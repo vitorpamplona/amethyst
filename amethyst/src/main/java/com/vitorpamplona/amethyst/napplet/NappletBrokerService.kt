@@ -32,6 +32,7 @@ import android.os.Messenger
 import android.os.RemoteException
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
@@ -359,7 +360,7 @@ class NappletBrokerService : Service() {
         val intent =
             Intent(applicationContext, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                data = Uri.parse("nostr:connectedapp?coordinate=" + Uri.encode(coordinate))
+                data = ("nostr:connectedapp?coordinate=" + Uri.encode(coordinate)).toUri()
             }
         runCatching { applicationContext.startActivity(intent) }
             .onFailure { Log.w("NappletBrokerService", "Could not open Connected Apps detail", it) }

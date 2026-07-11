@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.keystorage
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.Dispatchers
@@ -86,7 +87,7 @@ actual class SecureKeyStorage private actual constructor() {
     ) {
         withContext(Dispatchers.IO) {
             try {
-                encryptedPrefs.edit().putString(KEY_PREFIX + npub, privKeyHex).apply()
+                encryptedPrefs.edit { putString(KEY_PREFIX + npub, privKeyHex) }
             } catch (e: Exception) {
                 throw SecureStorageException("Failed to save private key", e)
             }
@@ -108,7 +109,7 @@ actual class SecureKeyStorage private actual constructor() {
                 val key = KEY_PREFIX + npub
                 val existed = encryptedPrefs.contains(key)
                 if (existed) {
-                    encryptedPrefs.edit().remove(key).apply()
+                    encryptedPrefs.edit { remove(key) }
                 }
                 existed
             } catch (e: Exception) {

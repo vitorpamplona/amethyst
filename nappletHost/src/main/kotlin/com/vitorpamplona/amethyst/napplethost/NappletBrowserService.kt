@@ -45,6 +45,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.RequiresApi
+import androidx.core.graphics.createBitmap
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
@@ -206,7 +207,7 @@ class NappletBrowserService : Service() {
         val outW = (boxW * zoom).toInt().coerceAtLeast(1)
         val outH = (boxH * zoom).toInt().coerceAtLeast(1)
         val t0 = SystemClock.elapsedRealtimeNanos()
-        val bitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(outW, outH)
         val canvas = Canvas(bitmap)
         canvas.drawColor(tab.bgColor)
         // Map the source rect (centered on cx,cy in view px) into the zoomed output bitmap.

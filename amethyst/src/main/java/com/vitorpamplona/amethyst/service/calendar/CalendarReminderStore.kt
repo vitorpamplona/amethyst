@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.calendar
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Persistent "I've already notified for this event" set. Backed by [SharedPreferences] because
@@ -54,7 +55,7 @@ class CalendarReminderStore(
         eventId: String,
         eventStartSeconds: Long,
     ) {
-        prefs.edit().putLong(keyFor(eventId), eventStartSeconds).apply()
+        prefs.edit { putLong(keyFor(eventId), eventStartSeconds) }
     }
 
     /**
