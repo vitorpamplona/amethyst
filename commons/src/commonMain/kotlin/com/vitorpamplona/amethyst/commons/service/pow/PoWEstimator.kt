@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.service.pow
 
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256Into
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -61,6 +63,25 @@ object PoWEstimator {
             }
         }
 
+    /**
+     * Aggregate hash rate with [workers] concurrent miners — what
+     * [com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner.mine] achieves when
+     * racing that many workers. Measured live (not cached): each worker runs
+     * its own ~250 ms benchmark loop concurrently and the rates are summed,
+     * so contention between cores is priced in.
+     */
+    suspend fun hashesPerSecond(
+        workers: Int,
+        dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    ): Double =
+        if (workers <= 1) {
+            hashesPerSecond(dispatcher)
+        } else {
+            withContext(dispatcher) {
+                List(workers) { async { benchmark() } }.awaitAll().sum()
+            }
+        }
+
     fun estimateSeconds(
         difficulty: Int,
         hashesPerSecond: Double,
@@ -68,14 +89,16 @@ object PoWEstimator {
 
     private fun benchmark(): Double {
         val payload = ByteArray(PAYLOAD_BYTES) { (it % 251).toByte() }
+        // same allocation-free hashing the miner's hot loop uses
+        val out = ByteArray(32)
 
         // warm up JIT/caches so the measured window reflects steady state
-        repeat(3 * BATCH) { sha256(payload) }
+        repeat(3 * BATCH) { sha256Into(out, payload, payload.size) }
 
         val mark = TimeSource.Monotonic.markNow()
         var count = 0L
         while (mark.elapsedNow() < BENCH_DURATION) {
-            repeat(BATCH) { sha256(payload) }
+            repeat(BATCH) { sha256Into(out, payload, payload.size) }
             count += BATCH
         }
         return count / mark.elapsedNow().toDouble(DurationUnit.SECONDS)
