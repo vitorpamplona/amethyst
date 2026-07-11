@@ -140,6 +140,11 @@ private val LightSubtleBorder = LightColorPalette.onSurface.copy(alpha = 0.05f)
 private val DarkChatBackground = DarkColorPalette.onSurface.copy(alpha = 0.12f)
 private val LightChatBackground = LightColorPalette.onSurface.copy(alpha = 0.08f)
 
+// Bubble fill for other users' chat messages. Stronger than chatBackground so the
+// bubble clearly separates from the screen background in both themes.
+private val DarkChatBubbleThem = DarkColorPalette.onSurface.copy(alpha = 0.18f)
+private val LightChatBubbleThem = LightColorPalette.onSurface.copy(alpha = 0.11f)
+
 private val DarkChatDraftBackground = DarkColorPalette.onSurface.copy(alpha = 0.15f)
 private val LightChatDraftBackground = LightColorPalette.onSurface.copy(alpha = 0.15f)
 
@@ -469,6 +474,15 @@ val ColorScheme.subtleBorder: Color
 
 val ColorScheme.chatBackground: Color
     get() = if (isLight) LightChatBackground else DarkChatBackground
+
+// Accent-following bubble fill for the logged-in user's own chat messages. Stronger
+// than mediumImportanceLink so "mine" vs "theirs" vs background read at a glance
+// while the default onBackground text stays readable on top of it.
+val ColorScheme.chatBubbleMe: Color
+    get() = primary.copy(alpha = if (isLight) 0.36f else 0.45f)
+
+val ColorScheme.chatBubbleThem: Color
+    get() = if (isLight) LightChatBubbleThem else DarkChatBubbleThem
 
 val ColorScheme.chatDraftBackground: Color
     get() = if (isLight) LightChatDraftBackground else DarkChatDraftBackground

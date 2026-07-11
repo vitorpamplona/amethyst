@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.computeChatGroupPosition
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.launch
@@ -187,6 +188,11 @@ fun ChatFeedLoaded(
         itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
+                // Reverse layout: index - 1 is the newer message (visually below),
+                // index + 1 the older one (visually above).
+                val newer = items.list.getOrNull(index - 1)
+                val older = items.list.getOrNull(index + 1)
+
                 ChatroomMessageCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
@@ -197,6 +203,10 @@ fun ChatFeedLoaded(
                     onScrollToNote = onScrollToNote,
                     shouldHighlight = highlightedNoteId.value == item.idHex,
                     onHighlightFinished = { highlightedNoteId.value = null },
+                    groupPosition =
+                        remember(item, newer, older) {
+                            computeChatGroupPosition(newer, item, older)
+                        },
                 )
 
                 NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)

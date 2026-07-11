@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
 import com.vitorpamplona.amethyst.ui.note.RelayBadgesHorizontal
 import com.vitorpamplona.amethyst.ui.note.RenderZapRaiser
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChangeChannelMetadataNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
@@ -110,6 +110,7 @@ fun ChatroomMessageCompose(
     onScrollToNote: ((Note) -> Unit)? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
+    groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     // Replaces the generic "post not found" blank while baseNote's event hasn't loaded. Used for
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
@@ -151,6 +152,7 @@ fun ChatroomMessageCompose(
                     onScrollToNote,
                     shouldHighlight,
                     onHighlightFinished,
+                    groupPosition,
                 )
             }
         }
@@ -179,6 +181,7 @@ fun NormalChatNote(
     onScrollToNote: ((Note) -> Unit)? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
+    groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
 ) {
     val isLoggedInUser =
         remember(note.author) {
@@ -215,8 +218,11 @@ fun NormalChatNote(
         isDraft = note.event is DraftWrapEvent,
         innerQuote = innerQuote,
         isComplete = accountViewModel.settings.isCompleteUIMode(),
-        hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
-        drawAuthorInfo = drawAuthorInfo,
+        // Received reactions and zaps render as chips under the bubble, so the
+        // detail row no longer needs to auto-expand for them.
+        hasDetailsToShow = false,
+        drawAuthorInfo = drawAuthorInfo && groupPosition.isFirstOfGroup,
+        groupPosition = groupPosition,
         parentBackgroundColor = parentBackgroundColor,
         shouldHighlight = shouldHighlight,
         onHighlightFinished = onHighlightFinished,
@@ -231,20 +237,34 @@ fun NormalChatNote(
                 false
             }
         },
+        onDoubleTap = {
+            // Double-tap to send the default reaction; only when it can actually
+            // sign one (reactToOrDelete assumes a non-empty choice list).
+            if (!note.isDraft() && accountViewModel.isWriteable() && accountViewModel.reactionChoices().isNotEmpty()) {
+                accountViewModel.reactToOrDelete(note)
+            }
+        },
         onAuthorClick = {
             note.author?.let {
                 nav.nav(routeFor(it))
             }
         },
         actionMenu = { onDismiss ->
-            NoteQuickActionMenu(
+            ChatMessageActionSheet(
                 note = note,
+                onWantsToReply = onWantsToReply,
+                onWantsToEditDraft = onWantsToEditDraft,
                 onDismiss = onDismiss,
-                onWantsToEditDraft = { onWantsToEditDraft(note) },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         },
+        reactionsRow =
+            if (!innerQuote) {
+                { ChatReactionChips(note, accountViewModel) }
+            } else {
+                null
+            },
         drawAuthorLine = {
             DrawAuthorInfo(
                 note,

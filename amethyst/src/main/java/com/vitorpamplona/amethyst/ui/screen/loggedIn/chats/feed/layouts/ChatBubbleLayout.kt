@@ -50,16 +50,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
-import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
-import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
+import com.vitorpamplona.amethyst.ui.theme.ChatPaddingGroupedModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.chatBackground
+import com.vitorpamplona.amethyst.ui.theme.chatBubbleMe
+import com.vitorpamplona.amethyst.ui.theme.chatBubbleThem
 import com.vitorpamplona.amethyst.ui.theme.chatDraftBackground
-import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
 import kotlinx.coroutines.delay
 
@@ -74,18 +73,21 @@ fun ChatBubbleLayout(
     isComplete: Boolean,
     hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
+    groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     parentBackgroundColor: MutableState<Color>? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
     onClick: () -> Boolean,
+    onDoubleTap: (() -> Unit)? = null,
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
+    reactionsRow: (@Composable () -> Unit)? = null,
     detailRow: @Composable () -> Unit,
     drawAuthorLine: @Composable () -> Unit,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
-    val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
-    val otherColors = MaterialTheme.colorScheme.chatBackground
+    val loggedInColors = MaterialTheme.colorScheme.chatBubbleMe
+    val otherColors = MaterialTheme.colorScheme.chatBubbleThem
     val defaultBackground = MaterialTheme.colorScheme.background
     val draftColor = MaterialTheme.colorScheme.chatDraftBackground
 
@@ -125,7 +127,12 @@ fun ChatBubbleLayout(
     )
 
     Row(
-        modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
+        modifier =
+            when {
+                innerQuote -> ChatPaddingInnerQuoteModifier
+                groupPosition.isConnectedAbove -> ChatPaddingGroupedModifier
+                else -> ChatPaddingModifier
+            },
         horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
     ) {
         val popupExpanded = remember { mutableStateOf(false) }
@@ -150,16 +157,17 @@ fun ChatBubbleLayout(
                         }
                     },
                     onLongClick = { popupExpanded.value = true },
+                    onDoubleClick = onDoubleTap,
                 )
             }
 
-        Row(
-            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+        Column(
+            horizontalAlignment = if (isLoggedInUser) Alignment.End else Alignment.Start,
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(
                 color = animatedColor,
-                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
+                shape = chatBubbleShapeFor(isLoggedInUser, if (innerQuote) ChatGroupPosition.SINGLE else groupPosition),
                 modifier = clickableModifier,
             ) {
                 Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
@@ -180,6 +188,8 @@ fun ChatBubbleLayout(
                     }
                 }
             }
+
+            reactionsRow?.invoke()
         }
 
         if (popupExpanded.value) {
@@ -241,6 +251,7 @@ private fun BubblePreview() {
             isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
+            groupPosition = ChatGroupPosition.TOP,
             parentBackgroundColor = bgColor,
             onClick = { false },
             onAuthorClick = {},
@@ -275,6 +286,7 @@ private fun BubblePreview() {
             isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
+            groupPosition = ChatGroupPosition.MIDDLE,
             parentBackgroundColor = bgColor,
             onClick = { false },
             onAuthorClick = {},
@@ -309,6 +321,7 @@ private fun BubblePreview() {
             isComplete = false,
             hasDetailsToShow = false,
             drawAuthorInfo = false,
+            groupPosition = ChatGroupPosition.BOTTOM,
             parentBackgroundColor = bgColor,
             onClick = { false },
             onAuthorClick = {},

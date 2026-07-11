@@ -78,8 +78,17 @@ val ButtonBorder = RoundedCornerShape(20.dp)
 val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
 val EditFieldBorder = RoundedCornerShape(25.dp)
 
-val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
-val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
+// Chat bubble corners: the small corner is the "tail" pointing at the author's side.
+// Grouped variants flatten the corners on the side that touches the neighboring
+// message of the same run (Top = visually first / oldest, Bottom = visually last).
+val ChatBubbleShapeMe = RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
+val ChatBubbleShapeMeTop = RoundedCornerShape(18.dp, 18.dp, 6.dp, 18.dp)
+val ChatBubbleShapeMeMiddle = RoundedCornerShape(18.dp, 6.dp, 6.dp, 18.dp)
+val ChatBubbleShapeMeBottom = RoundedCornerShape(18.dp, 6.dp, 4.dp, 18.dp)
+val ChatBubbleShapeThem = RoundedCornerShape(4.dp, 18.dp, 18.dp, 18.dp)
+val ChatBubbleShapeThemTop = RoundedCornerShape(4.dp, 18.dp, 18.dp, 6.dp)
+val ChatBubbleShapeThemMiddle = RoundedCornerShape(6.dp, 18.dp, 18.dp, 6.dp)
+val ChatBubbleShapeThemBottom = RoundedCornerShape(6.dp, 18.dp, 18.dp, 18.dp)
 
 val StdButtonSizeModifier = Modifier.size(19.dp)
 
@@ -255,6 +264,18 @@ val ChatPaddingModifier =
             start = 12.dp,
             end = 12.dp,
             top = 3.dp,
+            bottom = 3.dp,
+        )
+
+// Tighter top gap for a message visually connected to the previous message of the
+// same author run (grouped bubbles).
+val ChatPaddingGroupedModifier =
+    Modifier
+        .fillMaxWidth(1f)
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 1.dp,
             bottom = 3.dp,
         )
 
