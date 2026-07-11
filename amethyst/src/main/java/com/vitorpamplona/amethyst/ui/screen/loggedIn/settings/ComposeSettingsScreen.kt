@@ -27,24 +27,35 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.model.AccountPoWPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.creators.pow.POW_PRESETS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -115,8 +126,150 @@ fun ComposeSettingsContent(
             SettingsDivider()
             SignatureTile(sharedPrefs.composeSignature)
         }
+
+        SettingsSection(R.string.pow_settings_title) {
+            PowDifficultyTile(accountViewModel)
+            SettingsDivider()
+            PowCategoryChecklist(accountViewModel)
+        }
     }
 }
+
+@Composable
+private fun PowDifficultyTile(accountViewModel: AccountViewModel) {
+    val difficulty by accountViewModel.account.settings.syncedSettings.proofOfWork
+        .difficulty
+        .collectAsStateWithLifecycle()
+
+    SettingsBlockTile(
+        icon = MaterialSymbols.Manufacturing,
+        title = stringRes(R.string.pow_difficulty_title),
+        description = stringRes(R.string.pow_difficulty_explainer),
+    ) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = difficulty <= 0,
+                onClick = { accountViewModel.updatePowDifficulty(0) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = POW_PRESETS.size + 1),
+            ) {
+                Text(stringRes(R.string.pow_difficulty_off))
+            }
+            POW_PRESETS.forEachIndexed { index, preset ->
+                SegmentedButton(
+                    selected = difficulty == preset,
+                    onClick = { accountViewModel.updatePowDifficulty(preset) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index + 1, count = POW_PRESETS.size + 1),
+                ) {
+                    Text(preset.toString())
+                }
+            }
+        }
+
+        PowTimeEstimate(difficulty)
+    }
+
+    SettingsSubControlRow(
+        title = stringRes(R.string.pow_custom_difficulty_title),
+        description = stringRes(R.string.pow_custom_difficulty_explainer),
+    ) {
+        SettingsStepper(
+            value = difficulty,
+            min = 0,
+            max = AccountPoWPreferences.MAX_POW_DIFFICULTY,
+            unsetLabel = stringRes(R.string.pow_difficulty_off),
+            onValueChange = accountViewModel::updatePowDifficulty,
+        )
+    }
+}
+
+/**
+ * "≈ 45 s per post on this device" — turns the abstract bit count into a cost
+ * the user can feel. The hash rate is benchmarked once (~250 ms on a worker
+ * thread) and cached; the figure is a statistical mean, so any single post can
+ * be luckier or unluckier.
+ */
+@Composable
+private fun PowTimeEstimate(difficulty: Int) {
+    if (difficulty <= 0) return
+
+    val context = LocalContext.current
+    val estimate by
+        produceState<String?>(initialValue = null, difficulty) {
+            val rate = PoWEstimator.hashesPerSecond()
+            value = formatApproxDuration(context, PoWEstimator.estimateSeconds(difficulty, rate))
+        }
+
+    estimate?.let {
+        Text(
+            text = stringRes(R.string.pow_difficulty_estimate, it),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun PowCategoryChecklist(accountViewModel: AccountViewModel) {
+    val difficulty by accountViewModel.account.settings.syncedSettings.proofOfWork
+        .difficulty
+        .collectAsStateWithLifecycle()
+    val enabledCategories by accountViewModel.account.settings.syncedSettings.proofOfWork
+        .enabledCategories
+        .collectAsStateWithLifecycle()
+
+    val miningOn = difficulty > 0
+
+    SettingsControlRow(
+        icon = MaterialSymbols.Checklist,
+        title = stringRes(R.string.pow_categories_title),
+        description = stringRes(R.string.pow_categories_explainer),
+    ) {}
+
+    PoWCategory.entries.forEach { category ->
+        val checked = category in enabledCategories
+        SettingsSubControlRow(
+            title = stringRes(category.titleRes()),
+            description = stringRes(category.descriptionRes()),
+            enabled = miningOn,
+        ) {
+            Switch(
+                checked = checked,
+                enabled = miningOn,
+                onCheckedChange = { accountViewModel.updatePowCategory(category, it) },
+            )
+        }
+    }
+}
+
+@StringRes
+private fun PoWCategory.titleRes(): Int =
+    when (this) {
+        PoWCategory.SHORT_NOTES -> R.string.pow_category_short_notes
+        PoWCategory.COMMENTS -> R.string.pow_category_comments
+        PoWCategory.REPORTS -> R.string.pow_category_reports
+        PoWCategory.LONG_FORM -> R.string.pow_category_long_form
+        PoWCategory.VOICE -> R.string.pow_category_voice
+        PoWCategory.REPOSTS -> R.string.pow_category_reposts
+        PoWCategory.REACTIONS -> R.string.pow_category_reactions
+        PoWCategory.PUBLIC_CHAT -> R.string.pow_category_public_chat
+        PoWCategory.GIFT_WRAPS -> R.string.pow_category_gift_wraps
+        PoWCategory.OTHER_PUBLIC -> R.string.pow_category_other_public
+    }
+
+@StringRes
+private fun PoWCategory.descriptionRes(): Int =
+    when (this) {
+        PoWCategory.SHORT_NOTES -> R.string.pow_category_short_notes_explainer
+        PoWCategory.COMMENTS -> R.string.pow_category_comments_explainer
+        PoWCategory.REPORTS -> R.string.pow_category_reports_explainer
+        PoWCategory.LONG_FORM -> R.string.pow_category_long_form_explainer
+        PoWCategory.VOICE -> R.string.pow_category_voice_explainer
+        PoWCategory.REPOSTS -> R.string.pow_category_reposts_explainer
+        PoWCategory.REACTIONS -> R.string.pow_category_reactions_explainer
+        PoWCategory.PUBLIC_CHAT -> R.string.pow_category_public_chat_explainer
+        PoWCategory.GIFT_WRAPS -> R.string.pow_category_gift_wraps_explainer
+        PoWCategory.OTHER_PUBLIC -> R.string.pow_category_other_public_explainer
+    }
 
 @Composable
 private fun SignatureTile(flow: MutableStateFlow<String>) {

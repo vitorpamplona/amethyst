@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
@@ -316,10 +317,14 @@ open class ChannelNewMessageViewModel :
         val draftToDelete = draftNote
         cancel()
 
-        accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) {
-            channelRelays.toList()
-        }
-        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+        // Kinds 42/1311 are the PUBLIC_CHAT PoW category: route through the
+        // mining gate (a no-op when the category is off). Draft deletion runs
+        // inside the publish continuation so a cancelled mining job can't
+        // destroy the only copy of the text.
+        accountViewModel.account.sendMined(template, PoWReplay.ToRelays(channelRelays.toList())) { readyTemplate ->
+            accountViewModel.account.signAndSendPrivatelyOrBroadcast(readyTemplate) {
+                channelRelays.toList()
+            }
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }

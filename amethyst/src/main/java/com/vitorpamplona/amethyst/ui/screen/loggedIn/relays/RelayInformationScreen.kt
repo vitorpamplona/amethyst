@@ -829,9 +829,9 @@ private fun RelayHeader(
             textAlign = TextAlign.Center,
         )
 
-        Row(
-            modifier = Modifier.padding(horizontal = 30.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        FlowRow(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         ) {
             OutlinedButton(
                 shape = ButtonBorder,
@@ -843,7 +843,22 @@ private fun RelayHeader(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = stringRes(R.string.see_relay_feed))
+                Text(text = stringRes(R.string.see_relay_feed), maxLines = 1)
+            }
+
+            if (supportsNip29(relayInfo.supported_nips)) {
+                OutlinedButton(
+                    onClick = { nav.nav(Route.RelayGroupServer(relay.url)) },
+                    shape = ButtonBorder,
+                ) {
+                    Icon(
+                        MaterialSymbols.Groups,
+                        contentDescription = stringRes(R.string.relay_groups_button),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = stringRes(R.string.relay_groups_button), maxLines = 1)
+                }
             }
 
             if (supportsNip43(relayInfo.supported_nips)) {
@@ -857,7 +872,7 @@ private fun RelayHeader(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringRes(R.string.relay_members))
+                    Text(text = stringRes(R.string.relay_members), maxLines = 1)
                 }
             }
 
@@ -876,6 +891,8 @@ private fun RelayHeader(
         }
     }
 }
+
+fun supportsNip29(supportedNips: List<String>?): Boolean = supportedNips?.any { it == "29" } == true
 
 fun supportsNip43(supportedNips: List<String>?): Boolean = supportedNips?.any { it == "43" } == true
 
@@ -939,7 +956,7 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
                     val minPoW = lim.min_pow_difficulty
 
                     if (minPoW != null && minPoW > 0) {
-                        InfoRow(MaterialSymbols.Bolt, stringRes(R.string.minimum_pow), stringRes(R.string.amount_in_bits, minPoW))
+                        InfoRow(MaterialSymbols.Manufacturing, stringRes(R.string.minimum_pow), stringRes(R.string.amount_in_bits, minPoW))
                     } else {
                         lim.min_prefix?.let {
                             if (it > 0) {

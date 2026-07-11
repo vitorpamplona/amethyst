@@ -346,6 +346,15 @@
             android:stopWithTask="true"
             android:exported="false" />
 
+        <!-- Keeps the NIP-13 mining queue schedulable after the user leaves the
+             app: shortService gives a ~3 min guaranteed window with no special
+             permission. Jobs are persisted, so a timeout only defers them. -->
+        <service
+            android:name=".service.pow.PowMiningForegroundService"
+            android:foregroundServiceType="shortService"
+            android:stopWithTask="false"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

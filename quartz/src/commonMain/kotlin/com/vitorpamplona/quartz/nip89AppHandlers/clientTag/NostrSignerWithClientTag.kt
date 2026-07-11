@@ -102,6 +102,14 @@ class NostrSignerWithClientTag(
 
     override fun hasForegroundSupport(): Boolean = inner.hasForegroundSupport()
 
+    /**
+     * The exact tag set [sign] will forward to the inner signer. Callers that
+     * transform the template before signing (e.g. NIP-13 mining, which commits
+     * the tags into the hashed id) must mine over this final shape, otherwise
+     * the client tag appended at sign time would invalidate the nonce.
+     */
+    fun prepareTags(tags: Array<Array<String>>): Array<Array<String>> = if (disabled()) tags else appendClientTag(tags)
+
     private fun appendClientTag(tags: Array<Array<String>>): Array<Array<String>> {
         // Don't add if a client tag already exists
         if (tags.any { it.size >= 2 && it[0] == ClientTag.TAG_NAME }) return tags

@@ -135,15 +135,21 @@
         ]
       },
       {
-        "user": "crowdin.pretended462",
-        "languages": [
-          "German"
-        ]
-      },
-      {
         "user": "StellarStoic",
         "languages": [
           "Slovenian"
+        ]
+      },
+      {
+        "user": "hypnotichemionus4",
+        "languages": [
+          "Chinese Simplified"
+        ]
+      },
+      {
+        "user": "crowdin.pretended462",
+        "languages": [
+          "German"
         ]
       },
       {
@@ -156,12 +162,6 @@
         "user": "summoner001",
         "languages": [
           "Hungarian"
-        ]
-      },
-      {
-        "user": "hypnotichemionus4",
-        "languages": [
-          "Chinese Simplified"
         ]
       },
       {

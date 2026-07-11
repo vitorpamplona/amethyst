@@ -26,10 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlin.coroutines.cancellation.CancellationException
 
 class PoWMiner(
     val buffer: MiningBuffer,
     val desiredPoW: Int,
+    val isActive: () -> Boolean = { true },
 ) {
     val emptyBytesForDesiredPoW = desiredPoW / 8
 
@@ -38,6 +40,12 @@ class PoWMiner(
     fun run() = runDigit(buffer.nonceStarts)
 
     private fun runDigit(index: Int): Boolean {
+        // checks once every VALID_BYTES.size^2 hashes: cheap enough to not slow
+        // mining down, frequent enough for cancellation to feel immediate.
+        if (index + 2 <= buffer.nonceEnds && !isActive()) {
+            throw CancellationException("PoW mining was cancelled")
+        }
+
         for (testByte in VALID_BYTES) {
             // replaces the background base by the nonce integers
             buffer.bytes[index] = testByte
@@ -65,12 +73,20 @@ class PoWMiner(
         /**
          * The miner creates a stringified json template and changes the nonce directly in the UTF-8 ByteArray representation
          * to avoid having to recompute the json objects and stringify it.
+         *
+         * [isActive] is polled while mining; returning false aborts the search with a
+         * [CancellationException] so callers can cancel long-running jobs cooperatively.
          */
         fun <T : Event> run(
             template: EventTemplate<T>,
             pubKey: HexKey,
             desiredPoW: Int,
+            isActive: () -> Boolean = { true },
         ): EventTemplate<T> {
+            // sha256 ids have 256 bits; anything outside would index past the
+            // hash (or never terminate) deep inside the hot loop.
+            require(desiredPoW in 1..256) { "desiredPoW must be in 1..256, was $desiredPoW" }
+
             var nextSize = STARTING_NONCE_SIZE
 
             do {
@@ -90,7 +106,7 @@ class PoWMiner(
 
                 val buffer = MiningBuffer(bytes, startIndex, startIndex + nextSize)
 
-                if (PoWMiner(buffer, desiredPoW).run()) {
+                if (PoWMiner(buffer, desiredPoW, isActive).run()) {
                     return EventTemplate(
                         template.createdAt,
                         template.kind,

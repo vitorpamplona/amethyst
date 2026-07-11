@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -66,12 +67,13 @@ import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
-import com.vitorpamplona.amethyst.service.okhttp.SurgeDns
-import com.vitorpamplona.amethyst.service.okhttp.SurgeDnsStore
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
+import com.vitorpamplona.amethyst.service.pow.PowJobRestorer
+import com.vitorpamplona.amethyst.service.pow.PowJobStore
+import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.TorCircuitHealthTracker
@@ -102,6 +104,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -246,6 +250,23 @@ class AppModules(
     // ~700 sync getaddrinfo calls. Restored entries fall through to the stale-while-revalidate
     // path on first lookup. Stored in cacheDir — pure perf data, OK if the OS evicts it.
     val dnsStore = SurgeDnsStore(File(appContext.safeCacheDir(), SurgeDnsStore.FILE_NAME), surgeDns)
+
+    // Network identity change (same trigger as Tor's onNetworkChange above), but for DNS
+    // the response is deliberately SOFT: most cached answers are still correct on the new
+    // network, so staleAll() keeps serving every one of them and merely re-verifies —
+    // positives revalidate in the background on next use, negatives (e.g. hosts that only
+    // failed because the OLD network / captive portal couldn't resolve them) get re-tried
+    // on first touch instead of waiting out their TTL. Nothing is dropped, nothing blocks.
+    init {
+        applicationIOScope.launch {
+            connManager.status
+                .map { (it as? ConnectivityStatus.Active)?.networkId }
+                .filterNotNull()
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { surgeDns.staleAll() }
+        }
+    }
 
     // Shared cache populated by OnionLocationInterceptor from any HTTP/WebSocket
     // response carrying an Onion-Location header. Consulted by OnionUrlRewriteInterceptor
@@ -596,6 +617,27 @@ class AppModules(
             applicationIOScope,
         )
 
+    // fire-and-forget NIP-13 mining: posts queue here and publish when mined.
+    // Capped worker pool so a burst of sends never spawns unbounded miners.
+    // Template jobs checkpoint to disk (restored on login) and every enqueue
+    // raises the shortService shield so backgrounding doesn't freeze a miner.
+    val powJobStore by lazy {
+        PowJobStore(File(appContext.filesDir, PowJobStore.FILE_NAME), applicationIOScope)
+    }
+
+    val powPublishQueue by lazy {
+        PoWPublishQueue(
+            scope = applicationIOScope,
+            maxConcurrent = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 2),
+            persistence = powJobStore,
+            onQueueActive = { PowMiningForegroundService.start(appContext) },
+        )
+    }
+
+    val powJobRestorer by lazy {
+        PowJobRestorer(powPublishQueue, powJobStore, scheduledPostStore)
+    }
+
     // keeps all accounts live
     val accountsCache =
         AccountCacheState(
@@ -609,6 +651,7 @@ class AppModules(
             cache = cache,
             client = client,
             rootFilesDir = { appContext.filesDir },
+            powQueue = { powPublishQueue },
         )
 
     val sessionManager =
@@ -859,6 +902,16 @@ class AppModules(
                 } else {
                     alwaysOnNotificationServiceManager.stop()
                 }
+            }
+        }
+
+        // Resume PoW mining jobs that were checkpointed before a process death,
+        // for EVERY loaded account (the always-on service preloads non-active
+        // accounts, whose pending posts must not stay stranded on disk).
+        // Idempotent (the queue dedupes by job id), so re-emissions are safe.
+        applicationIOScope.launch {
+            accountsCache.accounts.collect { loaded ->
+                loaded.values.forEach { powJobRestorer.restore(it) }
             }
         }
 

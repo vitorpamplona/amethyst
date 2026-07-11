@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.cli.commands.OfferCommands
 import com.vitorpamplona.amethyst.cli.commands.OutboxCommand
 import com.vitorpamplona.amethyst.cli.commands.Podcast20Commands
 import com.vitorpamplona.amethyst.cli.commands.PodcastCommands
+import com.vitorpamplona.amethyst.cli.commands.PowCommands
 import com.vitorpamplona.amethyst.cli.commands.ProfileCommands
 import com.vitorpamplona.amethyst.cli.commands.PublishCommand
 import com.vitorpamplona.amethyst.cli.commands.RelayCommands
@@ -262,6 +263,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "dm" -> DmCommands.dispatch(dataDir, tail)
         "profile" -> ProfileCommands.dispatch(dataDir, tail)
         "notes" -> NotesCommands.dispatch(dataDir, tail)
+        "pow" -> PowCommands.dispatch(dataDir, tail)
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
         "store" -> StoreCommands.dispatch(dataDir, tail)
@@ -428,6 +430,13 @@ private fun printUsage() {
         |  encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]
         |  verify [EVENT-JSON]          check an event's id hash + signature
         |                                (reads stdin when the arg is omitted or `-`)
+        |  pow check EVENT-JSON|-       NIP-13: leading-zero bits, committed target,
+        |                                effective PoW (capped at the commitment)
+        |  pow mine --target N [--pubkey HEX] [--timeout SECS] TEMPLATE-JSON|-
+        |                               mine an UNSIGNED template (delegated PoW:
+        |                                ids don't commit to sigs, so amy can mine
+        |                                for any pubkey); exit 124 on timeout
+        |  pow bench                    hash rate + expected seconds at 16/20/24/28 bits
         |  key generate                 mint a fresh keypair (nsec + npub + hex)
         |  key public NSEC|HEX          derive the public key from a secret key
         |  key encrypt NSEC|HEX --password X    NIP-49 encrypt to ncryptsec1…
@@ -493,6 +502,8 @@ private fun printUsage() {
         |
         |Notes (NIP-10 kind:1):
         |  notes post TEXT [--relay URL]               publish a kind:1 short text note
+        |             [--pow BITS [--pow-timeout SECS]] mine a NIP-13 proof of work first
+        |                                              (exit 124 on timeout, nothing published)
         |                                              (--relay accepts comma-separated extras)
         |  notes feed [--author USER]                  fetch kind:1 notes
         |             [--following]                    (default: own; --author: one user;
@@ -611,6 +622,14 @@ private fun printUsage() {
         |                                              new/changed ranks >= --min-rank (default 2), skips
         |                                              unchanged, and retracts (kind:5) any card whose
         |                                              target left the graph or fell below the cutoff.
+        |  graperank crawl [OBSERVER]                 network only: crawl the WoT graph (kind 3/10000/
+        |    [--max-hops N] [--preconnect-cap N]      1984/10002) into the local store without scoring.
+        |    [--no-preconnect]                        Pre-connects every known-live relay in one parallel
+        |                                              storm (seeded from the reachability cache).
+        |  graperank probe [--timeout SECS]           relay census: mass-connect every relay the store
+        |    [--concurrency N]                        knows and record live/dead + measured rtt-open into
+        |                                              the reachability cache (NIP-66 kind:30166), so the
+        |                                              next crawl skips dead relays and waits once.
         |  graperank update [--down] [--up]           refresh every locally-known author's WoT record kinds
         |    [--no-sync-deletions] [--timeout SECS]     (0/3/10002/1984) from their own outbox: reads all
         |    [--relay-concurrency N] [--author-chunk N] kind:10002 in the store, groups authors by write

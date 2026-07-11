@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -79,6 +80,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
+import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.actions.Dao
@@ -145,6 +147,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -280,6 +283,19 @@ class AccountViewModel(
         // receivers can reach callManager + accountViewModel.
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
             .set(callManager, this)
+
+        // A mined post that fails to sign or broadcast would otherwise die
+        // silently — the composer already returned when it was enqueued.
+        viewModelScope.launch {
+            Amethyst.instance.powPublishQueue.failures.collect { failure ->
+                val kindLabel = stringRes(Amethyst.instance.appContext, powKindLabelRes(failure.kind))
+                if (failure.willRetryOnRestart) {
+                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed_retry, kindLabel)
+                } else {
+                    toastManager.toast(R.string.pow_settings_title, R.string.pow_publish_failed, kindLabel, failure.message.orEmpty())
+                }
+            }
+        }
     }
 
     /**
@@ -539,7 +555,8 @@ class AccountViewModel(
                     account.deletePrivately(privateRumors, note)
                 }
             } else {
-                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group && !note.isPrivateRumor()) {
+                val minesReactions = account.powDifficultyFor(ReactionEvent.KIND) != null
+                if (!minesReactions && settings.useTrackedBroadcasts() && note.event !is NIP17Group && !note.isPrivateRumor()) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
@@ -551,7 +568,9 @@ class AccountViewModel(
                         account.consumeReactionEvent(event)
                     }
                 } else {
-                    // Fire-and-forget (original behavior)
+                    // Fire-and-forget (original behavior). When PoW mining is
+                    // on for reactions this path also routes through the
+                    // mining queue, which has its own progress banner.
                     account.reactTo(note, reaction)
                 }
             }
@@ -1207,11 +1226,17 @@ class AccountViewModel(
     }
 
     fun boost(note: Note) =
-        launchTrackedOrDirect(
-            createTracked = { account.createBoostEvent(note) },
-            consumeTracked = account::consumeBoostEvent,
-            direct = { account.boost(note) },
-        )
+        if (account.powDifficultyFor(RepostEvent.KIND) != null) {
+            // Reposts are mined: route through the queue (which has its own
+            // progress banner) instead of the inline tracked path.
+            launchSigner { account.boost(note) }
+        } else {
+            launchTrackedOrDirect(
+                createTracked = { account.createBoostEvent(note) },
+                consumeTracked = account::consumeBoostEvent,
+                direct = { account.boost(note) },
+            )
+        }
 
     fun removeEmojiPack(emojiPack: Note) = launchSigner { account.removeEmojiPack(emojiPack) }
 
@@ -1600,6 +1625,13 @@ class AccountViewModel(
     fun updateReportWarningThreshold(threshold: Int) = launchSigner { account.updateReportWarningThreshold(threshold) }
 
     fun updateAddClientTag(add: Boolean) = launchSigner { account.updateAddClientTag(add) }
+
+    fun updatePowDifficulty(difficulty: Int) = launchSigner { account.updatePowDifficulty(difficulty) }
+
+    fun updatePowCategory(
+        category: PoWCategory,
+        enabled: Boolean,
+    ) = launchSigner { account.updatePowCategory(category, enabled) }
 
     fun updateFilterSpam(filterSpam: Boolean) =
         launchSigner {

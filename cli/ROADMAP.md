@@ -51,6 +51,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Marmot message send / list | ✅ | `commons/marmot/` |
 | `await` polling (KP / group / member / admin / message / rename / epoch) | ✅ | `AwaitCommands` |
 | NIP-01 note publish (`amy notes post TEXT`) | ✅ | `PostCommand` — outbox via `RelayCommands` configured set. |
+| NIP-13 proof of work (`amy notes post --pow N`, `amy pow check/mine/bench`) | ✅ | `PostCommand` + `PowCommands` — mines pre-signature via quartz `PoWMiner`; `pow mine --pubkey` covers delegated PoW; `pow check` applies the commitment cap. |
 | NIP-01 feed read (`amy notes feed [--following \| --author NPUB]`) | ✅ | `FeedCommand`. Hashtag / community feeds still pending. |
 | NIP-02 follow list add / remove / list | 🆕 | Logic in `amethyst/model/nip02FollowLists/`. |
 | NIP-09 event deletion | 🆕 | Builder exists in quartz. |

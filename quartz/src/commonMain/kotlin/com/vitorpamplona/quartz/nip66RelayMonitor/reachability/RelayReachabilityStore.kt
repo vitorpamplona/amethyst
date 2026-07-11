@@ -142,6 +142,21 @@ class RelayReachabilityStore(
         for (relay in dead) if (relay !in reachable) writeOne(relay, up = false, now, rttOpenMs)
     }
 
+    /**
+     * Like [record], but with a real, per-relay measured open round-trip — the shape a
+     * dedicated probe (see RelayProber) produces. Each reachable relay's record carries
+     * ITS OWN `rtt-open`, so the cache doubles as a latency census: a later reader can
+     * separate fast relays from working-but-slow ones instead of only live from dead.
+     */
+    suspend fun recordProbed(
+        reachableRttMs: Map<NormalizedRelayUrl, Long>,
+        dead: Set<NormalizedRelayUrl>,
+        now: Long = TimeUtils.now(),
+    ) {
+        for ((relay, rtt) in reachableRttMs) writeOne(relay, up = true, now, rtt.coerceAtLeast(0))
+        for (relay in dead) if (relay !in reachableRttMs) writeOne(relay, up = false, now, 0)
+    }
+
     private suspend fun writeOne(
         relay: NormalizedRelayUrl,
         up: Boolean,
