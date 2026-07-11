@@ -830,7 +830,7 @@ private fun RelayHeader(
         )
 
         FlowRow(
-            modifier = Modifier.padding(horizontal = 30.dp),
+            modifier = Modifier.padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         ) {
             OutlinedButton(
