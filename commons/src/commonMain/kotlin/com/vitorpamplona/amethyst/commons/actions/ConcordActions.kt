@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.MintedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -86,7 +87,7 @@ object ConcordActions {
     fun planeFilterFor(planePubKeysHex: List<HexKey>): Filter = Filter(kinds = listOf(ConcordKinds.WRAP), authors = planePubKeysHex)
 
     /** The public invite bundle for a link signer. */
-    fun bundleFilter(linkSignerPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordKinds.INVITE_BUNDLE), authors = listOf(linkSignerPubKeyHex))
+    fun bundleFilter(linkSignerPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = listOf(linkSignerPubKeyHex))
 
     /** Pending direct invites addressed to the given member (indexed by k=3313). */
     fun directInvitesFilter(memberPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordKinds.WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordKinds.DIRECT_INVITE.toString())))

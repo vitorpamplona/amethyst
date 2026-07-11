@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.concord.cord02Community
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.serialization.Serializable
@@ -64,7 +63,7 @@ class ConcordCommunityListEntry(
 
 /**
  * The member's private, self-encrypted list of joined Concord communities
- * (kind [ConcordKinds.COMMUNITY_LIST] = 13302, CORD-05) — the NIP-51 analog that
+ * (kind [ConcordCommunityListEvent.KIND] = 13302, CORD-05) — the NIP-51 analog that
  * lets a client return to the groups the user signed up for. Replaceable and
  * NIP-44-encrypted to the member's own key, so relays store only ciphertext.
  *
@@ -79,7 +78,7 @@ object ConcordCommunityList {
         createdAt: Long,
     ): Event {
         val content = signer.nip44Encrypt(encode(entries), signer.pubKey)
-        return signer.sign(createdAt, ConcordKinds.COMMUNITY_LIST, emptyArray(), content)
+        return signer.sign(createdAt, ConcordCommunityListEvent.KIND, emptyArray(), content)
     }
 
     /** Serializes [entries] to the plaintext JSON that gets NIP-44 self-encrypted. */
@@ -98,7 +97,7 @@ object ConcordCommunityList {
         event: Event,
         signer: NostrSigner,
     ): List<ConcordCommunityListEntry> {
-        if (event.kind != ConcordKinds.COMMUNITY_LIST) return emptyList()
+        if (event.kind != ConcordCommunityListEvent.KIND) return emptyList()
         return try {
             decode(signer.nip44Decrypt(event.content, signer.pubKey))
         } catch (_: Exception) {

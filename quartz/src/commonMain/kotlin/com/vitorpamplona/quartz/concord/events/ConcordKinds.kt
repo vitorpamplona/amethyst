@@ -55,12 +55,10 @@ object ConcordKinds {
     // Person-addressed rumor (CORD-05)
     const val DIRECT_INVITE = 3313
 
-    // Control / rekey rumors (CORD-02/04/06)
-    const val CONTROL = 3308
+    // Rekey rumor (CORD-06). Control 3308 now lives on ControlEditionEvent.KIND.
     const val REKEY = 3303
 
-    // Bare bookkeeping events
-    const val INVITE_BUNDLE = 33301 // addressable, CORD-05
-    const val COMMUNITY_LIST = 13302 // private self-list, CORD-05
+    // Bare bookkeeping events. Community-list 13302 (ConcordCommunityListEvent.KIND) and
+    // invite-bundle 33301 (ConcordInviteBundleEvent.KIND) now own their literals.
     const val INVITE_LIST = 13303 // private self-list, CORD-05
 }

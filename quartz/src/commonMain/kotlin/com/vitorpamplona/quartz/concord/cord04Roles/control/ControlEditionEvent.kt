@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.concord.cord04Roles.control
 
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -60,7 +59,7 @@ class ControlEditionEvent(
     fun authorityCitation() = tags.vac()
 
     companion object {
-        const val KIND = ConcordKinds.CONTROL
+        const val KIND = 3308
 
         /**
          * Builds the edition template for [entityKind]/[entityId] at [version].

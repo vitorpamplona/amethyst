@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord05Invites
 
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -164,7 +164,7 @@ object ConcordInviteLink {
         token: ByteArray,
         relays: List<String>? = null,
     ): String {
-        val naddr = NAddress.create(ConcordKinds.INVITE_BUNDLE, linkSignerPubKey, "", null)
+        val naddr = NAddress.create(ConcordInviteBundleEvent.KIND, linkSignerPubKey, "", null)
         val trimmed = base.trimEnd('/')
         return "$trimmed/invite/$naddr#${encodeFragment(token, relays)}"
     }
@@ -183,7 +183,7 @@ object ConcordInviteLink {
         if (marker < 0) return null
         val naddr = url.substring(marker + "/invite/".length, hash)
         val parsed = NAddress.parse(naddr) ?: return null
-        if (parsed.kind != ConcordKinds.INVITE_BUNDLE) return null
+        if (parsed.kind != ConcordInviteBundleEvent.KIND) return null
         return ParsedInviteLink(naddr, parsed.author, parsed.kind, fragment)
     }
 }

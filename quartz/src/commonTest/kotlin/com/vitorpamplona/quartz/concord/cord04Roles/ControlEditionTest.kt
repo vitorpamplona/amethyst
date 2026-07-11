@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.crypto.EditionHash
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -69,7 +69,7 @@ class ControlEditionTest {
                 arrayOf("ep", prev.toHexKey()),
                 arrayOf("vac", grantId.toHexKey(), "2", grantHash.toHexKey()),
             )
-        val rumor = RumorAssembler.assembleRumor<Event>(author, 1_700_000_000L, ConcordKinds.CONTROL, tags, content)
+        val rumor = RumorAssembler.assembleRumor<Event>(author, 1_700_000_000L, ControlEditionEvent.KIND, tags, content)
 
         val ed = ControlEdition.fromRumor(rumor)
         assertNotNull(ed)
@@ -92,7 +92,7 @@ class ControlEditionTest {
         // missing eid
         assertNull(
             ControlEdition.fromRumor(
-                RumorAssembler.assembleRumor<Event>(author, 1L, ConcordKinds.CONTROL, arrayOf(arrayOf("vsk", "0"), arrayOf("ev", "0")), "{}"),
+                RumorAssembler.assembleRumor<Event>(author, 1L, ControlEditionEvent.KIND, arrayOf(arrayOf("vsk", "0"), arrayOf("ev", "0")), "{}"),
             ),
         )
         // unknown vsk (bit 7 retired)
@@ -101,7 +101,7 @@ class ControlEditionTest {
                 RumorAssembler.assembleRumor<Event>(
                     author,
                     1L,
-                    ConcordKinds.CONTROL,
+                    ControlEditionEvent.KIND,
                     arrayOf(arrayOf("vsk", "7"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "0")),
                     "{}",
                 ),
@@ -112,7 +112,7 @@ class ControlEditionTest {
     @Test
     fun genesisHasNullPrevWhenEpAbsent() {
         val tags = arrayOf(arrayOf("vsk", "2"), arrayOf("eid", eid.toHexKey()), arrayOf("ev", "0"))
-        val ed = ControlEdition.fromRumor(RumorAssembler.assembleRumor<Event>(author, 1L, ConcordKinds.CONTROL, tags, """{"name":"general"}"""))
+        val ed = ControlEdition.fromRumor(RumorAssembler.assembleRumor<Event>(author, 1L, ControlEditionEvent.KIND, tags, """{"name":"general"}"""))
         assertNotNull(ed)
         assertNull(ed.prevHash)
     }

@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.concord.cord05Invites.bundle
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VskTag
 import com.vitorpamplona.quartz.concord.cord04Roles.control.vsk
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -57,7 +56,7 @@ class ConcordInviteBundleEvent(
     fun versionedSubKind() = tags.vsk()
 
     companion object {
-        const val KIND = ConcordKinds.INVITE_BUNDLE
+        const val KIND = 33301
 
         /** Builds the addressable bundle template carrying the already-encrypted [encryptedInvite]. */
         fun build(

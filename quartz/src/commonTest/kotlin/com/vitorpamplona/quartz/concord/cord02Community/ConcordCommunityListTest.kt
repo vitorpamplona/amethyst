@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord02Community
 
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
@@ -53,7 +53,7 @@ class ConcordCommunityListTest {
             val entries = listOf(entry("11".repeat(32), "Gamers"), entry("22".repeat(32), "Nostrichs"))
             val event = ConcordCommunityList.build(signer, entries, createdAt = 1_700_000_000L)
 
-            assertEquals(ConcordKinds.COMMUNITY_LIST, event.kind)
+            assertEquals(ConcordCommunityListEvent.KIND, event.kind)
             assertFalse(event.content.contains("Gamers")) // encrypted on the wire
 
             val parsed = ConcordCommunityList.parse(event, signer)

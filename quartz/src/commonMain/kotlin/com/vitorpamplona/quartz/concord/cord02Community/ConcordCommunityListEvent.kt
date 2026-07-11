@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.concord.cord02Community
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -30,7 +29,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * The member's private, self-encrypted list of joined Concord communities (kind
- * [ConcordKinds.COMMUNITY_LIST] = 13302, CORD-05). A replaceable event whose
+ * 13302, CORD-05). A replaceable event whose
  * `content` is the NIP-44 self-encryption of the [ConcordCommunityListEntry] JSON
  * — including each community's secrets (`community_root`, salt, epoch,
  * private-channel keys), so a single event both syncs membership across devices
@@ -60,7 +59,7 @@ class ConcordCommunityListEvent(
         }
 
     companion object {
-        const val KIND = ConcordKinds.COMMUNITY_LIST
+        const val KIND = 13302
         const val ALT = "Private list of joined Concord communities"
 
         /** The replaceable coordinate for a member's list: `(13302, pubkey, "")`. */

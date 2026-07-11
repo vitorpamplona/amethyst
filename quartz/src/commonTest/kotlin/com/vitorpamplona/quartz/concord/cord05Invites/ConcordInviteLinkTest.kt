@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.concord.cord05Invites
 
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import kotlin.io.encoding.Base64
@@ -83,7 +83,7 @@ class ConcordInviteLinkTest {
         val parsed = ConcordInviteLink.parseUrl(url)
         assertNotNull(parsed)
         assertEquals(signer, parsed.linkSignerPubKey)
-        assertEquals(ConcordKinds.INVITE_BUNDLE, parsed.kind)
+        assertEquals(ConcordInviteBundleEvent.KIND, parsed.kind)
         assertContentEquals(token, parsed.fragment.token)
     }
 

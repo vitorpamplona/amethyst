@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -224,7 +224,7 @@ private fun DisplayAddress(
     // needs the 16-byte unlock token that only lives in the full invite link's #fragment —
     // a naddr alone can't be joined. Show an informative label instead of the generic
     // (and here always-empty) addressable-note card.
-    if (nip19.kind == ConcordKinds.INVITE_BUNDLE) {
+    if (nip19.kind == ConcordInviteBundleEvent.KIND) {
         Text(
             text = stringRes(R.string.concord_invite_naddr_label) + (additionalChars ?: ""),
             color = MaterialTheme.colorScheme.primary,
