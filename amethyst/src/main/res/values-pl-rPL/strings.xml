@@ -803,13 +803,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_auth_policy_always_desc">Poświadcz autoryzację dla każdego transmitera, który o to poprosi</string>
     <string name="relay_auth_policy_never">Nigdy nie uwierzytelniaj</string>
     <string name="relay_auth_policy_never_desc">Ignoruj żądania uwierzytelnienia ze wszystkich transmiterów</string>
-    <string name="relay_auth_policy_if_in_my_list">Tylko moje transmitery</string>
-    <string name="relay_auth_policy_if_in_my_list_desc">Uwierzytelniaj tylko z transmiterami z listy transmiterów</string>
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_per_relay_overrides">Nadrzędność dla poszczególnych transmiterów</string>
     <string name="relay_auth_no_overrides">Brak nadrzędnych reguł dla transmiterów — polityka globalna obowiązuje wszędzie</string>
     <string name="relay_auth_decision_allow">Zezwól</string>
     <string name="relay_auth_decision_deny">Odmów</string>
-    <string name="relay_auth_remove_override">Usuń nadpisanie</string>
     <string name="nip82_repository_label">Źródło: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Pobierz</string>
