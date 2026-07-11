@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,11 +34,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
 /**
- * Shared rounded, accent-tinted container used by the centered "system-style"
- * cards rendered inside the live stream chat feed (zaps, raids, clips).
+ * Shared rounded, accent-tinted container used by the "system-style" cards
+ * rendered inside the live stream chat feed (zaps, raids, clips).
+ *
+ * [fillWidth] = true (default) stretches the card edge to edge, for content that
+ * carries media previews. false hugs the content and centers the card in the
+ * feed, matching the centered system-message pill design.
  *
  * Kept platform-neutral so Desktop can consume it alongside Android.
  */
@@ -45,19 +52,34 @@ fun StreamSystemCard(
     accent: Color = MaterialTheme.colorScheme.primary,
     accentAlpha: Float = 0.12f,
     onClick: (() -> Unit)? = null,
+    fillWidth: Boolean = true,
+    shape: Shape = RoundedCornerShape(8.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
     val base =
-        Modifier
-            .fillMaxWidth()
+        (if (fillWidth) Modifier.fillMaxWidth() else Modifier)
             .padding(horizontal = 8.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(shape)
             .background(accent.copy(alpha = accentAlpha))
 
     val clickable = if (onClick != null) base.clickable(onClick = onClick) else base
 
-    Box(
-        modifier = clickable.padding(horizontal = 10.dp, vertical = 8.dp),
-        content = content,
-    )
+    val card =
+        @Composable {
+            Box(
+                modifier = clickable.padding(horizontal = 10.dp, vertical = 8.dp),
+                content = content,
+            )
+        }
+
+    if (fillWidth) {
+        card()
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            card()
+        }
+    }
 }

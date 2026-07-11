@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,10 +52,12 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 private const val BIG_ZAP_THRESHOLD_SATS = 50_000L
+
+// Matches the 18dp rounding of the redesigned chat bubbles / system pills.
+private val ChatZapCardShape = RoundedCornerShape(18.dp)
 
 @Composable
 fun RenderChatZap(
@@ -79,54 +82,56 @@ fun RenderChatZap(
     val accentAlpha = if (isBigZap) 0.18f else 0.08f
     val amountText = card.amount ?: showAmountInteger(zapEvent.amount)
 
-    StreamSystemCard(accent = BitcoinOrange, accentAlpha = accentAlpha) {
+    // Content-hugging centered pill, matching the system-message design the rest
+    // of the chat feed moved to; the bitcoin accent keeps zaps celebratory.
+    StreamSystemCard(
+        accent = BitcoinOrange,
+        accentAlpha = accentAlpha,
+        fillWidth = false,
+        shape = ChatZapCardShape,
+    ) {
         val backgroundColor = remember(accentAlpha) { mutableStateOf(BitcoinOrange.copy(alpha = accentAlpha)) }
 
-        Row(
-            modifier = Modifier,
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            ZapIcon(
-                if (isBigZap) Size24Modifier else Size20Modifier,
-                BitcoinOrange,
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ZapIcon(
+                    if (isBigZap) Size24Modifier else Size20Modifier,
+                    BitcoinOrange,
+                )
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val sender = card.user
-                    if (sender != null) {
-                        UserPicture(sender, Size20dp, Modifier, accountViewModel, nav)
-                        Spacer(StdHorzSpacer)
-                        UsernameDisplay(
-                            baseUser = sender,
-                            fontWeight = FontWeight.Bold,
-                            accountViewModel = accountViewModel,
-                        )
-                    } else {
-                        Text(
-                            text = stringRes(R.string.chat_zap_anonymous),
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-
-                    Spacer(StdHorzSpacer)
-                    Text(
-                        text = stringRes(R.string.chat_zap_amount_suffix, amountText),
-                        color = BitcoinOrange,
-                        fontWeight = if (isBigZap) FontWeight.Bold else FontWeight.Normal,
-                    )
-                }
-
-                card.comment?.takeIf { it.isNotBlank() }?.let { comment ->
-                    Spacer(Modifier.padding(top = 2.dp))
-                    CrossfadeToDisplayComment(
-                        comment = comment,
-                        backgroundColor = backgroundColor,
-                        nav = nav,
+                val sender = card.user
+                if (sender != null) {
+                    UserPicture(sender, Size20dp, Modifier, accountViewModel, nav)
+                    UsernameDisplay(
+                        baseUser = sender,
+                        fontWeight = FontWeight.Bold,
                         accountViewModel = accountViewModel,
                     )
+                } else {
+                    Text(
+                        text = stringRes(R.string.chat_zap_anonymous),
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
+
+                Text(
+                    text = stringRes(R.string.chat_zap_amount_suffix, amountText),
+                    color = BitcoinOrange,
+                    fontWeight = if (isBigZap) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+
+            card.comment?.takeIf { it.isNotBlank() }?.let { comment ->
+                Spacer(Modifier.padding(top = 2.dp))
+                CrossfadeToDisplayComment(
+                    comment = comment,
+                    backgroundColor = backgroundColor,
+                    nav = nav,
+                    accountViewModel = accountViewModel,
+                )
             }
         }
     }
