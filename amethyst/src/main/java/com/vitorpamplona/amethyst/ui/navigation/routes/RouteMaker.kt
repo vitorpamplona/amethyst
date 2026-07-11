@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.routes
 
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -82,6 +83,14 @@ fun routeFor(
     val relayGroup = note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
     if (relayGroup != null) {
         return routeFor(relayGroup)
+    }
+
+    // Concord channel content (kind 9 chat, 1111 reply, 7 reaction) lands in LocalCache as a real
+    // Note attached to its ConcordChannel gatherer. Like the relay-group case above, route to the
+    // Concord channel screen instead of the generic thread view it would otherwise fall through to.
+    val concordChannel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concordChannel != null) {
+        return routeFor(concordChannel)
     }
 
     val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
@@ -281,6 +290,8 @@ fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.rela
 fun routeFor(note: RelayGroupChannel): Route = Route.RelayGroup(note.groupId.id, note.groupId.relayUrl.url)
 
 fun routeFor(groupId: GroupId): Route = Route.RelayGroup(groupId.id, groupId.relayUrl.url)
+
+fun routeFor(channel: ConcordChannel): Route = Route.Concord(channel.channelId.communityId, channel.channelId.channelId)
 
 fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
 
