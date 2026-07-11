@@ -47,6 +47,13 @@ import java.util.concurrent.TimeUnit
  * consults [CalendarReminderStore] to skip events that have already been notified for. Run as
  * a 15-minute periodic worker: that's the WorkManager minimum and matches the resolution of
  * the reminder UI ("starts in ~15 min" is the smallest interval users perceive as "soon").
+ *
+ * The periodic chain is only kept alive while it can plausibly fire: the ACCEPTED-RSVP
+ * observer in AppModules calls [schedule] when an accepted RSVP lands in LocalCache, and
+ * [doWork] cancels the chain when the cache holds no accepted RSVP that could still start.
+ * LocalCache is memory-only, so a WorkManager wake of a dead process always sees an empty
+ * cache and can never fire a reminder — an unconditional periodic schedule would cold-start
+ * the whole app graph every 15 minutes forever for zero benefit.
  */
 class CalendarReminderWorker(
     appContext: Context,
@@ -55,7 +62,10 @@ class CalendarReminderWorker(
     override suspend fun doWork(): Result {
         val prefs = CalendarReminderPrefs(applicationContext)
         if (!prefs.isEnabled()) {
-            Log.d(TAG) { "Reminders disabled; skipping scan." }
+            Log.d(TAG) { "Reminders disabled; ending periodic chain." }
+            // The settings toggle re-schedules on enable; no reason to keep
+            // waking the process while the feature is off.
+            cancel(applicationContext)
             return Result.success()
         }
         val now = TimeUtils.now()
@@ -110,6 +120,27 @@ class CalendarReminderWorker(
 
         // Prune entries for events that ended more than a day ago — they can't fire again.
         store.forgetBefore(now - PRUNE_AGE_SECONDS)
+
+        // Nothing left that could ever fire → end the periodic chain instead of
+        // waking the process every 15 minutes forever. An RSVP whose target event
+        // hasn't been fetched yet (start unknown) counts as "could still fire" so
+        // the chain survives until the target resolves. The ACCEPTED-RSVP observer
+        // in AppModules re-schedules the worker the next time a live session sees
+        // an accepted RSVP.
+        val couldStillFire =
+            acceptedRsvps.any { rsvp ->
+                val targetAddress = rsvp.calendarEventAddress() ?: return@any false
+                val start =
+                    LocalCache.addressables
+                        .get(targetAddress)
+                        ?.appointmentView()
+                        ?.startSeconds
+                start == null || start > now
+            }
+        if (!couldStillFire) {
+            Log.d(TAG) { "No accepted RSVP can still fire; ending periodic chain." }
+            cancel(applicationContext)
+        }
         return Result.success()
     }
 

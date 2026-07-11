@@ -42,10 +42,15 @@ import java.util.concurrent.TimeUnit
 /**
  * Scans the scheduled-post store and publishes posts whose publish time has arrived.
  *
- *  - schedule(context):       periodic, every 15 min (WorkManager minimum).
- *  - scheduleCatchUp(context): one-time, on app start, to flush posts that came
- *                              due while the device was off or while WorkManager
- *                              was deferred by Doze.
+ *  - schedule(context):       periodic, every 15 min (WorkManager minimum). Only
+ *                             enqueued while the store holds a PENDING post — the
+ *                             store observer in AppModules schedules it when a
+ *                             pending post appears and cancels it when the last
+ *                             one drains, so the worker never wakes the process
+ *                             with nothing to publish.
+ *  - scheduleCatchUp(context): one-time, to flush posts that came due while the
+ *                              device was off or while WorkManager was deferred
+ *                              by Doze.
  */
 class ScheduledPostWorker(
     appContext: Context,
@@ -105,6 +110,16 @@ class ScheduledPostWorker(
                 request,
             )
             Log.d(TAG) { "scheduleCatchUp(): enqueueUniqueWork($WORK_NAME_CATCH_UP, KEEP)" }
+        }
+
+        /**
+         * Ends the 15-minute periodic chain (keeps any catch-up run). Called by the
+         * store observer in AppModules when the last PENDING post drains, so the
+         * worker doesn't keep waking the process with nothing to publish.
+         */
+        fun cancelPeriodic(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            Log.d(TAG) { "cancelPeriodic(): cancelled periodic worker" }
         }
 
         fun cancel(context: Context) {

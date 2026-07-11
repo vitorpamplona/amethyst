@@ -158,13 +158,17 @@ Google Play Services infrastructure.
 
 ### Layer 4: AlarmManager Watchdog (5 minutes)
 
-**What:** `ServiceWatchdogManager` fires an `ELAPSED_REALTIME_WAKEUP` alarm every 5
+**What:** `ServiceWatchdogManager` fires an `ELAPSED_REALTIME` alarm every 5
 minutes. The receiver checks if the service should be running and restarts it.
 
 **Why needed:** This is the "belt and suspenders" layer. If all of the above layers fail
 (sticky restart blocked, alarm from `onTaskRemoved` didn't fire, broadcast wasn't
-delivered), the watchdog will catch it within 5 minutes. Uses `ELAPSED_REALTIME_WAKEUP` to
-wake the device from sleep, ensuring the check happens even in Doze.
+delivered), the watchdog will catch it within 5 minutes of the device being awake.
+The alarm deliberately does NOT use the `_WAKEUP` variant: pulling the CPU out of
+sleep every 5 minutes is a battery cost with no payoff, because a service restarted
+on a sleeping device can't do useful network work until the device wakes anyway.
+While the device sleeps, Layer 5 (WorkManager) and Layer 8 (FCM/UnifiedPush) cover
+delivery; the moment the device wakes, the pending watchdog alarm fires.
 
 ### Layer 5: WorkManager Periodic Catch-Up (15 minutes)
 

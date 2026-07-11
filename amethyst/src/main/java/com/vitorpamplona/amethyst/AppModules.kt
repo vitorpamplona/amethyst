@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
@@ -86,6 +87,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.safeCacheDir
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
@@ -105,6 +107,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
@@ -124,6 +127,8 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClie
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
@@ -887,17 +892,48 @@ class AppModules(
         // starts observing LocalCache for notification-worthy events
         notificationDispatcher.start()
 
-        // Schedule the scheduled-posts worker (periodic + one-time catch-up).
-        // Runs independently of the always-on notification setting so scheduled
-        // posts still fire when always-on notifications are disabled.
-        ScheduledPostWorker.schedule(appContext)
-        ScheduledPostWorker.scheduleCatchUp(appContext)
+        // Keep the scheduled-posts worker (15-min periodic + one-time catch-up)
+        // enqueued exactly while the store holds a PENDING post. An always-on
+        // periodic worker wakes — and often cold-starts — the whole process every
+        // 15 minutes forever, even for users who never schedule a post. The store
+        // is durable (JSON on disk) and the single source of truth, so the worker
+        // is (re-)enqueued from any mutation that produces a PENDING row and
+        // cancelled when the last one drains. Runs independently of the always-on
+        // notification setting so scheduled posts still fire when always-on
+        // notifications are disabled.
+        applicationIOScope.launch {
+            // Force the initial disk load; the flow's initial value is an empty
+            // list until the store is first touched.
+            scheduledPostStore.list()
+            scheduledPostStore.flow
+                .map { posts -> posts.any { it.status == ScheduledPostStatus.PENDING } }
+                .distinctUntilChanged()
+                .collect { hasPending ->
+                    if (hasPending) {
+                        ScheduledPostWorker.schedule(appContext)
+                        ScheduledPostWorker.scheduleCatchUp(appContext)
+                    } else {
+                        ScheduledPostWorker.cancelPeriodic(appContext)
+                    }
+                }
+        }
 
-        // Periodic scan that posts "starting soon" notifications for NIP-52 appointments the
-        // user has RSVP'd to as ACCEPTED. 15-minute cadence matches both the WorkManager
-        // periodic minimum and the lead-time window.
-        com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
-            .schedule(appContext)
+        // "Starting soon" reminders for NIP-52 appointments the user RSVP'd to as
+        // ACCEPTED. The 15-min periodic scanner is only scheduled while it can
+        // plausibly fire: this observer enqueues it when an accepted RSVP lands in
+        // LocalCache, and the worker cancels its own chain when the cache holds
+        // nothing that could still start. LocalCache is memory-only, so the
+        // unconditional schedule this replaces could never fire from a WorkManager
+        // cold start anyway — it only cost battery.
+        applicationIOScope.launch {
+            LocalCache
+                .observeNewEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
+                .collect { rsvp ->
+                    if (rsvp.status() == RSVPStatusTag.STATUS.ACCEPTED) {
+                        CalendarReminderWorker.schedule(appContext)
+                    }
+                }
+        }
 
         // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {
