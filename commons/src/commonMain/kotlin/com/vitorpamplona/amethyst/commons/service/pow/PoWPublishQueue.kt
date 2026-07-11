@@ -96,7 +96,10 @@ data class PoWJobFailure(
  * to the normal sign+broadcast continuation captured at enqueue time.
  *
  * FIFO with at most [maxConcurrent] concurrent miners so a burst of posts
- * queues up instead of spawning unbounded CPU work. Jobs are cancellable
+ * queues up instead of spawning unbounded CPU work. Each job's nonce search
+ * runs on [minerThreads] parallel workers (see PoWMiner.mine) — callers that
+ * bring their own mine lambda via [enqueueStaged]/[enqueueWork] should reuse
+ * this value to stay inside the queue's CPU budget. Jobs are cancellable
  * while QUEUED or MINING; once PUBLISHING starts, cancel is a no-op.
  *
  * Template jobs enqueued with a [PersistedPoWJob] record are checkpointed to
@@ -115,6 +118,7 @@ data class PoWJobFailure(
 class PoWPublishQueue(
     private val scope: CoroutineScope,
     maxConcurrent: Int = 1,
+    val minerThreads: Int = 1,
     miningDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val persistence: PoWJobPersistence? = null,
     private val onQueueActive: () -> Unit = {},
@@ -198,7 +202,7 @@ class PoWPublishQueue(
                 } else {
                     template
                 }
-            PoWMiner.run(toMine, pubKey, difficulty, isActive)
+            PoWMiner.mine(toMine, pubKey, difficulty, minerThreads, isActive)
         },
         publish = onMined,
     )

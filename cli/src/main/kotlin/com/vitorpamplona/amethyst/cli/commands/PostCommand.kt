@@ -81,13 +81,14 @@ object PostCommand {
             var powMillis: Long? = null
             val readyToSign =
                 if (powTarget != null) {
-                    System.err.println("mining $powTarget bits…")
+                    val threads = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+                    System.err.println("mining $powTarget bits… ($threads threads)")
                     val deadlineNanos = powTimeoutSec?.let { System.nanoTime() + it * 1_000_000_000L }
                     val startedAt = System.nanoTime()
                     val mined =
                         try {
                             withContext(Dispatchers.Default) {
-                                PoWMiner.run(template, ctx.signer.pubKey, powTarget) {
+                                PoWMiner.mine(template, ctx.signer.pubKey, powTarget, threads) {
                                     deadlineNanos == null || System.nanoTime() < deadlineNanos
                                 }
                             }

@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
@@ -117,7 +118,7 @@ fun PowOverrideButton(
             val context = LocalContext.current
             val hashRate by
                 produceState<Double?>(initialValue = null) {
-                    value = PoWEstimator.hashesPerSecond()
+                    value = deviceHashesPerSecond()
                 }
 
             fun eta(difficulty: Int): String? = hashRate?.let { formatApproxDuration(context, PoWEstimator.estimateSeconds(difficulty, it)) }

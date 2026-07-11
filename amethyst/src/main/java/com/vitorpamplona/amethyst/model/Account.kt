@@ -825,6 +825,14 @@ class Account(
         }
 
     /**
+     * Parallel workers a single nonce search should use — the mining queue's
+     * per-job budget (half the device's cores). 1 when no queue is wired.
+     * Callers that run [PoWMiner] inside a queued job must pass this so the
+     * job stays inside the queue's CPU budget.
+     */
+    fun powMinerWorkers(): Int = powQueue()?.minerThreads ?: 1
+
+    /**
      * Enqueues [work] into the fire-and-forget mining queue. Returns false when
      * no queue is wired (headless/test accounts): callers must then run their
      * direct, un-mined send path instead.
@@ -932,7 +940,9 @@ class Account(
             mine = { isActive ->
                 // the wrap's ephemeral key is generated inside the wrap build;
                 // the conversion hook hands its pubkey back so the nonce can
-                // commit to it.
+                // commit to it. Single-threaded on purpose: the conversion is
+                // a non-suspend hook deep inside the synchronous NIP-59 wrap
+                // build, so it can't race PoWMiner.mine workers.
                 val mineWrap: GiftWrapTemplateConversion = { template, ephemeralPubKey ->
                     PoWMiner.run(template, ephemeralPubKey, difficulty, isActive)
                 }
@@ -964,14 +974,15 @@ class Account(
         isActive: () -> Boolean,
     ): NostrSigner {
         val currentSigner = signer
+        val workers = powMinerWorkers()
         return if (currentSigner is NostrSignerWithClientTag) {
             NostrSignerWithClientTag(
-                inner = PoWNostrSigner(currentSigner.inner, difficulty, kindsToMine, isActive),
+                inner = PoWNostrSigner(currentSigner.inner, difficulty, kindsToMine, isActive, workers),
                 clientTag = currentSigner.clientTag,
                 disabled = currentSigner.disabled,
             )
         } else {
-            PoWNostrSigner(currentSigner, difficulty, kindsToMine, isActive)
+            PoWNostrSigner(currentSigner, difficulty, kindsToMine, isActive, workers)
         }
     }
 

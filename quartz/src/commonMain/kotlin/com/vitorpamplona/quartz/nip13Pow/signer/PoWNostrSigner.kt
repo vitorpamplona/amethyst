@@ -38,12 +38,16 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
  * Only events whose kind is in [kindsToMine] are mined; anything else (e.g. the
  * seal and rumor of a gift-wrapped flow) passes through untouched. Templates that
  * already carry a nonce tag are not mined again.
+ *
+ * [workers] parallel searches race over disjoint nonce slices (see
+ * [PoWMiner.mine]); 1 keeps the historical single-threaded behavior.
  */
 class PoWNostrSigner(
     val signer: NostrSigner,
     val desiredPoW: Int,
     val kindsToMine: Set<Int>,
     val isActive: () -> Boolean = { true },
+    val workers: Int = 1,
 ) : NostrSigner(signer.pubKey) {
     override fun isWriteable(): Boolean = signer.isWriteable()
 
@@ -55,10 +59,11 @@ class PoWNostrSigner(
     ): T =
         if (kind in kindsToMine && tags.none { PoWTag.hasTagWithContent(it) }) {
             val mined =
-                PoWMiner.run(
+                PoWMiner.mine(
                     template = EventTemplate<T>(createdAt, kind, tags, content),
                     pubKey = pubKey,
                     desiredPoW = desiredPoW,
+                    workers = workers,
                     isActive = isActive,
                 )
             signer.sign(mined.createdAt, mined.kind, mined.tags, mined.content)

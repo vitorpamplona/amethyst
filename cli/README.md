@@ -216,8 +216,8 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]` | Encode an addressable-event (`a` tag) pointer. |
 | `amy verify [EVENT-JSON]` | Check an event's id hash and signature. Reads stdin when the argument is omitted or `-`. Reports `id_ok` + `signature_ok` separately. |
 | `amy pow check EVENT-JSON\|-` | NIP-13 difficulty of a signed event: `actual_bits`, `committed_target`, `has_commitment`, and `effective_pow` (capped at the commitment so lucky low-target spam doesn't over-count), plus `valid` (id + signature). |
-| `amy pow mine --target N [--pubkey HEX] [--timeout SECS] TEMPLATE-JSON\|-` | Mine an **unsigned** template to N leading zero bits and print it back with the nonce tag. Ids don't commit to signatures, so amy can mine on behalf of any pubkey (NIP-13 delegated PoW); defaults to the active account. Exit 124 on timeout. |
-| `amy pow bench` | Benchmark this machine's hash rate and print expected mining time at 16/20/24/28 bits. |
+| `amy pow mine --target N [--pubkey HEX] [--timeout SECS] [--threads N] TEMPLATE-JSON\|-` | Mine an **unsigned** template to N leading zero bits and print it back with the nonce tag. Ids don't commit to signatures, so amy can mine on behalf of any pubkey (NIP-13 delegated PoW); defaults to the active account. Mines on all cores by default (`--threads` to override). Exit 124 on timeout. |
+| `amy pow bench` | Benchmark this machine's hash rate — `hashes_per_second` is the all-cores rate `pow mine` uses by default, `hashes_per_second_single_core` the one-thread rate — and print expected mining time at 16/20/24/28 bits. |
 | `amy key generate` | Mint a fresh keypair (`nsec` + `npub` + hex). Does not persist — use `init`/`login` for that. |
 | `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
 | `amy key encrypt NSEC\|HEX --password X` | NIP-49 encrypt a secret key to an `ncryptsec1…`. |
@@ -384,7 +384,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 
 | Command | What it does |
 |---|---|
-| `amy notes post TEXT [--relay URL] [--pow BITS [--pow-timeout SECS]]` | Publish a kind:1 short text note; `--pow` mines a NIP-13 proof of work into it first (blocks while mining, exit 124 on timeout with nothing published; `--json` adds `pow`, `pow_target`, `pow_millis`). |
+| `amy notes post TEXT [--relay URL] [--pow BITS [--pow-timeout SECS]]` | Publish a kind:1 short text note; `--pow` mines a NIP-13 proof of work into it first, using all cores (blocks while mining, exit 124 on timeout with nothing published; `--json` adds `pow`, `pow_target`, `pow_millis`). |
 | `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |

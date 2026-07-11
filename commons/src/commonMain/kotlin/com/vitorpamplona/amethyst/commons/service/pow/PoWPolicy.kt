@@ -86,6 +86,13 @@ object PoWPolicy {
      */
     const val MAX_DIFFICULTY = 40
 
+    /**
+     * How many parallel miner workers one mining job should use on a device
+     * with [availableProcessors] cores: half of them, so a running miner never
+     * starves the UI/render threads or the relay client. At least 1.
+     */
+    fun minerWorkers(availableProcessors: Int): Int = (availableProcessors / 2).coerceAtLeast(1)
+
     private const val LONG_FORM_DRAFT_KIND = 30024
 
     /** NIP-51 sets and other settings-like addressable kinds. */
