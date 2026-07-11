@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -3769,6 +3770,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 // servers. Replaceable like its sibling lists; RelayGroupListState reads it from the
                 // addressable cache, so it must be stored (it was silently dropped before).
                 is SimpleGroupListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                // Concord private joined-communities list (kind 13302). Replaceable, self-encrypted;
+                // ConcordChannelListState observes it via the addressable cache (Address(13302, me, "")),
+                // so — exactly like the 10009 list above — it must be stored replaceably or the Concord
+                // hub stays empty even after the event arrives.
+                is ConcordCommunityListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

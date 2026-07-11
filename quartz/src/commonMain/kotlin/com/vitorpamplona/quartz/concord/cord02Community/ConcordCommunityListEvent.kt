@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.concord.cord02Community
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -48,7 +48,7 @@ class ConcordCommunityListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun isContentEncoded() = true
 
     /** Decrypts this list's entries with [signer], or empty on failure / wrong key. */
