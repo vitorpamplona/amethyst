@@ -52,6 +52,11 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
+import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
@@ -184,6 +189,8 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
+import com.vitorpamplona.quartz.nip13Pow.signer.PoWNostrSigner
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -203,6 +210,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -228,6 +236,7 @@ import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkLi
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -246,6 +255,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapTemplateConversion
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -267,6 +277,7 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -287,6 +298,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
@@ -326,6 +338,7 @@ class Account(
     val mlsGroupStateStore: MlsGroupStateStore? = null,
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
+    val powQueue: () -> PoWPublishQueue? = { null },
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -662,6 +675,21 @@ class Account(
         return false
     }
 
+    suspend fun updatePowDifficulty(difficulty: Int) {
+        if (settings.updatePowDifficulty(difficulty)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun updatePowCategory(
+        category: PoWCategory,
+        enabled: Boolean,
+    ) {
+        if (settings.updatePowCategory(category, enabled)) {
+            sendNewAppSpecificData()
+        }
+    }
+
     suspend fun updateFilterSpam(filterSpam: Boolean): Boolean {
         if (settings.updateFilterSpam(filterSpam)) {
             if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {
@@ -763,17 +791,233 @@ class Account(
 
     private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
+    // ---
+    // NIP-13 proof-of-work publishing
+    // ---
+
+    /**
+     * Difficulty to mine [kind] at per this account's NIP-13 settings, or null
+     * when the kind publishes immediately: master difficulty off, category
+     * disabled, or one of [PoWPolicy]'s hard-excluded kinds (auth, zap
+     * requests, NWC/bunker RPC, drafts, lists…).
+     */
+    fun powDifficultyFor(kind: Int): Int? =
+        PoWPolicy.shouldMine(
+            kind = kind,
+            difficulty = settings.syncedSettings.proofOfWork.difficulty.value,
+            enabledCategories = settings.syncedSettings.proofOfWork.enabledCategories.value,
+        )
+
+    /**
+     * [powDifficultyFor] with a per-post override from the composer chip:
+     * null defers to the account settings, 0 disables mining for this post,
+     * a positive value forces that difficulty (hard-excluded kinds still win).
+     */
+    fun powDifficultyFor(
+        kind: Int,
+        overrideDifficulty: Int?,
+    ): Int? =
+        when {
+            overrideDifficulty == null -> powDifficultyFor(kind)
+            overrideDifficulty <= 0 -> null
+            PoWPolicy.neverMine(kind) -> null
+            else -> overrideDifficulty
+        }
+
+    /**
+     * Enqueues [work] into the fire-and-forget mining queue. Returns false when
+     * no queue is wired (headless/test accounts): callers must then run their
+     * direct, un-mined send path instead.
+     */
+    fun mineInBackground(
+        kind: Int,
+        difficulty: Int,
+        work: suspend (isActive: () -> Boolean) -> Unit,
+    ): Boolean {
+        val queue = powQueue() ?: return false
+        queue.enqueueWork(kind, difficulty, owner = signer.pubKey, work = work)
+        return true
+    }
+
+    /**
+     * Enqueues [template] to be mined at [difficulty] and then handed to
+     * [onMined], which should run the exact sign+send path the caller would
+     * have used without PoW. Returns false when no queue is wired.
+     *
+     * When [replay] is given the job is checkpointed to disk so it survives
+     * process death: on the next login the restorer re-mines the persisted
+     * template and finishes it with the (headless) replay path instead of
+     * [onMined]. Pass null for content that must not touch disk.
+     *
+     * The template is normalized to the final tag shape the signer will submit
+     * (client tag included) before mining — a tag appended after mining would
+     * invalidate the nonce.
+     */
+    fun <T : Event> mineTemplateInBackground(
+        template: EventTemplate<T>,
+        difficulty: Int,
+        replay: PoWReplay? = null,
+        onMined: suspend (EventTemplate<T>) -> Unit,
+    ): Boolean {
+        val queue = powQueue() ?: return false
+        val finalTemplate = withFinalSignerTags(template)
+        val record = replay?.toRecord(RandomInstance.randomChars(16), signer.pubKey, finalTemplate, difficulty)
+        queue.enqueue(
+            template = finalTemplate,
+            pubKey = signer.pubKey,
+            difficulty = difficulty,
+            persistAs = record,
+            // NIP-13 recommends refreshing created_at while mining; scheduled
+            // posts keep their intentional future timestamp.
+            refreshCreatedAtOnStart = replay !is PoWReplay.Schedule,
+            onMined = onMined,
+        )
+        return true
+    }
+
+    /**
+     * The one-liner for template send paths: when [template]'s kind should be
+     * mined (per settings and the optional composer [overrideDifficulty]),
+     * enqueue it and run [send] with the mined template once the nonce is
+     * found; otherwise run [send] with [template] right now.
+     */
+    suspend fun <T : Event> sendMined(
+        template: EventTemplate<T>,
+        replay: PoWReplay?,
+        overrideDifficulty: Int? = null,
+        send: suspend (EventTemplate<T>) -> Unit,
+    ) {
+        val difficulty = powDifficultyFor(template.kind, overrideDifficulty)
+        if (difficulty == null || !mineTemplateInBackground(template, difficulty, replay, send)) {
+            send(template)
+        }
+    }
+
+    /**
+     * Queues wrap mining for pre-signed [seals] (see NIP17Factory.createSeals):
+     * each seal gets its ephemeral-key envelope mined at [difficulty] on the
+     * worker pool, then the wraps broadcast. Checkpointed under
+     * [PersistedPoWJob.REPLAY_WRAPS] (the seals are already-signed ciphertext,
+     * safe to persist) unless an [existingRecord] from the restorer is passed.
+     * Returns false when no queue is wired.
+     */
+    fun mineWrapsInBackground(
+        seals: List<NIP17Factory.AddressedSeal>,
+        expirationDelta: Long?,
+        difficulty: Int,
+        existingRecord: PersistedPoWJob? = null,
+    ): Boolean {
+        val queue = powQueue() ?: return false
+        if (seals.isEmpty()) return true
+
+        val record =
+            existingRecord
+                ?: PersistedPoWJob(
+                    id = RandomInstance.randomChars(16),
+                    accountPubkey = signer.pubKey,
+                    kind = GiftWrapEvent.KIND,
+                    difficulty = difficulty,
+                    templateJson = "",
+                    replayType = PersistedPoWJob.REPLAY_WRAPS,
+                    extraEventsJson = seals.map { it.seal.toJson() },
+                    recipientPubkeys = seals.map { it.recipient },
+                    wrapExpirationDelta = expirationDelta,
+                    createdAtSec = TimeUtils.now(),
+                )
+
+        queue.enqueueStaged(
+            kind = GiftWrapEvent.KIND,
+            difficulty = difficulty,
+            persistAs = record,
+            mine = { isActive ->
+                // the wrap's ephemeral key is generated inside the wrap build;
+                // the conversion hook hands its pubkey back so the nonce can
+                // commit to it.
+                val mineWrap: GiftWrapTemplateConversion = { template, ephemeralPubKey ->
+                    PoWMiner.run(template, ephemeralPubKey, difficulty, isActive)
+                }
+                seals.map { NIP17Factory().wrapSeal(it, expirationDelta, templateConversion = mineWrap) }
+            },
+            publish = { wraps -> broadcastPrivately(wraps) },
+        )
+        return true
+    }
+
+    private fun <T : Event> withFinalSignerTags(template: EventTemplate<T>): EventTemplate<T> {
+        val currentSigner = signer
+        if (currentSigner !is NostrSignerWithClientTag) return template
+
+        val finalTags = currentSigner.prepareTags(template.tags)
+        if (finalTags === template.tags) return template
+
+        return EventTemplate(template.createdAt, template.kind, finalTags, template.content)
+    }
+
+    /**
+     * A signer that mines [kindsToMine] at [difficulty] right before signing.
+     * When the account signer stamps a client tag, the miner is layered inside
+     * it so mining runs over the final tag set.
+     */
+    private fun miningSigner(
+        difficulty: Int,
+        kindsToMine: Set<Int>,
+        isActive: () -> Boolean,
+    ): NostrSigner {
+        val currentSigner = signer
+        return if (currentSigner is NostrSignerWithClientTag) {
+            NostrSignerWithClientTag(
+                inner = PoWNostrSigner(currentSigner.inner, difficulty, kindsToMine, isActive),
+                clientTag = currentSigner.clientTag,
+                disabled = currentSigner.disabled,
+            )
+        } else {
+            PoWNostrSigner(currentSigner, difficulty, kindsToMine, isActive)
+        }
+    }
+
     suspend fun reactTo(
         note: Note,
         reaction: String,
-    ) = ReactionAction.reactTo(
-        note = note,
-        reaction = reaction,
-        by = userProfile(),
-        signer = signer,
-        onPublic = ::sendAutomatic,
-        onPrivate = ::broadcastPrivately,
-    )
+    ) {
+        // Reactions to NIP-17 groups and unsealed rumors are gift-wrapped: the
+        // inner kind-7 only ever travels as ciphertext, so mining it is pure
+        // waste — those targets skip the queue and sign with the plain signer.
+        val isPrivateTarget = note.event is NIP17Group || note.isPrivateRumor()
+
+        val powDifficulty = if (isPrivateTarget) null else powDifficultyFor(ReactionEvent.KIND)
+        if (powDifficulty != null) {
+            val queue = powQueue()
+            if (queue != null) {
+                // toggle semantics while mining: a second tap on the same
+                // reaction un-likes by cancelling the pending job instead of
+                // publishing a duplicate (the mined event doesn't exist yet,
+                // so hasReacted can't dedupe).
+                val dedupeKey = "reaction:${note.idHex}:$reaction"
+                if (queue.cancelByKey(dedupeKey)) return
+
+                queue.enqueueWork(ReactionEvent.KIND, powDifficulty, dedupeKey, owner = signer.pubKey) { isActive ->
+                    ReactionAction.reactTo(
+                        note = note,
+                        reaction = reaction,
+                        by = userProfile(),
+                        signer = miningSigner(powDifficulty, setOf(ReactionEvent.KIND), isActive),
+                        onPublic = ::sendAutomatic,
+                        onPrivate = ::broadcastPrivately,
+                    )
+                }
+                return
+            }
+        }
+
+        ReactionAction.reactTo(
+            note = note,
+            reaction = reaction,
+            by = userProfile(),
+            signer = signer,
+            onPublic = ::sendAutomatic,
+            onPrivate = ::broadcastPrivately,
+        )
+    }
 
     /**
      * Creates a reaction event without sending it.
@@ -1031,16 +1275,41 @@ class Account(
             // A kind-1984 e-tagging the rumor would leak the private id onto
             // public relays. Report the author instead (p-tag only).
             note.author?.let { report(it, type, content) }
-        } else {
-            sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+            return
         }
+
+        val powDifficulty = powDifficultyFor(ReportEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(ReportEvent.KIND, powDifficulty) { isActive ->
+                sendMyPublicAndPrivateOutbox(
+                    ReportAction.report(note, type, content, userProfile(), miningSigner(powDifficulty, setOf(ReportEvent.KIND), isActive)),
+                )
+            }
+        ) {
+            return
+        }
+
+        sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
     }
 
     suspend fun report(
         user: User,
         type: ReportType,
         content: String = "",
-    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
+    ) {
+        val powDifficulty = powDifficultyFor(ReportEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(ReportEvent.KIND, powDifficulty) { isActive ->
+                sendMyPublicAndPrivateOutbox(
+                    ReportAction.report(user, type, content, userProfile(), miningSigner(powDifficulty, setOf(ReportEvent.KIND), isActive)),
+                )
+            }
+        ) {
+            return
+        }
+
+        sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
+    }
 
     suspend fun delete(note: Note) = delete(listOf(note))
 
@@ -1116,7 +1385,23 @@ class Account(
     ) = blossomServers.createBlossomDeleteAuth(hash, alt)
 
     suspend fun boost(note: Note) {
-        RepostAction.repost(note, signer)?.let { event ->
+        val powDifficulty = powDifficultyFor(RepostEvent.KIND)
+        if (powDifficulty != null &&
+            mineInBackground(RepostEvent.KIND, powDifficulty) { isActive ->
+                repostNow(note, miningSigner(powDifficulty, setOf(RepostEvent.KIND, GenericRepostEvent.KIND), isActive))
+            }
+        ) {
+            return
+        }
+
+        repostNow(note, signer)
+    }
+
+    private suspend fun repostNow(
+        note: Note,
+        repostSigner: NostrSigner,
+    ) {
+        RepostAction.repost(note, repostSigner)?.let { event ->
             client.publish(event, computeMyReactionToNote(note, event))
             cache.justConsumeMyOwnEvent(event)
         }
@@ -2534,13 +2819,31 @@ class Account(
     override suspend fun sendNip17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
-        val wraps = NIP17Factory().createEncryptedFileNIP17(template, signer)
-        broadcastPrivately(wraps)
+        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
+        if (powDifficulty != null) {
+            // Sign the inner event and every seal NOW, in the caller's
+            // interaction context — an external signer (Amber/bunker) cannot
+            // prompt from a background mining worker. Only the local-CPU
+            // ephemeral-key wrap mining goes to the queue, checkpointed so a
+            // process death mid-mine cannot lose the file announcement.
+            val senderMessage = signer.sign(template)
+            val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
+        }
+
+        broadcastPrivately(NIP17Factory().createEncryptedFileNIP17(template, signer))
     }
 
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
-        val events = NIP17Factory().createMessageNIP17(template, signer)
-        broadcastPrivately(events)
+        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND)
+        if (powDifficulty != null) {
+            // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
+            val senderMessage = signer.sign(template)
+            val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
+        }
+
+        broadcastPrivately(NIP17Factory().createMessageNIP17(template, signer))
     }
 
     /**
@@ -2549,9 +2852,25 @@ class Account(
      * to the recipient's DM relays. Used for private replies (the parent's
      * author and participants are already p-tagged) and for private posts
      * (the Notify list is the audience). Nothing reaches public relays.
+     *
+     * [powOverrideDifficulty] is the composer chip's per-post override:
+     * null follows the account's gift-wrap setting, 0 disables mining.
      */
-    suspend fun sendPrivateNote(template: EventTemplate<TextNoteEvent>) {
+    suspend fun sendPrivateNote(
+        template: EventTemplate<TextNoteEvent>,
+        powOverrideDifficulty: Int? = null,
+    ) {
         if (!isWriteable()) return
+
+        val powDifficulty = powDifficultyFor(GiftWrapEvent.KIND, powOverrideDifficulty)
+        if (powDifficulty != null) {
+            // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
+            val senderNote = signer.sign(template)
+            val recipients = senderNote.taggedUserIds().plus(signer.pubKey).toSet()
+            val seals = NIP17Factory().createSeals(senderNote, recipients, signer)
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
+        }
+
         broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
     }
 
@@ -2562,8 +2881,10 @@ class Account(
         }
     }
 
-    suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
-        val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
+    suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) = broadcastPrivately(signedEvents.wraps)
+
+    suspend fun broadcastPrivately(wraps: List<GiftWrapEvent>) {
+        val mine = wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
             cache.justConsumeMyOwnEvent(giftWrap)
@@ -2572,7 +2893,7 @@ class Account(
         val id = mine.firstOrNull()?.id
         val mineNote = if (id == null) null else cache.getNoteIfExists(id)
 
-        signedEvents.wraps.forEach { wrap ->
+        wraps.forEach { wrap ->
             // Creates an alias
             if (mineNote != null && wrap.recipientPubKey() != signer.pubKey) {
                 cache.getOrAddAliasNote(wrap.id, mineNote)

@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
@@ -251,8 +252,11 @@ class VoiceReplyViewModel : ViewModel() {
                         // Check if replying to a voice event
                         val voiceHint = note.toEventHint<BaseVoiceEvent>()
                         if (voiceHint != null) {
-                            // Create VoiceReplyEvent (KIND 1244) for voice-to-voice replies
-                            accountViewModel.account.signAndComputeBroadcast(VoiceReplyEvent.build(audioMeta, voiceHint))
+                            // Create VoiceReplyEvent (KIND 1244) for voice-to-voice replies,
+                            // routed through the PoW gate (VOICE category; no-op when off)
+                            accountViewModel.account.sendMined(VoiceReplyEvent.build(audioMeta, voiceHint), PoWReplay.Broadcast()) {
+                                accountViewModel.account.signAndComputeBroadcast(it)
+                            }
                         } else {
                             // Create TextNoteEvent (KIND 1) with audio IMeta for voice replies to regular notes
                             val textHint = note.toEventHint<TextNoteEvent>()
@@ -270,7 +274,9 @@ class VoiceReplyViewModel : ViewModel() {
                                     // Add audio as IMeta attachment
                                     add(audioMeta.toIMetaArray())
                                 }
-                            accountViewModel.account.signAndComputeBroadcast(template)
+                            accountViewModel.account.sendMined(template, PoWReplay.Broadcast()) {
+                                accountViewModel.account.signAndComputeBroadcast(it)
+                            }
                         }
 
                         accountViewModel.account.settings.changeDefaultFileServer(server)

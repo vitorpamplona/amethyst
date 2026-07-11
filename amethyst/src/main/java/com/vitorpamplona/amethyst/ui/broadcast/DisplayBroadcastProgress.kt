@@ -37,11 +37,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
 
 /**
@@ -50,29 +53,38 @@ import kotlinx.coroutines.delay
  * - CompletedBroadcastIndicator: Shows completed broadcast for tap-to-view (auto-dismisses after 10s)
  * - BroadcastDetailsSheet: Shows detailed relay status on tap
  *
- * Hidden when the "Tracked broadcasts" UI setting is off.
+ * The relay-progress part is hidden when the "Tracked broadcasts" UI setting
+ * is off, but the NIP-13 mining phase always shows — the user needs to see
+ * (and be able to cancel) posts still burning CPU in the queue.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
     val useTrackedBroadcasts by accountViewModel.settings.uiSettingsFlow.useTrackedBroadcasts
         .collectAsStateWithLifecycle()
-    if (useTrackedBroadcasts != BooleanType.ALWAYS) return
+    val trackingEnabled = useTrackedBroadcasts == BooleanType.ALWAYS
 
-    val activeBroadcasts by accountViewModel.broadcastTracker.activeBroadcasts.collectAsStateWithLifecycle()
+    val miningJobs by Amethyst.instance.powPublishQueue.jobs
+        .collectAsStateWithLifecycle()
+    val trackedBroadcasts by accountViewModel.broadcastTracker.activeBroadcasts.collectAsStateWithLifecycle()
+    val activeBroadcasts = if (trackingEnabled) trackedBroadcasts else persistentListOf()
 
     // State for details sheet
     var seeDetails by remember { mutableStateOf(false) }
 
-    if (activeBroadcasts.isEmpty() && !seeDetails) return
+    if (activeBroadcasts.isEmpty() && miningJobs.isEmpty() && !seeDetails) return
 
     if (!seeDetails) {
-        DisplaySnack(activeBroadcasts, { seeDetails = true }, accountViewModel)
+        DisplaySnack(
+            activeBroadcasts,
+            miningJobs,
+            { if (activeBroadcasts.isNotEmpty()) seeDetails = true },
+            accountViewModel,
+        )
 
         LaunchedEffect(activeBroadcasts) {
             // this effect gets restarted every time the active broadcast changes
-            val allComplete = activeBroadcasts.all { it.isComplete }
-            if (allComplete) {
+            if (activeBroadcasts.isNotEmpty() && activeBroadcasts.all { it.isComplete }) {
                 // All relays responded — dismiss quickly
                 delay(3_000)
                 accountViewModel.broadcastTracker.clear()
@@ -111,12 +123,15 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
 @Composable
 fun DisplaySnack(
     activeBroadcasts: ImmutableList<BroadcastEvent>,
+    miningJobs: ImmutableList<PoWJobState>,
     onTap: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         BroadcastBanner(
             broadcasts = activeBroadcasts,
+            miningJobs = miningJobs,
+            onCancelJob = { Amethyst.instance.powPublishQueue.cancel(it) },
             onTap = onTap,
             onRetryAll = {
                 activeBroadcasts.forEach { b ->

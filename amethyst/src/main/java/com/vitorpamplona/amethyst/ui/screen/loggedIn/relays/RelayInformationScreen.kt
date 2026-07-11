@@ -939,7 +939,7 @@ fun LimitationsCard(lim: Nip11RelayInformation.RelayInformationLimitation) {
                     val minPoW = lim.min_pow_difficulty
 
                     if (minPoW != null && minPoW > 0) {
-                        InfoRow(MaterialSymbols.Bolt, stringRes(R.string.minimum_pow), stringRes(R.string.amount_in_bits, minPoW))
+                        InfoRow(MaterialSymbols.Manufacturing, stringRes(R.string.minimum_pow), stringRes(R.string.amount_in_bits, minPoW))
                     } else {
                         lim.min_prefix?.let {
                             if (it > 0) {

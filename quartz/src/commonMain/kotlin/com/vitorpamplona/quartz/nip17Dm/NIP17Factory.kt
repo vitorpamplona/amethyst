@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapTemplateConversion
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -46,6 +47,80 @@ class NIP17Factory {
         val msg: Event,
         val wraps: List<GiftWrapEvent>,
     )
+
+    /** A seal encrypted to one recipient, waiting to be gift-wrapped. */
+    data class AddressedSeal(
+        val recipient: HexKey,
+        val seal: Event,
+    )
+
+    data class SealsForWrapping(
+        val seals: List<AddressedSeal>,
+        val expirationDelta: Long?,
+    )
+
+    /**
+     * Phase one of a split wrap build: signs one seal per recipient using
+     * [signer]. This is the only step that talks to the user's signer
+     * (external signers must prompt in the user's interaction context);
+     * the remaining wrap step ([wrapSeal]) is pure local CPU work that can
+     * run on a background mining worker.
+     */
+    suspend fun createSeals(
+        event: Event,
+        to: Set<HexKey>,
+        signer: NostrSigner,
+    ): SealsForWrapping {
+        val innerExpDelta =
+            event.expiration()?.let {
+                if (it > event.createdAt) {
+                    it - event.createdAt
+                } else {
+                    null
+                }
+            }
+
+        val bunkerLimiter = if (signer is NostrSignerRemote) Semaphore(BUNKER_PARALLELISM) else null
+
+        val seals =
+            mapNotNullAsync(to.toList()) { next ->
+                val build: suspend () -> AddressedSeal = {
+                    AddressedSeal(
+                        recipient = next,
+                        seal =
+                            SealedRumorEvent.create(
+                                event = event,
+                                encryptTo = next,
+                                expirationDelta = innerExpDelta,
+                                signer = signer,
+                            ),
+                    )
+                }
+                bunkerLimiter?.withPermit { build() } ?: build()
+            }
+
+        return SealsForWrapping(seals, innerExpDelta)
+    }
+
+    /**
+     * Phase two: wraps one pre-signed seal in its ephemeral-key envelope.
+     * Local-only — no user signer involved. [templateConversion] is the
+     * pre-sign hook on the wrap template (e.g. NIP-13 mining); see
+     * [GiftWrapTemplateConversion].
+     */
+    fun wrapSeal(
+        addressed: AddressedSeal,
+        expirationDelta: Long?,
+        recipientRelayHint: NormalizedRelayUrl? = null,
+        templateConversion: GiftWrapTemplateConversion = { template, _ -> template },
+    ): GiftWrapEvent =
+        GiftWrapEvent.create(
+            event = addressed.seal,
+            recipientPubKey = addressed.recipient,
+            expirationDelta = expirationDelta,
+            recipientRelayHint = recipientRelayHint,
+            templateConversion = templateConversion,
+        )
 
     /**
      * Build one NIP-59 gift wrap per recipient.
@@ -75,6 +150,7 @@ class NIP17Factory {
         to: Set<HexKey>,
         signer: NostrSigner,
         recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
+        wrapTemplateConversion: GiftWrapTemplateConversion = { template, _ -> template },
     ): List<GiftWrapEvent> {
         val innerExpDelta =
             event.expiration()?.let {
@@ -102,6 +178,7 @@ class NIP17Factory {
                     recipientPubKey = next,
                     expirationDelta = innerExpDelta,
                     recipientRelayHint = recipientRelayHints(next),
+                    templateConversion = wrapTemplateConversion,
                 )
             }
             bunkerLimiter?.withPermit { build() } ?: build()
@@ -123,9 +200,10 @@ class NIP17Factory {
         template: EventTemplate<ChatMessageEvent>,
         signer: NostrSigner,
         recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
+        wrapTemplateConversion: GiftWrapTemplateConversion = { template2, _ -> template2 },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints, wrapTemplateConversion)
         return Result(
             msg = senderMessage,
             wraps = wraps,
@@ -142,9 +220,16 @@ class NIP17Factory {
     suspend fun createNoteNIP17(
         template: EventTemplate<TextNoteEvent>,
         signer: NostrSigner,
+        wrapTemplateConversion: GiftWrapTemplateConversion = { template2, _ -> template2 },
     ): Result {
         val senderNote = signer.sign(template)
-        val wraps = createWraps(senderNote, senderNote.taggedUserIds().plus(signer.pubKey).toSet(), signer)
+        val wraps =
+            createWraps(
+                senderNote,
+                senderNote.taggedUserIds().plus(signer.pubKey).toSet(),
+                signer,
+                wrapTemplateConversion = wrapTemplateConversion,
+            )
         return Result(
             msg = senderNote,
             wraps = wraps,
@@ -155,9 +240,10 @@ class NIP17Factory {
         template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>,
         signer: NostrSigner,
         recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
+        wrapTemplateConversion: GiftWrapTemplateConversion = { template2, _ -> template2 },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints, wrapTemplateConversion)
 
         return Result(
             msg = senderMessage,

@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
 import com.vitorpamplona.amethyst.ui.note.creators.polls.PollOptionsField
+import com.vitorpamplona.amethyst.ui.note.creators.pow.PowOverrideButton
 import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.scheduling.ScheduleAtButton
 import com.vitorpamplona.amethyst.ui.note.creators.scheduling.ScheduleAtPicker
@@ -832,6 +833,13 @@ private fun BottomRowActions(
                 postViewModel.wantsZapRaiser = !postViewModel.wantsZapRaiser
             }
         }
+
+        PowOverrideButton(
+            effectiveDifficulty = postViewModel.effectivePowDifficulty(),
+            defaultDifficulty = postViewModel.defaultPowDifficulty(),
+            isOverridden = postViewModel.powOverride != null,
+            onSelect = { postViewModel.powOverride = it },
+        )
 
         // A group thread's title is required, so the field is always shown for it — no toggle.
         if (postViewModel.groupThreadTarget == null) {

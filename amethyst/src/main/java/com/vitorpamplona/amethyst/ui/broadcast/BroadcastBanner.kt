@@ -20,9 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.broadcast
 
+import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -45,10 +50,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -59,6 +71,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.service.pow.formatTimeLeft
+import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -72,22 +88,28 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.delay
 import java.util.UUID
 
 /**
  * Banner showing active broadcast progress.
  * Displayed above bottom navigation when events are being sent to relays.
+ *
+ * [miningJobs] is the NIP-13 pre-send phase: posts waiting for (or in the
+ * middle of) proof-of-work mining, before their per-relay send states exist.
  */
 @Composable
 fun BroadcastBanner(
     broadcasts: ImmutableList<BroadcastEvent>,
+    miningJobs: ImmutableList<PoWJobState> = persistentListOf(),
+    onCancelJob: (String) -> Unit = {},
     onTap: () -> Unit = {},
     onRetryAll: () -> Unit = {},
     onDismiss: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
-        visible = broadcasts.isNotEmpty(),
+        visible = broadcasts.isNotEmpty() || miningJobs.isNotEmpty(),
         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150)),
         modifier = modifier,
@@ -108,22 +130,190 @@ fun BroadcastBanner(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .animateContentSize(),
             ) {
-                val isAllFinished = broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
+                if (miningJobs.isNotEmpty()) {
+                    MiningContent(miningJobs, onCancelJob)
 
-                if (isAllFinished) {
-                    if (broadcasts.size == 1) {
-                        CompletedBroadcastContent(broadcasts.first(), onRetryAll, onDismiss)
-                    } else {
-                        MultipleCompletedBroadcastContent(broadcasts, onRetryAll, onDismiss)
+                    if (broadcasts.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
                     }
-                } else {
-                    if (broadcasts.size == 1) {
-                        SingleBroadcastContent(broadcasts.first())
+                }
+
+                if (broadcasts.isNotEmpty()) {
+                    val isAllFinished = broadcasts.all { it.status != BroadcastStatus.IN_PROGRESS }
+
+                    if (isAllFinished) {
+                        if (broadcasts.size == 1) {
+                            CompletedBroadcastContent(broadcasts.first(), onRetryAll, onDismiss)
+                        } else {
+                            MultipleCompletedBroadcastContent(broadcasts, onRetryAll, onDismiss)
+                        }
                     } else {
-                        MultipleBroadcastsContent(broadcasts)
+                        if (broadcasts.size == 1) {
+                            SingleBroadcastContent(broadcasts.first())
+                        } else {
+                            MultipleBroadcastsContent(broadcasts)
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MiningContent(
+    miningJobs: ImmutableList<PoWJobState>,
+    onCancelJob: (String) -> Unit,
+) {
+    // one shared pulse for the gear — mining has no measurable progress, so
+    // the animation is what says "the app is working right now".
+    val pulse = rememberInfiniteTransition(label = "miningPulse")
+    val gearAlpha by pulse.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(700),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "gearAlpha",
+    )
+
+    // 1 Hz clock driving the per-job elapsed labels; only ticks while some
+    // job actually shows an elapsed time (queued-only banners don't need it).
+    var nowSec by remember { mutableLongStateOf(TimeUtils.now()) }
+    val anyMiningStarted = miningJobs.any { it.miningStartedAt != null }
+    if (anyMiningStarted) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                nowSec = TimeUtils.now()
+                delay(1_000)
+            }
+        }
+    }
+
+    // Benchmarked once and cached (~250 ms on a worker): turns each job's
+    // difficulty into an expected duration so the bar has a predictable end.
+    val context = LocalContext.current
+    val hashRate by
+        produceState<Double?>(initialValue = null) {
+            value = PoWEstimator.hashesPerSecond()
+        }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Manufacturing,
+                contentDescription = stringRes(R.string.pow_mining_title),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = gearAlpha),
+                modifier = Modifier.size(18.dp),
+            )
+
+            Text(
+                text = pluralStringResource(R.plurals.pow_mining_progress, miningJobs.size, miningJobs.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        miningJobs.forEach { job ->
+            val elapsedSec = job.miningStartedAt?.let { (nowSec - it).coerceAtLeast(0) }
+            val expectedSec = hashRate?.let { PoWEstimator.estimateSeconds(job.difficulty, it) }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Spacer(Modifier.width(26.dp))
+
+                val base =
+                    pluralStringResource(
+                        if (job.isMining) R.plurals.pow_mining_job else R.plurals.pow_queued_job,
+                        job.difficulty,
+                        kindToName(job.kind),
+                        job.difficulty,
+                    )
+                val suffix =
+                    buildList {
+                        elapsedSec?.let { add(DateUtils.formatElapsedTime(it)) }
+                        if (elapsedSec != null && expectedSec != null) {
+                            add(formatTimeLeft(context, expectedSec, elapsedSec))
+                        }
+                    }.joinToString(" • ")
+
+                Text(
+                    text = if (suffix.isEmpty()) base else "$base • $suffix",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+
+                // once the nonce is found the job is signing/broadcasting —
+                // there is nothing safe to abort anymore.
+                if (job.isCancellable) {
+                    IconButton(
+                        onClick = { onCancelJob(job.id) },
+                        modifier = Modifier.size(22.dp),
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.Close,
+                            contentDescription = stringRes(R.string.pow_notification_cancel_all),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+            }
+
+            // Predictable end: the bar fills over the estimated duration for
+            // this difficulty. The search is memoryless, so once the mean is
+            // passed there is no honest remainder to show — fall back to the
+            // indeterminate sweep instead of a bar stuck at 100%.
+            if (elapsedSec != null) {
+                val fraction = expectedSec?.let { (elapsedSec / it).toFloat() }
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.width(26.dp))
+                    if (fraction != null && fraction < 1f) {
+                        LinearProgressIndicator(
+                            progress = { fraction },
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+            }
+        }
+
+        // nothing mining yet (all jobs waiting for a worker): keep the shared
+        // activity sweep so the banner still reads as "working".
+        if (!anyMiningStarted) {
+            Spacer(Modifier.height(4.dp))
+
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
         }
     }
 }
@@ -442,6 +632,9 @@ fun Event.toKindName(): String =
         is OldBookmarkListEvent -> stringRes(R.string.bookmarks)
         else -> stringRes(R.string.post)
     }
+
+@Composable
+fun kindToName(kind: Int): String = stringRes(powKindLabelRes(kind))
 
 @Preview
 @Composable

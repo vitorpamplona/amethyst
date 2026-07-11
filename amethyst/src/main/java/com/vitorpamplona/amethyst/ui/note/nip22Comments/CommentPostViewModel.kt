@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
@@ -87,6 +88,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -234,6 +236,20 @@ open class CommentPostViewModel :
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // NIP-13 per-post override from the composer chip: null = follow account
+    // settings, 0 = don't mine this post, >0 = mine at that difficulty.
+    var powOverride by mutableStateOf<Int?>(null)
+
+    fun effectivePowDifficulty(): Int? {
+        if (!::accountViewModel.isInitialized) return null
+        return accountViewModel.account.powDifficultyFor(CommentEvent.KIND, powOverride)
+    }
+
+    fun defaultPowDifficulty(): Int? {
+        if (!::accountViewModel.isInitialized) return null
+        return accountViewModel.account.powDifficultyFor(CommentEvent.KIND)
+    }
 
     // A single ephemeral signer reused for the whole compose session so that media
     // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
@@ -521,7 +537,14 @@ open class CommentPostViewModel :
 
         val draftToDelete = draftNote
         val anonymous = wantsAnonymousPost
+        // captured before cancel() resets the chip
+        val chosenPow = powOverride
         cancel()
+
+        // Draft deletion lives INSIDE each publish continuation: when the post
+        // is mined first, the draft must survive until the mined event is
+        // actually signed and dispatched — a cancelled or process-killed
+        // mining job would otherwise have destroyed the only copy of the text.
 
         // A reply within a NIP-29 group is group content: pin it to the group's
         // host relay (the relay the thread was seen on) instead of the author's
@@ -541,19 +564,39 @@ open class CommentPostViewModel :
             }
 
         if (anonymous) {
-            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonymousSigner())
+            // The anonymous key signs without a client tag, so the template is
+            // mined as-is against the throwaway pubkey — and never checkpointed
+            // to disk, so the key and content can't outlive the process.
+            val anonSigner = anonymousSigner()
+            val powDifficulty = accountViewModel.account.powDifficultyFor(template.kind, chosenPow)
+            val enqueued =
+                powDifficulty != null &&
+                    accountViewModel.account.mineInBackground(template.kind, powDifficulty) { isActive ->
+                        // fresh created_at at mining start (NIP-13 recommendation):
+                        // the job may have waited in the queue behind other posts.
+                        val fresh = EventTemplate<Event>(TimeUtils.now(), template.kind, template.tags, template.content)
+                        val mined = PoWMiner.run(fresh, anonSigner.pubKey, powDifficulty, isActive)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+                    }
+            if (!enqueued) {
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
         } else if (replyGroupId != null) {
             // Group content: route to the resolved host. If it couldn't be resolved, publish to the
             // parent's relays (possibly empty) rather than broadcasting to the outbox — better to
             // under-deliver a group reply than to leak group participation to unrelated relays.
             val relays = groupHostRelays ?: replyingTo?.relays.orEmpty()
-            accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) { relays }
+            accountViewModel.account.sendMined(template, PoWReplay.ToRelays(relays), chosenPow) { readyTemplate ->
+                accountViewModel.account.signAndSendPrivatelyOrBroadcast(readyTemplate) { relays }
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
         } else {
-            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        }
-
-        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
+                accountViewModel.account.signAndComputeBroadcast(readyTemplate, extraNotesToBroadcast)
+                accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            }
         }
     }
 
@@ -824,6 +867,7 @@ open class CommentPostViewModel :
         wantsSecretEmoji = false
         wantsAnonymousPost = false
         anonymousSignerCache = null
+        powOverride = null
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()

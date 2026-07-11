@@ -106,7 +106,9 @@ class PoWRankEvaluator {
             minPoW: Int,
             emptyBytes: Int,
         ): Boolean {
-            for (index in 0 until emptyBytes) {
+            // emptyBytes is minPoW/8; clamp so an oversized target can never
+            // index past the 32-byte hash.
+            for (index in 0 until emptyBytes.coerceAtMost(id.size)) {
                 if (id[index] != R8) return false
             }
 

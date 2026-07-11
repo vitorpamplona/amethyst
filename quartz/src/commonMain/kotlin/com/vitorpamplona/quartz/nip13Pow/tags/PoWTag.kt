@@ -52,6 +52,6 @@ class PoWTag(
         fun assemble(
             nonce: String,
             commitment: Int?,
-        ) = arrayOfNotNull(TAG_NAME, nonce, commitment.toString())
+        ) = arrayOfNotNull(TAG_NAME, nonce, commitment?.toString())
     }
 }
