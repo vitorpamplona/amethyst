@@ -3807,6 +3807,8 @@
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
+    <string name="pow_time_left">≈ %1$s left</string>
+    <string name="pow_time_left_soon">any moment now</string>
     <string name="pow_publish_failed">Your %1$s finished mining but could not be published: %2$s</string>
     <string name="pow_publish_failed_retry">Your %1$s finished mining but could not be published. It will be retried the next time the app starts.</string>
     <string name="pow_kind_chat_message">Chat message</string>

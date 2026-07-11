@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -53,16 +52,15 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.model.AccountPoWPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.pow.POW_PRESETS
-import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlin.math.roundToLong
 
 @Composable
 fun ComposeSettingsScreen(
@@ -198,7 +196,7 @@ private fun PowTimeEstimate(difficulty: Int) {
     val estimate by
         produceState<String?>(initialValue = null, difficulty) {
             val rate = PoWEstimator.hashesPerSecond()
-            value = formatEstimate(context, PoWEstimator.estimateSeconds(difficulty, rate))
+            value = formatApproxDuration(context, PoWEstimator.estimateSeconds(difficulty, rate))
         }
 
     estimate?.let {
@@ -207,24 +205,6 @@ private fun PowTimeEstimate(difficulty: Int) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
         )
-    }
-}
-
-private fun formatEstimate(
-    context: Context,
-    seconds: Double,
-): String {
-    fun quantity(
-        id: Int,
-        count: Long,
-    ) = pluralStringRes(context, id, count.toInt(), count.toInt())
-
-    return when {
-        seconds < 1.0 -> stringRes(context, R.string.pow_estimate_instant)
-        seconds < 90.0 -> quantity(R.plurals.pow_estimate_seconds, seconds.roundToLong())
-        seconds < 90.0 * 60.0 -> quantity(R.plurals.pow_estimate_minutes, (seconds / 60.0).roundToLong())
-        seconds < 48.0 * 3600.0 -> quantity(R.plurals.pow_estimate_hours, (seconds / 3600.0).roundToLong())
-        else -> quantity(R.plurals.pow_estimate_days, (seconds / 86400.0).roundToLong())
     }
 }
 

@@ -33,10 +33,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
@@ -108,11 +112,29 @@ fun PowOverrideButton(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
+            // benchmarked on first open (~250 ms, cached after): each option
+            // shows what it would cost on THIS device, e.g. "24 bits · ≈ 45 seconds".
+            val context = LocalContext.current
+            val hashRate by
+                produceState<Double?>(initialValue = null) {
+                    value = PoWEstimator.hashesPerSecond()
+                }
+
+            fun eta(difficulty: Int): String? = hashRate?.let { formatApproxDuration(context, PoWEstimator.estimateSeconds(difficulty, it)) }
+
+            fun withEta(
+                label: String,
+                difficulty: Int,
+            ): String = eta(difficulty)?.let { "$label · $it" } ?: label
+
             DropdownMenuItem(
                 text = {
                     Text(
                         if (defaultDifficulty != null && defaultDifficulty > 0) {
-                            pluralStringResource(R.plurals.pow_option_default_on, defaultDifficulty, defaultDifficulty)
+                            withEta(
+                                pluralStringResource(R.plurals.pow_option_default_on, defaultDifficulty, defaultDifficulty),
+                                defaultDifficulty,
+                            )
                         } else {
                             stringRes(R.string.pow_option_default_off)
                         },
@@ -140,7 +162,7 @@ fun PowOverrideButton(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            pluralStringResource(R.plurals.pow_option_bits, preset, preset),
+                            withEta(pluralStringResource(R.plurals.pow_option_bits, preset, preset), preset),
                             fontWeight = if (isOverridden && effectiveDifficulty == preset) FontWeight.Bold else null,
                         )
                     },

@@ -53,11 +53,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -69,7 +71,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.service.pow.formatTimeLeft
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -178,7 +182,8 @@ private fun MiningContent(
     // 1 Hz clock driving the per-job elapsed labels; only ticks while some
     // job actually shows an elapsed time (queued-only banners don't need it).
     var nowSec by remember { mutableLongStateOf(TimeUtils.now()) }
-    if (miningJobs.any { it.miningStartedAt != null }) {
+    val anyMiningStarted = miningJobs.any { it.miningStartedAt != null }
+    if (anyMiningStarted) {
         LaunchedEffect(Unit) {
             while (true) {
                 nowSec = TimeUtils.now()
@@ -186,6 +191,14 @@ private fun MiningContent(
             }
         }
     }
+
+    // Benchmarked once and cached (~250 ms on a worker): turns each job's
+    // difficulty into an expected duration so the bar has a predictable end.
+    val context = LocalContext.current
+    val hashRate by
+        produceState<Double?>(initialValue = null) {
+            value = PoWEstimator.hashesPerSecond()
+        }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -211,6 +224,9 @@ private fun MiningContent(
         }
 
         miningJobs.forEach { job ->
+            val elapsedSec = job.miningStartedAt?.let { (nowSec - it).coerceAtLeast(0) }
+            val expectedSec = hashRate?.let { PoWEstimator.estimateSeconds(job.difficulty, it) }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -225,10 +241,16 @@ private fun MiningContent(
                         kindToName(job.kind),
                         job.difficulty,
                     )
-                val elapsed = job.miningStartedAt?.let { DateUtils.formatElapsedTime((nowSec - it).coerceAtLeast(0)) }
+                val suffix =
+                    buildList {
+                        elapsedSec?.let { add(DateUtils.formatElapsedTime(it)) }
+                        if (elapsedSec != null && expectedSec != null) {
+                            add(formatTimeLeft(context, expectedSec, elapsedSec))
+                        }
+                    }.joinToString(" • ")
 
                 Text(
-                    text = if (elapsed != null) "$base • $elapsed" else base,
+                    text = if (suffix.isEmpty()) base else "$base • $suffix",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -252,15 +274,47 @@ private fun MiningContent(
                     }
                 }
             }
+
+            // Predictable end: the bar fills over the estimated duration for
+            // this difficulty. The search is memoryless, so once the mean is
+            // passed there is no honest remainder to show — fall back to the
+            // indeterminate sweep instead of a bar stuck at 100%.
+            if (elapsedSec != null) {
+                val fraction = expectedSec?.let { (elapsedSec / it).toFloat() }
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.width(26.dp))
+                    if (fraction != null && fraction < 1f) {
+                        LinearProgressIndicator(
+                            progress = { fraction },
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+            }
         }
 
-        Spacer(Modifier.height(4.dp))
+        // nothing mining yet (all jobs waiting for a worker): keep the shared
+        // activity sweep so the banner still reads as "working".
+        if (!anyMiningStarted) {
+            Spacer(Modifier.height(4.dp))
 
-        LinearProgressIndicator(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-        )
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
     }
 }
 

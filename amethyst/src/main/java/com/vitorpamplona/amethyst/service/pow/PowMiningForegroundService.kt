@@ -34,17 +34,20 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -71,6 +74,11 @@ class PowMiningForegroundService : Service() {
     // service started" — the queue itself only knows what is still pending.
     private var sessionTotal = 0
     private var lastQueueSize = 0
+
+    // Benchmarked once per service run (~250 ms, cached by the estimator);
+    // read from the notification builder to compute expected durations.
+    @Volatile
+    private var hashRate: Double? = null
 
     // Built once per service instance: the intents never change, and
     // buildNotification runs on every queue update.
@@ -161,6 +169,18 @@ class PowMiningForegroundService : Service() {
                     }
                 }
             }
+
+        // the estimated-time-left figure and progress fraction only move with
+        // the clock, not with queue events: benchmark the hash rate once,
+        // then refresh the card periodically while something is mining.
+        scope.launch {
+            hashRate = PoWEstimator.hashesPerSecond()
+            while (true) {
+                val jobs = currentJobs()
+                if (jobs.any { it.isMining }) updateNotification(jobs)
+                delay(PROGRESS_REFRESH_MS)
+            }
+        }
     }
 
     private fun startForegroundCompat(jobs: ImmutableList<PoWJobState>) {
@@ -188,14 +208,39 @@ class PowMiningForegroundService : Service() {
         val total = (done + jobs.size).coerceAtLeast(1)
 
         val current = jobs.firstOrNull { it.isMining } ?: jobs.firstOrNull()
-        val text =
+
+        // expected duration for the job being mined right now, so the card can
+        // say "≈ 10 minutes left" and fill its bar toward a predictable end.
+        val rate = hashRate
+        val startedAt = current?.miningStartedAt
+        val expectedSec = if (current != null && rate != null) PoWEstimator.estimateSeconds(current.difficulty, rate) else null
+        val elapsedSec = startedAt?.let { (TimeUtils.now() - it).coerceAtLeast(0) }
+
+        val base =
             current?.let {
                 pluralStringRes(this, R.plurals.pow_mining_job, it.difficulty, stringRes(this, powKindLabelRes(it.kind)), it.difficulty)
             } ?: stringRes(this, R.string.pow_mining_title)
+        val text =
+            if (expectedSec != null && elapsedSec != null) {
+                "$base • ${formatTimeLeft(this, expectedSec, elapsedSec)}"
+            } else {
+                base
+            }
+
+        val fraction = if (expectedSec != null && elapsedSec != null) elapsedSec / expectedSec else null
 
         val progressStyle: NotificationCompat.ProgressStyle =
             if (total <= 1) {
-                NotificationCompat.ProgressStyle().setProgressIndeterminate(true)
+                // single post: fill toward the estimated duration; past the
+                // mean the search is memoryless, so sweep instead of lying.
+                if (fraction != null && fraction < 1.0) {
+                    NotificationCompat
+                        .ProgressStyle()
+                        .setProgressSegments(listOf(NotificationCompat.ProgressStyle.Segment(100)))
+                        .setProgress((fraction * 100).toInt())
+                } else {
+                    NotificationCompat.ProgressStyle().setProgressIndeterminate(true)
+                }
             } else {
                 NotificationCompat
                     .ProgressStyle()
@@ -229,6 +274,10 @@ class PowMiningForegroundService : Service() {
         private const val CHANNEL_ID = "pow_mining"
         private const val NOTIFICATION_ID = 0x504F57 // "POW"
         private const val ACTION_CANCEL_ALL = "com.vitorpamplona.amethyst.pow.CANCEL_ALL"
+
+        // clock-driven refresh cadence for the time-left text and bar; the
+        // shortService budget (~3 min) caps this at a handful of updates.
+        private const val PROGRESS_REFRESH_MS = 30_000L
 
         // Best-effort de-dup for start(): the queue calls it on EVERY enqueue,
         // and each call otherwise round-trips through system_server. A stale
