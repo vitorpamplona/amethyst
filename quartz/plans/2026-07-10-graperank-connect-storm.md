@@ -126,6 +126,34 @@ units, so the two retry rounds cost nearly as much as first passes at a
 fraction of the yield — route retry backbone re-asks as round-wide chunked
 per-relay units instead.
 
+### Retry routing: the round-wide communal sweep (Phase C)
+
+That "remaining lever" landed as a restructure of Phase B's shared-relay
+coverage. Before: every 256-user batch with retry (attempt>0) or no-outbox
+users fanned the SAME ~40 backbone+fallback relays, queueing thousands of
+small REQs against their 16-permit gates — measured as rounds 8–10 of a hop-8
+crawl burning ~80 min for +6.6k lists, nearly all hot-relay head-of-line
+blocking. After: `routeByOutbox` routes only a user's OWN-signal relays
+(write relays; harvested hints when there's no outbox) and flags
+communal-coverage users into a per-round set; a new **Phase C**
+(`communalSweep`) asks the shared relays ONCE per round for all flagged users
+in author-chunked units — the same (relay, user) pairs, ~8x fewer REQs — and
+records answered-empty pairs so each subsequent round shrinks. Attempt
+accounting moves to Phase C (a user burns an attempt only after both its own
+relays and the shared set missed that round), `shardedSweep` now records
+answered-empty pairs too, and each recovery-fixpoint iteration only asks the
+aggregators for stragglers ADDED since the previous pass (a repeat full-set
+pass cost ~4 min at 470k stragglers for zero new answers).
+
+Validation, cold hop-8, same observer (reference = the fixpoint build's
+232.6 min / 253,213 lists / 796,459 users): **160.7 min, 292,768 lists,
+1,169,194 users discovered, 7,240 relays** — 31% less wall clock with +15.6%
+lists and +47% users. The depth cliff moved out two hops: hop-7/8 populations
+319,878/292,268 vs 131,051/72,389, hop-7 lists 29,445 vs 6,117. Round-level
+profile: the retry rounds that defined the old tail now run in minutes
+(round 8: 247s total, of which Phase C fed 5,695 of its 6,080 lists), and
+Phase C itself costs 10–170s per round, folded out of the per-batch hot path.
+
 \* total inflated by a slow round-3 network sample + the then-serial tail; the
 change's own effect (straggler-round Phase A 20s → 20ms) is visible directly.
 
