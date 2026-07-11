@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
@@ -63,6 +64,10 @@ import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
 import kotlinx.coroutines.delay
 
 private const val RELAYS_AND_ACTIONS_TEXT = "Relays and Actions"
+
+// Half the height of a reaction chip, so the chip row overlaps the bubble by
+// exactly its own vertical center.
+private val ChatChipOverlapArrangement = Arrangement.spacedBy((-12).dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -163,6 +168,9 @@ fun ChatBubbleLayout(
 
         Column(
             horizontalAlignment = if (isLoggedInUser) Alignment.End else Alignment.Start,
+            // Negative spacing pulls the reaction chips up so their vertical center
+            // rides the bubble's bottom border instead of floating detached below it.
+            verticalArrangement = if (reactionsRow != null) ChatChipOverlapArrangement else Arrangement.Top,
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(

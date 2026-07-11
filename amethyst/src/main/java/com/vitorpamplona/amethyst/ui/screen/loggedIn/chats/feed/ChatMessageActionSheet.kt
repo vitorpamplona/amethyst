@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -59,10 +60,12 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ChangeReactionIcon
 import com.vitorpamplona.amethyst.ui.note.RenderReaction
+import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Size27dp
 import com.vitorpamplona.amethyst.ui.theme.Size28Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
@@ -176,6 +179,20 @@ private fun QuickReactionRow(
             ) {
                 RenderReaction(reactionType)
             }
+        }
+
+        // The full zap flow (amount choices, custom amounts, progress, wallet
+        // handoff) lives inside ZapReaction; its popups anchor above the icon.
+        Box(modifier = reactionBox, contentAlignment = Alignment.Center) {
+            ZapReaction(
+                baseNote = note,
+                grayTint = MaterialTheme.colorScheme.onBackground,
+                accountViewModel = accountViewModel,
+                iconSize = Size27dp,
+                iconSizeModifier = Size28Modifier,
+                showCounter = false,
+                nav = nav,
+            )
         }
 
         ClickableBox(

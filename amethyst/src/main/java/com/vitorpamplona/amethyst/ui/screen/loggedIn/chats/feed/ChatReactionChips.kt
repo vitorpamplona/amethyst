@@ -112,7 +112,9 @@ private fun RenderChatReactionChips(
     if (chips.isEmpty() && zapAmount.isBlank()) return
 
     FlowRow(
-        modifier = Modifier.padding(top = 2.dp),
+        // Inset from the bubble's edge so overlapping chips ride the border without
+        // poking past the bubble's rounded corners.
+        modifier = Modifier.padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
