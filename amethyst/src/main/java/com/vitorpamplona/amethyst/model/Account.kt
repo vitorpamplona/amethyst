@@ -2166,25 +2166,37 @@ class Account(
 
     /**
      * Bootstrap the Concord hub from the network: fetch this account's kind-13302
-     * joined-communities list from the Concord stock relays (where the reference
-     * client — Armada/Vector — publishes it, e.g. relay.ditto.pub) and fold the
-     * newest into [LocalCache], so communities we joined on another Concord client
-     * with this key surface here. Our outbox never carries that list, so without
-     * this a community joined on Armada would never appear.
+     * joined-communities list and fold the newest into [LocalCache], so communities
+     * we joined on another Concord client with this key surface here.
+     *
+     * We query a wide relay set because different Concord clients publish this
+     * private list to different places: the reference clients (Armada/Vector) push
+     * it to the Concord **stock relays** (e.g. relay.ditto.pub), while a user may
+     * also have copied it onto their **own** outbox/read relays. Our normal account
+     * subscription never asks for kind 13302, so without this explicit fetch a
+     * community joined on Armada would never appear — even if the list sits on the
+     * user's own outbox.
      *
      * Read-only import: kind 13302 is replaceable, so folding an older copy is a
      * no-op and this is safe to call on every hub open. Merging our own edits with
      * a foreign writer's is a separate concern (newest-wins replaceable).
      */
-    suspend fun importConcordCommunitiesFromStockRelays() {
-        val relays = InviteRelayDictionary.STOCK.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+    suspend fun importConcordCommunities() {
+        val stock = InviteRelayDictionary.STOCK.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+        val relays = (stock + mineRelays.flow.value + outboxRelays.flow.value).toSet()
         if (relays.isEmpty()) return
         val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(signer.pubKey))
-        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) })
-        events
-            .filterIsInstance<ConcordCommunityListEvent>()
-            .maxByOrNull { it.createdAt }
-            ?.let { cache.justConsumeMyOwnEvent(it) }
+        // Stock relays like relay.ditto.pub can be slow (~10–20s to first response), so give
+        // the fetch a generous window to drain every relay before we pick the newest copy.
+        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = 30_000L)
+        val newest = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
+        val entryCount = newest?.let { runCatching { it.decrypt(signer).size }.getOrElse { -1 } } ?: 0
+        Log.d(
+            "Concord",
+            "importConcordCommunities: queried ${relays.size} relays, fetched ${events.size} 13302 event(s), " +
+                "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}",
+        )
+        newest?.let { cache.justConsumeMyOwnEvent(it) }
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
