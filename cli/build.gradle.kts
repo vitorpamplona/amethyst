@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
     application
+    alias(libs.plugins.kotlinxKover)
 }
 
 kotlin {

@@ -64,19 +64,19 @@ fun DisplayPoW(pow: Int) {
             Modifier
                 .clip(RoundedCornerShape(50))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(horizontal = 6.dp, vertical = 1.dp),
+                .padding(horizontal = 5.dp, vertical = 1.dp),
     ) {
         Icon(
             symbol = MaterialSymbols.Manufacturing,
             contentDescription = stringRes(R.string.pow_settings_title),
             tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.size(12.dp),
+            modifier = Modifier.size(10.dp),
         )
         Text(
             text = pow.toString(),
             color = MaterialTheme.colorScheme.onSecondaryContainer,
-            fontSize = 12.sp,
-            lineHeight = 12.sp,
+            fontSize = 10.sp,
+            lineHeight = 10.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
         )

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Call
 import okhttp3.ConnectionPool
@@ -129,7 +130,10 @@ class MediaCallEventListener(
         // Drop the cached entry so the next attempt re-resolves instead of trying the same
         // dead IPs for up to 24h. Per-attempt connectFailed isn't enough — a multi-A-record
         // host can have one bad IP and OkHttp will recover by trying the next one.
-        if (error != null) {
+        // EXCEPT when the failure is the DNS lookup itself: the freshly-written negative
+        // entry IS the useful cache state, and deleting it would defeat the negative TTL
+        // (see DnsInvalidatingEventListener).
+        if (error != null && !error.causedByUnknownHost()) {
             dns.invalidate(host)
         }
 

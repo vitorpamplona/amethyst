@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
+    alias(libs.plugins.kotlinxKover)
 }
 
 kotlin {

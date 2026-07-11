@@ -29,6 +29,16 @@ class PoWPolicyTest {
     val allCategories = PoWCategory.entries.toSet()
 
     @Test
+    fun minerWorkersIsHalfTheCoresButNeverZero() {
+        assertEquals(1, PoWPolicy.minerWorkers(1))
+        assertEquals(1, PoWPolicy.minerWorkers(2))
+        assertEquals(2, PoWPolicy.minerWorkers(4))
+        assertEquals(3, PoWPolicy.minerWorkers(6))
+        assertEquals(4, PoWPolicy.minerWorkers(8))
+        assertEquals(1, PoWPolicy.minerWorkers(0))
+    }
+
+    @Test
     fun difficultyOffMinesNothing() {
         assertNull(PoWPolicy.shouldMine(1, 0, allCategories))
         assertNull(PoWPolicy.shouldMine(1, -5, allCategories))

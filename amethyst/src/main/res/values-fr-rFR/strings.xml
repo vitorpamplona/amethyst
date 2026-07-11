@@ -766,6 +766,17 @@
     <string name="napplet_decision_deny">Refuser</string>
     <string name="napplet_connected_app_forget">Oublier cette application</string>
     <!-- Relay Authentication (NIP-42) settings -->
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <string name="relay_auth_reason_other">Utiliser ce relais</string>
+    <string name="relay_auth_reason_my_own_relay">Connectez-vous à votre propre relais</string>
+    <string name="relay_auth_allow_once">Autoriser une fois</string>
+    <string name="relay_auth_always_allow">Toujours autoriser ce relais</string>
+    <string name="relay_auth_always_deliver">Toujours transmettre mes messages</string>
+    <string name="relay_auth_block">Bloquer ce relais</string>
+    <string name="relay_auth_forget">Oublier</string>
+    <string name="relay_auth_last_used">Dernière utilisation il y a %1$s</string>
+    <string name="relay_auth_no_overrides">Rien ici pour l\'instant — votre politique globale s\'applique à chaque relais.</string>
     <string name="relay_auth_decision_allow">Autoriser</string>
     <string name="relay_auth_decision_deny">Refuser</string>
     <string name="nip82_repository_label">Source : %1$s</string>
@@ -929,8 +940,12 @@
     <string name="route_podcasts">Podcasts</string>
     <string name="podcast_view_episodes">Voir les épisodes</string>
     <string name="podcast_no_episodes">Aucun épisode trouvé pour le moment</string>
+    <string name="podcast_trailer_season">Saison %1$d</string>
+    <string name="podcast_explicit">Explicite</string>
     <string name="podcast_completed">Terminé</string>
     <string name="podcast_premium">Premium</string>
+    <string name="podcast_support_show">Soutenir la série</string>
+    <string name="podcast_by_author">par %1$s</string>
     <string name="podcast_season">Saison %1$d</string>
     <string name="podcast_video">Vidéo</string>
     <string name="podcast_transcript">Transcription</string>
@@ -982,6 +997,8 @@
     <string name="podcast_show_language_label">Langue</string>
     <string name="podcast_show_language_placeholder">en</string>
     <string name="podcast_show_copyright_label">Droit d\'auteur</string>
+    <string name="podcast_trailer_title_placeholder">Titre du trailer</string>
+    <string name="podcast_trailer_url_label">URL du média</string>
     <string name="podcast_your_podcast">Votre podcast</string>
     <string name="podcast_untitled">Sans titre</string>
     <string name="podcast_no_episodes_yet">Aucun épisode pour le moment. Appuyez sur nouvel épisode pour publier votre premier épisode.</string>
@@ -1669,6 +1686,29 @@
     <string name="messages_create_public_chat">Public</string>
     <string name="messages_create_group">Groupe</string>
     <string name="messages_create_public_private_chat_description">Nouveau Groupe Public ou Privé</string>
+    <string name="relay_group_create_confirm">Créer</string>
+    <string name="relay_group_invite_title">Inviter des gens</string>
+    <string name="relay_group_invite_description">Partager ce code pour que les gens puissent rejoindre ce groupe.</string>
+    <string name="relay_group_invite_generating">Création d\'une invitation…</string>
+    <string name="relay_group_invite_copied">Code d\'invitation copié</string>
+    <string name="relay_group_join_title">Rejoindre le groupe</string>
+    <string name="relay_group_join_code_label">Code d\'invitation</string>
+    <string name="relay_group_join_confirm">Rejoindre</string>
+    <string name="relay_group_role_admin">Admin</string>
+    <string name="relay_group_role_moderator">Modérateur</string>
+    <string name="relay_group_role_member">Membre</string>
+    <string name="relay_group_members_title">Membres</string>
+    <string name="relay_group_badge_private">Privé</string>
+    <string name="relay_group_badge_invite_only">Sur invitation seulement</string>
+    <string name="relay_group_browse_invalid_url">Entrer une URL de relais valide (wss://…).</string>
+    <string name="relay_group_field_name">Nom</string>
+    <string name="relay_group_field_about">Description</string>
+    <string name="relay_group_field_picture">Photo de groupe</string>
+    <string name="relay_group_add_photo">Ajouter une photo</string>
+    <string name="relay_group_change_photo">Modifier la photo</string>
+    <string name="relay_group_section_discovery">Découverte</string>
+    <string name="relay_group_field_geohash">Localisation (géohash)</string>
+    <string name="relay_group_flag_private">Privé</string>
     <string name="messages_new_message">Privé</string>
     <string name="messages_new_message_to">À</string>
     <string name="messages_new_message_subject">Sujet</string>
@@ -3161,6 +3201,17 @@
     <string name="auto_create_drafts_setting_description">Enregistre automatiquement un brouillon lorsque vous tapez ou quittez un compositeur avec du texte non envoyé, et l\'envoie à vos relais de boîte d\'envoi privée.</string>
     <string name="compose_signature_setting_title">Signature</string>
     <string name="compose_signature_setting_hint">Votre signature</string>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d heure</item>
+        <item quantity="other">%1$d heures</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d jour</item>
+        <item quantity="other">%1$d jours</item>
+    </plurals>
+    <string name="pow_time_left_soon">à tout moment maintenant</string>
+    <string name="pow_publish_failed">Votre %1$s a fini de miner mais n\'a pas pu être publié : %2$s</string>
+    <string name="pow_kind_report">Signaler</string>
     <string name="ai_writing_use_this">Utiliser ceci</string>
     <string name="ai_writing_dismiss">Ignorer</string>
     <string name="ai_tone_correct">Corriger</string>

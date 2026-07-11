@@ -774,13 +774,12 @@
     <string name="relay_auth_policy_always_desc">Auth-challenges ondertekenen voor elke relay die erom vraagt</string>
     <string name="relay_auth_policy_never">Nooit authenticeren</string>
     <string name="relay_auth_policy_never_desc">Auth-challenges van alle relays negeren</string>
-    <string name="relay_auth_policy_if_in_my_list">Alleen mijn relays</string>
-    <string name="relay_auth_policy_if_in_my_list_desc">Alleen authenticeren met relays in je relaylijst</string>
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_per_relay_overrides">Per-relay-uitzonderingen</string>
     <string name="relay_auth_no_overrides">Geen per-relay-uitzonderingen — globaal beleid geldt overal</string>
     <string name="relay_auth_decision_allow">Toestaan</string>
     <string name="relay_auth_decision_deny">Weigeren</string>
-    <string name="relay_auth_remove_override">Uitzondering verwijderen</string>
     <string name="nip82_repository_label">Bron: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Downloaden</string>

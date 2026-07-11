@@ -713,6 +713,8 @@
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Permissions management screen -->
     <!-- Relay Authentication (NIP-42) settings -->
+    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
+    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="nip82_repository_label">Fonte: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Baixar</string>

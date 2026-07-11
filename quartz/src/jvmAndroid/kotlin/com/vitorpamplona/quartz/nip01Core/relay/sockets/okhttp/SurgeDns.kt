@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp
 
 import okhttp3.Dns
 import java.net.InetAddress
@@ -74,7 +74,16 @@ class SurgeDns(
     private val maxEntries: Int = 2000,
     private val positiveTtlMs: Long = TimeUnit.HOURS.toMillis(24),
     private val positiveTtlJitterMs: Long = TimeUnit.HOURS.toMillis(24),
-    private val negativeTtlMs: Long = TimeUnit.SECONDS.toMillis(10),
+    /**
+     * How long a resolution FAILURE is served from cache. 10 minutes: a dead domain's
+     * `getaddrinfo` burns 10-30s of resolver timeouts, and both the app's relay pool and a
+     * GrapeRank crawl re-dial dead hosts continuously — the relay pool's own reconnect
+     * backoff already reaches 5 minutes, so a 10-minute DNS negative doesn't change relay
+     * behavior, it only makes the retries that do happen cost microseconds. Recovery paths
+     * for a WRONG negative (transient blip): [staleAll] on a network-identity change
+     * re-tries it on next use, and the entry ages out naturally.
+     */
+    private val negativeTtlMs: Long = TimeUnit.MINUTES.toMillis(10),
     private val refreshExecutor: Executor = DEFAULT_REFRESH_EXECUTOR,
 ) : Dns {
     private val cache = ConcurrentHashMap<String, Entry>()
@@ -205,7 +214,33 @@ class SurgeDns(
         }
     }
 
-    /** Drop all cached entries. Call when the network changes (e.g. WiFi <-> mobile). */
+    /**
+     * Soft-expire every entry WITHOUT discarding anything — the right response to a network
+     * change (WiFi <-> mobile, captive portal cleared). Most cached answers are still correct
+     * on the new network, so keep serving them under a "double-check" regime instead of
+     * assuming either way:
+     *
+     *  - positives fall into the stale-while-revalidate path on their next use: the old
+     *    answer is served instantly and a background refresh re-verifies it (and demotes it
+     *    to negative if the new network really can't resolve it);
+     *  - negatives are re-tried synchronously on their next use, so a host that only failed
+     *    because of the OLD network recovers on first touch instead of waiting out its TTL.
+     *
+     * Contrast [invalidate], which throws every answer away and re-pays a blocking
+     * `getaddrinfo` per host — a self-inflicted cold start on what is usually a healthy cache.
+     */
+    fun staleAll() {
+        val now = System.currentTimeMillis()
+        for ((host, entry) in cache) {
+            if (entry.expiresAtMillis > now) {
+                // replace(k, old, new): a concurrent fresh resolution wins over the staling.
+                cache.replace(host, entry, Entry(entry.addresses, now))
+            }
+        }
+        dirty.set(true)
+    }
+
+    /** Drop all cached entries. Prefer [staleAll] for network changes — this forces a blocking re-resolve per host. */
     fun invalidate() {
         cache.clear()
         dirty.set(true)

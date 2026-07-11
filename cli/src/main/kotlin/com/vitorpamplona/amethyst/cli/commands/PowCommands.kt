@@ -108,11 +108,16 @@ object PowCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val usage = "pow mine --target N [--pubkey HEX] [--timeout SECS] <template-json | ->"
+        val usage = "pow mine --target N [--pubkey HEX] [--timeout SECS] [--threads N] <template-json | ->"
 
         val target = args.flags["target"]?.toIntOrNull() ?: return Output.error("bad_args", usage)
         if (target < 1 || target > MAX_DIFFICULTY) {
             return Output.error("bad_args", "--target must be between 1 and $MAX_DIFFICULTY")
+        }
+
+        val threads = args.intFlag("threads", defaultThreads())
+        if (threads < 1) {
+            return Output.error("bad_args", "--threads must be >= 1")
         }
 
         val json = readPayload(args.positional.toTypedArray()) ?: return Output.error("bad_args", usage)
@@ -142,13 +147,13 @@ object PowCommands {
         val timeoutSec = args.flags["timeout"]?.toLongOrNull()
         val deadlineNanos = timeoutSec?.let { System.nanoTime() + it * 1_000_000_000L }
 
-        System.err.println("mining $target bits for ${pubKey.take(8)}…")
+        System.err.println("mining $target bits for ${pubKey.take(8)}… ($threads threads)")
         val startedAt = System.nanoTime()
 
         val mined =
             try {
                 withContext(Dispatchers.Default) {
-                    PoWMiner.run(template, pubKey, target) {
+                    PoWMiner.mine(template, pubKey, target, threads) {
                         deadlineNanos == null || System.nanoTime() < deadlineNanos
                     }
                 }
@@ -176,26 +181,37 @@ object PowCommands {
                 "pow" to PoWRankEvaluator.calculatePowRankOf(id),
                 "pow_target" to target,
                 "pow_millis" to elapsedMs,
+                "threads" to threads,
                 "template_json" to mined.toJson(),
             ),
         )
         return 0
     }
 
-    /** `amy pow bench` — hash rate + expected mining time per common target. */
+    /**
+     * `amy pow bench` — single-core and all-cores hash rate, plus expected
+     * mining time per common target at the all-cores rate (what `pow mine`
+     * uses by default).
+     */
     private suspend fun bench(): Int {
-        val rate = PoWEstimator.hashesPerSecond()
+        val threads = defaultThreads()
+        val singleRate = PoWEstimator.hashesPerSecond()
+        val parallelRate = PoWEstimator.hashesPerSecond(threads)
         Output.emit(
             mapOf(
-                "hashes_per_second" to rate.roundToLong(),
+                "hashes_per_second" to parallelRate.roundToLong(),
+                "hashes_per_second_single_core" to singleRate.roundToLong(),
+                "threads" to threads,
                 "expected_seconds" to
                     listOf(16, 20, 24, 28).associate { bits ->
-                        bits.toString() to PoWEstimator.estimateSeconds(bits, rate)
+                        bits.toString() to PoWEstimator.estimateSeconds(bits, parallelRate)
                     },
             ),
         )
         return 0
     }
+
+    private fun defaultThreads(): Int = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
 
     private fun readPayload(rest: Array<String>): String? {
         val arg = rest.firstOrNull() ?: return null

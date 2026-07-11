@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.serialization)
     alias(libs.plugins.googleKsp)
+    alias(libs.plugins.kotlinxKover)
 }
 
 fun getCurrentBranch(workingDir: java.io.File): String =

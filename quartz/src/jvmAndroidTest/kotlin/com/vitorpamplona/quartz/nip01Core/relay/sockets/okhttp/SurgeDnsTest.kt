@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp
 
 import okhttp3.Dns
 import org.junit.Assert.assertArrayEquals
@@ -91,6 +91,45 @@ class SurgeDnsTest {
         assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
 
         assertEquals(1, upstream.calls("missing.example"))
+    }
+
+    @Test
+    fun `staleAll serves stale positives and revalidates on next use`() {
+        val upstream = CountingDns(mapOf("a.example" to listOf(ip("1.2.3.4"))))
+        val syncRefresh = Executor { it.run() }
+        val dns = SurgeDns(delegate = upstream, refreshExecutor = syncRefresh)
+
+        dns.lookup("a.example")
+        assertEquals(1, upstream.calls("a.example"))
+
+        dns.staleAll()
+
+        // Nothing was dropped: the answer still comes straight from cache — but the
+        // touch double-checks upstream (background refresh, synchronous here).
+        assertEquals(listOf(ip("1.2.3.4")), dns.lookup("a.example"))
+        assertEquals(2, upstream.calls("a.example"))
+
+        // The refresh re-armed the TTL: back to a plain cache hit.
+        dns.lookup("a.example")
+        assertEquals(2, upstream.calls("a.example"))
+    }
+
+    @Test
+    fun `staleAll retries negatives on next use instead of waiting out the TTL`() {
+        val upstream = CountingDns(emptyMap())
+        val dns = SurgeDns(delegate = upstream)
+
+        assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
+        assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
+        assertEquals(1, upstream.calls("missing.example"))
+
+        dns.staleAll()
+
+        // The negative no longer short-circuits: the next use goes back upstream (sync
+        // path — negatives never serve stale), so a host that only failed because of
+        // the OLD network recovers on first touch after a network change.
+        assertThrows(UnknownHostException::class.java) { dns.lookup("missing.example") }
+        assertEquals(2, upstream.calls("missing.example"))
     }
 
     @Test
