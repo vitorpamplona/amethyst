@@ -829,7 +829,7 @@
     <string name="relay_auth_toggle_my_relays">My relays and venues</string>
     <string name="relay_auth_toggle_my_relays_desc">Log in to your own relays and to public chats, communities and live streams you\'ve joined or favorited.</string>
     <string name="relay_auth_toggle_read_follows">Read posts from people I follow</string>
-    <string name="relay_auth_toggle_read_follows_desc">Log in to a follow\'s relays to download their posts.</string>
+    <string name="relay_auth_toggle_read_follows_desc">Log in to a follow\'s relays to download their profile information, posts and post engagement.</string>
     <string name="relay_auth_toggle_message_follows">Message people I follow</string>
     <string name="relay_auth_toggle_message_follows_desc">Log in to a follow\'s relays to send DMs, replies and notifications.</string>
     <string name="relay_auth_toggle_message_strangers">Message anyone</string>
@@ -839,19 +839,19 @@
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <string name="relay_auth_title_send_dm">Send your message to %1$s?</string>
     <string name="relay_auth_title_notify">Notify %1$s?</string>
-    <string name="relay_auth_title_read">Load posts from %1$s?</string>
+    <string name="relay_auth_title_read">Load profile, posts and engagement from %1$s?</string>
     <string name="relay_auth_title_post_venue">Post to %1$s?</string>
     <string name="relay_auth_title_read_venue">Open %1$s?</string>
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_consequence_send_dm">If you don\'t, your message to %1$s won\'t be delivered.</string>
     <string name="relay_auth_consequence_notify">If you don\'t, %1$s won\'t be notified about this.</string>
-    <string name="relay_auth_consequence_read">If you don\'t, you won\'t see posts from %1$s here.</string>
+    <string name="relay_auth_consequence_read">If you don\'t, you won\'t see the profile, posts or engagement from %1$s here.</string>
     <string name="relay_auth_consequence_post_venue">If you don\'t, your message to %1$s won\'t be posted.</string>
     <string name="relay_auth_consequence_read_venue">If you don\'t, you won\'t see %1$s here.</string>
     <string name="relay_auth_name_and_others">%1$s and others</string>
     <string name="relay_auth_reason_send_dm">Send your private message to:</string>
     <string name="relay_auth_reason_notify_inbox">Notify:</string>
-    <string name="relay_auth_reason_read_outbox">Download posts from:</string>
+    <string name="relay_auth_reason_read_outbox">Download profile information, posts and engagement from:</string>
     <string name="relay_auth_reason_post_venue">Post to this room</string>
     <string name="relay_auth_reason_read_venue">Open this room</string>
     <string name="relay_auth_reason_other">Use this relay</string>
