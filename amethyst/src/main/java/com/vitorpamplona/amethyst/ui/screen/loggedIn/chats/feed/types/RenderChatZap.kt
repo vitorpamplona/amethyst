@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,9 +55,6 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 private const val BIG_ZAP_THRESHOLD_SATS = 50_000L
 
-// Matches the 18dp rounding of the redesigned chat bubbles / system pills.
-private val ChatZapCardShape = RoundedCornerShape(18.dp)
-
 @Composable
 fun RenderChatZap(
     baseNote: Note,
@@ -88,7 +84,6 @@ fun RenderChatZap(
         accent = BitcoinOrange,
         accentAlpha = accentAlpha,
         fillWidth = false,
-        shape = ChatZapCardShape,
     ) {
         val backgroundColor = remember(accentAlpha) { mutableStateOf(BitcoinOrange.copy(alpha = accentAlpha)) }
 

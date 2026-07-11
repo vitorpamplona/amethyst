@@ -53,7 +53,8 @@ fun StreamSystemCard(
     accentAlpha: Float = 0.12f,
     onClick: (() -> Unit)? = null,
     fillWidth: Boolean = true,
-    shape: Shape = RoundedCornerShape(8.dp),
+    // 18dp matches the rounding of the redesigned chat bubbles and system pills.
+    shape: Shape = RoundedCornerShape(18.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
     val base =
