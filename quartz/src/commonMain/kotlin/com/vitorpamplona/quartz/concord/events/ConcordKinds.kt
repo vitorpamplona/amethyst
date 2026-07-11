@@ -37,11 +37,11 @@ object ConcordKinds {
     const val SEAL_ENCRYPTED = 20013
     const val SEAL_PLAINTEXT = 20014
 
-    // Chat Plane rumors (CORD-03)
-    const val MESSAGE = 9
-    const val COMMENT = 1111
-    const val REACTION = 7
-    const val DELETE = 5
+    // Chat Plane rumors (CORD-03).
+    // Messages (kind 9), replies (9 + q), reactions (7), and deletes (5) are standard
+    // Nostr events — Concord reuses ChatEvent / ReactionEvent / DeletionEvent and only
+    // adds the channel/epoch binding (see cord03Channels/ChannelChat + tags/), so they
+    // are NOT aliased here. Only the Concord-specific chat kinds remain.
     const val EDIT = 3302
     const val WEBXDC = 3310
     const val TYPING = 23311

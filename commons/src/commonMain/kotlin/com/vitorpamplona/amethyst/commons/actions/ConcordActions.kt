@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /** One decrypted, verified Concord channel message projected for display. */
 data class ConcordChatMessage(
@@ -173,7 +174,7 @@ object ConcordActions {
     ): List<ConcordChatMessage> =
         wraps
             .mapNotNull { wrap -> ConcordStreamEnvelope.openOrNull(wrap, channel)?.rumor }
-            .filter { it.kind == ConcordKinds.MESSAGE && ChannelChat.isBoundTo(it, channelId, epoch) }
+            .filter { it.kind == ChatEvent.KIND && ChannelChat.isBoundTo(it, channelId, epoch) }
             .map { ConcordChatMessage(it.id, it.pubKey, it.content, it.createdAt, channelId, epoch) }
             .sortedWith(compareBy({ it.createdAt }, { it.id }))
 

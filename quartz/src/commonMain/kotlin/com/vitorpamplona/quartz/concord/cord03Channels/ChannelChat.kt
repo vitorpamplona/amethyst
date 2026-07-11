@@ -20,36 +20,31 @@
  */
 package com.vitorpamplona.quartz.concord.cord03Channels
 
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
+import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
+import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /**
  * Chat Plane message binding (CORD-03).
  *
- * Every Chat Plane rumor — a message, reply, reaction, edit, or delete — commits
- * to the channel and epoch it belongs to via `["channel", <id>]` and
- * `["epoch", <n>]` tags inside the author-signed rumor. Recipients enforce this
- * binding ([isBoundTo]) so an event lifted from one channel/epoch can't be
- * replayed into another.
+ * A Concord chat rumor **is** a standard Nostr event — a kind-9 [ChatEvent]
+ * message/reply or a kind-7 [ReactionEvent] — that additionally commits to the
+ * channel and epoch it belongs to via `["channel", <id>]` + `["epoch", <n>]` tags
+ * (see [channel]/[epoch] and [ChannelTag]/[EpochTag]). This object reuses the
+ * standard event builders and only adds the binding, so the same event classes
+ * that render everywhere else in the app render Concord messages too. Recipients
+ * enforce the binding ([TagArray.isConcordBoundTo]) so an event lifted from one
+ * channel/epoch can't be replayed into another.
  */
 object ChannelChat {
-    const val TAG_CHANNEL = "channel"
-    const val TAG_EPOCH = "epoch"
-
-    /** Builds the channel/epoch binding tags shared by every Chat Plane rumor. */
-    fun bindingTags(
-        channelId: HexKey,
-        epoch: Long,
-    ): Array<Array<String>> = arrayOf(arrayOf(TAG_CHANNEL, channelId), arrayOf(TAG_EPOCH, epoch.toString()))
-
     /**
-     * Builds an unsigned kind-9 chat message rumor bound to [channelId]/[epoch].
+     * Builds an unsigned kind-9 [ChatEvent] rumor bound to [channelId]/[epoch].
      * Wrap it for the channel plane with
-     * [com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope] (encrypted
-     * seal) to publish.
+     * [com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope] to publish.
      */
     fun message(
         authorPubKey: HexKey,
@@ -60,11 +55,11 @@ object ChannelChat {
         extraTags: Array<Array<String>> = emptyArray(),
     ): Event =
         RumorAssembler.assembleRumor(
-            pubKey = authorPubKey,
-            createdAt = createdAt,
-            kind = ConcordKinds.MESSAGE,
-            tags = bindingTags(channelId, epoch) + extraTags,
-            content = text,
+            authorPubKey,
+            ChatEvent.build(text, createdAt) {
+                channelBinding(channelId, epoch)
+                extraTags.forEach { addUnique(it) }
+            },
         )
 
     /**
@@ -91,10 +86,12 @@ object ChannelChat {
         )
 
     /**
-     * Builds an unsigned kind-7 reaction rumor bound to [channelId]/[epoch] against
-     * the target message ([targetId]/[targetAuthor]/[targetKind]). [content] is the
-     * reaction (e.g. `"+"`, `"🤙"`). On the receiving side this decrypts to a normal
-     * kind-7 that wires to its target Note by the `e` tag through the shared cache.
+     * Builds an unsigned kind-7 [ReactionEvent] rumor bound to [channelId]/[epoch]
+     * against the target message ([targetId]/[targetAuthor]/[targetKind]). [content]
+     * is the reaction (e.g. `"+"`, `"🤙"`). Kept to the minimal `e`/`p`/`k` tag form
+     * (no relay hints) so it stays wire-identical across clients. On the receiving
+     * side it decrypts to a normal kind-7 that wires to its target Note by the `e`
+     * tag through the shared cache.
      */
     fun reaction(
         authorPubKey: HexKey,
@@ -106,34 +103,34 @@ object ChannelChat {
         content: String,
         createdAt: Long,
     ): Event =
-        RumorAssembler.assembleRumor(
+        RumorAssembler.assembleRumor<ReactionEvent>(
             pubKey = authorPubKey,
             createdAt = createdAt,
-            kind = ConcordKinds.REACTION,
+            kind = ReactionEvent.KIND,
             tags =
-                bindingTags(channelId, epoch) +
-                    arrayOf(
-                        arrayOf("e", targetId),
-                        arrayOf("p", targetAuthor),
-                        arrayOf("k", targetKind.toString()),
-                    ),
+                arrayOf(
+                    ChannelTag.assemble(channelId),
+                    EpochTag.assemble(epoch),
+                    arrayOf("e", targetId),
+                    arrayOf("p", targetAuthor),
+                    arrayOf("k", targetKind.toString()),
+                ),
             content = content,
         )
 
     /** The channel id a Chat Plane [rumor] is bound to, or null if unbound. */
-    fun channelOf(rumor: Event): HexKey? = rumor.tags.firstTagValue(TAG_CHANNEL)
+    fun channelOf(rumor: Event): HexKey? = rumor.tags.concordChannel()
 
     /** The epoch a Chat Plane [rumor] is bound to, or null if unbound/malformed. */
-    fun epochOf(rumor: Event): Long? = rumor.tags.firstTagValue(TAG_EPOCH)?.toLongOrNull()
+    fun epochOf(rumor: Event): Long? = rumor.tags.concordEpoch()
 
     /**
-     * True when [rumor] is bound to exactly [channelId] and [epoch]. Recipients
-     * must reject any Chat Plane event whose binding does not match the plane it
-     * arrived on.
+     * True when [rumor] is bound to exactly [channelId] and [epoch]. Recipients must
+     * reject any Chat Plane event whose binding does not match the plane it arrived on.
      */
     fun isBoundTo(
         rumor: Event,
         channelId: HexKey,
         epoch: Long,
-    ): Boolean = channelOf(rumor) == channelId && epochOf(rumor) == epoch
+    ): Boolean = rumor.tags.isConcordBoundTo(channelId, epoch)
 }

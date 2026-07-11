@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.concord.cord07Voice
 
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
+import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
 import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -69,7 +71,8 @@ object VoicePresence {
         subMs: Int? = null,
     ): Event {
         val tags = ArrayList<Array<String>>()
-        tags.addAll(ChannelChat.bindingTags(channelId, epoch))
+        tags.add(ChannelTag.assemble(channelId))
+        tags.add(EpochTag.assemble(epoch))
         tags.add(arrayOf(TAG_IDENTITY, identity))
         if (broker != null) tags.add(arrayOf(TAG_BROKER, broker))
         if (subMs != null) tags.add(arrayOf("ms", subMs.toString()))
@@ -82,7 +85,7 @@ object VoicePresence {
         channelId: HexKey,
         epoch: Long,
         createdAt: Long,
-    ): Event = RumorAssembler.assembleRumor(authorPubKey, createdAt, KIND, ChannelChat.bindingTags(channelId, epoch), CONTENT_LEFT)
+    ): Event = RumorAssembler.assembleRumor(authorPubKey, createdAt, KIND, arrayOf(ChannelTag.assemble(channelId), EpochTag.assemble(epoch)), CONTENT_LEFT)
 
     fun parse(rumor: Event): VoicePresenceInfo? {
         if (rumor.kind != KIND) return null

@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -73,7 +73,7 @@ class ConcordPlaneRegistryTest {
             assertNotNull(routedMsg)
             assertEquals(ConcordPlaneKind.CHANNEL, routedMsg.plane.kind)
             assertEquals(community.generalChannelIdHex, routedMsg.plane.channelId?.channelId)
-            assertEquals(ConcordKinds.MESSAGE, routedMsg.opened.rumor.kind)
+            assertEquals(ChatEvent.KIND, routedMsg.opened.rumor.kind)
             assertEquals("gm", routedMsg.opened.rumor.content)
 
             // A wrap from an unrelated plane (different community) is not ours.
