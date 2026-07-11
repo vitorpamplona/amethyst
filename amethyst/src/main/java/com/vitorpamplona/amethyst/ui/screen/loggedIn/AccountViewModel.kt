@@ -623,6 +623,12 @@ class AccountViewModel(
         if (ban) account.banConcordMember(communityId, member) else account.unbanConcordMember(communityId, member)
     }
 
+    /** Pull the account's Concord community list from the stock relays (Concord hub bootstrap). */
+    fun importConcordCommunities() =
+        viewModelScope.launch(Dispatchers.IO) {
+            account.importConcordCommunitiesFromStockRelays()
+        }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

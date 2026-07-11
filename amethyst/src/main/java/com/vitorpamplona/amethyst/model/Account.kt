@@ -136,10 +136,12 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -2147,6 +2149,29 @@ class Account(
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
         val wraps = client.fetchAll(filters = filters)
         return wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) }
+    }
+
+    /**
+     * Bootstrap the Concord hub from the network: fetch this account's kind-13302
+     * joined-communities list from the Concord stock relays (where the reference
+     * client — Armada/Vector — publishes it, e.g. relay.ditto.pub) and fold the
+     * newest into [LocalCache], so communities we joined on another Concord client
+     * with this key surface here. Our outbox never carries that list, so without
+     * this a community joined on Armada would never appear.
+     *
+     * Read-only import: kind 13302 is replaceable, so folding an older copy is a
+     * no-op and this is safe to call on every hub open. Merging our own edits with
+     * a foreign writer's is a separate concern (newest-wins replaceable).
+     */
+    suspend fun importConcordCommunitiesFromStockRelays() {
+        val relays = InviteRelayDictionary.STOCK.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (relays.isEmpty()) return
+        val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(signer.pubKey))
+        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) })
+        events
+            .filterIsInstance<ConcordCommunityListEvent>()
+            .maxByOrNull { it.createdAt }
+            ?.let { cache.justConsumeMyOwnEvent(it) }
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
