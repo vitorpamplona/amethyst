@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli
 
+import com.sun.management.UnixOperatingSystemMXBean
 import com.vitorpamplona.amethyst.cli.stores.FileCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
@@ -54,6 +55,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -88,6 +91,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
 
 /**
@@ -135,6 +139,18 @@ class Context(
      */
     val anonymous: Boolean = false,
 ) : AutoCloseable {
+    // Shared resolver — the SAME SurgeDns the Android app runs (stale-while-revalidate,
+    // single-flight, jittered 24-48h positive TTL, 10-min negative TTL), persisted under
+    // `<data-dir>/shared/` so repeat crawls start with the whole relay universe pre-resolved:
+    // every previously-seen host serves its cached answer instantly and re-verifies in the
+    // background instead of paying a blocking getaddrinfo per host.
+    private val surgeDns = SurgeDns()
+    private val dnsStore =
+        SurgeDnsStore(dataDir.dnsCacheFile, surgeDns).also {
+            // Best-effort warm start (~25KB read); a corrupt/missing blob just means a cold cache.
+            runCatching { it.load() }
+        }
+
     private val okhttp =
         OkHttpClient
             .Builder()
@@ -149,14 +165,26 @@ class Context(
             // already-open sockets, bounded by AdaptiveRelayLimiter), so it can't
             // trip a relay's REQ rate-limit — it only speeds connection setup. The
             // executor thread pool is unbounded on demand, so raising maxRequests
-            // just lets more of those short-lived handshakes proceed at once. 7s
+            // just lets more of those short-lived handshakes proceed at once
+            // (1 platform thread per in-flight handshake — ~1k is fine on a JVM,
+            // 10k is not). Sized against the process FD budget: every pending
+            // handshake and every open socket is one file descriptor. 7s
             // (not 5s): a 5s cap struck too many merely-busy relays as connect
             // failures — the crawl treats a connect *timeout* as retryable anyway,
             // but the extra headroom lets slow-but-alive relays finish the handshake.
             .connectTimeout(7, TimeUnit.SECONDS)
+            // DNS dominates a mass connection ramp without help: Dns.SYSTEM blocks a
+            // dispatcher thread per lookup, the JVM's own cache lasts ~30s (useless
+            // over a 30-minute crawl), a dead domain burns 10-30s of resolver
+            // timeouts on EVERY re-dial, and the outbox model mints hundreds of
+            // per-user URLs on one host — each a fresh lookup. SurgeDns (shared with
+            // the Android app) collapses all of it: single-flight per host,
+            // stale-while-revalidate positives, 10-min negative TTL, persisted
+            // across runs via [dnsStore].
+            .dns(surgeDns)
             .dispatcher(
                 Dispatcher().apply {
-                    maxRequests = 256
+                    maxRequests = maxParallelHandshakes
                     maxRequestsPerHost = 16
                 },
             ).build()
@@ -212,7 +240,11 @@ class Context(
             // on a from-scratch GrapeRank crawl than the old 100 (which drowned
             // damus/nos.lol in 100 concurrent giant REQs) at equal completeness, and
             // is still generous for the single-user fetches other amy commands do.
-            startCap = 16,
+            // AMY_RELAY_SUB_CAP overrides for experiments — the crawl's Phase-B
+            // throughput plateaus on hot-relay permit queues, and the 16-vs-100
+            // benchmark predates the multithreaded-crawl fix, so the sweet spot may
+            // sit higher; relays that complain still get demoted down the ladder.
+            startCap = System.getenv("AMY_RELAY_SUB_CAP")?.toIntOrNull()?.coerceIn(1, 100) ?: 16,
         ).also { client.addConnectionListener(it) }
 
     /**
@@ -1030,6 +1062,10 @@ class Context(
     override fun close() {
         // Nothing to persist for an anonymous run (no account dir to write into).
         if (!anonymous) dataDir.saveRunState(state)
+        // Persist the DNS cache (shared dir, account-independent) so the next run's
+        // connection storm starts with every known host pre-resolved. Best-effort:
+        // a failed save must never break the run it is summarizing.
+        runCatching { dnsStore.save() }
         (signer as? NostrSignerRemote)?.let {
             try {
                 it.closeSubscription()
@@ -1057,6 +1093,39 @@ class Context(
          * [com.vitorpamplona.quartz.utils.TimeUtils.randomWithTwoDays].
          */
         private const val GIFT_WRAP_LOOKBACK_SECS: Long = 2L * 24 * 60 * 60
+
+        /** FDs reserved for everything that isn't a relay socket (store, jars, pipes, DNS). */
+        private const val FD_RESERVE = 256L
+
+        /**
+         * The process's max-open-files limit (`ulimit -n`), the hard ceiling on
+         * concurrent sockets: every open WebSocket AND every in-flight handshake is
+         * one file descriptor, and the JVM cannot raise its own rlimit. Falls back
+         * to the conservative 1024 (the common soft default) when the platform bean
+         * doesn't expose it.
+         */
+        val maxFileDescriptors: Long =
+            (ManagementFactory.getOperatingSystemMXBean() as? UnixOperatingSystemMXBean)
+                ?.maxFileDescriptorCount ?: 1024L
+
+        /**
+         * Concurrent WS-upgrade handshakes (OkHttp Dispatcher.maxRequests): a quarter
+         * of the FD budget, so pending dials can never crowd out the sockets already
+         * held open (warm pool, drains, parked subs). Also bounds the transient
+         * platform threads OkHttp spawns — one per in-flight handshake.
+         */
+        val maxParallelHandshakes: Int =
+            ((maxFileDescriptors - FD_RESERVE) / 4).coerceIn(64, 1024).toInt()
+
+        /**
+         * Default cap for the crawl's mass pre-connect (warm pool): half the FD
+         * budget goes to held-open relay sockets, leaving the other half for
+         * in-flight handshakes, drain/parked subscriptions and headroom. At the
+         * common 1024-FD soft limit this is ~384; `ulimit -n 16384` unlocks the
+         * full 4000. Overridable per-run with --preconnect-cap.
+         */
+        val defaultPreconnectCap: Int =
+            ((maxFileDescriptors - FD_RESERVE) / 2).coerceIn(100, 4000).toInt()
 
         /**
          * Build a Context but require an account with a usable identity —

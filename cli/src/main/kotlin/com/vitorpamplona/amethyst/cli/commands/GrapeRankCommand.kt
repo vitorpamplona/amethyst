@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
@@ -92,6 +93,9 @@ import kotlin.math.roundToInt
  *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store
  *    and score (same as bare `--offline`). Instant and param-tunable; repeat with
  *    different `--rigor`/`--attenuation`/cutoffs without re-crawling.
+ *  - `amy graperank probe` — the relay census: mass-connect every relay the store
+ *    knows and record live/dead + measured RTT into the reachability cache, so the
+ *    next crawl skips the dead and pre-connects the living in one parallel storm.
  *  - bare `amy graperank [OBSERVER]` — the convenience combo: crawl then score.
  *
  * Sub-verbs complete the NIP-85 provider experience — the discovery layer that
@@ -193,6 +197,7 @@ object GrapeRankCommand {
             // `sync` is the pre-rename name kept as a back-compat alias; `crawl` is
             // canonical (disambiguates from negentropy `amy sync` / `graperank update`).
             "crawl", "sync" -> crawl(dataDir, tail.drop(1).toTypedArray())
+            "probe" -> probe(dataDir, tail.drop(1).toTypedArray())
             "update" -> update(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             else -> run(dataDir, tail)
@@ -441,11 +446,25 @@ object GrapeRankCommand {
         // Aggregator kind:3 recovery for stragglers is on by default; --no-aggregators
         // disables it for A/B comparison.
         val aggregators = if (args.bool("no-aggregators")) emptySet() else CONTENT_AGGREGATOR_RELAYS
-        // Seed the crawl with relays a prior run/monitor proved dead within the cache's
-        // TTL, so the WS path never re-pays their connect timeouts (--no-reachability-cache
-        // to skip). The crawl's own final live/dead set is flushed back by the caller.
-        val knownDead =
-            if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
+        // Seed the crawl from the reachability cache (--no-reachability-cache to skip):
+        // proven-dead relays within the TTL are never dialed (their connect timeouts
+        // aren't re-paid), and the proven-live universe is pre-connected in one
+        // parallel storm at crawl start so the connect wait is paid once, up front.
+        // The crawl's own final live/dead set is flushed back by the caller.
+        val reachability =
+            if (args.bool("no-reachability-cache")) null else ctx.reachability.snapshot()
+        val knownDead = reachability?.dead ?: emptySet()
+        // Mass pre-connect sizing: every warm socket is one FD, so the default is
+        // derived from the process's ulimit (--preconnect-cap to override,
+        // --no-preconnect to fall back to the top-20 warm pool).
+        val preconnectCap =
+            if (args.bool("no-preconnect")) 0 else args.intFlag("preconnect-cap", Context.defaultPreconnectCap)
+        if (preconnectCap > 0 && Context.maxFileDescriptors < 4096) {
+            System.err.println(
+                "[graperank] open-files limit is ${Context.maxFileDescriptors} → pre-connect capped at " +
+                    "$preconnectCap sockets; `ulimit -n 16384` before running unlocks a faster crawl",
+            )
+        }
         return GrapeRankCrawler(
             client = ctx.client,
             store = ctx.store,
@@ -454,6 +473,8 @@ object GrapeRankCommand {
                 GrapeRankCrawler.Config(
                     relayListDiscoveryRelays = discoveryRelays,
                     knownDeadRelays = knownDead,
+                    knownLiveRelays = if (preconnectCap > 0) reachability?.live.orEmpty() else emptySet(),
+                    preconnectCap = preconnectCap,
                     contentFallbackRelays = contentFallback,
                     contentAggregatorRelays = aggregators,
                     maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE),
@@ -462,7 +483,7 @@ object GrapeRankCommand {
                     parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000,
                     diagnose = args.bool("diagnose"),
                     insertBatchSize = args.intFlag("insert-batch", 500),
-                    drainConcurrency = args.intFlag("drain-concurrency", 24),
+                    drainConcurrency = args.intFlag("drain-concurrency", 48),
                     timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
                     // Cheap TCP reachability pre-probe (--no-probe to disable). No Tor
                     // transport here, so .onion relays are skipped on sight.
@@ -471,8 +492,20 @@ object GrapeRankCommand {
                     // shedDeadDiscovery / shardRotations keep their benchmarked-best
                     // Config defaults.
                 ),
-            log = { System.err.println(it) },
+            log = crawlLogger(),
         )
+    }
+
+    /**
+     * Crawl progress logger with a `[t+SSSs]` elapsed prefix, so a saved log
+     * attributes wall time to rounds/phases without external timestamps.
+     */
+    private fun crawlLogger(): (String) -> Unit {
+        val start = System.nanoTime()
+        return { line ->
+            val secs = (System.nanoTime() - start) / 1_000_000_000
+            System.err.println("[t+${secs}s] $line")
+        }
     }
 
     /** Echo any relay NOTICE/CLOSED feedback + adaptive throttling the crawl saw. */
@@ -542,6 +575,86 @@ object GrapeRankCommand {
                     "verify_ms" to stats.verifyMs,
                     "insert_ms" to stats.insertMs,
                     "events_stored" to stats.eventsStored,
+                ),
+            )
+        }
+        return 0
+    }
+
+    /**
+     * `amy graperank probe [--timeout SECS] [--concurrency N]` —
+     * the relay census. Mass-connects the ENTIRE relay universe the local store knows
+     * (every relay advertised in any stored kind:10002, deduped per host, plus
+     * everything already in the reachability cache) in parallel waves with a no-op
+     * REQ, so the "is this relay alive, and how slow?" wait is paid once, up front,
+     * concurrently — then records per-relay verdicts with real measured `rtt-open`
+     * into the NIP-66 reachability cache (kind:30166).
+     *
+     * The next `graperank crawl` reads that cache to (a) skip the dead set without
+     * dialing it and (b) pre-connect the live set in one storm — separating "working
+     * but slow" (kept; the crawler's patient park path waits for them) from "not
+     * working" (skipped entirely). Typical flow the first time:
+     * `graperank crawl --max-hops 2` (cheap, saves the relay lists) → `graperank
+     * probe` → full `graperank crawl`.
+     */
+    private suspend fun probe(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val timeoutMs = args.longFlag("timeout", 15L) * 1000
+        val waveSize = args.intFlag("concurrency", Context.defaultPreconnectCap)
+
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+            val cached = ctx.reachability.snapshot()
+            val universe = RelayProber.knownRelayUniverse(ctx.store) + cached.live + cached.dead
+            if (universe.isEmpty()) {
+                Output.emit(
+                    linkedMapOf<String, Any?>(
+                        "probed" to 0,
+                        "note" to "no relays known locally — run `amy graperank crawl` first to gather kind:10002 relay lists",
+                    ),
+                )
+                return 0
+            }
+
+            System.err.println(
+                "[relay-probe] probing ${universe.size} relays in waves of $waveSize " +
+                    "(${timeoutMs / 1000}s per wave; open-files limit ${Context.maxFileDescriptors})",
+            )
+            val result =
+                RelayProber(ctx.client) { System.err.println(it) }
+                    .probe(universe, timeoutMs, waveSize)
+
+            ctx.reachability.recordProbed(result.reachableRttMs(), result.deadRelays())
+
+            val rtts =
+                result.reachable
+                    .map { it.rttOpenMs }
+                    .filter { it >= 0 }
+                    .sorted()
+
+            fun pct(p: Int): Long? = if (rtts.isEmpty()) null else rtts[(rtts.size - 1) * p / 100]
+            val slowest =
+                result.reachable
+                    .filter { it.rttOpenMs >= 0 }
+                    .sortedByDescending { it.rttOpenMs }
+                    .take(10)
+                    .map { mapOf("relay" to it.relay.url, "rtt_open_ms" to it.rttOpenMs) }
+            val authWalled = result.reachable.count { it.error?.startsWith("closed:") == true }
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "probed" to result.verdicts.size,
+                    "reachable" to result.reachable.size,
+                    "dead" to result.dead.size,
+                    "closed_by_policy" to authWalled,
+                    "elapsed_ms" to result.elapsedMs,
+                    "rtt_open_p50_ms" to pct(50),
+                    "rtt_open_p90_ms" to pct(90),
+                    "rtt_open_p99_ms" to pct(99),
+                    "slowest" to slowest,
                 ),
             )
         }

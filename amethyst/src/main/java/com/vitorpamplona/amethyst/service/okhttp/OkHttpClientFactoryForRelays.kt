@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Dispatcher
