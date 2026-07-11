@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -87,6 +90,38 @@ object ConcordSubscriptionPlanner {
             for (relay in sub.relays) authorsByRelay.getOrPut(relay) { ArrayList() }.add(sub.pubKeyHex)
         }
         return authorsByRelay.mapValues { (_, authors) -> listOf(ConcordActions.planeFilterFor(authors)) }
+    }
+
+    /**
+     * Collapses [subs] into one [RelayBasedFilter] per host relay for a live
+     * subscription: each relay gets a single `{kinds:[1059], authors:[…all plane
+     * pks on it…], since}` filter, with [since] applied per relay from the EOSE
+     * map. Returns null when no plane resolves to a relay (nothing to subscribe).
+     *
+     * This is the assembler-facing shape (what a `PerUniqueIdEoseManager` returns);
+     * [filtersByRelay] is the one-shot drain shape (no `since`).
+     */
+    fun relayBasedFilters(
+        subs: List<ConcordPlaneSub>,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? {
+        val authorsByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
+        for (sub in subs) {
+            for (relay in sub.relays) authorsByRelay.getOrPut(relay) { HashSet() }.add(sub.pubKeyHex)
+        }
+        if (authorsByRelay.isEmpty()) return null
+
+        return authorsByRelay.map { (relay, authors) ->
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = listOf(ConcordKinds.WRAP),
+                        authors = authors.toList(),
+                        since = since?.get(relay)?.time,
+                    ),
+            )
+        }
     }
 
     private fun normalize(urls: List<String>): Set<NormalizedRelayUrl> = urls.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }

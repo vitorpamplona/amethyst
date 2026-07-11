@@ -26,11 +26,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /** One screen's request to keep the user's joined Concord Channels live. */
 class ConcordChannelQueryState(
@@ -76,7 +73,9 @@ class ConcordChannelSubAssembler(
         if (entries.isEmpty()) return null
 
         // Control planes for every joined community, plus channel planes for the
-        // ones whose Control Plane has already folded.
+        // ones whose Control Plane has already folded. Deriving the channel planes
+        // is the only account-dependent step; collapsing planes into per-relay
+        // kind-1059 filters lives in the shared planner.
         val subs = ArrayList<ConcordPlaneSub>()
         subs += ConcordSubscriptionPlanner.controlPlaneSubs(entries)
         for (entry in entries) {
@@ -88,24 +87,7 @@ class ConcordChannelSubAssembler(
             subs += ConcordSubscriptionPlanner.channelPlaneSubs(entry, state)
         }
 
-        // One kind-1059 filter per host relay, carrying every plane address on it.
-        val authorsByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
-        for (sub in subs) {
-            for (relay in sub.relays) authorsByRelay.getOrPut(relay) { HashSet() }.add(sub.pubKeyHex)
-        }
-        if (authorsByRelay.isEmpty()) return null
-
-        return authorsByRelay.map { (relay, authors) ->
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = listOf(ConcordKinds.WRAP),
-                        authors = authors.toList(),
-                        since = since?.get(relay)?.time,
-                    ),
-            )
-        }
+        return ConcordSubscriptionPlanner.relayBasedFilters(subs, since)
     }
 
     override fun id(key: ConcordChannelQueryState) = key.account

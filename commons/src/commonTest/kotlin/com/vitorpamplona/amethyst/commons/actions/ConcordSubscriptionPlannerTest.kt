@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.relays.MutableTime
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ConcordSubscriptionPlannerTest {
@@ -70,5 +73,34 @@ class ConcordSubscriptionPlannerTest {
             assertEquals(listOf(1059), filter.kinds)
             assertTrue(filter.authors!!.contains(community.controlPlane.publicKeyHex))
             assertTrue(filter.authors!!.contains(general.pubKeyHex))
+        }
+
+    @Test
+    fun relayBasedFiltersCollapsePerRelayAndApplySince() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val entry =
+                com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    relays = listOf("wss://r.example"),
+                    name = "Nostrichs",
+                )
+            val subs = ConcordSubscriptionPlanner.controlPlaneSubs(listOf(entry))
+            val relay = RelayUrlNormalizer.normalizeOrNull("wss://r.example")!!
+
+            // One kind-1059 filter for the single relay, carrying the derived since.
+            val filters = ConcordSubscriptionPlanner.relayBasedFilters(subs, mutableMapOf(relay to MutableTime(1234L)))!!
+            assertEquals(1, filters.size)
+            assertEquals(relay, filters[0].relay)
+            assertEquals(listOf(1059), filters[0].filter.kinds)
+            assertEquals(1234L, filters[0].filter.since)
+            assertTrue(filters[0].filter.authors!!.contains(community.controlPlane.publicKeyHex))
+
+            // No planes resolve to a relay -> nothing to subscribe.
+            assertNull(ConcordSubscriptionPlanner.relayBasedFilters(emptyList(), null))
         }
 }
