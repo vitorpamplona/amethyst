@@ -77,8 +77,12 @@ control, rekey, guestbook, invites, voice), not the standard-Nostr aliases.
    ext; dropped `MESSAGE/REACTION/DELETE/COMMENT` aliases. (commit c2cbd602)
 2. ✅ Control plane 3308 → `cord04Roles/control/ControlEditionEvent` package +
    `tags/` (vsk/eid/ev/ep/vac) + ext; `EventFactory` registers 3308. (commit dc2abc0e)
-3. Invites 33301 / 3313 / 13303. **← next**
-4. Guestbook (3306/3309/3312) + voice (23313/23311) + rekey (3303).
+3. Invites: ✅ 33301 bundle → `cord05Invites/bundle/ConcordInviteBundleEvent`
+   (addressable, reuses `DTag` + `VskTag`; registered in `EventFactory`). Remaining:
+   3313 direct-invite → `ConcordDirectInviteEvent` (the rumor has empty tags; the
+   `p`/`k` index lives on the giftwrap). 13303 invite-list has no implementation yet
+   (a bare `ConcordKinds` constant) — build it when the private-invite feature lands.
+4. Guestbook (3306/3309/3312) + voice (23313/23311) + rekey (3303). **← next**
 5. Envelope seals (20013/20014) / wrap (1059/21059).
 6. Shrink `ConcordKinds` to only kinds without their own event class; audit
    `EventFactory` coverage.

@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.concord.cord05Invites
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
-import com.vitorpamplona.quartz.concord.events.ConcordKinds
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -51,10 +51,7 @@ class MintedInviteLink(
  * bundle. Pinned to the Concord v2 reference client.
  */
 object ConcordInviteBundle {
-    const val KIND = ConcordKinds.INVITE_BUNDLE
-    const val TAG_D = "d"
-    const val TAG_VSK = "vsk"
-    const val VSK_LIVE = "6"
+    const val KIND = ConcordInviteBundleEvent.KIND
 
     private fun json(invite: CommunityInvite) = ConcordJson.instance.encodeToString(CommunityInvite.serializer(), invite)
 
@@ -68,7 +65,7 @@ object ConcordInviteBundle {
         val bundleKey = ConcordKeyDerivation.inviteBundleKey(token)
         val content = Nip44.v2.encrypt(json(invite), bundleKey).encodePayload()
         val signer = NostrSignerSync(KeyPair(privKey = linkSignerPrivKey))
-        return signer.signNormal(createdAt, KIND, arrayOf(arrayOf(TAG_D, ""), arrayOf(TAG_VSK, VSK_LIVE)), content)
+        return signer.sign(ConcordInviteBundleEvent.build(content, createdAt))
     }
 
     /** Decrypts a kind-33301 bundle [event] with the link [token], or null if it isn't a valid bundle. */
