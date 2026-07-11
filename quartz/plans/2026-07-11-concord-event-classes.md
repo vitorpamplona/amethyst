@@ -73,10 +73,12 @@ control, rekey, guestbook, invites, voice), not the standard-Nostr aliases.
 
 ## Sequencing (incremental, compile + interop-test each)
 
-1. Chat plane reuse (this doc's first section) — smallest blast radius (4 refs),
-   highest clarity. **← start here.**
-2. Control plane 3308 → `ControlEditionEvent` package.
-3. Invites 33301 / 3313 / 13303.
-4. Guestbook + voice + rekey.
-5. Envelope seals/wrap.
-6. Shrink `ConcordKinds`, delete dead constants, update `EventFactory`.
+1. ✅ Chat plane reuse — `ChatEvent`/`ReactionEvent` + `cord03Channels/tags` +
+   ext; dropped `MESSAGE/REACTION/DELETE/COMMENT` aliases. (commit c2cbd602)
+2. ✅ Control plane 3308 → `cord04Roles/control/ControlEditionEvent` package +
+   `tags/` (vsk/eid/ev/ep/vac) + ext; `EventFactory` registers 3308. (commit dc2abc0e)
+3. Invites 33301 / 3313 / 13303. **← next**
+4. Guestbook (3306/3309/3312) + voice (23313/23311) + rekey (3303).
+5. Envelope seals (20013/20014) / wrap (1059/21059).
+6. Shrink `ConcordKinds` to only kinds without their own event class; audit
+   `EventFactory` coverage.
