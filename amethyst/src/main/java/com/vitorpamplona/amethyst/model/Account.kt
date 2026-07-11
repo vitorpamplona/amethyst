@@ -189,6 +189,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.signer.PoWNostrSigner
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
@@ -253,6 +254,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapTemplateConversion
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -927,7 +929,13 @@ class Account(
             difficulty = difficulty,
             persistAs = record,
             mine = { isActive ->
-                seals.map { NIP17Factory().wrapSeal(it, expirationDelta, powDifficulty = difficulty, powIsActive = isActive) }
+                // the wrap's ephemeral key is generated inside the wrap build;
+                // the conversion hook hands its pubkey back so the nonce can
+                // commit to it.
+                val mineWrap: GiftWrapTemplateConversion = { template, ephemeralPubKey ->
+                    PoWMiner.run(template, ephemeralPubKey, difficulty, isActive)
+                }
+                seals.map { NIP17Factory().wrapSeal(it, expirationDelta, templateConversion = mineWrap) }
             },
             publish = { wraps -> broadcastPrivately(wraps) },
         )

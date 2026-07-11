@@ -30,12 +30,20 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+
+/**
+ * Caller hook to adjust the finished wrap template right before the ephemeral
+ * key signs it — e.g. mining a NIP-13 proof of work into it. Receives the
+ * ephemeral key's pubkey because the NIP-01 id (what a nonce commits to)
+ * includes it, and the key never leaves [GiftWrapEvent.create]. Must return a
+ * template of the same kind; the default is the identity.
+ */
+typealias GiftWrapTemplateConversion = (template: EventTemplate<GiftWrapEvent>, ephemeralPubKey: HexKey) -> EventTemplate<GiftWrapEvent>
 
 @Immutable
 open class GiftWrapEvent(
@@ -109,10 +117,11 @@ open class GiftWrapEvent(
          * [recipientRelayHint] — `null` (the default) preserves the
          * historical 2-element `["p", pubkey]` shape.
          *
-         * [powDifficulty] mines a NIP-13 proof of work into the wrap itself
-         * (the ephemeral-key envelope, never the inner seal or rumor) so DM
-         * relays can PoW-filter inbox spam. [powIsActive] is the cooperative
-         * cancellation hook forwarded to the miner.
+         * [templateConversion] runs on the finished template right before the
+         * ephemeral key signs it. This is how a caller mines a NIP-13 proof
+         * of work into the wrap itself (the ephemeral-key envelope, never the
+         * inner seal or rumor) so DM relays can PoW-filter inbox spam —
+         * without this NIP-59 code knowing anything about mining.
          */
         fun create(
             event: Event,
@@ -120,8 +129,7 @@ open class GiftWrapEvent(
             expirationDelta: Long? = null,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
             recipientRelayHint: NormalizedRelayUrl? = null,
-            powDifficulty: Int? = null,
-            powIsActive: () -> Boolean = { true },
+            templateConversion: GiftWrapTemplateConversion = { template, _ -> template },
         ): GiftWrapEvent {
             val signer = NostrSignerSync(KeyPair()) // GiftWrap is always a random key
 
@@ -145,12 +153,7 @@ open class GiftWrapEvent(
                     content = signer.nip44Encrypt(event.toJson(), recipientPubKey),
                 )
 
-            val readyToSign =
-                if (powDifficulty != null && powDifficulty > 0) {
-                    PoWMiner.run(template, signer.pubKey, powDifficulty, powIsActive)
-                } else {
-                    template
-                }
+            val readyToSign = templateConversion(template, signer.pubKey)
 
             return signer.sign(
                 createdAt = readyToSign.createdAt,
