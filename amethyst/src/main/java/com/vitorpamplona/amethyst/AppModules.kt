@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
@@ -618,9 +619,12 @@ class AppModules(
         )
 
     // fire-and-forget NIP-13 mining: posts queue here and publish when mined.
-    // Capped worker pool so a burst of sends never spawns unbounded miners.
-    // Template jobs checkpoint to disk (restored on login) and every enqueue
-    // raises the shortService shield so backgrounding doesn't freeze a miner.
+    // One job mines at a time, racing half the cores over disjoint nonce
+    // slices — same total CPU budget as the old 2-job pool, but each post
+    // finishes ~minerThreads× sooner and the other half of the cores stays
+    // free for the UI. Template jobs checkpoint to disk (restored on login)
+    // and every enqueue raises the shortService shield so backgrounding
+    // doesn't freeze a miner.
     val powJobStore by lazy {
         PowJobStore(File(appContext.filesDir, PowJobStore.FILE_NAME), applicationIOScope)
     }
@@ -628,7 +632,8 @@ class AppModules(
     val powPublishQueue by lazy {
         PoWPublishQueue(
             scope = applicationIOScope,
-            maxConcurrent = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 2),
+            maxConcurrent = 1,
+            minerThreads = PoWPolicy.minerWorkers(Runtime.getRuntime().availableProcessors()),
             persistence = powJobStore,
             onQueueActive = { PowMiningForegroundService.start(appContext) },
         )

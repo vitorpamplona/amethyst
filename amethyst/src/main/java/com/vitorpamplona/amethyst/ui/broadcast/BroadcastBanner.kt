@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatTimeLeft
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -197,7 +198,7 @@ private fun MiningContent(
     val context = LocalContext.current
     val hashRate by
         produceState<Double?>(initialValue = null) {
-            value = PoWEstimator.hashesPerSecond()
+            value = deviceHashesPerSecond()
         }
 
     Column(modifier = Modifier.fillMaxWidth()) {

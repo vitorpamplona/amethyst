@@ -25,6 +25,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -50,37 +51,41 @@ object PoWEstimator {
     private const val BATCH = 2_000
     private val BENCH_DURATION = 250.milliseconds
 
-    private var cachedRate: Double? = null
+    // cached per worker count; guarded by benchLock (single-flight so
+    // concurrent first callers — e.g. the settings screen recomposing while
+    // the composer chip opens — share one ~250 ms benchmark instead of each
+    // burning the cores).
+    private val cachedRates = mutableMapOf<Int, Double>()
     private val benchLock = Mutex()
 
-    suspend fun hashesPerSecond(dispatcher: CoroutineDispatcher = Dispatchers.Default): Double =
-        cachedRate ?: withContext(dispatcher) {
-            // single-flight: concurrent first callers (e.g. the settings screen
-            // recomposing while the composer chip opens) share one ~250 ms
-            // benchmark instead of each burning a core.
-            benchLock.withLock {
-                cachedRate ?: benchmark().also { cachedRate = it }
-            }
-        }
+    suspend fun hashesPerSecond(dispatcher: CoroutineDispatcher = Dispatchers.Default): Double = hashesPerSecond(1, dispatcher)
 
     /**
      * Aggregate hash rate with [workers] concurrent miners — what
      * [com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner.mine] achieves when
-     * racing that many workers. Measured live (not cached): each worker runs
-     * its own ~250 ms benchmark loop concurrently and the rates are summed,
-     * so contention between cores is priced in.
+     * racing that many workers. Each worker runs its own ~250 ms benchmark
+     * loop concurrently and the rates are summed, so contention between
+     * cores is priced in.
      */
     suspend fun hashesPerSecond(
         workers: Int,
         dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    ): Double =
-        if (workers <= 1) {
-            hashesPerSecond(dispatcher)
-        } else {
-            withContext(dispatcher) {
-                List(workers) { async { benchmark() } }.awaitAll().sum()
+    ): Double {
+        val count = workers.coerceAtLeast(1)
+        benchLock.withLock {
+            cachedRates[count]?.let { return it }
+            return withContext(dispatcher) {
+                val rate =
+                    if (count == 1) {
+                        benchmark()
+                    } else {
+                        coroutineScope { List(count) { async { benchmark() } }.awaitAll().sum() }
+                    }
+                cachedRates[count] = rate
+                rate
             }
         }
+    }
 
     fun estimateSeconds(
         difficulty: Int,
