@@ -36,14 +36,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.MemorySnapshot
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.resourceusage.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler
@@ -57,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -76,6 +81,16 @@ fun ResourceUsageScreen(
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             days = Amethyst.instance.resourceUsage.allDaysIncludingLive()
+        }
+    }
+
+    // Live memory snapshot, refreshed only while this screen is composed.
+    // Collected off-main: DiskLruCache.size() contends with journal I/O.
+    val context = LocalContext.current
+    val memory by produceState<MemorySnapshot?>(null) {
+        while (true) {
+            value = withContext(Dispatchers.IO) { collectMemorySnapshot(context) }
+            delay(2_000)
         }
     }
 
@@ -105,7 +120,8 @@ fun ResourceUsageScreen(
                 UsageSummarySection(R.string.resource_usage_today, todaySummary)
                 UsageSummarySection(R.string.resource_usage_week, weekSummary)
                 SubsystemSection(weekSummary)
-                SendReportSection(accountViewModel, nav, loaded, today)
+                MemorySection(memory)
+                SendReportSection(accountViewModel, nav, loaded, today, memory)
             }
         }
     }
@@ -192,11 +208,36 @@ private fun MetricRow(
 }
 
 @Composable
+private fun MemorySection(memory: MemorySnapshot?) {
+    if (memory == null) return
+    SettingsSection(R.string.resource_usage_memory_section) {
+        MetricRow(R.string.resource_usage_memory_heap, "${memory.heapUsedMb} / ${memory.heapMaxMb} MB")
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_native, "${memory.nativeHeapUsedMb} MB")
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_image_cache, "${memory.imageCacheUsedMb} / ${memory.imageCacheMaxMb} MB")
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_image_disk, "${memory.imageDiskUsedMb} / ${memory.imageDiskMaxMb} MB")
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_notes, memory.noteCount.toString())
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_users, memory.userCount.toString())
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_addressables, memory.addressableCount.toString())
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_chatrooms, memory.chatroomCount.toString())
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_memory_device_class, "${memory.memoryClassMb} MB")
+    }
+}
+
+@Composable
 private fun SendReportSection(
     accountViewModel: AccountViewModel,
     nav: INav,
     days: Map<Long, Map<String, Long>>,
     today: Long,
+    memory: MemorySnapshot?,
 ) {
     SettingsSection(R.string.resource_usage_send_section) {
         Column(
@@ -210,7 +251,7 @@ private fun SendReportSection(
             )
             Button(
                 onClick = {
-                    val report = ResourceUsageReportAssembler().buildReport(days, today)
+                    val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
                     nav.nav {
                         routeToMessage(
                             user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),

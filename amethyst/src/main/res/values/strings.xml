@@ -3208,6 +3208,16 @@
     <string name="resource_usage_subsystem_push">Push registration</string>
     <string name="resource_usage_subsystem_other">Other</string>
     <string name="resource_usage_empty">No usage recorded yet.</string>
+    <string name="resource_usage_memory_section">Memory right now</string>
+    <string name="resource_usage_memory_heap">App memory (heap)</string>
+    <string name="resource_usage_memory_native">Native memory</string>
+    <string name="resource_usage_memory_image_cache">Image cache (RAM)</string>
+    <string name="resource_usage_memory_image_disk">Image cache (disk)</string>
+    <string name="resource_usage_memory_notes">Notes in memory</string>
+    <string name="resource_usage_memory_users">Profiles in memory</string>
+    <string name="resource_usage_memory_addressables">Addressable events in memory</string>
+    <string name="resource_usage_memory_chatrooms">Chatroom lists in memory</string>
+    <string name="resource_usage_memory_device_class">Device memory class</string>
     <string name="resource_usage_send_section">Share with the developers</string>
     <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, or browsing details. Nothing is sent until you tap Send in the message screen.</string>
     <string name="resource_usage_send_button">Send report via DM</string>

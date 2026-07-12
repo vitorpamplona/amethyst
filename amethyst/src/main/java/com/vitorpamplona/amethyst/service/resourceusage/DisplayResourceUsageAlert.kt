@@ -29,9 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
@@ -60,6 +62,7 @@ fun DisplayResourceUsageAlert(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val context = LocalContext.current
     val alert = remember { mutableStateOf<ResourceUsageAlerts.Alert?>(null) }
 
     LaunchedEffect(accountViewModel) {
@@ -109,10 +112,13 @@ fun DisplayResourceUsageAlert(
                 Button(onClick = {
                     nav.nav {
                         val report =
-                            ResourceUsageReportAssembler().buildReport(
-                                Amethyst.instance.resourceUsage.allDaysIncludingLive(),
-                                Amethyst.instance.resourceUsage.today(),
-                            )
+                            withContext(Dispatchers.IO) {
+                                ResourceUsageReportAssembler().buildReport(
+                                    Amethyst.instance.resourceUsage.allDaysIncludingLive(),
+                                    Amethyst.instance.resourceUsage.today(),
+                                    collectMemorySnapshot(context),
+                                )
+                            }
                         routeToMessage(
                             user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
                             draftMessage = report,

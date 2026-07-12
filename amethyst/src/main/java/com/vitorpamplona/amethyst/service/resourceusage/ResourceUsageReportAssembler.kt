@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.resourceusage
 
 import android.os.Build
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.MemorySnapshot
 import java.util.Locale
 
 /**
@@ -35,6 +36,7 @@ class ResourceUsageReportAssembler {
     fun buildReport(
         days: Map<Long, Map<String, Long>>,
         today: Long,
+        memory: MemorySnapshot? = null,
     ): String {
         val sb = StringBuilder()
         sb.append("Resource Usage Report: ")
@@ -58,6 +60,18 @@ class ResourceUsageReportAssembler {
         sb.append(summaryTable(UsageSummary.from(todayCounters)))
         sb.append("\n**Last 7 days**\n\n")
         sb.append(summaryTable(UsageSummary.fromDays(weekCounters)))
+
+        if (memory != null) {
+            sb.append("\n**Memory right now**\n\n")
+            sb.append("| Metric | Value |\n")
+            sb.append("| --- | --- |\n")
+            sb.append("| Device class | ${memory.memoryClassMb} MB |\n")
+            sb.append("| App heap | ${memory.heapUsedMb} / ${memory.heapMaxMb} MB |\n")
+            sb.append("| Native heap | ${memory.nativeHeapUsedMb} MB |\n")
+            sb.append("| Image cache (RAM) | ${memory.imageCacheUsedMb} / ${memory.imageCacheMaxMb} MB |\n")
+            sb.append("| Image cache (disk) | ${memory.imageDiskUsedMb} / ${memory.imageDiskMaxMb} MB |\n")
+            sb.append("| Cached notes/users/addressables/chatrooms | ${memory.noteCount}/${memory.userCount}/${memory.addressableCount}/${memory.chatroomCount} |\n")
+        }
 
         sb.append("\nTechnical details (per epoch-day):\n")
         sb.append("```\n")

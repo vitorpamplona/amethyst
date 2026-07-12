@@ -75,7 +75,6 @@ fun UserDrawerSearchTopBar(
             }
         },
         actions = {
-            MemoryUsageChip()
             IconButton(onClick = { nav.nav(Route.Search) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
