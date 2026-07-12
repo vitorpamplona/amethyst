@@ -156,4 +156,11 @@ private fun reasonDescription(alert: ResourceUsageAlerts.Alert): String =
                 alert.value.toInt(),
                 alert.value.toInt(),
             )
+
+        ResourceUsageAlerts.Reason.RECONNECT_CHURN ->
+            pluralStringResource(
+                R.plurals.resource_usage_reason_reconnects,
+                alert.value.toInt(),
+                alert.value.toInt(),
+            )
     }

@@ -72,12 +72,34 @@ object UsageKeys {
         foreground: Boolean,
     ): String = "relay.connms.${dim(mobile, foreground)}"
 
+    /** `relay.connects.mobile.bg` — completed relay (re)connections: each one paid a TCP+TLS handshake. */
+    fun relayConnects(
+        mobile: Boolean,
+        foreground: Boolean,
+    ): String = "relay.connects.${dim(mobile, foreground)}"
+
+    /** `relay.connfails.mobile.bg` — dials that failed before the websocket opened. */
+    fun relayConnectFails(
+        mobile: Boolean,
+        foreground: Boolean,
+    ): String = "relay.connfails.${dim(mobile, foreground)}"
+
     /** `worker.scheduledPost.runs` */
     fun workerRuns(worker: String): String = "worker.$worker.runs"
 
     const val WAKELOCK_NOTIF_MS = "wakelock.notif.ms"
     const val WAKELOCK_NOTIF_COUNT = "wakelock.notif.count"
     const val APP_STARTS = "app.starts"
+
+    /** Whole-process CPU time (user+system) — the honest aggregate of parsing, crypto, coroutines, and UI. */
+    const val CPU_MS = "cpu.ms"
+
+    /** Time with at least one activity STARTED — the denominator that makes the other counters interpretable. */
+    const val APP_FG_MS = "app.fgms"
+
+    /** Event signature verifications (LocalCache.justVerify). */
+    const val VERIFY_COUNT = "crypto.verify.count"
+    const val VERIFY_US = "crypto.verify.us"
 
     fun dim(
         mobile: Boolean,

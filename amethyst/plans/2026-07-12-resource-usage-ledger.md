@@ -58,6 +58,22 @@ Flat `Map<String, Long>` per UTC epoch-day, retained ~30 days. Key grammar:
 - `worker.scheduledPost.runs` / `worker.calendarReminder.runs` /
   `worker.notificationCatchUp.runs`
 - `app.starts` — process starts (detects WorkManager cold-start churn)
+- `relay.connects.<net>.<vis>` / `relay.connfails.<net>.<vis>` — completed
+  (re)connections and failed dials; each connect paid a TCP+TLS handshake,
+  so high daily counts are the reconnect-churn signature
+- `cpu.ms` — whole-process CPU time deltas ([android.os.Process
+  .getElapsedCpuTime] sampled at flush): the honest aggregate of parsing,
+  crypto, coroutines, and UI without per-subsystem guesswork
+- `app.fgms` — time with UI visible; display power is proportional to it and
+  it's the denominator for every per-day comparison
+- `crypto.verify.count` / `crypto.verify.us` — event signature verifications
+  (LocalCache.justVerify hook), settling "does Schnorr verify cost matter"
+  with data
+
+Deliberately not tracked (v1): per-screen time (route names leak behavior
+patterns into a report — needs its own privacy review), per-coroutine or
+per-dispatcher CPU (needs a thread registry; `cpu.ms` answers whether CPU
+matters at all first), signing (user-action-rate, negligible).
 
 Flat keys keep the store schema-free: new counters need no migration.
 

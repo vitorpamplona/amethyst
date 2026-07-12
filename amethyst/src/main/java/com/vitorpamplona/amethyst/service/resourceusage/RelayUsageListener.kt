@@ -55,4 +55,22 @@ class RelayUsageListener(
     ) {
         accountant.add(UsageKeys.relayMsg(isMobile(), isForeground(), received = true), msgStr.length.toLong())
     }
+
+    // Every completed (re)connection paid a TCP+TLS handshake; high daily
+    // counts are the signature of reconnect churn (flaky network, aggressive
+    // relay idle timeouts, Tor bootstrap loops).
+    override fun onConnected(
+        relay: IRelayClient,
+        pingMillis: Int,
+        compressed: Boolean,
+    ) {
+        accountant.add(UsageKeys.relayConnects(isMobile(), isForeground()), 1)
+    }
+
+    override fun onCannotConnect(
+        relay: IRelayClient,
+        errorMessage: String,
+    ) {
+        accountant.add(UsageKeys.relayConnectFails(isMobile(), isForeground()), 1)
+    }
 }

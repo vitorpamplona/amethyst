@@ -213,6 +213,78 @@ class RelayConnectionTimeIntegratorTest {
         }
 }
 
+class ProcessCpuSamplerTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    @Test
+    fun accountsCpuDeltasAcrossSamples() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 1L })
+            var cpu = 1_000L
+            val sampler = ProcessCpuSampler(accountant) { cpu }
+
+            cpu = 1_500L
+            sampler.sample()
+            cpu = 1_800L
+            sampler.sample()
+
+            val counters = accountant.allDaysIncludingLive()[1L].orEmpty()
+            assertEquals(800L, counters[UsageKeys.CPU_MS])
+        }
+}
+
+class ForegroundTimeIntegratorTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    @Test
+    fun accountsOnlyForegroundTime() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 1L })
+            var now = 0L
+            val fg = MutableStateFlow(false)
+            val integrator = ForegroundTimeIntegrator(fg, accountant) { now }
+            val job = integrator.start(backgroundScope)
+            testScheduler.runCurrent()
+
+            // 60s in background — must not count
+            now = 60_000L
+            fg.value = true
+            testScheduler.runCurrent()
+
+            // 30s in foreground — counts
+            now = 90_000L
+            fg.value = false
+            testScheduler.runCurrent()
+
+            // 60s more in background, then read: still 30s
+            now = 150_000L
+            val counters = accountant.allDaysIncludingLive()[1L].orEmpty()
+            assertEquals(30_000L, counters[UsageKeys.APP_FG_MS])
+            job.cancel()
+        }
+
+    @Test
+    fun openForegroundSegmentIsAccountedOnRead() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 1L })
+            var now = 0L
+            val fg = MutableStateFlow(true)
+            val integrator = ForegroundTimeIntegrator(fg, accountant) { now }
+            val job = integrator.start(backgroundScope)
+            testScheduler.runCurrent()
+
+            now = 45_000L
+            val counters = accountant.allDaysIncludingLive()[1L].orEmpty()
+            assertEquals(45_000L, counters[UsageKeys.APP_FG_MS])
+            job.cancel()
+        }
+}
+
 class ResourceUsageAlertsTest {
     private fun day(vararg counters: Pair<String, Long>) = mapOf(*counters)
 
@@ -281,6 +353,21 @@ class ResourceUsageAlertsTest {
             )
         val alert = ResourceUsageAlerts.evaluate(days, today = 10L)
         assertEquals(ResourceUsageAlerts.Reason.PROCESS_CHURN, alert?.reason)
+    }
+
+    @Test
+    fun reconnectChurnAlerts() {
+        val days =
+            mapOf(
+                9L to
+                    day(
+                        UsageKeys.relayConnects(mobile = true, foreground = false) to 3_000L,
+                        UsageKeys.relayConnects(mobile = false, foreground = true) to
+                            ResourceUsageAlerts.RELAY_CONNECTS_PER_DAY - 2_000L,
+                    ),
+            )
+        val alert = ResourceUsageAlerts.evaluate(days, today = 10L)
+        assertEquals(ResourceUsageAlerts.Reason.RECONNECT_CHURN, alert?.reason)
     }
 
     @Test

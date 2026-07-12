@@ -86,8 +86,10 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscripti
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
+import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
 import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
+import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
 import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
@@ -630,7 +632,8 @@ class AppModules(
     // Captures statistics about relays
     val relayStats = RelayStats(client)
 
-    // Resource-usage ledger: relay traffic + connection-time collectors.
+    // Resource-usage ledger: relay traffic/reconnect + connection-time,
+    // foreground-time, process-CPU, and signature-verification collectors.
     init {
         client.addConnectionListener(
             RelayUsageListener(
@@ -645,6 +648,15 @@ class AppModules(
             isForeground = foregroundTracker.isForeground,
             accountant = resourceUsage,
         ).start(applicationIOScope)
+        ForegroundTimeIntegrator(
+            isForeground = foregroundTracker.isForeground,
+            accountant = resourceUsage,
+        ).start(applicationIOScope)
+        ProcessCpuSampler(resourceUsage).register()
+        cache.verifyMeter = { elapsedNanos, _ ->
+            resourceUsage.add(UsageKeys.VERIFY_COUNT, 1)
+            resourceUsage.add(UsageKeys.VERIFY_US, elapsedNanos / 1_000)
+        }
     }
 
     // Logs debug messages when needed

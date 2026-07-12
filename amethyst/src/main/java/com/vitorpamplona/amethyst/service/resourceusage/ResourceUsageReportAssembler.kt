@@ -81,6 +81,10 @@ class ResourceUsageReportAssembler {
             append("| Relay connection time | ${formatConnHours(s.relayConnMs)} |\n")
             append("| ... while backgrounded on cellular | ${formatConnHours(s.relayConnMsMobileBg)} |\n")
             append("| Notification wakelock | ${formatDurationMs(s.wakelockMs)} (${s.wakelockCount}x) |\n")
+            append("| Relay reconnections | ${s.relayConnects} (${s.relayConnectFails} failed) |\n")
+            append("| Signatures verified | ${s.verifyCount} (${formatDurationMs(s.verifyUs / 1_000)} CPU) |\n")
+            append("| App CPU time | ${formatDurationMs(s.cpuMs)} |\n")
+            append("| Time in app | ${formatDurationMs(s.foregroundMs)} |\n")
             append("| Background worker runs | ${s.workerRuns} |\n")
             append("| App process starts | ${s.appStarts} |\n")
             val subsystems =

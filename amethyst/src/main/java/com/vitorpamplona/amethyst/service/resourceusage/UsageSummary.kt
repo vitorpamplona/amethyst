@@ -40,6 +40,12 @@ data class UsageSummary(
     val wakelockCount: Long,
     val workerRuns: Long,
     val appStarts: Long,
+    val relayConnects: Long,
+    val relayConnectFails: Long,
+    val cpuMs: Long,
+    val foregroundMs: Long,
+    val verifyCount: Long,
+    val verifyUs: Long,
     /** total rx+tx bytes per subsystem (net roles + "relay"). */
     val bytesPerSubsystem: Map<String, Long>,
 ) {
@@ -75,6 +81,12 @@ data class UsageSummary(
                 wakelockCount = counters[UsageKeys.WAKELOCK_NOTIF_COUNT] ?: 0L,
                 workerRuns = counters.sumMatching("worker", "runs"),
                 appStarts = counters[UsageKeys.APP_STARTS] ?: 0L,
+                relayConnects = counters.sumMatching("connects"),
+                relayConnectFails = counters.sumMatching("connfails"),
+                cpuMs = counters[UsageKeys.CPU_MS] ?: 0L,
+                foregroundMs = counters[UsageKeys.APP_FG_MS] ?: 0L,
+                verifyCount = counters[UsageKeys.VERIFY_COUNT] ?: 0L,
+                verifyUs = counters[UsageKeys.VERIFY_US] ?: 0L,
                 bytesPerSubsystem = subsystems,
             )
         }

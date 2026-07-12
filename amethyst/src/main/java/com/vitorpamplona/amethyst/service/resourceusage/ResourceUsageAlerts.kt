@@ -37,6 +37,7 @@ object ResourceUsageAlerts {
         BACKGROUND_MOBILE_CONNECTION_TIME,
         WAKELOCK_TIME,
         PROCESS_CHURN,
+        RECONNECT_CHURN,
     }
 
     data class Alert(
@@ -56,6 +57,14 @@ object ResourceUsageAlerts {
 
     /** > 75 process starts in one day (WorkManager/restart churn). */
     const val APP_STARTS_PER_DAY = 75L
+
+    /**
+     * > 5000 completed relay (re)connections in one day. A healthy day is a
+     * few hundred to ~2000 even with a large relay set; sustained thousands
+     * means something is cycling (a stuck relay tier, a flapping network, a
+     * Tor bootstrap loop) and every cycle pays a TLS handshake.
+     */
+    const val RELAY_CONNECTS_PER_DAY = 5_000L
 
     const val MIN_DAYS_BETWEEN_PROMPTS = 7L
 
@@ -83,6 +92,9 @@ object ResourceUsageAlerts {
             }
             if (summary.appStarts > APP_STARTS_PER_DAY) {
                 return Alert(Reason.PROCESS_CHURN, day, summary.appStarts)
+            }
+            if (summary.relayConnects > RELAY_CONNECTS_PER_DAY) {
+                return Alert(Reason.RECONNECT_CHURN, day, summary.relayConnects)
             }
         }
         return null

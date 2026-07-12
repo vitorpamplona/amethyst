@@ -3192,6 +3192,10 @@
     <string name="resource_usage_relay_time_bg_mobile">\u2026 backgrounded on cellular</string>
     <string name="resource_usage_wakelock">Notification processing (CPU awake)</string>
     <string name="resource_usage_worker_runs">Background jobs run</string>
+    <string name="resource_usage_reconnects">Relay reconnections (failed)</string>
+    <string name="resource_usage_verifies">Signatures verified</string>
+    <string name="resource_usage_cpu">Processor time used</string>
+    <string name="resource_usage_fg_time">Time in app</string>
     <string name="resource_usage_app_starts">App process starts</string>
     <string name="resource_usage_by_subsystem">Data by feature (7 days)</string>
     <string name="resource_usage_subsystem_relay">Relay sync</string>
@@ -3215,6 +3219,10 @@
     <plurals name="resource_usage_reason_churn">
         <item quantity="one">the app process restarted %1$d time in one day</item>
         <item quantity="other">the app process restarted %1$d times in one day</item>
+    </plurals>
+    <plurals name="resource_usage_reason_reconnects">
+        <item quantity="one">the app reconnected to relays %1$d time in one day</item>
+        <item quantity="other">the app reconnected to relays %1$d times in one day</item>
     </plurals>
     <string name="resource_usage_alert_send">Review &amp; send</string>
     <string name="resource_usage_alert_not_now">Not now</string>

@@ -3216,10 +3216,27 @@ object LocalCache : ILocalCache, ICacheProvider {
         live.removedNote(newNote)
     }
 
+    /**
+     * Resource-usage ledger hook: called with (elapsedNanos, valid) for every
+     * signature verification so the app can account crypto CPU per day.
+     * Wired by AppModules like [onchainBackend]; null costs nothing.
+     */
+    var verifyMeter: ((elapsedNanos: Long, valid: Boolean) -> Unit)? = null
+
     fun justVerify(event: Event): Boolean {
         checkNotInMainThread()
 
-        return if (!event.verify()) {
+        val meter = verifyMeter
+        if (meter == null) return justVerifyInner(event)
+
+        val start = System.nanoTime()
+        val valid = justVerifyInner(event)
+        meter(System.nanoTime() - start, valid)
+        return valid
+    }
+
+    private fun justVerifyInner(event: Event): Boolean =
+        if (!event.verify()) {
             try {
                 event.checkSignature()
             } catch (e: Exception) {
@@ -3230,7 +3247,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         } else {
             true
         }
-    }
 
     fun consume(
         event: DraftWrapEvent,
