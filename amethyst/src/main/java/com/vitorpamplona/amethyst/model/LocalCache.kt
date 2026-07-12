@@ -753,7 +753,13 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (rumor is ChatEvent || rumor is CommentEvent) {
             getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex)).addNote(getOrCreateNote(rumor.id))
         }
-        justConsume(rumor, null, false)
+        // wasVerified = true: a Concord rumor is unsigned (its `sig` is empty), so a signature
+        // check would fail and the event would never load onto its Note — leaving the chat row
+        // stuck on the "loading / not found" placeholder. Its authenticity is already established
+        // by the envelope open path (ConcordStreamEnvelope.open verifies the seal signature,
+        // binds rumor.pubKey == seal.pubKey, and checks rumor.verifyId()), exactly like a NIP-59
+        // gift-wrapped DM rumor, so we consume it as pre-verified.
+        justConsume(rumor, null, true)
     }
 
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
