@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -63,26 +65,32 @@ object ChannelChat {
         )
 
     /**
-     * Builds an unsigned kind-9 reply rumor bound to [channelId]/[epoch], quoting
-     * [parentId] (a `q` tag, NIP-C7 style) and crediting its author with a `p` tag.
-     * Reuses [message], so it is a normal channel message that also threads.
+     * Builds an unsigned kind-1111 **thread reply** ([CommentEvent], NIP-22) to
+     * [parent], bound to [channelId]/[epoch].
+     *
+     * A thread reply is a NIP-22 comment — NOT a kind-9 message with a `q` tag
+     * (which NIP-C7 reserves for *inline quotes* that clients deliberately keep out
+     * of threads). [CommentEvent.replyBuilder] emits the uppercase `K`/`E`/`P`
+     * pointers at the immutable thread root and the lowercase `k`/`e`/`p` pointers
+     * at the immediate [parent] (inheriting the root when [parent] is itself a
+     * comment, so the root is stable at any depth). We add the same
+     * `["channel", …]` + `["epoch", …]` binding every Chat Plane rumor carries, so
+     * the reply is verifiable against the plane it arrives on. This is exactly the
+     * shape Soapbox Armada builds and groups into a message's thread.
      */
     fun reply(
         authorPubKey: HexKey,
         channelId: HexKey,
         epoch: Long,
         text: String,
-        parentId: HexKey,
-        parentAuthor: HexKey,
+        parent: Event,
         createdAt: Long,
     ): Event =
-        message(
-            authorPubKey = authorPubKey,
-            channelId = channelId,
-            epoch = epoch,
-            text = text,
-            createdAt = createdAt,
-            extraTags = arrayOf(arrayOf("q", parentId), arrayOf("p", parentAuthor)),
+        RumorAssembler.assembleRumor(
+            authorPubKey,
+            CommentEvent.replyBuilder(text, EventHintBundle(parent), createdAt) {
+                channelBinding(channelId, epoch)
+            },
         )
 
     /**

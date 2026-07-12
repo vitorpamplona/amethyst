@@ -135,7 +135,7 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
-    /** Builds an encrypted-seal reply wrap (kind 9 quoting [parent]) on the [channel] plane. */
+    /** Builds an encrypted-seal thread-reply wrap (kind-1111 NIP-22 comment on [parent]) on the [channel] plane. */
     suspend fun buildChannelReply(
         authorSigner: NostrSigner,
         channel: GroupKey,
@@ -145,7 +145,7 @@ object ConcordActions {
         text: String,
         createdAt: Long,
     ): Event {
-        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt)
+        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent, createdAt)
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 

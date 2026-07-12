@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -80,12 +81,16 @@ class ConcordCommunitySessionTest {
             assertEquals("🤙", reaction.content)
             assertEquals(message.id, reaction.tags.first { it[0] == "e" }[1])
 
-            // A reply decrypts as a kind-9 quoting the parent via a `q` tag.
+            // A reply decrypts as a kind-1111 NIP-22 thread comment: uppercase `E` at the thread
+            // root and lowercase `e` at the immediate parent (both the message here), still bound
+            // to the channel so it groups into the message's thread — the shape Armada threads.
             val replyWrap = ConcordActions.buildChannelReply(owner, general, community.generalChannelIdHex, community.rootEpoch, message, "gm back", 4L)
             assertTrue(session.ingest(replyWrap))
             val reply = captured.map { it.third }.first { it.content == "gm back" }
-            assertEquals(9, reply.kind)
-            assertEquals(message.id, reply.tags.first { it[0] == "q" }[1])
+            assertEquals(1111, reply.kind)
+            assertEquals(message.id, reply.tags.first { it[0] == "E" }[1])
+            assertEquals(message.id, reply.tags.first { it[0] == "e" }[1])
+            assertTrue(ChannelChat.isBoundTo(reply, community.generalChannelIdHex, community.rootEpoch))
 
             // A stray wrap from a different community is ignored.
             val outsider = ConcordCommunityFactory.create(owner, "Other", createdAt = 1L, relays = listOf("wss://r.example"))
