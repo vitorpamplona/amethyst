@@ -87,8 +87,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.safeCacheDir
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
@@ -893,30 +893,19 @@ class AppModules(
         notificationDispatcher.start()
 
         // Keep the scheduled-posts worker (15-min periodic + one-time catch-up)
-        // enqueued exactly while the store holds a PENDING post. An always-on
-        // periodic worker wakes — and often cold-starts — the whole process every
-        // 15 minutes forever, even for users who never schedule a post. The store
-        // is durable (JSON on disk) and the single source of truth, so the worker
-        // is (re-)enqueued from any mutation that produces a PENDING row and
-        // cancelled when the last one drains. Runs independently of the always-on
+        // enqueued exactly while the store holds a PENDING post — see
+        // ScheduledPostWorkGate. Runs independently of the always-on
         // notification setting so scheduled posts still fire when always-on
         // notifications are disabled.
-        applicationIOScope.launch {
-            // Force the initial disk load; the flow's initial value is an empty
-            // list until the store is first touched.
-            scheduledPostStore.list()
-            scheduledPostStore.flow
-                .map { posts -> posts.any { it.status == ScheduledPostStatus.PENDING } }
-                .distinctUntilChanged()
-                .collect { hasPending ->
-                    if (hasPending) {
-                        ScheduledPostWorker.schedule(appContext)
-                        ScheduledPostWorker.scheduleCatchUp(appContext)
-                    } else {
-                        ScheduledPostWorker.cancelPeriodic(appContext)
-                    }
-                }
-        }
+        ScheduledPostWorkGate(
+            store = scheduledPostStore,
+            scope = applicationIOScope,
+            onPendingWork = {
+                ScheduledPostWorker.schedule(appContext)
+                ScheduledPostWorker.scheduleCatchUp(appContext)
+            },
+            onNoPendingWork = { ScheduledPostWorker.cancelPeriodic(appContext) },
+        ).start()
 
         // "Starting soon" reminders for NIP-52 appointments the user RSVP'd to as
         // ACCEPTED. The 15-min periodic scanner is only scheduled while it can
