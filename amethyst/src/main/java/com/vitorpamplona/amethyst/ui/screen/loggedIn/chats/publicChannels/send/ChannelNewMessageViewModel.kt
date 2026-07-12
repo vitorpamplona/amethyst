@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -85,6 +86,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
@@ -142,6 +144,10 @@ open class ChannelNewMessageViewModel :
     var channel: Channel? = null
 
     val replyTo = mutableStateOf<Note?>(null)
+
+    // INLINE keeps the reply in the timeline (native reply); MINICHAT sends a kind-1111
+    // thread comment that opens as a minichat. Only meaningful while replyTo is set.
+    val replyMode = mutableStateOf(ReplyMode.INLINE)
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
 
@@ -223,11 +229,17 @@ open class ChannelNewMessageViewModel :
 
     open fun reply(replyNote: Note) {
         replyTo.value = replyNote
+        replyMode.value = ReplyMode.INLINE
         draftTag.newVersion()
+    }
+
+    fun toggleReplyMode() {
+        replyMode.value = if (replyMode.value == ReplyMode.INLINE) ReplyMode.MINICHAT else ReplyMode.INLINE
     }
 
     fun clearReply() {
         replyTo.value = null
+        replyMode.value = ReplyMode.INLINE
         draftTag.newVersion()
     }
 
@@ -421,6 +433,16 @@ open class ChannelNewMessageViewModel :
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
+
+        // A minichat reply is a kind-1111 thread comment rooted at the parent, independent of the
+        // channel type; NIP-29 groups additionally carry the `h` tag so the relay scopes it.
+        val minichatParent = replyTo.value?.takeIf { replyMode.value == ReplyMode.MINICHAT }?.event
+        if (minichatParent != null) {
+            return CommentEvent.replyBuilder(message.text.toString(), EventHintBundle(minichatParent, channel.relays().firstOrNull())) {
+                if (channel is RelayGroupChannel) hTag(channel.groupId.id)
+            }
+        }
+
         val messageText = message.text.toString()
         val tagger =
             NewMessageTagger(

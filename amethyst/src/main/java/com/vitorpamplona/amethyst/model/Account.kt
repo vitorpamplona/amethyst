@@ -228,6 +228,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
@@ -1996,14 +1997,45 @@ class Account(
         rootNote: Note,
         text: String,
     ): Boolean {
-        val concord = rootNote.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
-        return sendConcordChannelMessage(
-            concord.channelId.communityId,
-            concord.channelId.channelId,
-            text,
-            rootNote,
-            ReplyMode.MINICHAT,
-        )
+        if (!isWriteable()) return false
+        val gatherers = rootNote.inGatherers
+
+        gatherers?.firstNotNullOfOrNull { it as? ConcordChannel }?.let { concord ->
+            return sendConcordChannelMessage(
+                concord.channelId.communityId,
+                concord.channelId.channelId,
+                text,
+                rootNote,
+                ReplyMode.MINICHAT,
+            )
+        }
+
+        // Public chats: a plain public kind-1111 comment rooted at the message. NIP-29 groups
+        // additionally carry the `h` tag and go only to the host relay.
+        val rootEvent = rootNote.event ?: return false
+
+        gatherers?.firstNotNullOfOrNull { it as? PublicChatChannel }?.let { chat ->
+            val relays = chat.relays().ifEmpty { outboxRelays.flow.value }
+            val signed = signer.sign(CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, chat.relays().firstOrNull())))
+            cache.justConsumeMyOwnEvent(signed)
+            client.publish(signed, relays)
+            return true
+        }
+
+        gatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }?.let { group ->
+            val hostRelay = group.groupId.relayUrl
+            val signed =
+                signer.sign(
+                    CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
+                        hTag(group.groupId.id)
+                    },
+                )
+            cache.justConsumeMyOwnEvent(signed)
+            client.publish(signed, setOf(hostRelay))
+            return true
+        }
+
+        return false
     }
 
     /**

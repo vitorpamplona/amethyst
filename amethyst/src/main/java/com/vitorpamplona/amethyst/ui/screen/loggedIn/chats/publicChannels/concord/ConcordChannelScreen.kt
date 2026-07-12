@@ -21,21 +21,15 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -45,15 +39,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -67,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.send.ConcordNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ReplyModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -149,48 +141,6 @@ fun ConcordChannelScreen(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     onMessageSent = { feedViewModel.feedState.sendToTop() },
-                )
-            }
-        }
-    }
-}
-
-/**
- * A small segmented toggle shown above the composer while a reply is pending: send it
- * as an inline message in the timeline, or pull the conversation aside into a minichat
- * thread. Inline is the default; the user opts into the thread.
- */
-@Composable
-private fun ReplyModeToggle(
-    mode: ReplyMode,
-    onToggle: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val minichat = mode == ReplyMode.MINICHAT
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.clickable(onClick = onToggle),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            ) {
-                SymbolIcon(
-                    symbol = if (minichat) MaterialSymbols.Forum else MaterialSymbols.Chat,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(14.dp),
-                )
-                Text(
-                    text = stringRes(if (minichat) com.vitorpamplona.amethyst.R.string.chat_reply_in_thread else com.vitorpamplona.amethyst.R.string.chat_reply_in_chat),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }

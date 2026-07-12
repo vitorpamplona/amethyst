@@ -220,10 +220,11 @@ fun observeNoteReplyCount(
  * children only (inline quote-replies are ordinary kind-9/42 messages and are not
  * counted here). Drives the "N replies" chip that opens the minichat.
  *
- * Local-only: it reads the reply index the cache already holds, and does NOT open a
- * per-note relay subscription (that would be one wasted REQ per visible row, and in
- * Concord the kind-1111 replies arrive over the channel plane anyway). The replies for
- * public chats are loaded once, feed-wide, by the chat screen's minichat subscription.
+ * Mounting this registers the message with [EventFinderFilterAssemblerSubscription], which
+ * batches the visible messages' ids into shared REQs for their replies (kind-1111 among
+ * them) — so for public chats (NIP-28/NIP-29) the thread replies load, and the chip appears,
+ * just by rendering the rows. Concord's kind-1111 replies instead arrive over the channel
+ * plane, so that REQ finds nothing there and is a harmless no-op.
  */
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
@@ -231,6 +232,8 @@ fun observeNoteMinichatReplyCount(
     note: Note,
     accountViewModel: AccountViewModel,
 ): State<Int> {
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
+
     val flow =
         remember(note) {
             note
