@@ -20,20 +20,98 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 
+import android.util.LruCache
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayNotifier
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
+import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Routes relay `NOTIFY` payment prompts to the account they actually concern.
+ *
+ * A relay's NOTIFY does not reliably name a pubkey, so we can't parse the account out of the
+ * message. Instead we correlate it with the AUTH that triggered it: a paid relay answers an
+ * unauthorized AUTH with `OK <authEventId> false …` immediately followed by the NOTIFY. We *signed*
+ * that auth event, so [AuthCmd.event] tells us which account's key it was. We remember that per auth
+ * event, resolve the failing `OK` back to the signer, and drop the NOTIFY into THAT account's own
+ * [NotifyRequestsCache] ([Account.relayNotifications]).
+ *
+ * The cache is per account (not a process-wide singleton), so a prompt for account A can never
+ * surface under account B — and an unattributable NOTIFY is dropped rather than shown to the wrong
+ * account. This is the fix for the stale-global-cache leak where switching accounts re-surfaced
+ * another account's inbox.nostr.wine prompt.
+ */
 class NotifyCoordinator(
-    client: INostrClient,
+    private val client: INostrClient,
+    private val accountForPubkey: (HexKey) -> Account?,
 ) {
-    val requests = NotifyRequestsCache()
+    companion object {
+        const val TAG = "NotifyCoordinator"
+        private const val AUTH_EVENT_CACHE = 256
+    }
 
-    val receiver =
-        RelayNotifier(client) { message, relay ->
-            requests.addPaymentRequestIfNew(message, relay.url)
+    // authEventId -> the pubkey we signed it with. Bounded: only a handful of relays re-auth.
+    private val signerOfAuthEvent = LruCache<HexKey, HexKey>(AUTH_EVENT_CACHE)
+
+    // relay -> pubkey of the auth the relay most recently rejected there (the one it will bill).
+    private val billedPubkeyAt = ConcurrentHashMap<NormalizedRelayUrl, HexKey>()
+
+    private val listener =
+        object : RelayConnectionListener {
+            override fun onSent(
+                relay: IRelayClient,
+                cmdStr: String,
+                cmd: Command,
+                success: Boolean,
+            ) {
+                if (cmd is AuthCmd) {
+                    signerOfAuthEvent.put(cmd.event.id, cmd.event.pubKey)
+                }
+            }
+
+            override fun onIncomingMessage(
+                relay: IRelayClient,
+                msgStr: String,
+                msg: Message,
+            ) {
+                when (msg) {
+                    is OkMessage ->
+                        if (!msg.success) {
+                            signerOfAuthEvent.get(msg.eventId)?.let { billedPubkeyAt[relay.url] = it }
+                        }
+                    is NotifyMessage -> route(relay.url, msg.message)
+                    else -> {}
+                }
+            }
         }
 
+    private fun route(
+        relay: NormalizedRelayUrl,
+        message: String,
+    ) {
+        // Consume the correlation so a later, unrelated NOTIFY can't reuse a stale attribution.
+        // An unattributable NOTIFY (none of our auths were rejected here) is dropped rather than
+        // risk surfacing it under the wrong account.
+        val account = billedPubkeyAt.remove(relay)?.let(accountForPubkey)
+        account?.relayNotifications?.addPaymentRequestIfNew(message, relay)
+    }
+
+    init {
+        Log.d(TAG, "Init, Subscribe")
+        client.addConnectionListener(listener)
+    }
+
     fun destroy() {
-        receiver.destroy()
+        Log.d(TAG, "Destroy, Unsubscribe")
+        client.removeConnectionListener(listener)
     }
 }
