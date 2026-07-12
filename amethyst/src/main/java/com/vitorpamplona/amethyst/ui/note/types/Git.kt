@@ -21,12 +21,10 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -85,7 +83,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.repoHasFetchableClo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -93,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size8dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -102,9 +98,7 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
-private val CardShape = QuoteBorder
 private val ChipShape = RoundedCornerShape(8.dp)
-private val CardPadding = PaddingValues(start = Size10dp, top = Size10dp, end = Size10dp, bottom = Size5dp)
 private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
 private val LinkRowSpacing = Arrangement.spacedBy(Size8dp)
 
@@ -113,15 +107,7 @@ private fun GitCardContainer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val border = MaterialTheme.colorScheme.subtleBorder
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(CardShape)
-                .border(1.dp, border, CardShape)
-                .padding(CardPadding),
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         content()
     }
 }
