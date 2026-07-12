@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.serialization)
     application
     `java-test-fixtures`
-    alias(libs.plugins.kotlinxKover)
 }
 
 application {

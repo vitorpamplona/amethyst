@@ -45,50 +45,6 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.serialization)
     alias(libs.plugins.googleKsp) apply false
-    alias(libs.plugins.kotlinxKover)
-}
-
-// Aggregated code coverage: `./gradlew koverXmlReportCoverage` runs the unit
-// test suites of the modules below and merges their coverage into
-// build/reports/kover/reportCoverage.xml (JaCoCo-compatible XML, importable by
-// SonarQube — see BUILDING.md). `koverHtmlReportCoverage` renders the same
-// data for humans. A named variant is used instead of Kover's default total
-// report because the total for an Android project unconditionally merges
-// EVERY build variant — compiling all release/benchmark variants of
-// :amethyst just to measure unit tests. The "coverage" variant below picks
-// one representative compilation per project: the `jvm` target for KMP/JVM
-// modules and `playDebug` for :amethyst — play is the primary flavor and the
-// larger code surface (both `add`s are optional so the one block fits every
-// project). :nappletHost stays out — it has no tests.
-dependencies {
-    kover(project(":amethyst"))
-    kover(project(":quartz"))
-    kover(project(":commons"))
-    kover(project(":quic"))
-    kover(project(":nestsClient"))
-    kover(project(":geode"))
-    kover(project(":cli"))
-    kover(project(":relayBench"))
-    kover(project(":desktopApp"))
-}
-
-kover {
-    currentProject {
-        createVariant("coverage") {}
-    }
-}
-
-subprojects {
-    plugins.withId("org.jetbrains.kotlinx.kover") {
-        configure<kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension> {
-            currentProject {
-                createVariant("coverage") {
-                    add("jvm", optional = true)
-                    add("playDebug", optional = true)
-                }
-            }
-        }
-    }
 }
 
 // Shared app version for all subprojects — read from gradle/libs.versions.toml.
@@ -163,15 +119,6 @@ if (sonarEnabled) {
         .stringPropertyNames()
         .filter { it.startsWith("sonar.") }
         .forEach { System.setProperty(it, sonarProperties.getProperty(it)) }
-
-    // Import Kover's aggregated coverage (run `./gradlew koverXmlReportCoverage`
-    // first) unless the operator pointed the scanner somewhere else.
-    if (System.getProperty("sonar.coverage.jacoco.xmlReportPaths") == null) {
-        System.setProperty(
-            "sonar.coverage.jacoco.xmlReportPaths",
-            layout.buildDirectory.file("reports/kover/reportCoverage.xml").get().asFile.absolutePath,
-        )
-    }
 
     // The scanner's sonarResolver task reads AGP's generated-res-values provider
     // but doesn't depend on the task that produces it — wire it up in every
