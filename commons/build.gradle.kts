@@ -25,7 +25,6 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.serialization)
-    alias(libs.plugins.kotlinxKover)
 }
 
 kotlin {
