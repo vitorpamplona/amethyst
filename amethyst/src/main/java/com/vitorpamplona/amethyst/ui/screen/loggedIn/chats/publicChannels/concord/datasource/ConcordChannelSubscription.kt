@@ -26,16 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**
  * Mount on any screen that lists the user's joined Concord Channels (the Messages
  * tab, the Concord home) to keep their planes live and their folded metadata in
- * the [LocalCache] channel index.
+ * the LocalCache channel index.
  *
  * The query state is keyed on the account (stable), so the assembler wouldn't
  * re-run its filter derivation on its own when a community folds or the joined set
@@ -57,39 +53,12 @@ fun ConcordChannelSubscription(
 
     val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
     LaunchedEffect(revision) {
-        refreshConcordChannelIndex(account)
+        // The channel-index refresh (community name/icon, membership, ban pruning) runs
+        // account-wide from Account on this same revision, so the Messages tab has chips even
+        // when this screen was never opened. Here we only need to re-derive the subscription
+        // filters, since a newly-folded channel plane must now be subscribed.
         dataSource.invalidateFilters()
     }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
-}
-
-/**
- * Projects each folded community session into the shared LocalCache channel index
- * so the Messages list and chat screens render an up-to-date [ConcordChannel]
- * (name, voice/private flags, community name/relays, this account's membership).
- */
-private fun refreshConcordChannelIndex(account: Account) {
-    val myPubKey = account.signer.pubKey
-    val relaysByCommunity =
-        account.concordChannelList.liveCommunities.value
-            .associate { entry ->
-                entry.id to entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-            }
-
-    for (session in account.concordSessions.sessions()) {
-        val state = session.state.value ?: continue
-        val communityId = session.entry.id
-        val relays = relaysByCommunity[communityId] ?: emptySet()
-        for (channelIdHex in state.channels.keys) {
-            val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
-            channel.updateFrom(state, relays, myPubKey)
-            // A member banned since these notes loaded: drop their messages now (the
-            // ingest gate stops future ones). removeNote invalidates the feed, so the
-            // ban is reflected live rather than only on the next feed pass.
-            channel.notes
-                .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
-                .forEach { channel.removeNote(it) }
-        }
-    }
 }

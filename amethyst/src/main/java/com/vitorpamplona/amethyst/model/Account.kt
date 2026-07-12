@@ -137,6 +137,7 @@ import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
@@ -445,6 +446,35 @@ class Account(
                 ?.authority
         if (authority?.isBanned(rumor.pubKey) == true) return
         cache.consumeConcordRumor(communityId, channelIdHex, rumor)
+    }
+
+    /**
+     * Copies each folded community's metadata (name/icon, channel flags, this account's
+     * membership) onto its [ConcordChannel] objects in the cache, and drops messages from
+     * authors banned since they loaded. Runs account-wide on every
+     * [com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager] revision —
+     * NOT gated behind the Concord hub screen — so every surface (the Messages-tab
+     * community chip, the chat screen title) reflects the current fold, and bans apply,
+     * even when the hub was never opened.
+     */
+    fun refreshConcordChannelIndex() {
+        val myPubKey = signer.pubKey
+        val relaysByCommunity =
+            concordChannelList.liveCommunities.value.associate { entry ->
+                entry.id to entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+            }
+        for (session in concordSessions.sessions()) {
+            val state = session.state.value ?: continue
+            val communityId = session.entry.id
+            val relays = relaysByCommunity[communityId] ?: emptySet()
+            for (channelIdHex in state.channels.keys) {
+                val channel = cache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
+                channel.updateFrom(state, relays, myPubKey)
+                channel.notes
+                    .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
+                    .forEach { channel.removeNote(it) }
+            }
+        }
     }
 
     val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
@@ -4711,6 +4741,13 @@ class Account(
                     }
                 }
             }
+        }
+
+        // Keep Concord channel metadata (community name/icon, membership) live across the whole
+        // app — not just the hub screen — so the Messages tab renders each channel's community
+        // chip, and per-community bans apply, as soon as a Control Plane folds.
+        scope.launch {
+            concordSessions.revision.collect { refreshConcordChannelIndex() }
         }
 
         scope.launch {
