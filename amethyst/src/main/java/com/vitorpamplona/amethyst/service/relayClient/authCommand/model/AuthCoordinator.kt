@@ -24,6 +24,8 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
@@ -33,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import java.util.concurrent.ConcurrentHashMap
 
 class ScreenAuthAccount(
     val account: Account,
@@ -87,10 +90,13 @@ class AuthCoordinator(
                     }
                 val currentLedgers = relayLedgers
                 // Ask the user (only in the ASK case) and fold every account's verdict into one
-                // decision plus an optional per-relay override to remember.
+                // decision plus an optional per-relay override to remember. When this relay hosts our
+                // Concord planes, never block the derived stream-key AUTH behind a user prompt: skip
+                // the user-auth ASK (DISMISS) so we return the stream AUTHs immediately instead of
+                // waiting on — or being dropped by — a dialog the user may never answer.
                 val outcome =
                     AuthDecisionResolver.resolve(currentLedgers.map { it.decide(context) }) {
-                        promptBus.requestDecision(relayUrl, context.purposes)
+                        if (streamAuths.isNotEmpty()) UserAuthChoice.DISMISS else promptBus.requestDecision(relayUrl, context.purposes)
                     }
                 outcome.remember?.let { decision ->
                     currentLedgers.firstOrNull()?.setDecision(relayUrl.url, decision)
@@ -146,13 +152,18 @@ class AuthCoordinator(
         if (secrets.isEmpty()) return emptyList()
         return secrets.mapNotNull { secret ->
             try {
-                NostrSignerSync(KeyPair(privKey = secret)).sign(authTemplate)
+                // Cache the signer by secret so we don't re-derive the secp256k1 keypair for every
+                // plane on every relay challenge/reconnect.
+                streamSigners.getOrPut(secret.toHexKey()) { NostrSignerSync(KeyPair(privKey = secret)) }.sign(authTemplate)
             } catch (e: Exception) {
                 Log.e("AuthCoordinator", "Failed to sign a Concord stream-key AUTH", e)
                 null
             }
         }
     }
+
+    // stream secret (hex) -> its local signer. Bounded by joined communities × channels.
+    private val streamSigners = ConcurrentHashMap<HexKey, NostrSignerSync>()
 
     fun destroy() {
         receiver.destroy()

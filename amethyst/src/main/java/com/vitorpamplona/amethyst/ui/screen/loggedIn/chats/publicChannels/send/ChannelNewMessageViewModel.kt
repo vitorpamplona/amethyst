@@ -434,15 +434,6 @@ open class ChannelNewMessageViewModel :
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
 
-        // A minichat reply is a kind-1111 thread comment rooted at the parent, independent of the
-        // channel type; NIP-29 groups additionally carry the `h` tag so the relay scopes it.
-        val minichatParent = replyTo.value?.takeIf { replyMode.value == ReplyMode.MINICHAT }?.event
-        if (minichatParent != null) {
-            return CommentEvent.replyBuilder(message.text.toString(), EventHintBundle(minichatParent, channel.relays().firstOrNull())) {
-                if (channel is RelayGroupChannel) hTag(channel.groupId.id)
-            }
-        }
-
         val messageText = message.text.toString()
         val tagger =
             NewMessageTagger(
@@ -462,6 +453,25 @@ open class ChannelNewMessageViewModel :
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
+
+        // A minichat reply is a kind-1111 thread comment rooted at the parent, independent of the
+        // channel type (NIP-29 groups additionally carry the `h` tag). It carries the same mention/
+        // hashtag/quote/emoji/attachment enrichment an inline message does — built from tagger.message,
+        // not the raw text — so replying in a thread never silently drops any of them.
+        val minichatParent = replyTo.value?.takeIf { replyMode.value == ReplyMode.MINICHAT }?.event
+        if (minichatParent != null) {
+            return CommentEvent.replyBuilder(tagger.message, EventHintBundle(minichatParent, channelRelays.firstOrNull())) {
+                if (channel is RelayGroupChannel) hTag(channel.groupId.id)
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
+                contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
+                geoHash?.let { geohash(it) }
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
+        }
 
         return when {
             channel is PublicChatChannel -> {

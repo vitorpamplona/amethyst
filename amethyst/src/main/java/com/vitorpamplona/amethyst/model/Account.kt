@@ -329,6 +329,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -2015,10 +2016,10 @@ class Account(
         val rootEvent = rootNote.event ?: return false
 
         gatherers?.firstNotNullOfOrNull { it as? PublicChatChannel }?.let { chat ->
-            val relays = chat.relays().ifEmpty { outboxRelays.flow.value }
-            val signed = signer.sign(CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, chat.relays().firstOrNull())))
+            val relays = chat.relays()
+            val signed = signer.sign(CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, relays.firstOrNull())))
             cache.justConsumeMyOwnEvent(signed)
-            client.publish(signed, relays)
+            client.publish(signed, relays.ifEmpty { outboxRelays.flow.value })
             return true
         }
 
@@ -4804,9 +4805,12 @@ class Account(
 
         // Keep Concord channel metadata (community name/icon, membership) live across the whole
         // app — not just the hub screen — so the Messages tab renders each channel's community
-        // chip, and per-community bans apply, as soon as a Control Plane folds.
+        // chip, and per-community bans apply, as soon as a Control Plane folds. The revision bumps
+        // on every ingested message, so sample() coalesces bursts into at most one full re-index
+        // per window instead of re-scanning every channel's notes per message.
         scope.launch {
-            concordSessions.revision.collect { refreshConcordChannelIndex() }
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
+            concordSessions.revision.sample(500).collect { refreshConcordChannelIndex() }
         }
 
         scope.launch {
