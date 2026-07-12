@@ -26,43 +26,33 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
+import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
-import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun MoreOptionsButton(
@@ -114,6 +104,7 @@ fun NoteDropDownMenu(
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
+    var deleteConfirmationShowing by remember { mutableStateOf(false) }
 
     // Tapping "Share" hands the note's share options off to the shared Share
     // drawer (ShareOptionsBottomSheet). We render it INSTEAD of the menu dialog
@@ -167,247 +158,79 @@ fun NoteDropDownMenu(
         )
     }
 
+    // Own private rumors (NIP-17 DMs) must be retracted with a gift-wrapped
+    // deletion — a public NIP-09 would e-tag the rumor id onto public relays.
+    val performDelete = {
+        if (note.isPrivateRumor()) {
+            accountViewModel.deletePrivately(note)
+        } else {
+            accountViewModel.delete(note)
+        }
+    }
+
+    if (deleteConfirmationShowing) {
+        QuickActionAlertDialog(
+            title = stringRes(R.string.quick_action_request_deletion_alert_title),
+            textContent = stringRes(R.string.quick_action_request_deletion_alert_body),
+            buttonIcon = MaterialSymbols.Delete,
+            buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
+            onClickDoOnce = {
+                performDelete()
+                onDismiss()
+            },
+            onClickDontShowAgain = {
+                performDelete()
+                accountViewModel.account.settings.setHideDeleteRequestDialog()
+                onDismiss()
+            },
+            onDismiss = { deleteConfirmationShowing = false },
+        )
+    }
+
+    val handlers =
+        NoteActionHandlers(
+            onShare = { showShareSheet = true },
+            onEditPost = { wantsToEditPost.value = true },
+            onEditDraft = { nav.nav { routeEditDraftTo(note, accountViewModel.account) } },
+            onAddLabel = { addLabelDialogShowing = true },
+            onReport = { reportDialogShowing = true },
+            onDeleteRequest = {
+                if (accountViewModel.account.settings.hideDeleteRequestDialog) {
+                    performDelete()
+                    onDismiss()
+                } else {
+                    deleteConfirmationShowing = true
+                }
+            },
+            onDismiss = onDismiss,
+        )
+
+    // "Copy Text" copies the newest version of a versioned post when the caller
+    // is looking at one.
+    val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
+
     M3ActionDialog(
         title = stringRes(R.string.note_actions_dialog_title),
         onDismiss = onDismiss,
     ) {
-        val clipboardManager = LocalClipboard.current
-        val scope = rememberCoroutineScope()
-
-        // Unsealed rumors (private replies/posts received in gift wraps) are
-        // unsigned and must never be referenced by a public event: hide every
-        // action that would publish an e-tag of this note (broadcast, edit,
-        // OTS timestamp, pin, label, public bookmark, deletion request).
-        val isPrivateRumor = note.isPrivateRumor()
-
-        // Follow section
-        M3ActionSection {
-            if (!state.isFollowingAuthor) {
-                M3ActionRow(icon = MaterialSymbols.PersonAdd, text = stringRes(R.string.follow)) {
-                    val author = note.author ?: return@M3ActionRow
-                    accountViewModel.follow(author)
-                    onDismiss()
-                }
-            } else {
-                M3ActionRow(icon = MaterialSymbols.PersonRemove, text = stringRes(R.string.unfollow)) {
-                    val author = note.author ?: return@M3ActionRow
-                    accountViewModel.unfollow(author)
-                    onDismiss()
-                }
-            }
-            M3ActionRow(icon = MaterialSymbols.AutoMirrored.PlaylistAdd, text = stringRes(R.string.follow_set_add_author_from_note_action)) {
-                val authorHexKey = note.author?.pubkeyHex ?: return@M3ActionRow
-                nav.nav(Route.PeopleListManagement(authorHexKey))
-                onDismiss()
-            }
-        }
-
-        // Copy & Share section. The copy-to-clipboard rows live here (and only
-        // here); the "Share" row hands off to the shared Share drawer.
-        M3ActionSection {
-            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
-                val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) {
-                    scope.launch {
-                        clipboardManager.setText(it)
-                    }
-                }
-                onDismiss()
-            }
-            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
-                note.author?.let {
-                    scope.launch(Dispatchers.IO) {
-                        clipboardManager.setText("nostr:${it.pubkeyNpub()}")
-                        onDismiss()
-                    }
-                }
-            }
-            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_note_id)) {
-                scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText(note.toNostrUri())
-                    onDismiss()
-                }
-            }
-            M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_raw_json)) {
-                val event = note.event
-                if (event != null) {
-                    scope.launch {
-                        val json = withContext(Dispatchers.Default) { JacksonMapper.toJsonPretty(event) }
-                        clipboardManager.setText(json)
-                        onDismiss()
-                    }
-                } else {
-                    onDismiss()
-                }
-            }
-            if (!isPrivateRumor) {
-                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
-                    showShareSheet = true
-                }
-            }
-        }
-
-        // Edit & Broadcast section
-        M3ActionSection {
-            if (state.isLoggedUser && note.isDraft()) {
-                M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_draft)) {
-                    nav.nav { routeEditDraftTo(note, accountViewModel.account) }
-                }
-            }
-            if (!note.isDraft() && !isPrivateRumor) {
-                if (note.event is TextNoteEvent) {
-                    if (state.isLoggedUser) {
-                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_post)) {
-                            wantsToEditPost.value = true
-                        }
-                    } else {
-                        M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.propose_an_edit)) {
-                            wantsToEditPost.value = true
-                        }
-                    }
-                } else if (note.event is LongTextNoteEvent && state.isLoggedUser) {
-                    M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_article)) {
-                        nav.nav { Route.NewLongFormPost(version = note.idHex) }
-                    }
-                }
-            }
-            // Rumors are rebroadcast as their delivering gift wrap; hidden
-            // when the wrap is unknown (the unsigned rumor must never be
-            // published).
-            if (accountViewModel.canBroadcast(note)) {
-                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
-                    accountViewModel.broadcast(note)
-                    onDismiss()
-                }
-            }
-        }
-
-        // Timestamp & Bookmarks section
-        M3ActionSection {
-            if (!isPrivateRumor) {
-                if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-                    M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
-                } else {
-                    M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_it)) {
-                        accountViewModel.timestamp(note)
-                        onDismiss()
-                    }
-                }
-            }
-            if (state.isLoggedUser && !isPrivateRumor) {
-                if (state.isPinnedNote) {
-                    M3ActionRow(icon = MaterialSymbols.PushPin, text = stringRes(R.string.unpin_from_profile)) {
-                        accountViewModel.removePin(note)
-                        onDismiss()
-                    }
-                } else {
-                    M3ActionRow(icon = MaterialSymbols.PushPin, text = stringRes(R.string.pin_to_profile)) {
-                        accountViewModel.addPin(note)
-                        onDismiss()
-                    }
-                }
-            }
-            if (!isPrivateRumor) {
-                M3ActionRow(icon = MaterialSymbols.Tag, text = stringRes(R.string.add_hashtag_label)) {
-                    addLabelDialogShowing = true
-                }
-            }
-            // Pick exactly one curation flow per kind: music tracks go to playlists, emoji
-            // packs go to the emoji list, everything else gets the standard bookmark rows.
-            // Showing both at once is noisy and makes "bookmark" feel like the catch-all when
-            // it really isn't for these kinds.
-            when {
-                isPrivateRumor -> {
-                    // No bookmark/playlist/emoji-list rows for private rumors:
-                    // those lists reference the note by id, which other devices
-                    // can't resolve from relays and public lists would leak.
-                }
-
-                note.event is MusicTrackEvent && note is AddressableNote -> {
-                    // Music tracks (kind 36787) belong in playlists (kind 34139). The
-                    // sheet behind this nav lets the user toggle membership across all of
-                    // their own playlists in one place — that subsumes the private/public
-                    // bookmark add+remove pair for this kind.
-                    M3ActionRow(icon = MaterialSymbols.AutoMirrored.PlaylistAdd, text = stringRes(R.string.add_to_music_playlist)) {
-                        nav.nav(Route.AddToMusicPlaylist(note.address.toValue()))
-                        onDismiss()
-                    }
-                }
-
-                note.event is EmojiPackEvent -> {
-                    // Emoji packs belong in the user's emoji list (kind 10030), not the
-                    // bookmark list.
-                    val emojiText =
-                        if (state.isEmojiPackInMyList) {
-                            stringRes(R.string.remove_from_emoji_list)
-                        } else {
-                            stringRes(R.string.add_to_emoji_list)
-                        }
-                    M3ActionRow(icon = MaterialSymbols.EmojiEmotions, text = emojiText) {
-                        val address = (note as AddressableNote).address
-                        nav.nav(Route.EmojiPackSelection(kind = EmojiPackEvent.KIND, pubKeyHex = address.pubKeyHex, dTag = address.dTag))
-                        onDismiss()
-                    }
-                }
-
-                else -> {
-                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-                    M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
-                        if (note.event is LongTextNoteEvent) {
-                            nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
-                        } else {
-                            nav.nav(Route.PostBookmarkManagement(note.idHex))
-                        }
-                        onDismiss()
-                    }
-                    if (state.isPrivateBookmarkNote) {
-                        M3ActionRow(icon = MaterialSymbols.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
-                            accountViewModel.removePrivateBookmark(note)
-                            onDismiss()
-                        }
-                    } else {
-                        M3ActionRow(icon = MaterialSymbols.Lock, text = stringRes(R.string.add_to_private_bookmarks)) {
-                            accountViewModel.addPrivateBookmark(note)
-                            onDismiss()
-                        }
-                    }
-                    if (state.isPublicBookmarkNote) {
-                        M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
-                            accountViewModel.removePublicBookmark(note)
-                            onDismiss()
-                        }
-                    } else {
-                        M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
-                            accountViewModel.addPublicBookmark(note)
-                            onDismiss()
-                        }
-                    }
-                }
-            }
-        }
-
-        // Moderation section
-        M3ActionSection {
-            val isThreadMuted = accountViewModel.isThreadMutedFor(note)
-            M3ActionRow(
-                icon = MaterialSymbols.AutoMirrored.VolumeOff,
-                text = stringRes(if (isThreadMuted) R.string.quick_action_unmute_thread else R.string.quick_action_mute_thread),
-            ) {
-                if (isThreadMuted) {
-                    accountViewModel.unmuteThread(note)
-                } else {
-                    accountViewModel.muteThread(note)
-                }
-                onDismiss()
-            }
-            if (state.isLoggedUser && !isPrivateRumor) {
-                M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
-                    accountViewModel.delete(note)
-                    onDismiss()
-                }
-            } else {
-                M3ActionRow(icon = MaterialSymbols.Report, text = stringRes(R.string.block_report), isDestructive = true) {
-                    reportDialogShowing = true
+        // The action inventory is shared with the chat long-press sheet
+        // (noteActionSections), so the two surfaces cannot drift.
+        noteActionSections(
+            note = note,
+            noteVersionToCopy = lastNoteVersion,
+            state = state,
+            handlers = handlers,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        ).forEach { section ->
+            M3ActionSection {
+                section.forEach { action ->
+                    M3ActionRow(
+                        icon = action.symbol,
+                        text = action.label,
+                        isDestructive = action.isDestructive,
+                        onClick = action.onClick,
+                    )
                 }
             }
         }

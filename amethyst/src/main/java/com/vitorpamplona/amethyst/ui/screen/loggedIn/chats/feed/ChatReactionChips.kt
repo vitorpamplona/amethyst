@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.note.ObserveZapAmountText
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
@@ -71,6 +72,8 @@ private data class ReactionChip(
     val count: Int,
     val includesMe: Boolean,
 )
+
+private val ChipGlyphFontSize = 13.sp
 
 /**
  * Messenger-style pills under a chat bubble summarizing who engaged with the message:
@@ -194,7 +197,7 @@ private fun ReactionChipView(
             if (chip.count > 1) {
                 Text(
                     text = chip.count.toString(),
-                    fontSize = 12.sp,
+                    fontSize = Font12SP,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
@@ -219,7 +222,7 @@ private fun ZapChip(
             ZappedIcon(Size14Modifier)
             Text(
                 text = amount,
-                fontSize = 12.sp,
+                fontSize = Font12SP,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.grayText,
                 maxLines = 1,
@@ -246,18 +249,18 @@ internal fun ChipReactionGlyph(reactionType: String) {
         InLineIconRenderer(
             persistentListOf(CustomEmoji.ImageUrlType(url)),
             style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
-            fontSize = 13.sp,
+            fontSize = ChipGlyphFontSize,
             maxLines = 1,
         )
     } else {
         when (reactionType) {
             "+" -> LikedIcon(Size14Modifier)
-            "-" -> Text(text = "👎", fontSize = 13.sp, maxLines = 1)
+            "-" -> Text(text = "👎", fontSize = ChipGlyphFontSize, maxLines = 1)
             else -> {
                 if (EmojiCoder.isCoded(reactionType)) {
-                    AnimatedBorderTextCornerRadius(reactionType, fontSize = 13.sp)
+                    AnimatedBorderTextCornerRadius(reactionType, fontSize = ChipGlyphFontSize)
                 } else {
-                    Text(text = reactionType, fontSize = 13.sp, maxLines = 1)
+                    Text(text = reactionType, fontSize = ChipGlyphFontSize, maxLines = 1)
                 }
             }
         }

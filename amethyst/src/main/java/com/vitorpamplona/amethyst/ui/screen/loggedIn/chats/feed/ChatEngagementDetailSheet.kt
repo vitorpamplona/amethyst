@@ -137,35 +137,16 @@ private fun ZapperRow(
     nav: INav,
     onDismiss: () -> Unit,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable {
-                    // Open the zap receipt in its own thread view (replies to the
-                    // zap itself); profile stays one tap away on the avatar. Falls
-                    // back to the zapper's profile while the receipt is unknown.
-                    val destination =
-                        zap.zapNote?.let { routeFor(it, accountViewModel.account) }
-                            ?: zap.user?.let { routeFor(it) }
-
-                    destination?.let {
-                        nav.nav(it)
-                        onDismiss()
-                    }
-                },
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Column(modifier = Modifier.fillMaxWidth()) {
+        EngagementRow(
+            user = zap.user,
+            // The zap receipt's own thread view (replies to the zap itself);
+            // falls back to the zapper's profile while the receipt is unknown.
+            eventNote = zap.zapNote,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onDismiss = onDismiss,
         ) {
-            zap.user?.let { user ->
-                UserPicture(user, Size25dp, Modifier, accountViewModel, nav)
-                Row(modifier = Modifier.weight(1f)) {
-                    UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
-                }
-            } ?: Spacer(Modifier.weight(1f))
-
             zap.amount?.let { amount ->
                 Text(
                     text = "⚡ $amount",
@@ -194,6 +175,32 @@ private fun ReactorRow(
     nav: INav,
     onDismiss: () -> Unit,
 ) {
+    EngagementRow(
+        user = entry.user,
+        eventNote = entry.reactionNote,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        onDismiss = onDismiss,
+    ) {
+        ChipReactionGlyph(entry.reactionType)
+    }
+}
+
+/**
+ * Shared engagement-list row: avatar + name + a trailing element. The row opens
+ * the engagement event's own thread view (replies/reactions TO the zap or
+ * reaction), falling back to the user's profile; the avatar keeps its built-in
+ * one-tap profile navigation.
+ */
+@Composable
+private fun EngagementRow(
+    user: User?,
+    eventNote: Note?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDismiss: () -> Unit,
+    trailing: @Composable () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -201,20 +208,25 @@ private fun ReactorRow(
             Modifier
                 .fillMaxWidth()
                 .clickable {
-                    // Open the reaction event in its own thread view; the avatar
-                    // still navigates to the profile.
                     val destination =
-                        routeFor(entry.reactionNote, accountViewModel.account)
-                            ?: routeFor(entry.user)
+                        eventNote?.let { routeFor(it, accountViewModel.account) }
+                            ?: user?.let { routeFor(it) }
 
-                    nav.nav(destination)
-                    onDismiss()
+                    destination?.let {
+                        nav.nav(it)
+                        onDismiss()
+                    }
                 },
     ) {
-        UserPicture(entry.user, Size25dp, Modifier, accountViewModel, nav)
-        Row(modifier = Modifier.weight(1f)) {
-            UsernameDisplay(baseUser = entry.user, accountViewModel = accountViewModel)
+        if (user != null) {
+            UserPicture(user, Size25dp, Modifier, accountViewModel, nav)
+            Row(modifier = Modifier.weight(1f)) {
+                UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
+            }
+        } else {
+            Spacer(Modifier.weight(1f))
         }
-        ChipReactionGlyph(entry.reactionType)
+
+        trailing()
     }
 }

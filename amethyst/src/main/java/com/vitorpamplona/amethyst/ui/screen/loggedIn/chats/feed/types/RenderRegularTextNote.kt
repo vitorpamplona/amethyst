@@ -39,6 +39,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiCount
 import com.vitorpamplona.amethyst.ui.stringRes
 
+// Jumbo sizes step down as the emoji count grows so up to three still fit a line.
+private val JumboEmojiSingle = 50.sp
+private val JumboEmojiPair = 40.sp
+private val JumboEmojiTriple = 32.sp
+
 @Composable
 fun RenderRegularTextNote(
     note: Note,
@@ -63,9 +68,9 @@ fun RenderRegularTextNote(
                         text = eventContent.trim(),
                         fontSize =
                             when (jumboCount) {
-                                1 -> 50.sp
-                                2 -> 40.sp
-                                else -> 32.sp
+                                1 -> JumboEmojiSingle
+                                2 -> JumboEmojiPair
+                                else -> JumboEmojiTriple
                             },
                     )
                 } else {

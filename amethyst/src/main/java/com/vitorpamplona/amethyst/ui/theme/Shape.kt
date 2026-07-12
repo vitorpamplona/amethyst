@@ -78,19 +78,9 @@ val ButtonBorder = RoundedCornerShape(20.dp)
 val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
 val EditFieldBorder = RoundedCornerShape(25.dp)
 
-// Chat bubble corners: the small 4dp corner is the "tail" pointing at the author's
-// side. A grouped run reads as one continuous unit: full rounding only at the very
-// top of the group and the very bottom, every edge that touches a neighboring
-// message of the same run stays sharp (Top = visually first / oldest, Bottom =
-// visually last).
-val ChatBubbleShapeMe = RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
-val ChatBubbleShapeMeTop = RoundedCornerShape(18.dp, 18.dp, 6.dp, 6.dp)
-val ChatBubbleShapeMeMiddle = RoundedCornerShape(6.dp, 6.dp, 6.dp, 6.dp)
-val ChatBubbleShapeMeBottom = RoundedCornerShape(6.dp, 6.dp, 4.dp, 18.dp)
-val ChatBubbleShapeThem = RoundedCornerShape(4.dp, 18.dp, 18.dp, 18.dp)
-val ChatBubbleShapeThemTop = RoundedCornerShape(4.dp, 18.dp, 6.dp, 6.dp)
-val ChatBubbleShapeThemMiddle = RoundedCornerShape(6.dp, 6.dp, 6.dp, 6.dp)
-val ChatBubbleShapeThemBottom = RoundedCornerShape(6.dp, 6.dp, 18.dp, 18.dp)
+// Chat bubble shapes live in commons (ChatTheme.kt) so Android and Desktop share
+// one geometry: see ChatBubbleShapeMe/Them and their grouped Top/Middle/Bottom
+// variants there.
 
 val StdButtonSizeModifier = Modifier.size(19.dp)
 

@@ -46,12 +46,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,8 +65,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
-import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ChangeReactionIcon
@@ -77,10 +73,12 @@ import com.vitorpamplona.amethyst.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
 import com.vitorpamplona.amethyst.ui.note.elements.AddHashtagLabelDialog
 import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
+import com.vitorpamplona.amethyst.ui.note.elements.NoteActionHandlers
 import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.ui.note.observeZapRailCapability
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.note.payViaIntentOrManualSplit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
@@ -93,16 +91,10 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 // null amount = open the on-chain dialog with no prefill.
 @Immutable
@@ -112,12 +104,9 @@ private data class OnchainZapRequest(
 
 /**
  * Long-press surface for a chat message: a quick-reaction row and the unpacked
- * zap amount presets on top, then every note action the 3-dot menu offers,
- * grouped by similarity into rows of icon tiles (message, author, organize,
- * moderation).
- *
- * The music-playlist and emoji-pack curation specials from the 3-dot menu are
- * intentionally absent: those kinds never render in a chat feed.
+ * zap amount presets on top, chat-only tiles (reply, edit draft), then the shared
+ * note-action inventory (noteActionSections — the same one behind the 3-dot menu,
+ * so the two surfaces can never drift) rendered as rows of icon tiles.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -248,266 +237,79 @@ fun ChatMessageActionSheet(
                 SectionDivider()
             }
 
-            MessageSection(note, state, onWantsToReply, onWantsToEditDraft, onEditPost = { wantsToEditPost = true }, onShare = { showShareSheet = true }, onDismiss, accountViewModel)
+            // Chat-only affordances first, then the shared note-action inventory
+            // (the same one behind the 3-dot menu, so the two surfaces never drift).
+            ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
 
-            SectionDivider()
-
-            AuthorSection(note, state, onDismiss, accountViewModel, nav)
-
-            if (!note.isPrivateRumor()) {
-                SectionDivider()
-                OrganizeSection(note, state, onAddLabel = { addLabelDialogShowing = true }, onDismiss, accountViewModel, nav)
-            }
-
-            SectionDivider()
-
-            ModerationSection(
-                note = note,
-                state = state,
-                onReport = { reportDialogShowing = true },
-                onDeleteRequest = {
-                    if (accountViewModel.account.settings.hideDeleteRequestDialog) {
-                        performDelete()
+            val handlers =
+                NoteActionHandlers(
+                    onShare = { showShareSheet = true },
+                    onEditPost = { wantsToEditPost = true },
+                    onEditDraft = {
+                        onWantsToEditDraft(note)
                         onDismiss()
-                    } else {
-                        deleteConfirmationShowing = true
-                    }
-                },
-                onDismiss = onDismiss,
+                    },
+                    onAddLabel = { addLabelDialogShowing = true },
+                    onReport = { reportDialogShowing = true },
+                    onDeleteRequest = {
+                        if (accountViewModel.account.settings.hideDeleteRequestDialog) {
+                            performDelete()
+                            onDismiss()
+                        } else {
+                            deleteConfirmationShowing = true
+                        }
+                    },
+                    onDismiss = onDismiss,
+                )
+
+            noteActionSections(
+                note = note,
+                noteVersionToCopy = note,
+                state = state,
+                handlers = handlers,
                 accountViewModel = accountViewModel,
-            )
+                nav = nav,
+            ).forEach { section ->
+                SectionDivider()
+                TileRow {
+                    section.forEach { action ->
+                        ActionTile(action.symbol, action.label, action.isDestructive, action.onClick)
+                    }
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-// ---------- Action tile sections (the unpacked 3-dot menu) ----------
+// ---------- Action tile sections ----------
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalUuidApi::class)
+/** Chat-specific tiles (reply, edit draft) that have no 3-dot menu equivalent. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MessageSection(
+private fun ChatOnlyRow(
     note: Note,
     state: DropDownParams,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
-    onEditPost: () -> Unit,
-    onShare: () -> Unit,
     onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
 ) {
-    val clipboardManager = LocalClipboard.current
-    val scope = rememberCoroutineScope()
-    val isPrivateRumor = note.isPrivateRumor()
-
-    TileRow {
-        if (!note.isDraft()) {
-            ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(R.string.reply_description)) {
-                onWantsToReply(note)
-                onDismiss()
-            }
-        }
-
-        if (state.isLoggedUser && note.isDraft()) {
+    if (note.isDraft() && !state.isLoggedUser) return
+    if (note.isDraft() && state.isLoggedUser) {
+        TileRow {
             ActionTile(MaterialSymbols.Edit, stringRes(R.string.edit_draft)) {
                 onWantsToEditDraft(note)
                 onDismiss()
             }
         }
-
-        if (!note.isDraft() && !isPrivateRumor && note.event is TextNoteEvent) {
-            ActionTile(
-                MaterialSymbols.Edit,
-                stringRes(if (state.isLoggedUser) R.string.edit_post else R.string.propose_an_edit),
-                onClick = onEditPost,
-            )
-        }
-
-        ActionTile(MaterialSymbols.ContentCopy, stringRes(R.string.copy_text)) {
-            accountViewModel.decrypt(note) {
-                scope.launch { clipboardManager.setText(it) }
-            }
-            onDismiss()
-        }
-
-        ActionTile(MaterialSymbols.FormatQuote, stringRes(R.string.copy_note_id)) {
-            scope.launch(Dispatchers.IO) {
-                clipboardManager.setText(note.toNostrUri())
-                onDismiss()
-            }
-        }
-
-        ActionTile(MaterialSymbols.ContentCopy, stringRes(R.string.copy_raw_json)) {
-            val event = note.event
-            if (event != null) {
-                scope.launch {
-                    val json = withContext(Dispatchers.Default) { JacksonMapper.toJsonPretty(event) }
-                    clipboardManager.setText(json)
-                    onDismiss()
-                }
-            } else {
-                onDismiss()
-            }
-        }
-
-        if (!isPrivateRumor) {
-            ActionTile(MaterialSymbols.Share, stringRes(R.string.quick_action_share), onClick = onShare)
-        }
-
-        // Rumors are rebroadcast as their delivering gift wrap; hidden when the
-        // wrap is unknown (the unsigned rumor must never be published).
-        if (accountViewModel.canBroadcast(note)) {
-            ActionTile(MaterialSymbols.CellTower, stringRes(R.string.broadcast)) {
-                accountViewModel.broadcast(note)
-                onDismiss()
-            }
-        }
+        return
     }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AuthorSection(
-    note: Note,
-    state: DropDownParams,
-    onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val clipboardManager = LocalClipboard.current
-    val scope = rememberCoroutineScope()
 
     TileRow {
-        if (!state.isLoggedUser) {
-            if (!state.isFollowingAuthor) {
-                ActionTile(MaterialSymbols.PersonAdd, stringRes(R.string.follow)) {
-                    note.author?.let { accountViewModel.follow(it) }
-                    onDismiss()
-                }
-            } else {
-                ActionTile(MaterialSymbols.PersonRemove, stringRes(R.string.unfollow)) {
-                    note.author?.let { accountViewModel.unfollow(it) }
-                    onDismiss()
-                }
-            }
-        }
-
-        ActionTile(MaterialSymbols.AutoMirrored.PlaylistAdd, stringRes(R.string.follow_set_add_author_from_note_action)) {
-            note.author?.pubkeyHex?.let {
-                nav.nav(Route.PeopleListManagement(it))
-            }
+        ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(R.string.reply_description)) {
+            onWantsToReply(note)
             onDismiss()
-        }
-
-        ActionTile(MaterialSymbols.AlternateEmail, stringRes(R.string.copy_user_pubkey)) {
-            note.author?.let {
-                scope.launch(Dispatchers.IO) {
-                    clipboardManager.setText("nostr:${it.pubkeyNpub()}")
-                    onDismiss()
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun OrganizeSection(
-    note: Note,
-    state: DropDownParams,
-    onAddLabel: () -> Unit,
-    onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    TileRow {
-        if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-            ActionTile(MaterialSymbols.Schedule, stringRes(R.string.timestamp_pending)) { onDismiss() }
-        } else {
-            ActionTile(MaterialSymbols.Schedule, stringRes(R.string.timestamp_it)) {
-                accountViewModel.timestamp(note)
-                onDismiss()
-            }
-        }
-
-        if (state.isLoggedUser) {
-            ActionTile(
-                MaterialSymbols.PushPin,
-                stringRes(if (state.isPinnedNote) R.string.unpin_from_profile else R.string.pin_to_profile),
-            ) {
-                if (state.isPinnedNote) {
-                    accountViewModel.removePin(note)
-                } else {
-                    accountViewModel.addPin(note)
-                }
-                onDismiss()
-            }
-        }
-
-        ActionTile(MaterialSymbols.Tag, stringRes(R.string.add_hashtag_label), onClick = onAddLabel)
-
-        ActionTile(MaterialSymbols.BookmarkAdd, stringRes(R.string.manage_bookmark_label, stringRes(R.string.post))) {
-            nav.nav(Route.PostBookmarkManagement(note.idHex))
-            onDismiss()
-        }
-
-        if (state.isPrivateBookmarkNote) {
-            ActionTile(MaterialSymbols.LockOpen, stringRes(R.string.remove_from_private_bookmarks)) {
-                accountViewModel.removePrivateBookmark(note)
-                onDismiss()
-            }
-        } else {
-            ActionTile(MaterialSymbols.Lock, stringRes(R.string.add_to_private_bookmarks)) {
-                accountViewModel.addPrivateBookmark(note)
-                onDismiss()
-            }
-        }
-
-        if (state.isPublicBookmarkNote) {
-            ActionTile(MaterialSymbols.BookmarkRemove, stringRes(R.string.remove_from_public_bookmarks)) {
-                accountViewModel.removePublicBookmark(note)
-                onDismiss()
-            }
-        } else {
-            ActionTile(MaterialSymbols.Bookmark, stringRes(R.string.add_to_public_bookmarks)) {
-                accountViewModel.addPublicBookmark(note)
-                onDismiss()
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ModerationSection(
-    note: Note,
-    state: DropDownParams,
-    onReport: () -> Unit,
-    onDeleteRequest: () -> Unit,
-    onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    TileRow {
-        val isThreadMuted = accountViewModel.isThreadMutedFor(note)
-        ActionTile(
-            MaterialSymbols.AutoMirrored.VolumeOff,
-            stringRes(if (isThreadMuted) R.string.quick_action_unmute_thread else R.string.quick_action_mute_thread),
-        ) {
-            if (isThreadMuted) {
-                accountViewModel.unmuteThread(note)
-            } else {
-                accountViewModel.muteThread(note)
-            }
-            onDismiss()
-        }
-
-        // Own messages always get a delete affordance (the private-rumor variant
-        // goes through the gift-wrapped deletion); reporting yourself never
-        // makes sense, so Report is others-only.
-        if (state.isLoggedUser) {
-            ActionTile(MaterialSymbols.Delete, stringRes(R.string.request_deletion), isDestructive = true, onClick = onDeleteRequest)
-        } else {
-            ActionTile(MaterialSymbols.Report, stringRes(R.string.block_report), isDestructive = true, onClick = onReport)
         }
     }
 }
@@ -659,16 +461,7 @@ private fun QuickZapAmountRow(
     }
 
     val onPayViaIntent = { payables: ImmutableList<ZapPaymentHandler.Payable> ->
-        if (payables.size == 1) {
-            val payable = payables.first()
-            payViaIntent(payable.invoice, context, { }) { error ->
-                accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
-            }
-        } else {
-            val uid = Uuid.random().toString()
-            accountViewModel.tempManualPaymentCache.put(uid, payables)
-            nav.nav(Route.ManualZapSplitPayment(uid))
-        }
+        payViaIntentOrManualSplit(payables, context, accountViewModel, nav)
     }
 
     Row(

@@ -1153,6 +1153,31 @@ private data class OnchainZapRequest(
     val amountSats: Long?,
 )
 
+/**
+ * Pays a single payable via a wallet intent, or routes multiple payables (zap
+ * splits) to the manual payment screen. The shared tail of every zap flow.
+ */
+@OptIn(ExperimentalUuidApi::class)
+fun payViaIntentOrManualSplit(
+    payables: ImmutableList<ZapPaymentHandler.Payable>,
+    context: Context,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onPaymentError: () -> Unit = {},
+) {
+    if (payables.size == 1) {
+        val payable = payables.first()
+        payViaIntent(payable.invoice, context, { }) { error ->
+            onPaymentError()
+            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+        }
+    } else {
+        val uid = Uuid.random().toString()
+        accountViewModel.tempManualPaymentCache.put(uid, payables)
+        nav.nav(Route.ManualZapSplitPayment(uid))
+    }
+}
+
 @Composable
 @OptIn(ExperimentalFoundationApi::class, ExperimentalUuidApi::class)
 fun ZapReaction(
@@ -1204,17 +1229,7 @@ fun ZapReaction(
                                 }
                             },
                             onPayViaIntent = {
-                                if (it.size == 1) {
-                                    val payable = it.first()
-                                    payViaIntent(payable.invoice, context, { }) { error ->
-                                        zappingProgress = 0f
-                                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
-                                    }
-                                } else {
-                                    val uid = Uuid.random().toString()
-                                    accountViewModel.tempManualPaymentCache.put(uid, it)
-                                    nav.nav(Route.ManualZapSplitPayment(uid))
-                                }
+                                payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                             },
                             onCustomAmount = {
                                 wantsToSetCustomZap = true
@@ -1260,17 +1275,7 @@ fun ZapReaction(
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
-                    if (it.size == 1) {
-                        val payable = it.first()
-                        payViaIntent(payable.invoice, context, { }) { error ->
-                            zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
-                        }
-                    } else {
-                        val uid = Uuid.random().toString()
-                        accountViewModel.tempManualPaymentCache.put(uid, it)
-                        nav.nav(Route.ManualZapSplitPayment(uid))
-                    }
+                    payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 onReloadNutzap = { amount ->
                     wantsToZap = false
