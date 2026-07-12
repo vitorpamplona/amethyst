@@ -3185,6 +3185,14 @@
     <string name="resource_usage_search_keywords">battery data usage consumption power network diagnostics ledger</string>
     <string name="resource_usage_today">Today</string>
     <string name="resource_usage_week">Last 7 days</string>
+    <string name="resource_usage_tile_cellular">Cellular today</string>
+    <string name="resource_usage_tile_wifi">Wi-Fi today</string>
+    <string name="resource_usage_tile_relay">Relay time today</string>
+    <string name="resource_usage_tile_in_app">In app today</string>
+    <string name="resource_usage_trend_section">Data per day</string>
+    <string name="resource_usage_legend_cellular">Cellular (MB)</string>
+    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
+    <string name="resource_usage_activity_section">Activity (7 days)</string>
     <string name="resource_usage_cellular_bg">Cellular data (background)</string>
     <string name="resource_usage_cellular_fg">Cellular data (in app)</string>
     <string name="resource_usage_wifi">Wi-Fi data</string>

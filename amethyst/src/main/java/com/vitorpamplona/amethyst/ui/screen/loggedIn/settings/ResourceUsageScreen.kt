@@ -21,14 +21,21 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,6 +48,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,6 +79,9 @@ import kotlinx.coroutines.withContext
  * user-initiated path to DM the numbers to the developers (same NIP-17 flow
  * as crash reports). Everything on this screen stays on-device until the
  * user sends that DM.
+ *
+ * Layout: headline stat tiles (today) → 7-day trend chart → per-feature
+ * proportion bars → activity counters → live memory meters → send card.
  */
 @Composable
 fun ResourceUsageScreen(
@@ -117,9 +129,14 @@ fun ResourceUsageScreen(
                 val todaySummary = UsageSummary.from(loaded[today].orEmpty())
                 val weekSummary = UsageSummary.fromDays((today - 6..today).mapNotNull { loaded[it] })
 
-                UsageSummarySection(R.string.resource_usage_today, todaySummary)
-                UsageSummarySection(R.string.resource_usage_week, weekSummary)
+                TodayTiles(todaySummary)
+                if (weekSummary.totalBytes > 0) {
+                    SettingsSection(R.string.resource_usage_trend_section) {
+                        UsageTrendChart(loaded, today)
+                    }
+                }
                 SubsystemSection(weekSummary)
+                ActivitySection(weekSummary)
                 MemorySection(memory)
                 SendReportSection(accountViewModel, nav, loaded, today, memory)
             }
@@ -127,46 +144,64 @@ fun ResourceUsageScreen(
     }
 }
 
+/** Headline numbers for today as a 2x2 tile grid. */
 @Composable
-private fun UsageSummarySection(
-    @StringRes title: Int,
-    s: UsageSummary,
-) {
-    SettingsSection(title) {
-        MetricRow(R.string.resource_usage_cellular_bg, formatBytes(s.mobileBytesBg))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_cellular_fg, formatBytes(s.mobileBytesFg))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_wifi, formatBytes(s.wifiBytesBg + s.wifiBytesFg))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_relay_time, formatConnHours(s.relayConnMs))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_relay_time_bg_mobile, formatConnHours(s.relayConnMsMobileBg))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_wakelock, formatDurationMs(s.wakelockMs))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_reconnects, "${s.relayConnects} (${s.relayConnectFails})")
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_verifies, s.verifyCount.toString())
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_cpu, formatDurationMs(s.cpuMs))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_fg_time, formatDurationMs(s.foregroundMs))
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_worker_runs, s.workerRuns.toString())
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_app_starts, s.appStarts.toString())
+private fun TodayTiles(s: UsageSummary) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatTile(R.string.resource_usage_tile_cellular, formatBytes(s.mobileBytes), Modifier.weight(1f))
+            StatTile(R.string.resource_usage_tile_wifi, formatBytes(s.wifiBytesBg + s.wifiBytesFg), Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatTile(R.string.resource_usage_tile_relay, formatConnHours(s.relayConnMs), Modifier.weight(1f))
+            StatTile(R.string.resource_usage_tile_in_app, formatDurationMs(s.foregroundMs), Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
+private fun StatTile(
+    @StringRes label: Int,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = stringRes(label),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+/** Ranked per-feature traffic with proportion bars (7 days). */
+@Composable
 private fun SubsystemSection(week: UsageSummary) {
     if (week.bytesPerSubsystem.isEmpty()) return
+    val rows = week.bytesPerSubsystem.entries.sortedByDescending { it.value }
+    val max = rows.first().value.coerceAtLeast(1L)
     SettingsSection(R.string.resource_usage_by_subsystem) {
-        val rows = week.bytesPerSubsystem.entries.sortedByDescending { it.value }
-        rows.forEachIndexed { index, (subsystem, bytes) ->
-            if (index > 0) SettingsDivider()
-            MetricRow(subsystemLabel(subsystem), formatBytes(bytes))
+        rows.forEach { (subsystem, bytes) ->
+            BarRow(
+                label = subsystemLabel(subsystem),
+                value = formatBytes(bytes),
+                fraction = bytes.toFloat() / max.toFloat(),
+            )
         }
     }
 }
@@ -184,6 +219,72 @@ private fun subsystemLabel(subsystem: String): Int =
         "push" -> R.string.resource_usage_subsystem_push
         else -> R.string.resource_usage_subsystem_other
     }
+
+/** Label + value + a thin rounded proportion bar underneath. */
+@Composable
+private fun BarRow(
+    @StringRes label: Int,
+    value: String,
+    fraction: Float,
+    color: Color = MaterialTheme.colorScheme.primary,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringRes(label),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(color),
+            )
+        }
+    }
+}
+
+/** Background/CPU activity counters for the last 7 days. */
+@Composable
+private fun ActivitySection(s: UsageSummary) {
+    SettingsSection(R.string.resource_usage_activity_section) {
+        MetricRow(R.string.resource_usage_relay_time, formatConnHours(s.relayConnMs))
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_relay_time_bg_mobile, formatConnHours(s.relayConnMsMobileBg))
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_reconnects, "${s.relayConnects} (${s.relayConnectFails})")
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_verifies, s.verifyCount.toString())
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_cpu, formatDurationMs(s.cpuMs))
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_wakelock, formatDurationMs(s.wakelockMs))
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_worker_runs, s.workerRuns.toString())
+        SettingsDivider()
+        MetricRow(R.string.resource_usage_app_starts, s.appStarts.toString())
+    }
+}
 
 @Composable
 private fun MetricRow(
@@ -207,17 +308,38 @@ private fun MetricRow(
     }
 }
 
+/**
+ * Live memory meters. The heap bar keeps the retired debug chip's status
+ * semantics: green below 60% of the max heap, amber to 80%, red above.
+ */
 @Composable
 private fun MemorySection(memory: MemorySnapshot?) {
     if (memory == null) return
+    val heapColor =
+        when {
+            memory.heapFraction > 0.80f -> Color(0xFFE53935)
+            memory.heapFraction > 0.60f -> Color(0xFFFFA000)
+            else -> Color(0xFF43A047)
+        }
     SettingsSection(R.string.resource_usage_memory_section) {
-        MetricRow(R.string.resource_usage_memory_heap, "${memory.heapUsedMb} / ${memory.heapMaxMb} MB")
+        BarRow(
+            label = R.string.resource_usage_memory_heap,
+            value = "${memory.heapUsedMb} / ${memory.heapMaxMb} MB",
+            fraction = memory.heapFraction,
+            color = heapColor,
+        )
+        BarRow(
+            label = R.string.resource_usage_memory_image_cache,
+            value = "${memory.imageCacheUsedMb} / ${memory.imageCacheMaxMb} MB",
+            fraction = memory.imageCacheUsedMb.toFloat() / memory.imageCacheMaxMb.coerceAtLeast(1L).toFloat(),
+        )
+        BarRow(
+            label = R.string.resource_usage_memory_image_disk,
+            value = "${memory.imageDiskUsedMb} / ${memory.imageDiskMaxMb} MB",
+            fraction = memory.imageDiskUsedMb.toFloat() / memory.imageDiskMaxMb.coerceAtLeast(1L).toFloat(),
+        )
         SettingsDivider()
         MetricRow(R.string.resource_usage_memory_native, "${memory.nativeHeapUsedMb} MB")
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_image_cache, "${memory.imageCacheUsedMb} / ${memory.imageCacheMaxMb} MB")
-        SettingsDivider()
-        MetricRow(R.string.resource_usage_memory_image_disk, "${memory.imageDiskUsedMb} / ${memory.imageDiskMaxMb} MB")
         SettingsDivider()
         MetricRow(R.string.resource_usage_memory_notes, memory.noteCount.toString())
         SettingsDivider()
