@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -193,34 +194,45 @@ fun ChatFeedLoaded(
                 val newer = items.list.getOrNull(index - 1)
                 val older = items.list.getOrNull(index + 1)
 
-                ChatroomMessageCompose(
-                    baseNote = item,
-                    routeForLastRead = routeForLastRead,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    onWantsToReply = onWantsToReply,
-                    onWantsToEditDraft = onWantsToEditDraft,
-                    onScrollToNote = onScrollToNote,
-                    shouldHighlight = highlightedNoteId.value == item.idHex,
-                    onHighlightFinished = { highlightedNoteId.value = null },
-                    groupPosition =
-                        remember(item, newer, older) {
-                            computeChatGroupPosition(newer, item, older)
-                        },
-                )
+                // Send/arrival motion: new items fade in and existing ones slide to
+                // make room, so a sent message enters instead of appearing.
+                val itemModifier =
+                    if (accountViewModel.settings.isPerformanceMode()) {
+                        Modifier
+                    } else {
+                        Modifier.animateItem()
+                    }
 
-                NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
+                Column(modifier = itemModifier) {
+                    ChatroomMessageCompose(
+                        baseNote = item,
+                        routeForLastRead = routeForLastRead,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onWantsToReply = onWantsToReply,
+                        onWantsToEditDraft = onWantsToEditDraft,
+                        onScrollToNote = onScrollToNote,
+                        shouldHighlight = highlightedNoteId.value == item.idHex,
+                        onHighlightFinished = { highlightedNoteId.value = null },
+                        groupPosition =
+                            remember(item, newer, older) {
+                                computeChatGroupPosition(newer, item, older)
+                            },
+                    )
 
-                // Per-relay paging markers belonging in the gap toward the next-older message. With the
-                // reverse layout this draws just above the message (the older side), so a relay's marker
-                // appears right below the oldest message it has reached and slides down as it pages.
-                markersInGap?.invoke(
-                    item.event?.createdAt,
-                    items.list
-                        .getOrNull(index + 1)
-                        ?.event
-                        ?.createdAt,
-                )
+                    NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
+
+                    // Per-relay paging markers belonging in the gap toward the next-older message. With the
+                    // reverse layout this draws just above the message (the older side), so a relay's marker
+                    // appears right below the oldest message it has reached and slides down as it pages.
+                    markersInGap?.invoke(
+                        item.event?.createdAt,
+                        items.list
+                            .getOrNull(index + 1)
+                            ?.event
+                            ?.createdAt,
+                    )
+                }
             }
         }
 

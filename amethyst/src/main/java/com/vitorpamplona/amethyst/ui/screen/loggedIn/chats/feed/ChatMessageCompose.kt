@@ -256,6 +256,12 @@ fun NormalChatNote(
                 accountViewModel.reactToOrDelete(note)
             }
         },
+        onSwipeReply =
+            if (!innerQuote && !note.isDraft()) {
+                { onWantsToReply(note) }
+            } else {
+                null
+            },
         onAuthorClick = {
             note.author?.let {
                 nav.nav(routeFor(it))

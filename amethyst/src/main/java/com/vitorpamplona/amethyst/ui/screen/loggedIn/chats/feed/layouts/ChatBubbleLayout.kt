@@ -21,15 +21,22 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -41,34 +48,50 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.note.CommentIcon
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingGroupedModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.chatBubbleMe
 import com.vitorpamplona.amethyst.ui.theme.chatBubbleThem
 import com.vitorpamplona.amethyst.ui.theme.chatDraftBackground
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private const val RELAYS_AND_ACTIONS_TEXT = "Relays and Actions"
 
 // Half the height of a reaction chip, so the chip row overlaps the bubble by
 // exactly its own vertical center.
 private val ChatChipOverlapArrangement = Arrangement.spacedBy((-12).dp)
+
+// Swipe-to-reply: releasing past the threshold fires the reply; the bubble never
+// drags further than the max.
+private val SwipeReplyThreshold = 56.dp
+private val SwipeReplyMaxDrag = 72.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -87,6 +110,9 @@ fun ChatBubbleLayout(
     onHighlightFinished: (() -> Unit)? = null,
     onClick: () -> Boolean,
     onDoubleTap: (() -> Unit)? = null,
+    // Drag the bubble toward the screen center to quote-reply. Null disables the
+    // gesture (inner quotes, drafts).
+    onSwipeReply: (() -> Unit)? = null,
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     reactionsRow: (@Composable () -> Unit)? = null,
@@ -137,84 +163,218 @@ fun ChatBubbleLayout(
         label = "highlightAnimation",
     )
 
-    Row(
+    val haptic = LocalHapticFeedback.current
+    val dragOffset = remember { Animatable(0f) }
+    val swipeScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val swipeThresholdPx = remember(density) { with(density) { SwipeReplyThreshold.toPx() } }
+    val swipeMaxPx = remember(density) { with(density) { SwipeReplyMaxDrag.toPx() } }
+
+    Box(
         modifier =
             when {
                 innerQuote -> ChatPaddingInnerQuoteModifier
                 groupPosition.isConnectedAbove -> ChatPaddingGroupedModifier
                 else -> ChatPaddingModifier
             },
-        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
     ) {
-        val popupExpanded = remember { mutableStateOf(false) }
-
-        val showDetails =
-            remember {
-                mutableStateOf(
-                    if (isComplete) {
-                        true
-                    } else {
-                        hasDetailsToShow
-                    },
-                )
+        if (onSwipeReply != null) {
+            val progress = (abs(dragOffset.value) / swipeThresholdPx).coerceIn(0f, 1f)
+            if (progress > 0f) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(if (isLoggedInUser) Alignment.CenterEnd else Alignment.CenterStart)
+                            .graphicsLayer {
+                                alpha = progress
+                                scaleX = 0.6f + 0.4f * progress
+                                scaleY = 0.6f + 0.4f * progress
+                            },
+                ) {
+                    CommentIcon(Size20Modifier, MaterialTheme.colorScheme.placeholderText)
+                }
             }
+        }
 
-        val clickableModifier =
-            remember {
-                Modifier.combinedClickable(
-                    onClick = {
-                        if (!onClick() && !isComplete) {
-                            showDetails.value = !showDetails.value
-                        }
-                    },
-                    onLongClick = { popupExpanded.value = true },
-                    onDoubleClick = onDoubleTap,
-                )
-            }
-
-        Column(
-            horizontalAlignment = if (isLoggedInUser) Alignment.End else Alignment.Start,
-            // Negative spacing pulls the reaction chips up so their vertical center
-            // rides the bubble's bottom border instead of floating detached below it.
-            verticalArrangement = if (reactionsRow != null) ChatChipOverlapArrangement else Arrangement.Top,
-            modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
-        ) {
-            Surface(
-                // Jumbo emoji show bare; the scroll-to highlight still tints them.
-                color = if (transparentBubble && !highlightActive.value) Color.Transparent else animatedColor,
-                shape = chatBubbleShapeFor(isLoggedInUser, if (innerQuote) ChatGroupPosition.SINGLE else groupPosition),
-                modifier = clickableModifier,
-            ) {
-                Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
-                    if (drawAuthorInfo) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
-                            modifier = HalfHalfVertPadding.clickable(onClick = onAuthorClick),
-                        ) {
-                            drawAuthorLine()
+        val swipeModifier =
+            if (onSwipeReply != null) {
+                Modifier
+                    .graphicsLayer { translationX = dragOffset.value }
+                    .pointerInput(onSwipeReply) {
+                        // Drag toward the screen center only; a haptic tick marks the
+                        // commit point, releasing past it fires the reply.
+                        var crossedThreshold = false
+                        detectHorizontalDragGestures(
+                            onDragStart = { crossedThreshold = false },
+                            onDragEnd = {
+                                if (abs(dragOffset.value) >= swipeThresholdPx) {
+                                    onSwipeReply()
+                                }
+                                swipeScope.launch { dragOffset.animateTo(0f) }
+                            },
+                            onDragCancel = {
+                                swipeScope.launch { dragOffset.animateTo(0f) }
+                            },
+                        ) { change, dragAmount ->
+                            change.consume()
+                            val newOffset =
+                                if (isLoggedInUser) {
+                                    (dragOffset.value + dragAmount).coerceIn(-swipeMaxPx, 0f)
+                                } else {
+                                    (dragOffset.value + dragAmount).coerceIn(0f, swipeMaxPx)
+                                }
+                            if (!crossedThreshold && abs(newOffset) >= swipeThresholdPx) {
+                                crossedThreshold = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                            swipeScope.launch { dragOffset.snapTo(newOffset) }
                         }
                     }
+            } else {
+                Modifier
+            }
 
-                    inner(bgColor)
+        Row(
+            modifier = Modifier.fillMaxWidth().then(swipeModifier),
+            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+        ) {
+            InnerChatBubble(
+                isLoggedInUser = isLoggedInUser,
+                innerQuote = innerQuote,
+                isComplete = isComplete,
+                hasDetailsToShow = hasDetailsToShow,
+                drawAuthorInfo = drawAuthorInfo,
+                groupPosition = groupPosition,
+                transparentBubble = transparentBubble,
+                animatedColor = animatedColor,
+                highlightActive = highlightActive.value,
+                bgColor = bgColor,
+                onClick = onClick,
+                onDoubleTap = onDoubleTap,
+                onAuthorClick = onAuthorClick,
+                actionMenu = actionMenu,
+                reactionsRow = reactionsRow,
+                timeRow = timeRow,
+                detailRow = detailRow,
+                drawAuthorLine = drawAuthorLine,
+                inner = inner,
+            )
+        }
+    }
+}
 
-                    if (showDetails.value) {
-                        detailRow()
-                    } else if (timeRow != null) {
-                        Box(modifier = Modifier.align(Alignment.End)) {
-                            timeRow()
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun InnerChatBubble(
+    isLoggedInUser: Boolean,
+    innerQuote: Boolean,
+    isComplete: Boolean,
+    hasDetailsToShow: Boolean,
+    drawAuthorInfo: Boolean,
+    groupPosition: ChatGroupPosition,
+    transparentBubble: Boolean,
+    animatedColor: Color,
+    highlightActive: Boolean,
+    bgColor: MutableState<Color>,
+    onClick: () -> Boolean,
+    onDoubleTap: (() -> Unit)?,
+    onAuthorClick: () -> Unit,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
+    reactionsRow: (@Composable () -> Unit)?,
+    timeRow: (@Composable () -> Unit)?,
+    detailRow: @Composable () -> Unit,
+    drawAuthorLine: @Composable () -> Unit,
+    inner: @Composable (MutableState<Color>) -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    val popupExpanded = remember { mutableStateOf(false) }
+
+    val showDetails =
+        remember {
+            mutableStateOf(
+                if (isComplete) {
+                    true
+                } else {
+                    hasDetailsToShow
+                },
+            )
+        }
+
+    val pressInteractionSource = remember { MutableInteractionSource() }
+    val isPressed by pressInteractionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (isPressed) 0.97f else 1f, label = "bubblePressScale")
+
+    val indication = LocalIndication.current
+    val clickableModifier =
+        remember {
+            Modifier.combinedClickable(
+                interactionSource = pressInteractionSource,
+                indication = indication,
+                onClick = {
+                    if (!onClick() && !isComplete) {
+                        showDetails.value = !showDetails.value
+                    }
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    popupExpanded.value = true
+                },
+                onDoubleClick =
+                    onDoubleTap?.let { action ->
+                        {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            action()
                         }
+                    },
+            )
+        }
+
+    Column(
+        horizontalAlignment = if (isLoggedInUser) Alignment.End else Alignment.Start,
+        // Negative spacing pulls the reaction chips up so their vertical center
+        // rides the bubble's bottom border instead of floating detached below it.
+        verticalArrangement = if (reactionsRow != null) ChatChipOverlapArrangement else Arrangement.Top,
+        modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
+    ) {
+        Surface(
+            // Jumbo emoji show bare; the scroll-to highlight still tints them.
+            color = if (transparentBubble && !highlightActive) Color.Transparent else animatedColor,
+            shape = chatBubbleShapeFor(isLoggedInUser, if (innerQuote) ChatGroupPosition.SINGLE else groupPosition),
+            modifier =
+                clickableModifier.graphicsLayer {
+                    scaleX = pressScale
+                    scaleY = pressScale
+                },
+        ) {
+            Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
+                if (drawAuthorInfo) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+                        modifier = HalfHalfVertPadding.clickable(onClick = onAuthorClick),
+                    ) {
+                        drawAuthorLine()
+                    }
+                }
+
+                inner(bgColor)
+
+                if (showDetails.value) {
+                    detailRow()
+                } else if (timeRow != null) {
+                    Box(modifier = Modifier.align(Alignment.End)) {
+                        timeRow()
                     }
                 }
             }
-
-            reactionsRow?.invoke()
         }
 
-        if (popupExpanded.value) {
-            actionMenu {
-                popupExpanded.value = false
-            }
+        reactionsRow?.invoke()
+    }
+
+    if (popupExpanded.value) {
+        actionMenu {
+            popupExpanded.value = false
         }
     }
 }
