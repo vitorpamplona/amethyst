@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
+import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
@@ -1962,6 +1963,7 @@ class Account(
         channelIdHex: String,
         text: String,
         replyTo: Note? = null,
+        replyMode: ReplyMode = ReplyMode.INLINE,
     ): Boolean {
         if (!isWriteable()) return false
         val session = concordSessions.sessionFor(communityId) ?: return false
@@ -1970,10 +1972,15 @@ class Account(
 
         val parent = replyTo?.event
         val wrap =
-            if (parent != null) {
-                ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now())
-            } else {
-                ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now())
+            when {
+                // A minichat reply is a kind-1111 thread comment; an inline reply is a kind-9
+                // message quoting the parent; a fresh post is a plain kind-9 message.
+                parent != null && replyMode == ReplyMode.MINICHAT ->
+                    ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now())
+                parent != null ->
+                    ConcordActions.buildChannelInlineReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now())
+                else ->
+                    ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now())
             }
         publishConcordWrap(entry, wrap)
         return true

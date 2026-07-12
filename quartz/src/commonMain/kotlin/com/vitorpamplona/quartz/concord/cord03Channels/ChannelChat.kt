@@ -65,6 +65,32 @@ object ChannelChat {
         )
 
     /**
+     * Builds an unsigned kind-9 **inline quote-reply** to [parentId]: a normal
+     * channel [message] that quotes the parent via a `q` tag (NIP-C7) and credits
+     * its author with a `p` tag. Unlike [reply] (a kind-1111 thread comment pulled
+     * into a minichat), an inline quote stays in the main chat timeline — the two
+     * reply modes the composer offers. Matches Armada, where a kind-9 `q` is an
+     * inline quote deliberately kept out of threads.
+     */
+    fun inlineReply(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        text: String,
+        parentId: HexKey,
+        parentAuthor: HexKey,
+        createdAt: Long,
+    ): Event =
+        message(
+            authorPubKey = authorPubKey,
+            channelId = channelId,
+            epoch = epoch,
+            text = text,
+            createdAt = createdAt,
+            extraTags = arrayOf(arrayOf("q", parentId), arrayOf("p", parentAuthor)),
+        )
+
+    /**
      * Builds an unsigned kind-1111 **thread reply** ([CommentEvent], NIP-22) to
      * [parent], bound to [channelId]/[epoch].
      *

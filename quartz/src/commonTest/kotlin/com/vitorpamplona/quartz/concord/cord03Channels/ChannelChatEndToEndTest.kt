@@ -80,6 +80,26 @@ class ChannelChatEndToEndTest {
     }
 
     @Test
+    fun inlineReplyIsAKind9QuoteWhileThreadReplyIsAKind1111Comment() {
+        val author = KeyPair().pubKey.toHexKey()
+        val parent =
+            ChannelChat.message(authorPubKey = author, channelId = channelIdHex, epoch = 0L, text = "root", createdAt = 1L)
+
+        // Inline quote-reply: a normal kind-9 message, quoting the parent via `q`, still channel-bound.
+        val inline = ChannelChat.inlineReply(author, channelIdHex, 0L, "inline", parent.id, parent.pubKey, 2L)
+        assertEquals(9, inline.kind)
+        assertEquals(parent.id, inline.tags.first { it[0] == "q" }[1])
+        assertTrue(ChannelChat.isBoundTo(inline, channelIdHex, 0L))
+
+        // Thread reply: a kind-1111 NIP-22 comment, uppercase `E` root + lowercase `e` parent, channel-bound.
+        val thread = ChannelChat.reply(author, channelIdHex, 0L, "thread", parent, 3L)
+        assertEquals(1111, thread.kind)
+        assertEquals(parent.id, thread.tags.first { it[0] == "E" }[1])
+        assertEquals(parent.id, thread.tags.first { it[0] == "e" }[1])
+        assertTrue(ChannelChat.isBoundTo(thread, channelIdHex, 0L))
+    }
+
+    @Test
     fun nonMembersCannotDeriveThePlane() =
         runTest {
             val alice = NostrSignerInternal(KeyPair())

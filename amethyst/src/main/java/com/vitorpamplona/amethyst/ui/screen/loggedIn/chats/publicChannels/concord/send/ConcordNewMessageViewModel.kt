@@ -27,6 +27,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -54,6 +55,10 @@ open class ConcordNewMessageViewModel : ViewModel() {
 
     val message = TextFieldState()
     val replyTo = mutableStateOf<Note?>(null)
+
+    // How the pending reply is delivered: INLINE stays in the timeline (kind-9 quote),
+    // MINICHAT pulls it into a thread (kind-1111). Only meaningful while replyTo is set.
+    val replyMode = mutableStateOf(ReplyMode.INLINE)
 
     var userSuggestions: UserSuggestionState? = null
 
@@ -96,10 +101,22 @@ open class ConcordNewMessageViewModel : ViewModel() {
 
     fun reply(note: Note) {
         replyTo.value = note
+        replyMode.value = ReplyMode.INLINE
+    }
+
+    /** Reply to [note] directly in a minichat thread (used from the minichat screen / long-press). */
+    fun replyInMinichat(note: Note) {
+        replyTo.value = note
+        replyMode.value = ReplyMode.MINICHAT
+    }
+
+    fun toggleReplyMode() {
+        replyMode.value = if (replyMode.value == ReplyMode.INLINE) ReplyMode.MINICHAT else ReplyMode.INLINE
     }
 
     fun clearReply() {
         replyTo.value = null
+        replyMode.value = ReplyMode.INLINE
     }
 
     fun editFromDraft(draftMessage: String) {
@@ -134,10 +151,10 @@ open class ConcordNewMessageViewModel : ViewModel() {
         if (text.isEmpty()) return
 
         val parent = replyTo.value
-        account.sendConcordChannelMessage(community, channel, text, parent)
+        account.sendConcordChannelMessage(community, channel, text, parent, replyMode.value)
 
         message.clearText()
-        replyTo.value = null
+        clearReply()
         userSuggestions?.reset()
     }
 }

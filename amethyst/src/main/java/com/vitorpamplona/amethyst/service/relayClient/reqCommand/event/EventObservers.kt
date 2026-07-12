@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
@@ -212,6 +213,35 @@ fun observeNoteReplyCount(
         }
 
     return flow.collectAsStateWithLifecycle(note.replies.size)
+}
+
+/**
+ * Count of a chat message's **minichat** replies — its kind-1111 [CommentEvent]
+ * children only (inline quote-replies are ordinary kind-9/42 messages and are not
+ * counted here). Drives the "N replies" chip that opens the minichat.
+ *
+ * Local-only: it reads the reply index the cache already holds, and does NOT open a
+ * per-note relay subscription (that would be one wasted REQ per visible row, and in
+ * Concord the kind-1111 replies arrive over the channel plane anyway). The replies for
+ * public chats are loaded once, feed-wide, by the chat screen's minichat subscription.
+ */
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeNoteMinichatReplyCount(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<Int> {
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .replies.stateFlow
+                .sample(200)
+                .mapLatest { it.note.replies.count { reply -> reply.event is CommentEvent } }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(note.replies.count { it.event is CommentEvent })
 }
 
 @Composable

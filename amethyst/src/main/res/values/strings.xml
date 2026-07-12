@@ -349,6 +349,14 @@
     <string name="concord_view_grouped">By community</string>
     <string name="concord_view_inline_desc">Show each channel as its own conversation, mixed in with your chats.</string>
     <string name="concord_view_grouped_desc">Collapse each community\'s channels into a single row, placed at its newest message.</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <string name="chat_reply_in_chat">In chat</string>
+    <string name="chat_reply_in_thread">In thread</string>
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
+    <plurals name="chat_minichat_reply_count">
+        <item quantity="one">%1$d reply</item>
+        <item quantity="other">%1$d replies</item>
+    </plurals>
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_reply_searching_history">Looking for the original message…</string>

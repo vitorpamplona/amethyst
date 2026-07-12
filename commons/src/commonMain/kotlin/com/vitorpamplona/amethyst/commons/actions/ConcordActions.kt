@@ -135,6 +135,20 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
+    /** Builds an encrypted-seal inline quote-reply wrap (kind-9 message quoting [parent] via `q`) on the [channel] plane. */
+    suspend fun buildChannelInlineReply(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        parent: Event,
+        text: String,
+        createdAt: Long,
+    ): Event {
+        val rumor = ChannelChat.inlineReply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+    }
+
     /** Builds an encrypted-seal thread-reply wrap (kind-1111 NIP-22 comment on [parent]) on the [channel] plane. */
     suspend fun buildChannelReply(
         authorSigner: NostrSigner,
