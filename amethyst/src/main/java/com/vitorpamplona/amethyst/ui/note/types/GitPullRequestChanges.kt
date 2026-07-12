@@ -99,9 +99,13 @@ fun GitPullRequestChanges(
 
     when (val s = state) {
         ChangesState.Idle ->
-            FilledTonalButton(onClick = { load() }, modifier = Modifier.padding(top = 8.dp)) {
-                Icon(MaterialSymbols.Code, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringRes(R.string.git_pr_view_changes), modifier = Modifier.padding(start = 6.dp))
+            FilledTonalButton(
+                onClick = { load() },
+                modifier = Modifier.padding(top = 8.dp).then(CompactButtonHeight),
+                contentPadding = CompactButtonPadding,
+            ) {
+                Icon(MaterialSymbols.Code, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(stringRes(R.string.git_pr_view_changes), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
 
         ChangesState.Loading ->
@@ -129,9 +133,13 @@ fun GitPullRequestChanges(
             }
 
         ChangesState.Failed ->
-            FilledTonalButton(onClick = { load() }, modifier = Modifier.padding(top = 8.dp)) {
-                Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringRes(R.string.git_pr_changes_retry), modifier = Modifier.padding(start = 6.dp))
+            FilledTonalButton(
+                onClick = { load() },
+                modifier = Modifier.padding(top = 8.dp).then(CompactButtonHeight),
+                contentPadding = CompactButtonPadding,
+            ) {
+                Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(stringRes(R.string.git_pr_changes_retry), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
     }
 }

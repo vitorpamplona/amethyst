@@ -262,11 +262,30 @@ private fun GitMetaRow(
 private fun String.shortCommit(): String = if (length > 7) take(7) else this
 
 /**
+ * Some NIP-34 clients duplicate the subject tag as a leading markdown heading of the
+ * content ("# Title\n\n…"). The card already renders the subject as its own title, so
+ * when the first line is a heading matching [subject], drop it from the body.
+ */
+private fun stripDuplicatedSubject(
+    content: String,
+    subject: String?,
+): String {
+    if (subject.isNullOrBlank()) return content
+    val trimmed = content.trimStart()
+    if (!trimmed.startsWith("#")) return content
+    val firstLineEnd = trimmed.indexOf('\n').let { if (it < 0) trimmed.length else it }
+    val heading = trimmed.substring(0, firstLineEnd).trimStart('#').trim()
+    if (!heading.equals(subject.trim(), ignoreCase = true)) return content
+    return trimmed.substring(firstLineEnd).trimStart()
+}
+
+/**
  * The shared markdown body used by patches, issues and pull requests: honors
  * the collapsed [makeItShort] preview for the logged-in user's own posts and
  * otherwise renders the full content with sensitivity warnings and uncited
  * hashtags. The subject, when present, is rendered separately as a title by the
- * caller, so it is not inlined here.
+ * caller, so it is not inlined here — pass it as [renderedSubject] so a copy
+ * duplicated into the content as a leading heading is stripped.
  */
 @Composable
 private fun GitMarkdownBody(
@@ -277,8 +296,10 @@ private fun GitMarkdownBody(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    renderedSubject: String? = null,
 ) {
-    LoadDecryptedContent(note, accountViewModel) { body ->
+    LoadDecryptedContent(note, accountViewModel) { rawBody ->
+        val body = remember(rawBody, renderedSubject) { stripDuplicatedSubject(rawBody, renderedSubject) }
         val isAuthorTheLoggedUser =
             remember(note.event) { accountViewModel.isLoggedUser(note.author) }
 
@@ -537,7 +558,7 @@ private fun RenderGitIssueEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitStatusActions(note, accountViewModel)
@@ -669,7 +690,7 @@ private fun RenderGitPullRequestEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
