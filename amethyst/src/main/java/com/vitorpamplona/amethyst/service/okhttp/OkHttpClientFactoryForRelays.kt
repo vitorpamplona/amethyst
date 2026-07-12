@@ -41,15 +41,19 @@ class OkHttpClientFactoryForRelays(
         const val DEFAULT_TIMEOUT_ON_WIFI_SECS: Int = 10
         const val DEFAULT_TIMEOUT_ON_MOBILE_SECS: Int = 30
 
-        // Every WebSocket ping on an otherwise-idle cellular connection promotes
-        // the radio out of its low-power state and pays the multi-second "tail"
-        // energy cost — per connection. On mobile data the interval is doubled to
-        // halve those wake-ups while staying under the ~5-minute idle timeout of
-        // the most aggressive carrier NATs (so connections aren't silently dropped
-        // between pings). Wifi keeps the tighter interval: pings there are cheap
-        // and detect dead connections sooner.
-        const val WEBSOCKET_PING_INTERVAL_ON_WIFI_SECS: Long = 120
-        const val WEBSOCKET_PING_INTERVAL_ON_MOBILE_SECS: Long = 240
+        // 120s is a measured sweet spot, not a guess — see
+        // amethyst/plans/2026-07-12-relay-ping-interval-study.md (probe of 122
+        // production relays). Idle-timeout tiers observed in production are
+        // ~60s / ~120s / ~240s / ~300s / ~600s, and a client ping only reliably
+        // resets a relay's idle timer when the interval sits well BELOW the
+        // tier (240s pings already lose the ~240s and ~300s tiers, incl. every
+        // nostr1.com-hosted relay; 300s pings lose relay.snort.social). Raising
+        // the interval also saves almost no battery: 90% of surveyed relays
+        // send their own server pings every 30-70s, which OkHttp must answer,
+        // so the radio's wake cadence is set by the relays, not by this value.
+        // Lowering it would only rescue the ~120s tier (6/122 relays, already
+        // cycling today) at 2x the ping traffic on every other connection.
+        const val WEBSOCKET_PING_INTERVAL_SECS: Long = 120
     }
 
     val myDispatcher =
@@ -87,7 +91,6 @@ class OkHttpClientFactoryForRelays(
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
-        pingIntervalSeconds: Long = WEBSOCKET_PING_INTERVAL_ON_WIFI_SECS,
     ): OkHttpClient {
         if (proxy != lastProxy) {
             rootClient.connectionPool.evictAll()
@@ -101,7 +104,7 @@ class OkHttpClientFactoryForRelays(
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
-            .pingInterval(Duration.ofSeconds(pingIntervalSeconds))
+            .pingInterval(Duration.ofSeconds(WEBSOCKET_PING_INTERVAL_SECS))
             .build()
     }
 
@@ -112,14 +115,12 @@ class OkHttpClientFactoryForRelays(
         buildHttpClient(
             buildLocalSocksProxy(localSocksProxyPort),
             buildTimeout(isMobile ?: DEFAULT_IS_MOBILE),
-            buildPingInterval(isMobile ?: DEFAULT_IS_MOBILE),
         )
 
     fun buildHttpClient(isMobile: Boolean?): OkHttpClient =
         buildHttpClient(
             null,
             buildTimeout(isMobile ?: DEFAULT_IS_MOBILE),
-            buildPingInterval(isMobile ?: DEFAULT_IS_MOBILE),
         )
 
     fun buildTimeout(isMobile: Boolean): Int =
@@ -127,13 +128,6 @@ class OkHttpClientFactoryForRelays(
             DEFAULT_TIMEOUT_ON_MOBILE_SECS
         } else {
             DEFAULT_TIMEOUT_ON_WIFI_SECS
-        }
-
-    fun buildPingInterval(isMobile: Boolean): Long =
-        if (isMobile) {
-            WEBSOCKET_PING_INTERVAL_ON_MOBILE_SECS
-        } else {
-            WEBSOCKET_PING_INTERVAL_ON_WIFI_SECS
         }
 
     fun buildLocalSocksProxy(port: Int?) = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port ?: DEFAULT_SOCKS_PORT))
