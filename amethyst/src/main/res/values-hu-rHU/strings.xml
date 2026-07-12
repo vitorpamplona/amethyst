@@ -139,7 +139,8 @@
     <string name="send_payment_receipt_section">Zap-igazolás</string>
     <string name="send_payment_receipt_clink">Közvetlen lightning-fizetés - nem lesz zapigazolás közzétéve a Nostr-on.</string>
     <string name="send_payment_receipt_onchain">Egy láncon belüli zapigazolás közzé lesz téve a Nostr-on, így a címzett megtalálhatja a kifizetést.</string>
-    <string name="send_payment_receipt_onchain_address">Fizetés közvetlenül a láncon belüli pénztárcából a profil megadott bitcoin-címére (%1$s) - nem lesz zapigazolás közzétéve.</string>
+    <string name="send_payment_receipt_onchain_address">Fizetés közvetlenül a láncon belüli pénztárcából a profil megadott bitcoin-címére (%1$s) - nem lesz zapigazolás közzétéve.
+</string>
     <string name="send_payment_receipt_cashu">A nutzap-esemény magát az ecasht kézbesíti, így az mindig közzé lesz téve.</string>
     <string name="send_payment_requesting_invoice">Számla kérése…</string>
     <string name="send_payment_requesting_invoice_nostr">Számla kérése a Nostr hálózaton keresztül…</string>
@@ -793,7 +794,7 @@
     <string name="relay_auth_toggle_my_relays">Saját átjátszók és helyszínek</string>
     <string name="relay_auth_toggle_my_relays_desc">Bejelentkezés a saját átjátszóiba, valamint azokba a nyilvános csevegésekbe, közösségekbe és élő közvetítésekbe, amelyekhez csatlakozott vagy amelyeket kedvelt.</string>
     <string name="relay_auth_toggle_read_follows">Követett személyek bejegyzéseinek olvasása</string>
-    <string name="relay_auth_toggle_read_follows_desc">Bejelentkezés egy követett személy átjátszóiba a bejegyzéseinek letöltéséhez.</string>
+    <string name="relay_auth_toggle_read_follows_desc">Bejelentkezés egy követett felhasználó átjátszóiba, hogy letölthesse a profiladatait, bejegyzéseit és a bejegyzéseihez kapcsolódó interakciókat.</string>
     <string name="relay_auth_toggle_message_follows">Üzenet küldése a követett személyeknek</string>
     <string name="relay_auth_toggle_message_follows_desc">Bejelentkezés egy követett személy átjátszóiba a közvetlen üzenetek, válaszok és értesítések küldéséhez.</string>
     <string name="relay_auth_toggle_message_strangers">Üzenet küldése bárkinek</string>
@@ -803,13 +804,13 @@
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <string name="relay_auth_title_send_dm">Elküldi az üzenetet neki: %1$s?</string>
     <string name="relay_auth_title_notify">Értesíti őt: %1$s?</string>
-    <string name="relay_auth_title_read">Betölti a bejegyzéseket tőle: %1$s?</string>
+    <string name="relay_auth_title_read">Profil, bejegyzések és interakciók betöltése tőle: %1$s?</string>
     <string name="relay_auth_title_post_venue">Közzéteszi itt: %1$s?</string>
     <string name="relay_auth_title_read_venue">Megnyitja ezt: %1$s?</string>
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_consequence_send_dm">Ha nem teszi meg, az üzenete nem lesz kézbesítve neki: %1$s.</string>
     <string name="relay_auth_consequence_notify">Ha nem teszi meg, %1$s nem kap erről értesítést.</string>
-    <string name="relay_auth_consequence_read">Ha nem teszi meg, nem fogja itt látni a bejegyzéseket tőle: %1$s.</string>
+    <string name="relay_auth_consequence_read">Ha nem teszi meg, akkor nem fogja itt látni %1$s profilját, bejegyzéseit és interakcióit.</string>
     <string name="relay_auth_consequence_post_venue">Ha nem teszi meg, az üzenete nem lesz közzétéve itt: %1$s.</string>
     <string name="relay_auth_consequence_read_venue">Ha nem teszi meg, nem fogja itt látni ezt: %1$s.</string>
     <string name="relay_auth_name_and_others">%1$s és mások</string>

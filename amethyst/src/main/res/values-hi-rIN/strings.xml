@@ -791,7 +791,7 @@
     <string name="relay_auth_policy_custom">अनुकूलित</string>
     <string name="relay_auth_policy_custom_desc">स्पष्ट चयन करें किन पुनःप्रसारकों में प्रवेशांकन करना चाहिए। नीचे जिसको अनुमति नहीं दी गई उन सब के विषय में आप पूछे जाएँगे।</string>
     <string name="relay_auth_toggle_my_relays">मेरे पुनःप्रसारक तथा आयोजन स्थल</string>
-    <string name="relay_auth_toggle_my_relays_desc">प्रवेशांकन करें आपके अपने पुनःप्रसारक तथा सार्वजनिक चर्चाएँ तथा समुदाय तथा सीधे प्रवाहों को जिनसे आप जुडे हैं अथवा प्रियचिह्नित किए हैं।</string>
+    <string name="relay_auth_toggle_my_relays_desc">प्रवेशांकन करें आपके अपने पुनःप्रसारक तथा सार्वजनिक चर्चाएँ तथा समुदाय तथा वर्तमानप्रवाहों को जिनसे आप जुडे हैं अथवा प्रियचिह्नित किए हैं।</string>
     <string name="relay_auth_toggle_read_follows">मेरे द्वारा अनुचरित लोगों के पत्र पढें</string>
     <string name="relay_auth_toggle_read_follows_desc">अनुचरित के पुनःप्रसारकों में प्रवेशांकन करें उनके पत्र प्राप्त करने के लिए।</string>
     <string name="relay_auth_toggle_message_follows">मेरे द्वारा अनुचरित लोगों को सन्देश भेजें</string>
@@ -845,7 +845,7 @@
     <string name="shorts">लघु चलचित्र</string>
     <string name="public_chats">सार्वजनिक चर्चा</string>
     <string name="follow_packs">अनुचरण पोटलियाँ</string>
-    <string name="live_streams">सीधा प्रसारण</string>
+    <string name="live_streams">वर्तमानप्रवाह</string>
     <string name="nests">ध्वनि शाला</string>
     <string name="meeting_room_in_space">%1$s में</string>
     <string name="meeting_room_in_space_unknown">एक निलय</string>
@@ -871,14 +871,14 @@
     <string name="nest_leave_stage">मंच छोडें</string>
     <string name="nest_mic_mute">ध्वनिग्राहक मौन</string>
     <string name="nest_mic_unmute">ध्वनिग्राहक सक्रिय</string>
-    <string name="nest_broadcast_connecting">सीधा प्रसारण प्रारम्भ…</string>
+    <string name="nest_broadcast_connecting">वर्तमानप्रवाह प्रारम्भ…</string>
     <string name="nest_broadcast_failed">प्रसारण असफल : %1$s</string>
     <string name="nest_mute_failed">मौनकरण असफल : %1$s</string>
     <string name="nest_open_settings">कोई अनुमति नहीं</string>
     <string name="nest_notification_channel">निलय</string>
     <string name="nest_notification_channel_description">ध्वनि चालू रखता है जब शाला खुला है।</string>
     <string name="nest_notification_listening">निलय संयोजित</string>
-    <string name="nest_notification_broadcasting">निलय - सीधाप्रसार</string>
+    <string name="nest_notification_broadcasting">निलय - वर्तमान</string>
     <string name="nest_notification_text">लौटने के लिए दबाएँ।</string>
     <string name="nest_notification_stop">अवरोधन</string>
     <string name="nest_join">निलय जुडें</string>
@@ -906,7 +906,7 @@
         <item quantity="one">%1$d श्रोता</item>
         <item quantity="other">%1$d श्रोतागण</item>
     </plurals>
-    <string name="nest_live_chip">सीधाप्रसार</string>
+    <string name="nest_live_chip">वर्तमान</string>
     <string name="nest_tab_chat">चर्चा</string>
     <string name="nest_tab_audience">श्रोतागण</string>
     <string name="nest_tab_hands">हाथ</string>
@@ -951,7 +951,7 @@
     <string name="nest_unjoinable_body">इस शाला में ध्वनि सेवा अथवा गन्तव्य उपलब्ध नहीं। निमन्त्रक को इसके विवरणों का शोधन करना चाहिए श्रोतागण जुडने से पहले।</string>
     <string name="nest_unjoinable_back">पीछे</string>
     <string name="nest_create_fab">स्थान आरम्भण</string>
-    <string name="nests_section_live_now">सीधाप्रसार चालू</string>
+    <string name="nests_section_live_now">वर्तमानप्रवाह चालू</string>
     <string name="nests_section_scheduled">समयनिर्धारित</string>
     <string name="nests_section_recently_ended">निकटकाल समाप्त</string>
     <string name="nests_ended_ago">समाप्त %1$s पूर्व</string>
@@ -1605,7 +1605,7 @@
     <string name="content_size">विषयवस्तु आकार</string>
     <string name="connectivity">संयोजकता</string>
     <string name="access_control">अभिगमन नियन्त्रण</string>
-    <string name="minimum_pow">न्यूनतम श्रमप्रमाण</string>
+    <string name="minimum_pow">न्यूनतम श्रमप्रमाण कठिनाई</string>
     <string name="auth_required">प्रमाणीकरण आवश्यक</string>
     <string name="payment_required">भुगतान आवश्यक</string>
     <string name="max_message_length">अधिकतम संदेश लम्बाई</string>
@@ -1619,13 +1619,13 @@
     <string name="cashu_copy_token">Token कॉपी करें</string>
     <string name="quick_actions_open_in_another_app">अन्य क्रमक में खोलें</string>
     <string name="no_lightning_address_set">कोई लैटनिंग पता स्थापित नहीं</string>
-    <string name="live_stream_live_tag">तत्क्षणप्रसार</string>
-    <string name="live_stream_offline_tag">जालरहित</string>
+    <string name="live_stream_live_tag">वर्तमान</string>
+    <string name="live_stream_offline_tag">असंयोजित</string>
     <string name="live_stream_ended_tag">समाप्त</string>
     <string name="live_stream_planned_tag">समय निर्धारित</string>
     <string name="live_stream_private_tag">निजी</string>
-    <string name="live_stream_is_offline">तत्क्षणप्रसार कट गया</string>
-    <string name="live_stream_has_ended">तत्क्षणप्रसार समाप्त</string>
+    <string name="live_stream_is_offline">वर्तमानप्रवाह कट गया</string>
+    <string name="live_stream_has_ended">वर्तमानप्रवाह समाप्त</string>
     <string name="meeting_space_open_tag">खुला</string>
     <string name="meeting_space_private_tag">निजी</string>
     <string name="meeting_space_closed_tag">आवृत</string>
@@ -1639,7 +1639,7 @@
     <string name="discover_reads">पठितव्य</string>
     <string name="discover_content_v2">सूचनावली विधियाँ</string>
     <string name="discover_marketplace">व्यापारक्षेत्र</string>
-    <string name="discover_live_v2">तत्क्षणप्रसार</string>
+    <string name="discover_live_v2">वर्तमानप्रवाह</string>
     <string name="discover_community_v2">समुदाय</string>
     <string name="discover_chat">चर्चाएँ</string>
     <string name="community_approved_posts">अनुमति प्राप्त पत्र</string>
@@ -2520,7 +2520,7 @@
     <string name="video_player_settings_action_share">बाँटें अथवा अभिलेखन करें</string>
     <string name="video_player_settings_action_share_description">चलचित्र योजक बाहर बाँटें</string>
     <string name="video_player_settings_action_download">संचारयन्त्र में अभिलेखन करें</string>
-    <string name="video_player_settings_action_download_description">चलचित्र का अवरोहण करें आपके यन्त्र तक (सीधे प्रसारों में अदृश्य)</string>
+    <string name="video_player_settings_action_download_description">चलचित्र का अवरोहण करें आपके यन्त्र तक (वर्तमानप्रवाहों में अदृश्य)</string>
     <string name="video_player_settings_action_pip">चित्र में चित्र</string>
     <string name="video_player_settings_action_pip_description">चलचित्र दिखाएँ तैरते गवाक्ष में (अदृश्य यदि अनालम्बित)</string>
     <string name="video_player_settings_action_cast">यन्त्र पर निक्षेपण</string>
@@ -3023,8 +3023,8 @@
     <string name="kind_adventure_scene">साहसिक दृश्य</string>
     <string name="kind_adventure_reading">साहसिक पठन</string>
     <string name="kind_named_bookmarks">नाम युक्त स्मर्त्तव्य सूची</string>
-    <string name="kind_live_chats">सीधी बातचीत</string>
-    <string name="kind_live_streams">सीधा प्रसारण</string>
+    <string name="kind_live_chats">वर्तमान बातचीत</string>
+    <string name="kind_live_streams">वर्तमानप्रवाह</string>
     <string name="kind_zaps">ज्साप</string>
     <string name="kind_nwc_request">नोस्टर धनकोष अनुरोध</string>
     <string name="kind_nwc_response">नोस्टर धनकोष प्रत्युत्तर</string>
@@ -3246,7 +3246,7 @@
     <string name="hls_state_uploaded_format">आरोहण कृत %2$d में से %1$d</string>
     <string name="hls_state_publishing">घटना प्रकाशन चालू…</string>
     <string name="hls_state_success_title">दृश्याभिलेख प्रकाशित</string>
-    <string name="hls_state_success_body">आपका उच्छनिरूपण दृश्याभिलेख नोस्टर पर चलन्त है।</string>
+    <string name="hls_state_success_body">आपका उच्छनिरूपण दृश्याभिलेख नोस्टर पर वर्तमान है।</string>
     <string name="hls_state_failure_title">कुछ गडबड हुआ</string>
     <string name="hls_done">हो गया</string>
     <string name="hls_try_again">पुनः प्रयास करें</string>
@@ -3431,7 +3431,7 @@
     <string name="ai_writing_setting_title">लेख शोधन प्रस्ताव करें</string>
     <string name="ai_writing_setting_description">यन्त्र स्थित एआई॰ प्रतिरूप का प्रयोग करता है लेख सुधार तथा स्वर परिवर्तन प्रस्तावों के लिए।</string>
     <string name="tracked_broadcasts_setting_title">पदचिह्न युक्त प्रसारण</string>
-    <string name="tracked_broadcasts_setting_description">पदचिह्न युक्त प्रसारक का उपयोग करें घटनाओं को भेजते समय। तत्काल प्रगति दिखाता है तथा प्रत्येक पुनःप्रसारक की स्थिति प्रसारण करते समय।</string>
+    <string name="tracked_broadcasts_setting_description">पदचिह्न युक्त प्रसारक का उपयोग करें घटनाओं को भेजते समय। वर्तमान प्रगति दिखाता है तथा प्रत्येक पुनःप्रसारक की स्थिति प्रसारण करते समय।</string>
     <string name="suggest_workouts_setting_title">व्यायामों का सुझाव बाँटनें के लिए</string>
     <string name="suggest_workouts_setting_description">सम्पन्न व्यायाम पढता है स्वास्थ्य संयोजन से (सामसंग स्वास्थ्य तथा गूगिल फिट तथा फिटबिट तथा गार्मिन इत्यादि) तथा पत्र के रूप में बाँटने का सुझाव देता है। अनुमति अनुरोध केवल संयोजन करने पर।</string>
     <string name="compose_settings">सम्पादन स्थापना विकल्प</string>
@@ -3462,7 +3462,7 @@
     <string name="pow_category_reposts_explainer">उच्च मात्रा सक्रिय प्रयोक्ताओं के लिए</string>
     <string name="pow_category_reactions">प्रतिक्रियाएँ</string>
     <string name="pow_category_reactions_explainer">उच्चतम मात्रा प्रकार। प्रत्येक इष्टसूचक के लिए खनन का परिणाम विद्युत्कोष का व्यय</string>
-    <string name="pow_category_public_chat">सार्वजनिक तथा सीधा चर्चा</string>
+    <string name="pow_category_public_chat">सार्वजनिक तथा वर्तमान चर्चा</string>
     <string name="pow_category_public_chat_explainer">खनन विलम्बता से वार्तालाप प्रवाह आहत</string>
     <string name="pow_category_gift_wraps">निजी सन्देश कोष</string>
     <string name="pow_category_gift_wraps_explainer">सीधासन्देश पुनःप्रसारकों को आगतपेटिका कचरालेख छालन करने में सक्षम करता है। केवल बाहरी कोष का खनन होता है। आपका सन्देश कभी नहीं</string>
