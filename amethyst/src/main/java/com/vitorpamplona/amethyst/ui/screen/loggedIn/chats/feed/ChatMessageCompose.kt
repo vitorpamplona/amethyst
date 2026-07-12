@@ -415,7 +415,7 @@ private fun MinichatReplyChip(
         Surface(
             shape = RoundedCornerShape(6.dp),
             color = MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.clickable { nav.nav(Route.Note(note.idHex)) },
+            modifier = Modifier.clickable { nav.nav(Route.ChatMinichat(note.idHex)) },
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

@@ -352,6 +352,8 @@
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <string name="chat_reply_in_chat">In chat</string>
     <string name="chat_reply_in_thread">In thread</string>
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <string name="chat_minichat_title">Thread</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d reply</item>

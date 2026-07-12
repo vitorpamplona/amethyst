@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.minichat.MinichatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
@@ -597,6 +598,14 @@ fun BuildNavigation(
             ConcordChannelScreen(
                 communityId = it.communityId,
                 channelId = it.channelId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ChatMinichat> {
+            MinichatScreen(
+                rootId = it.rootId,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

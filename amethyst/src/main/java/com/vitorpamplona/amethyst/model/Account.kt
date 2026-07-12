@@ -1987,6 +1987,26 @@ class Account(
     }
 
     /**
+     * Post [text] into [rootNote]'s minichat — a kind-1111 thread reply rooted at that
+     * message. Resolves the chat context from the note's gatherer; today it drives the
+     * Concord channel path (NIP-28/NIP-29 public-chat minichats are a follow-up). Returns
+     * false if the message isn't in a chat we can post a thread reply to.
+     */
+    suspend fun sendMinichatReply(
+        rootNote: Note,
+        text: String,
+    ): Boolean {
+        val concord = rootNote.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        return sendConcordChannelMessage(
+            concord.channelId.communityId,
+            concord.channelId.channelId,
+            text,
+            rootNote,
+            ReplyMode.MINICHAT,
+        )
+    }
+
+    /**
      * React to a Concord message with [reaction] (e.g. `"+"`, an emoji). Mirrors
      * [sendConcordChannelMessage]: builds a kind-7 rumor bound to the message's
      * channel/epoch, wraps it on the plane, and publishes it — so the reaction stays

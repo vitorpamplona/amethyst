@@ -707,6 +707,13 @@ sealed class Route {
 
     @Serializable object Concords : Route()
 
+    // The "minichat" of a chat message: its kind-1111 thread replies, opened from the message and
+    // rendered as a chat-within-a-chat. Keyed by the root message id; the screen resolves the chat
+    // context (Concord channel, public chat, relay group) from the note's gatherer.
+    @Serializable data class ChatMinichat(
+        val rootId: HexKey,
+    ) : Route()
+
     @Serializable data class ChannelMetadataEdit(
         val id: String? = null,
     ) : Route()
