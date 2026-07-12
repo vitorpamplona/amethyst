@@ -28,11 +28,14 @@ import kotlin.concurrent.Volatile
 
 class RelayAuthStatus {
     // Keeps track of auth responses to update the relay with all filters
-    // after the authentication happen
-    private val authResponseWatcher: LruCache<HexKey, AuthEventReceiptStatus> = LruCache(10)
+    // after the authentication happen.
+    // Sized generously: one connection may authenticate as many identities at once — the
+    // user plus every Concord plane stream key hosted on that relay (control + channels) —
+    // and if older entries roll off, OK-tracking / hasFinishedAllAuths() accounting degrades.
+    private val authResponseWatcher: LruCache<HexKey, AuthEventReceiptStatus> = LruCache(200)
 
     // Avoids sending multiple replies for each auth.
-    private val uniqueAuthChallengesSent: LruCache<ChallengePair, ChallengePair> = LruCache(10)
+    private val uniqueAuthChallengesSent: LruCache<ChallengePair, ChallengePair> = LruCache(200)
 
     // Latest epoch-second at which a tracked AUTH event received a successful OK.
     // Read by RelayAuthSnapshot consumers for staleness checks (e.g. proactive

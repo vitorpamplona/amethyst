@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,6 +104,24 @@ class ConcordSessionManager(
 
     /** The `authors` set (control + known channel planes) for the kind-1059 subscription. */
     fun subscribeAddresses(): Set<HexKey> = registry.subscribeAddresses()
+
+    /**
+     * The stream secret keys that must answer a NIP-42 AUTH challenge from [relay]:
+     * every plane (control + folded channels) of every joined community whose relays
+     * include [relay]. Concord relays serve a plane's kind-1059 wraps only to a
+     * connection authenticated as that stream key, so the relay-auth layer signs a
+     * kind-22242 with each of these (locally, never the user's signer) — without them
+     * the connection is authed only as the user, the plane REQ is refused, and no
+     * channel or message ever loads.
+     */
+    fun streamAuthSecretsFor(relay: NormalizedRelayUrl): List<ByteArray> {
+        val out = ArrayList<ByteArray>()
+        for (session in registry.sessions()) {
+            val relays = session.entry.relays.mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+            if (relay in relays) session.streamKeys().forEach { out.add(it.secretKey) }
+        }
+        return out
+    }
 
     /** Route an inbound stream wrap; true if it was a Concord plane wrap we applied. */
     fun ingest(wrap: Event): Boolean {

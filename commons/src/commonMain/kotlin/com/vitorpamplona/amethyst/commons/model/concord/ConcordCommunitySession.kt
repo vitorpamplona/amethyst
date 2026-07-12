@@ -84,6 +84,16 @@ class ConcordCommunitySession(
     /** The current Chat Plane addresses to subscribe to, one per folded channel. */
     fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys.toSet() }
 
+    /**
+     * Every stream key whose kind-1059 wraps this session reads: the Control Plane plus
+     * one per folded channel. These are the identities a NIP-42 relay must see the
+     * connection authenticate as (kind 22242) to serve the wraps — a Concord wrap is
+     * authored by the stream key and `p`-tagged to a throwaway ephemeral key, so the
+     * member is neither author nor recipient and the relay refuses unless we AUTH as the
+     * stream key itself.
+     */
+    fun streamKeys(): List<GroupKey> = lock.withLock { listOf(controlPlaneKey) + channelKeysByAddress.values.map { it.second } }
+
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
     fun controlEditions(): List<ControlEdition> = lock.withLock { ConcordActions.controlEditions(controlWraps.values.toList(), controlPlaneKey) }
 

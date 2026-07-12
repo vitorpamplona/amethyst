@@ -24,9 +24,13 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 
@@ -60,6 +64,13 @@ class AuthCoordinator(
             client,
             scope,
             signWithAllLoggedInUsers = { relayUrl, authTemplate ->
+                // Concord plane traffic is gated behind NIP-42 as the derived *stream key*, not the
+                // user: a relay serves a plane's kind-1059 wraps only to a connection authenticated
+                // as that stream key. These AUTHs expose no user identity (ephemeral derived keys)
+                // and are signed locally, so we always attach them — independent of the user-auth
+                // policy below — or Concord channels/messages never load. No-op for non-Concord relays.
+                val streamAuths = signConcordStreamAuths(relayUrl, authTemplate)
+
                 // Reconstruct *why* this relay wants auth from what we're doing with it, so each
                 // account's ledger can apply follow-based trust and (later) explain the prompt.
                 // Built lazily so the no-ledgers auto-allow path below doesn't pay for it.
@@ -86,32 +97,62 @@ class AuthCoordinator(
                 }
                 val shouldAuth = outcome.shouldAuth
 
-                if (shouldAuth) {
-                    // Remember why we granted this relay so the settings screen can explain it.
-                    currentLedgers.firstOrNull()?.recordGrant(context)
+                val userAuths =
+                    if (shouldAuth) {
+                        // Remember why we granted this relay so the settings screen can explain it.
+                        currentLedgers.firstOrNull()?.recordGrant(context)
 
-                    // distinct() returns Set<Account> (the key type U of ListWithUniqueSetCache)
-                    val results =
-                        authWithAccounts.distinct().mapNotNull {
-                            if (it.signer.isWriteable()) {
-                                try {
-                                    it.signer.sign(authTemplate)
-                                } catch (e: Exception) {
-                                    Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
+                        // distinct() returns Set<Account> (the key type U of ListWithUniqueSetCache)
+                        val results =
+                            authWithAccounts.distinct().mapNotNull {
+                                if (it.signer.isWriteable()) {
+                                    try {
+                                        it.signer.sign(authTemplate)
+                                    } catch (e: Exception) {
+                                        Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
+                                        null
+                                    }
+                                } else {
                                     null
                                 }
-                            } else {
-                                null
                             }
-                        }
 
-                    // Always auth, even with random keys
-                    if (results.isNotEmpty()) results else listOf(tempAccount.sign(authTemplate))
-                } else {
-                    emptyList()
-                }
+                        // Always auth, even with random keys (unless we're only here for stream auth).
+                        if (results.isNotEmpty()) {
+                            results
+                        } else if (streamAuths.isEmpty()) {
+                            listOf(tempAccount.sign(authTemplate))
+                        } else {
+                            emptyList()
+                        }
+                    } else {
+                        emptyList()
+                    }
+
+                streamAuths + userAuths
             },
         )
+
+    /**
+     * Signs one kind-22242 AUTH per Concord plane stream key hosted on [relayUrl], across every
+     * watched account. Signed locally from the derived stream secret (a raw [KeyPair] via
+     * [NostrSignerSync]) — never the account signer, and never surfacing the user's identity.
+     */
+    private suspend fun signConcordStreamAuths(
+        relayUrl: NormalizedRelayUrl,
+        authTemplate: EventTemplate<RelayAuthEvent>,
+    ): List<RelayAuthEvent> {
+        val secrets = authWithAccounts.distinct().flatMap { it.concordSessions.streamAuthSecretsFor(relayUrl) }
+        if (secrets.isEmpty()) return emptyList()
+        return secrets.mapNotNull { secret ->
+            try {
+                NostrSignerSync(KeyPair(privKey = secret)).sign(authTemplate)
+            } catch (e: Exception) {
+                Log.e("AuthCoordinator", "Failed to sign a Concord stream-key AUTH", e)
+                null
+            }
+        }
+    }
 
     fun destroy() {
         receiver.destroy()

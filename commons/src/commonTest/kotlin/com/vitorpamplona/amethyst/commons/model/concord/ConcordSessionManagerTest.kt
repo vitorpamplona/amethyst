@@ -26,11 +26,13 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntr
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConcordSessionManagerTest {
@@ -96,5 +98,32 @@ class ConcordSessionManagerTest {
                     ?.metadata
                     ?.name,
             )
+        }
+
+    @Test
+    fun exposesStreamKeysScopedToTheCommunityRelaysForNip42Auth() =
+        runTest {
+            val alpha = ConcordCommunityFactory.create(owner, "Alpha", createdAt = 1L, relays = listOf("wss://r.example"))
+            val communities = MutableStateFlow(listOf(entryFor(alpha, "Alpha")))
+
+            val manager = ConcordSessionManager(communities, owner.pubKey, backgroundScope)
+            testScheduler.runCurrent()
+
+            val hosted = RelayUrlNormalizer.normalize("wss://r.example")
+            val elsewhere = RelayUrlNormalizer.normalize("wss://other.example")
+
+            // Before any fold, only the control-plane key must AUTH — and only on the community's relay.
+            val beforeFold = manager.streamAuthSecretsFor(hosted).map { it.toHexKey() }
+            assertTrue(beforeFold.contains(alpha.controlPlane.secretKey.toHexKey()))
+            assertTrue(manager.streamAuthSecretsFor(elsewhere).isEmpty()) // relay-scoped
+
+            // After the Control Plane folds, the #general channel key joins the AUTH set.
+            alpha.genesisWraps.forEach { manager.ingest(it) }
+            testScheduler.runCurrent()
+            val general = ConcordActions.publicChannel(alpha.communityRoot, alpha.generalChannelId, alpha.rootEpoch)
+            val afterFold = manager.streamAuthSecretsFor(hosted).map { it.toHexKey() }
+            assertTrue(afterFold.contains(alpha.controlPlane.secretKey.toHexKey()))
+            assertTrue(afterFold.contains(general.secretKey.toHexKey()))
+            assertFalse(manager.streamAuthSecretsFor(elsewhere).any { it.toHexKey() == general.secretKey.toHexKey() })
         }
 }
