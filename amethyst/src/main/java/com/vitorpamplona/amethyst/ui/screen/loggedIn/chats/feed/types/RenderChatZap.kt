@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ui.StreamSystemCard
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -80,10 +81,14 @@ fun RenderChatZap(
 
     // Content-hugging centered pill, matching the system-message design the rest
     // of the chat feed moved to; the bitcoin accent keeps zaps celebratory.
+    // Tapping opens the zap receipt in its own thread view.
     StreamSystemCard(
         accent = BitcoinOrange,
         accentAlpha = accentAlpha,
         fillWidth = false,
+        onClick = {
+            routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) }
+        },
     ) {
         val backgroundColor = remember(accentAlpha) { mutableStateOf(BitcoinOrange.copy(alpha = accentAlpha)) }
 

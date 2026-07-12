@@ -65,6 +65,9 @@ import kotlinx.collections.immutable.toImmutableList
 private data class ReactionEntry(
     val user: User,
     val reactionType: String,
+    // The kind-7 reaction note itself, so the row can open it in its own thread
+    // view (replies and reactions TO the reaction).
+    val reactionNote: Note,
 )
 
 /**
@@ -123,7 +126,7 @@ private fun buildReactionEntries(note: Note): ImmutableList<ReactionEntry> =
         .sortedByDescending { it.second.size }
         .flatMap { (type, reactionNotes) ->
             reactionNotes.mapNotNull { reactionNote ->
-                reactionNote.author?.let { ReactionEntry(it, type) }
+                reactionNote.author?.let { ReactionEntry(it, type, reactionNote) }
             }
         }.toImmutableList()
 
@@ -139,8 +142,15 @@ private fun ZapperRow(
             Modifier
                 .fillMaxWidth()
                 .clickable {
-                    zap.user?.let {
-                        nav.nav(routeFor(it))
+                    // Open the zap receipt in its own thread view (replies to the
+                    // zap itself); profile stays one tap away on the avatar. Falls
+                    // back to the zapper's profile while the receipt is unknown.
+                    val destination =
+                        zap.zapNote?.let { routeFor(it, accountViewModel.account) }
+                            ?: zap.user?.let { routeFor(it) }
+
+                    destination?.let {
+                        nav.nav(it)
                         onDismiss()
                     }
                 },
@@ -191,7 +201,13 @@ private fun ReactorRow(
             Modifier
                 .fillMaxWidth()
                 .clickable {
-                    nav.nav(routeFor(entry.user))
+                    // Open the reaction event in its own thread view; the avatar
+                    // still navigates to the profile.
+                    val destination =
+                        routeFor(entry.reactionNote, accountViewModel.account)
+                            ?: routeFor(entry.user)
+
+                    nav.nav(destination)
                     onDismiss()
                 },
     ) {
