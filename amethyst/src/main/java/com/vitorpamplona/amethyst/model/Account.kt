@@ -911,6 +911,10 @@ class Account(
         expirationDelta: Long?,
         difficulty: Int,
         existingRecord: PersistedPoWJob? = null,
+        // The inner rumor's id (the note the chat feed displays), so the mined
+        // wraps still register with the delivery-ticks tracker at publish time.
+        // Null for restart-restored jobs, whose rumor id wasn't persisted.
+        displayedNoteId: HexKey? = null,
     ): Boolean {
         val queue = powQueue() ?: return false
         if (seals.isEmpty()) return true
@@ -943,7 +947,7 @@ class Account(
                 }
                 seals.map { NIP17Factory().wrapSeal(it, expirationDelta, templateConversion = mineWrap) }
             },
-            publish = { wraps -> broadcastPrivately(wraps) },
+            publish = { wraps -> broadcastPrivately(wraps, displayedNoteId) },
         )
         return true
     }
@@ -2836,7 +2840,7 @@ class Account(
             // process death mid-mine cannot lose the file announcement.
             val senderMessage = signer.sign(template)
             val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) {
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderMessage.id)) {
                 // The wraps publish only after mining, but the user has already
                 // replied — advance the read marker now.
                 markDmRoomAsRead(senderMessage)
@@ -2853,7 +2857,7 @@ class Account(
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
             val senderMessage = signer.sign(template)
             val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) {
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderMessage.id)) {
                 // The wraps publish only after mining, but the user has already
                 // replied — advance the read marker now.
                 markDmRoomAsRead(senderMessage)
@@ -2886,7 +2890,7 @@ class Account(
             val senderNote = signer.sign(template)
             val recipients = senderNote.taggedUserIds().plus(signer.pubKey).toSet()
             val seals = NIP17Factory().createSeals(senderNote, recipients, signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderNote.id)) return
         }
 
         broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
@@ -2900,24 +2904,20 @@ class Account(
     }
 
     suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
-        // The recipient -> wrap -> target-relays mapping only exists here, before
-        // the wraps are aliased onto a single note; capture it for delivery ticks.
-        signedEvents.wraps.forEach { wrap ->
-            wrap.recipientPubKey()?.let { recipient ->
-                chatDeliveryTracker.trackWrap(
-                    displayedNoteId = signedEvents.msg.id,
-                    recipient = recipient,
-                    wrapId = wrap.id,
-                    targetRelays = computeRelayListToBroadcast(wrap),
-                )
-            }
-        }
-
-        broadcastPrivately(signedEvents.wraps)
+        broadcastPrivately(signedEvents.wraps, signedEvents.msg.id)
         markDmRoomAsRead(signedEvents.msg)
     }
 
-    suspend fun broadcastPrivately(wraps: List<GiftWrapEvent>) {
+    /**
+     * [displayedNoteId] is the inner rumor's id (the note the chat feed shows).
+     * When present, each wrap registers with the delivery-ticks tracker — this is
+     * the only place the recipient -> wrap -> target-relays mapping exists, before
+     * the wraps are aliased onto a single note.
+     */
+    suspend fun broadcastPrivately(
+        wraps: List<GiftWrapEvent>,
+        displayedNoteId: HexKey? = null,
+    ) {
         val mine = wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
@@ -2934,6 +2934,19 @@ class Account(
             }
 
             val relayList = computeRelayListToBroadcast(wrap)
+
+            if (displayedNoteId != null) {
+                wrap.recipientPubKey()?.let { recipient ->
+                    chatDeliveryTracker.trackWrap(
+                        displayedNoteId = displayedNoteId,
+                        recipient = recipient,
+                        wrapId = wrap.id,
+                        targetRelays = relayList,
+                        isSelf = recipient == signer.pubKey,
+                    )
+                }
+            }
+
             client.publish(wrap, relayList)
         }
 

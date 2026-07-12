@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ChangeReactionIcon
+import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
 import com.vitorpamplona.amethyst.ui.note.elements.AddHashtagLabelDialog
@@ -132,6 +133,36 @@ fun ChatMessageActionSheet(
     var wantsToEditPost by remember { mutableStateOf(false) }
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
+    var deleteConfirmationShowing by remember { mutableStateOf(false) }
+
+    // Own private rumors (NIP-17 DMs) must be retracted with a gift-wrapped
+    // deletion — a public NIP-09 would e-tag the rumor id onto public relays.
+    val performDelete = {
+        if (note.isPrivateRumor()) {
+            accountViewModel.deletePrivately(note)
+        } else {
+            accountViewModel.delete(note)
+        }
+    }
+
+    if (deleteConfirmationShowing) {
+        QuickActionAlertDialog(
+            title = stringRes(R.string.quick_action_request_deletion_alert_title),
+            textContent = stringRes(R.string.quick_action_request_deletion_alert_body),
+            buttonIcon = MaterialSymbols.Delete,
+            buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
+            onClickDoOnce = {
+                performDelete()
+                onDismiss()
+            },
+            onClickDontShowAgain = {
+                performDelete()
+                accountViewModel.account.settings.setHideDeleteRequestDialog()
+                onDismiss()
+            },
+            onDismiss = { deleteConfirmationShowing = false },
+        )
+    }
 
     // On-chain zaps need a dialog that outlives the sheet, so the request swaps
     // the sheet for the dialog. Share works the same way (see NoteDropDownMenu).
@@ -230,7 +261,21 @@ fun ChatMessageActionSheet(
 
             SectionDivider()
 
-            ModerationSection(note, state, onReport = { reportDialogShowing = true }, onDismiss, accountViewModel)
+            ModerationSection(
+                note = note,
+                state = state,
+                onReport = { reportDialogShowing = true },
+                onDeleteRequest = {
+                    if (accountViewModel.account.settings.hideDeleteRequestDialog) {
+                        performDelete()
+                        onDismiss()
+                    } else {
+                        deleteConfirmationShowing = true
+                    }
+                },
+                onDismiss = onDismiss,
+                accountViewModel = accountViewModel,
+            )
 
             Spacer(Modifier.height(24.dp))
         }
@@ -438,6 +483,7 @@ private fun ModerationSection(
     note: Note,
     state: DropDownParams,
     onReport: () -> Unit,
+    onDeleteRequest: () -> Unit,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
@@ -455,11 +501,11 @@ private fun ModerationSection(
             onDismiss()
         }
 
-        if (state.isLoggedUser && !note.isPrivateRumor()) {
-            ActionTile(MaterialSymbols.Delete, stringRes(R.string.request_deletion), isDestructive = true) {
-                accountViewModel.delete(note)
-                onDismiss()
-            }
+        // Own messages always get a delete affordance (the private-rumor variant
+        // goes through the gift-wrapped deletion); reporting yourself never
+        // makes sense, so Report is others-only.
+        if (state.isLoggedUser) {
+            ActionTile(MaterialSymbols.Delete, stringRes(R.string.request_deletion), isDestructive = true, onClick = onDeleteRequest)
         } else {
             ActionTile(MaterialSymbols.Report, stringRes(R.string.block_report), isDestructive = true, onClick = onReport)
         }

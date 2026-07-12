@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
@@ -213,19 +214,33 @@ fun NormalChatNote(
             }
         }
 
-    // Emoji-only messages render as bare jumbo emoji, no bubble fill. Encrypted
-    // content that hasn't hit the decrypt cache yet just isn't jumbo (ciphertext
-    // never passes the emoji-only check).
-    val isJumboEmoji =
-        remember(note.event) {
+    // Emoji-only messages render as bare jumbo emoji, no bubble fill. Ciphertext
+    // never passes the emoji-only check, so the cheap synchronous read decides
+    // most cases; the decrypt callback updates the flag when an encrypted
+    // message's plaintext arrives after first composition, keeping the bubble
+    // transparency in agreement with the jumbo text rendering downstream.
+    var isJumboEmoji by
+        remember(note.event?.id) {
             val noteEvent = note.event
-            if (noteEvent is DraftWrapEvent) {
-                false
-            } else {
-                val content = accountViewModel.cachedDecrypt(note) ?: noteEvent?.content
-                content != null && jumboEmojiCount(content) > 0
+            val content =
+                if (noteEvent is DraftWrapEvent) {
+                    null
+                } else {
+                    accountViewModel.cachedDecrypt(note) ?: noteEvent?.content
+                }
+            mutableStateOf(content != null && jumboEmojiCount(content) > 0)
+        }
+
+    if (note.event !is DraftWrapEvent) {
+        LaunchedEffect(note.event?.id) {
+            accountViewModel.decrypt(note) { content ->
+                val jumbo = jumboEmojiCount(content) > 0
+                if (jumbo != isJumboEmoji) {
+                    isJumboEmoji = jumbo
+                }
             }
         }
+    }
 
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,

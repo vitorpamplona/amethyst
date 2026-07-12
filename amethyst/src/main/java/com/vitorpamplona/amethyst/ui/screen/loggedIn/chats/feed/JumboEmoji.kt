@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import com.vitorpamplona.amethyst.commons.util.codePointAtKmp
+import com.vitorpamplona.amethyst.commons.util.codePointCharCount
+
 /** A message of up to this many emoji renders as jumbo emoji without a bubble. */
 const val MAX_JUMBO_EMOJI = 3
 
@@ -28,21 +31,40 @@ const val MAX_JUMBO_EMOJI = 3
  * whitespace) and short enough to render jumbo, or 0 when it contains any
  * non-emoji text or more than [MAX_JUMBO_EMOJI] emoji.
  *
- * Modifier code points (variation selectors, ZWJ, skin tones, keycaps) don't
- * count as separate emoji, so a ZWJ family or a flag counts what it draws as.
+ * Modifier code points (variation selectors, ZWJ, skin tones, keycap marks)
+ * don't count as separate emoji: a ZWJ family counts what it draws as, a keycap
+ * like 1️⃣ counts as one, and a flag needs its full regional-indicator pair —
+ * incomplete sequences make the message non-jumbo.
+ *
+ * Built on the KMP-safe code-point helpers so the logic can move to commonMain.
  */
 fun jumboEmojiCount(content: String): Int {
     var count = 0
     var previousWasZwj = false
+
+    // A regional indicator waiting for its pair (flags are two RIs = one emoji).
     var pendingRegionalIndicator = false
+
+    // An ASCII keycap base ('0'-'9', '#', '*') waiting for its combining keycap
+    // mark; only then does it count as one emoji.
+    var pendingKeycapBase = false
 
     var i = 0
     while (i < content.length) {
-        val cp = content.codePointAt(i)
-        i += Character.charCount(cp)
+        val cp = content.codePointAtKmp(i)
+        i += codePointCharCount(cp)
 
         when {
-            Character.isWhitespace(cp) -> {
+            isWhitespace(cp) -> {
+                if (pendingKeycapBase || pendingRegionalIndicator) return 0
+                previousWasZwj = false
+            }
+
+            cp == KEYCAP_MARK -> {
+                // Completes a keycap sequence like '1' + VS16 + U+20E3.
+                if (!pendingKeycapBase) return 0
+                pendingKeycapBase = false
+                count++
                 previousWasZwj = false
             }
 
@@ -50,18 +72,27 @@ fun jumboEmojiCount(content: String): Int {
                 previousWasZwj = cp == ZWJ
             }
 
+            isKeycapBase(cp) -> {
+                // A bare digit is only an emoji when its keycap mark follows.
+                if (pendingKeycapBase || pendingRegionalIndicator) return 0
+                pendingKeycapBase = true
+                previousWasZwj = false
+            }
+
             isRegionalIndicator(cp) -> {
-                // Two regional indicators pair into one flag.
+                if (pendingKeycapBase) return 0
+                // Two regional indicators pair into one flag; count on completion.
                 if (pendingRegionalIndicator) {
                     pendingRegionalIndicator = false
+                    count++
                 } else {
                     pendingRegionalIndicator = true
-                    count++
                 }
                 previousWasZwj = false
             }
 
             isEmojiBase(cp) -> {
+                if (pendingKeycapBase || pendingRegionalIndicator) return 0
                 if (!previousWasZwj) count++
                 previousWasZwj = false
             }
@@ -72,17 +103,25 @@ fun jumboEmojiCount(content: String): Int {
         if (count > MAX_JUMBO_EMOJI) return 0
     }
 
+    // Incomplete sequences (half a flag, a digit with no keycap mark) mean the
+    // message is not emoji-only.
+    if (pendingRegionalIndicator || pendingKeycapBase) return 0
+
     return count
 }
 
 private const val ZWJ = 0x200D
+private const val KEYCAP_MARK = 0x20E3
+
+private fun isWhitespace(cp: Int): Boolean = cp <= 0xFFFF && cp.toChar().isWhitespace()
 
 private fun isEmojiModifier(cp: Int): Boolean =
     cp == ZWJ ||
         cp == 0xFE0E || // variation selector 15 (text style)
         cp == 0xFE0F || // variation selector 16 (emoji style)
-        cp == 0x20E3 || // combining enclosing keycap
         cp in 0x1F3FB..0x1F3FF // skin tones
+
+private fun isKeycapBase(cp: Int): Boolean = cp in '0'.code..'9'.code || cp == '#'.code || cp == '*'.code
 
 private fun isRegionalIndicator(cp: Int): Boolean = cp in 0x1F1E6..0x1F1FF
 

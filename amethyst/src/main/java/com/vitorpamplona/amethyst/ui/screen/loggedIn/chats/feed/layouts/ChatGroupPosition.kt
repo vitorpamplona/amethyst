@@ -21,6 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeMe
@@ -145,5 +149,41 @@ fun computeChatGroupPosition(
         connectedAbove -> ChatGroupPosition.BOTTOM
         connectedBelow -> ChatGroupPosition.TOP
         else -> ChatGroupPosition.SINGLE
+    }
+}
+
+/**
+ * [computeChatGroupPosition] that recomputes when any of the three notes' events or
+ * authors finish loading. The grouping math reads `event`/`author`, which resolve
+ * asynchronously on the same Note objects, so caching by Note identity alone
+ * latches a stale position for neighbors that compose before their data arrives.
+ */
+@Composable
+fun watchChatGroupPosition(
+    newer: Note?,
+    note: Note,
+    older: Note?,
+): ChatGroupPosition {
+    val noteVersion by note
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val newerVersion =
+        newer
+            ?.flow()
+            ?.metadata
+            ?.stateFlow
+            ?.collectAsStateWithLifecycle()
+            ?.value
+    val olderVersion =
+        older
+            ?.flow()
+            ?.metadata
+            ?.stateFlow
+            ?.collectAsStateWithLifecycle()
+            ?.value
+
+    return remember(noteVersion, newerVersion, olderVersion, newer, older) {
+        computeChatGroupPosition(newer, note, older)
     }
 }

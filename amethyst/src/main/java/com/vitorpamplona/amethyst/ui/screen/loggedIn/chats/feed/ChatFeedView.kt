@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.computeChatGroupPosition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.watchChatGroupPosition
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.launch
@@ -214,10 +214,7 @@ fun ChatFeedLoaded(
                         onScrollToNote = onScrollToNote,
                         shouldHighlight = highlightedNoteId.value == item.idHex,
                         onHighlightFinished = { highlightedNoteId.value = null },
-                        groupPosition =
-                            remember(item, newer, older) {
-                                computeChatGroupPosition(newer, item, older)
-                            },
+                        groupPosition = watchChatGroupPosition(newer, item, older),
                     )
 
                     NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)

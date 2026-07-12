@@ -25,10 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.StateFlow
 
 /** Delivery progress of one recipient's gift wrap (NIP-17 DMs). */
 @Immutable
@@ -36,6 +34,10 @@ data class RecipientDelivery(
     val recipient: HexKey,
     val targetRelays: Set<NormalizedRelayUrl>,
     val acceptedRelays: Set<NormalizedRelayUrl> = emptySet(),
+    // The sender's own self-copy wrap: shown in the delivery detail (it matters
+    // for multi-device sync) but excluded from "delivered to everyone" and the
+    // k/n count, which describe the OTHER participants.
+    val isSelf: Boolean = false,
 ) {
     val isDelivered: Boolean
         get() = acceptedRelays.isNotEmpty()
@@ -52,13 +54,19 @@ data class ChatDelivery(
     val acceptedRelays: Set<NormalizedRelayUrl> = emptySet(),
     val recipients: List<RecipientDelivery>? = null,
 ) {
+    /** The other participants' wraps (self-copy excluded); null for rooms. */
+    val otherRecipients: List<RecipientDelivery>?
+        get() = recipients?.filterNot { it.isSelf }
+
     val isFullyAccepted: Boolean
-        get() =
-            if (recipients != null) {
-                recipients.all { it.isDelivered }
+        get() {
+            val others = otherRecipients
+            return if (others != null) {
+                others.isNotEmpty() && others.all { it.isDelivered }
             } else {
                 targetRelays.isNotEmpty() && acceptedRelays.containsAll(targetRelays)
             }
+        }
 }
 
 /**
@@ -73,23 +81,32 @@ data class ChatDelivery(
  * exists (inside the publish loop), and a persistent OK listener attributes each
  * acceptance back to the message and, for DMs, to the recipient.
  *
- * In-memory only: history from before an app restart simply has no entry, and the
- * UI falls back to the Note's seen-on relays.
+ * State is held as one small StateFlow per tracked message, so a relay OK updates
+ * and notifies only that message's collectors instead of fanning out through a
+ * whole-map flow. In-memory only: history from before an app restart simply has no
+ * entry, and the UI falls back to the Note's seen-on relays.
+ *
+ * Owns a persistent listener on the client: [destroy] MUST be called when the
+ * owning Account is discarded (logout / account removal) or the listener leaks.
  */
 class ChatDeliveryTracker(
     client: INostrClient,
 ) {
     private val lock = Any()
 
-    private val deliveries = MutableStateFlow(mapOf<HexKey, ChatDelivery>())
+    // One flow per tracked (or queried) displayed-note id; LinkedHashMap iteration
+    // order is insertion order, used for eviction. Guarded by [lock].
+    private val deliveries = LinkedHashMap<HexKey, MutableStateFlow<ChatDelivery?>>()
 
-    // wrap id -> (displayed note id, recipient pubkey)
+    // Lock-free fast-path index for the OK listener, which fires for every event
+    // the app publishes anywhere: wrap id -> (displayed note id, recipient).
+    @Volatile
     private var wrapIndex = mapOf<HexKey, Pair<HexKey, HexKey>>()
 
-    // insertion order of displayed note ids, for pruning
-    private val trackedOrder = ArrayDeque<HexKey>()
+    // Lock-free fast-path set of tracked/queried note ids (see [onAccepted]).
+    @Volatile
+    private var knownIds = setOf<HexKey>()
 
-    @Suppress("unused")
     private val okCollector =
         RelayInsertConfirmationCollector(client) { eventId, relay ->
             onAccepted(eventId, relay.url)
@@ -102,10 +119,7 @@ class ChatDeliveryTracker(
     ) {
         if (targetRelays.isEmpty()) return
         synchronized(lock) {
-            if (deliveries.value[eventId] == null) {
-                registerNoteId(eventId)
-            }
-            deliveries.value = deliveries.value + (eventId to ChatDelivery(targetRelays))
+            flowForLocked(eventId).value = ChatDelivery(targetRelays)
         }
     }
 
@@ -118,79 +132,95 @@ class ChatDeliveryTracker(
         recipient: HexKey,
         wrapId: HexKey,
         targetRelays: Set<NormalizedRelayUrl>,
+        isSelf: Boolean = false,
     ) {
         synchronized(lock) {
-            val current = deliveries.value[displayedNoteId]
-            if (current == null) {
-                registerNoteId(displayedNoteId)
-            }
+            val flow = flowForLocked(displayedNoteId)
+            val current = flow.value
 
-            val recipients = (current?.recipients ?: emptyList()) + RecipientDelivery(recipient, targetRelays)
-
-            deliveries.value =
-                deliveries.value +
-                (
-                    displayedNoteId to
-                        ChatDelivery(
-                            targetRelays = (current?.targetRelays ?: emptySet()) + targetRelays,
-                            acceptedRelays = current?.acceptedRelays ?: emptySet(),
-                            recipients = recipients,
-                        )
+            flow.value =
+                ChatDelivery(
+                    targetRelays = (current?.targetRelays ?: emptySet()) + targetRelays,
+                    acceptedRelays = current?.acceptedRelays ?: emptySet(),
+                    recipients = (current?.recipients ?: emptyList()) + RecipientDelivery(recipient, targetRelays, isSelf = isSelf),
                 )
 
             wrapIndex = wrapIndex + (wrapId to (displayedNoteId to recipient))
         }
     }
 
-    fun deliveryFlow(noteId: HexKey): Flow<ChatDelivery?> = deliveries.map { it[noteId] }.distinctUntilChanged()
+    fun deliveryFlow(noteId: HexKey): StateFlow<ChatDelivery?> =
+        synchronized(lock) {
+            flowForLocked(noteId)
+        }
 
-    fun currentFor(noteId: HexKey): ChatDelivery? = deliveries.value[noteId]
+    fun currentFor(noteId: HexKey): ChatDelivery? =
+        synchronized(lock) {
+            deliveries[noteId]?.value
+        }
+
+    fun destroy() {
+        okCollector.destroy()
+        synchronized(lock) {
+            deliveries.clear()
+            wrapIndex = emptyMap()
+            knownIds = emptySet()
+        }
+    }
 
     private fun onAccepted(
         eventId: HexKey,
         relay: NormalizedRelayUrl,
     ) {
-        // Cheap negative path: OKs fire for every event the app publishes anywhere.
-        val isWrap = wrapIndex[eventId]
-        if (isWrap == null && deliveries.value[eventId] == null) return
+        // Lock-free negative path: OKs fire for every event the app publishes
+        // anywhere; almost all are not chat messages we track.
+        if (eventId !in wrapIndex && eventId !in knownIds) return
 
         synchronized(lock) {
             val wrapTarget = wrapIndex[eventId]
             if (wrapTarget != null) {
                 val (noteId, recipient) = wrapTarget
-                val delivery = deliveries.value[noteId] ?: return
+                val flow = deliveries[noteId] ?: return
+                val delivery = flow.value ?: return
 
-                deliveries.value =
-                    deliveries.value +
-                    (
-                        noteId to
-                            delivery.copy(
-                                acceptedRelays = delivery.acceptedRelays + relay,
-                                recipients =
-                                    delivery.recipients?.map {
-                                        if (it.recipient == recipient) {
-                                            it.copy(acceptedRelays = it.acceptedRelays + relay)
-                                        } else {
-                                            it
-                                        }
-                                    },
-                            )
+                flow.value =
+                    delivery.copy(
+                        acceptedRelays = delivery.acceptedRelays + relay,
+                        recipients =
+                            delivery.recipients?.map {
+                                if (it.recipient == recipient) {
+                                    it.copy(acceptedRelays = it.acceptedRelays + relay)
+                                } else {
+                                    it
+                                }
+                            },
                     )
             } else {
-                val delivery = deliveries.value[eventId] ?: return
-                deliveries.value =
-                    deliveries.value + (eventId to delivery.copy(acceptedRelays = delivery.acceptedRelays + relay))
+                val flow = deliveries[eventId] ?: return
+                val delivery = flow.value ?: return
+                flow.value = delivery.copy(acceptedRelays = delivery.acceptedRelays + relay)
             }
         }
     }
 
-    private fun registerNoteId(noteId: HexKey) {
-        trackedOrder.addLast(noteId)
-        if (trackedOrder.size > MAX_TRACKED) {
-            val evicted = trackedOrder.removeFirst()
-            deliveries.value = deliveries.value - evicted
+    // Must run under [lock]. Also creates entries for ids queried by the UI
+    // before their send registers (compose can win that race), so both paths
+    // share the same flow instance.
+    private fun flowForLocked(noteId: HexKey): MutableStateFlow<ChatDelivery?> {
+        deliveries[noteId]?.let { return it }
+
+        val flow = MutableStateFlow<ChatDelivery?>(null)
+        deliveries[noteId] = flow
+        knownIds = knownIds + noteId
+
+        while (deliveries.size > MAX_TRACKED) {
+            val evicted = deliveries.keys.first()
+            deliveries.remove(evicted)
+            knownIds = knownIds - evicted
             wrapIndex = wrapIndex.filterValues { it.first != evicted }
         }
+
+        return flow
     }
 
     companion object {

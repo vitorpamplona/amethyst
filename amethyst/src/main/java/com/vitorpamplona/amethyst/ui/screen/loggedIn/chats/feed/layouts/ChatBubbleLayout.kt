@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -46,9 +46,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.theme.chatBubbleThem
 import com.vitorpamplona.amethyst.ui.theme.chatDraftBackground
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -128,21 +131,20 @@ fun ChatBubbleLayout(
     val defaultBackground = MaterialTheme.colorScheme.background
     val draftColor = MaterialTheme.colorScheme.chatDraftBackground
 
+    // Keyed on the theme-derived inputs so bubbles recolor when the user switches
+    // light/dark or accent while the chat is composed (MaterialTheme recomposes
+    // in place — nothing recreates this composable on a theme change).
+    val parentBg = parentBackgroundColor?.value
     val bgColor =
-        remember {
-            if (isLoggedInUser) {
-                if (isDraft) {
-                    mutableStateOf(
-                        draftColor.compositeOver(parentBackgroundColor?.value ?: defaultBackground),
-                    )
-                } else {
-                    mutableStateOf(
-                        loggedInColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground),
-                    )
+        remember(isLoggedInUser, isDraft, loggedInColors, otherColors, draftColor, defaultBackground, parentBg) {
+            val base = parentBg ?: defaultBackground
+            val bubble =
+                when {
+                    isLoggedInUser && isDraft -> draftColor
+                    isLoggedInUser -> loggedInColors
+                    else -> otherColors
                 }
-            } else {
-                mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
-            }
+            mutableStateOf(bubble.compositeOver(base))
         }
 
     val highlightActive = remember { mutableStateOf(false) }
@@ -164,7 +166,11 @@ fun ChatBubbleLayout(
     )
 
     val haptic = LocalHapticFeedback.current
-    val dragOffset = remember { Animatable(0f) }
+
+    // Plain state during the drag (a coroutine per pointer frame is wasted work);
+    // a single animation job settles it back on release.
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    var settleJob by remember { mutableStateOf<Job?>(null) }
     val swipeScope = rememberCoroutineScope()
     val density = LocalDensity.current
     val swipeThresholdPx = remember(density) { with(density) { SwipeReplyThreshold.toPx() } }
@@ -179,7 +185,7 @@ fun ChatBubbleLayout(
             },
     ) {
         if (onSwipeReply != null) {
-            val progress = (abs(dragOffset.value) / swipeThresholdPx).coerceIn(0f, 1f)
+            val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
             if (progress > 0f) {
                 Box(
                     modifier =
@@ -199,35 +205,44 @@ fun ChatBubbleLayout(
         val swipeModifier =
             if (onSwipeReply != null) {
                 Modifier
-                    .graphicsLayer { translationX = dragOffset.value }
+                    .graphicsLayer { translationX = dragOffset }
                     .pointerInput(onSwipeReply) {
                         // Drag toward the screen center only; a haptic tick marks the
                         // commit point, releasing past it fires the reply.
                         var crossedThreshold = false
+
+                        val settleBack = {
+                            settleJob =
+                                swipeScope.launch {
+                                    animate(dragOffset, 0f) { value, _ -> dragOffset = value }
+                                }
+                        }
+
                         detectHorizontalDragGestures(
-                            onDragStart = { crossedThreshold = false },
+                            onDragStart = {
+                                settleJob?.cancel()
+                                crossedThreshold = false
+                            },
                             onDragEnd = {
-                                if (abs(dragOffset.value) >= swipeThresholdPx) {
+                                if (abs(dragOffset) >= swipeThresholdPx) {
                                     onSwipeReply()
                                 }
-                                swipeScope.launch { dragOffset.animateTo(0f) }
+                                settleBack()
                             },
-                            onDragCancel = {
-                                swipeScope.launch { dragOffset.animateTo(0f) }
-                            },
+                            onDragCancel = { settleBack() },
                         ) { change, dragAmount ->
                             change.consume()
                             val newOffset =
                                 if (isLoggedInUser) {
-                                    (dragOffset.value + dragAmount).coerceIn(-swipeMaxPx, 0f)
+                                    (dragOffset + dragAmount).coerceIn(-swipeMaxPx, 0f)
                                 } else {
-                                    (dragOffset.value + dragAmount).coerceIn(0f, swipeMaxPx)
+                                    (dragOffset + dragAmount).coerceIn(0f, swipeMaxPx)
                                 }
                             if (!crossedThreshold && abs(newOffset) >= swipeThresholdPx) {
                                 crossedThreshold = true
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             }
-                            swipeScope.launch { dragOffset.snapTo(newOffset) }
+                            dragOffset = newOffset
                         }
                     }
             } else {

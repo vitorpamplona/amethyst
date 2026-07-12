@@ -582,6 +582,17 @@ class AccountViewModel(
         reactToOrDelete(note, reaction)
     }
 
+    /**
+     * Retracts the user's own private rumor (e.g. a NIP-17 DM message) with a
+     * gift-wrapped NIP-09 deletion to the same participants. A public deletion
+     * would e-tag the private rumor id onto public relays.
+     */
+    fun deletePrivately(note: Note) {
+        launchSigner {
+            account.deletePrivately(listOf(note), note)
+        }
+    }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

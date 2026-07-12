@@ -85,6 +85,11 @@ fun ChatReactionChips(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Deliberate cost: this observes reactions/zaps for EVERY visible message
+    // (the ids fold into the batched EventFinder relay filters — one shared REQ,
+    // not one per note), which is exactly what ReactionsRow already does for
+    // every note in the main feeds. Gating on already-known engagement would be
+    // cheaper but would never DISCOVER reactions for messages nobody expanded.
     val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
     val chips by

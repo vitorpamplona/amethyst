@@ -85,7 +85,7 @@ fun ChatDeliveryTicks(
 
     val delivery by
         remember(baseNote) { tracker.deliveryFlow(baseNote.idHex) }
-            .collectAsStateWithLifecycle(tracker.currentFor(baseNote.idHex))
+            .collectAsStateWithLifecycle()
 
     val seenOnState by
         remember(baseNote) { baseNote.flow().relays.stateFlow }
@@ -198,11 +198,7 @@ private fun RecipientDeliveryRow(
             }
         }
 
-        if (recipient.isDelivered) {
-            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
-        } else {
-            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
-        }
+        DeliveryStatusTick(recipient.isDelivered)
     }
 }
 
@@ -222,11 +218,16 @@ private fun RelayDeliveryRow(
             maxLines = 1,
         )
 
-        if (accepted) {
-            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
-        } else {
-            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
-        }
+        DeliveryStatusTick(accepted)
+    }
+}
+
+@Composable
+private fun DeliveryStatusTick(delivered: Boolean) {
+    if (delivered) {
+        TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
+    } else {
+        TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
     }
 }
 
@@ -248,23 +249,19 @@ private fun RenderDeliveryTicks(
         return
     }
 
-    val recipients = delivery.recipients
-    if (recipients != null && recipients.size > 2) {
+    // "Delivered to everyone" and the k/n count describe the OTHER participants;
+    // the sender's own self-copy wrap only shows in the detail dialog.
+    val others = delivery.otherRecipients
+    if (others != null && others.size > 1) {
         // Group DM: double check once everyone got it, plus a delivered count.
-        val deliveredCount = recipients.count { it.isDelivered }
+        val deliveredCount = others.count { it.isDelivered }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            when {
-                deliveredCount == 0 && !seenSomewhere ->
-                    TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, pendingColor)
-
-                delivery.isFullyAccepted ->
-                    TickIcon(MaterialSymbols.DoneAll, R.string.chat_delivery_delivered_all, deliveredColor)
-
-                else ->
-                    TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, pendingColor)
-            }
+            DeliveryLadderTick(
+                pending = deliveredCount == 0 && !seenSomewhere,
+                fullyAccepted = delivery.isFullyAccepted,
+            )
             Text(
-                text = "$deliveredCount/${recipients.size}",
+                text = "$deliveredCount/${others.size}",
                 fontSize = Font12SP,
                 color = if (delivery.isFullyAccepted) deliveredColor else pendingColor,
                 maxLines = 1,
@@ -275,15 +272,27 @@ private fun RenderDeliveryTicks(
 
     // 1:1 DMs and public rooms share the classic tick ladder.
     val acceptedSomewhere = seenSomewhere || delivery.acceptedRelays.isNotEmpty()
-    when {
-        !acceptedSomewhere ->
-            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, pendingColor)
+    DeliveryLadderTick(
+        pending = !acceptedSomewhere,
+        fullyAccepted = delivery.isFullyAccepted,
+    )
+}
 
-        delivery.isFullyAccepted ->
-            TickIcon(MaterialSymbols.DoneAll, R.string.chat_delivery_delivered_all, deliveredColor)
+/** The shared pending -> accepted-somewhere -> fully-accepted tick selection. */
+@Composable
+private fun DeliveryLadderTick(
+    pending: Boolean,
+    fullyAccepted: Boolean,
+) {
+    when {
+        pending ->
+            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+
+        fullyAccepted ->
+            TickIcon(MaterialSymbols.DoneAll, R.string.chat_delivery_delivered_all, MaterialTheme.colorScheme.allGoodColor)
 
         else ->
-            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, pendingColor)
+            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.placeholderText)
     }
 }
 

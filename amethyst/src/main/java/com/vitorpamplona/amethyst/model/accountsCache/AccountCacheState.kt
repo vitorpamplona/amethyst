@@ -70,6 +70,9 @@ class AccountCacheState(
         accounts.update { existingAccounts ->
             val oldValue = existingAccounts[pubkey]
             oldValue?.scope?.cancel()
+            // Unregisters the tracker's persistent listener from the shared
+            // client; without this every removed account leaks a listener.
+            oldValue?.chatDeliveryTracker?.destroy()
             existingAccounts.minus(pubkey)
         }
     }
@@ -258,6 +261,7 @@ class AccountCacheState(
         accounts.update { existingAccounts ->
             existingAccounts.forEach {
                 it.value.scope.cancel()
+                it.value.chatDeliveryTracker.destroy()
             }
             emptyMap()
         }

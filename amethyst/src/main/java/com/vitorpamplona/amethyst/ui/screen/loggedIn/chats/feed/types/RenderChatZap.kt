@@ -105,11 +105,16 @@ fun RenderChatZap(
                 val sender = card.user
                 if (sender != null) {
                     UserPicture(sender, Size20dp, Modifier, accountViewModel, nav)
-                    UsernameDisplay(
-                        baseUser = sender,
-                        fontWeight = FontWeight.Bold,
-                        accountViewModel = accountViewModel,
-                    )
+                    // weight(fill = false) hugs short names but yields to the
+                    // amount when the name is long — the amount is the point of
+                    // the card and must always stay visible.
+                    Row(modifier = Modifier.weight(1f, fill = false)) {
+                        UsernameDisplay(
+                            baseUser = sender,
+                            fontWeight = FontWeight.Bold,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 } else {
                     Text(
                         text = stringRes(R.string.chat_zap_anonymous),
@@ -121,6 +126,7 @@ fun RenderChatZap(
                     text = stringRes(R.string.chat_zap_amount_suffix, amountText),
                     color = BitcoinOrange,
                     fontWeight = if (isBigZap) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
                 )
             }
 
