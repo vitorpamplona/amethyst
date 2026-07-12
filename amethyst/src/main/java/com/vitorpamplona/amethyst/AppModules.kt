@@ -86,6 +86,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscripti
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
+import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
+import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
+import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
+import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
+import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
+import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorkGate
@@ -279,6 +286,24 @@ class AppModules(
     // on Tor-enabled clients to transparently redirect to .onion addresses.
     val onionLocationCache = OnionLocationCache()
 
+    // ---- Resource-usage ledger (battery/data accounting) ----
+    // Passive on-device counters (bytes per subsystem x network x visibility,
+    // relay connection-time, wakelock time, worker runs). Never transmitted;
+    // the user can review them in Settings and explicitly DM a report to the
+    // developers. See amethyst/plans/2026-07-12-resource-usage-ledger.md.
+    val foregroundTracker = ForegroundTracker()
+
+    val resourceUsageStore = ResourceUsageStore(File(appContext.filesDir, ResourceUsageStore.FILE_NAME))
+
+    val resourceUsage = ResourceUsageAccountant(resourceUsageStore, applicationIOScope)
+
+    private val httpUsageMeter =
+        HttpUsageMeter(
+            accountant = resourceUsage,
+            isMobile = { connManager.isMobileOrFalse.value },
+            isForeground = { foregroundTracker.isForeground.value },
+        )
+
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
         DualHttpClientManager(
@@ -301,7 +326,7 @@ class AppModules(
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
-    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
+    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value, httpUsageMeter)
 
     val electrumXClient by lazy {
         Log.d("AppModules", "ElectrumXClient Init")
@@ -605,6 +630,23 @@ class AppModules(
     // Captures statistics about relays
     val relayStats = RelayStats(client)
 
+    // Resource-usage ledger: relay traffic + connection-time collectors.
+    init {
+        client.addConnectionListener(
+            RelayUsageListener(
+                accountant = resourceUsage,
+                isMobile = { connManager.isMobileOrFalse.value },
+                isForeground = { foregroundTracker.isForeground.value },
+            ),
+        )
+        RelayConnectionTimeIntegrator(
+            connectedCount = client.connectedRelaysFlow().map { it.size },
+            isMobile = connManager.isMobileOrNull,
+            isForeground = foregroundTracker.isForeground,
+            accountant = resourceUsage,
+        ).start(applicationIOScope)
+    }
+
     // Logs debug messages when needed
     val detailedLogger = if (isDebug) RelayLogger(client, debugSending = false, debugReceiving = false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
@@ -740,7 +782,11 @@ class AppModules(
     // Observes LocalCache for notification-relevant events and routes them to
     // EventNotificationConsumer. Sources: FCM, UnifiedPush, Pokey, active relay
     // subscriptions, and NotificationRelayService.
-    val notificationDispatcher = NotificationDispatcher(appContext, applicationIOScope)
+    val notificationDispatcher =
+        NotificationDispatcher(appContext, applicationIOScope) { heldMs ->
+            resourceUsage.add(UsageKeys.WAKELOCK_NOTIF_MS, heldMs)
+            resourceUsage.add(UsageKeys.WAKELOCK_NOTIF_COUNT, 1)
+        }
 
     // Local store for posts the user has scheduled to publish later. Backed by a
     // single JSON file under the app's private filesDir; read by ScheduledPostWorker.
@@ -823,6 +869,10 @@ class AppModules(
 
     fun initiate(appContext: Context) {
         Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
+
+        // Ledger: count process starts — high counts reveal WorkManager/restart
+        // churn that cold-starts the whole app graph repeatedly.
+        resourceUsage.add(UsageKeys.APP_STARTS, 1)
 
         // Restore the persisted DNS cache before any networking starts. Lookups that fire
         // before this completes fall through to the sync resolver path (existing behavior);
@@ -1005,6 +1055,8 @@ class AppModules(
 
     fun trim(level: Int) {
         _trimLevelEvents.tryEmit(level)
+        // Backgrounding is a natural moment to flush the usage ledger too.
+        resourceUsage.flushAsync()
         applicationIOScope.launch {
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()

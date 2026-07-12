@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model.privacyOptions
 
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
+import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okhttp3.OkHttpClient
@@ -32,7 +34,18 @@ import javax.net.SocketFactory
 class RoleBasedHttpClientBuilder(
     val okHttpClient: DualHttpClientManager,
     val torSettings: TorSettingsFlow,
+    /**
+     * When present, every role's client is wrapped with a byte-counting
+     * interceptor so the resource-usage ledger can attribute HTTP traffic
+     * per subsystem. Null keeps the raw shared clients (tests).
+     */
+    val usageMeter: HttpUsageMeter? = null,
 ) : IRoleBasedHttpClientBuilder {
+    private fun metered(
+        role: String,
+        base: OkHttpClient,
+    ): OkHttpClient = usageMeter?.counted(role, base) ?: base
+
     fun shouldUseTorForImageDownload(url: String) =
         shouldUseTorFor(
             url,
@@ -131,19 +144,19 @@ class RoleBasedHttpClientBuilder(
 
     override fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(shouldUseTorForVideoDownload(url))
 
-    override fun okHttpClientForNip05(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForNIP05(url))
+    override fun okHttpClientForNip05(url: String): OkHttpClient = metered(UsageKeys.ROLE_NIP05, okHttpClient.getHttpClient(shouldUseTorForNIP05(url)))
 
-    override fun okHttpClientForUploads(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForUploads(url))
+    override fun okHttpClientForUploads(url: String): OkHttpClient = metered(UsageKeys.ROLE_UPLOADS, okHttpClient.getHttpClient(shouldUseTorForUploads(url)))
 
-    override fun okHttpClientForImage(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForImageDownload(url))
+    override fun okHttpClientForImage(url: String): OkHttpClient = metered(UsageKeys.ROLE_IMAGE, okHttpClient.getHttpClient(shouldUseTorForImageDownload(url)))
 
-    override fun okHttpClientForVideo(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForVideoDownload(url))
+    override fun okHttpClientForVideo(url: String): OkHttpClient = metered(UsageKeys.ROLE_VIDEO, okHttpClient.getHttpClient(shouldUseTorForVideoDownload(url)))
 
-    override fun okHttpClientForMoney(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForMoneyOperations(url))
+    override fun okHttpClientForMoney(url: String): OkHttpClient = metered(UsageKeys.ROLE_MONEY, okHttpClient.getHttpClient(shouldUseTorForMoneyOperations(url)))
 
-    override fun okHttpClientForPreview(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForPreviewUrl(url))
+    override fun okHttpClientForPreview(url: String): OkHttpClient = metered(UsageKeys.ROLE_PREVIEW, okHttpClient.getHttpClient(shouldUseTorForPreviewUrl(url)))
 
-    override fun okHttpClientForPushRegistration(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForTrustedRelays())
+    override fun okHttpClientForPushRegistration(url: String): OkHttpClient = metered(UsageKeys.ROLE_PUSH, okHttpClient.getHttpClient(shouldUseTorForTrustedRelays()))
 
     /**
      * Returns a [SocketFactory] that routes through the user's Tor proxy

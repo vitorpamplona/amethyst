@@ -31,6 +31,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -120,6 +121,7 @@ class NotificationCatchUpWorker(
 
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting notification catch-up")
+        runCatching { Amethyst.instance.resourceUsage.add(UsageKeys.workerRuns("notificationCatchUp"), 1) }
 
         return try {
             // If the foreground service should be running but isn't, restart it

@@ -26,9 +26,11 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -60,6 +62,7 @@ class CalendarReminderWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
+        runCatching { Amethyst.instance.resourceUsage.add(UsageKeys.workerRuns("calendarReminder"), 1) }
         val prefs = CalendarReminderPrefs(applicationContext)
         if (!prefs.isEnabled()) {
             Log.d(TAG) { "Reminders disabled; ending periodic chain." }

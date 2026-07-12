@@ -31,6 +31,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -132,6 +133,7 @@ class ScheduledPostWorker(
     override suspend fun doWork(): Result {
         val nowSec = System.currentTimeMillis() / 1000
         Log.d(TAG) { "doWork() ENTER nowSec=$nowSec runAttempt=$runAttemptCount tags=$tags" }
+        runCatching { Amethyst.instance.resourceUsage.add(UsageKeys.workerRuns("scheduledPost"), 1) }
 
         return try {
             val appModules = Amethyst.instance

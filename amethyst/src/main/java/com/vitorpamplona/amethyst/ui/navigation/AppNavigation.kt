@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
+import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsScreen
@@ -228,6 +229,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NotificationSettin
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.OtsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ProfileUiSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ReactionsSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SpammingUsersScreen
@@ -306,6 +308,7 @@ fun AppNavigation(
     DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
     DisplayNotifyMessages(accountViewModel, nav)
     DisplayCrashMessages(accountViewModel, nav)
+    DisplayResourceUsageAlert(accountViewModel, nav)
     DisplayBroadcastProgress(accountViewModel)
 
     ObserveIncomingCalls(accountViewModel)
@@ -481,6 +484,7 @@ fun BuildNavigation(
         composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ResourceUsage> { ResourceUsageScreen(accountViewModel, nav) }
         composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ImportFollowsPickFollows> {
             ImportFollowListPickFollowsScreen(it.userHex, accountViewModel, nav)

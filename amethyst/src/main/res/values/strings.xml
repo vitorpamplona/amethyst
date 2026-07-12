@@ -3180,6 +3180,45 @@
     <string name="crashreport_found">Crash Report found</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Would you like to send the recent crash report to Amethyst in a DM? No personal information will be shared</string>
     <string name="crashreport_found_send">Send it</string>
+
+    <string name="resource_usage_title">App resource usage</string>
+    <string name="resource_usage_search_keywords">battery data usage consumption power network diagnostics ledger</string>
+    <string name="resource_usage_today">Today</string>
+    <string name="resource_usage_week">Last 7 days</string>
+    <string name="resource_usage_cellular_bg">Cellular data (background)</string>
+    <string name="resource_usage_cellular_fg">Cellular data (in app)</string>
+    <string name="resource_usage_wifi">Wi-Fi data</string>
+    <string name="resource_usage_relay_time">Relay connection time</string>
+    <string name="resource_usage_relay_time_bg_mobile">\u2026 backgrounded on cellular</string>
+    <string name="resource_usage_wakelock">Notification processing (CPU awake)</string>
+    <string name="resource_usage_worker_runs">Background jobs run</string>
+    <string name="resource_usage_app_starts">App process starts</string>
+    <string name="resource_usage_by_subsystem">Data by feature (7 days)</string>
+    <string name="resource_usage_subsystem_relay">Relay sync</string>
+    <string name="resource_usage_subsystem_image">Images</string>
+    <string name="resource_usage_subsystem_video">Video &amp; audio</string>
+    <string name="resource_usage_subsystem_uploads">Uploads</string>
+    <string name="resource_usage_subsystem_money">Wallet &amp; zaps</string>
+    <string name="resource_usage_subsystem_nip05">Address verification</string>
+    <string name="resource_usage_subsystem_preview">Link previews</string>
+    <string name="resource_usage_subsystem_push">Push registration</string>
+    <string name="resource_usage_subsystem_other">Other</string>
+    <string name="resource_usage_empty">No usage recorded yet.</string>
+    <string name="resource_usage_send_section">Share with the developers</string>
+    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, or browsing details. Nothing is sent until you tap Send in the message screen.</string>
+    <string name="resource_usage_send_button">Send report via DM</string>
+    <string name="resource_usage_alert_title">High resource usage detected</string>
+    <string name="resource_usage_alert_message">Amethyst consumed more than expected recently: %1$s. Would you like to send a usage report to the developers in an encrypted DM? You will see the full report before anything is sent.</string>
+    <string name="resource_usage_reason_bg_data">%1$s of cellular data in the background in one day</string>
+    <string name="resource_usage_reason_conn_time">%1$s of relay connections while backgrounded on cellular in one day</string>
+    <string name="resource_usage_reason_wakelock">the CPU was held awake for %1$s processing notifications in one day</string>
+    <plurals name="resource_usage_reason_churn">
+        <item quantity="one">the app process restarted %1$d time in one day</item>
+        <item quantity="other">the app process restarted %1$d times in one day</item>
+    </plurals>
+    <string name="resource_usage_alert_send">Review &amp; send</string>
+    <string name="resource_usage_alert_not_now">Not now</string>
+    <string name="resource_usage_alert_opt_out">Don\u2019t ask again</string>
     <string name="this_message_will_disappear_in">This message will disappear in %1$s</string>
     <string name="select_signer">Select Signer</string>
 
