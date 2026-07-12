@@ -213,6 +213,20 @@ fun NormalChatNote(
             }
         }
 
+    // Emoji-only messages render as bare jumbo emoji, no bubble fill. Encrypted
+    // content that hasn't hit the decrypt cache yet just isn't jumbo (ciphertext
+    // never passes the emoji-only check).
+    val isJumboEmoji =
+        remember(note.event) {
+            val noteEvent = note.event
+            if (noteEvent is DraftWrapEvent) {
+                false
+            } else {
+                val content = accountViewModel.cachedDecrypt(note) ?: noteEvent?.content
+                content != null && jumboEmojiCount(content) > 0
+            }
+        }
+
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
         isDraft = note.event is DraftWrapEvent,
@@ -223,6 +237,7 @@ fun NormalChatNote(
         hasDetailsToShow = false,
         drawAuthorInfo = drawAuthorInfo && groupPosition.isFirstOfGroup,
         groupPosition = groupPosition,
+        transparentBubble = isJumboEmoji,
         parentBackgroundColor = parentBackgroundColor,
         shouldHighlight = shouldHighlight,
         onHighlightFinished = onHighlightFinished,
@@ -258,7 +273,7 @@ fun NormalChatNote(
         },
         reactionsRow =
             if (!innerQuote) {
-                { ChatReactionChips(note, accountViewModel) }
+                { ChatReactionChips(note, accountViewModel, nav) }
             } else {
                 null
             },
@@ -271,7 +286,7 @@ fun NormalChatNote(
                     ) {
                         ChatTimeAgo(note)
                         if (isLoggedInUser && !note.isDraft()) {
-                            ChatDeliveryTicks(note, accountViewModel)
+                            ChatDeliveryTicks(note, accountViewModel, nav)
                         }
                     }
                 }

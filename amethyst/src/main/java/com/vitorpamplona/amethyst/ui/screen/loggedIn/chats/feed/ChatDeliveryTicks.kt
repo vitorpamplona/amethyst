@@ -20,13 +20,22 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,11 +47,20 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDelivery
+import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.RecipientDelivery
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 /**
  * Relay-acceptance ticks for the logged-in user's own chat messages, rendered next
@@ -61,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 fun ChatDeliveryTicks(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val tracker = accountViewModel.account.chatDeliveryTracker
 
@@ -72,9 +91,143 @@ fun ChatDeliveryTicks(
         remember(baseNote) { baseNote.flow().relays.stateFlow }
             .collectAsStateWithLifecycle()
 
-    val seenSomewhere = seenOnState.note.relays.isNotEmpty()
+    val seenOnRelays = seenOnState.note.relays
+    val seenSomewhere = seenOnRelays.isNotEmpty()
 
-    RenderDeliveryTicks(delivery, seenSomewhere)
+    var showDetails by remember { mutableStateOf(false) }
+
+    ClickableBox(onClick = { showDetails = true }) {
+        RenderDeliveryTicks(delivery, seenSomewhere)
+    }
+
+    if (showDetails) {
+        ChatDeliveryDetailDialog(
+            baseNote = baseNote,
+            delivery = delivery,
+            seenOnRelays = seenOnRelays,
+            onDismiss = { showDetails = false },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+/**
+ * Per-recipient (DMs) or per-relay (rooms) acceptance detail behind the tick,
+ * with a re-broadcast escape hatch for messages stuck on pending relays.
+ */
+@Composable
+private fun ChatDeliveryDetailDialog(
+    baseNote: Note,
+    delivery: ChatDelivery?,
+    seenOnRelays: List<NormalizedRelayUrl>,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.chat_delivery_details_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val recipients = delivery?.recipients
+                when {
+                    recipients != null ->
+                        recipients.forEach { recipient ->
+                            RecipientDeliveryRow(recipient, accountViewModel, nav)
+                        }
+
+                    delivery != null ->
+                        delivery.targetRelays.sortedBy { it.url }.forEach { relay ->
+                            RelayDeliveryRow(
+                                relay = relay,
+                                accepted = relay in delivery.acceptedRelays || relay in seenOnRelays,
+                            )
+                        }
+
+                    else ->
+                        // Untracked (sent before a restart): only the seen-on set is known.
+                        seenOnRelays.sortedBy { it.url }.forEach { relay ->
+                            RelayDeliveryRow(relay = relay, accepted = true)
+                        }
+                }
+            }
+        },
+        confirmButton = {
+            if (accountViewModel.canBroadcast(baseNote)) {
+                TextButton(
+                    onClick = {
+                        accountViewModel.broadcast(baseNote)
+                        onDismiss()
+                    },
+                ) {
+                    Text(stringRes(R.string.broadcast))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.close))
+            }
+        },
+    )
+}
+
+@Composable
+private fun RecipientDeliveryRow(
+    recipient: RecipientDelivery,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        LoadUser(baseUserHex = recipient.recipient, accountViewModel = accountViewModel) { user ->
+            if (user != null) {
+                UserPicture(user, Size20dp, Modifier, accountViewModel, nav)
+                Row(modifier = Modifier.weight(1f)) {
+                    UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
+                }
+            } else {
+                Text(text = recipient.recipient.take(8), modifier = Modifier.weight(1f), maxLines = 1)
+            }
+        }
+
+        if (recipient.isDelivered) {
+            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
+        } else {
+            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+        }
+    }
+}
+
+@Composable
+private fun RelayDeliveryRow(
+    relay: NormalizedRelayUrl,
+    accepted: Boolean,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = relay.displayUrl(),
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+        )
+
+        if (accepted) {
+            TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
+        } else {
+            TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+        }
+    }
 }
 
 @Composable

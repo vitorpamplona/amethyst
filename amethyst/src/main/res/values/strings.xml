@@ -2822,6 +2822,9 @@
     <string name="chat_system_created_channel_unnamed">%1$s created the channel</string>
     <string name="chat_system_updated_channel">%1$s updated the channel profile</string>
 
+    <string name="chat_delivery_details_title">Message Delivery</string>
+    <string name="close">Close</string>
+
     <string name="chat_delivery_pending">Waiting for a relay to accept this message</string>
     <string name="chat_delivery_accepted">Accepted by at least one relay</string>
     <string name="chat_delivery_delivered_all">Delivered to all recipients\' relays</string>

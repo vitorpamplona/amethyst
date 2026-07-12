@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
@@ -39,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
+import com.vitorpamplona.amethyst.ui.theme.isLight
 
 @Composable
 fun DrawAuthorInfo(
@@ -51,6 +55,23 @@ fun DrawAuthorInfo(
     }
 }
 
+/**
+ * A stable, pubkey-derived name color so authors are scannable in fast-moving
+ * group rooms. The hue comes from the pubkey; saturation/lightness are tuned per
+ * theme so every hue stays readable on the "them" bubble fill.
+ */
+fun authorNameColorFor(
+    pubkeyHex: String,
+    isLightTheme: Boolean,
+): Color {
+    val hue = (pubkeyHex.take(6).toIntOrNull(16) ?: pubkeyHex.hashCode()).mod(360).toFloat()
+    return if (isLightTheme) {
+        Color.hsl(hue, saturation = 0.70f, lightness = 0.35f)
+    } else {
+        Color.hsl(hue, saturation = 0.55f, lightness = 0.70f)
+    }
+}
+
 @Composable
 private fun WatchAndDisplayUser(
     author: User,
@@ -58,6 +79,12 @@ private fun WatchAndDisplayUser(
     nav: INav,
 ) {
     val userState by observeUserInfo(author, accountViewModel)
+
+    val isLightTheme = MaterialTheme.colorScheme.isLight
+    val nameColor =
+        remember(author.pubkeyHex, isLightTheme) {
+            authorNameColorFor(author.pubkeyHex, isLightTheme)
+        }
 
     UserDisplayNameLayout(
         picture = {
@@ -83,6 +110,7 @@ private fun WatchAndDisplayUser(
                 CreateTextWithEmoji(
                     text = userState?.info?.bestName() ?: author.pubkeyDisplayHex(),
                     tags = userState?.tags ?: EmptyTagList,
+                    color = nameColor,
                     maxLines = 1,
                     fontWeight = FontWeight.Bold,
                 )
@@ -90,6 +118,7 @@ private fun WatchAndDisplayUser(
                 CreateTextWithEmoji(
                     text = author.pubkeyDisplayHex(),
                     tags = EmptyTagList,
+                    color = nameColor,
                     maxLines = 1,
                     fontWeight = FontWeight.Bold,
                 )

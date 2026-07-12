@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -33,9 +35,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.ui.note.ObserveZapAmountText
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
@@ -77,6 +83,7 @@ private data class ReactionChip(
 fun ChatReactionChips(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
@@ -93,11 +100,23 @@ fun ChatReactionChips(
             }
         }
 
+    var showDetails by remember { mutableStateOf(false) }
+
+    if (showDetails) {
+        ChatEngagementDetailSheet(
+            baseNote = baseNote,
+            onDismiss = { showDetails = false },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
     ObserveZapAmountText(baseNote, accountViewModel) { zapAmount ->
         RenderChatReactionChips(
             chips = chips,
             zapAmount = zapAmount,
             onToggleReaction = { accountViewModel.reactToOrDelete(baseNote, it) },
+            onOpenDetails = { showDetails = true },
         )
     }
 }
@@ -108,6 +127,7 @@ private fun RenderChatReactionChips(
     chips: ImmutableList<ReactionChip>,
     zapAmount: String,
     onToggleReaction: (String) -> Unit,
+    onOpenDetails: () -> Unit,
 ) {
     if (chips.isEmpty() && zapAmount.isBlank()) return
 
@@ -119,19 +139,25 @@ private fun RenderChatReactionChips(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         if (zapAmount.isNotBlank()) {
-            ZapChip(zapAmount)
+            ZapChip(zapAmount, onClick = onOpenDetails)
         }
 
         chips.forEach { chip ->
-            ReactionChipView(chip, onClick = { onToggleReaction(chip.type) })
+            ReactionChipView(
+                chip = chip,
+                onClick = { onToggleReaction(chip.type) },
+                onLongClick = onOpenDetails,
+            )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ReactionChipView(
     chip: ReactionChip,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     val background =
         if (chip.includesMe) {
@@ -150,10 +176,13 @@ private fun ReactionChipView(
         }
 
     Surface(
-        onClick = onClick,
         shape = ButtonBorder,
         color = background,
         border = border,
+        modifier =
+            Modifier
+                .clip(ButtonBorder)
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         ChipContentRow {
             ChipReactionGlyph(chip.type)
@@ -171,8 +200,12 @@ private fun ReactionChipView(
 }
 
 @Composable
-private fun ZapChip(amount: String) {
+private fun ZapChip(
+    amount: String,
+    onClick: () -> Unit,
+) {
     Surface(
+        onClick = onClick,
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
@@ -202,7 +235,7 @@ private fun ChipContentRow(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun ChipReactionGlyph(reactionType: String) {
+internal fun ChipReactionGlyph(reactionType: String) {
     if (reactionType.startsWith(":")) {
         val url = reactionType.removePrefix(":").substringAfter(":")
         InLineIconRenderer(

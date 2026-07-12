@@ -80,6 +80,8 @@ fun ChatBubbleLayout(
     hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
+    // Jumbo-emoji messages render without a bubble fill.
+    transparentBubble: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
@@ -178,7 +180,8 @@ fun ChatBubbleLayout(
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(
-                color = animatedColor,
+                // Jumbo emoji show bare; the scroll-to highlight still tints them.
+                color = if (transparentBubble && !highlightActive.value) Color.Transparent else animatedColor,
                 shape = chatBubbleShapeFor(isLoggedInUser, if (innerQuote) ChatGroupPosition.SINGLE else groupPosition),
                 modifier = clickableModifier,
             ) {
