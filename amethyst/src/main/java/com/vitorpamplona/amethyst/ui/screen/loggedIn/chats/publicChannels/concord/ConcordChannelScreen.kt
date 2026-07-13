@@ -83,10 +83,14 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -134,7 +138,7 @@ fun ConcordChannelScreen(
                 }
             }
         }
-    ConcordBootstrapHistoryWhenEmpty(feedViewModel.feedState, history)
+    ConcordBackfillHistoryToWindow(feedViewModel.feedState, history)
 
     val newMessageModel: ConcordNewMessageViewModel = viewModel(key = channel.channelId.toKey() + "ConcordNewMessageViewModel")
     newMessageModel.init(accountViewModel)
@@ -215,23 +219,40 @@ fun ConcordChannelScreen(
     }
 }
 
+/** The number of messages a freshly-opened channel eagerly backfills to before paging goes demand-driven. */
+private const val CONCORD_HISTORY_TARGET = 50
+
 /**
- * When the channel opens empty, kick a single history page so there's something to scroll from — from
- * there paging is purely demand-driven by the markers' visibility. Debounced so the transient empty
- * feed that navigation flashes through doesn't trigger a hunt. Mirrors the DM `BootstrapHistoryWhenEmpty`.
+ * On open, eagerly backfill this channel's older history until the feed holds at least
+ * [CONCORD_HISTORY_TARGET] messages (or the relays are exhausted) — mirroring Armada's multi-page
+ * `backfillStore`. The live subscription only carries each plane's relay-capped recent tail, shared
+ * across one merged REQ per relay for every channel; so without this, a channel that has plenty of
+ * history opens showing just its last few messages until the user scrolls. Once the target is reached,
+ * paging is purely demand-driven by the markers' visibility. A short startup delay skips the transient
+ * empty feed that navigation flashes through. Supersedes the old empty-only bootstrap.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-private fun ConcordBootstrapHistoryWhenEmpty(
+private fun ConcordBackfillHistoryToWindow(
     feedContentState: FeedContentState,
     history: ConcordChannelHistorySubAssembler,
 ) {
-    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
-    val needsBootstrap = feedState is FeedState.Empty
-    LaunchedEffect(needsBootstrap, history) {
-        if (!needsBootstrap) return@LaunchedEffect
+    LaunchedEffect(feedContentState, history) {
         delay(1200L)
-        combine(history.loadingMore, history.status) { loading, s -> !loading && !s.exhausted }
-            .distinctUntilChanged()
+        // Reactive count of currently-loaded messages (0 while empty/loading).
+        val loadedCount =
+            feedContentState.feedContent.flatMapLatest { state ->
+                when (state) {
+                    is FeedState.Loaded -> state.feed.map { it.list.size }
+                    else -> flowOf(0)
+                }
+            }
+        // Pull another page whenever we're below target, no page is in flight, and relays aren't done.
+        // Each landed page grows the count (or flips exhausted), so this re-fires page-by-page and then
+        // latches off. The !loading gate prevents overlapping REQs / a tight loop.
+        combine(loadedCount, history.loadingMore, history.status) { count, loading, status ->
+            count < CONCORD_HISTORY_TARGET && !loading && !status.exhausted
+        }.distinctUntilChanged()
             .filter { it }
             .collect { history.advanceAll() }
     }
