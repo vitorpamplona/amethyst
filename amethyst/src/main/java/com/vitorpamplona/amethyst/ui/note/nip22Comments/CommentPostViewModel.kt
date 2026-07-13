@@ -74,6 +74,7 @@ import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -176,6 +177,21 @@ open class CommentPostViewModel :
     )
 
     var notifying by mutableStateOf<List<User>?>(null)
+
+    // Members of the notifying list whose bell is off: they keep their chip
+    // (so they are one tap away from being added back) but are dropped from
+    // the extra notification p tags of the outgoing comment.
+    var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
+
+    fun toggleNotify(user: User) {
+        mutedNotifies =
+            if (user.pubkeyHex in mutedNotifies) {
+                mutedNotifies - user.pubkeyHex
+            } else {
+                mutedNotifies + user.pubkeyHex
+            }
+        draftTag.newVersion()
+    }
 
     // NIP-9B: latest community rules document for the community we're posting into.
     // Null when the reply target is not a community, or no rules have been observed yet.
@@ -303,6 +319,7 @@ open class CommentPostViewModel :
     open fun reply(post: Note) {
         this.replyingTo = post
         this.externalIdentity = (post.event as? CommentEvent)?.scope()
+        mutedNotifies = emptySet()
         (post.event as? LnZapEvent)?.let { zap ->
             notifying = listOfNotNull(zapSenderToNotify(zap))
         }
@@ -498,14 +515,16 @@ open class CommentPostViewModel :
 
         notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
             draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+        mutedNotifies = emptySet()
 
         // Replies to zaps notify the zap sender through a plain p tag (the receipt's
-        // author keys above are the lightning provider). Restore the sender chip only
-        // if the draft still tags them — its absence means the user removed it.
+        // author keys above are the lightning provider). The sender chip always comes
+        // back; a missing p tag in the draft means the user muted their bell.
         (replyingTo?.event as? LnZapEvent)?.let { zap ->
             zapSenderToNotify(zap)?.let { sender ->
-                if (draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
-                    notifying = (notifying ?: emptyList()) + sender
+                notifying = ((notifying ?: emptyList()) + sender).distinct()
+                if (!draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
+                    mutedNotifies = mutedNotifies + sender.pubkeyHex
                 }
             }
         }
@@ -665,9 +684,9 @@ open class CommentPostViewModel :
                             }
                         } else if (replyingToEvent is LnZapEvent) {
                             val sender = zapSenderToNotify(replyingToEvent)
-                            // notifying starts with the sender; a missing entry means the
-                            // user removed the chip, so respect that and don't tag them.
-                            if (sender != null && notifying?.contains(sender) != false) {
+                            // The sender's chip stays in the list; a muted bell means
+                            // the user doesn't want to ping them, so don't tag them.
+                            if (sender != null && sender.pubkeyHex !in mutedNotifies) {
                                 listOf(sender.toPTag())
                             } else {
                                 emptyList()
@@ -855,6 +874,7 @@ open class CommentPostViewModel :
         mediaUploadTracker.finishUpload()
 
         notifying = null
+        mutedNotifies = emptySet()
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -884,10 +904,6 @@ open class CommentPostViewModel :
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
         this.multiOrchestrator?.remove(selected)
-    }
-
-    open fun removeFromReplyList(userToRemove: User) {
-        notifying = notifying?.filter { it != userToRemove }
     }
 
     override fun onMessageChanged() {
