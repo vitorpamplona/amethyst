@@ -98,16 +98,17 @@ class ConcordSessionRegistry(
         }
 
     /**
-     * Routes an inbound stream [wrap] to whichever session recognizes it. Returns
-     * true if some session applied it. A wrap belongs to at most one plane, so the
-     * first accepting session wins.
+     * Routes an inbound stream [wrap] to whichever session recognizes it, returning that session's
+     * [ConcordIngestOutcome] (or [ConcordIngestOutcome.NOT_MINE] if none claim it). A wrap belongs to
+     * at most one plane, so the first accepting session wins.
      */
-    fun ingest(wrap: Event): Boolean {
+    fun ingest(wrap: Event): ConcordIngestOutcome {
         val snapshot = lock.withLock { sessions.values.toList() }
         for (session in snapshot) {
-            if (session.ingest(wrap)) return true
+            val outcome = session.ingest(wrap)
+            if (outcome != ConcordIngestOutcome.NOT_MINE) return outcome
         }
-        return false
+        return ConcordIngestOutcome.NOT_MINE
     }
 
     fun clear() = lock.withLock { sessions.clear() }

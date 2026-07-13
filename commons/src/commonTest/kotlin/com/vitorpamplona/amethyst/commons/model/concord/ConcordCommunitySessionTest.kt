@@ -54,8 +54,9 @@ class ConcordCommunitySessionTest {
             val session = ConcordCommunitySession(entry, owner.pubKey) { communityId, channelIdHex, rumor -> captured += Triple(communityId, channelIdHex, rumor) }
             assertEquals(community.controlPlane.publicKeyHex, session.controlPlaneAddress)
 
-            // Feed the genesis control wraps → state folds, channels + membership resolve.
-            community.genesisWraps.forEach { assertTrue(session.ingest(it)) }
+            // Feed the genesis control wraps → state folds, channels + membership resolve. A fold is
+            // STRUCTURAL (it moves the subscription set), so it's allowed to bump the revision.
+            community.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL, session.ingest(it)) }
             val state = session.state.value
             assertEquals("Nostrichs", state?.metadata?.name)
             assertTrue(state!!.channels.containsKey(community.generalChannelIdHex))
@@ -67,7 +68,9 @@ class ConcordCommunitySessionTest {
 
             // A channel message wrap decrypts and is emitted to the sink for #general.
             val msgWrap = ConcordActions.buildChannelMessage(owner, general, community.generalChannelIdHex, community.rootEpoch, "gm all", 2L)
-            assertTrue(session.ingest(msgWrap))
+            // A chat message lands in the feed but is NON_STRUCTURAL: it must never bump the revision
+            // (per-message re-subscription is what rate-limited the plane REQs and emptied channels).
+            assertEquals(ConcordIngestOutcome.NON_STRUCTURAL, session.ingest(msgWrap))
             val general9 = captured.filter { it.second == community.generalChannelIdHex && it.third.content == "gm all" }
             assertEquals(1, general9.size)
             assertEquals(community.communityIdHex, general9[0].first)
@@ -76,7 +79,7 @@ class ConcordCommunitySessionTest {
 
             // A reaction to that message decrypts as a kind-7 bound to the channel, e-tagging the target.
             val reactionWrap = ConcordActions.buildChannelReaction(owner, general, community.generalChannelIdHex, community.rootEpoch, message, "🤙", 3L)
-            assertTrue(session.ingest(reactionWrap))
+            assertEquals(ConcordIngestOutcome.NON_STRUCTURAL, session.ingest(reactionWrap))
             val reaction = captured.map { it.third }.first { it.kind == 7 }
             assertEquals("🤙", reaction.content)
             assertEquals(message.id, reaction.tags.first { it[0] == "e" }[1])
@@ -85,7 +88,7 @@ class ConcordCommunitySessionTest {
             // root and lowercase `e` at the immediate parent (both the message here), still bound
             // to the channel so it groups into the message's thread — the shape Armada threads.
             val replyWrap = ConcordActions.buildChannelReply(owner, general, community.generalChannelIdHex, community.rootEpoch, message, "gm back", 4L)
-            assertTrue(session.ingest(replyWrap))
+            assertEquals(ConcordIngestOutcome.NON_STRUCTURAL, session.ingest(replyWrap))
             val reply = captured.map { it.third }.first { it.content == "gm back" }
             assertEquals(1111, reply.kind)
             assertEquals(message.id, reply.tags.first { it[0] == "E" }[1])
@@ -94,6 +97,6 @@ class ConcordCommunitySessionTest {
 
             // A stray wrap from a different community is ignored.
             val outsider = ConcordCommunityFactory.create(owner, "Other", createdAt = 1L, relays = listOf("wss://r.example"))
-            assertTrue(!session.ingest(outsider.genesisWraps.first()))
+            assertEquals(ConcordIngestOutcome.NOT_MINE, session.ingest(outsider.genesisWraps.first()))
         }
 }

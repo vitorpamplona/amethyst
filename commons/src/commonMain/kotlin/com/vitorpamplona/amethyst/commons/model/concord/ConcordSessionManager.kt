@@ -123,11 +123,17 @@ class ConcordSessionManager(
         return out
     }
 
-    /** Route an inbound stream wrap; true if it was a Concord plane wrap we applied. */
+    /**
+     * Route an inbound stream wrap; true if it was a Concord plane wrap we applied. Only a wrap that
+     * changed community *structure* (a fold, a membership/rekey change — not a plain chat message)
+     * bumps the revision: bumping per message re-derives every plane subscription per message and
+     * gets the client rate-limited off the relays (which then close the plane subs mid-load). Chat
+     * messages still reach the feed via the rumor sink → LocalCache, independent of the revision.
+     */
     fun ingest(wrap: Event): Boolean {
-        val applied = registry.ingest(wrap)
-        if (applied) bumpRevision()
-        return applied
+        val outcome = registry.ingest(wrap)
+        if (outcome == ConcordIngestOutcome.STRUCTURAL) bumpRevision()
+        return outcome.claimed
     }
 
     fun sessions() = registry.sessions()

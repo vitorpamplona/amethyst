@@ -5022,9 +5022,9 @@ class Account(
 
         // Keep Concord channel metadata (community name/icon, membership) live across the whole
         // app — not just the hub screen — so the Messages tab renders each channel's community
-        // chip, and per-community bans apply, as soon as a Control Plane folds. The revision bumps
-        // on every ingested message, so sample() coalesces bursts into at most one full re-index
-        // per window instead of re-scanning every channel's notes per message.
+        // chip, and per-community bans apply, as soon as a Control Plane folds. The revision now
+        // bumps only on *structural* change (a fold / membership / rekey, never a plain message),
+        // so this fires rarely; sample() stays as a cheap coalescer for a burst of folds.
         scope.launch {
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             concordSessions.revision.sample(500).collect {

@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -70,8 +69,8 @@ class ConcordSessionRegistryTest {
             assertTrue(registry.subscribeAddresses().contains(alpha.controlPlane.publicKeyHex))
             assertTrue(registry.subscribeAddresses().contains(beta.controlPlane.publicKeyHex))
 
-            // A genesis control wrap routes to Alpha's session and folds it.
-            alpha.genesisWraps.forEach { assertTrue(registry.ingest(it)) }
+            // A genesis control wrap routes to Alpha's session and folds it (STRUCTURAL).
+            alpha.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL, registry.ingest(it)) }
             val alphaState = registry.sessionFor(alpha.communityIdHex)!!.state.value
             assertEquals("Alpha", alphaState?.metadata?.name)
 
@@ -81,7 +80,7 @@ class ConcordSessionRegistryTest {
 
             // A channel message decrypts and is emitted to the sink for Alpha's #general.
             val msg = ConcordActions.buildChannelMessage(owner, general, alpha.generalChannelIdHex, alpha.rootEpoch, "gm", 2L)
-            assertTrue(registry.ingest(msg))
+            assertEquals(ConcordIngestOutcome.NON_STRUCTURAL, registry.ingest(msg))
             val general9 = captured.filter { it.first == alpha.communityIdHex && it.second == alpha.generalChannelIdHex && it.third.content == "gm" }
             assertEquals(1, general9.size)
 
@@ -101,6 +100,6 @@ class ConcordSessionRegistryTest {
 
             // A wrap from an unknown community is routed nowhere.
             val gamma = ConcordCommunityFactory.create(owner, "Gamma", createdAt = 1L, relays = listOf("wss://r.example"))
-            assertFalse(registry.ingest(gamma.genesisWraps.first()))
+            assertEquals(ConcordIngestOutcome.NOT_MINE, registry.ingest(gamma.genesisWraps.first()))
         }
 }

@@ -42,6 +42,29 @@ import kotlinx.coroutines.flow.StateFlow
 typealias ConcordRumorSink = (communityId: HexKey, channelIdHex: HexKey, rumor: Event) -> Unit
 
 /**
+ * The result of feeding one wrap to a session's [ConcordCommunitySession.ingest]. It separates
+ * "was it ours" from "did it change structure", so only structure-changing wraps bump the session
+ * revision (and thus re-derive plane subscriptions). Landing every chat message as a revision bump
+ * re-REQs every plane per message and gets the client rate-limited off the relays.
+ */
+enum class ConcordIngestOutcome {
+    /** The wrap is not addressed to any plane this session knows. Keep routing it elsewhere. */
+    NOT_MINE,
+
+    /** Ours and applied, but nothing the subscription set / folded structure depends on changed —
+     *  a chat/reaction/reply/delete message landing, or a duplicate wrap. Must NOT bump the revision. */
+    NON_STRUCTURAL,
+
+    /** Ours and changed structure: a Control-Plane fold (metadata/channels/membership/authority), a
+     *  guestbook membership change, or a buffered base-rekey. Bumps the revision. */
+    STRUCTURAL,
+    ;
+
+    /** True when the wrap belonged to this session (whether or not it changed structure). */
+    val claimed get() = this != NOT_MINE
+}
+
+/**
  * The live read-model of one joined Concord community, driven by inbound stream
  * wraps fed via [ingest].
  *
@@ -155,38 +178,47 @@ class ConcordCommunitySession(
     /**
      * Ingests a stream [wrap]. If it belongs to this community's Control Plane it
      * re-folds; if it belongs to a known channel plane it re-projects that
-     * channel's messages. Returns true if the wrap was recognized and applied.
+     * channel's messages. The [ConcordIngestOutcome] tells the caller both whether
+     * the wrap was ours and — crucially — whether it changed *structure* (a fold that
+     * moves the subscription set / metadata) versus just landing a chat message. Only
+     * a [ConcordIngestOutcome.STRUCTURAL] result should bump the session revision;
+     * bumping on every message re-derives every plane's REQ per message and rate-limits
+     * the relays (they close the plane subs mid-load, so channels appear empty).
      */
-    fun ingest(wrap: Event): Boolean {
+    fun ingest(wrap: Event): ConcordIngestOutcome {
         when (wrap.pubKey) {
             controlPlaneAddress -> {
                 lock.withLock {
-                    if (controlWraps.put(wrap.id, wrap) != null) return true // dup
+                    if (controlWraps.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
                 }
                 refold()
-                return true
+                return ConcordIngestOutcome.STRUCTURAL
             }
             guestbookAddress -> {
                 lock.withLock {
-                    if (guestbookWraps.put(wrap.id, wrap) != null) return true // dup
+                    if (guestbookWraps.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
                 }
                 refoldGuestbook()
-                return true
+                return ConcordIngestOutcome.STRUCTURAL
             }
             nextBaseRekeyAddress -> {
                 // Buffer only — decrypting a base-rotation blob needs the account signer, so the
-                // app layer drains [pendingBaseRekeyWraps] with it and authorizes the rotator.
+                // app layer drains [pendingBaseRekeyWraps] with it and authorizes the rotator. That
+                // drain runs off the revision tick, so a buffered rekey must bump (rare — a rekey,
+                // not a message).
                 lock.withLock { baseRekeyWraps[wrap.id] = wrap }
-                return true
+                return ConcordIngestOutcome.STRUCTURAL
             }
             else -> {
-                val channelRef = lock.withLock { channelKeysByAddress[wrap.pubKey] } ?: return false
+                val channelRef = lock.withLock { channelKeysByAddress[wrap.pubKey] } ?: return ConcordIngestOutcome.NOT_MINE
                 val (channelIdHex, _) = channelRef
                 lock.withLock {
                     channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap)
                 }
                 reprojectChannel(channelIdHex)
-                return true
+                // A chat message lands in the feed via [onRumor] → LocalCache, independent of the
+                // revision; it changes no plane address, so it must NOT bump (see the storm note above).
+                return ConcordIngestOutcome.NON_STRUCTURAL
             }
         }
     }
