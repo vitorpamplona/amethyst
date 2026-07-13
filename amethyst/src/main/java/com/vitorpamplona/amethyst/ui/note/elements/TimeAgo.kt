@@ -125,16 +125,25 @@ fun ToggleableTimeAgoText(
 }
 
 @Composable
-fun TimeAgo(note: Note) {
+fun TimeAgo(
+    note: Note,
+    style: TimeAgoStyle = TimeAgoStyle.Dotted,
+    fontSize: TextUnit = TextUnit.Unspecified,
+) {
     val time = note.createdAt() ?: return
-    TimeAgo(time)
+    TimeAgo(time, style, fontSize)
 }
 
 @Composable
-fun TimeAgo(time: Long) {
+fun TimeAgo(
+    time: Long,
+    style: TimeAgoStyle = TimeAgoStyle.Dotted,
+    fontSize: TextUnit = TextUnit.Unspecified,
+) {
     ToggleableTimeAgoText(
         timestamp = time,
-        style = TimeAgoStyle.Dotted,
+        style = style,
+        fontSize = fontSize,
         color = MaterialTheme.colorScheme.placeholderText,
     )
 }

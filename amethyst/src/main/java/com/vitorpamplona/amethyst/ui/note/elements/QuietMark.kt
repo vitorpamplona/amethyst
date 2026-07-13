@@ -23,58 +23,57 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 /**
- * Compact squared chip for note-header metadata (PoW, OTS, location, relay
- * hosts, ...). Matches the relay information pills used in the NIP-29 chat
- * headers so all header badges share one look: a small icon plus a short
- * label on a secondary-container surface with slightly rounded corners.
+ * Quiet passive-state marker for note headers: Boosted, Draft, Edited, pinned,
+ * private rumor, ... One spec for all of them so the header reads as a single
+ * system: 12sp medium gray text with an optional 12dp icon. Contrast with
+ * [HeaderPill], which is the loud tier for tappable/verifiable metadata.
+ *
+ * Spacing between markers is owned by the parent row (`Arrangement.spacedBy`),
+ * not baked in here.
  */
 @Composable
-fun HeaderPill(
-    symbol: MaterialSymbol,
-    text: String,
-    modifier: Modifier = Modifier,
+fun QuietMark(
+    text: String? = null,
+    symbol: MaterialSymbol? = null,
     contentDescription: String? = null,
-    iconTint: Color? = null,
+    modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
         modifier = if (onClick != null) modifier.clickable(onClick = onClick) else modifier,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-        ) {
+        if (symbol != null) {
             Icon(
                 symbol = symbol,
                 contentDescription = contentDescription,
-                tint = iconTint ?: MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(11.dp),
+                tint = MaterialTheme.colorScheme.placeholderText,
+                modifier = Modifier.size(12.dp),
             )
+        }
+        if (text != null) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.placeholderText,
+                fontSize = Font12SP,
+                lineHeight = Font12SP,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }

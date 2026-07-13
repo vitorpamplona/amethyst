@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -47,7 +47,7 @@ fun DisplayFollowingCommunityInPost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Column(HalfStartPadding) {
+    Column {
         Row(verticalAlignment = Alignment.CenterVertically) { DisplayCommunity(baseNote, accountViewModel, nav) }
     }
 }
@@ -67,7 +67,7 @@ private fun DisplayCommunity(
     ClickableTextColor(
         label,
         style = LocalTextStyle.current.copy(fontSize = Font12SP),
-        linkColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
+        linkColor = MaterialTheme.colorScheme.lessImportantLink,
         overflow = TextOverflow.Ellipsis,
         maxLines = 1,
     ) {

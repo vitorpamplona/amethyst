@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -55,20 +54,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextColor
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplies
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.note.ZapIcon
-import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -83,28 +78,13 @@ fun DisplayReward(
     baseReward: Reward,
     baseNote: Note,
     accountViewModel: AccountViewModel,
-    nav: INav,
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
 
-    Column {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable { popupExpanded = true },
-        ) {
-            ClickableTextColor(
-                "#bounty",
-                linkColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
-            ) {
-                nav.nav(Route.Hashtag("bounty"))
-            }
+    RenderPledgeAmount(baseNote, baseReward, accountViewModel) { popupExpanded = true }
 
-            RenderPledgeAmount(baseNote, baseReward, accountViewModel)
-        }
-
-        if (popupExpanded) {
-            AddBountyAmountDialog(baseNote, accountViewModel) { popupExpanded = false }
-        }
+    if (popupExpanded) {
+        AddBountyAmountDialog(baseNote, accountViewModel) { popupExpanded = false }
     }
 }
 
@@ -113,6 +93,7 @@ private fun RenderPledgeAmount(
     baseNote: Note,
     baseReward: Reward,
     accountViewModel: AccountViewModel,
+    onClick: () -> Unit,
 ) {
     val repliesState by observeNoteReplies(baseNote, accountViewModel)
     var reward by remember {
@@ -142,16 +123,12 @@ private fun RenderPledgeAmount(
         }
     }
 
-    if (hasPledge) {
-        ZappedIcon(modifier = Size20Modifier)
-    } else {
-        ZapIcon(modifier = Size20Modifier, MaterialTheme.colorScheme.placeholderText)
-    }
-
-    Text(
+    HeaderPill(
+        symbol = MaterialSymbols.Bolt,
         text = reward,
-        color = MaterialTheme.colorScheme.placeholderText,
-        maxLines = 1,
+        contentDescription = stringRes(R.string.bounty_label),
+        iconTint = if (hasPledge) BitcoinOrange else null,
+        onClick = onClick,
     )
 }
 

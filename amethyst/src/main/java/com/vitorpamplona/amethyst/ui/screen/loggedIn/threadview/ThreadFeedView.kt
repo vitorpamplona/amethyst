@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
@@ -231,6 +232,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -703,7 +705,10 @@ private fun FullBleedNoteCompose(
             }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                ) {
                     if (zapSender != null) {
                         UsernameDisplay(zapSender, Modifier.weight(1f), accountViewModel = accountViewModel)
                     } else {
@@ -738,12 +743,15 @@ private fun FullBleedNoteCompose(
 
                     Expiration(baseNote)
 
-                    TimeAgo(note = baseNote)
+                    TimeAgo(note = baseNote, style = TimeAgoStyle.Short, fontSize = Font12SP)
 
                     MoreOptionsButton(baseNote, editState, accountViewModel, nav)
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                ) {
                     Column(
                         Modifier.weight(1f),
                     ) {
@@ -765,7 +773,7 @@ private fun FullBleedNoteCompose(
 
                     val baseReward = remember { noteEvent.bountyBaseReward()?.let { Reward(it) } }
                     if (baseReward != null) {
-                        DisplayReward(baseReward, baseNote, accountViewModel, nav)
+                        DisplayReward(baseReward, baseNote, accountViewModel)
                     }
 
                     val pow = remember(noteEvent) { noteEvent.strongPoWOrNull() }

@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 
 @Composable
@@ -85,7 +86,7 @@ fun ForkInformationRowLightColor(
                 clickablePart = stringRes(id = R.string.forked_from) + " " + (userState?.info?.bestName() ?: author.pubkeyDisplayHex()),
                 maxLines = 1,
                 route = route,
-                overrideColor = MaterialTheme.colorScheme.primary,
+                overrideColor = MaterialTheme.colorScheme.lessImportantLink,
                 fontSize = Font14SP,
                 nav = nav,
                 tags = userState?.tags,

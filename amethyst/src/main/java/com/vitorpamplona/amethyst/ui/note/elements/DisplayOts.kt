@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -63,7 +62,6 @@ fun DisplayOts(
             HeaderPill(
                 symbol = MaterialSymbols.CheckCircle,
                 text = stringRes(R.string.existed_since, timeStr),
-                modifier = HalfStartPadding,
                 contentDescription = stringRes(R.string.ots_info_title),
                 onClick = {
                     accountViewModel.toastManager.toast(
@@ -78,7 +76,6 @@ fun DisplayOts(
             HeaderPill(
                 symbol = MaterialSymbols.Schedule,
                 text = stringRes(id = R.string.timestamp_pending_short),
-                modifier = HalfStartPadding,
                 contentDescription = stringRes(R.string.ots_info_title),
             )
         },

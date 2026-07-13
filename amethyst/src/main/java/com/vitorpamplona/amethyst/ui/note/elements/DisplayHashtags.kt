@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
@@ -85,7 +86,7 @@ private fun DisplayTagList(
     ClickableTextColor(
         "#$firstTag",
         style = LocalTextStyle.current.copy(fontSize = Font12SP),
-        linkColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
+        linkColor = MaterialTheme.colorScheme.lessImportantLink,
         overflow = TextOverflow.Ellipsis,
         maxLines = 1,
     ) {
