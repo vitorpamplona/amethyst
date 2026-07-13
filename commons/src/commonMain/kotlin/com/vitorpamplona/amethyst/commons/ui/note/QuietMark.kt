@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,10 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+
+private val QuietMarkFontSize = 12.sp
 
 /**
  * Quiet passive-state marker for note headers: Boosted, Draft, Edited, pinned,
@@ -70,8 +72,8 @@ fun QuietMark(
             Text(
                 text = text,
                 color = MaterialTheme.colorScheme.placeholderText,
-                fontSize = Font12SP,
-                lineHeight = Font12SP,
+                fontSize = QuietMarkFontSize,
+                lineHeight = QuietMarkFontSize,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
             )

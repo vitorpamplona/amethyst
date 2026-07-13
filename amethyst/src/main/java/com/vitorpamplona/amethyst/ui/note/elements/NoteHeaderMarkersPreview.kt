@@ -76,7 +76,8 @@ private val COMMUNITY_ADDRESS = "34550:" + "c".repeat(64) + ":amethyst-users"
  * Design-system preview for the note-header first row, rendered by the REAL
  * `FirstUserInfoRow` over notes seeded into [LocalCache] — the same pattern
  * the ZapPollNote/Poll previews use. Rows go from bare to fully loaded so the
- * two marker tiers ([HeaderPill] and [QuietMark]) can be reviewed together.
+ * two marker tiers (`HeaderPill` and `QuietMark`, now in `commons/ui/note`)
+ * can be reviewed together.
  *
  * Two markers cannot appear in a static preview because their visibility is
  * computed inside effects that previews never run: the followed-hashtag label
