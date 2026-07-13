@@ -78,7 +78,11 @@ class ConcordChannelSubAssembler(
         // kind-1059 filters lives in the shared planner.
         val subs = ArrayList<ConcordPlaneSub>()
         subs += ConcordSubscriptionPlanner.controlPlaneSubs(entries)
-        subs += ConcordSubscriptionPlanner.auxiliaryPlaneSubs(entries)
+        // NOTE: the CORD-06 Guestbook + next-rekey planes are deliberately NOT folded into this
+        // shared control+channel REQ. Naming those extra stream keys here starved the whole
+        // subscription on relays that gate (or close) a REQ on NIP-42 stream-key AUTH, so control
+        // stopped folding and channels went empty. They'll return in their own isolated
+        // subscription; keeping the core chat path byte-for-byte what it was before CORD-06.
         for (entry in entries) {
             val state =
                 account.concordSessions

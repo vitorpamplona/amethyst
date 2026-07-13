@@ -114,17 +114,25 @@ class ConcordCommunitySession(
     fun pendingBaseRekeyWraps(): List<Event> = lock.withLock { baseRekeyWraps.values.toList() }
 
     /**
-     * Every stream key whose kind-1059 wraps this session reads: the Control Plane, the
-     * Guestbook Plane, one per folded channel, and the next-epoch base-rekey address.
-     * These are the identities a NIP-42 relay must see the connection authenticate as
-     * (kind 22242) to serve the wraps — a Concord wrap is authored by the stream key and
-     * `p`-tagged to a throwaway ephemeral key, so the member is neither author nor
-     * recipient and the relay refuses unless we AUTH as the stream key itself.
+     * Every stream key whose kind-1059 wraps this session reads: the Control Plane plus
+     * one per folded channel. These are the identities a NIP-42 relay must see the
+     * connection authenticate as (kind 22242) to serve the wraps — a Concord wrap is
+     * authored by the stream key and `p`-tagged to a throwaway ephemeral key, so the
+     * member is neither author nor recipient and the relay refuses unless we AUTH as the
+     * stream key itself.
+     *
+     * The Guestbook + next-epoch base-rekey planes ([auxStreamKeys]) are intentionally
+     * NOT included here: mixing them into the shared control/channel AUTH set starved the
+     * subscription on relays that gate a REQ on stream-key AUTH (control stopped folding,
+     * channels went empty). They AUTH on their own isolated subscription instead.
      */
     fun streamKeys(): List<GroupKey> =
         lock.withLock {
-            listOf(controlPlaneKey, guestbookKey, nextBaseRekeyKey) + channelKeysByAddress.values.map { it.second }
+            listOf(controlPlaneKey) + channelKeysByAddress.values.map { it.second }
         }
+
+    /** The CORD-06 auxiliary plane keys (Guestbook + next base-rekey) for their own isolated AUTH. */
+    fun auxStreamKeys(): List<GroupKey> = listOf(guestbookKey, nextBaseRekeyKey)
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
     fun controlEditions(): List<ControlEdition> = lock.withLock { ConcordActions.controlEditions(controlWraps.values.toList(), controlPlaneKey) }

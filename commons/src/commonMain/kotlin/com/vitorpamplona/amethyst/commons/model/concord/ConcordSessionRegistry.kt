@@ -92,8 +92,6 @@ class ConcordSessionRegistry(
             val out = HashSet<HexKey>()
             for (session in sessions.values) {
                 out += session.controlPlaneAddress
-                out += session.guestbookAddress
-                out += session.nextBaseRekeyAddress
                 out += session.channelAddresses()
             }
             out
