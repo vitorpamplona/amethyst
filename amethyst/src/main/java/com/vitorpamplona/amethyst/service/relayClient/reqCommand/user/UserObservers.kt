@@ -43,6 +43,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -61,16 +62,32 @@ fun observeUserName(
 
     val flow =
         remember(user) {
-            user
-                .metadata()
-                .flow
-                .map {
-                    it?.info?.bestName() ?: user.pubkeyDisplayHex()
-                }.distinctUntilChanged()
+            combine(
+                user.metadata().flow,
+                accountViewModel.account.contactCards.petNameFlow(user),
+            ) { info, petName ->
+                petName ?: info?.info?.bestName() ?: user.pubkeyDisplayHex()
+            }.distinctUntilChanged()
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return flow.collectAsStateWithLifecycle(user.toBestDisplayName())
+}
+
+/**
+ * The nickname (NIP-85 petname) the logged-in account gave this user through
+ * its own contact card, decrypted from the card's content. Null when the
+ * account never nicknamed this user. Per the spec, when present it should be
+ * rendered instead of the user's display name.
+ */
+@Composable
+fun observeUserPetName(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String?> {
+    val flow = remember(user) { accountViewModel.account.contactCards.petNameFlow(user) }
+
+    return flow.collectAsStateWithLifecycle(null)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

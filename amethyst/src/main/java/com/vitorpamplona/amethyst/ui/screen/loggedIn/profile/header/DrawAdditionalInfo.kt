@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPetName
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.util.LongPressCopyText
@@ -106,7 +107,11 @@ fun DrawAdditionalInfo(
     val scope = rememberCoroutineScope()
     val identities by externalIdentities.identities.collectAsStateWithLifecycle()
 
-    val displayName = user.info.bestName()
+    val petName by observeUserPetName(baseUser, accountViewModel)
+
+    // the nickname the account gave this user wins over the profile's own name;
+    // the "@name" line below keeps the real handle visible for disambiguation
+    val displayName = petName ?: user.info.bestName()
 
     val ui = accountViewModel.settings.uiSettingsFlow
     val showBadges by ui.showProfileBadges.collectAsStateWithLifecycle()

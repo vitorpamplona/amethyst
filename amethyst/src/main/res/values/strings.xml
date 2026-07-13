@@ -3543,6 +3543,13 @@
     <string name="playback_actions_dialog_title">Playback</string>
     <string name="video_quality_auto">Auto</string>
 
+    <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="edit_nickname">Edit nickname</string>
+    <string name="nickname_dialog_title">Nickname</string>
+    <string name="nickname_dialog_explainer">Shown to you instead of this user\'s name, everywhere in the app. It\'s saved encrypted in your contact card: only you can read it.</string>
+    <string name="nickname_label">Nickname</string>
+    <string name="nickname_summary_label">Private note about this user</string>
+
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Cast to device</string>
     <string name="cast_stop_casting">Stop casting</string>

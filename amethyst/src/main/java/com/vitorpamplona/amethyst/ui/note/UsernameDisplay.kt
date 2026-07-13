@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPetName
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -105,11 +106,13 @@ fun UsernameDisplay(
     accountViewModel: AccountViewModel,
 ) {
     val userMetadata by observeUserInfo(baseUser, accountViewModel)
+    val petName by observeUserPetName(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
-        val name = it?.info?.bestName()
+        // the account's own nickname for this user wins over the user's metadata
+        val name = petName ?: it?.info?.bestName()
         if (name != null) {
-            UserDisplay(name, it.tags, weight, fontWeight, textColor, textAlign)
+            UserDisplay(name, it?.tags, weight, fontWeight, textColor, textAlign)
         } else {
             NPubDisplay(baseUser, weight, fontWeight, textColor, textAlign)
         }

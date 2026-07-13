@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPetName
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
@@ -1010,11 +1011,12 @@ private fun DisplayUserFromTag(
     nav: INav,
 ) {
     val meta by observeUserInfo(baseUser, accountViewModel)
+    val petName by observeUserPetName(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
         Row {
             CreateClickableTextWithEmoji(
-                clickablePart = remember(meta) { it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
+                clickablePart = remember(meta, petName) { petName ?: it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
                 maxLines = 1,
                 route = remember(baseUser) { routeFor(baseUser) },
                 nav = nav,

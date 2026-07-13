@@ -26,11 +26,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEndTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
@@ -143,6 +145,44 @@ class ContactCardEvent(
 
             val encryptedContent = PrivateTagsInContent.encryptNip44(privateTags, signer)
             return signer.sign(createdAt, KIND, publicTags, encryptedContent)
+        }
+
+        /**
+         * Replaces the petname and summary of an existing card, keeping every other
+         * public and private tag intact. Both fields always live in the NIP-44
+         * encrypted content — any stray public copy is stripped. A `null` value
+         * removes the field from the card.
+         */
+        suspend fun updatePetNameAndSummary(
+            earlierVersion: ContactCardEvent,
+            petName: String? = null,
+            summary: String? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): ContactCardEvent {
+            val privateTags =
+                earlierVersion.privateTags(signer)
+                    ?: throw SignerExceptions.UnauthorizedDecryptionException()
+
+            var newPrivateTags =
+                privateTags
+                    .remove(arrayOf(PetNameTag.TAG_NAME))
+                    .remove(arrayOf(SummaryTag.TAG_NAME))
+
+            petName?.let { newPrivateTags = newPrivateTags.plus(PetNameTag.assemble(it)) }
+            summary?.let { newPrivateTags = newPrivateTags.plus(SummaryTag.assemble(it)) }
+
+            val newPublicTags =
+                earlierVersion.tags
+                    .remove(arrayOf(PetNameTag.TAG_NAME))
+                    .remove(arrayOf(SummaryTag.TAG_NAME))
+
+            return signer.sign(
+                createdAt,
+                KIND,
+                newPublicTags,
+                PrivateTagsInContent.encryptNip44(newPrivateTags, signer),
+            )
         }
     }
 }

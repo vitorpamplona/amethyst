@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +47,16 @@ fun UserProfileDropDownMenu(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
+    val isNicknameDialogOpen = remember { mutableStateOf(false) }
+
+    if (isNicknameDialogOpen.value) {
+        EditNicknameDialog(
+            user = user,
+            onDismiss = { isNicknameDialogOpen.value = false },
+            accountViewModel = accountViewModel,
+        )
+    }
+
     if (!popupExpanded) return
 
     M3ActionDialog(
@@ -88,6 +100,16 @@ fun UserProfileDropDownMenu(
 
         // Moderation section (if not self)
         if (accountViewModel.userProfile() != user) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = MaterialSymbols.Edit,
+                    text = stringRes(R.string.edit_nickname),
+                ) {
+                    isNicknameDialogOpen.value = true
+                    onDismiss()
+                }
+            }
+
             M3ActionSection {
                 if (accountViewModel.account.isHidden(user)) {
                     M3ActionRow(

@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecr
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
@@ -417,6 +419,9 @@ class Account(
 
     val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
+
+    val contactCardDecryptionCache = ContactCardDecryptionCache(signer)
+    val contactCards = ContactCardsState(signer, cache, contactCardDecryptionCache, scope)
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
@@ -3769,6 +3774,19 @@ class Account(
 
     suspend fun hideUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(muteList.hideUser(pubkeyHex))
+    }
+
+    /**
+     * Nicknames a user by publishing the account's kind:30382 contact card about
+     * them, with the petname and summary NIP-44 encrypted in the content. `null`
+     * clears a field. Goes out through the account's extended outbox relays.
+     */
+    suspend fun updateContactCardPetName(
+        pubkeyHex: HexKey,
+        petName: String?,
+        summary: String?,
+    ) {
+        sendMyPublicAndPrivateOutbox(contactCards.updatePetNameAndSummary(pubkeyHex, petName, summary))
     }
 
     suspend fun showUser(pubkeyHex: HexKey) {
