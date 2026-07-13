@@ -310,6 +310,7 @@
     <string name="concord_home_title">Concord Channels</string>
     <string name="concord_home_empty">You haven\'t joined any Concord Channels yet. Create one, or open an invite link.</string>
     <string name="concord_channels_empty">No channels yet.</string>
+    <string name="concord_show_all_channels">Show all channels</string>
     <string name="concord_create_title">New Concord Channel</string>
     <string name="concord_create_name">Name</string>
     <string name="concord_create_about">About (optional)</string>
@@ -318,6 +319,10 @@
     <plurals name="concord_channel_count">
         <item quantity="one">%1$d channel</item>
         <item quantity="other">%1$d channels</item>
+    </plurals>
+    <plurals name="concord_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
     </plurals>
     <string name="concord_create_action">Create</string>
     <string name="concord_invite_action">Invite people</string>

@@ -169,7 +169,7 @@ fun ConcordChannelScreen(
                     feedContentState = feedViewModel.feedState,
                     accountViewModel = accountViewModel,
                     nav = nav,
-                    routeForLastRead = "Concord/$communityId/$channelId",
+                    routeForLastRead = concordChannelLastReadRoute(communityId, channelId),
                     onWantsToReply = { newMessageModel.reply(it) },
                     onWantsToEditDraft = {},
                     // A status card at the oldest end: shows what it's reaching for while it pages and
