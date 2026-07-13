@@ -96,6 +96,8 @@ class ResourceUsageReportAssembler {
             append("| ... while backgrounded on cellular | ${formatConnHours(s.relayConnMsMobileBg)} |\n")
             append("| Notification wakelock | ${formatDurationMs(s.wakelockMs)} (${s.wakelockCount}x) |\n")
             append("| Relay reconnections | ${s.relayConnects} (${s.relayConnectFails} failed) |\n")
+            append("| Web requests | ${s.httpRequests} (${s.radioBursts} radio bursts, ${formatDurationMs(s.httpActiveMs)} active) |\n")
+            append("| Media playback | ${formatDurationMs(s.mediaPlayMs)} |\n")
             append("| Signatures verified | ${s.verifyCount} (${formatDurationMs(s.verifyUs / 1_000)} CPU) |\n")
             append("| App CPU time | ${formatDurationMs(s.cpuMs)} |\n")
             append("| Time in app | ${formatDurationMs(s.foregroundMs)} |\n")

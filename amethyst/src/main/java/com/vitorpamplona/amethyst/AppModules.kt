@@ -90,10 +90,12 @@ import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
 import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
 import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
+import com.vitorpamplona.amethyst.service.resourceusage.RadioBurstEstimator
 import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
+import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
@@ -299,12 +301,27 @@ class AppModules(
 
     val resourceUsage = ResourceUsageAccountant(resourceUsageStore, applicationIOScope)
 
-    private val httpUsageMeter =
-        HttpUsageMeter(
+    // Estimates radio wake-ups from HTTP burst patterns — bytes alone don't
+    // predict battery; scattered small requests each pay the radio ramp+tail.
+    private val radioBurstEstimator =
+        RadioBurstEstimator(
             accountant = resourceUsage,
             isMobile = { connManager.isMobileOrFalse.value },
             isForeground = { foregroundTracker.isForeground.value },
         )
+
+    // Single catch-all counter on the shared non-relay HTTP client: role
+    // wrappers only relabel via request tags, so no HTTP traffic (including
+    // direct getHttpClient users like the napplet broker) escapes the ledger.
+    private val httpUsageInterceptor =
+        UsageCountingInterceptor(
+            accountant = resourceUsage,
+            isMobile = { connManager.isMobileOrFalse.value },
+            isForeground = { foregroundTracker.isForeground.value },
+            bursts = radioBurstEstimator,
+        )
+
+    private val httpUsageMeter = HttpUsageMeter()
 
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
@@ -325,6 +342,7 @@ class AppModules(
                 master && !profileOnly && localBlossomCacheProbe.available.value
             },
             onionCache = onionLocationCache,
+            usageInterceptor = httpUsageInterceptor,
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
@@ -871,7 +889,9 @@ class AppModules(
             diskCache = { diskCache },
             memoryCache = { memoryCache },
             blossomServerResolver = { blossomResolver },
-            callFactory = { okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(it)) },
+            // Through the role builder (not raw getHttpClient) so Coil's image
+            // traffic carries the "image" ledger tag. Same Tor decision inside.
+            callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
         )

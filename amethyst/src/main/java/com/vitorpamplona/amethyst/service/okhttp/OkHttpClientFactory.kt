@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Co
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -61,6 +62,13 @@ class OkHttpClientFactory(
      */
     val shouldBridgeBlossomCache: (() -> Boolean)? = null,
     private val onionCache: OnionLocationCache,
+    /**
+     * Resource-usage ledger counter, installed OUTERMOST on the shared base
+     * client so every request through any derived client is accounted —
+     * per-role tagging wrappers only relabel, they never bypass. Null in
+     * tests / pre-configuration call sites.
+     */
+    private val usageInterceptor: Interceptor? = null,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
@@ -103,6 +111,7 @@ class OkHttpClientFactory(
             .pingInterval(Duration.ofSeconds(HTTP2_PING_INTERVAL_SECS))
             .followRedirects(true)
             .followSslRedirects(true)
+            .apply { usageInterceptor?.let { addInterceptor(it) } }
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .apply {
                 blossomCacheRedirect?.let { addInterceptor(it) }

@@ -84,6 +84,7 @@ class ExoPlayerBuilder(
                 addListener(AspectRatioCacher(MediaAspectRatioCache))
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))
+                addListener(MediaPlayTimeTracker())
             }
     }
 

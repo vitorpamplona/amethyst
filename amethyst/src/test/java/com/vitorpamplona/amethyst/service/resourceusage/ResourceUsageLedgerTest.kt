@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import com.vitorpamplona.amethyst.service.playback.playerPool.MediaPlayTimeTracker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -283,6 +284,58 @@ class ForegroundTimeIntegratorTest {
             assertEquals(45_000L, counters[UsageKeys.APP_FG_MS])
             job.cancel()
         }
+}
+
+class RadioBurstEstimatorTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    @Test
+    fun countsBurstsOnlyAfterRadioIdleGaps() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 1L })
+            var now = 100_000L
+            val estimator =
+                RadioBurstEstimator(
+                    accountant = accountant,
+                    isMobile = { true },
+                    isForeground = { false },
+                    nowMs = { now },
+                )
+
+            estimator.onHttpActivity() // first activity = one burst
+            now += 2_000
+            estimator.onHttpActivity() // 2s later: same burst
+            now += RadioBurstEstimator.BURST_GAP_MS + 1
+            estimator.onHttpActivity() // >10s of silence: new burst
+            now += 500
+            estimator.onHttpActivity() // same burst
+
+            val counters = accountant.allDaysIncludingLive()[1L].orEmpty()
+            assertEquals(2L, counters[UsageKeys.radioBursts(mobile = true, foreground = false)])
+        }
+}
+
+class MediaPlayTimeTrackerTest {
+    @Test
+    fun accumulatesOnlyWhilePlaying() {
+        var now = 0L
+        var played = 0L
+        val tracker = MediaPlayTimeTracker(onPlayed = { played += it }, nowMs = { now })
+
+        tracker.onIsPlayingChanged(true)
+        now = 30_000L
+        tracker.onIsPlayingChanged(false)
+
+        now = 100_000L // paused time must not count
+        tracker.onIsPlayingChanged(true)
+        now = 105_000L
+        tracker.onIsPlayingChanged(false)
+        tracker.onIsPlayingChanged(false) // duplicate stop is a no-op
+
+        assertEquals(35_000L, played)
+    }
 }
 
 class ResourceUsageAlertsTest {

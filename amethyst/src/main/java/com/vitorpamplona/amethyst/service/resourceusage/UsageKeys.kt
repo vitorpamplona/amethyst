@@ -49,7 +49,10 @@ object UsageKeys {
     const val ROLE_PREVIEW = "preview"
     const val ROLE_PUSH = "push"
 
-    val HTTP_ROLES = listOf(ROLE_IMAGE, ROLE_VIDEO, ROLE_UPLOADS, ROLE_MONEY, ROLE_NIP05, ROLE_PREVIEW, ROLE_PUSH)
+    /** Catch-all for HTTP requests that reach the shared clients without a role tag. */
+    const val ROLE_OTHER = "other"
+
+    val HTTP_ROLES = listOf(ROLE_IMAGE, ROLE_VIDEO, ROLE_UPLOADS, ROLE_MONEY, ROLE_NIP05, ROLE_PREVIEW, ROLE_PUSH, ROLE_OTHER)
 
     /** `net.image.mobile.bg.rx` — HTTP bytes for a subsystem. */
     fun net(
@@ -58,6 +61,26 @@ object UsageKeys {
         foreground: Boolean,
         received: Boolean,
     ): String = "net.$role.${dim(mobile, foreground)}.${if (received) RX else TX}"
+
+    /** `net.image.mobile.bg.reqs` — HTTP request count for a subsystem. */
+    fun netReqs(
+        role: String,
+        mobile: Boolean,
+        foreground: Boolean,
+    ): String = "net.$role.${dim(mobile, foreground)}.reqs"
+
+    /** `net.image.mobile.bg.activems` — wall time spent actively transferring. */
+    fun netActiveMs(
+        role: String,
+        mobile: Boolean,
+        foreground: Boolean,
+    ): String = "net.$role.${dim(mobile, foreground)}.activems"
+
+    /** `net.bursts.mobile.bg` — estimated radio wake-ups caused by HTTP traffic. */
+    fun radioBursts(
+        mobile: Boolean,
+        foreground: Boolean,
+    ): String = "net.bursts.${dim(mobile, foreground)}"
 
     /** `relay.msg.mobile.bg.rx` — approximate relay websocket payload bytes. */
     fun relayMsg(
@@ -100,6 +123,9 @@ object UsageKeys {
     /** Event signature verifications (LocalCache.justVerify). */
     const val VERIFY_COUNT = "crypto.verify.count"
     const val VERIFY_US = "crypto.verify.us"
+
+    /** Media (video/audio) playback time — decoder + screen + streaming all at once. */
+    const val MEDIA_PLAY_MS = "media.playms"
 
     fun dim(
         mobile: Boolean,

@@ -29,46 +29,110 @@ import okio.ForwardingSource
 import okio.Source
 import okio.buffer
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+
+/** Request tag carrying the ledger subsystem a request belongs to. */
+class UsageRoleTag(
+    val role: String,
+)
 
 /**
- * Application interceptor that attributes HTTP traffic to a ledger subsystem
- * (image/video/uploads/money/nip05/preview/push). Upload size comes from the
- * request body's contentLength; download size is counted as the app actually
- * consumes the streamed response body, so partially-read streams (video seek,
- * cancelled image loads) count only what crossed the wire to the app.
+ * Estimates cellular-radio wake-ups caused by HTTP traffic: a new burst is
+ * counted whenever bytes flow after more than [BURST_GAP_MS] of HTTP silence,
+ * approximating the radio having dropped to idle in between (LTE/5G inactivity
+ * timers are typically ~10s). Bytes alone don't predict battery — many small
+ * scattered requests cost far more than one continuous download of the same
+ * size, because every burst pays the radio's ramp + tail energy. This counter
+ * is what makes that pattern visible.
  *
- * Network/visibility dims are sampled when bytes flow, not when the request
- * is created — a request issued on wifi that finishes on cellular counts as
- * cellular, matching what the radio actually did.
+ * Caveat: bursts are counted from HTTP activity only. While relays are
+ * connected their traffic keeps the radio awake anyway — that cost is already
+ * captured by the relay connection-time counters.
  */
-class UsageCountingInterceptor(
-    private val role: String,
+class RadioBurstEstimator(
     private val accountant: ResourceUsageAccountant,
     private val isMobile: () -> Boolean,
     private val isForeground: () -> Boolean,
+    private val nowMs: () -> Long = { System.currentTimeMillis() },
+) {
+    @Volatile private var lastActivityMs = Long.MIN_VALUE
+
+    fun onHttpActivity() {
+        val now = nowMs()
+        val last = lastActivityMs
+        lastActivityMs = now
+        if (last == Long.MIN_VALUE || now - last > BURST_GAP_MS) {
+            accountant.add(UsageKeys.radioBursts(isMobile(), isForeground()), 1)
+        }
+    }
+
+    companion object {
+        const val BURST_GAP_MS = 10_000L
+    }
+}
+
+/**
+ * Application interceptor that accounts every HTTP request into the ledger:
+ * bytes up/down, request count, and active-transfer time, attributed to the
+ * subsystem named by the request's [UsageRoleTag] (set by the per-role
+ * clients from RoleBasedHttpClientBuilder) or to [defaultRole] for anything
+ * that reaches the shared clients untagged — so no HTTP traffic can escape
+ * the ledger.
+ *
+ * Installed FIRST on the base client (outermost), so the tagging interceptor
+ * of role-wrapped clients must be inserted BEFORE it (see [HttpUsageMeter]).
+ * Download bytes are counted as the app actually consumes the streamed body,
+ * so cancelled loads count only what crossed to the app. Network/visibility
+ * dims are sampled when bytes flow, matching what the radio actually did.
+ */
+class UsageCountingInterceptor(
+    private val accountant: ResourceUsageAccountant,
+    private val isMobile: () -> Boolean,
+    private val isForeground: () -> Boolean,
+    private val bursts: RadioBurstEstimator? = null,
+    private val defaultRole: String = UsageKeys.ROLE_OTHER,
+    private val nowMs: () -> Long = { System.currentTimeMillis() },
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
+        val role = request.tag(UsageRoleTag::class.java)?.role ?: defaultRole
+
+        accountant.add(UsageKeys.netReqs(role, isMobile(), isForeground()), 1)
+        bursts?.onHttpActivity()
+
         val requestBytes = request.body?.contentLength()?.coerceAtLeast(0L) ?: 0L
         if (requestBytes > 0) {
             accountant.add(UsageKeys.net(role, isMobile(), isForeground(), received = false), requestBytes)
         }
 
+        val startedAtMs = nowMs()
         val response = chain.proceed(request)
-        val body = response.body
         return response
             .newBuilder()
             .body(
-                CountingResponseBody(body) { bytes ->
-                    accountant.add(UsageKeys.net(role, isMobile(), isForeground(), received = true), bytes)
-                },
+                CountingResponseBody(
+                    delegate = response.body,
+                    onBytes = { bytes ->
+                        accountant.add(UsageKeys.net(role, isMobile(), isForeground(), received = true), bytes)
+                        bursts?.onHttpActivity()
+                    },
+                    onFinished = {
+                        accountant.add(UsageKeys.netActiveMs(role, isMobile(), isForeground()), nowMs() - startedAtMs)
+                    },
+                ),
             ).build()
     }
 
     private class CountingResponseBody(
         private val delegate: ResponseBody,
         private val onBytes: (Long) -> Unit,
+        onFinished: () -> Unit,
     ) : ResponseBody() {
+        private val finished = AtomicBoolean(false)
+        private val onFinishedOnce = {
+            if (finished.compareAndSet(false, true)) onFinished()
+        }
+
         override fun contentType() = delegate.contentType()
 
         override fun contentLength() = delegate.contentLength()
@@ -80,8 +144,17 @@ class UsageCountingInterceptor(
                     byteCount: Long,
                 ): Long {
                     val read = super.read(sink, byteCount)
-                    if (read > 0) onBytes(read)
+                    if (read > 0) {
+                        onBytes(read)
+                    } else if (read == -1L) {
+                        onFinishedOnce()
+                    }
                     return read
+                }
+
+                override fun close() {
+                    super.close()
+                    onFinishedOnce()
                 }
             }.buffer()
         }
@@ -91,16 +164,14 @@ class UsageCountingInterceptor(
 }
 
 /**
- * Caches per-(role, base client) wrapped OkHttp clients so each role gets its
- * counting interceptor without rebuilding the shared clients. Base clients
- * are rebuilt on proxy/network changes (new identity), so the cache is
- * cleared when it grows past a small bound.
+ * Hands out per-subsystem OkHttp clients: the shared base client (which
+ * carries the single [UsageCountingInterceptor]) wrapped with a tagging
+ * interceptor inserted at position 0, OUTSIDE the counter, so the tag is
+ * visible when the counter reads it. Wrapped clients are cached per
+ * (role, base identity); base clients are rebuilt on proxy/network changes,
+ * so the cache is cleared when it grows past a small bound.
  */
-class HttpUsageMeter(
-    private val accountant: ResourceUsageAccountant,
-    private val isMobile: () -> Boolean,
-    private val isForeground: () -> Boolean,
-) {
+class HttpUsageMeter {
     private val wrapped = ConcurrentHashMap<Pair<String, OkHttpClient>, OkHttpClient>()
 
     fun counted(
@@ -111,13 +182,28 @@ class HttpUsageMeter(
         return wrapped.getOrPut(role to base) {
             base
                 .newBuilder()
-                .addInterceptor(UsageCountingInterceptor(role, accountant, isMobile, isForeground))
+                .apply { interceptors().add(0, RoleTaggingInterceptor(role)) }
                 .build()
         }
     }
 
+    private class RoleTaggingInterceptor(
+        private val role: String,
+    ) : Interceptor {
+        private val tag = UsageRoleTag(role)
+
+        override fun intercept(chain: Interceptor.Chain): Response =
+            chain.proceed(
+                chain
+                    .request()
+                    .newBuilder()
+                    .tag(UsageRoleTag::class.java, tag)
+                    .build(),
+            )
+    }
+
     companion object {
-        // roles (7) x live base clients (proxy on/off ~2) with headroom for
+        // roles (8) x live base clients (proxy on/off ~2) with headroom for
         // network-change rebuilds before the clear kicks in.
         private const val MAX_CACHED = 32
     }

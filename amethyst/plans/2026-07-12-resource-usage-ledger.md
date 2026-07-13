@@ -69,6 +69,17 @@ Flat `Map<String, Long>` per UTC epoch-day, retained ~30 days. Key grammar:
 - `crypto.verify.count` / `crypto.verify.us` — event signature verifications
   (LocalCache.justVerify hook), settling "does Schnorr verify cost matter"
   with data
+- `net.<role>.<net>.<vis>.reqs` / `.activems` — HTTP request counts and
+  active-transfer time per subsystem; counting lives on the shared base
+  client (OkHttpClientFactory) with tag-based role attribution, so untagged
+  callers land in `other` instead of escaping the ledger
+- `net.bursts.<net>.<vis>` — estimated radio wake-ups from HTTP burst
+  patterns (new activity after >10s of HTTP silence): the battery-relevant
+  measure that bytes alone can't capture, since scattered small requests
+  each pay the radio ramp+tail
+- `media.playms` — actual media playback time (ExoPlayer isPlaying
+  segments): decoder + screen + streaming at once, the denominator for
+  video bytes
 
 Deliberately not tracked (v1): per-screen time (route names leak behavior
 patterns into a report — needs its own privacy review), per-coroutine or

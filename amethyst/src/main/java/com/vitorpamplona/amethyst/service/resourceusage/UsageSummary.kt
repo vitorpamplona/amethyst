@@ -46,6 +46,10 @@ data class UsageSummary(
     val foregroundMs: Long,
     val verifyCount: Long,
     val verifyUs: Long,
+    val httpRequests: Long,
+    val radioBursts: Long,
+    val httpActiveMs: Long,
+    val mediaPlayMs: Long,
     /** total rx+tx bytes per subsystem (net roles + "relay"). */
     val bytesPerSubsystem: Map<String, Long>,
 ) {
@@ -87,6 +91,10 @@ data class UsageSummary(
                 foregroundMs = counters[UsageKeys.APP_FG_MS] ?: 0L,
                 verifyCount = counters[UsageKeys.VERIFY_COUNT] ?: 0L,
                 verifyUs = counters[UsageKeys.VERIFY_US] ?: 0L,
+                httpRequests = counters.sumMatching("reqs"),
+                radioBursts = counters.sumMatching("bursts"),
+                httpActiveMs = counters.sumMatching("activems"),
+                mediaPlayMs = counters[UsageKeys.MEDIA_PLAY_MS] ?: 0L,
                 bytesPerSubsystem = subsystems,
             )
         }
