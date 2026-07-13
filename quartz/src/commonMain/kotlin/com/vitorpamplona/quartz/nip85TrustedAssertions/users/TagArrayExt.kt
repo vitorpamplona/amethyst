@@ -22,8 +22,59 @@ package com.vitorpamplona.quartz.nip85TrustedAssertions.users
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEndTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PostCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReactionsCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReplyCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountSentTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.TopicTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountSentTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDayReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDaySentTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountReceivedTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountSentTag
+
+fun TagArray.rank() = fastFirstNotNullOfOrNull(RankTag::parse)
+
+fun TagArray.followerCount() = fastFirstNotNullOfOrNull(FollowerCountTag::parse)
+
+fun TagArray.firstCreatedAt() = fastFirstNotNullOfOrNull(FirstCreatedAtTag::parse)
+
+fun TagArray.postCount() = fastFirstNotNullOfOrNull(PostCountTag::parse)
+
+fun TagArray.replyCount() = fastFirstNotNullOfOrNull(ReplyCountTag::parse)
+
+fun TagArray.reactionsCount() = fastFirstNotNullOfOrNull(ReactionsCountTag::parse)
+
+fun TagArray.zapAmountReceived() = fastFirstNotNullOfOrNull(ZapAmountReceivedTag::parse)
+
+fun TagArray.zapAmountSent() = fastFirstNotNullOfOrNull(ZapAmountSentTag::parse)
+
+fun TagArray.zapCountReceived() = fastFirstNotNullOfOrNull(ZapCountReceivedTag::parse)
+
+fun TagArray.zapCountSent() = fastFirstNotNullOfOrNull(ZapCountSentTag::parse)
+
+fun TagArray.zapAvgAmountDayReceived() = fastFirstNotNullOfOrNull(ZapAvgAmountDayReceivedTag::parse)
+
+fun TagArray.zapAvgAmountDaySent() = fastFirstNotNullOfOrNull(ZapAvgAmountDaySentTag::parse)
+
+fun TagArray.reportsCountReceived() = fastFirstNotNullOfOrNull(ReportsCountReceivedTag::parse)
+
+fun TagArray.reportsCountSent() = fastFirstNotNullOfOrNull(ReportsCountSentTag::parse)
+
+fun TagArray.topics() = mapNotNull(TopicTag::parse)
+
+fun TagArray.activeHoursStart() = fastFirstNotNullOfOrNull(ActiveHoursStartTag::parse)
+
+fun TagArray.activeHoursEnd() = fastFirstNotNullOfOrNull(ActiveHoursEndTag::parse)
 
 fun TagArray.petName() = fastFirstNotNullOfOrNull(PetNameTag::parse)
 

@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,20 +115,22 @@ class ContactCardsState(
     ): ContactCardEvent {
         val existing = getCard(target)
         return if (existing != null) {
-            ContactCardEvent.updatePetNameAndSummary(
-                earlierVersion = existing,
-                petName = petName,
-                summary = summary,
-                emojis = emojis,
-                signer = signer,
+            signer.sign(
+                ContactCardEvent.updatePetNameAndSummary(
+                    earlierVersion = existing,
+                    petName = petName,
+                    summary = summary,
+                    emojis = emojis,
+                    signer = signer,
+                ),
             )
         } else {
             ContactCardEvent.create(
                 targetUser = target,
                 petName = petName,
                 summary = summary,
+                emojis = emojis,
                 signer = signer,
-                privateInitializer = { emojis(emojis) },
             )
         }
     }

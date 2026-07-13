@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.experimental.nip85TrustedAssertions
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
@@ -77,11 +76,13 @@ class ContactCardPetNameTest {
                 )
 
             val updated =
-                ContactCardEvent.updatePetNameAndSummary(
-                    earlierVersion = card,
-                    petName = "Bobby",
-                    summary = "new summary",
-                    signer = signer,
+                signer.sign(
+                    ContactCardEvent.updatePetNameAndSummary(
+                        earlierVersion = card,
+                        petName = "Bobby",
+                        summary = "new summary",
+                        signer = signer,
+                    ),
                 )
 
             assertEquals(targetUser, updated.aboutUser())
@@ -109,11 +110,13 @@ class ContactCardPetNameTest {
                 )
 
             val cleared =
-                ContactCardEvent.updatePetNameAndSummary(
-                    earlierVersion = card,
-                    petName = null,
-                    summary = null,
-                    signer = signer,
+                signer.sign(
+                    ContactCardEvent.updatePetNameAndSummary(
+                        earlierVersion = card,
+                        petName = null,
+                        summary = null,
+                        signer = signer,
+                    ),
                 )
 
             assertNull(cleared.privatePetName())
@@ -130,17 +133,19 @@ class ContactCardPetNameTest {
                 ContactCardEvent.create(
                     targetUser = targetUser,
                     petName = "Bob :wave:",
+                    emojis = listOf(oldEmoji),
                     signer = signer,
-                    privateInitializer = { emojis(listOf(oldEmoji)) },
                 )
             assertEquals(listOf(oldEmoji), card.privateTags(signer)!!.mapNotNull(EmojiUrlTag::parse))
 
             val updated =
-                ContactCardEvent.updatePetNameAndSummary(
-                    earlierVersion = card,
-                    petName = "Bob :soapbox:",
-                    emojis = listOf(newEmoji),
-                    signer = signer,
+                signer.sign(
+                    ContactCardEvent.updatePetNameAndSummary(
+                        earlierVersion = card,
+                        petName = "Bob :soapbox:",
+                        emojis = listOf(newEmoji),
+                        signer = signer,
+                    ),
                 )
 
             assertEquals("Bob :soapbox:", updated.privatePetName())
@@ -165,10 +170,12 @@ class ContactCardPetNameTest {
             assertEquals("public bob", card.petName())
 
             val updated =
-                ContactCardEvent.updatePetNameAndSummary(
-                    earlierVersion = card,
-                    petName = "private bob",
-                    signer = signer,
+                signer.sign(
+                    ContactCardEvent.updatePetNameAndSummary(
+                        earlierVersion = card,
+                        petName = "private bob",
+                        signer = signer,
+                    ),
                 )
 
             assertNull(updated.petName())
