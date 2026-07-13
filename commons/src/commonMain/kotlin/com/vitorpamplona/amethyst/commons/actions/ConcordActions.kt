@@ -203,6 +203,22 @@ object ConcordActions {
     }
 
     /**
+     * Builds an **ephemeral** typing heartbeat wrap (kind-23311 rumor, kind-21059 wrap)
+     * on the [channel] plane. Relays broadcast but never store it; publish every few
+     * seconds while the user is composing.
+     */
+    suspend fun buildChannelTyping(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        createdAt: Long,
+    ): Event {
+        val rumor = ChannelChat.typing(authorSigner.pubKey, channelId, epoch, createdAt)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true, ephemeral = true, createdAt = createdAt)
+    }
+
+    /**
      * Opens the channel [wraps], keeps the kind-9 messages correctly bound to
      * [channelId]/[epoch], and returns them oldest-first (createdAt, then id).
      */

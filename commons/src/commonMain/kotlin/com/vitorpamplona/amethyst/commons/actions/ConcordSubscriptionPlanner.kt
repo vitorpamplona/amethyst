@@ -135,7 +135,9 @@ object ConcordSubscriptionPlanner {
                 relay = relay,
                 filter =
                     Filter(
-                        kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
+                        // Stored plane wraps (1059) plus ephemeral ones (21059) — the latter carry the
+                        // live-only typing heartbeats a relay broadcasts but never stores.
+                        kinds = listOf(ConcordStreamEnvelope.KIND_WRAP, ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL),
                         authors = authors.toList(),
                         since = since?.get(relay)?.time,
                     ),

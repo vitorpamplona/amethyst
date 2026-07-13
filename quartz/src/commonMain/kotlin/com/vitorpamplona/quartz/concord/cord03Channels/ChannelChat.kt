@@ -152,6 +152,32 @@ object ChannelChat {
             content = content,
         )
 
+    /** Chat Plane typing indicator (CORD-03): a transient "user is composing" heartbeat. */
+    const val KIND_TYPING = 23311
+
+    /**
+     * Builds an unsigned kind-23311 typing heartbeat bound to [channelId]/[epoch].
+     * Empty content; wrap it as an **ephemeral** stream event (kind 21059) so relays
+     * broadcast but never store it. Republish every few seconds while composing; a
+     * receiver shows the author as typing until the heartbeat goes stale.
+     */
+    fun typing(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        createdAt: Long,
+    ): Event =
+        RumorAssembler.assembleRumor<Event>(
+            pubKey = authorPubKey,
+            createdAt = createdAt,
+            kind = KIND_TYPING,
+            tags = arrayOf(ChannelTag.assemble(channelId), EpochTag.assemble(epoch)),
+            content = "",
+        )
+
+    /** True when [rumor] is a typing heartbeat (kind 23311). */
+    fun isTyping(rumor: Event): Boolean = rumor.kind == KIND_TYPING
+
     /** The channel id a Chat Plane [rumor] is bound to, or null if unbound. */
     fun channelOf(rumor: Event): HexKey? = rumor.tags.concordChannel()
 

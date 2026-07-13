@@ -2137,6 +2137,23 @@ class Account(
         return true
     }
 
+    /**
+     * Publish a typing heartbeat (kind-23311, ephemeral 21059) to a Concord channel — call at
+     * most every few seconds while composing. Not folded locally (we never show our own typing);
+     * ephemeral, so relays broadcast but never store it.
+     */
+    suspend fun sendConcordTyping(
+        communityId: String,
+        channelIdHex: String,
+    ) {
+        if (!isWriteable()) return
+        val entry = concordSessions.sessionFor(communityId)?.entry ?: return
+        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val wrap = ConcordActions.buildChannelTyping(signer, channelKey, channelIdHex, entry.rootEpoch, TimeUtils.now())
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (relays.isNotEmpty()) client.publish(wrap, relays)
+    }
+
     /** Instant local echo (the session folds it back as a Note) + publish to the community relays. */
     private fun publishConcordWrap(
         entry: ConcordCommunityListEntry,

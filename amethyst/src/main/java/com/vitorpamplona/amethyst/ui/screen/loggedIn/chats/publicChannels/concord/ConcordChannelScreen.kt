@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,15 +39,21 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -55,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -82,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -206,6 +215,8 @@ fun ConcordChannelScreen(
                 )
             }
 
+            ConcordTypingIndicator(communityId, channelId, accountViewModel)
+
             if (channel.canPost()) {
                 Spacer(modifier = DoubleVertSpacer)
                 ConcordMessageComposer(
@@ -258,6 +269,75 @@ private fun ConcordBackfillHistoryToWindow(
     }
 }
 
+/** Republish a typing heartbeat at most this often (seconds) while composing. */
+private const val TYPING_HEARTBEAT_SECS = 4L
+
+/**
+ * A slim "X is typing…" line above the composer, driven by the session's ephemeral
+ * typing heartbeats (kind 23311). A ~2s ticker re-applies the freshness window so a
+ * typist who stops silently fades out even without a new ingest.
+ */
+@Composable
+private fun ConcordTypingIndicator(
+    communityId: String,
+    channelId: String,
+    accountViewModel: AccountViewModel,
+) {
+    val session = remember(communityId) { accountViewModel.account.concordSessions.sessionFor(communityId) } ?: return
+    val typingMap by session.typing.collectAsStateWithLifecycle()
+
+    var nowSecs by remember { mutableLongStateOf(TimeUtils.now()) }
+    LaunchedEffect(session) {
+        while (true) {
+            delay(2000L)
+            nowSecs = TimeUtils.now()
+        }
+    }
+
+    val typers =
+        remember(typingMap, channelId, nowSecs) {
+            (typingMap[channelId] ?: emptyMap())
+                .filterValues { nowSecs - it <= ConcordCommunitySession.TYPING_STALE_SECS }
+                .keys
+                .sorted()
+        }
+
+    if (typers.isEmpty()) return
+
+    val label =
+        when (typers.size) {
+            1 -> stringRes(R.string.concord_typing_one, rememberTypistName(typers[0], accountViewModel))
+            2 ->
+                stringRes(
+                    R.string.concord_typing_two,
+                    rememberTypistName(typers[0], accountViewModel),
+                    rememberTypistName(typers[1], accountViewModel),
+                )
+            else -> stringRes(R.string.concord_typing_many)
+        }
+
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+        )
+    }
+}
+
+/** Resolves [hex] to its best display name, reactively, falling back to a short hex. */
+@Composable
+private fun rememberTypistName(
+    hex: String,
+    accountViewModel: AccountViewModel,
+): String {
+    val user = remember(hex) { accountViewModel.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
+    val info by observeUserInfo(user, accountViewModel)
+    return info?.info?.bestName() ?: remember(user) { user.pubkeyDisplayHex() }
+}
+
 private fun reachState(p: RelayPagingProgress): RelayReachState =
     when {
         p.done -> RelayReachState.DONE
@@ -281,6 +361,9 @@ private fun ConcordMessageComposer(
     val scope = rememberCoroutineScope()
     val canPost by remember { derivedStateOf { newMessageModel.canPost() } }
     val context = LocalContext.current
+
+    // Throttle typing heartbeats to at most one every few seconds while the field is non-empty.
+    val lastTypingSecs = remember(newMessageModel.channelId) { longArrayOf(0L) }
 
     DisposableEffect(newMessageModel.channelId) {
         onDispose { newMessageModel.userSuggestions?.reset() }
@@ -306,7 +389,19 @@ private fun ConcordMessageComposer(
 
         ThinPaddingTextField(
             state = newMessageModel.message,
-            onTextChanged = { newMessageModel.onMessageChanged() },
+            onTextChanged = {
+                newMessageModel.onMessageChanged()
+                val community = newMessageModel.communityId
+                val channel = newMessageModel.channelId
+                val now = TimeUtils.now()
+                if (community != null && channel != null &&
+                    newMessageModel.message.text.isNotEmpty() &&
+                    now - lastTypingSecs[0] >= TYPING_HEARTBEAT_SECS
+                ) {
+                    lastTypingSecs[0] = now
+                    accountViewModel.sendConcordTyping(community, channel)
+                }
+            },
             inputTransformation = MentionPreservingInputTransformation,
             outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth(),

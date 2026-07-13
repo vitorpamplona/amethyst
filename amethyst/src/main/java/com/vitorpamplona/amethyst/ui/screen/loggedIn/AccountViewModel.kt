@@ -641,6 +641,14 @@ class AccountViewModel(
             account.importConcordCommunities()
         }
 
+    /** Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). */
+    fun sendConcordTyping(
+        communityId: String,
+        channelIdHex: String,
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        account.sendConcordTyping(communityId, channelIdHex)
+    }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

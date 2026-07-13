@@ -100,6 +100,26 @@ class ChannelChatEndToEndTest {
     }
 
     @Test
+    fun typingHeartbeatIsAnEphemeralWrapReadableByAnotherMember() =
+        runTest {
+            val alice = NostrSignerInternal(KeyPair())
+            val channel = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+
+            val rumor = ChannelChat.typing(alice.pubKey, channelIdHex, rootEpoch, createdAt = 1_700_000_000L)
+            val wrap = ConcordStreamEnvelope.wrap(rumor, channel, alice, encrypted = true, ephemeral = true)
+
+            // The wrap is the ephemeral kind so relays broadcast but never store it.
+            assertEquals(ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL, wrap.kind)
+
+            val opened = ConcordStreamEnvelope.open(wrap, channel)
+            assertTrue(ChannelChat.isTyping(opened.rumor))
+            assertEquals(ChannelChat.KIND_TYPING, opened.rumor.kind)
+            assertEquals(alice.pubKey, opened.author)
+            assertTrue(ChannelChat.isBoundTo(opened.rumor, channelIdHex, rootEpoch))
+            assertFalse(ChannelChat.isTyping(ChannelChat.message(alice.pubKey, channelIdHex, rootEpoch, "hi", 1L)))
+        }
+
+    @Test
     fun nonMembersCannotDeriveThePlane() =
         runTest {
             val alice = NostrSignerInternal(KeyPair())

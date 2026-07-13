@@ -25,11 +25,14 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -126,6 +129,16 @@ class ConcordCommunitySession(
 
     /** The live Guestbook membership set (self-signed joins minus later leaves). */
     val members: StateFlow<Set<HexKey>> = _members
+
+    // channelIdHex -> (other member pubkey -> createdAt secs of their latest typing heartbeat).
+    private val typingByChannel = HashMap<HexKey, HashMap<HexKey, Long>>()
+    private val _typing = MutableStateFlow<Map<HexKey, Map<HexKey, Long>>>(emptyMap())
+
+    /**
+     * The latest typing-heartbeat time (createdAt secs) per channel per *other* member (kind 23311,
+     * CORD-03). The UI applies its own freshness window and shows those still typing.
+     */
+    val typing: StateFlow<Map<HexKey, Map<HexKey, Long>>> = _typing
 
     /**
      * The community's full membership (lowercase hex): everyone who announced on the Guestbook,
@@ -227,7 +240,14 @@ class ConcordCommunitySession(
             }
             else -> {
                 val channelRef = lock.withLock { channelKeysByAddress[wrap.pubKey] } ?: return ConcordIngestOutcome.NOT_MINE
-                val (channelIdHex, _) = channelRef
+                val (channelIdHex, key) = channelRef
+                // An ephemeral wrap on a channel plane is a transient signal (typing) — fold it into
+                // the typing state, never into the stored message buffer or the Note sink. The typing
+                // UI collects the [typing] StateFlow directly, so this needs no structural revision bump.
+                if (wrap.kind == ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL) {
+                    ingestTyping(wrap, channelIdHex, key)
+                    return ConcordIngestOutcome.NON_STRUCTURAL
+                }
                 lock.withLock {
                     channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap)
                 }
@@ -237,6 +257,28 @@ class ConcordCommunitySession(
                 return ConcordIngestOutcome.NON_STRUCTURAL
             }
         }
+    }
+
+    private fun ingestTyping(
+        wrap: Event,
+        channelIdHex: HexKey,
+        key: GroupKey,
+    ) {
+        val rumor = ConcordStreamEnvelope.openOrNull(wrap, key)?.rumor ?: return
+        if (!ChannelChat.isTyping(rumor) || !ChannelChat.isBoundTo(rumor, channelIdHex, entry.rootEpoch)) return
+        val who = rumor.pubKey.lowercase()
+        if (who == myPubKey.lowercase()) return // never show my own typing back to me
+        val now = TimeUtils.now()
+        val snapshot =
+            lock.withLock {
+                val perChannel = typingByChannel.getOrPut(channelIdHex) { HashMap() }
+                val prev = perChannel[who]
+                if (prev == null || rumor.createdAt > prev) perChannel[who] = rumor.createdAt
+                perChannel.entries.retainAll { now - it.value <= TYPING_STALE_SECS }
+                if (perChannel.isEmpty()) typingByChannel.remove(channelIdHex)
+                typingByChannel.mapValues { it.value.toMap() }
+            }
+        _typing.value = snapshot
     }
 
     private fun refold() {
@@ -269,5 +311,10 @@ class ConcordCommunitySession(
         ConcordActions.channelRumors(wraps, key, channelIdHex, entry.rootEpoch).forEach { rumor ->
             onRumor(entry.id, channelIdHex, rumor)
         }
+    }
+
+    companion object {
+        /** A typing heartbeat is considered current for this many seconds after it's seen. */
+        const val TYPING_STALE_SECS = 8L
     }
 }

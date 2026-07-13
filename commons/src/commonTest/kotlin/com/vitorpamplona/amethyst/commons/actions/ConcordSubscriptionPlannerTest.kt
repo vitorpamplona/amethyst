@@ -92,11 +92,12 @@ class ConcordSubscriptionPlannerTest {
             val subs = ConcordSubscriptionPlanner.controlPlaneSubs(listOf(entry))
             val relay = RelayUrlNormalizer.normalizeOrNull("wss://r.example")!!
 
-            // One kind-1059 filter for the single relay, carrying the derived since.
+            // One filter for the single relay, carrying the derived since. Live subscriptions ask for
+            // both the stored wrap (1059) and the ephemeral wrap (21059) that carries typing heartbeats.
             val filters = ConcordSubscriptionPlanner.relayBasedFilters(subs, mutableMapOf(relay to MutableTime(1234L)))!!
             assertEquals(1, filters.size)
             assertEquals(relay, filters[0].relay)
-            assertEquals(listOf(1059), filters[0].filter.kinds)
+            assertEquals(listOf(1059, 21059), filters[0].filter.kinds)
             assertEquals(1234L, filters[0].filter.since)
             assertTrue(filters[0].filter.authors!!.contains(community.controlPlane.publicKeyHex))
 
