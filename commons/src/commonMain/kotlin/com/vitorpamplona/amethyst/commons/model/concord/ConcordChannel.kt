@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -71,6 +72,14 @@ class ConcordChannel(
     /** This account's standing in the community (from the authority resolver + banlist). */
     var membership: ConcordMembership = ConcordMembership.MEMBER
         private set
+
+    /**
+     * Per-relay backward-pagination cursors for this channel's history (CORD-03). The live
+     * subscription only holds the recent tail the relay serves for the channel plane; older
+     * messages are paged in on demand by `until`+`limit` as the user scrolls, exactly like the
+     * NIP-04 per-conversation history. Held here so the cursors share the channel's cache lifetime.
+     */
+    val history = RelayLoadingCursors()
 
     /**
      * Refresh this channel's metadata from a freshly-folded community [state] plus

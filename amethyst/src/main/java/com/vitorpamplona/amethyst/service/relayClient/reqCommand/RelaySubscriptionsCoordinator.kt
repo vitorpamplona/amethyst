@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistoryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadFeedFilterAssembler
@@ -134,6 +135,10 @@ class RelaySubscriptionsCoordinator(
     // control + channel planes live (kind-1059 by derived stream address).
     val concordChannels = ConcordChannelFilterAssembler(client)
 
+    // On-demand backward history pager for whichever Concord Channel screen is open (older wraps by
+    // until+limit, per relay), the Concord analog of the per-conversation NIP-04 history.
+    val concordChannelHistory = ConcordChannelHistoryFilterAssembler(client)
+
     val chatroom = ChatroomFilterAssembler(client)
     val community = CommunityFilterAssembler(client)
     val gitRepository = RepositoryFilterAssembler(client)
@@ -201,6 +206,7 @@ class RelaySubscriptionsCoordinator(
             relayGroupWarmup,
             relayGroupsDiscovery,
             concordChannels,
+            concordChannelHistory,
             account,
             accountForeground,
             home,

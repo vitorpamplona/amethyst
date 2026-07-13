@@ -35,6 +35,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -43,8 +44,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
@@ -54,6 +63,9 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.send.ConcordNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
@@ -68,7 +80,13 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -88,6 +106,7 @@ fun ConcordChannelScreen(
     nav: INav,
 ) {
     ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
+    ConcordChannelHistorySubscription(communityId, channelId, accountViewModel.dataSources().concordChannelHistory, accountViewModel)
 
     val account = accountViewModel.account
     val channel = remember(account, communityId, channelId) { LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelId)) }
@@ -98,6 +117,24 @@ fun ConcordChannelScreen(
             factory = ChannelFeedViewModel.Factory(channel, account),
         )
     WatchLifecycleAndUpdateModel(feedViewModel)
+
+    // Backward history pager for this open channel (older wraps by until+limit, per relay), mirroring
+    // the NIP-04 per-conversation history: markers drive paging while on screen, a status card sits at
+    // the oldest end, and an empty channel bootstraps one page so there is something to scroll from.
+    val history = remember(accountViewModel) { accountViewModel.dataSources().concordChannelHistory.history }
+    val loadingHistory by history.loadingMore.collectAsStateWithLifecycle()
+    val historyStatus by history.status.collectAsStateWithLifecycle()
+    val limits =
+        remember(historyStatus) {
+            buildList {
+                if (!historyStatus.exhausted) {
+                    historyStatus.relayProgress.forEach { (relay, p) ->
+                        add(RelayReachCursor("cord:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p), "Concord") { history.advance(relay) })
+                    }
+                }
+            }
+        }
+    ConcordBootstrapHistoryWhenEmpty(feedViewModel.feedState, history)
 
     val newMessageModel: ConcordNewMessageViewModel = viewModel(key = channel.channelId.toKey() + "ConcordNewMessageViewModel")
     newMessageModel.init(accountViewModel)
@@ -131,6 +168,37 @@ fun ConcordChannelScreen(
                     routeForLastRead = "Concord/$communityId/$channelId",
                     onWantsToReply = { newMessageModel.reply(it) },
                     onWantsToEditDraft = {},
+                    // A status card at the oldest end: shows what it's reaching for while it pages and
+                    // crossfades to "All caught up" when every relay runs dry.
+                    olderBoundary = {
+                        DmHistoryLoadingCard(
+                            "Concord",
+                            "Concord",
+                            loadingHistory,
+                            historyStatus.exhausted,
+                            historyStatus.relayCount,
+                            historyStatus.stalledCount,
+                            historyStatus.reachedBack,
+                            historyStatus.relayProgress,
+                            ::formatHistoryReachDate,
+                        )
+                    },
+                    // Each relay's window-limit marker at its reached cursor (pure UI). Hidden when exhausted.
+                    markersInGap =
+                        if (limits.isEmpty()) {
+                            null
+                        } else {
+                            { newer, older -> RelayReachMarkers(limits, newer, older) {} }
+                        },
+                    // Pulls each relay's next page while its marker is on screen, off viewport visibility.
+                    sentinels =
+                        if (limits.isEmpty()) {
+                            null
+                        } else {
+                            { items, listState ->
+                                RelayReachSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
+                            }
+                        },
                 )
             }
 
@@ -146,6 +214,41 @@ fun ConcordChannelScreen(
         }
     }
 }
+
+/**
+ * When the channel opens empty, kick a single history page so there's something to scroll from — from
+ * there paging is purely demand-driven by the markers' visibility. Debounced so the transient empty
+ * feed that navigation flashes through doesn't trigger a hunt. Mirrors the DM `BootstrapHistoryWhenEmpty`.
+ */
+@Composable
+private fun ConcordBootstrapHistoryWhenEmpty(
+    feedContentState: FeedContentState,
+    history: ConcordChannelHistorySubAssembler,
+) {
+    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
+    val needsBootstrap = feedState is FeedState.Empty
+    LaunchedEffect(needsBootstrap, history) {
+        if (!needsBootstrap) return@LaunchedEffect
+        delay(1200L)
+        combine(history.loadingMore, history.status) { loading, s -> !loading && !s.exhausted }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect { history.advanceAll() }
+    }
+}
+
+private fun reachState(p: RelayPagingProgress): RelayReachState =
+    when {
+        p.done -> RelayReachState.DONE
+        p.stalled -> RelayReachState.STALLED
+        else -> RelayReachState.REACHING
+    }
+
+private fun relayShortName(relay: NormalizedRelayUrl): String =
+    relay.url
+        .removePrefix("wss://")
+        .removePrefix("ws://")
+        .removeSuffix("/")
 
 @Composable
 private fun ConcordMessageComposer(

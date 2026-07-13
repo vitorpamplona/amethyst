@@ -107,6 +107,9 @@ class ConcordCommunitySession(
     /** The current Chat Plane addresses to subscribe to, one per folded channel. */
     fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys.toSet() }
 
+    /** The Chat Plane stream address for [channelIdHex], once this community has folded that channel (else null). */
+    fun channelPlaneAddress(channelIdHex: HexKey): HexKey? = lock.withLock { channelKeysByAddress.entries.firstOrNull { it.value.first == channelIdHex }?.key }
+
     /** The base-rotation rekey [GroupKey] a member opens an inbound Refounding under. */
     fun nextBaseRekeyKey(): GroupKey = nextBaseRekeyKey
 
