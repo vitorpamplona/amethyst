@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.playerPool.aspectRatio.AspectRatioCacher
 import com.vitorpamplona.amethyst.service.playback.playerPool.positions.CurrentPlayPositionCacher
 import com.vitorpamplona.amethyst.service.playback.playerPool.positions.VideoViewedPositionCache
+import com.vitorpamplona.amethyst.service.playback.playerPool.repeat.AutoReplayLimiter
 import com.vitorpamplona.amethyst.service.playback.playerPool.wake.KeepVideosPlaying
 
 @OptIn(UnstableApi::class)
@@ -82,6 +83,7 @@ class ExoPlayerBuilder(
                 )
                 PcmTapRegistry.bind(currentMediaItem?.mediaId, sink)
                 addListener(AspectRatioCacher(MediaAspectRatioCache))
+                addListener(AutoReplayLimiter(pause = ::pause))
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))
             }
