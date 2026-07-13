@@ -353,15 +353,20 @@ kotlin {
 // daemon. This no-op shared build service with maxParallelUsages = 1 tells the
 // scheduler to run this module's Kotlin compile tasks one at a time; other
 // projects' tasks (JVM tests, lint analysis, packaging) still run in parallel.
+//
+// CI-only: the OOM needs a cache-cold compile of several variants at once,
+// which local builds (incremental, usually one variant) don't produce.
 abstract class AmethystKotlinCompileLimiter : BuildService<BuildServiceParameters.None>
 
-val kotlinCompileLimiter =
-    gradle.sharedServices.registerIfAbsent("amethystKotlinCompileLimiter", AmethystKotlinCompileLimiter::class) {
-        maxParallelUsages.set(1)
-    }
+if (System.getenv("CI") != null) {
+    val kotlinCompileLimiter =
+        gradle.sharedServices.registerIfAbsent("amethystKotlinCompileLimiter", AmethystKotlinCompileLimiter::class) {
+            maxParallelUsages.set(1)
+        }
 
-tasks.withType<KotlinCompile>().configureEach {
-    usesService(kotlinCompileLimiter)
+    tasks.withType<KotlinCompile>().configureEach {
+        usesService(kotlinCompileLimiter)
+    }
 }
 
 composeCompiler {
