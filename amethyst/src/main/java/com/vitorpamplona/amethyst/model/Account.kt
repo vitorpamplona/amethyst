@@ -3778,15 +3778,18 @@ class Account(
 
     /**
      * Nicknames a user by publishing the account's kind:30382 contact card about
-     * them, with the petname and summary NIP-44 encrypted in the content. `null`
-     * clears a field. Goes out through the account's extended outbox relays.
+     * them, with the petname and summary NIP-44 encrypted in the content. Any
+     * `:shortcode:` from the account's emoji packs gets its NIP-30 emoji mapping
+     * embedded (also encrypted) so the nickname renders with custom emojis.
+     * `null` clears a field. Goes out through the account's extended outbox relays.
      */
     suspend fun updateContactCardPetName(
         pubkeyHex: HexKey,
         petName: String?,
         summary: String?,
     ) {
-        sendMyPublicAndPrivateOutbox(contactCards.updatePetNameAndSummary(pubkeyHex, petName, summary))
+        val emojis = emoji.findEmojiTags(listOfNotNull(petName, summary).joinToString(" "))
+        sendMyPublicAndPrivateOutbox(contactCards.updatePetNameAndSummary(pubkeyHex, petName, summary, emojis))
     }
 
     suspend fun showUser(pubkeyHex: HexKey) {

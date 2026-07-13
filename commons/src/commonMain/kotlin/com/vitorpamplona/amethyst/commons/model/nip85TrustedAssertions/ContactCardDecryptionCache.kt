@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions
 
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
@@ -44,4 +45,14 @@ class ContactCardDecryptionCache(
     suspend fun petName(event: ContactCardEvent) = cachedPrivateCards.mergeTagList(event).petName()
 
     suspend fun summary(event: ContactCardEvent) = cachedPrivateCards.mergeTagList(event).summary()
+
+    /**
+     * The petname plus the card's full decrypted tag list, so renderers can
+     * resolve the NIP-30 `emoji` mappings stored alongside it.
+     */
+    suspend fun petNameWithEmojis(event: ContactCardEvent): PetName? {
+        val merged = cachedPrivateCards.mergeTagList(event)
+        val name = merged.petName() ?: return null
+        return PetName(name, merged.toImmutableListOfLists())
+    }
 }

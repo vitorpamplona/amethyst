@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.PetName
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.NoteState
@@ -66,7 +67,7 @@ fun observeUserName(
                 user.metadata().flow,
                 accountViewModel.account.contactCards.petNameFlow(user),
             ) { info, petName ->
-                petName ?: info?.info?.bestName() ?: user.pubkeyDisplayHex()
+                petName?.petName ?: info?.info?.bestName() ?: user.pubkeyDisplayHex()
             }.distinctUntilChanged()
         }
 
@@ -76,15 +77,16 @@ fun observeUserName(
 
 /**
  * The nickname (NIP-85 petname) the logged-in account gave this user through
- * its own contact card, decrypted from the card's content. Null when the
- * account never nicknamed this user. Per the spec, when present it should be
- * rendered instead of the user's display name.
+ * its own contact card, decrypted from the card's content, with the card's
+ * tags so `:shortcode:` custom emojis resolve. Null when the account never
+ * nicknamed this user. Per the spec, when present it should be rendered
+ * instead of the user's display name.
  */
 @Composable
 fun observeUserPetName(
     user: User,
     accountViewModel: AccountViewModel,
-): State<String?> {
+): State<PetName?> {
     val flow = remember(user) { accountViewModel.account.contactCards.petNameFlow(user) }
 
     return flow.collectAsStateWithLifecycle(null)

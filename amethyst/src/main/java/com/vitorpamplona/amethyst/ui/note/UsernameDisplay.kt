@@ -109,10 +109,11 @@ fun UsernameDisplay(
     val petName by observeUserPetName(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
-        // the account's own nickname for this user wins over the user's metadata
-        val name = petName ?: it?.info?.bestName()
+        // the account's own nickname for this user wins over the user's metadata;
+        // its custom emojis resolve against the contact card's tags, not the profile's
+        val name = petName?.petName ?: it?.info?.bestName()
         if (name != null) {
-            UserDisplay(name, it?.tags, weight, fontWeight, textColor, textAlign)
+            UserDisplay(name, petName?.tags ?: it?.tags, weight, fontWeight, textColor, textAlign)
         } else {
             NPubDisplay(baseUser, weight, fontWeight, textColor, textAlign)
         }

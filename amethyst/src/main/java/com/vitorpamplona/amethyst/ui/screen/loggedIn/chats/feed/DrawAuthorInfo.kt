@@ -66,7 +66,7 @@ private fun WatchAndDisplayUser(
             InnerUserPicture(
                 userHex = author.pubkeyHex,
                 userPicture = userState?.info?.picture,
-                userName = petName ?: userState?.info?.bestName(),
+                userName = petName?.petName ?: userState?.info?.bestName(),
                 size = Size20dp,
                 modifier = Modifier,
                 accountViewModel = accountViewModel,
@@ -83,8 +83,8 @@ private fun WatchAndDisplayUser(
         name = {
             if (userState != null) {
                 CreateTextWithEmoji(
-                    text = petName ?: userState?.info?.bestName() ?: author.pubkeyDisplayHex(),
-                    tags = userState?.tags ?: EmptyTagList,
+                    text = petName?.petName ?: userState?.info?.bestName() ?: author.pubkeyDisplayHex(),
+                    tags = petName?.tags ?: userState?.tags ?: EmptyTagList,
                     maxLines = 1,
                     fontWeight = FontWeight.Bold,
                 )

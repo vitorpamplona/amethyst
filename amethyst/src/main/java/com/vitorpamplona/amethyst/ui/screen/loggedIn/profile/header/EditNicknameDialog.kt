@@ -22,11 +22,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -34,7 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -43,6 +52,9 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
  * Edits the nickname (petname) and private note (summary) the account keeps for
  * [user] in its own kind:30382 contact card. Both fields are saved NIP-44
  * encrypted, so only this account can read them. Blank fields clear the value.
+ *
+ * Typing `:` offers the account's NIP-30 custom emojis; the mappings for any
+ * shortcode used are embedded (also encrypted) so the nickname renders with them.
  */
 @Composable
 fun EditNicknameDialog(
@@ -50,13 +62,30 @@ fun EditNicknameDialog(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val nickname = remember { mutableStateOf("") }
-    val summary = remember { mutableStateOf("") }
+    val nickname = rememberTextFieldState()
+    val summary = rememberTextFieldState()
+    val emojiSuggestions = remember(accountViewModel) { EmojiSuggestionState(accountViewModel.account) }
+    // which field the emoji autocomplete should insert into
+    val emojiTarget = remember { mutableStateOf<TextFieldState?>(null) }
+
+    // keeps the account's selected emoji packs loaded while the dialog is open
+    WatchAndLoadMyEmojiList(accountViewModel)
 
     // Prefill with the card's current encrypted values, if any.
     LaunchedEffect(user) {
-        nickname.value = accountViewModel.account.contactCards.petName(user.pubkeyHex) ?: ""
-        summary.value = accountViewModel.account.contactCards.summary(user.pubkeyHex) ?: ""
+        accountViewModel.account.contactCards
+            .petName(user.pubkeyHex)
+            ?.let { nickname.setTextAndPlaceCursorAtEnd(it) }
+        accountViewModel.account.contactCards
+            .summary(user.pubkeyHex)
+            ?.let { summary.setTextAndPlaceCursorAtEnd(it) }
+    }
+
+    fun watchEmojiIn(field: TextFieldState) {
+        emojiTarget.value = field
+        if (field.selection.collapsed) {
+            emojiSuggestions.processCurrentWord(field.currentWord())
+        }
     }
 
     AlertDialog(
@@ -72,21 +101,32 @@ fun EditNicknameDialog(
                     text = stringRes(R.string.nickname_dialog_explainer),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
-                TextField(
-                    value = nickname.value,
-                    onValueChange = { nickname.value = it },
+                ThinPaddingTextField(
+                    state = nickname,
+                    onTextChanged = { watchEmojiIn(nickname) },
                     singleLine = true,
                     label = {
                         Text(text = stringRes(R.string.nickname_label))
                     },
-                    modifier = Modifier,
                 )
-                TextField(
-                    value = summary.value,
-                    onValueChange = { summary.value = it },
+                ThinPaddingTextField(
+                    state = summary,
+                    onTextChanged = { watchEmojiIn(summary) },
                     label = {
                         Text(text = stringRes(R.string.nickname_summary_label))
                     },
+                )
+                ShowEmojiSuggestionList(
+                    emojiSuggestions,
+                    onSelect = {
+                        emojiTarget.value?.replaceCurrentWord(":${it.code}:")
+                        emojiSuggestions.reset()
+                    },
+                    onFullSize = {
+                        emojiTarget.value?.replaceCurrentWord(":${it.code}:")
+                        emojiSuggestions.reset()
+                    },
+                    modifier = Modifier.heightIn(max = 200.dp),
                 )
             }
         },
@@ -95,8 +135,16 @@ fun EditNicknameDialog(
                 onClick = {
                     accountViewModel.updateContactCardPetName(
                         user = user,
-                        petName = nickname.value.trim().ifBlank { null },
-                        summary = summary.value.trim().ifBlank { null },
+                        petName =
+                            nickname.text
+                                .toString()
+                                .trim()
+                                .ifBlank { null },
+                        summary =
+                            summary.text
+                                .toString()
+                                .trim()
+                                .ifBlank { null },
                     )
                     onDismiss()
                 },

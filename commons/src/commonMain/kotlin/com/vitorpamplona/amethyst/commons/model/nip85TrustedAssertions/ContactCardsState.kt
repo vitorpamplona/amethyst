@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -85,11 +87,14 @@ class ContactCardsState(
                     ?: flowOf(null)
             }
 
-    /** The petname the account gave [target], decrypted from the card's content. */
+    /**
+     * The petname the account gave [target], decrypted from the card's content,
+     * along with the card's tags so `:shortcode:` custom emojis resolve.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun petNameFlow(target: User): Flow<String?> =
+    fun petNameFlow(target: User): Flow<PetName?> =
         myCardFlow(target)
-            .mapLatest { card -> card?.let { decryptionCache.petName(it) } }
+            .mapLatest { card -> card?.let { decryptionCache.petNameWithEmojis(it) } }
             .distinctUntilChanged()
             .flowOn(Dispatchers.IO)
 
@@ -98,14 +103,16 @@ class ContactCardsState(
     suspend fun summary(target: HexKey): String? = getCard(target)?.let { decryptionCache.summary(it) }
 
     /**
-     * Builds the new signed card for [target] with the given petname and summary
-     * (both stored NIP-44 encrypted; `null` clears the field), preserving every
-     * other tag of an existing card. The caller is responsible for publishing it.
+     * Builds the new signed card for [target] with the given petname, summary and
+     * the NIP-30 emoji mappings their shortcodes use (all stored NIP-44 encrypted;
+     * `null` clears a field), preserving every other tag of an existing card. The
+     * caller is responsible for publishing it.
      */
     suspend fun updatePetNameAndSummary(
         target: HexKey,
         petName: String?,
         summary: String?,
+        emojis: List<EmojiUrlTag> = emptyList(),
     ): ContactCardEvent {
         val existing = getCard(target)
         return if (existing != null) {
@@ -113,6 +120,7 @@ class ContactCardsState(
                 earlierVersion = existing,
                 petName = petName,
                 summary = summary,
+                emojis = emojis,
                 signer = signer,
             )
         } else {
@@ -121,6 +129,7 @@ class ContactCardsState(
                 petName = petName,
                 summary = summary,
                 signer = signer,
+                privateInitializer = { emojis(emojis) },
             )
         }
     }

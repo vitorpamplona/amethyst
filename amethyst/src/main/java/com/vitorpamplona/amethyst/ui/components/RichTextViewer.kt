@@ -1016,11 +1016,11 @@ private fun DisplayUserFromTag(
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
         Row {
             CreateClickableTextWithEmoji(
-                clickablePart = remember(meta, petName) { petName ?: it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
+                clickablePart = remember(meta, petName) { petName?.petName ?: it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
                 maxLines = 1,
                 route = remember(baseUser) { routeFor(baseUser) },
                 nav = nav,
-                tags = it?.tags,
+                tags = petName?.tags ?: it?.tags,
             )
         }
     }

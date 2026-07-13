@@ -302,12 +302,12 @@ fun RenderUserAsClickableText(
     val petName by observeUserPetName(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(
-        clickablePart = "@" + (petName ?: userState?.info?.bestName() ?: baseUser.pubkeyDisplayHex()),
+        clickablePart = "@" + (petName?.petName ?: userState?.info?.bestName() ?: baseUser.pubkeyDisplayHex()),
         suffix = additionalChars?.ifBlank { null },
         maxLines = 1,
         route = remember(baseUser) { routeFor(baseUser) },
         nav = nav,
-        tags = userState?.tags ?: EmptyTagList,
+        tags = petName?.tags ?: userState?.tags ?: EmptyTagList,
     )
 }
 

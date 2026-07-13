@@ -111,7 +111,7 @@ fun DrawAdditionalInfo(
 
     // the nickname the account gave this user wins over the profile's own name;
     // the "@name" line below keeps the real handle visible for disambiguation
-    val displayName = petName ?: user.info.bestName()
+    val displayName = petName?.petName ?: user.info.bestName()
 
     val ui = accountViewModel.settings.uiSettingsFlow
     val showBadges by ui.showProfileBadges.collectAsStateWithLifecycle()
@@ -125,7 +125,7 @@ fun DrawAdditionalInfo(
             ) {
                 CreateTextWithEmoji(
                     text = displayName,
-                    tags = user.tags,
+                    tags = petName?.tags ?: user.tags,
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
                 )

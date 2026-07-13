@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.experimental.nip85TrustedAssertions
 
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
@@ -116,6 +118,35 @@ class ContactCardPetNameTest {
 
             assertNull(cleared.privatePetName())
             assertNull(cleared.privateSummary())
+        }
+
+    @Test
+    fun updateReplacesCustomEmojiMappings() =
+        runTest {
+            val oldEmoji = EmojiUrlTag("wave", "https://old.example/wave.png")
+            val newEmoji = EmojiUrlTag("soapbox", "https://new.example/soapbox.png")
+
+            val card =
+                ContactCardEvent.create(
+                    targetUser = targetUser,
+                    petName = "Bob :wave:",
+                    signer = signer,
+                    privateInitializer = { emojis(listOf(oldEmoji)) },
+                )
+            assertEquals(listOf(oldEmoji), card.privateTags(signer)!!.mapNotNull(EmojiUrlTag::parse))
+
+            val updated =
+                ContactCardEvent.updatePetNameAndSummary(
+                    earlierVersion = card,
+                    petName = "Bob :soapbox:",
+                    emojis = listOf(newEmoji),
+                    signer = signer,
+                )
+
+            assertEquals("Bob :soapbox:", updated.privatePetName())
+            // the emoji set is replaced wholesale, still encrypted
+            assertEquals(listOf(newEmoji), updated.privateTags(signer)!!.mapNotNull(EmojiUrlTag::parse))
+            assertTrue(updated.tags.none { it.size > 0 && it[0] == EmojiUrlTag.TAG_NAME })
         }
 
     @Test

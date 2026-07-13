@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
@@ -148,15 +149,18 @@ class ContactCardEvent(
         }
 
         /**
-         * Replaces the petname and summary of an existing card, keeping every other
-         * public and private tag intact. Both fields always live in the NIP-44
-         * encrypted content — any stray public copy is stripped. A `null` value
-         * removes the field from the card.
+         * Replaces the petname, summary and their NIP-30 custom emoji mappings on an
+         * existing card, keeping every other public and private tag intact. All of
+         * them always live in the NIP-44 encrypted content — any stray public
+         * petname/summary copy is stripped. A `null` value removes the field; the
+         * private `emoji` tag set is replaced wholesale since it only exists to
+         * render the petname/summary shortcodes.
          */
         suspend fun updatePetNameAndSummary(
             earlierVersion: ContactCardEvent,
             petName: String? = null,
             summary: String? = null,
+            emojis: List<EmojiUrlTag> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): ContactCardEvent {
@@ -168,9 +172,13 @@ class ContactCardEvent(
                 privateTags
                     .remove(arrayOf(PetNameTag.TAG_NAME))
                     .remove(arrayOf(SummaryTag.TAG_NAME))
+                    .remove(arrayOf(EmojiUrlTag.TAG_NAME))
 
             petName?.let { newPrivateTags = newPrivateTags.plus(PetNameTag.assemble(it)) }
             summary?.let { newPrivateTags = newPrivateTags.plus(SummaryTag.assemble(it)) }
+            if (emojis.isNotEmpty()) {
+                newPrivateTags = newPrivateTags.plus(emojis.map { it.toTagArray() })
+            }
 
             val newPublicTags =
                 earlierVersion.tags
