@@ -338,7 +338,7 @@ class AppModules(
     // Session-time counters for the app's long-running battery consumers.
     // All timer-free segment integrators: services and status flows flip them
     // on/off, so tracking costs one counter write per transition.
-    val alwaysOnSession = SessionTimeIntegrator(resourceUsage, UsageKeys.ALWAYS_ON_MS).also { it.registerFlushHook() }
+    val alwaysOnSession = SessionTimeIntegrator(resourceUsage, UsageKeys.ALWAYS_ON_MS, UsageKeys.ALWAYS_ON_STARTS).also { it.registerFlushHook() }
     val callSession = SessionTimeIntegrator(resourceUsage, UsageKeys.CALL_MS, UsageKeys.CALL_SESSIONS).also { it.registerFlushHook() }
     val nestsSession = SessionTimeIntegrator(resourceUsage, UsageKeys.NESTS_MS, UsageKeys.NESTS_SESSIONS).also { it.registerFlushHook() }
     private val powSession = SessionTimeIntegrator(resourceUsage, UsageKeys.POW_MS, UsageKeys.POW_SESSIONS).also { it.registerFlushHook() }

@@ -100,7 +100,7 @@ class ResourceUsageReportAssembler {
             append("| Media playback | ${formatDurationMs(s.mediaPlayMs)} |\n")
             append("| PoW mining | ${formatDurationMs(s.powMs)} |\n")
             append("| Tor uptime (in-app) | ${formatDurationMs(s.torMs)} |\n")
-            append("| Always-on service | ${formatDurationMs(s.alwaysOnMs)} |\n")
+            append("| Always-on service | ${formatDurationMs(s.alwaysOnMs)} (${s.alwaysOnStarts} starts) |\n")
             append("| Calls / audio rooms | ${formatDurationMs(s.callMs)} / ${formatDurationMs(s.nestsMs)} |\n")
             append("| Location listening | ${formatDurationMs(s.locationMs)} |\n")
             append("| Signatures verified | ${s.verifyCount} (${formatDurationMs(s.verifyUs / 1_000)} CPU) |\n")

@@ -135,8 +135,13 @@ object UsageKeys {
     const val TOR_MS = "tor.ms"
     const val TOR_STARTS = "tor.starts"
 
-    /** Always-on notification relay service uptime — the mode context for its relay connections. */
+    /**
+     * Always-on notification relay service: uptime (the mode context for its
+     * relay connections) and starts — each start beyond the first is churn
+     * (watchdog alarm or auto-restart re-launching a killed service).
+     */
     const val ALWAYS_ON_MS = "service.alwayson.ms"
+    const val ALWAYS_ON_STARTS = "service.alwayson.starts"
 
     /** Calls and NIP-53 audio rooms: mic + Opus + a live media connection. */
     const val CALL_MS = "call.ms"
