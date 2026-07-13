@@ -120,10 +120,17 @@ class CalendarReminderWorker(
         store.forgetBefore(now - PRUNE_AGE_SECONDS)
 
         // Nothing left that could ever fire → end the periodic chain instead of
-        // waking the process every 15 minutes forever. The ACCEPTED-RSVP observer
-        // in AppModules re-schedules the worker the next time a live session sees
-        // an accepted RSVP.
-        if (!couldStillFire(acceptedRsvps, now)) {
+        // waking the process every 15 minutes forever. The observers in
+        // AppModules re-schedule the worker the next time a live session sees
+        // an accepted RSVP or a calendar-event update.
+        //
+        // Decide on a FRESH cache snapshot, not the one from the start of the
+        // run: an RSVP accepted while this run was scanning already fired the
+        // observer, whose schedule() uses KEEP and no-ops while this chain
+        // still exists — cancelling on the stale snapshot would kill the chain
+        // with that RSVP's reminder permanently lost (observeNewEvents never
+        // re-fires for an event that is already in cache).
+        if (!couldStillFire(acceptedRsvpsInCache(), TimeUtils.now())) {
             Log.d(TAG) { "No accepted RSVP can still fire; ending periodic chain." }
             cancel(applicationContext)
         }

@@ -363,6 +363,19 @@ class RadioBurstEstimatorTest {
         }
 }
 
+class LoopbackExclusionTest {
+    @Test
+    fun loopbackHostsAreRecognizedAndRealHostsAreNot() {
+        assertTrue(UsageCountingInterceptor.isLoopback("127.0.0.1"))
+        assertTrue(UsageCountingInterceptor.isLoopback("127.4.5.6"))
+        assertTrue(UsageCountingInterceptor.isLoopback("localhost"))
+        assertTrue(UsageCountingInterceptor.isLoopback("::1"))
+        assertFalse(UsageCountingInterceptor.isLoopback("relay.example.com"))
+        assertFalse(UsageCountingInterceptor.isLoopback("192.168.1.10"))
+        assertFalse(UsageCountingInterceptor.isLoopback("128.0.0.1"))
+    }
+}
+
 class MediaPlayTimeTrackerTest {
     @Test
     fun accumulatesOnlyWhilePlaying() {

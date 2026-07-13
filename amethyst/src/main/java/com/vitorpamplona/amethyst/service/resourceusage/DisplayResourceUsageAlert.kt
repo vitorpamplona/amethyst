@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -42,12 +43,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-/**
- * Developer recipient for user-initiated diagnostic DMs — the same account
- * the crash-report dialog routes to.
- */
-const val DEV_REPORT_PUBKEY = "aa9047325603dacd4f8142093567973566de3b1e20a89557b728c3be4c6a844b"
 
 /**
  * On app open, checks the resource-usage ledger against the
@@ -74,16 +69,26 @@ fun DisplayResourceUsageAlert(
             }
             val found = ResourceUsageAlerts.evaluate(accountant.allDaysIncludingLive(), accountant.today())
             if (found != null) {
-                // Mark immediately so process restarts can't re-prompt within the window.
-                store.markAlertPrompted(TimeUtils.now())
                 alert.value = found
             }
         }
     }
 
+    // The 7-day rate limit is consumed when the user ACTS on the dialog (any
+    // button or dismissal), not when it is shown: marking before the first
+    // frame let a config change or process death burn the whole prompt budget
+    // on a dialog nobody ever saw, silencing an active battery problem for a
+    // week. Re-showing after an unhandled recreation is exactly what we want.
+    val dismiss = {
+        accountViewModel.runOnIO {
+            Amethyst.instance.resourceUsageStore.markAlertPrompted(TimeUtils.now())
+        }
+        alert.value = null
+    }
+
     alert.value?.let { found ->
         AlertDialog(
-            onDismissRequest = { alert.value = null },
+            onDismissRequest = dismiss,
             title = { Text(stringRes(R.string.resource_usage_alert_title)) },
             text = {
                 Text(
@@ -99,11 +104,11 @@ fun DisplayResourceUsageAlert(
                         accountViewModel.runOnIO {
                             Amethyst.instance.resourceUsageStore.setAlertsOptOut(true)
                         }
-                        alert.value = null
+                        dismiss()
                     }) {
                         Text(stringRes(R.string.resource_usage_alert_opt_out))
                     }
-                    TextButton(onClick = { alert.value = null }) {
+                    TextButton(onClick = dismiss) {
                         Text(stringRes(R.string.resource_usage_alert_not_now))
                     }
                 }
@@ -126,7 +131,7 @@ fun DisplayResourceUsageAlert(
                             expiresDays = 30,
                         )
                     }
-                    alert.value = null
+                    dismiss()
                 }) {
                     Text(stringRes(R.string.resource_usage_alert_send))
                 }

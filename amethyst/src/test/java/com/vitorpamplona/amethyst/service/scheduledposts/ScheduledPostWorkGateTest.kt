@@ -131,6 +131,28 @@ class ScheduledPostWorkGateTest {
         }
 
     @Test
+    fun claimingTheLastPendingPost_doesNotCancelTheRunningWorker() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(id = "a", publishAtSec = 1_000))
+            startGate(store)
+            runCurrent()
+            assertEquals(listOf(true), decisions)
+
+            // The periodic worker claims the post (PENDING -> PUBLISHING) and
+            // is now mid-publish. Cancelling here would kill the very worker
+            // holding the claim and strand the post in PUBLISHING forever.
+            store.claimDuePosts(nowSec = 2_000)
+            runCurrent()
+            assertEquals("a claim must never cancel the chain", listOf(true), decisions)
+
+            // Only the publish actually finishing drains the gate.
+            store.markSent("a")
+            runCurrent()
+            assertEquals(listOf(true, false), decisions)
+        }
+
+    @Test
     fun publishNowOnFailedPost_reschedulesTheWorker() =
         runTest {
             val store = newStore()

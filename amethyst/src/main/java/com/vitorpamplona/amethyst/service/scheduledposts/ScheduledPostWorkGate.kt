@@ -37,6 +37,11 @@ import kotlinx.coroutines.launch
  * publishNow, releaseClaim) and [onNoPendingWork] when the last one drains
  * (markSent/markFailed/cancel/removeForAccount).
  *
+ * PUBLISHING counts as pending work: claimDuePosts flips PENDING → PUBLISHING
+ * (and emits) BEFORE the worker publishes, so gating on PENDING alone would
+ * cancel the periodic worker mid-publish the moment it claims the last post —
+ * stranding the post in PUBLISHING with nothing left to finish or retry it.
+ *
  * [start] forces the store's initial disk load BEFORE collecting: the flow's
  * initial value is an empty list until the store is first touched, and acting
  * on that placeholder would cancel scheduled work that a pending post still
@@ -52,7 +57,7 @@ class ScheduledPostWorkGate(
         scope.launch {
             store.list()
             store.flow
-                .map { posts -> posts.any { it.status == ScheduledPostStatus.PENDING } }
+                .map { posts -> posts.any { it.status == ScheduledPostStatus.PENDING || it.status == ScheduledPostStatus.PUBLISHING } }
                 .distinctUntilChanged()
                 .collect { hasPending ->
                     if (hasPending) {

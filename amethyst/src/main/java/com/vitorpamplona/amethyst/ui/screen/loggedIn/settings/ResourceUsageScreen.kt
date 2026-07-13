@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.MemorySnapshot
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.resourceusage.DEV_REPORT_PUBKEY
+import com.vitorpamplona.amethyst.service.crashreports.DEV_REPORT_PUBKEY
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatBytes
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatConnHours
@@ -125,9 +125,12 @@ fun ResourceUsageScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                val today = Amethyst.instance.resourceUsage.today()
-                val todaySummary = UsageSummary.from(loaded[today].orEmpty())
-                val weekSummary = UsageSummary.fromDays((today - 6..today).mapNotNull { loaded[it] })
+                // remember(loaded): the memory produceState recomposes this
+                // scope every 2s, and the summaries walk every counter of
+                // every retained day — recompute only when the data reloads.
+                val today = remember(loaded) { Amethyst.instance.resourceUsage.today() }
+                val todaySummary = remember(loaded) { UsageSummary.from(loaded[today].orEmpty()) }
+                val weekSummary = remember(loaded) { UsageSummary.fromDays((today - 6..today).mapNotNull { loaded[it] }) }
 
                 TodayTiles(todaySummary)
                 if (weekSummary.totalBytes > 0) {

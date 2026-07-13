@@ -96,6 +96,13 @@ class UsageCountingInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
+
+        // Loopback traffic (LocalBlossomCacheRedirectInterceptor rewrites cache
+        // hits to 127.0.0.1) never touches the radio: counting it would inflate
+        // the network numbers — and could trip the background-data alert — for
+        // exactly the users who cache aggressively to SAVE data.
+        if (isLoopback(request.url.host)) return chain.proceed(request)
+
         val role = request.tag(UsageRoleTag::class.java)?.role ?: defaultRole
 
         accountant.add(UsageKeys.netReqs(role, isMobile(), isForeground()), 1)
@@ -122,6 +129,11 @@ class UsageCountingInterceptor(
                     },
                 ),
             ).build()
+    }
+
+    companion object {
+        /** OkHttp reports IPv6 hosts unbracketed ("::1"); keep the bracketed form defensively. */
+        fun isLoopback(host: String): Boolean = host.startsWith("127.") || host == "localhost" || host == "::1" || host == "[::1]"
     }
 
     private class CountingResponseBody(

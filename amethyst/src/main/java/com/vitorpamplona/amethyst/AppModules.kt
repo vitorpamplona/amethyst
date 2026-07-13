@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
@@ -116,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
@@ -143,12 +145,15 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClie
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -161,6 +166,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -1060,6 +1066,28 @@ class AppModules(
                     if (rsvp.status() == RSVPStatusTag.STATUS.ACCEPTED) {
                         CalendarReminderWorker.schedule(appContext)
                     }
+                }
+        }
+
+        // A rescheduled appointment must also re-arm the chain: the worker
+        // cancels itself when every known target is in the past, and a
+        // kind-31922/31923 update (the organizer moving the event) arrives
+        // WITHOUT any new RSVP — the user's existing RSVP still points at the
+        // same address, and observeNewEvents never re-fires for it. conflate +
+        // delay bounds the cache rescan to one per 30s while event feeds
+        // stream slot events; the scan only runs for users with reminders on.
+        applicationIOScope.launch {
+            LocalCache
+                .observeNewEvents<Event>(
+                    Filter(kinds = listOf(CalendarDateSlotEvent.KIND, CalendarTimeSlotEvent.KIND)),
+                ).conflate()
+                .collect {
+                    if (CalendarReminderPrefs(appContext).isEnabled() &&
+                        CalendarReminderWorker.couldStillFire(CalendarReminderWorker.acceptedRsvpsInCache(), TimeUtils.now())
+                    ) {
+                        CalendarReminderWorker.schedule(appContext)
+                    }
+                    delay(30_000)
                 }
         }
 
