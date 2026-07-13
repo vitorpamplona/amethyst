@@ -3209,6 +3209,15 @@
     <string name="resource_usage_cpu">Processor time used</string>
     <string name="resource_usage_fg_time">Time in app</string>
     <string name="resource_usage_app_starts">App process starts</string>
+    <string name="resource_usage_decrypts">Messages decrypted</string>
+    <string name="resource_usage_remote_signs">Remote signatures</string>
+    <string name="resource_usage_pow">Proof-of-work mining</string>
+    <string name="resource_usage_tor">Tor uptime</string>
+    <string name="resource_usage_always_on">Always-on notification service</string>
+    <string name="resource_usage_calls">Time in calls</string>
+    <string name="resource_usage_nests">Time in audio rooms</string>
+    <string name="resource_usage_location">Location listening</string>
+    <string name="resource_usage_battery_drain">Battery used (in app / background)</string>
     <string name="resource_usage_by_subsystem">Data by feature (7 days)</string>
     <string name="resource_usage_subsystem_relay">Relay sync</string>
     <string name="resource_usage_subsystem_image">Images</string>

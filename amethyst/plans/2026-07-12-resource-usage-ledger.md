@@ -81,6 +81,31 @@ Flat `Map<String, Long>` per UTC epoch-day, retained ~30 days. Key grammar:
   segments): decoder + screen + streaming at once, the denominator for
   video bytes
 
+- `pow.ms` / `pow.sessions` — NIP-13 mining time (any job mining in the
+  PoW queue): full-core CPU, the largest attributable CPU consumer
+- `tor.ms` / `tor.starts` — in-app (Arti) Tor uptime and bootstraps, from the
+  raw TorService status (NOT TorManager.status, whose WhileSubscribed
+  upstream calls service.start() when collected). External Tor (Orbot) is
+  deliberately untracked — its battery belongs to Orbot
+- `service.alwayson.ms` — NotificationRelayService uptime: the mode context
+  that explains a device's relay connection-time
+- `call.ms`/`call.sessions`, `nests.ms`/`nests.sessions` — calls and NIP-53
+  audio rooms (mic + Opus + live media connection), from the foreground
+  services' lifecycles
+- `location.ms` — time actively listening for GPS updates (geohash tagging);
+  mostly a tripwire for a leaked location subscription
+- `crypto.decrypt.count/us`, `crypto.encrypt.count/us` — NIP-04/44 work via a
+  MeteringNostrSigner decorator wrapped inside NostrSignerWithClientTag at
+  account load; durations metered only for local-key signers (external/
+  remote waits are IPC/network, not CPU)
+- `sign.local|nip46|nip55.count` — signatures by signer kind: NIP-46 is a
+  relay round-trip and NIP-55 an Amber IPC wake, so the kind is the
+  battery-relevant dimension (this supersedes "signing is negligible", which
+  is only true for local keys)
+- `battery.drain.fg|bg` — measured battery percent while discharging, sampled
+  at flush from BatteryManager: NOT app-isolated, but the ground truth that
+  report corpora can correlate the other counters against
+
 Deliberately not tracked (v1): per-screen time (route names leak behavior
 patterns into a report — needs its own privacy review), per-coroutine or
 per-dispatcher CPU (needs a thread registry; `cpu.ms` answers whether CPU

@@ -3221,6 +3221,7 @@ object LocalCache : ILocalCache, ICacheProvider {
      * signature verification so the app can account crypto CPU per day.
      * Wired by AppModules like [onchainBackend]; null costs nothing.
      */
+    @Volatile
     var verifyMeter: ((elapsedNanos: Long, valid: Boolean) -> Unit)? = null
 
     fun justVerify(event: Event): Boolean {

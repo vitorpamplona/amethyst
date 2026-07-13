@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst
 
 import android.content.ComponentCallbacks2
 import android.content.Context
+import android.os.BatteryManager
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
@@ -86,15 +87,18 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscripti
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
+import com.vitorpamplona.amethyst.service.resourceusage.BatteryDrainSampler
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
 import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
+import com.vitorpamplona.amethyst.service.resourceusage.MeteringNostrSigner
 import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
 import com.vitorpamplona.amethyst.service.resourceusage.RadioBurstEstimator
 import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
+import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.service.safeCacheDir
@@ -110,6 +114,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -226,7 +231,7 @@ class AppModules(
     // App services that should be run as soon as there are subscribers to their flows
     val locationManager by lazy {
         Log.d("AppModules", "LocationManager Init")
-        LocationState(appContext, applicationIOScope)
+        LocationState(appContext, applicationIOScope, onListening = { locationSession.setActive(it) })
     }
     val connManager = ConnectivityManager(appContext, applicationIOScope)
 
@@ -235,7 +240,8 @@ class AppModules(
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
-    val torManager = TorManager(torPrefs, TorService(appContext), applicationIOScope)
+    private val torService = TorService(appContext)
+    val torManager = TorManager(torPrefs, torService, applicationIOScope)
 
     // Network identity change (wifi↔cellular, regained from offline, captive portal
     // cleared) — the old network's guards/circuits are dead, and Arti's in-memory
@@ -322,6 +328,45 @@ class AppModules(
         )
 
     private val httpUsageMeter = HttpUsageMeter()
+
+    // Session-time counters for the app's long-running battery consumers.
+    // All timer-free segment integrators: services and status flows flip them
+    // on/off, so tracking costs one counter write per transition.
+    val alwaysOnSession = SessionTimeIntegrator(resourceUsage, UsageKeys.ALWAYS_ON_MS).also { it.registerFlushHook() }
+    val callSession = SessionTimeIntegrator(resourceUsage, UsageKeys.CALL_MS, UsageKeys.CALL_SESSIONS).also { it.registerFlushHook() }
+    val nestsSession = SessionTimeIntegrator(resourceUsage, UsageKeys.NESTS_MS, UsageKeys.NESTS_SESSIONS).also { it.registerFlushHook() }
+    private val powSession = SessionTimeIntegrator(resourceUsage, UsageKeys.POW_MS, UsageKeys.POW_SESSIONS).also { it.registerFlushHook() }
+    private val torSession = SessionTimeIntegrator(resourceUsage, UsageKeys.TOR_MS, UsageKeys.TOR_STARTS).also { it.registerFlushHook() }
+    private val locationSession = SessionTimeIntegrator(resourceUsage, UsageKeys.LOCATION_MS).also { it.registerFlushHook() }
+
+    // In-app (Arti) Tor uptime. Watches the raw TorService status — NOT
+    // TorManager.status, whose upstream is WhileSubscribed and calls
+    // service.start() when collected, so a permanent ledger subscription
+    // there would keep Tor's control flow alive on its own. External Tor
+    // (Orbot) is deliberately untracked: its battery belongs to Orbot.
+    init {
+        applicationIOScope.launch {
+            torService.status
+                .map { it is TorServiceStatus.Active }
+                .distinctUntilChanged()
+                .collect { torSession.setActive(it) }
+        }
+    }
+
+    // Measured battery drain (percent while discharging, fg/bg) — the ground
+    // truth the app counters get correlated against. One binder read per
+    // ledger flush, nothing while idle.
+    init {
+        val batteryManager = appContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        if (batteryManager != null) {
+            BatteryDrainSampler(
+                accountant = resourceUsage,
+                capacityPct = { batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).takeIf { it in 1..100 } },
+                isCharging = { batteryManager.isCharging },
+                isForeground = { foregroundTracker.isForeground.value },
+            ).register()
+        }
+    }
 
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
@@ -713,7 +758,18 @@ class AppModules(
             minerThreads = PoWPolicy.minerWorkers(Runtime.getRuntime().availableProcessors()),
             persistence = powJobStore,
             onQueueActive = { PowMiningForegroundService.start(appContext) },
-        )
+        ).also { queue ->
+            // Resource ledger: mining burns half the cores flat-out for as
+            // long as it runs — without this, PoW shows up in cpu.ms as an
+            // unattributed mystery. Wired inside the lazy so the ledger never
+            // forces the queue to initialize.
+            applicationIOScope.launch {
+                queue.jobs
+                    .map { jobs -> jobs.any { it.isMining } }
+                    .distinctUntilChanged()
+                    .collect { powSession.setActive(it) }
+            }
+        }
     }
 
     val powJobRestorer by lazy {
@@ -734,6 +790,7 @@ class AppModules(
             client = client,
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
+            meterSigner = { MeteringNostrSigner(it, resourceUsage) },
         )
 
     val sessionManager =

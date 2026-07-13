@@ -31,13 +31,17 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
 class LocationState(
     context: Context,
     scope: CoroutineScope,
+    /** Resource-ledger hook: true while GPS/location updates are actively requested. */
+    private val onListening: ((Boolean) -> Unit)? = null,
 ) {
     companion object {
         const val MIN_TIME: Long = 10000L
@@ -72,6 +76,8 @@ class LocationState(
                     val result =
                         LocationFlow(context)
                             .get(MIN_TIME, MIN_DISTANCE)
+                            .onStart { onListening?.invoke(true) }
+                            .onCompletion { onListening?.invoke(false) }
                             .map {
                                 LocationResult.Success(it.toGeoHash(GeohashPrecision.KM_5_X_5.digits)) as LocationResult
                             }.onEach {

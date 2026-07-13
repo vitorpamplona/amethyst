@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import android.os.SystemClock
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -53,7 +54,7 @@ class RadioBurstEstimator(
     private val accountant: ResourceUsageAccountant,
     private val isMobile: () -> Boolean,
     private val isForeground: () -> Boolean,
-    private val nowMs: () -> Long = { System.currentTimeMillis() },
+    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
 ) {
     @Volatile private var lastActivityMs = Long.MIN_VALUE
 
@@ -91,7 +92,7 @@ class UsageCountingInterceptor(
     private val isForeground: () -> Boolean,
     private val bursts: RadioBurstEstimator? = null,
     private val defaultRole: String = UsageKeys.ROLE_OTHER,
-    private val nowMs: () -> Long = { System.currentTimeMillis() },
+    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()

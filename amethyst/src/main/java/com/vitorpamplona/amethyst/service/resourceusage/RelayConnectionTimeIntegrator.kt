@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -31,31 +32,22 @@ import kotlinx.coroutines.launch
  * the ledger, split by network class and visibility. Connection-time is the
  * best single battery proxy the ping study found: most relays server-ping
  * every 30-70s, so the radio is active for as long as connections are open.
- *
- * No timers: the integral is exact between state changes (the connection
- * count is constant), so a segment is closed only when any input changes —
- * plus on [closeOpenSegment], which the accountant calls before every flush
- * and read so multi-hour stable sessions still account.
  */
 class RelayConnectionTimeIntegrator(
     private val connectedCount: Flow<Int>,
     private val isMobile: Flow<Boolean?>,
     private val isForeground: Flow<Boolean>,
-    private val accountant: ResourceUsageAccountant,
-    private val nowMs: () -> Long = { System.currentTimeMillis() },
-) {
-    private data class SegmentState(
+    accountant: ResourceUsageAccountant,
+    nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+) : TimeSegmentIntegrator<RelayConnectionTimeIntegrator.SegmentState>(accountant, nowMs) {
+    data class SegmentState(
         val count: Int,
         val mobile: Boolean,
         val foreground: Boolean,
     )
 
-    private val lock = Any()
-    private var current: SegmentState? = null
-    private var segmentStartMs: Long = 0L
-
     fun start(scope: CoroutineScope): Job {
-        accountant.addPreFlushHook(::closeOpenSegment)
+        registerFlushHook()
         return scope.launch {
             combine(connectedCount, isMobile, isForeground) { count, mobile, fg ->
                 SegmentState(count, mobile ?: false, fg)
@@ -63,26 +55,7 @@ class RelayConnectionTimeIntegrator(
         }
     }
 
-    /** Accounts the running segment up to now without changing state. */
-    fun closeOpenSegment() {
-        synchronized(lock) {
-            val state = current ?: return
-            val now = nowMs()
-            account(state, now - segmentStartMs)
-            segmentStartMs = now
-        }
-    }
-
-    private fun transitionTo(next: SegmentState) {
-        synchronized(lock) {
-            val now = nowMs()
-            current?.let { account(it, now - segmentStartMs) }
-            current = next
-            segmentStartMs = now
-        }
-    }
-
-    private fun account(
+    override fun account(
         state: SegmentState,
         elapsedMs: Long,
     ) {

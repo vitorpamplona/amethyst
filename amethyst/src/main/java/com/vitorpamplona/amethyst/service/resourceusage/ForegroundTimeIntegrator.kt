@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.resourceusage
 
+import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -29,45 +30,24 @@ import kotlinx.coroutines.launch
  * Integrates time-with-UI-visible into the ledger ([UsageKeys.APP_FG_MS]).
  * Screen-on time is what display power is proportional to, and it's the
  * denominator that makes every other counter interpretable (MB per hour in
- * app vs MB while backgrounded). Same timer-free segment pattern as
- * [RelayConnectionTimeIntegrator]: segments close on transitions and on the
- * accountant's pre-flush hook.
+ * app vs MB while backgrounded).
  */
 class ForegroundTimeIntegrator(
     private val isForeground: Flow<Boolean>,
-    private val accountant: ResourceUsageAccountant,
-    private val nowMs: () -> Long = { System.currentTimeMillis() },
-) {
-    private val lock = Any()
-    private var foreground = false
-    private var segmentStartMs = 0L
-
+    accountant: ResourceUsageAccountant,
+    nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+) : TimeSegmentIntegrator<Unit>(accountant, nowMs) {
     fun start(scope: CoroutineScope): Job {
-        accountant.addPreFlushHook(::closeOpenSegment)
+        registerFlushHook()
         return scope.launch {
-            isForeground.collect { fg -> transitionTo(fg) }
+            isForeground.collect { fg -> transitionTo(if (fg) Unit else null) }
         }
     }
 
-    fun closeOpenSegment() {
-        synchronized(lock) {
-            if (!foreground) return
-            val now = nowMs()
-            account(now - segmentStartMs)
-            segmentStartMs = now
-        }
-    }
-
-    private fun transitionTo(fg: Boolean) {
-        synchronized(lock) {
-            val now = nowMs()
-            if (foreground) account(now - segmentStartMs)
-            foreground = fg
-            segmentStartMs = now
-        }
-    }
-
-    private fun account(elapsedMs: Long) {
+    override fun account(
+        state: Unit,
+        elapsedMs: Long,
+    ) {
         if (elapsedMs > 0) accountant.add(UsageKeys.APP_FG_MS, elapsedMs)
     }
 }

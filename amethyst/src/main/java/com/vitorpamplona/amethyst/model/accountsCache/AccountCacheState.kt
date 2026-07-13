@@ -63,6 +63,8 @@ class AccountCacheState(
     val client: INostrClient,
     val rootFilesDir: () -> File = { File("") },
     val powQueue: () -> PoWPublishQueue? = { null },
+    /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
+    val meterSigner: (NostrSigner) -> NostrSigner = { it },
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -175,7 +177,7 @@ class AccountCacheState(
 
         val signerWithClientTag =
             NostrSignerWithClientTag(
-                inner = signer,
+                inner = meterSigner(signer),
                 clientName = CLIENT_TAG_NAME,
                 disabled = { !accountSettings.syncedSettings.security.addClientTag.value },
             )

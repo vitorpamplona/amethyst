@@ -21,6 +21,12 @@
 package com.vitorpamplona.amethyst.service.resourceusage
 
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaPlayTimeTracker
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -120,6 +126,46 @@ class ResourceUsageAccountantTest {
             assertEquals(42L, days[300]?.get("x"))
             // and not yet on disk
             assertNull(store.allDays()[300])
+        }
+
+    @Test
+    fun countersKeepAccumulatingAfterADrain() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 200L })
+
+            accountant.add("x", 5)
+            accountant.flush()
+            accountant.add("x", 7)
+            accountant.flush()
+
+            assertEquals(12L, store.allDays()[200]?.get("x"))
+        }
+
+    @Test
+    fun hookAddsAreDrainedInPlaceAndNeverRearmTheFlushLoop() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 300L })
+            var hookRuns = 0
+            accountant.addPreFlushHook {
+                hookRuns++
+                accountant.add("hook.counter", 1)
+            }
+
+            accountant.add("x", 1)
+            testScheduler.advanceTimeBy(31_000)
+            testScheduler.runCurrent()
+
+            assertEquals("the one debounced flush ran its hooks once", 1, hookRuns)
+            assertEquals(1L, store.allDays()[300]?.get("hook.counter"))
+
+            // If hook adds re-armed the debounce, more flushes would fire and
+            // the hook counter would keep growing without any real activity.
+            testScheduler.advanceTimeBy(300_000)
+            testScheduler.runCurrent()
+            assertEquals("no self-perpetuating flush loop", 1, hookRuns)
+            assertEquals(1L, store.allDays()[300]?.get("hook.counter"))
         }
 
     @Test
@@ -336,6 +382,226 @@ class MediaPlayTimeTrackerTest {
 
         assertEquals(35_000L, played)
     }
+}
+
+class SessionTimeIntegratorTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    @Test
+    fun accountsActiveTimeAndCountsActivations() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 100L })
+            var clock = 0L
+            val session = SessionTimeIntegrator(accountant, "s.ms", "s.starts", nowMs = { clock })
+
+            session.setActive(true)
+            clock += 5_000
+            session.setActive(false)
+            clock += 60_000 // idle time must not count
+            session.setActive(true)
+            clock += 1_000
+            session.setActive(false)
+
+            val today = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(6_000L, today["s.ms"])
+            assertEquals(2L, today["s.starts"])
+        }
+
+    @Test
+    fun repeatedActivationsDoNotDoubleCountStarts() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 100L })
+            var clock = 0L
+            val session = SessionTimeIntegrator(accountant, "s.ms", "s.starts", nowMs = { clock })
+
+            session.setActive(true)
+            clock += 1_000
+            session.setActive(true)
+            clock += 1_000
+            session.setActive(false)
+
+            val today = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(2_000L, today["s.ms"])
+            assertEquals(1L, today["s.starts"])
+        }
+
+    @Test
+    fun openSegmentIsAccountedOnFlushWithoutClosing() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 100L })
+            var clock = 0L
+            val session = SessionTimeIntegrator(accountant, "s.ms", nowMs = { clock })
+            session.registerFlushHook()
+
+            session.setActive(true)
+            clock += 120_000
+            val mid = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals("multi-hour stable sessions account without a transition", 120_000L, mid["s.ms"])
+
+            clock += 30_000
+            session.setActive(false)
+            val end = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(150_000L, end["s.ms"])
+        }
+}
+
+class BatteryDrainSamplerTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    private fun harness(scope: CoroutineScope): Triple<ResourceUsageAccountant, BatteryDrainSampler, Controls> {
+        val store = ResourceUsageStore(File(temp.root, "u.json"))
+        val accountant = ResourceUsageAccountant(store, scope, epochDay = { 100L })
+        val controls = Controls()
+        val sampler =
+            BatteryDrainSampler(
+                accountant = accountant,
+                capacityPct = { controls.pct },
+                isCharging = { controls.charging },
+                isForeground = { controls.foreground },
+            )
+        return Triple(accountant, sampler, controls)
+    }
+
+    private class Controls {
+        var pct: Int? = 90
+        var charging = false
+        var foreground = true
+    }
+
+    @Test
+    fun firstSampleOnlyEstablishesTheBaseline() =
+        runTest {
+            val (accountant, sampler, _) = harness(backgroundScope)
+            sampler.sample()
+            assertNull(accountant.allDaysIncludingLive()[100]?.get(UsageKeys.BATTERY_DRAIN_FG))
+        }
+
+    @Test
+    fun dischargeDropsAreAccountedByVisibility() =
+        runTest {
+            val (accountant, sampler, controls) = harness(backgroundScope)
+            sampler.sample() // baseline 90, discharging
+            controls.pct = 87
+            sampler.sample() // -3 while foreground
+            controls.foreground = false
+            controls.pct = 85
+            sampler.sample() // -2 while background
+
+            val today = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(3L, today[UsageKeys.BATTERY_DRAIN_FG])
+            assertEquals(2L, today[UsageKeys.BATTERY_DRAIN_BG])
+        }
+
+    @Test
+    fun intervalsTouchingAChargerAreSkipped() =
+        runTest {
+            val (accountant, sampler, controls) = harness(backgroundScope)
+            sampler.sample() // baseline 90, discharging
+            controls.charging = true
+            controls.pct = 80 // weird drop while charging: ignore
+            sampler.sample()
+            controls.charging = false
+            controls.pct = 78 // first discharging interval after charging: baseline only
+            sampler.sample()
+            controls.pct = 77
+            sampler.sample() // clean discharging interval: -1
+
+            val today = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(1L, today[UsageKeys.BATTERY_DRAIN_FG])
+        }
+
+    @Test
+    fun aLevelIncreaseResetsTheBaselineWithoutAccounting() =
+        runTest {
+            val (accountant, sampler, controls) = harness(backgroundScope)
+            sampler.sample() // baseline 90
+            controls.pct = 95 // e.g. charged while the process was frozen
+            sampler.sample()
+            controls.pct = 94
+            sampler.sample() // -1
+
+            val today = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(1L, today[UsageKeys.BATTERY_DRAIN_FG])
+        }
+}
+
+class MeteringNostrSignerTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    /** Pure-Kotlin fake so the test never touches secp256k1 JNI. */
+    private class FakeSigner : NostrSigner("aa".repeat(32)) {
+        override fun isWriteable() = true
+
+        override suspend fun <T : Event> sign(
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): T = throw UnsupportedOperationException("fake")
+
+        override suspend fun nip04Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = "enc04"
+
+        override suspend fun nip04Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = "dec04"
+
+        override suspend fun nip44Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = "enc44"
+
+        override suspend fun nip44Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = "dec44"
+
+        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw UnsupportedOperationException("fake")
+
+        override suspend fun deriveKey(nonce: HexKey): HexKey = "bb".repeat(32)
+
+        override suspend fun signPsbt(psbtHex: String): String = psbtHex
+
+        override fun hasForegroundSupport() = true
+    }
+
+    @Test
+    fun countsSignsAndCryptoOpsWithoutChangingResults() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 100L })
+            val metered = MeteringNostrSigner(FakeSigner(), accountant)
+
+            assertEquals("dec44", metered.nip44Decrypt("x", "aa".repeat(32)))
+            assertEquals("dec04", metered.nip04Decrypt("x", "aa".repeat(32)))
+            assertEquals("enc44", metered.nip44Encrypt("x", "aa".repeat(32)))
+            runCatching { metered.sign<Event>(0L, 1, arrayOf(), "hello") }
+
+            val today = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(2L, today[UsageKeys.DECRYPT_COUNT])
+            assertEquals(1L, today[UsageKeys.ENCRYPT_COUNT])
+            assertEquals(1L, today[UsageKeys.signs(UsageKeys.SIGNER_LOCAL)])
+            assertNull("non-local signers must not pollute crypto CPU time", today[UsageKeys.DECRYPT_US])
+        }
+
+    @Test
+    fun innermostSignerUnwrapsTheMeteringDecorator() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 100L })
+            val raw = FakeSigner()
+            val metered = MeteringNostrSigner(raw, accountant)
+            assertEquals(raw, metered.innermostSigner())
+        }
 }
 
 class ResourceUsageAlertsTest {

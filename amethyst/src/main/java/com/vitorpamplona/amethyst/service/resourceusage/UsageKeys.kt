@@ -127,6 +127,51 @@ object UsageKeys {
     /** Media (video/audio) playback time — decoder + screen + streaming all at once. */
     const val MEDIA_PLAY_MS = "media.playms"
 
+    /** NIP-13 proof-of-work mining: full-core CPU for as long as it runs. */
+    const val POW_MS = "pow.ms"
+    const val POW_SESSIONS = "pow.sessions"
+
+    /** In-app (Arti) Tor: circuit crypto + directory/guard keep-alives while up; each start pays a bootstrap. */
+    const val TOR_MS = "tor.ms"
+    const val TOR_STARTS = "tor.starts"
+
+    /** Always-on notification relay service uptime — the mode context for its relay connections. */
+    const val ALWAYS_ON_MS = "service.alwayson.ms"
+
+    /** Calls and NIP-53 audio rooms: mic + Opus + a live media connection. */
+    const val CALL_MS = "call.ms"
+    const val CALL_SESSIONS = "call.sessions"
+    const val NESTS_MS = "nests.ms"
+    const val NESTS_SESSIONS = "nests.sessions"
+
+    /** Time spent actively listening for GPS/location updates (geohash tagging). */
+    const val LOCATION_MS = "location.ms"
+
+    /**
+     * NIP-04/44 decryptions and encryptions through account signers. Durations
+     * are only metered for local-key signers (CPU cost); external/remote
+     * signer waits are IPC/network, tracked by the sign/decrypt counts alone.
+     */
+    const val DECRYPT_COUNT = "crypto.decrypt.count"
+    const val DECRYPT_US = "crypto.decrypt.us"
+    const val ENCRYPT_COUNT = "crypto.encrypt.count"
+    const val ENCRYPT_US = "crypto.encrypt.us"
+
+    /** `sign.nip46.count` — signatures by signer kind: local key, NIP-55 (Amber IPC), NIP-46 (relay round-trip). */
+    fun signs(kind: String): String = "sign.$kind.count"
+
+    const val SIGNER_LOCAL = "local"
+    const val SIGNER_NIP46 = "nip46"
+    const val SIGNER_NIP55 = "nip55"
+
+    /**
+     * Measured battery drain (percent points while discharging), split by
+     * visibility. Not app-isolated — it's the ground truth the other counters
+     * get correlated against across reports.
+     */
+    const val BATTERY_DRAIN_FG = "battery.drain.fg"
+    const val BATTERY_DRAIN_BG = "battery.drain.bg"
+
     fun dim(
         mobile: Boolean,
         foreground: Boolean,

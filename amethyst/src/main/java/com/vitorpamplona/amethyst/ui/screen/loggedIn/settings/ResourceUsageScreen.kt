@@ -291,6 +291,42 @@ private fun ActivitySection(s: UsageSummary) {
         MetricRow(R.string.resource_usage_worker_runs, s.workerRuns.toString())
         SettingsDivider()
         MetricRow(R.string.resource_usage_app_starts, s.appStarts.toString())
+        if (s.decryptCount > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_decrypts, s.decryptCount.toString())
+        }
+        if (s.signNip46 + s.signNip55 > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_remote_signs, (s.signNip46 + s.signNip55).toString())
+        }
+        if (s.powMs > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_pow, formatDurationMs(s.powMs))
+        }
+        if (s.torMs > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_tor, formatDurationMs(s.torMs))
+        }
+        if (s.alwaysOnMs > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_always_on, formatDurationMs(s.alwaysOnMs))
+        }
+        if (s.callMs > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_calls, formatDurationMs(s.callMs))
+        }
+        if (s.nestsMs > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_nests, formatDurationMs(s.nestsMs))
+        }
+        if (s.locationMs > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_location, formatDurationMs(s.locationMs))
+        }
+        if (s.batteryDrainFg + s.batteryDrainBg > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_battery_drain, "${s.batteryDrainFg}% / ${s.batteryDrainBg}%")
+        }
     }
 }
 
