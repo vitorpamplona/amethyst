@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
@@ -446,7 +447,7 @@ private fun ConcordRoomCompose(
 
     ChannelName(
         channelIdHex = channel.channelId.channelId,
-        channelPicture = channel.communityIcon,
+        channelPicture = rememberConcordImageModel(channel.communityIcon, accountViewModel),
         channelTitle = { modifier ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
                 Text(
@@ -549,7 +550,7 @@ private fun ConcordServerRoomCompose(
 
     ChannelName(
         channelIdHex = row.communityId,
-        channelPicture = metadata?.icon,
+        channelPicture = rememberConcordImageModel(metadata?.icon, accountViewModel),
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, R.string.concord_server_label, modifier) },
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,

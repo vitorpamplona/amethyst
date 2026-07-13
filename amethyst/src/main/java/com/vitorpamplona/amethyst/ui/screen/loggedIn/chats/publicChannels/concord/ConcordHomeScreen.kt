@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -164,7 +165,7 @@ fun ConcordHomeScreen(
                         CommunityHeader(
                             communityId = entry.id,
                             name = state?.metadata?.name?.takeIf { it.isNotBlank() } ?: entry.name.ifBlank { stringRes(R.string.concord_home_title) },
-                            iconUrl = state?.metadata?.icon,
+                            iconPointer = state?.metadata?.icon,
                             channelCount = state?.channels?.size ?: 0,
                             expanded = isOpen,
                             accountViewModel = accountViewModel,
@@ -213,7 +214,7 @@ private fun CommunityRail(
         contentPadding = PaddingValues(horizontal = 16.dp),
     ) {
         items(communities, key = { it.id }) { entry ->
-            val iconUrl =
+            val iconPointer =
                 accountViewModel.account.concordSessions
                     .sessionFor(entry.id)
                     ?.state
@@ -221,11 +222,12 @@ private fun CommunityRail(
                     ?.metadata
                     ?.icon
                     .takeIf { revision >= 0 }
+            val iconModel = rememberConcordImageModel(iconPointer, accountViewModel)
             val isOpen = entry.id in expanded
             val ring = if (isOpen) MaterialTheme.colorScheme.primary else Color.Transparent
             RobohashFallbackAsyncImage(
                 robot = entry.id,
-                model = iconUrl,
+                model = iconModel,
                 contentDescription = entry.name,
                 modifier =
                     Modifier
@@ -245,7 +247,7 @@ private fun CommunityRail(
 private fun CommunityHeader(
     communityId: String,
     name: String,
-    iconUrl: String?,
+    iconPointer: ImagePointer?,
     channelCount: Int,
     expanded: Boolean,
     accountViewModel: AccountViewModel,
@@ -253,6 +255,7 @@ private fun CommunityHeader(
     onOpen: () -> Unit,
 ) {
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
+    val iconModel = rememberConcordImageModel(iconPointer, accountViewModel)
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -260,7 +263,7 @@ private fun CommunityHeader(
     ) {
         RobohashFallbackAsyncImage(
             robot = communityId,
-            model = iconUrl,
+            model = iconModel,
             contentDescription = name,
             modifier = Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onOpen),
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),

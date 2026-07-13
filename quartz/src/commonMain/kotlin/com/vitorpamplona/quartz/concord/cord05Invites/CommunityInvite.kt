@@ -20,17 +20,9 @@
  */
 package com.vitorpamplona.quartz.concord.cord05Invites
 
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-
-/** An encrypted-media image reference (CORD-02): where the bytes are and how to decrypt them. */
-@Serializable
-class ImagePointer(
-    val url: String = "",
-    val key: String = "",
-    val nonce: String = "",
-    val hash: String = "",
-)
 
 /** A channel grant carried in an invite: its id, delivered [key], [epoch], and [name]. */
 @Serializable

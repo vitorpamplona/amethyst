@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -61,8 +62,12 @@ class ConcordChannel(
     var communityName: String? = null
         private set
 
-    /** The parent community's icon URL, from its folded metadata (null if unset). */
-    var communityIcon: String? = null
+    /** The parent community's encrypted-media icon pointer, from its folded metadata (null if unset). */
+    var communityIcon: ImagePointer? = null
+        private set
+
+    /** The parent community's encrypted-media banner pointer, from its folded metadata (null if unset). */
+    var communityBanner: ImagePointer? = null
         private set
 
     /** The community's bootstrap relays — a channel plane may be mirrored on all of them. */
@@ -103,6 +108,7 @@ class ConcordChannel(
         val newPrivate = def?.private ?: isPrivate
         val newCommunityName = state.metadata?.name
         val newCommunityIcon = state.metadata?.icon
+        val newCommunityBanner = state.metadata?.banner
         val newMembership = ConcordMembership.of(state.authority, myPubKey)
 
         val changed =
@@ -111,6 +117,7 @@ class ConcordChannel(
                 isPrivate != newPrivate ||
                 communityName != newCommunityName ||
                 communityIcon != newCommunityIcon ||
+                communityBanner != newCommunityBanner ||
                 membership != newMembership
 
         channelName = newChannelName
@@ -118,6 +125,7 @@ class ConcordChannel(
         isPrivate = newPrivate
         communityName = newCommunityName
         communityIcon = newCommunityIcon
+        communityBanner = newCommunityBanner
         communityRelays = relays
         membership = newMembership
         return changed

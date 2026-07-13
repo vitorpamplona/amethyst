@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
@@ -93,7 +94,7 @@ fun ConcordEditScreen(
         if (!prefilled && md != null) {
             name.value = md.name
             about.value = md.description.orEmpty()
-            iconUrl.value = md.icon.orEmpty()
+            iconUrl.value = md.icon?.url.orEmpty()
             prefilled = true
         }
     }
@@ -143,7 +144,11 @@ fun ConcordEditScreen(
                                 communityId = communityId,
                                 name = name.value.trim(),
                                 description = about.value.trim().ifBlank { null },
-                                icon = iconUrl.value.trim().ifBlank { null },
+                                icon =
+                                    iconUrl.value
+                                        .trim()
+                                        .ifBlank { null }
+                                        ?.let { ImagePointer(url = it) },
                                 relays = state?.metadata?.relays ?: session.entry.relays,
                             )
                         working = false

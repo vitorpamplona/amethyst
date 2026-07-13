@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
@@ -125,7 +126,7 @@ object ConcordActions {
         createdAt: Long,
         description: String? = null,
         relays: List<String> = emptyList(),
-        icon: String? = null,
+        icon: ImagePointer? = null,
     ): NewConcordCommunity = ConcordCommunityFactory.create(ownerSigner, name, createdAt, description, relays, icon)
 
     /** Opens the control-plane [wraps] into their [ControlEdition]s (drops any that don't open/parse). */

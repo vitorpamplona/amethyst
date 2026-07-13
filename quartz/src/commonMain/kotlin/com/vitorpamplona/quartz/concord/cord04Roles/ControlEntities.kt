@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -99,13 +100,19 @@ class ChannelEntity(
 )
 
 /**
- * A community's Metadata content (CORD-02): display [name], optional [icon] and
- * [description], and the community's bootstrap [relays]. Client-extensible.
+ * A community's Metadata content (CORD-02): display [name], optional [description], the community's
+ * bootstrap [relays], and the encrypted-media [icon]/[banner] pointers. Client-extensible.
+ *
+ * [icon]/[banner] are CORD-02 §6 [ImagePointer]s (an object `{url,key,nonce,hash}`), NOT plain URLs —
+ * the wire shape is pinned to the Concord v2 reference client. Deserializing them into anything else
+ * (e.g. a `String`) fails the whole entity's decode, which is why a wrong type silently drops the
+ * community name too.
  */
 @Serializable
 class MetadataEntity(
     val name: String = "",
-    val icon: String? = null,
+    val icon: ImagePointer? = null,
+    val banner: ImagePointer? = null,
     val description: String? = null,
     val relays: List<String> = emptyList(),
 )

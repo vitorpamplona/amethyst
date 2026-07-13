@@ -76,7 +76,7 @@ object ConcordCommunityFactory {
         createdAt: Long,
         description: String? = null,
         relays: List<String> = emptyList(),
-        icon: String? = null,
+        icon: ImagePointer? = null,
     ): NewConcordCommunity {
         val ownerXOnly = ownerSigner.pubKey.hexToByteArray()
         val ownerSalt = ConcordKeyDerivation.newOwnerSalt()

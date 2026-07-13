@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
@@ -133,7 +134,11 @@ fun ConcordCreateScreen(
                                 name = name.value.trim(),
                                 description = about.value.trim().ifBlank { null },
                                 relays = relays.map { it.url },
-                                icon = iconUrl.value.trim().ifBlank { null },
+                                icon =
+                                    iconUrl.value
+                                        .trim()
+                                        .ifBlank { null }
+                                        ?.let { ImagePointer(url = it) },
                             )
                         working = false
                         if (communityId != null) nav.newStack(Route.ConcordServer(communityId))

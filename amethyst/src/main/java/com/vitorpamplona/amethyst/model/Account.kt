@@ -145,6 +145,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
@@ -1935,7 +1936,7 @@ class Account(
         name: String,
         description: String? = null,
         relays: List<String> = emptyList(),
-        icon: String? = null,
+        icon: ImagePointer? = null,
     ): String? {
         if (!isWriteable()) return null
         val relayUrls = relays.ifEmpty { outboxRelays.flow.value.map { it.url } }
@@ -2443,7 +2444,7 @@ class Account(
         communityId: String,
         name: String,
         description: String?,
-        icon: String?,
+        icon: ImagePointer?,
         relays: List<String>,
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
