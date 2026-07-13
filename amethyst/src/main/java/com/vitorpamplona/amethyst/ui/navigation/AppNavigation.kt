@@ -606,6 +606,8 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ChatMinichat> {
             MinichatScreen(
                 rootId = it.rootId,
+                concordCommunityId = it.concordCommunityId,
+                concordChannelId = it.concordChannelId,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

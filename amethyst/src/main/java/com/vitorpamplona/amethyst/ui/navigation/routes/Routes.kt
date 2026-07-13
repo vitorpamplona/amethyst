@@ -709,9 +709,14 @@ sealed class Route {
 
     // The "minichat" of a chat message: its kind-1111 thread replies, opened from the message and
     // rendered as a chat-within-a-chat. Keyed by the root message id; the screen resolves the chat
-    // context (Concord channel, public chat, relay group) from the note's gatherer.
+    // context (Concord channel, public chat, relay group) from the note's gatherer. When opened from
+    // a Concord reply whose parent message may not be cached, [concordCommunityId]/[concordChannelId]
+    // carry the plane context (taken from the reply's channel), so the screen can still subscribe the
+    // plane and backfill the parent — without them, a reply to an unloaded parent can't pick the relay.
     @Serializable data class ChatMinichat(
         val rootId: HexKey,
+        val concordCommunityId: String? = null,
+        val concordChannelId: String? = null,
     ) : Route()
 
     @Serializable data class ChannelMetadataEdit(

@@ -54,11 +54,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -67,6 +70,9 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -85,17 +91,29 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 @Composable
 fun MinichatScreen(
     rootId: String,
+    concordCommunityId: String? = null,
+    concordChannelId: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val rootNote = remember(rootId) { LocalCache.getOrCreateNote(rootId) }
-    val isConcord = remember(rootNote) { rootNote.inGatherers?.any { it is ConcordChannel } == true }
 
-    // Datasource: keep the thread replies flowing no matter the entry point. Concord replies
-    // arrive over the channel plane; public-chat (NIP-28/NIP-29) replies over a relay REQ for
-    // this message's kind-1111 children (a no-op for Concord).
+    // Resolve the Concord channel from the (loaded) root note's gatherer, else from the ids threaded
+    // in by the reply that opened this minichat. The latter is what lets a reply-to-an-unloaded-parent
+    // still pick the plane + relays: the reply arrived over the channel plane, so its channel id is known.
+    val concordChannel = remember(rootNote) { rootNote.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } }
+    val communityId = concordCommunityId ?: concordChannel?.channelId?.communityId
+    val channelId = concordChannelId ?: concordChannel?.channelId?.channelId
+    val isConcord = communityId != null && channelId != null
+
+    // Datasource: keep the thread replies flowing no matter the entry point. Concord replies arrive
+    // over the channel plane, so mount the plane subscription plus this channel's backward-history
+    // pager and page it until the parent message loads (see [ConcordMinichatBackfillUntilRoot]);
+    // public-chat (NIP-28/NIP-29) replies come over a relay REQ for this message's kind-1111 children.
     if (isConcord) {
         ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
+        ConcordChannelHistorySubscription(communityId!!, channelId!!, accountViewModel.dataSources().concordChannelHistory, accountViewModel)
+        ConcordMinichatBackfillUntilRoot(rootNote, accountViewModel.dataSources().concordChannelHistory.history)
     }
     EventFinderFilterAssemblerSubscription(rootNote, accountViewModel)
 
@@ -193,5 +211,26 @@ fun MinichatScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * Pages the Concord channel's backward history until the minichat's parent message loads (or the
+ * relays are exhausted). Reaching a minichat from a reply notification can land on a parent that
+ * isn't in the live tail; the reply itself pinned the channel context, so we can walk the plane
+ * history back to fetch the parent — after which its whole kind-1111 thread projects normally. The
+ * `!loading` gate serializes pages; once the root's event is present, or nothing is left, it latches off.
+ */
+@Composable
+private fun ConcordMinichatBackfillUntilRoot(
+    rootNote: Note,
+    history: ConcordChannelHistorySubAssembler,
+) {
+    LaunchedEffect(rootNote, history) {
+        combine(history.loadingMore, history.status) { loading, status ->
+            rootNote.event == null && !loading && !status.exhausted
+        }.distinctUntilChanged()
+            .filter { it }
+            .collect { history.advanceAll() }
     }
 }

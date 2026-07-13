@@ -66,10 +66,42 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
+/**
+ * A minichat reply — a kind-1111 [CommentEvent] posted into a chat message's thread — should open
+ * that message's minichat ([Route.ChatMinichat]), not the whole channel it lives in. Regular chat
+ * messages are kind 9 / 42, so a [CommentEvent] in a *chat context* is always a thread reply. We
+ * gate on the chat context (the reply is attached to a Concord / relay-group / public-chat gatherer,
+ * or its root message is) precisely so a generic NIP-22 comment on an article or note keeps its own
+ * thread route and isn't mistaken for a minichat. Returns null when it isn't a chat-context comment.
+ */
+fun minichatRouteFor(note: Note): Route? {
+    val comment = note.event as? CommentEvent ?: return null
+    val rootId = comment.rootEventIds().firstOrNull() ?: return null
+
+    // Prefer the reply's own Concord channel (the reply arrived over that plane, so its gatherer
+    // always carries the community/channel), else the root note's if it happens to be loaded. Passing
+    // these lets the minichat screen resolve the plane + relays even when the parent isn't cached.
+    val concord =
+        note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+            ?: LocalCache.getNoteIfExists(rootId)?.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concord != null) {
+        return Route.ChatMinichat(rootId, concord.channelId.communityId, concord.channelId.channelId)
+    }
+
+    val inChatContext = note.isInChatGatherer() || LocalCache.getNoteIfExists(rootId)?.isInChatGatherer() == true
+    return if (inChatContext) Route.ChatMinichat(rootId) else null
+}
+
+private fun Note.isInChatGatherer(): Boolean = inGatherers?.any { it is ConcordChannel || it is RelayGroupChannel || it is PublicChatChannel } == true
+
 fun routeFor(
     note: Note,
     loggedIn: Account,
 ): Route? {
+    // A minichat reply opens the message's thread, not the whole channel it belongs to. Must run
+    // before the channel-gatherer shortcuts below, which would otherwise swallow it into the channel.
+    minichatRouteFor(note)?.let { return it }
+
     // Marmot group messages should navigate to the group chat
     val marmotGroup = note.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
