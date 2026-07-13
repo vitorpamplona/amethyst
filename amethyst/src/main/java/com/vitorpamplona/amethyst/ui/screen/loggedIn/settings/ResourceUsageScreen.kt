@@ -39,6 +39,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
@@ -65,6 +67,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssem
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatDurationMs
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -140,6 +143,7 @@ fun ResourceUsageScreen(
                 }
                 SubsystemSection(weekSummary)
                 ActivitySection(weekSummary)
+                AlwaysOnServiceSection(weekSummary, nav)
                 MemorySection(memory)
                 SendReportSection(accountViewModel, nav, loaded, today, memory)
             }
@@ -310,10 +314,6 @@ private fun ActivitySection(s: UsageSummary) {
             SettingsDivider()
             MetricRow(R.string.resource_usage_tor, formatDurationMs(s.torMs))
         }
-        if (s.alwaysOnMs > 0) {
-            SettingsDivider()
-            MetricRow(R.string.resource_usage_always_on, formatDurationMs(s.alwaysOnMs))
-        }
         if (s.callMs > 0) {
             SettingsDivider()
             MetricRow(R.string.resource_usage_calls, formatDurationMs(s.callMs))
@@ -397,6 +397,55 @@ private fun MemorySection(memory: MemorySnapshot?) {
         MetricRow(R.string.resource_usage_memory_chatrooms, memory.chatroomCount.toString())
         SettingsDivider()
         MetricRow(R.string.resource_usage_memory_device_class, "${memory.memoryClassMb} MB")
+    }
+}
+
+/**
+ * Decision-support card for the always-on notification service — the one
+ * background consumer users can directly turn off. Shows what the service
+ * actually costs in the last 7 days (uptime, the relay connections it holds
+ * while the app is closed, and the measured background battery drain) and
+ * links straight to the setting that controls it.
+ */
+@Composable
+private fun AlwaysOnServiceSection(
+    s: UsageSummary,
+    nav: INav,
+) {
+    if (s.alwaysOnMs <= 0) return
+    val starts = s.alwaysOnStarts.toInt()
+    SettingsSection(R.string.resource_usage_alwayson_section) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.resource_usage_alwayson_explanation),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        MetricRow(
+            R.string.resource_usage_alwayson_uptime,
+            "${formatDurationMs(s.alwaysOnMs)} · ${pluralStringResource(R.plurals.resource_usage_alwayson_starts, starts, starts)}",
+        )
+        SettingsDivider()
+        MetricRow(
+            R.string.resource_usage_alwayson_bg_relay,
+            formatConnHours(s.relayConnMsMobileBg + s.relayConnMsWifiBg),
+        )
+        if (s.batteryDrainBg > 0) {
+            SettingsDivider()
+            MetricRow(R.string.resource_usage_alwayson_battery, "${s.batteryDrainBg}%")
+        }
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            TextButton(
+                onClick = { nav.nav(Route.NotificationSettings) },
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringRes(R.string.resource_usage_alwayson_settings_button))
+            }
+        }
     }
 }
 

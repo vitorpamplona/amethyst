@@ -3213,11 +3213,20 @@
     <string name="resource_usage_remote_signs">Remote signatures</string>
     <string name="resource_usage_pow">Proof-of-work mining</string>
     <string name="resource_usage_tor">Tor uptime</string>
-    <string name="resource_usage_always_on">Always-on notification service</string>
     <string name="resource_usage_calls">Time in calls</string>
     <string name="resource_usage_nests">Time in audio rooms</string>
     <string name="resource_usage_location">Location listening</string>
     <string name="resource_usage_battery_drain">Battery used (in app / background)</string>
+    <string name="resource_usage_alwayson_section">Background notification service</string>
+    <string name="resource_usage_alwayson_explanation">Keeps connections to your relays open while the app is closed, so notifications arrive without Google’s push servers. While enabled, this is usually the largest background battery cost. If battery matters more to you than instant notifications, you can change the delivery method or turn it off.</string>
+    <string name="resource_usage_alwayson_uptime">Running time</string>
+    <plurals name="resource_usage_alwayson_starts">
+        <item quantity="one">%1$d start</item>
+        <item quantity="other">%1$d starts</item>
+    </plurals>
+    <string name="resource_usage_alwayson_bg_relay">Relay connections held while closed</string>
+    <string name="resource_usage_alwayson_battery">Battery drained meanwhile (whole device)</string>
+    <string name="resource_usage_alwayson_settings_button">Change notification settings</string>
     <string name="resource_usage_by_subsystem">Data by feature (7 days)</string>
     <string name="resource_usage_subsystem_relay">Relay sync</string>
     <string name="resource_usage_subsystem_image">Images</string>
