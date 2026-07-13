@@ -676,16 +676,97 @@ class UsageInsightsTest {
 
     @Test
     fun backgroundRelayTimeWithAlwaysOnSuggestsNotificationSettings() {
+        // Service ran 100 of the ~168 background hours: it owns the connections.
         val s =
             summary(
                 mapOf(
-                    UsageKeys.ALWAYS_ON_MS to 24L * 3_600_000L,
+                    UsageKeys.ALWAYS_ON_MS to 100L * 3_600_000L,
                     UsageKeys.relayConnMs(mobile = true, foreground = false) to 7L * 4L * 3_600_000L,
                 ),
                 days = 7,
             )
         val insights = UsageInsights.evaluate(s)
         assertEquals(UsageInsights.Target.NOTIFICATION_SETTINGS, insights.first().target)
+    }
+
+    @Test
+    fun briefServiceUptimeIsNotBlamedForBackgroundConnectionsItCannotOwn() {
+        // Service ran 1h all week; 28h of background connections came from
+        // something else (e.g. background audio) — no notification insight.
+        val s =
+            summary(
+                mapOf(
+                    UsageKeys.ALWAYS_ON_MS to 1L * 3_600_000L,
+                    UsageKeys.relayConnMs(mobile = true, foreground = false) to 7L * 4L * 3_600_000L,
+                ),
+                days = 7,
+            )
+        assertTrue(UsageInsights.evaluate(s).none { it.target == UsageInsights.Target.NOTIFICATION_SETTINGS })
+    }
+
+    @Test
+    fun insightsAreRankedByEstimatedImpactNotDeclarationOrder() {
+        // PoW at 100h scores ~300; the notification insight scores ~150 —
+        // PoW must come first even though its rule is declared later.
+        val s =
+            summary(
+                mapOf(
+                    UsageKeys.ALWAYS_ON_MS to 150L * 3_600_000L,
+                    UsageKeys.relayConnMs(mobile = true, foreground = false) to 7L * 4L * 3_600_000L,
+                    UsageKeys.POW_MS to 100L * 3_600_000L,
+                ),
+                days = 7,
+            )
+        val insights = UsageInsights.evaluate(s)
+        assertEquals(UsageInsights.Target.POW_SETTINGS, insights[0].target)
+        assertEquals(UsageInsights.Target.NOTIFICATION_SETTINGS, insights[1].target)
+    }
+
+    @Test
+    fun powMiningTimeSuggestsComposeSettings() {
+        val s = summary(mapOf(UsageKeys.POW_MS to 7L * 15L * 60_000L), days = 7)
+        assertTrue(UsageInsights.evaluate(s).any { it.target == UsageInsights.Target.POW_SETTINGS })
+    }
+
+    @Test
+    fun reconnectChurnSuggestsReviewingTheRelayList() {
+        val s = summary(mapOf(UsageKeys.relayConnects(mobile = true, foreground = false) to 7L * 600L), days = 7)
+        assertTrue(UsageInsights.evaluate(s).any { it.target == UsageInsights.Target.RELAY_CHURN })
+    }
+
+    @Test
+    fun pushProcessingTimeSuggestsNotificationSettings() {
+        val s = summary(mapOf(UsageKeys.WAKELOCK_NOTIF_MS to 7L * 10L * 60_000L), days = 7)
+        assertTrue(UsageInsights.evaluate(s).any { it.target == UsageInsights.Target.PUSH_PROCESSING })
+    }
+
+    @Test
+    fun foregroundDominatedDrainLeadsWithTheHonestyNote() {
+        val s =
+            summary(
+                mapOf(
+                    UsageKeys.BATTERY_DRAIN_FG to 20L,
+                    UsageKeys.BATTERY_DRAIN_BG to 2L,
+                    UsageKeys.TOR_MS to 7L * 5L * 3_600_000L,
+                ),
+                days = 7,
+            )
+        val insights = UsageInsights.evaluate(s)
+        assertEquals(UsageInsights.Target.FOREGROUND_INFO, insights.first().target)
+        assertTrue(insights.any { it.target == UsageInsights.Target.PRIVACY_SETTINGS })
+    }
+
+    @Test
+    fun balancedDrainDoesNotAddTheHonestyNote() {
+        val s =
+            summary(
+                mapOf(
+                    UsageKeys.BATTERY_DRAIN_FG to 10L,
+                    UsageKeys.BATTERY_DRAIN_BG to 8L,
+                ),
+                days = 7,
+            )
+        assertTrue(UsageInsights.evaluate(s).none { it.target == UsageInsights.Target.FOREGROUND_INFO })
     }
 
     @Test
@@ -745,7 +826,7 @@ class UsageInsightsTest {
         val s =
             summary(
                 mapOf(
-                    UsageKeys.ALWAYS_ON_MS to 24L * 3_600_000L,
+                    UsageKeys.ALWAYS_ON_MS to 168L * 3_600_000L,
                     UsageKeys.relayConnMs(mobile = true, foreground = false) to 40L * 7L * 24L * 3_600_000L,
                     UsageKeys.net(UsageKeys.ROLE_VIDEO, mobile = true, foreground = true, received = true) to 7L * 200L * 1024L * 1024L,
                     UsageKeys.TOR_MS to 7L * 10L * 3_600_000L,

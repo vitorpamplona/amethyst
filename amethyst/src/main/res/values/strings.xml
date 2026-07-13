@@ -3228,9 +3228,19 @@
     <string name="resource_usage_alwayson_battery">Battery drained meanwhile (whole device)</string>
     <string name="resource_usage_alwayson_settings_button">Change notification settings</string>
     <string name="resource_usage_insights_section">What’s using your battery</string>
-    <string name="resource_usage_insight_notifications">Relay connections held while the app was closed are your largest background cost (%1$s).</string>
+    <string name="resource_usage_insight_notifications">The always-on notification service held relay connections open for %1$s while the app was in the background.</string>
+    <string name="resource_usage_insight_foreground">Most of your measured battery use (%1$s%%) happened while you were actively using the app — screen and browsing, not background activity. Settings changes mainly reduce the background share.</string>
+    <plurals name="resource_usage_insight_churn">
+        <item quantity="one">Relays reconnected %1$d time. Frequent reconnections usually mean an unreliable relay in your list — each retry pays a new handshake and a radio wake-up.</item>
+        <item quantity="other">Relays reconnected %1$d times. Frequent reconnections usually mean an unreliable relay in your list — each retry pays a new handshake and a radio wake-up.</item>
+    </plurals>
+    <string name="resource_usage_insight_pow">Proof-of-work mining ran the processor at full speed for %1$s. Lowering the default difficulty reduces this directly.</string>
+    <string name="resource_usage_insight_push">Processing incoming notifications kept the device awake for %1$s. Changing how notifications are delivered can reduce it.</string>
     <string name="resource_usage_insight_media">%1$s of images, video, and previews were downloaded over cellular. Media loading can be limited to Wi-Fi.</string>
-    <string name="resource_usage_insight_relays">The app kept %1$s relay connections open on average. Each open connection keeps the radio awake — fewer relays means longer battery.</string>
+    <plurals name="resource_usage_insight_relays">
+        <item quantity="one">The app kept %1$d relay connection open on average. Each open connection keeps the radio awake — fewer relays means longer battery.</item>
+        <item quantity="other">The app kept %1$d relay connections open on average. Each open connection keeps the radio awake — fewer relays means longer battery.</item>
+    </plurals>
     <string name="resource_usage_insight_tor">Built-in Tor ran for %1$s. Tor spends extra battery on encryption and keep-alives for the same traffic.</string>
     <string name="resource_usage_insight_button_media">Media settings</string>
     <string name="resource_usage_insight_button_relays">Edit relays</string>
