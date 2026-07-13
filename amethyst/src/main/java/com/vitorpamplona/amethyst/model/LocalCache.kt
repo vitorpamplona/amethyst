@@ -750,9 +750,20 @@ object LocalCache : ILocalCache, ICacheProvider {
         // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
         // so the note already carries its ConcordChannel gatherer when it flows through
         // the Messages-list incremental filter (which routes rows by that gatherer).
-        if (rumor is ChatEvent || rumor is CommentEvent) {
-            getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex)).addNote(getOrCreateNote(rumor.id))
-        }
+        val messageRow =
+            if (rumor is ChatEvent || rumor is CommentEvent) {
+                val ch = getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
+                val note = getOrCreateNote(rumor.id)
+                // Skip attaching a row for a message we already know is deleted (its kind-5 delete
+                // was processed first). Otherwise every reproject — which re-emits the whole wrap
+                // buffer — would re-add then re-remove it, churning the feed. justConsume still
+                // records the (already-known) deletion below; a delete arriving LATER is handled by
+                // the normal deletion cascade unlinking the note from its gatherers.
+                if (!deletionIndex.hasBeenDeleted(rumor)) ch.addNote(note)
+                ch to note
+            } else {
+                null
+            }
         // wasVerified = true: a Concord rumor is unsigned (its `sig` is empty), so a signature
         // check would fail and the event would never load onto its Note — leaving the chat row
         // stuck on the "loading / not found" placeholder. Its authenticity is already established
@@ -760,6 +771,16 @@ object LocalCache : ILocalCache, ICacheProvider {
         // binds rumor.pubKey == seal.pubKey, and checks rumor.verifyId()), exactly like a NIP-59
         // gift-wrapped DM rumor, so we consume it as pre-verified.
         justConsume(rumor, null, true)
+
+        // justConsume bails without loading the event when the rumor has already been deleted
+        // (a kind-5 delete referencing it was processed first — easy to hit in Concord because a
+        // reproject re-emits the whole wrap buffer and ordering isn't guaranteed) or fails to
+        // verify. We attached the row up front, so an unpopulated note would otherwise linger as a
+        // permanent "Event is loading…" ghost. Drop it; the reverse order (delete after the message)
+        // is already handled by the normal deletion cascade unlinking the note from its gatherers.
+        messageRow?.let { (ch, note) ->
+            if (note.event == null) ch.removeNote(note)
+        }
     }
 
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
