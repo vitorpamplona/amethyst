@@ -107,18 +107,24 @@ class ConcordSessionManager(
 
     /**
      * The stream secret keys that must answer a NIP-42 AUTH challenge from [relay]:
-     * every plane (control + folded channels) of every joined community whose relays
-     * include [relay]. Concord relays serve a plane's kind-1059 wraps only to a
-     * connection authenticated as that stream key, so the relay-auth layer signs a
-     * kind-22242 with each of these (locally, never the user's signer) — without them
-     * the connection is authed only as the user, the plane REQ is refused, and no
-     * channel or message ever loads.
+     * every plane of every joined community whose relays include [relay] — the Control
+     * Plane + folded channels ([ConcordCommunitySession.streamKeys]) plus the Guestbook
+     * and next-epoch base-rekey planes ([ConcordCommunitySession.auxStreamKeys]). Concord
+     * relays serve a plane's kind-1059 wraps only to a connection authenticated as that
+     * stream key, so the relay-auth layer signs a kind-22242 with each of these (locally,
+     * never the user's signer) — without them the plane REQ is refused. Since the relay
+     * re-authenticates on an `auth-required` CLOSED, a key revealed only after the Control
+     * Plane folds (a channel) is picked up on the retry; the aux keys derive from the entry
+     * alone, so they authenticate on the initial connection.
      */
     fun streamAuthSecretsFor(relay: NormalizedRelayUrl): List<ByteArray> {
         val out = ArrayList<ByteArray>()
         for (session in registry.sessions()) {
             val relays = session.entry.relays.mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
-            if (relay in relays) session.streamKeys().forEach { out.add(it.secretKey) }
+            if (relay in relays) {
+                session.streamKeys().forEach { out.add(it.secretKey) }
+                session.auxStreamKeys().forEach { out.add(it.secretKey) }
+            }
         }
         return out
     }

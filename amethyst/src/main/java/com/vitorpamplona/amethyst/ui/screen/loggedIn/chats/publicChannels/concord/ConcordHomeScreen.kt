@@ -329,11 +329,23 @@ private fun CommunityHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (channelKeys.isNotEmpty()) {
+            val memberCount =
+                remember(revision) {
+                    accountViewModel.account.concordSessions
+                        .sessionFor(communityId)
+                        ?.memberCount() ?: 0
+                }
+            val parts = mutableListOf<String>()
+            if (channelKeys.isNotEmpty()) parts += pluralStringResource(R.plurals.concord_channel_count, channelKeys.size, channelKeys.size)
+            if (memberCount > 0) parts += pluralStringResource(R.plurals.concord_member_count, memberCount, memberCount)
+            val subtitle = parts.joinToString(" · ")
+            if (subtitle.isNotEmpty()) {
                 Text(
-                    pluralStringResource(R.plurals.concord_channel_count, channelKeys.size, channelKeys.size),
+                    subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

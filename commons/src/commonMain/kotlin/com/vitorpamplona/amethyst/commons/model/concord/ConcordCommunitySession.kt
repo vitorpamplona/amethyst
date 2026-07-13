@@ -104,6 +104,22 @@ class ConcordCommunitySession(
     /** The live Guestbook membership set (self-signed joins minus later leaves). */
     val members: StateFlow<Set<HexKey>> = _members
 
+    /**
+     * The community's full membership (lowercase hex): everyone who announced on the Guestbook,
+     * plus the owner and every role-holder (who are members whether or not they posted a join),
+     * minus the banned. Best-effort — a member who joined without a Guestbook motion and holds no
+     * role is invisible (key possession leaves no trace), so this is a floor, not a census.
+     */
+    fun allMembers(): Set<HexKey> {
+        val s = _state.value
+        val roster = if (s != null) s.authority.roleHolders() + s.ownerPubKey.lowercase() else emptySet()
+        val banned = s?.authority?.bannedMembers().orEmpty()
+        return (_members.value + roster) - banned
+    }
+
+    /** The size of [allMembers] — the community's true (best-effort) member count. */
+    fun memberCount(): Int = allMembers().size
+
     /** The current Chat Plane addresses to subscribe to, one per folded channel. */
     fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys.toSet() }
 

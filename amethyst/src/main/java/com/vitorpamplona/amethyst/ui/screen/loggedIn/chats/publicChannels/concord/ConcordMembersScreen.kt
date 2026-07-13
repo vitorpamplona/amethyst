@@ -94,12 +94,19 @@ fun ConcordMembersScreen(
     val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
     val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
 
+    // The Guestbook membership (self-signed joins), so plain members show alongside the owner,
+    // admins and banned — not just the privileged roster the Control Plane traces.
+    val guestbookMembers by (session?.members ?: remember { MutableStateFlow(emptySet<HexKey>()) }).collectAsStateWithLifecycle()
+
     val myPubKey = account.signer.pubKey
     val roster =
-        remember(state) {
+        remember(state, guestbookMembers) {
             val s = state ?: return@remember emptyList<RosterEntry>()
             val authority = s.authority
-            val pubkeys = (listOf(s.ownerPubKey) + authority.roleHolders() + authority.bannedMembers()).map { it.lowercase() }.distinct()
+            val pubkeys =
+                (listOf(s.ownerPubKey) + authority.roleHolders() + authority.bannedMembers() + guestbookMembers)
+                    .map { it.lowercase() }
+                    .distinct()
             pubkeys
                 .map { RosterEntry(it, ConcordMembership.of(authority, it)) }
                 .sortedWith(compareBy({ it.membership.sortRank() }, { it.pubkey }))
