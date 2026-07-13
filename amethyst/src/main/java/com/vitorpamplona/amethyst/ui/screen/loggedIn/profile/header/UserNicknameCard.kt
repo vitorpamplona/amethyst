@@ -80,7 +80,7 @@ fun UserNicknameCard(
 
     OutlinedCard(
         onClick = { isEditDialogOpen.value = true },
-        modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 3.5.dp),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(
