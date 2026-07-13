@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -450,6 +451,13 @@ private fun MinichatReplyChip(
     }
 }
 
+/**
+ * Id of a note whose reply-to preview should be suppressed on a message row. Set by a
+ * thread view that already pins that note at the top (the minichat pins its root), so each
+ * reply doesn't redundantly re-render the same parent as an inner quote. Null everywhere else.
+ */
+val LocalSuppressReplyToNoteId = compositionLocalOf<String?> { null }
+
 @Composable
 fun RenderReplyRow(
     note: Note,
@@ -462,7 +470,8 @@ fun RenderReplyRow(
     onScrollToNote: ((Note) -> Unit)? = null,
 ) {
     val replyTo = note.replyTo?.lastOrNull()
-    if (!innerQuote && replyTo != null && !isCitedInContent(note, replyTo)) {
+    val suppressId = LocalSuppressReplyToNoteId.current
+    if (!innerQuote && replyTo != null && replyTo.idHex != suppressId && !isCitedInContent(note, replyTo)) {
         RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
     }
 }

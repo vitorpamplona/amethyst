@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalSuppressReplyToNoteId
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
@@ -148,27 +150,31 @@ fun MinichatScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxHeight().padding(padding)) {
-            LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f, true)) {
-                item("root") {
-                    ChatroomMessageCompose(
-                        baseNote = rootNote,
-                        routeForLastRead = null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        onWantsToReply = {},
-                        onWantsToEditDraft = {},
-                    )
-                    HorizontalDivider()
-                }
-                items(replies, key = { it.idHex }) { reply ->
-                    ChatroomMessageCompose(
-                        baseNote = reply,
-                        routeForLastRead = null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        onWantsToReply = {},
-                        onWantsToEditDraft = {},
-                    )
+            // Every reply here is rooted at [rootNote], which is already pinned at the top — so
+            // suppress the redundant reply-to-root preview each reply would otherwise render.
+            CompositionLocalProvider(LocalSuppressReplyToNoteId provides rootId) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f, true)) {
+                    item("root") {
+                        ChatroomMessageCompose(
+                            baseNote = rootNote,
+                            routeForLastRead = null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onWantsToReply = {},
+                            onWantsToEditDraft = {},
+                        )
+                        HorizontalDivider()
+                    }
+                    items(replies, key = { it.idHex }) { reply ->
+                        ChatroomMessageCompose(
+                            baseNote = reply,
+                            routeForLastRead = null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onWantsToReply = {},
+                            onWantsToEditDraft = {},
+                        )
+                    }
                 }
             }
 
