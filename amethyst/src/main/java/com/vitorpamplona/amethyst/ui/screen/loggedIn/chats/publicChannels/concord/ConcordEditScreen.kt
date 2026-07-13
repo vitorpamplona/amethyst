@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -70,7 +71,13 @@ fun ConcordEditScreen(
     nav: INav,
 ) {
     val account = accountViewModel.account
-    val session = remember(account, communityId) { account.concordSessions.sessionFor(communityId) }
+
+    // Self-sufficient: mount the plane subscription so a deep link folds the community, and
+    // re-resolve the session on each revision so it resolves once the session exists.
+    ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
+
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
     val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
 
     val name = remember { mutableStateOf("") }

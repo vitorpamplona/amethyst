@@ -52,6 +52,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteMinichatReplyCount
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
@@ -400,8 +403,11 @@ private fun MessageBubbleLines(
 /**
  * A chip on a chat message's action row showing how many kind-1111 thread ("minichat")
  * replies it has; tapping opens that thread. Shown only when there is at least one — an
- * inline reply is an ordinary message and isn't counted. Shared across every chat type
- * (Concord, NIP-28, NIP-29, DMs), since they all render through this row.
+ * inline reply is an ordinary message and isn't counted.
+ *
+ * Only shown where minichats are actually wired: the public chats (Concord, NIP-28, NIP-29).
+ * NIP-17 DMs are deliberately excluded — most clients don't render kind-1111 replies in a DM
+ * view, so a thread there would be a dead end.
  */
 @Composable
 private fun MinichatReplyChip(
@@ -409,6 +415,12 @@ private fun MinichatReplyChip(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val supportsMinichat =
+        remember(note) {
+            note.inGatherers?.any { it is ConcordChannel || it is PublicChatChannel || it is RelayGroupChannel } == true
+        }
+    if (!supportsMinichat) return
+
     val count by observeNoteMinichatReplyCount(note, accountViewModel)
     if (count > 0) {
         Spacer(StdHorzSpacer)

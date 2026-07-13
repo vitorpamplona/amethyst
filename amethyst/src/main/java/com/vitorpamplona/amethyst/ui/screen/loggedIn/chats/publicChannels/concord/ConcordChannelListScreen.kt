@@ -82,7 +82,9 @@ fun ConcordChannelListScreen(
     ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
 
     val account = accountViewModel.account
-    val session = remember(account, communityId) { account.concordSessions.sessionFor(communityId) }
+    // Re-resolve on each revision so a deep link that lands before the session exists picks it up.
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
     val state by (session?.state ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) })
         .collectAsStateWithLifecycle()
 

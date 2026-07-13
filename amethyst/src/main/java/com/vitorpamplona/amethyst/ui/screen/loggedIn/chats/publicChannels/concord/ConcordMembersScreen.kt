@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
@@ -80,7 +81,15 @@ fun ConcordMembersScreen(
     nav: INav,
 ) {
     val account = accountViewModel.account
-    val session = remember(account, communityId) { account.concordSessions.sessionFor(communityId) }
+
+    // Self-sufficient: mount the Concord plane subscription so the community folds even when this
+    // screen is opened directly (deep link), not only from the hub.
+    ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
+
+    // Re-resolve the session as sessions are created/folded (revision-keyed), so a deep link that
+    // lands before the community's session exists still picks it up once it does.
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
     val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
 
     val myPubKey = account.signer.pubKey
