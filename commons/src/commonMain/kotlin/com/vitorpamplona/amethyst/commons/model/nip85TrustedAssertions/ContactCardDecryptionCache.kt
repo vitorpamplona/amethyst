@@ -44,20 +44,22 @@ class ContactCardDecryptionCache(
     suspend fun summary(event: ContactCardEvent) = cachedPrivateCards.mergeTagList(event).summary()
 
     /**
-     * The petname plus the card's full decrypted tag list, so renderers can
-     * resolve the NIP-30 `emoji` mappings stored alongside it.
+     * The decrypted petname and summary plus the card's full decrypted tag list,
+     * so renderers can resolve the NIP-30 `emoji` mappings stored alongside them.
      */
-    suspend fun petNameWithEmojis(event: ContactCardEvent): PetName? = cachedPrivateCards.mergeTagList(event).toPetName()
+    suspend fun nickname(event: ContactCardEvent): Nickname? = cachedPrivateCards.mergeTagList(event).toNickname()
 
     /**
      * Synchronous variant that only reads an already-decrypted card, for use as
      * the immediate value of UI flows. Returns null until the suspend path has
      * decrypted the card once.
      */
-    fun cachedPetNameWithEmojis(event: ContactCardEvent): PetName? = cachedPrivateCards.mergeTagListPrecached(event).toPetName()
+    fun cachedNickname(event: ContactCardEvent): Nickname? = cachedPrivateCards.mergeTagListPrecached(event).toNickname()
 
-    private fun TagArray.toPetName(): PetName? {
-        val name = petName() ?: return null
-        return PetName(name, toImmutableListOfLists())
+    private fun TagArray.toNickname(): Nickname? {
+        val name = petName()
+        val summary = summary()
+        if (name == null && summary == null) return null
+        return Nickname(name, summary, toImmutableListOfLists())
     }
 }

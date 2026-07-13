@@ -24,18 +24,25 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 
 /**
- * The nickname the account gave a user, together with the card's decrypted tag
- * list so renderers can resolve any NIP-30 `:shortcode:` custom emojis the
- * petname uses (the `emoji` mappings live encrypted next to the petname).
+ * The decrypted private fields of the account's contact card about a user: the
+ * nickname (petname) and the private note (summary), plus the card's decrypted
+ * tag list so renderers can resolve any NIP-30 `:shortcode:` custom emojis they
+ * use (the `emoji` mappings live encrypted next to them). Only built when at
+ * least one of the two fields is present.
  */
 @Immutable
-class PetName(
-    val petName: String,
+class Nickname(
+    val petName: String?,
+    val summary: String?,
     val tags: ImmutableListOfLists<String>,
 ) {
     // content equality so flow distinctUntilChanged() dedupes re-decryptions of
     // the same card (ImmutableListOfLists itself compares by identity)
-    override fun equals(other: Any?): Boolean = other is PetName && petName == other.petName && tags.lists.contentDeepEquals(other.tags.lists)
+    override fun equals(other: Any?): Boolean =
+        other is Nickname &&
+            petName == other.petName &&
+            summary == other.summary &&
+            tags.lists.contentDeepEquals(other.tags.lists)
 
-    override fun hashCode(): Int = 31 * petName.hashCode() + tags.contentHash()
+    override fun hashCode(): Int = 31 * (31 * petName.hashCode() + summary.hashCode()) + tags.contentHash()
 }

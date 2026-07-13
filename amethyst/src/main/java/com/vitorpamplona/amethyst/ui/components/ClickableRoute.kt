@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPetName
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -299,15 +299,16 @@ fun RenderUserAsClickableText(
     nav: INav,
 ) {
     val userState by observeUserInfo(baseUser, accountViewModel)
-    val petName by observeUserPetName(baseUser, accountViewModel)
+    val nickname by observeUserNickname(baseUser, accountViewModel)
+    val petName = nickname?.petName
 
     CreateClickableTextWithEmoji(
-        clickablePart = "@" + (petName?.petName ?: userState?.info?.bestName() ?: baseUser.pubkeyDisplayHex()),
+        clickablePart = "@" + (petName ?: userState?.info?.bestName() ?: baseUser.pubkeyDisplayHex()),
         suffix = additionalChars?.ifBlank { null },
         maxLines = 1,
         route = remember(baseUser) { routeFor(baseUser) },
         nav = nav,
-        tags = petName?.tags ?: userState?.tags ?: EmptyTagList,
+        tags = (if (petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
     )
 }
 

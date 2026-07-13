@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPetName
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.util.LongPressCopyText
@@ -107,17 +106,17 @@ fun DrawAdditionalInfo(
     val scope = rememberCoroutineScope()
     val identities by externalIdentities.identities.collectAsStateWithLifecycle()
 
-    val petName by observeUserPetName(baseUser, accountViewModel)
-
-    // the nickname the account gave this user wins over the profile's own name;
-    // the "@name" line below keeps the real handle visible for disambiguation
-    val displayName = petName?.petName ?: user.info.bestName()
+    val displayName = user.info.bestName()
 
     val ui = accountViewModel.settings.uiSettingsFlow
     val showBadges by ui.showProfileBadges.collectAsStateWithLifecycle()
     val showAppRecommendations by ui.showProfileAppRecommendations.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = SpacedBy3dp) {
+        // the nickname the account gave this user, on top of (not replacing)
+        // the profile's own display name below
+        UserNicknameCard(baseUser, accountViewModel)
+
         if (displayName != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -125,7 +124,7 @@ fun DrawAdditionalInfo(
             ) {
                 CreateTextWithEmoji(
                     text = displayName,
-                    tags = petName?.tags ?: user.tags,
+                    tags = user.tags,
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
                 )

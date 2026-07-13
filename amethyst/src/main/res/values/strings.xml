@@ -3545,6 +3545,7 @@
 
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <string name="edit_nickname">Edit nickname</string>
+    <string name="nickname_private">Only visible to you</string>
 
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Cast to device</string>

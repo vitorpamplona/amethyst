@@ -87,22 +87,23 @@ class ContactCardsState(
             }
 
     /**
-     * The petname the account gave [target], decrypted from the card's content,
-     * along with the card's tags so `:shortcode:` custom emojis resolve.
+     * The nickname (petname + private summary) the account gave [target],
+     * decrypted from the card's content, along with the card's tags so
+     * `:shortcode:` custom emojis resolve.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun petNameFlow(target: User): Flow<PetName?> =
+    fun nicknameFlow(target: User): Flow<Nickname?> =
         myCardFlow(target)
-            .mapLatest { card -> card?.let { decryptionCache.petNameWithEmojis(it) } }
+            .mapLatest { card -> card?.let { decryptionCache.nickname(it) } }
             .distinctUntilChanged()
             .flowOn(Dispatchers.IO)
 
     /**
-     * Synchronously returns the petname for [target] when its card is already
+     * Synchronously returns the nickname for [target] when its card is already
      * decrypted (or has none to decrypt). Cheap enough for initial values of UI
      * flows: a map read plus the decryption cache lookup, no crypto.
      */
-    fun cachedPetName(target: User): PetName? {
+    fun cachedNickname(target: User): Nickname? {
         val card =
             target
                 .cardsOrNull()
@@ -110,7 +111,7 @@ class ContactCardsState(
                 ?.value
                 ?.get(accountUser)
                 ?.event as? ContactCardEvent ?: return null
-        return decryptionCache.cachedPetNameWithEmojis(card)
+        return decryptionCache.cachedNickname(card)
     }
 
     /**
@@ -121,13 +122,13 @@ class ContactCardsState(
     fun displayNameFlow(target: User): Flow<String> =
         combine(
             target.metadata().flow,
-            petNameFlow(target),
-        ) { info, petName ->
-            petName?.petName ?: info?.info?.bestName() ?: target.pubkeyDisplayHex()
+            nicknameFlow(target),
+        ) { info, nickname ->
+            nickname?.petName ?: info?.info?.bestName() ?: target.pubkeyDisplayHex()
         }.distinctUntilChanged()
 
     /** Synchronous first value for [displayNameFlow], from already-decrypted data. */
-    fun cachedDisplayName(target: User): String = cachedPetName(target)?.petName ?: target.toBestDisplayName()
+    fun cachedDisplayName(target: User): String = cachedNickname(target)?.petName ?: target.toBestDisplayName()
 
     suspend fun petName(target: HexKey): String? = getCard(target)?.let { decryptionCache.petName(it) }
 
