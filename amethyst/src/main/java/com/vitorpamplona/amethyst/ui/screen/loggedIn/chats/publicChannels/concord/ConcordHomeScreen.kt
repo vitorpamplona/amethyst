@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -112,19 +114,32 @@ fun ConcordHomeScreen(
             TopAppBar(
                 title = { Text(stringRes(R.string.concord_home_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                    // Back arrow only when this is a pushed screen (from the drawer / a deep link);
+                    // as a bottom-nav root there is nothing to pop and the bar takes its place.
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                        }
                     }
                 },
             )
         },
+        bottomBar = {
+            // Renders only when this is a bottom-nav root (AppBottomBar hides itself when canPop),
+            // so the same screen works both as a pushed destination and a bottom-nav tab.
+            AppBottomBar(Route.Concords, nav, accountViewModel) { route ->
+                if (route != Route.Concords) nav.navBottomBar(route)
+            }
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.nav(Route.ConcordCreate) }, shape = CircleShape) {
-                SymbolIcon(
-                    symbol = MaterialSymbols.Add,
-                    contentDescription = stringRes(R.string.concord_create_title),
-                    modifier = Modifier.size(24.dp),
-                )
+            FabBottomBarPadded(nav) {
+                FloatingActionButton(onClick = { nav.nav(Route.ConcordCreate) }, shape = CircleShape) {
+                    SymbolIcon(
+                        symbol = MaterialSymbols.Add,
+                        contentDescription = stringRes(R.string.concord_create_title),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
             }
         },
     ) { padding ->

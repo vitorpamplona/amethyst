@@ -140,25 +140,6 @@ fun ChannelFabColumn(nav: INav) {
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-
-                FloatingActionButton(
-                    onClick = {
-                        nav.nav(Route.Concords)
-                        isOpen = false
-                    },
-                    modifier = Size55Modifier,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Text(
-                        text = stringRes(R.string.concord_home_title),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        fontSize = Font12SP,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
 
