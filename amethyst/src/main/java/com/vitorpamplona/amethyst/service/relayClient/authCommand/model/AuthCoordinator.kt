@@ -55,7 +55,7 @@ class AuthCoordinator(
         RelayAuthenticator(
             client,
             scope,
-            signWithAllLoggedInUsers = { relayUrl, authTemplate ->
+            signWithAllLoggedInUsers = { relayUrl, authTemplate, interactive ->
                 // Concord plane traffic is gated behind NIP-42 as the derived *stream key*, not the
                 // user: a relay serves a plane's kind-1059 wraps only to a connection authenticated
                 // as that stream key. These AUTHs expose no user identity (ephemeral derived keys)
@@ -102,9 +102,15 @@ class AuthCoordinator(
                                 // derived stream-key AUTH behind that dialog: on a relay that hosts our
                                 // Concord planes we DISMISS the user-auth ASK (skip account auth) so the
                                 // stream AUTHs return immediately instead of waiting on a prompt.
+                                //
+                                // A non-[interactive] pass is an automatic re-auth off an `auth-required:`
+                                // CLOSED (e.g. a Concord channel-plane REQ refused because the connection
+                                // AUTHed before the control plane folded in its channel stream keys). It
+                                // must never raise a fresh dialog: DISMISS the account ASK and let only the
+                                // already-approved identities (ledger-ALLOW accounts + stream keys) re-send.
                                 val choice =
                                     askChoice ?: (
-                                        if (streamAuths.isNotEmpty()) {
+                                        if (streamAuths.isNotEmpty() || !interactive) {
                                             UserAuthChoice.DISMISS
                                         } else {
                                             promptBus.requestDecision(relayUrl, context.purposes)

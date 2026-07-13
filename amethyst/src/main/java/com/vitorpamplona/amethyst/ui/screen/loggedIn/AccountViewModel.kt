@@ -349,7 +349,7 @@ class AccountViewModel(
         RelayAuthenticator(
             newClient,
             customScope,
-            signWithAllLoggedInUsers = { _, authTemplate ->
+            signWithAllLoggedInUsers = { _, authTemplate, _ ->
                 if (account.signer.isWriteable()) {
                     try {
                         listOf(account.signer.sign(authTemplate))

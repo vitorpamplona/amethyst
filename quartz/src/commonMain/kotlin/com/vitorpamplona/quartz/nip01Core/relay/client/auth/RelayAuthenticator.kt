@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
@@ -61,8 +63,13 @@ class RelayAuthenticator(
      * Signs the auth template for every currently-logged-in account and returns the signed events.
      * The [relay] parameter allows callers to check per-relay auth policy before signing.
      * Returns an empty list to skip authentication for this relay.
+     *
+     * [interactive] is true for a fresh relay AUTH challenge (the signer MAY surface a user
+     * prompt for an undecided relay) and false for an automatic re-auth triggered by an
+     * `auth-required:` CLOSED (the signer must NOT prompt — it may only re-attach identities
+     * that are already approved, such as ledger-ALLOW accounts and derived stream keys).
      */
-    val signWithAllLoggedInUsers: suspend (relay: NormalizedRelayUrl, EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
+    val signWithAllLoggedInUsers: suspend (relay: NormalizedRelayUrl, EventTemplate<RelayAuthEvent>, interactive: Boolean) -> List<RelayAuthEvent>,
 ) : IAuthStatus {
     // Connection callbacks fire on the per-relay OkHttp dispatcher thread, so
     // this state is mutated concurrently — LargeCache wraps a platform-tuned
@@ -101,8 +108,9 @@ class RelayAuthenticator(
                 msg: Message,
             ) {
                 when (msg) {
-                    is AuthMessage -> authenticate(relay, msg)
+                    is AuthMessage -> authenticate(relay, msg.challenge, interactive = true)
                     is OkMessage -> checkAuthResults(relay, msg)
+                    is ClosedMessage -> reauthenticateIfAuthRequired(relay, msg)
                 }
             }
 
@@ -119,8 +127,11 @@ class RelayAuthenticator(
 
     private fun authenticate(
         relay: IRelayClient,
-        msg: AuthMessage,
+        challenge: String,
+        interactive: Boolean,
     ) {
+        // Store the challenge so a later `auth-required:` CLOSED can reuse it (NIP-42).
+        authStatus.get(relay.url)?.rememberChallenge(challenge)
         scope.launch {
             // Relay auth is automatic and not user-initiated. Signing can fail in
             // benign, expected ways — e.g. an external NIP-55 signer prompt that the
@@ -129,8 +140,8 @@ class RelayAuthenticator(
             // a CoroutineExceptionHandler (viewModelScope, rememberCoroutineScope, …),
             // so an uncaught throwable here crashes the whole app. Swallow + log them.
             try {
-                val ev = RelayAuthEvent.build(relay.url, msg.challenge)
-                signWithAllLoggedInUsers(relay.url, ev).forEach { authEvent ->
+                val ev = RelayAuthEvent.build(relay.url, challenge)
+                signWithAllLoggedInUsers(relay.url, ev, interactive).forEach { authEvent ->
                     // only send replies to new challenges to avoid infinite loop:
                     if (authStatus.get(relay.url)?.saveAuthSubmission(authEvent) == true) {
                         relay.sendIfConnected(AuthCmd(authEvent))
@@ -145,6 +156,31 @@ class RelayAuthenticator(
                 Log.w("RelayAuthenticator", "Failed to authenticate with ${relay.url}", e)
             }
         }
+    }
+
+    /**
+     * NIP-42: a relay sends the challenge only in an `AUTH` message, never in a `CLOSED`.
+     * When a REQ is refused with an `auth-required:` CLOSED (e.g. a Concord channel-plane
+     * REQ mounted after the control plane folded and revealed new stream keys), the relay
+     * does NOT re-issue a challenge — the client is expected to reuse the one already stored
+     * for the connection. Re-run the sign/send pass with that challenge: [saveAuthSubmission]
+     * dedups by (pubkey, challenge), so only identities we haven't AUTHed on this challenge
+     * yet (the folded-in keys) are actually sent — a no-op once they all are, so no loop.
+     */
+    private fun reauthenticateIfAuthRequired(
+        relay: IRelayClient,
+        msg: ClosedMessage,
+    ) {
+        if (MachineReadablePrefix.parse(msg.message) != MachineReadablePrefix.AUTH_REQUIRED) return
+        val status = authStatus.get(relay.url) ?: return
+        // Coalesce the burst: a relay refuses EVERY currently-open sub with its own `auth-required`
+        // CLOSED, so a single missing identity yields many CLOSEDs at once. Re-signing on each would
+        // re-hit an external (NIP-55) signer for every ledger-ALLOW account. Skip while an AUTH is
+        // still in flight — the OK of the one we already sent runs [checkAuthResults] → syncFilters,
+        // which re-drives the refused REQ; if it's still refused, that fresh CLOSED re-auths then.
+        if (!status.hasFinishedAllAuths()) return
+        val challenge = status.lastChallenge() ?: return
+        authenticate(relay, challenge, interactive = false)
     }
 
     private fun checkAuthResults(
