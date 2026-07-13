@@ -142,6 +142,7 @@ import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
@@ -327,9 +328,10 @@ private fun NewPostScreenBody(
                         accountViewModel = accountViewModel,
                         label = if (postViewModel.wantsPrivateNote) stringRes(R.string.private_note_visible_to) else null,
                         showWhenEmpty = postViewModel.wantsPrivateNote,
+                        mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
                         onAddUser = { postViewModel.wantsToAddNotifyUser = !postViewModel.wantsToAddNotifyUser },
                     ) {
-                        postViewModel.removeFromReplyList(it)
+                        postViewModel.toggleNotify(it)
                     }
                 }
 
@@ -350,7 +352,7 @@ private fun NewPostScreenBody(
                     )
                 }
 
-                if (postViewModel.wantsPrivateNote && postViewModel.pTags.isNullOrEmpty()) {
+                if (postViewModel.wantsPrivateNote && postViewModel.activeNotifies().isNullOrEmpty()) {
                     Text(
                         text = stringRes(R.string.private_note_no_receivers),
                         style = MaterialTheme.typography.bodySmall,
