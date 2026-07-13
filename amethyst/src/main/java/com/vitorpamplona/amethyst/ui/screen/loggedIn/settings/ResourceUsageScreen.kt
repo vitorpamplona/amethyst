@@ -66,7 +66,6 @@ import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssem
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatBytes
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatConnHours
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatDurationMs
-import com.vitorpamplona.amethyst.service.resourceusage.UsageInsights
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -140,7 +139,6 @@ fun ResourceUsageScreen(
 
                 TodayTiles(todaySummary)
                 WeekRatesTiles(weekSummary)
-                InsightsSection(weekSummary, nav)
                 if (weekSummary.totalBytes > 0) {
                     SettingsSection(R.string.resource_usage_trend_section) {
                         UsageTrendChart(loaded, today)
@@ -229,93 +227,6 @@ private fun WeekRatesTiles(s: UsageSummary) {
         tiles.forEach { (label, value) -> StatTile(label, value, Modifier.weight(1f)) }
     }
 }
-
-/**
- * Up to three plain-language recommendations, each deep-linking to the
- * setting that acts on it — the rules live in [UsageInsights] so they are
- * unit-testable and shared with nothing UI-bound.
- */
-@Composable
-private fun InsightsSection(
-    week: UsageSummary,
-    nav: INav,
-) {
-    val insights = remember(week) { UsageInsights.evaluate(week) }
-    if (insights.isEmpty()) return
-    SettingsSection(R.string.resource_usage_insights_section) {
-        insights.forEachIndexed { index, insight ->
-            if (index > 0) SettingsDivider()
-            Column(
-                modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = insightText(insight),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                val route = insightRoute(insight.target)
-                if (route != null) {
-                    TextButton(
-                        onClick = { nav.nav(route) },
-                        modifier = Modifier.align(Alignment.End),
-                    ) {
-                        Text(stringRes(insightButton(insight.target)))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun insightText(insight: UsageInsights.Insight): String =
-    when (insight.target) {
-        UsageInsights.Target.FOREGROUND_INFO ->
-            stringRes(R.string.resource_usage_insight_foreground, insight.value.toString())
-        UsageInsights.Target.NOTIFICATION_SETTINGS ->
-            stringRes(R.string.resource_usage_insight_notifications, formatConnHours(insight.value))
-        UsageInsights.Target.MEDIA_SETTINGS ->
-            stringRes(R.string.resource_usage_insight_media, formatBytes(insight.value))
-        UsageInsights.Target.RELAY_SETTINGS -> {
-            val relays = insight.value.toInt()
-            pluralStringResource(R.plurals.resource_usage_insight_relays, relays, relays)
-        }
-        UsageInsights.Target.RELAY_CHURN -> {
-            val reconnects = insight.value.toInt()
-            pluralStringResource(R.plurals.resource_usage_insight_churn, reconnects, reconnects)
-        }
-        UsageInsights.Target.POW_SETTINGS ->
-            stringRes(R.string.resource_usage_insight_pow, formatDurationMs(insight.value))
-        UsageInsights.Target.PUSH_PROCESSING ->
-            stringRes(R.string.resource_usage_insight_push, formatDurationMs(insight.value))
-        UsageInsights.Target.PRIVACY_SETTINGS ->
-            stringRes(R.string.resource_usage_insight_tor, formatDurationMs(insight.value))
-    }
-
-private fun insightRoute(target: UsageInsights.Target): Route? =
-    when (target) {
-        UsageInsights.Target.FOREGROUND_INFO -> null
-        UsageInsights.Target.NOTIFICATION_SETTINGS -> Route.NotificationSettings
-        UsageInsights.Target.MEDIA_SETTINGS -> Route.Settings
-        UsageInsights.Target.RELAY_SETTINGS -> Route.EditRelays
-        UsageInsights.Target.RELAY_CHURN -> Route.EditRelays
-        UsageInsights.Target.POW_SETTINGS -> Route.ComposeSettings
-        UsageInsights.Target.PUSH_PROCESSING -> Route.NotificationSettings
-        UsageInsights.Target.PRIVACY_SETTINGS -> Route.PrivacyOptions
-    }
-
-@StringRes
-private fun insightButton(target: UsageInsights.Target): Int =
-    when (target) {
-        UsageInsights.Target.FOREGROUND_INFO -> R.string.resource_usage_insights_section
-        UsageInsights.Target.NOTIFICATION_SETTINGS -> R.string.resource_usage_alwayson_settings_button
-        UsageInsights.Target.MEDIA_SETTINGS -> R.string.resource_usage_insight_button_media
-        UsageInsights.Target.RELAY_SETTINGS -> R.string.resource_usage_insight_button_relays
-        UsageInsights.Target.RELAY_CHURN -> R.string.resource_usage_insight_button_relays
-        UsageInsights.Target.POW_SETTINGS -> R.string.compose_settings
-        UsageInsights.Target.PUSH_PROCESSING -> R.string.resource_usage_alwayson_settings_button
-        UsageInsights.Target.PRIVACY_SETTINGS -> R.string.resource_usage_insight_button_privacy
-    }
 
 /**
  * Ranked per-feature traffic with proportion bars (7 days). Cellular is the
@@ -652,7 +563,7 @@ private fun TorServiceSection(
                 onClick = { nav.nav(Route.PrivacyOptions) },
                 modifier = Modifier.align(Alignment.End),
             ) {
-                Text(stringRes(R.string.resource_usage_insight_button_privacy))
+                Text(stringRes(R.string.resource_usage_tor_settings_button))
             }
         }
     }
