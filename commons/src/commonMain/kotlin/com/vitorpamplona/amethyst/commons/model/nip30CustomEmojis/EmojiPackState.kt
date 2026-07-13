@@ -134,11 +134,12 @@ class EmojiPackState(
     fun findEmojiTags(message: String): List<EmojiUrlTag> {
         val myEmojiSet = myEmojis.value
         if (myEmojiSet.isEmpty()) return emptyList()
+        val byCode = myEmojiSet.associateBy { it.code }
         return CustomEmoji
             .findAllEmojiCodes(message)
             .distinct()
             .mapNotNull { code ->
-                myEmojiSet.firstOrNull { it.code == code }?.let { EmojiUrlTag(it.code, it.link) }
+                byCode[code]?.let { EmojiUrlTag(it.code, it.link) }
             }
     }
 

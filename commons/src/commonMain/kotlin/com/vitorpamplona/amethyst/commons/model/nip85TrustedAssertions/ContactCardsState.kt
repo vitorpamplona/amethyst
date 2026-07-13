@@ -24,12 +24,11 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
@@ -55,7 +54,7 @@ class ContactCardsState(
     val signer: NostrSigner,
     val cache: ICacheProvider,
     val decryptionCache: ContactCardDecryptionCache,
-    val scope: CoroutineScope,
+    val emojiPacks: EmojiPackState,
 ) {
     private val accountUser: User? by lazy { cache.getOrCreateUser(signer.pubKey) }
 
@@ -67,8 +66,8 @@ class ContactCardsState(
 
     /**
      * The account's own card about [target], as attached to the target user's
-     * [UserCardsCache] when the event is consumed. Reads from the existing
-     * received-cards map so displaying users without a card allocates nothing new.
+     * [UserCardsCache] when the event is consumed. `cards()` lazily allocates the
+     * per-user cache (like `metadata()` does) so a card arriving later is seen.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun myCardFlow(target: User): Flow<ContactCardEvent?> =
@@ -97,22 +96,39 @@ class ContactCardsState(
             .distinctUntilChanged()
             .flowOn(Dispatchers.IO)
 
+    /**
+     * Synchronously returns the petname for [target] when its card is already
+     * decrypted (or has none to decrypt). Cheap enough for initial values of UI
+     * flows: a map read plus the decryption cache lookup, no crypto.
+     */
+    fun cachedPetName(target: User): PetName? {
+        val card =
+            target
+                .cardsOrNull()
+                ?.receivedCards
+                ?.value
+                ?.get(accountUser)
+                ?.event as? ContactCardEvent ?: return null
+        return decryptionCache.cachedPetNameWithEmojis(card)
+    }
+
     suspend fun petName(target: HexKey): String? = getCard(target)?.let { decryptionCache.petName(it) }
 
     suspend fun summary(target: HexKey): String? = getCard(target)?.let { decryptionCache.summary(it) }
 
     /**
-     * Builds the new signed card for [target] with the given petname, summary and
-     * the NIP-30 emoji mappings their shortcodes use (all stored NIP-44 encrypted;
-     * `null` clears a field), preserving every other tag of an existing card. The
-     * caller is responsible for publishing it.
+     * Builds the new signed card for [target] with the given petname and summary
+     * (`null` clears a field), preserving every other tag of an existing card.
+     * Any `:shortcode:` from the account's emoji packs gets its NIP-30 emoji
+     * mapping embedded; everything is stored NIP-44 encrypted. The caller is
+     * responsible for publishing it.
      */
     suspend fun updatePetNameAndSummary(
         target: HexKey,
         petName: String?,
         summary: String?,
-        emojis: List<EmojiUrlTag> = emptyList(),
     ): ContactCardEvent {
+        val emojis = emojiPacks.findEmojiTags(listOfNotNull(petName, summary).joinToString(" "))
         val existing = getCard(target)
         return if (existing != null) {
             signer.sign(

@@ -37,11 +37,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,20 +64,23 @@ fun EditNicknameDialog(
 ) {
     val nickname = rememberTextFieldState()
     val summary = rememberTextFieldState()
-    val emojiSuggestions = remember(accountViewModel) { EmojiSuggestionState(accountViewModel.account) }
+    val emojiSuggestions = remember(accountViewModel) { EmojiSuggestionState(accountViewModel.account.emoji) }
     // which field the emoji autocomplete should insert into
     val emojiTarget = remember { mutableStateOf<TextFieldState?>(null) }
 
     // keeps the account's selected emoji packs loaded while the dialog is open
     WatchAndLoadMyEmojiList(accountViewModel)
 
-    // Prefill with the card's current encrypted values, if any.
+    // Prefill with the card's current encrypted values, if any. Decryption can
+    // be slow on external signers, so don't clobber anything already typed.
     LaunchedEffect(user) {
         accountViewModel.account.contactCards
             .petName(user.pubkeyHex)
+            ?.takeIf { nickname.text.isEmpty() }
             ?.let { nickname.setTextAndPlaceCursorAtEnd(it) }
         accountViewModel.account.contactCards
             .summary(user.pubkeyHex)
+            ?.takeIf { summary.text.isEmpty() }
             ?.let { summary.setTextAndPlaceCursorAtEnd(it) }
     }
 

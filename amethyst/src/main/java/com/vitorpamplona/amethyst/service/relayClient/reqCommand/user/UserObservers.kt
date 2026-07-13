@@ -71,8 +71,15 @@ fun observeUserName(
             }.distinctUntilChanged()
         }
 
+    val initialName =
+        remember(user) {
+            accountViewModel.account.contactCards
+                .cachedPetName(user)
+                ?.petName ?: user.toBestDisplayName()
+        }
+
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(user.toBestDisplayName())
+    return flow.collectAsStateWithLifecycle(initialName)
 }
 
 /**
@@ -87,9 +94,10 @@ fun observeUserPetName(
     user: User,
     accountViewModel: AccountViewModel,
 ): State<PetName?> {
-    val flow = remember(user) { accountViewModel.account.contactCards.petNameFlow(user) }
+    val contactCards = accountViewModel.account.contactCards
+    val flow = remember(user) { contactCards.petNameFlow(user) }
 
-    return flow.collectAsStateWithLifecycle(null)
+    return flow.collectAsStateWithLifecycle(remember(user) { contactCards.cachedPetName(user) })
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

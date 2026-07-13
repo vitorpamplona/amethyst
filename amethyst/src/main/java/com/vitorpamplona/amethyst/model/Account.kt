@@ -420,9 +420,6 @@ class Account(
     val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
     val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
 
-    val contactCardDecryptionCache = ContactCardDecryptionCache(signer)
-    val contactCards = ContactCardsState(signer, cache, contactCardDecryptionCache, scope)
-
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
     val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
@@ -439,6 +436,10 @@ class Account(
     val pinState = PinListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
     val ownedEmojiPacks = OwnedEmojiPacksState(signer, cache, scope)
+
+    // needs `emoji` above: nickname edits resolve :shortcodes: against the account's packs
+    val contactCardDecryptionCache = ContactCardDecryptionCache(signer)
+    val contactCards = ContactCardsState(signer, cache, contactCardDecryptionCache, emoji)
 
     val vanish = VanishRequestsState(signer, cache, client, scope)
 
@@ -3778,19 +3779,15 @@ class Account(
 
     /**
      * Nicknames a user by publishing the account's kind:30382 contact card about
-     * them, with the petname and summary NIP-44 encrypted in the content. Any
-     * `:shortcode:` from the account's emoji packs gets its NIP-30 emoji mapping
-     * embedded (also encrypted) so the nickname renders with custom emojis.
-     * `null` clears a field. Goes out through the account's extended outbox relays.
+     * them, with the petname, summary and their custom emoji mappings NIP-44
+     * encrypted in the content. `null` clears a field. Goes out through the
+     * account's extended outbox relays.
      */
     suspend fun updateContactCardPetName(
         pubkeyHex: HexKey,
         petName: String?,
         summary: String?,
-    ) {
-        val emojis = emoji.findEmojiTags(listOfNotNull(petName, summary).joinToString(" "))
-        sendMyPublicAndPrivateOutbox(contactCards.updatePetNameAndSummary(pubkeyHex, petName, summary, emojis))
-    }
+    ) = sendMyPublicAndPrivateOutbox(contactCards.updatePetNameAndSummary(pubkeyHex, petName, summary))
 
     suspend fun showUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(blockPeopleList.showUser(pubkeyHex))

@@ -18,25 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
+package com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.model.Account
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 
+/**
+ * Backs the `:shortcode:` autocomplete in text fields: feed the word under the
+ * cursor into [processCurrentWord] and collect [results] for the matching
+ * emojis from the account's selected packs.
+ */
 @Stable
 class EmojiSuggestionState(
-    val account: Account,
+    val emojiPacks: EmojiPackState,
 ) {
     val search: MutableStateFlow<String> = MutableStateFlow("")
     val results: Flow<List<EmojiPackState.EmojiMedia>> =
-        account
-            .emoji.myEmojis
+        emojiPacks.myEmojis
             .combine(search) { list, search ->
                 if (search.length == 1) {
                     list
