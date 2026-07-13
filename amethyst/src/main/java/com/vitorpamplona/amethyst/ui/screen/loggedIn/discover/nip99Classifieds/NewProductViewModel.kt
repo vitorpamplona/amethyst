@@ -558,12 +558,8 @@ open class NewProductViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-
-        message.replaceCurrentWord(wordToInsert)
+        emojiSuggestions?.autocompleteInto(message, item)
         urlPreviews.update(message.text.toString())
-
-        emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }

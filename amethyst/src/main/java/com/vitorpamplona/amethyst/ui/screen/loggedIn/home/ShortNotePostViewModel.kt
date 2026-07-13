@@ -1610,12 +1610,8 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-
-        message.replaceCurrentWord(wordToInsert)
+        emojiSuggestions?.autocompleteInto(message, item)
         urlPreviews.update(message.text.toString())
-
-        emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }

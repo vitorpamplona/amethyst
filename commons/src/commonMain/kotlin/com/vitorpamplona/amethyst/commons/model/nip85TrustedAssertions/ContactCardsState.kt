@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -111,6 +112,22 @@ class ContactCardsState(
                 ?.event as? ContactCardEvent ?: return null
         return decryptionCache.cachedPetNameWithEmojis(card)
     }
+
+    /**
+     * The name to render for [target], per the NIP-81 policy: the nickname the
+     * account gave them wins over the profile's own display name, falling back
+     * to the short npub when neither exists.
+     */
+    fun displayNameFlow(target: User): Flow<String> =
+        combine(
+            target.metadata().flow,
+            petNameFlow(target),
+        ) { info, petName ->
+            petName?.petName ?: info?.info?.bestName() ?: target.pubkeyDisplayHex()
+        }.distinctUntilChanged()
+
+    /** Synchronous first value for [displayNameFlow], from already-decrypted data. */
+    fun cachedDisplayName(target: User): String = cachedPetName(target)?.petName ?: target.toBestDisplayName()
 
     suspend fun petName(target: HexKey): String? = getCard(target)?.let { decryptionCache.petName(it) }
 

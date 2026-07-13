@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
 import com.vitorpamplona.amethyst.commons.model.toHexSet
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User

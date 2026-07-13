@@ -18,35 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
+package com.vitorpamplona.amethyst.commons.nip85TrustedAssertions.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nickname_cancel
+import com.vitorpamplona.amethyst.commons.resources.nickname_dialog_explainer
+import com.vitorpamplona.amethyst.commons.resources.nickname_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.nickname_label
+import com.vitorpamplona.amethyst.commons.resources.nickname_save
+import com.vitorpamplona.amethyst.commons.resources.nickname_summary_label
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
-import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Edits the nickname (petname) and private note (summary) the account keeps for
@@ -55,79 +61,82 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
  *
  * Typing `:` offers the account's NIP-30 custom emojis; the mappings for any
  * shortcode used are embedded (also encrypted) so the nickname renders with them.
+ *
+ * Shared by every front end: the caller supplies the account's [contactCards]
+ * and publishes the result in [onSave] (e.g. through its outbox relays). On
+ * Android, compose `WatchAndLoadMyEmojiList` alongside so the emoji packs load.
  */
 @Composable
 fun EditNicknameDialog(
     user: User,
+    contactCards: ContactCardsState,
+    onSave: (petName: String?, summary: String?) -> Unit,
     onDismiss: () -> Unit,
-    accountViewModel: AccountViewModel,
 ) {
     val nickname = rememberTextFieldState()
     val summary = rememberTextFieldState()
-    val emojiSuggestions = remember(accountViewModel) { EmojiSuggestionState(accountViewModel.account.emoji) }
-    // which field the emoji autocomplete should insert into
+    val emojiSuggestions = remember(contactCards) { EmojiSuggestionState(contactCards.emojiPacks) }
+    // which field the emoji autocomplete should insert into: the last one edited
     val emojiTarget = remember { mutableStateOf<TextFieldState?>(null) }
-
-    // keeps the account's selected emoji packs loaded while the dialog is open
-    WatchAndLoadMyEmojiList(accountViewModel)
 
     // Prefill with the card's current encrypted values, if any. Decryption can
     // be slow on external signers, so don't clobber anything already typed.
     LaunchedEffect(user) {
-        accountViewModel.account.contactCards
+        contactCards
             .petName(user.pubkeyHex)
             ?.takeIf { nickname.text.isEmpty() }
             ?.let { nickname.setTextAndPlaceCursorAtEnd(it) }
-        accountViewModel.account.contactCards
+        contactCards
             .summary(user.pubkeyHex)
             ?.takeIf { summary.text.isEmpty() }
             ?.let { summary.setTextAndPlaceCursorAtEnd(it) }
     }
 
-    fun watchEmojiIn(field: TextFieldState) {
-        emojiTarget.value = field
-        if (field.selection.collapsed) {
-            emojiSuggestions.processCurrentWord(field.currentWord())
+    // Feed the word under the cursor of the last-edited field to the autocomplete.
+    LaunchedEffect(nickname, summary) {
+        fun watch(field: TextFieldState) {
+            emojiTarget.value = field
+            if (field.selection.collapsed) {
+                emojiSuggestions.processCurrentWord(field.currentWord())
+            }
         }
+        launch { snapshotFlow { nickname.text }.collect { watch(nickname) } }
+        launch { snapshotFlow { summary.text }.collect { watch(summary) } }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = stringRes(R.string.nickname_dialog_title))
+            Text(text = stringResource(Res.string.nickname_dialog_title))
         },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(
-                    text = stringRes(R.string.nickname_dialog_explainer),
-                    color = MaterialTheme.colorScheme.placeholderText,
+                    text = stringResource(Res.string.nickname_dialog_explainer),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                ThinPaddingTextField(
+                OutlinedTextField(
                     state = nickname,
-                    onTextChanged = { watchEmojiIn(nickname) },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
                     label = {
-                        Text(text = stringRes(R.string.nickname_label))
+                        Text(text = stringResource(Res.string.nickname_label))
                     },
                 )
-                ThinPaddingTextField(
+                OutlinedTextField(
                     state = summary,
-                    onTextChanged = { watchEmojiIn(summary) },
                     label = {
-                        Text(text = stringRes(R.string.nickname_summary_label))
+                        Text(text = stringResource(Res.string.nickname_summary_label))
                     },
                 )
                 ShowEmojiSuggestionList(
                     emojiSuggestions,
-                    onSelect = {
-                        emojiTarget.value?.replaceCurrentWord(":${it.code}:")
-                        emojiSuggestions.reset()
+                    onSelect = { emoji ->
+                        emojiTarget.value?.let { emojiSuggestions.autocompleteInto(it, emoji) }
                     },
-                    onFullSize = {
-                        emojiTarget.value?.replaceCurrentWord(":${it.code}:")
-                        emojiSuggestions.reset()
+                    onFullSize = { emoji ->
+                        emojiTarget.value?.let { emojiSuggestions.autocompleteInto(it, emoji) }
                     },
                     modifier = Modifier.heightIn(max = 200.dp),
                 )
@@ -136,30 +145,27 @@ fun EditNicknameDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    accountViewModel.updateContactCardPetName(
-                        user = user,
-                        petName =
-                            nickname.text
-                                .toString()
-                                .trim()
-                                .ifBlank { null },
-                        summary =
-                            summary.text
-                                .toString()
-                                .trim()
-                                .ifBlank { null },
+                    onSave(
+                        nickname.text
+                            .toString()
+                            .trim()
+                            .ifBlank { null },
+                        summary.text
+                            .toString()
+                            .trim()
+                            .ifBlank { null },
                     )
                     onDismiss()
                 },
             ) {
-                Text(stringRes(R.string.save))
+                Text(stringResource(Res.string.nickname_save))
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
             ) {
-                Text(stringRes(R.string.cancel))
+                Text(stringResource(Res.string.nickname_cancel))
             }
         },
     )

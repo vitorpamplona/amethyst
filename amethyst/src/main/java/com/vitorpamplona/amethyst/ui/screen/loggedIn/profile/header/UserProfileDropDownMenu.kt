@@ -29,11 +29,13 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip85TrustedAssertions.ui.EditNicknameDialog
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -50,10 +52,13 @@ fun UserProfileDropDownMenu(
     val isNicknameDialogOpen = remember { mutableStateOf(false) }
 
     if (isNicknameDialogOpen.value) {
+        // keeps the account's selected emoji packs loaded for the : autocomplete
+        WatchAndLoadMyEmojiList(accountViewModel)
         EditNicknameDialog(
             user = user,
+            contactCards = accountViewModel.account.contactCards,
+            onSave = { petName, summary -> accountViewModel.updateContactCardPetName(user, petName, summary) },
             onDismiss = { isNicknameDialogOpen.value = false },
-            accountViewModel = accountViewModel,
         )
     }
 

@@ -692,9 +692,7 @@ class LongFormPostViewModel :
     }
 
     fun autocompleteWithEmoji(item: EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-        message.replaceCurrentWord(wordToInsert)
-        emojiSuggestions?.reset()
+        emojiSuggestions?.autocompleteInto(message, item)
         draftTag.newVersion()
     }
 

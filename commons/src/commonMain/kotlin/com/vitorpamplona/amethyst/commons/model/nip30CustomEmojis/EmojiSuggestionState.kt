@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -65,5 +67,17 @@ class EmojiSuggestionState(
                 search.tryEmit("")
             }
         }
+    }
+
+    /**
+     * Completes the word under the cursor in [field] with the selected emoji's
+     * `:shortcode:` and closes the suggestion list.
+     */
+    fun autocompleteInto(
+        field: TextFieldState,
+        item: EmojiPackState.EmojiMedia,
+    ) {
+        field.replaceCurrentWord(":${item.code}:")
+        reset()
     }
 }

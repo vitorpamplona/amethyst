@@ -61,25 +61,11 @@ fun observeUserName(
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
-    val flow =
-        remember(user) {
-            combine(
-                user.metadata().flow,
-                accountViewModel.account.contactCards.petNameFlow(user),
-            ) { info, petName ->
-                petName?.petName ?: info?.info?.bestName() ?: user.pubkeyDisplayHex()
-            }.distinctUntilChanged()
-        }
-
-    val initialName =
-        remember(user) {
-            accountViewModel.account.contactCards
-                .cachedPetName(user)
-                ?.petName ?: user.toBestDisplayName()
-        }
+    val contactCards = accountViewModel.account.contactCards
+    val flow = remember(user) { contactCards.displayNameFlow(user) }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(initialName)
+    return flow.collectAsStateWithLifecycle(remember(user) { contactCards.cachedDisplayName(user) })
 }
 
 /**
@@ -323,7 +309,7 @@ fun observeUserBookmarkCount(
 
     val combined =
         remember(user) {
-            kotlinx.coroutines.flow.combine(newFlow, oldFlow) { newCount, oldCount ->
+            combine(newFlow, oldFlow) { newCount, oldCount ->
                 newCount + oldCount
             }
         }

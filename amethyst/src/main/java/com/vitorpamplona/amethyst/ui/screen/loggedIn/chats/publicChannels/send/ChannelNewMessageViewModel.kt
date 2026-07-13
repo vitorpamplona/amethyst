@@ -678,10 +678,7 @@ open class ChannelNewMessageViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-        message.replaceCurrentWord(wordToInsert)
-
-        emojiSuggestions?.reset()
+        emojiSuggestions?.autocompleteInto(message, item)
 
         draftTag.newVersion()
     }

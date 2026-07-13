@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsByAuthorInTheRelay
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -49,7 +50,6 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 
@@ -94,12 +94,6 @@ val AccountInfoAndListsFromKeyKinds2 =
         NutzapInfoEvent.KIND,
     )
 
-// The account's own kind:30382 contact cards (nicknames/petnames for other
-// users, NIP-44 encrypted). Addressable: one card per target user, so this is a
-// collection rather than a single replaceable — kept out of the small-limit
-// filters above and given its own filter with a larger limit.
-val AccountContactCardKinds = listOf(ContactCardEvent.KIND)
-
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
 val AmethystMetadataTagMapFilter = mapOf("d" to listOf(APP_SPECIFIC_DATA_D_TAG))
 
@@ -131,15 +125,12 @@ fun filterAccountInfoAndListsFromKey(
                     since = since,
                 ),
         ),
-        RelayBasedFilter(
+        // The account's own kind:30382 contact cards (nicknames, NIP-44 encrypted).
+        // Addressable — one card per target user — hence its own larger-limit filter.
+        filterContactCardsByAuthorInTheRelay(
             relay = relay,
-            filter =
-                Filter(
-                    kinds = AccountContactCardKinds,
-                    authors = listOf(pubkey),
-                    limit = 500,
-                    since = since,
-                ),
+            author = pubkey,
+            since = since,
         ),
         RelayBasedFilter(
             relay = relay,
