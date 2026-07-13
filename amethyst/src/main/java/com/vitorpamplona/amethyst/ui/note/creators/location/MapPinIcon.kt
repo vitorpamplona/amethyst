@@ -25,6 +25,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import androidx.core.graphics.createBitmap
 import kotlin.math.roundToInt
 
 /**
@@ -57,7 +58,7 @@ fun roadEventPinBitmap(
     val cx = width / 2f
     val cy = pad + radius
 
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(width, height)
     val canvas = Canvas(bitmap)
 
     // Head circle + pointer drawn as a single path so they share one shadow

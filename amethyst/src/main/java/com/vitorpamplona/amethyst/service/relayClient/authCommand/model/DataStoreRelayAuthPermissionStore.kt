@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Single-file DataStore-backed [RelayAuthPermissionStore]. All per-relay ALLOW/DENY overrides
@@ -45,11 +46,10 @@ class DataStoreRelayAuthPermissionStore(
 ) : RelayAuthPermissionStore {
     constructor(context: Context) : this(context.applicationContext.filesDir)
 
-    private val store: DataStore<Preferences> by lazy {
-        PreferenceDataStoreFactory.create(
-            produceFile = { File(filesDir, "datastore/relay_auth.preferences_pb") },
-        )
-    }
+    // DataStore v1 throws if two instances are ever active on the same file. loadAccount can build
+    // this store more than once for the same account (re-login, cache races), so the underlying
+    // DataStore is shared per absolute file path across the process instead of created per instance.
+    private val store: DataStore<Preferences> get() = dataStoreFor(File(filesDir, "datastore/relay_auth.preferences_pb"))
 
     override suspend fun loadDecision(relayUrl: String): RelayAuthDecision? {
         val raw = store.data.first()[decisionKey(relayUrl)] ?: return null
@@ -198,6 +198,15 @@ class DataStoreRelayAuthPermissionStore(
     private fun lastUsedKey(relayUrl: String) = stringPreferencesKey("$LAST_USED_PREFIX${hash(relayUrl)}")
 
     companion object {
+        // One DataStore per file path, process-wide. computeIfAbsent runs the factory at most once
+        // per path, so concurrent constructions for the same account share a single active DataStore.
+        private val stores = ConcurrentHashMap<String, DataStore<Preferences>>()
+
+        private fun dataStoreFor(file: File): DataStore<Preferences> =
+            stores.computeIfAbsent(file.absolutePath) {
+                PreferenceDataStoreFactory.create(produceFile = { file })
+            }
+
         private const val DECISION_PREFIX = "allow:"
         private const val URL_PREFIX = "url:"
         private const val RATIONALE_PREFIX = "rat:"

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nip64Chess
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 actual class ChessDismissedGamesStorage private actual constructor() {
     private var prefs: SharedPreferences? = null
@@ -48,6 +49,6 @@ actual class ChessDismissedGamesStorage private actual constructor() {
         userPubkey: String,
         ids: Set<String>,
     ) {
-        prefs?.edit()?.putStringSet(prefsKey(userPubkey), ids)?.apply()
+        prefs?.edit { putStringSet(prefsKey(userPubkey), ids) }
     }
 }

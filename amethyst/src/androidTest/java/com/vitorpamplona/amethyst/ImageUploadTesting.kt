@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -81,7 +82,7 @@ class ImageUploadTesting {
             .build()
 
     private fun getBitmap(): ByteArray {
-        val bitmap = Bitmap.createBitmap(200, 300, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(200, 300)
         for (x in 0 until bitmap.width) {
             for (y in 0 until bitmap.height) {
                 bitmap.setPixel(x, y, Color.rgb(Random.nextInt(), Random.nextInt(), Random.nextInt()))

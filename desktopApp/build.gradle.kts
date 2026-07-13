@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.jetbrainsComposeCompiler)
-    alias(libs.plugins.kotlinxKover)
 }
 
 // RPM rejects dashes in version strings — replace with tilde (~) which RPM uses

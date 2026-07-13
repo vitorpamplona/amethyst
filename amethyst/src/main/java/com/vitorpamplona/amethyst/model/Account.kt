@@ -56,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -133,6 +135,10 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
@@ -188,6 +194,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -362,6 +369,7 @@ class Account(
     val marmotMessageStore: com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore? = null,
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
+    relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -375,6 +383,41 @@ class Account(
     override val spammersHashCodes: Set<Int> get() = hiddenUsers.flow.value.spammersHashCodes
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
+
+    // Per-account NIP-42 ALLOW/DENY overrides, warm-cached in memory so a relay AUTH challenge is
+    // answered without a disk read. Backed by a per-account file (see AccountCacheState).
+    val relayAuthPermissions = RelayAuthPermissionCache(relayAuthPermissionStore, scope)
+
+    // Per-account NIP-42 policy evaluator (blocked → per-relay override → global policy → prompt),
+    // reading THIS account's own toggles, relay lists and follow graph. Cached here so every AUTH
+    // path (foreground screen + background notification consumer) shares one instance, and so an
+    // AUTH challenge is decided per account instead of folding every logged-in account together.
+    val relayAuthLedger =
+        RelayAuthPermissionLedger(
+            store = relayAuthPermissions,
+            globalPolicy = { settings.defaultRelayAuthPolicy.value },
+            customToggles = {
+                RelayAuthCustomToggles(
+                    myRelaysAndVenues = settings.relayAuthTrustMyRelaysAndVenues.value,
+                    readFollows = settings.relayAuthTrustReadFollows.value,
+                    messageFollows = settings.relayAuthTrustMessageFollows.value,
+                    messageStrangers = settings.relayAuthTrustMessageStrangers.value,
+                )
+            },
+            isInMyRelayList = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in trustedRelays.flow.value } ?: false },
+            isBlocked = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in blockedRelayList.flow.value } ?: false },
+            isFollowed = { pubkey -> pubkey in allFollows.flow.value.authors },
+            isTrustedVenue = { venueId ->
+                venueId in publicChatList.flowSet.value ||
+                    venueId in communityList.flowSet.value ||
+                    Address.parse(venueId)?.pubKeyHex?.let { it in allFollows.flow.value.authors } == true
+            },
+        )
+
+    // Per-account relay NOTIFY (payment-prompt) cache. NotifyCoordinator attributes each incoming
+    // NOTIFY to the account whose AUTH the relay rejected and drops it here, so a prompt for one
+    // account never surfaces under another (the old cache was a process-wide singleton).
+    val relayNotifications = NotifyRequestsCache()
 
     override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
 

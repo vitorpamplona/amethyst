@@ -64,17 +64,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.LoadRelayAuthUser
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -105,8 +103,8 @@ fun RelayAuthSettingsScreen(
     nav: INav,
 ) {
     val account = accountViewModel.account
-    val store: DataStoreRelayAuthPermissionStore = Amethyst.instance.relayAuthPermissionStore
-    val ledger = remember { RelayAuthPermissionLedger(store, { account.settings.defaultRelayAuthPolicy.value }) }
+    val store: RelayAuthPermissionStore = account.relayAuthPermissions
+    val ledger = account.relayAuthLedger
     val scope = rememberCoroutineScope()
 
     val globalPolicy by account.settings.defaultRelayAuthPolicy.collectAsState()

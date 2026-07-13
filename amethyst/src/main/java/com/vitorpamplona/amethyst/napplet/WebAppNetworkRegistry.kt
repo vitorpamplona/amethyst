@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -86,7 +86,7 @@ object WebAppNetworkRegistry {
     }
 
     /** The host key for [url] (e.g. `vitorpamplona.com`), or the raw string if it has no host. */
-    fun hostKeyOf(url: String): String = runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+    fun hostKeyOf(url: String): String = runCatching { url.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
 
     /** Whether the site behind [url] routes through Tor. Defaults to true (Tor) for any site never set. */
     fun useTor(url: String): Boolean = modes[hostKeyOf(url)] ?: true

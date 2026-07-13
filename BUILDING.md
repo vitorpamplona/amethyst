@@ -278,25 +278,6 @@ call does not guarantee lint finishes first):
 The reports persist under each module's `build/reports/`, so re-run lint only
 when you want fresh lint data in the next scan.
 
-### 5. Optional: include test coverage
-
-Coverage comes from [Kover](https://github.com/Kotlin/kotlinx-kover). The root
-`koverXmlReportCoverage` task runs the unit-test suites of the covered modules
-(`quartz`, `commons`, `quic`, `nestsClient`, `geode`, `cli`, `relayBench`,
-`desktopApp`, and `amethyst`'s `fdroidDebug` variant) and merges the result
-into `build/reports/kover/reportCoverage.xml`, which the scanner imports
-automatically when it exists. Same recipe as lint — generate first, scan
-second:
-
-```bash
-./gradlew koverXmlReportCoverage
-./gradlew sonar
-```
-
-For a human-readable version of the same data, run
-`./gradlew koverHtmlReportCoverage` and open
-`build/reports/kover/htmlCoverage/index.html`.
-
 Every `sonar.*` entry in `local.properties` is forwarded to the scanner, so any
 [analysis parameter](https://docs.sonarsource.com/sonarqube-server/latest/analyzing-source-code/analysis-parameters/)
 can be set there. `sonar.projectKey` / `sonar.projectName` default to the root

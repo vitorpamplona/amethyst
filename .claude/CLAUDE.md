@@ -282,6 +282,26 @@ Do this before considering the task complete.
 - The only acceptable inline fully-qualified names are: a genuine name
   collision (prefer `import ... as Alias` instead), or where the language
   requires it. Comments, KDoc, and string literals are exempt.
+- **Prefer the `androidx.core` KTX extension over the raw platform Java call**
+  when one exists — this is what Android Lint's `UseKtx` flags. Common swaps:
+  `Bitmap.createBitmap(w, h, cfg)` → `createBitmap(w, h)`,
+  `Bitmap.createScaledBitmap(src, w, h, f)` → `src.scale(w, h, f)`,
+  `Uri.parse(s)` → `s.toUri()`, and `prefs.edit()…apply()` → `prefs.edit { }`.
+  Only adopt the KTX form when it's behaviour-preserving: keep any explicit
+  argument that differs from the extension's default (a non-`ARGB_8888`
+  `Bitmap.Config`, `scale(filter = false)`), and leave calls the KTX has no
+  equivalent for (e.g. the `createBitmap` pixels/matrix overloads, or a
+  conditional-`apply()` editor loop) untouched.
+- **This "prefer the KTX sugar" rule does NOT extend to collection operators.**
+  The KTX preference is about platform wrappers (`Bitmap`/`Uri`/`SharedPreferences`),
+  which compile to the identical call. Collections are the opposite: in hot
+  event/parse paths Quartz deliberately uses raw JVM arrays (`TagArray =
+  Array<Array<String>>`) and the inline `fast*` operators (`fastForEach`,
+  `fastAny`, `fastFirstOrNull`, `fastFirstNotNullOfOrNull`, … in
+  `nip01Core/core/TagArray.kt`) instead of Kotlin `List` + stdlib
+  `forEach`/`map`/`filter`/`any` — the `fast*` variants allocate no iterator,
+  no intermediate list, and no lambda object. Don't "modernize" those into
+  stdlib collection calls; match the surrounding hot-path style.
 
 ### Navigation Shell
 - **Desktop**: Sidebar + main content area

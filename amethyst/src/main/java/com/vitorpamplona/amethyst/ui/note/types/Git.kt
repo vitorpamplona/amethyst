@@ -21,12 +21,10 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -85,7 +83,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.repoHasFetchableClo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -93,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size8dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -102,9 +98,7 @@ import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
-private val CardShape = QuoteBorder
 private val ChipShape = RoundedCornerShape(8.dp)
-private val CardPadding = PaddingValues(start = Size10dp, top = Size10dp, end = Size10dp, bottom = Size5dp)
 private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
 private val LinkRowSpacing = Arrangement.spacedBy(Size8dp)
 
@@ -113,15 +107,7 @@ private fun GitCardContainer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val border = MaterialTheme.colorScheme.subtleBorder
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(CardShape)
-                .border(1.dp, border, CardShape)
-                .padding(CardPadding),
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         content()
     }
 }
@@ -262,11 +248,30 @@ private fun GitMetaRow(
 private fun String.shortCommit(): String = if (length > 7) take(7) else this
 
 /**
+ * Some NIP-34 clients duplicate the subject tag as a leading markdown heading of the
+ * content ("# Title\n\n…"). The card already renders the subject as its own title, so
+ * when the first line is a heading matching [subject], drop it from the body.
+ */
+private fun stripDuplicatedSubject(
+    content: String,
+    subject: String?,
+): String {
+    if (subject.isNullOrBlank()) return content
+    val trimmed = content.trimStart()
+    if (!trimmed.startsWith("#")) return content
+    val firstLineEnd = trimmed.indexOf('\n').let { if (it < 0) trimmed.length else it }
+    val heading = trimmed.substring(0, firstLineEnd).trimStart('#').trim()
+    if (!heading.equals(subject.trim(), ignoreCase = true)) return content
+    return trimmed.substring(firstLineEnd).trimStart()
+}
+
+/**
  * The shared markdown body used by patches, issues and pull requests: honors
  * the collapsed [makeItShort] preview for the logged-in user's own posts and
  * otherwise renders the full content with sensitivity warnings and uncited
  * hashtags. The subject, when present, is rendered separately as a title by the
- * caller, so it is not inlined here.
+ * caller, so it is not inlined here — pass it as [renderedSubject] so a copy
+ * duplicated into the content as a leading heading is stripped.
  */
 @Composable
 private fun GitMarkdownBody(
@@ -277,8 +282,10 @@ private fun GitMarkdownBody(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    renderedSubject: String? = null,
 ) {
-    LoadDecryptedContent(note, accountViewModel) { body ->
+    LoadDecryptedContent(note, accountViewModel) { rawBody ->
+        val body = remember(rawBody, renderedSubject) { stripDuplicatedSubject(rawBody, renderedSubject) }
         val isAuthorTheLoggedUser =
             remember(note.event) { accountViewModel.isLoggedUser(note.author) }
 
@@ -537,7 +544,7 @@ private fun RenderGitIssueEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitStatusActions(note, accountViewModel)
@@ -669,7 +676,7 @@ private fun RenderGitPullRequestEvent(
 
         Spacer(modifier = HalfDoubleVertSpacer)
 
-        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+        GitMarkdownBody(note, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav, renderedSubject = subject)
 
         if (!makeItShort) {
             GitPullRequestChanges(cloneUrls, currentCommit, mergeBase, accountViewModel)
