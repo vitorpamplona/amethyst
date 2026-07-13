@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,18 +32,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,26 +55,26 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import kotlinx.coroutines.launch
 
 /**
- * The shared metadata form for creating and editing a Concord community — a large
- * circular icon preview at the top that reflects the icon URL live (tap it to jump
- * to the URL field), then the name, description, and icon-URL fields. Mirrors the
- * NIP-29 `GroupImagePicker` hero + `GroupMetadataFields` layout so the two features
- * feel consistent. Callers own the state and add the surrounding scaffold, relays
- * section (create only), and the create/save action.
+ * The shared metadata form for creating and editing a Concord community — a large circular icon
+ * hero at the top (tap to pick an image, which is AES-256-GCM-encrypted and uploaded to Blossom as
+ * a CORD-02 §6 [ImagePointer], see [ConcordImageUploader]), then the name and description fields.
+ * Mirrors the NIP-29 `GroupImagePicker` hero + `GroupMetadataFields` layout so the two features feel
+ * consistent. Callers own the state and add the surrounding scaffold, relays section (create only),
+ * and the create/save action.
  */
 @Composable
 fun ConcordMetadataFields(
     name: MutableState<String>,
     about: MutableState<String>,
-    iconUrl: MutableState<String>,
+    icon: MutableState<ImagePointer?>,
     robotSeed: String,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val iconFocus = remember { FocusRequester() }
-
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -75,10 +82,9 @@ fun ConcordMetadataFields(
     ) {
         ConcordIconHero(
             robotSeed = robotSeed,
-            iconUrl = iconUrl.value,
+            icon = icon,
             displayName = name.value,
             accountViewModel = accountViewModel,
-            onClick = { iconFocus.requestFocus() },
         )
 
         OutlinedTextField(
@@ -96,45 +102,61 @@ fun ConcordMetadataFields(
             maxLines = 5,
             label = { Text(stringRes(R.string.concord_create_about)) },
         )
-        OutlinedTextField(
-            value = iconUrl.value,
-            onValueChange = { iconUrl.value = it },
-            modifier = Modifier.fillMaxWidth().focusRequester(iconFocus),
-            singleLine = true,
-            label = { Text(stringRes(R.string.concord_create_icon)) },
-            placeholder = { Text("https://…/icon.png") },
-        )
     }
 }
 
-/** The circular community-icon hero: shows the icon URL live over a stable robohash placeholder. */
+/**
+ * The circular community-icon hero: shows the current (decrypted) icon over a stable robohash
+ * placeholder, and on tap opens the photo picker → encrypts + uploads the chosen image and updates
+ * [icon] to the resulting encrypted pointer. A spinner covers the hero while the upload is in flight.
+ */
 @Composable
 private fun ConcordIconHero(
     robotSeed: String,
-    iconUrl: String,
+    icon: MutableState<ImagePointer?>,
     displayName: String,
     accountViewModel: AccountViewModel,
-    onClick: () -> Unit,
 ) {
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var uploading by remember { mutableStateOf(false) }
+    val iconModel = rememberConcordImageModel(icon.value, accountViewModel)
+
+    val picker =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            uploading = true
+            scope.launch {
+                try {
+                    icon.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(uri, context)
+                } catch (e: Exception) {
+                    Toast.makeText(context, stringRes(context, R.string.failed_to_upload_media_no_details), Toast.LENGTH_SHORT).show()
+                } finally {
+                    uploading = false
+                }
+            }
+        }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier =
                 Modifier
                     .size(104.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onClick),
+                    .clickable(enabled = !uploading) { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             contentAlignment = Alignment.Center,
         ) {
             RobohashFallbackAsyncImage(
                 robot = robotSeed,
-                model = iconUrl.ifBlank { null },
+                model = iconModel,
                 contentDescription = displayName.ifBlank { stringRes(R.string.concord_create_title) },
                 modifier = Modifier.size(104.dp).clip(CircleShape),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 autoPlayGif = autoPlayGif,
             )
+            if (uploading) CircularProgressIndicator(modifier = Modifier.size(36.dp))
         }
         Text(
             text = stringRes(R.string.concord_create_icon_hint),
@@ -146,7 +168,7 @@ private fun ConcordIconHero(
                 Modifier
                     .padding(top = 8.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onClick)
+                    .clickable(enabled = !uploading) { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                     .padding(horizontal = 8.dp, vertical = 4.dp),
         )
     }

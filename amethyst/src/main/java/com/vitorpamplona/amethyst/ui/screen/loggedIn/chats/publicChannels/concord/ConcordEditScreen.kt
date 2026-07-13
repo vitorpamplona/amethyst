@@ -83,7 +83,7 @@ fun ConcordEditScreen(
 
     val name = remember { mutableStateOf("") }
     val about = remember { mutableStateOf("") }
-    val iconUrl = remember { mutableStateOf("") }
+    val icon = remember { mutableStateOf<ImagePointer?>(null) }
     var prefilled by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -94,7 +94,7 @@ fun ConcordEditScreen(
         if (!prefilled && md != null) {
             name.value = md.name
             about.value = md.description.orEmpty()
-            iconUrl.value = md.icon?.url.orEmpty()
+            icon.value = md.icon
             prefilled = true
         }
     }
@@ -129,7 +129,7 @@ fun ConcordEditScreen(
             ConcordMetadataFields(
                 name = name,
                 about = about,
-                iconUrl = iconUrl,
+                icon = icon,
                 robotSeed = communityId,
                 accountViewModel = accountViewModel,
             )
@@ -144,11 +144,7 @@ fun ConcordEditScreen(
                                 communityId = communityId,
                                 name = name.value.trim(),
                                 description = about.value.trim().ifBlank { null },
-                                icon =
-                                    iconUrl.value
-                                        .trim()
-                                        .ifBlank { null }
-                                        ?.let { ImagePointer(url = it) },
+                                icon = icon.value,
                                 relays = state?.metadata?.relays ?: session.entry.relays,
                             )
                         working = false

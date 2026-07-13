@@ -71,7 +71,7 @@ fun ConcordCreateScreen(
 ) {
     val name = remember { mutableStateOf("") }
     val about = remember { mutableStateOf("") }
-    val iconUrl = remember { mutableStateOf("") }
+    val icon = remember { mutableStateOf<ImagePointer?>(null) }
     val relays = remember { mutableListOf<NormalizedRelayUrl>().toMutableStateList() }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -100,7 +100,7 @@ fun ConcordCreateScreen(
             ConcordMetadataFields(
                 name = name,
                 about = about,
-                iconUrl = iconUrl,
+                icon = icon,
                 robotSeed = "concord-new",
                 accountViewModel = accountViewModel,
             )
@@ -134,11 +134,7 @@ fun ConcordCreateScreen(
                                 name = name.value.trim(),
                                 description = about.value.trim().ifBlank { null },
                                 relays = relays.map { it.url },
-                                icon =
-                                    iconUrl.value
-                                        .trim()
-                                        .ifBlank { null }
-                                        ?.let { ImagePointer(url = it) },
+                                icon = icon.value,
                             )
                         working = false
                         if (communityId != null) nav.newStack(Route.ConcordServer(communityId))
