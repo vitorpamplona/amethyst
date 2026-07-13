@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 
 val ContactCardKindList = listOf(ContactCardEvent.KIND)
@@ -46,7 +47,8 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
             Filter(
                 kinds = ContactCardKindList,
                 authors = trustedAccounts,
-                tags = mapOf("d" to targets.sorted()),
+                // kind:30382 addresses the target user in the d-tag
+                tags = mapOf(DTag.TAG_NAME to targets.sorted()),
                 since = since,
             ),
     )

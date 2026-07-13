@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 class UserCardsSubAssembler(
@@ -46,7 +47,10 @@ class UserCardsSubAssembler(
         filters: List<Filter>?,
     ) {
         filters?.forEach { filter ->
-            filter.tags?.get("p")?.forEach {
+            // kind:30382 addresses the target user in the d-tag (the key the
+            // filter builder uses). Reading any other tag leaves the per-user
+            // EOSEs unset and forces full re-downloads with since = null.
+            filter.tags?.get(DTag.TAG_NAME)?.forEach {
                 val targetUser = cache.getUserIfExists(it)
                 targetUser?.cardsOrNull()?.latestEOSEs?.newEose(relay, time)
             }
