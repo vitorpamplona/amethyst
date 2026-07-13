@@ -52,6 +52,7 @@ data class UsageSummary(
     val mediaPlayMs: Long,
     val powMs: Long,
     val torMs: Long,
+    val torStarts: Long,
     val alwaysOnMs: Long,
     val alwaysOnStarts: Long,
     val callMs: Long,
@@ -65,25 +66,51 @@ data class UsageSummary(
     val batteryDrainBg: Long,
     /** total rx+tx bytes per subsystem (net roles + "relay"). */
     val bytesPerSubsystem: Map<String, Long>,
+    /** cellular-only rx+tx bytes per subsystem — the scarce resource. */
+    val mobileBytesPerSubsystem: Map<String, Long>,
+    /** foreground time per screen NAME (arguments are never recorded). */
+    val screenTimeMs: Map<String, Long>,
+    /** how many day buckets this summary was built from (>= 1). */
+    val dayCount: Int,
 ) {
     val totalBytes: Long get() = mobileBytesBg + mobileBytesFg + wifiBytesBg + wifiBytesFg
     val mobileBytes: Long get() = mobileBytesBg + mobileBytesFg
     val relayConnMs: Long get() = relayConnMsMobileBg + relayConnMsMobileFg + relayConnMsWifiBg + relayConnMsWifiFg
 
     companion object {
-        fun from(counters: Map<String, Long>): UsageSummary {
+        fun from(
+            counters: Map<String, Long>,
+            dayCount: Int = 1,
+        ): UsageSummary {
             fun traffic(
                 net: String,
                 vis: String,
             ) = counters.sumMatching(net, vis, UsageKeys.RX) + counters.sumMatching(net, vis, UsageKeys.TX)
 
             val subsystems = mutableMapOf<String, Long>()
+            val mobileSubsystems = mutableMapOf<String, Long>()
             for (role in UsageKeys.HTTP_ROLES) {
                 val bytes = counters.sumMatching(role, UsageKeys.RX) + counters.sumMatching(role, UsageKeys.TX)
                 if (bytes > 0) subsystems[role] = bytes
+                val mobileBytes =
+                    counters.sumMatching(role, UsageKeys.MOBILE, UsageKeys.RX) +
+                        counters.sumMatching(role, UsageKeys.MOBILE, UsageKeys.TX)
+                if (mobileBytes > 0) mobileSubsystems[role] = mobileBytes
             }
             val relayBytes = counters.sumMatching("msg", UsageKeys.RX) + counters.sumMatching("msg", UsageKeys.TX)
             if (relayBytes > 0) subsystems["relay"] = relayBytes
+            val mobileRelayBytes =
+                counters.sumMatching("msg", UsageKeys.MOBILE, UsageKeys.RX) +
+                    counters.sumMatching("msg", UsageKeys.MOBILE, UsageKeys.TX)
+            if (mobileRelayBytes > 0) mobileSubsystems["relay"] = mobileRelayBytes
+
+            val screens = mutableMapOf<String, Long>()
+            for ((key, value) in counters) {
+                if (key.startsWith(UsageKeys.SCREEN_PREFIX) && key.endsWith(".ms") && value > 0) {
+                    val name = key.removePrefix(UsageKeys.SCREEN_PREFIX).removeSuffix(".ms")
+                    if (name.isNotBlank()) screens[name] = (screens[name] ?: 0L) + value
+                }
+            }
 
             return UsageSummary(
                 mobileBytesBg = traffic(UsageKeys.MOBILE, UsageKeys.BG),
@@ -110,6 +137,7 @@ data class UsageSummary(
                 mediaPlayMs = counters[UsageKeys.MEDIA_PLAY_MS] ?: 0L,
                 powMs = counters[UsageKeys.POW_MS] ?: 0L,
                 torMs = counters[UsageKeys.TOR_MS] ?: 0L,
+                torStarts = counters[UsageKeys.TOR_STARTS] ?: 0L,
                 alwaysOnMs = counters[UsageKeys.ALWAYS_ON_MS] ?: 0L,
                 alwaysOnStarts = counters[UsageKeys.ALWAYS_ON_STARTS] ?: 0L,
                 callMs = counters[UsageKeys.CALL_MS] ?: 0L,
@@ -122,6 +150,9 @@ data class UsageSummary(
                 batteryDrainFg = counters[UsageKeys.BATTERY_DRAIN_FG] ?: 0L,
                 batteryDrainBg = counters[UsageKeys.BATTERY_DRAIN_BG] ?: 0L,
                 bytesPerSubsystem = subsystems,
+                mobileBytesPerSubsystem = mobileSubsystems,
+                screenTimeMs = screens,
+                dayCount = dayCount.coerceAtLeast(1),
             )
         }
 
@@ -129,7 +160,7 @@ data class UsageSummary(
         fun fromDays(days: Collection<Map<String, Long>>): UsageSummary {
             val merged = mutableMapOf<String, Long>()
             days.forEach { day -> day.forEach { (k, v) -> merged[k] = (merged[k] ?: 0L) + v } }
-            return from(merged)
+            return from(merged, dayCount = days.size)
         }
     }
 }

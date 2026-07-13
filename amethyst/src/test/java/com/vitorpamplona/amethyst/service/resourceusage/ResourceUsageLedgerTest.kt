@@ -617,6 +617,164 @@ class MeteringNostrSignerTest {
         }
 }
 
+class ScreenTimeIntegratorTest {
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    @Test
+    fun routeNamesLoseTheirArgumentsBeforeAnythingIsRecorded() {
+        assertEquals("Profile", ScreenTimeIntegrator.screenNameOf("com.vitorpamplona.amethyst.ui.navigation.routes.Route.Profile/{userId}"))
+        assertEquals("Hashtag", ScreenTimeIntegrator.screenNameOf("routes.Route.Hashtag/{tag}?extra={extra}"))
+        assertEquals("Home", ScreenTimeIntegrator.screenNameOf("routes.Route.Home"))
+        assertNull(ScreenTimeIntegrator.screenNameOf(null))
+        assertNull(ScreenTimeIntegrator.screenNameOf(""))
+    }
+
+    @Test
+    fun accountsScreenTimeOnlyWhileForeground() =
+        runTest {
+            val store = ResourceUsageStore(File(temp.root, "u.json"))
+            val accountant = ResourceUsageAccountant(store, backgroundScope, epochDay = { 100L })
+            var clock = 0L
+            val isForeground = MutableStateFlow(true)
+            val integrator = ScreenTimeIntegrator(accountant, nowMs = { clock })
+            integrator.start(backgroundScope, isForeground)
+            testScheduler.runCurrent()
+
+            integrator.onScreen("Home")
+            testScheduler.runCurrent()
+            clock += 5_000
+            integrator.onScreen("Video")
+            testScheduler.runCurrent()
+            clock += 3_000
+            isForeground.value = false // backgrounded on Video: segment closes
+            testScheduler.runCurrent()
+            clock += 60_000 // background time must not count
+            isForeground.value = true
+            testScheduler.runCurrent()
+            clock += 2_000
+            integrator.onScreen(null)
+            testScheduler.runCurrent()
+
+            val today = accountant.allDaysIncludingLive()[100].orEmpty()
+            assertEquals(5_000L, today[UsageKeys.screenMs("Home")])
+            assertEquals(5_000L, today[UsageKeys.screenMs("Video")])
+        }
+}
+
+class UsageInsightsTest {
+    private fun summary(
+        counters: Map<String, Long>,
+        days: Int,
+    ) = UsageSummary.fromDays(List(days) { if (it == 0) counters else emptyMap() })
+
+    @Test
+    fun quietWeekYieldsNoInsights() {
+        val s = summary(mapOf(UsageKeys.APP_FG_MS to 3_600_000L), days = 7)
+        assertTrue(UsageInsights.evaluate(s).isEmpty())
+    }
+
+    @Test
+    fun backgroundRelayTimeWithAlwaysOnSuggestsNotificationSettings() {
+        val s =
+            summary(
+                mapOf(
+                    UsageKeys.ALWAYS_ON_MS to 24L * 3_600_000L,
+                    UsageKeys.relayConnMs(mobile = true, foreground = false) to 7L * 4L * 3_600_000L,
+                ),
+                days = 7,
+            )
+        val insights = UsageInsights.evaluate(s)
+        assertEquals(UsageInsights.Target.NOTIFICATION_SETTINGS, insights.first().target)
+    }
+
+    @Test
+    fun backgroundRelayTimeWithoutAlwaysOnDoesNotBlameNotifications() {
+        val s =
+            summary(
+                mapOf(UsageKeys.relayConnMs(mobile = true, foreground = false) to 7L * 4L * 3_600_000L),
+                days = 7,
+            )
+        assertTrue(UsageInsights.evaluate(s).none { it.target == UsageInsights.Target.NOTIFICATION_SETTINGS })
+    }
+
+    @Test
+    fun cellularMediaSuggestsMediaSettingsButWifiDoesNot() {
+        val cellular =
+            summary(
+                mapOf(UsageKeys.net(UsageKeys.ROLE_IMAGE, mobile = true, foreground = true, received = true) to 7L * 30L * 1024L * 1024L),
+                days = 7,
+            )
+        assertEquals(UsageInsights.Target.MEDIA_SETTINGS, UsageInsights.evaluate(cellular).first().target)
+
+        val wifi =
+            summary(
+                mapOf(UsageKeys.net(UsageKeys.ROLE_IMAGE, mobile = false, foreground = true, received = true) to 7L * 30L * 1024L * 1024L),
+                days = 7,
+            )
+        assertTrue(UsageInsights.evaluate(wifi).isEmpty())
+    }
+
+    @Test
+    fun manySimultaneousRelaysSuggestsEditingTheRelayList() {
+        // 40 relays open around the clock for a week.
+        val s =
+            summary(
+                mapOf(UsageKeys.relayConnMs(mobile = false, foreground = true) to 40L * 7L * 24L * 3_600_000L),
+                days = 7,
+            )
+        assertTrue(UsageInsights.evaluate(s).any { it.target == UsageInsights.Target.RELAY_SETTINGS })
+    }
+
+    @Test
+    fun longTorUptimeSuggestsPrivacyOptions() {
+        val s = summary(mapOf(UsageKeys.TOR_MS to 7L * 5L * 3_600_000L), days = 7)
+        assertTrue(UsageInsights.evaluate(s).any { it.target == UsageInsights.Target.PRIVACY_SETTINGS })
+    }
+
+    @Test
+    fun thresholdsScaleWithTheNumberOfObservedDays() {
+        // 5 tor-hours looks fine over a week but heavy over a single day.
+        val counters = mapOf(UsageKeys.TOR_MS to 5L * 3_600_000L)
+        assertTrue(UsageInsights.evaluate(summary(counters, days = 7)).isEmpty())
+        assertTrue(UsageInsights.evaluate(summary(counters, days = 1)).any { it.target == UsageInsights.Target.PRIVACY_SETTINGS })
+    }
+
+    @Test
+    fun neverMoreThanThreeInsights() {
+        val s =
+            summary(
+                mapOf(
+                    UsageKeys.ALWAYS_ON_MS to 24L * 3_600_000L,
+                    UsageKeys.relayConnMs(mobile = true, foreground = false) to 40L * 7L * 24L * 3_600_000L,
+                    UsageKeys.net(UsageKeys.ROLE_VIDEO, mobile = true, foreground = true, received = true) to 7L * 200L * 1024L * 1024L,
+                    UsageKeys.TOR_MS to 7L * 10L * 3_600_000L,
+                ),
+                days = 7,
+            )
+        assertEquals(UsageInsights.MAX_INSIGHTS, UsageInsights.evaluate(s).size)
+    }
+}
+
+class UsageSummaryMapsTest {
+    @Test
+    fun screenTimeAndCellularMapsAreExtractedFromCounters() {
+        val s =
+            UsageSummary.from(
+                mapOf(
+                    UsageKeys.screenMs("Home") to 10_000L,
+                    UsageKeys.screenMs("Video") to 5_000L,
+                    UsageKeys.net(UsageKeys.ROLE_IMAGE, mobile = true, foreground = true, received = true) to 100L,
+                    UsageKeys.net(UsageKeys.ROLE_IMAGE, mobile = false, foreground = true, received = true) to 900L,
+                ),
+            )
+        assertEquals(10_000L, s.screenTimeMs["Home"])
+        assertEquals(5_000L, s.screenTimeMs["Video"])
+        assertEquals(100L, s.mobileBytesPerSubsystem[UsageKeys.ROLE_IMAGE])
+        assertEquals(1_000L, s.bytesPerSubsystem[UsageKeys.ROLE_IMAGE])
+    }
+}
+
 class ResourceUsageAlertsTest {
     private fun day(vararg counters: Pair<String, Long>) = mapOf(*counters)
 

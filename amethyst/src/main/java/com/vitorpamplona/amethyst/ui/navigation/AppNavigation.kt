@@ -42,13 +42,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
+import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsScreen
@@ -303,6 +306,7 @@ fun AppNavigation(
         }
     }
 
+    TrackScreenTime(nav)
     NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
 
     DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
@@ -323,6 +327,27 @@ private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
         val state = callState
         if (state is CallState.IncomingCall || state is CallState.Offering) {
             CallActivity.launch(context)
+        }
+    }
+}
+
+/**
+ * Feeds the resource-usage ledger with time-per-screen. Only the route's
+ * base name crosses this boundary — [ScreenTimeIntegrator.screenNameOf]
+ * strips every navigation argument first, so the ledger can say "Profile"
+ * but never which profile.
+ */
+@Composable
+private fun TrackScreenTime(nav: Nav) {
+    DisposableEffect(nav.controller) {
+        val listener =
+            NavController.OnDestinationChangedListener { _, destination, _ ->
+                Amethyst.instance.screenTime.onScreen(ScreenTimeIntegrator.screenNameOf(destination.route))
+            }
+        nav.controller.addOnDestinationChangedListener(listener)
+        onDispose {
+            nav.controller.removeOnDestinationChangedListener(listener)
+            Amethyst.instance.screenTime.onScreen(null)
         }
     }
 }

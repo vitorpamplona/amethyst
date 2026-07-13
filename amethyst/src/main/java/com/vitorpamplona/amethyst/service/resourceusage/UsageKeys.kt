@@ -153,6 +153,16 @@ object UsageKeys {
     const val LOCATION_MS = "location.ms"
 
     /**
+     * `screen.Home.ms` — time a screen was visible while the app was in the
+     * foreground. PRIVACY: only the route's base NAME is ever recorded, never
+     * its navigation arguments — "Profile" is tracked, whose profile is not
+     * (see ScreenTimeIntegrator.screenNameOf, which strips them).
+     */
+    fun screenMs(screen: String): String = "$SCREEN_PREFIX$screen.ms"
+
+    const val SCREEN_PREFIX = "screen."
+
+    /**
      * NIP-04/44 decryptions and encryptions through account signers. Durations
      * are only metered for local-key signers (CPU cost); external/remote
      * signer waits are IPC/network, tracked by the sign/decrypt counts alone.

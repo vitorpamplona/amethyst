@@ -61,10 +61,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectMemorySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.crashreports.DEV_REPORT_PUBKEY
+import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatBytes
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatConnHours
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatDurationMs
+import com.vitorpamplona.amethyst.service.resourceusage.UsageInsights
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -75,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /**
  * The resource-usage ledger: how much network, relay connection time, and
@@ -136,14 +139,18 @@ fun ResourceUsageScreen(
                 val weekSummary = remember(loaded) { UsageSummary.fromDays((today - 6..today).mapNotNull { loaded[it] }) }
 
                 TodayTiles(todaySummary)
+                WeekRatesTiles(weekSummary)
+                InsightsSection(weekSummary, nav)
                 if (weekSummary.totalBytes > 0) {
                     SettingsSection(R.string.resource_usage_trend_section) {
                         UsageTrendChart(loaded, today)
                     }
                 }
                 SubsystemSection(weekSummary)
+                ScreenTimeSection(weekSummary)
                 ActivitySection(weekSummary)
                 AlwaysOnServiceSection(weekSummary, nav)
+                TorServiceSection(weekSummary, nav)
                 MemorySection(memory)
                 SendReportSection(accountViewModel, nav, loaded, today, memory)
             }
@@ -196,9 +203,120 @@ private fun StatTile(
     }
 }
 
-/** Ranked per-feature traffic with proportion bars (7 days). */
+/**
+ * 7-day rates: totals aren't judgeable, rates are. Battery %/hour of use is
+ * the most tangible battery number we can show; average simultaneous relay
+ * connections is the number a user can act on by trimming their relay list.
+ */
+@Composable
+private fun WeekRatesTiles(s: UsageSummary) {
+    val fgHours = s.foregroundMs / 3_600_000.0
+    val tiles =
+        buildList {
+            if (fgHours >= 0.5 && s.batteryDrainFg > 0) {
+                add(R.string.resource_usage_tile_battery_rate to String.format(Locale.US, "%.1f%%", s.batteryDrainFg / fgHours))
+            }
+            if (fgHours >= 0.5) {
+                add(R.string.resource_usage_tile_data_rate to formatBytes(((s.mobileBytesFg + s.wifiBytesFg) / fgHours).toLong()))
+            }
+            val avgRelays = s.relayConnMs.toDouble() / (s.dayCount * ResourceUsageAccountant.DAY_MS)
+            if (avgRelays >= 0.5) {
+                add(R.string.resource_usage_tile_avg_relays to String.format(Locale.US, "%.1f", avgRelays))
+            }
+        }
+    if (tiles.isEmpty()) return
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        tiles.forEach { (label, value) -> StatTile(label, value, Modifier.weight(1f)) }
+    }
+}
+
+/**
+ * Up to three plain-language recommendations, each deep-linking to the
+ * setting that acts on it — the rules live in [UsageInsights] so they are
+ * unit-testable and shared with nothing UI-bound.
+ */
+@Composable
+private fun InsightsSection(
+    week: UsageSummary,
+    nav: INav,
+) {
+    val insights = remember(week) { UsageInsights.evaluate(week) }
+    if (insights.isEmpty()) return
+    SettingsSection(R.string.resource_usage_insights_section) {
+        insights.forEachIndexed { index, insight ->
+            if (index > 0) SettingsDivider()
+            Column(
+                modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = insightText(insight),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                TextButton(
+                    onClick = { nav.nav(insightRoute(insight.target)) },
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text(stringRes(insightButton(insight.target)))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun insightText(insight: UsageInsights.Insight): String =
+    when (insight.target) {
+        UsageInsights.Target.NOTIFICATION_SETTINGS ->
+            stringRes(R.string.resource_usage_insight_notifications, formatConnHours(insight.value))
+        UsageInsights.Target.MEDIA_SETTINGS ->
+            stringRes(R.string.resource_usage_insight_media, formatBytes(insight.value))
+        UsageInsights.Target.RELAY_SETTINGS ->
+            stringRes(R.string.resource_usage_insight_relays, insight.value.toString())
+        UsageInsights.Target.PRIVACY_SETTINGS ->
+            stringRes(R.string.resource_usage_insight_tor, formatDurationMs(insight.value))
+    }
+
+private fun insightRoute(target: UsageInsights.Target): Route =
+    when (target) {
+        UsageInsights.Target.NOTIFICATION_SETTINGS -> Route.NotificationSettings
+        UsageInsights.Target.MEDIA_SETTINGS -> Route.Settings
+        UsageInsights.Target.RELAY_SETTINGS -> Route.EditRelays
+        UsageInsights.Target.PRIVACY_SETTINGS -> Route.PrivacyOptions
+    }
+
+@StringRes
+private fun insightButton(target: UsageInsights.Target): Int =
+    when (target) {
+        UsageInsights.Target.NOTIFICATION_SETTINGS -> R.string.resource_usage_alwayson_settings_button
+        UsageInsights.Target.MEDIA_SETTINGS -> R.string.resource_usage_insight_button_media
+        UsageInsights.Target.RELAY_SETTINGS -> R.string.resource_usage_insight_button_relays
+        UsageInsights.Target.PRIVACY_SETTINGS -> R.string.resource_usage_insight_button_privacy
+    }
+
+/**
+ * Ranked per-feature traffic with proportion bars (7 days). Cellular is the
+ * scarce resource (battery and often money), so when any cellular traffic
+ * exists the ranking, bars, and headline value are cellular — with the total
+ * as secondary context. Wi-Fi-only devices fall back to totals.
+ */
 @Composable
 private fun SubsystemSection(week: UsageSummary) {
+    val cellular = week.mobileBytesPerSubsystem
+    if (cellular.isNotEmpty()) {
+        val rows = cellular.entries.sortedByDescending { it.value }
+        val max = rows.first().value.coerceAtLeast(1L)
+        SettingsSection(R.string.resource_usage_by_subsystem_cellular) {
+            rows.forEach { (subsystem, bytes) ->
+                BarRow(
+                    label = subsystemLabel(subsystem),
+                    value = stringRes(R.string.resource_usage_cell_of_total, formatBytes(bytes), formatBytes(week.bytesPerSubsystem[subsystem] ?: bytes)),
+                    fraction = bytes.toFloat() / max.toFloat(),
+                )
+            }
+        }
+        return
+    }
     if (week.bytesPerSubsystem.isEmpty()) return
     val rows = week.bytesPerSubsystem.entries.sortedByDescending { it.value }
     val max = rows.first().value.coerceAtLeast(1L)
@@ -208,6 +326,29 @@ private fun SubsystemSection(week: UsageSummary) {
                 label = subsystemLabel(subsystem),
                 value = formatBytes(bytes),
                 fraction = bytes.toFloat() / max.toFloat(),
+            )
+        }
+    }
+}
+
+/**
+ * Where the screen-on time went (7 days). Route base names only — the
+ * ledger never records which profile/hashtag/thread a screen showed.
+ */
+@Composable
+private fun ScreenTimeSection(week: UsageSummary) {
+    if (week.screenTimeMs.isEmpty()) return
+    val rows =
+        week.screenTimeMs.entries
+            .sortedByDescending { it.value }
+            .take(6)
+    val max = rows.first().value.coerceAtLeast(1L)
+    SettingsSection(R.string.resource_usage_screen_time_section) {
+        rows.forEach { (name, ms) ->
+            BarRow(
+                label = name,
+                value = formatDurationMs(ms),
+                fraction = ms.toFloat() / max.toFloat(),
             )
         }
     }
@@ -227,10 +368,18 @@ private fun subsystemLabel(subsystem: String): Int =
         else -> R.string.resource_usage_subsystem_other
     }
 
-/** Label + value + a thin rounded proportion bar underneath. */
 @Composable
 private fun BarRow(
     @StringRes label: Int,
+    value: String,
+    fraction: Float,
+    color: Color = MaterialTheme.colorScheme.primary,
+) = BarRow(stringRes(label), value, fraction, color)
+
+/** Label + value + a thin rounded proportion bar underneath. */
+@Composable
+private fun BarRow(
+    label: String,
     value: String,
     fraction: Float,
     color: Color = MaterialTheme.colorScheme.primary,
@@ -241,7 +390,7 @@ private fun BarRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringRes(label),
+                text = label,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -444,6 +593,43 @@ private fun AlwaysOnServiceSection(
                 modifier = Modifier.align(Alignment.End),
             ) {
                 Text(stringRes(R.string.resource_usage_alwayson_settings_button))
+            }
+        }
+    }
+}
+
+/**
+ * Cost card for in-app Tor — like the always-on card: what it cost this
+ * week and the settings surface that controls it.
+ */
+@Composable
+private fun TorServiceSection(
+    s: UsageSummary,
+    nav: INav,
+) {
+    if (s.torMs <= 0) return
+    val starts = s.torStarts.toInt()
+    SettingsSection(R.string.resource_usage_tor_section) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringRes(R.string.resource_usage_tor_explanation),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        MetricRow(
+            R.string.resource_usage_alwayson_uptime,
+            "${formatDurationMs(s.torMs)} · ${pluralStringResource(R.plurals.resource_usage_alwayson_starts, starts, starts)}",
+        )
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            TextButton(
+                onClick = { nav.nav(Route.PrivacyOptions) },
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringRes(R.string.resource_usage_insight_button_privacy))
             }
         }
     }

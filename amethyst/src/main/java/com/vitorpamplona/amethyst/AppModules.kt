@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeInteg
 import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
+import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
@@ -344,6 +345,15 @@ class AppModules(
     private val powSession = SessionTimeIntegrator(resourceUsage, UsageKeys.POW_MS, UsageKeys.POW_SESSIONS).also { it.registerFlushHook() }
     private val torSession = SessionTimeIntegrator(resourceUsage, UsageKeys.TOR_MS, UsageKeys.TOR_STARTS).also { it.registerFlushHook() }
     private val locationSession = SessionTimeIntegrator(resourceUsage, UsageKeys.LOCATION_MS).also { it.registerFlushHook() }
+
+    // Time-per-screen (route base names only — arguments never reach the
+    // ledger). Fed by the navigation listener in AppNavigation; foreground
+    // gating means backgrounding on a screen closes its segment.
+    val screenTime = ScreenTimeIntegrator(resourceUsage)
+
+    init {
+        screenTime.start(applicationIOScope, foregroundTracker.isForeground)
+    }
 
     // In-app (Arti) Tor uptime. Watches the raw TorService status — NOT
     // TorManager.status, whose upstream is WhileSubscribed and calls

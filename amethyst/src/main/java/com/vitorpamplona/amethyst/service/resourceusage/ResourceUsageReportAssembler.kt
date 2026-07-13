@@ -118,6 +118,14 @@ class ResourceUsageReportAssembler {
             if (subsystems.isNotEmpty()) {
                 append("| By subsystem | $subsystems |\n")
             }
+            val screens =
+                s.screenTimeMs.entries
+                    .sortedByDescending { it.value }
+                    .take(8)
+                    .joinToString(", ") { "${it.key} ${formatDurationMs(it.value)}" }
+            if (screens.isNotEmpty()) {
+                append("| Screen time | $screens |\n")
+            }
         }
 
     companion object {

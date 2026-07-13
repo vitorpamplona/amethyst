@@ -106,10 +106,16 @@ Flat `Map<String, Long>` per UTC epoch-day, retained ~30 days. Key grammar:
   at flush from BatteryManager: NOT app-isolated, but the ground truth that
   report corpora can correlate the other counters against
 
-Deliberately not tracked (v1): per-screen time (route names leak behavior
-patterns into a report — needs its own privacy review), per-coroutine or
-per-dispatcher CPU (needs a thread registry; `cpu.ms` answers whether CPU
-matters at all first), signing (user-action-rate, negligible).
+- `screen.<Name>.ms` — foreground time per screen, added after the original
+  privacy review: only the route's base NAME is recorded (screenNameOf strips
+  every navigation argument before the value leaves the nav layer), so the
+  ledger can say "Profile" but never whose profile
+
+Deliberately not tracked (v1): per-coroutine or per-dispatcher CPU (needs a
+thread registry; `cpu.ms` answers whether CPU matters at all first).
+(Two earlier v1 exclusions were later revisited: per-screen time ships with
+names-only privacy as above, and signing is now counted per signer kind
+because NIP-46/NIP-55 signatures are network/IPC round-trips, not local CPU.)
 
 Flat keys keep the store schema-free: new counters need no migration.
 
