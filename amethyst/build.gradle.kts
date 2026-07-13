@@ -1,4 +1,7 @@
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -339,6 +342,30 @@ configurations.all {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
+    }
+}
+
+// Gradle schedules Kotlin compilations of different variants of this module
+// concurrently (e.g. playDebug + playBenchmark when CI runs unit tests, lint,
+// and assembleBenchmark in one invocation), but they all share a single Kotlin
+// daemon whose heap (kotlin.daemon.jvmargs) cannot fit two full :amethyst
+// codegen passes — CI runs died with "GC overhead limit exceeded" inside the
+// daemon. This no-op shared build service with maxParallelUsages = 1 tells the
+// scheduler to run this module's Kotlin compile tasks one at a time; other
+// projects' tasks (JVM tests, lint analysis, packaging) still run in parallel.
+//
+// CI-only: the OOM needs a cache-cold compile of several variants at once,
+// which local builds (incremental, usually one variant) don't produce.
+abstract class AmethystKotlinCompileLimiter : BuildService<BuildServiceParameters.None>
+
+if (System.getenv("CI") != null) {
+    val kotlinCompileLimiter =
+        gradle.sharedServices.registerIfAbsent("amethystKotlinCompileLimiter", AmethystKotlinCompileLimiter::class) {
+            maxParallelUsages.set(1)
+        }
+
+    tasks.withType<KotlinCompile>().configureEach {
+        usesService(kotlinCompileLimiter)
     }
 }
 
