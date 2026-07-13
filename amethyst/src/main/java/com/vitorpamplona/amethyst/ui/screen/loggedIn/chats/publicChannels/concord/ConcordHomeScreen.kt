@@ -47,6 +47,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,7 +114,8 @@ fun ConcordHomeScreen(
 
     // Per-community expansion, cycled on tap: absent = CLOSED → UNREAD (peek only the channels with
     // new messages) → OPEN (all channels) → CLOSED. Multi-open, so several can be expanded at once.
-    var expandStates by remember { mutableStateOf(emptyMap<String, ChannelExpand>()) }
+    // rememberSaveable so the chevron states survive opening a channel and coming back to the hub.
+    var expandStates by rememberSaveable(stateSaver = ExpandStatesSaver) { mutableStateOf(emptyMap<String, ChannelExpand>()) }
 
     Scaffold(
         topBar = {
@@ -516,3 +519,19 @@ private enum class ChannelExpand {
     /** Every channel, plus the banner hero. */
     OPEN,
 }
+
+/**
+ * Saver for the per-community expand map so the chevron states survive navigation (open a channel,
+ * come back). Serializes to an `ArrayList<String>` of `"communityId=MODE"` — community ids are hex,
+ * so `=` never collides.
+ */
+private val ExpandStatesSaver =
+    Saver<Map<String, ChannelExpand>, ArrayList<String>>(
+        save = { map -> ArrayList(map.map { "${it.key}=${it.value.name}" }) },
+        restore = { list ->
+            list.associate {
+                val sep = it.lastIndexOf('=')
+                it.substring(0, sep) to ChannelExpand.valueOf(it.substring(sep + 1))
+            }
+        },
+    )
