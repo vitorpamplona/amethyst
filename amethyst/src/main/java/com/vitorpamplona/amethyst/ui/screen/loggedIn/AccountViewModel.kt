@@ -623,6 +623,18 @@ class AccountViewModel(
         if (ban) account.banConcordMember(communityId, member) else account.unbanConcordMember(communityId, member)
     }
 
+    /**
+     * Remove [member] from [communityId] absolutely (CORD-06 Refounding): rotate the
+     * community key so the member's key stops working for anything sent afterwards.
+     * Heavier than a ban (re-keys every retained member); owner / BAN-holder only.
+     */
+    fun removeConcordMember(
+        communityId: String,
+        member: HexKey,
+    ) = launchSigner {
+        account.refoundConcordCommunity(communityId, setOf(member))
+    }
+
     /** Pull the account's Concord community list from the stock + own relays (Concord hub bootstrap). */
     fun importConcordCommunities() =
         viewModelScope.launch(Dispatchers.IO) {

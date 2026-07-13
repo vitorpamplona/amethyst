@@ -157,7 +157,7 @@ object ConcordStreamEnvelope {
         }
         require(rumor.verifyId()) { "Rumor id ${rumor.id} is not its NIP-01 hash" }
 
-        return OpenedStreamEvent(rumor, seal.kind, seal.pubKey)
+        return OpenedStreamEvent(rumor, seal.kind, seal.pubKey, seal)
     }
 
     /** Like [open] but returns null instead of throwing on any validation failure. */
@@ -176,11 +176,15 @@ object ConcordStreamEnvelope {
 
 /**
  * The verified result of opening a stream wrap: the author [rumor], the
- * [sealKind] it arrived under (20013/20014), and the true [author] pubkey (equal
- * to `rumor.pubKey`, surfaced for convenience).
+ * [sealKind] it arrived under (20013/20014), the true [author] pubkey (equal to
+ * `rumor.pubKey`, surfaced for convenience), and the verified inner [seal] event
+ * itself. The [seal] carries the original author's signature, so a Refounding can
+ * re-wrap a plaintext control seal under a fresh root without re-signing it
+ * (CORD-06 §3 compaction).
  */
 class OpenedStreamEvent(
     val rumor: Event,
     val sealKind: Int,
     val author: String,
+    val seal: Event,
 )

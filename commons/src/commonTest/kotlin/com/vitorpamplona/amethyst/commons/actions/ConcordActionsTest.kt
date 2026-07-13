@@ -78,5 +78,58 @@ class ConcordActionsTest {
             assertEquals("Nostrichs", state.metadata?.name)
         }
 
+    @Test
+    fun guestbookJoinFoldsIntoMembership() =
+        runTest {
+            val community = ConcordActions.createCommunity(owner, "Test", createdAt = 1L, relays = listOf("wss://r.example"))
+            val alice = NostrSignerInternal(KeyPair())
+            val bob = NostrSignerInternal(KeyPair())
+            val guestbook = ConcordActions.guestbookPlane(community.communityRoot, community.communityId, community.rootEpoch)
+
+            val joins =
+                listOf(
+                    ConcordActions.buildGuestbookJoin(alice, guestbook, createdAt = 2L),
+                    ConcordActions.buildGuestbookJoin(bob, guestbook, createdAt = 3L),
+                )
+            val members = ConcordActions.guestbookMembers(joins, guestbook)
+            assertEquals(setOf(alice.pubKey.lowercase(), bob.pubKey.lowercase()), members)
+        }
+
+    @Test
+    fun refoundingReKeysRetainedAndSeversRemoved() =
+        runTest {
+            val community = ConcordActions.createCommunity(owner, "Test", createdAt = 1L, relays = listOf("wss://r.example"))
+            val alice = NostrSignerInternal(KeyPair()) // retained
+            val carol = NostrSignerInternal(KeyPair()) // removed
+
+            val newRoot = ByteArray(32) { 0x33 }
+            val build =
+                ConcordActions.buildRefounding(
+                    rotatorSigner = owner,
+                    communityId = community.communityIdHex,
+                    priorRoot = community.communityRoot,
+                    newRoot = newRoot,
+                    rootEpoch = community.rootEpoch,
+                    priorControlWraps = community.genesisWraps,
+                    priorControlKey = community.controlPlane,
+                    recipientsXOnly = listOf(owner.pubKey, alice.pubKey),
+                    createdAt = 5L,
+                )
+
+            val baseRekey = ConcordActions.nextBaseRekeyPlane(community.communityRoot, community.communityId, community.rootEpoch)
+
+            val aliceGot = ConcordActions.openBaseRekey(build.rekeyWraps, baseRekey, alice, community.communityRoot, community.rootEpoch)
+            val carolGot = ConcordActions.openBaseRekey(build.rekeyWraps, baseRekey, carol, community.communityRoot, community.rootEpoch)
+            assertNotNull(aliceGot)
+            assertEquals(community.rootEpoch + 1, aliceGot.newEpoch)
+            assertTrue(carolGot == null)
+
+            // The compacted Control Plane folds identically under the new root.
+            val newControl = ConcordActions.controlPlane(aliceGot.newRoot, community.communityId, aliceGot.newEpoch)
+            val state = ConcordActions.foldCommunity(build.controlWraps, newControl, community.ownerPubKey)
+            assertEquals("Test", state.metadata?.name)
+            assertTrue(state.channels.isNotEmpty())
+        }
+
     private fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 }

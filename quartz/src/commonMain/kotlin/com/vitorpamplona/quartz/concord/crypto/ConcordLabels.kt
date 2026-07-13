@@ -73,4 +73,7 @@ object ConcordLabels {
 
     /** community_root-scoped rekey pseudonym for Refoundings (CORD-06). */
     const val BASE_REKEY_PSEUDONYM = "concord/base-rekey-pseudonym"
+
+    /** Epoch-key commitment prefix for a rekey's `prevcommit` (CORD-02 §A.5). Not an HKDF label. */
+    const val EPOCH_KEY_COMMITMENT = "concord/epoch-key-commitment"
 }

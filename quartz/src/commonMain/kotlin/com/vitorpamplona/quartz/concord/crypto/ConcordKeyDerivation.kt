@@ -225,6 +225,51 @@ object ConcordKeyDerivation {
      */
     fun inviteBundleKey(token: ByteArray): ByteArray = hkdf32(token, buildInfo(ConcordLabels.INVITE_KEY))
 
+    // ---- CORD-06 rekey addresses & commitment ---------------------------------
+
+    /**
+     * The base-rotation rekey address for a Refounding (CORD-06 §2 Subscription):
+     * `group_key("concord/base-rekey-pseudonym", prior_community_root, community_id,
+     * new_epoch)`. The rotator publishes the kind-3303 blobs here and every current
+     * member precomputes it (from the root they already hold at the *next* epoch) to
+     * receive their new root in real time. Keyed by the **prior** root on purpose so
+     * the address stays computable by everyone who still holds it.
+     */
+    fun baseRekeyAddress(
+        priorCommunityRoot: ByteArray,
+        communityId: ByteArray,
+        newEpoch: Long,
+    ): GroupKey = groupKey(ConcordLabels.BASE_REKEY_PSEUDONYM, priorCommunityRoot, communityId, newEpoch)
+
+    /**
+     * The per-channel rekey address (CORD-06 §2): `group_key("concord/rekey-pseudonym",
+     * prior_community_root, channel_id, new_channel_epoch)`. Used when rotating a single
+     * Private Channel's key rather than the whole community.
+     */
+    fun channelRekeyAddress(
+        priorCommunityRoot: ByteArray,
+        channelId: ByteArray,
+        newChannelEpoch: Long,
+    ): GroupKey = groupKey(ConcordLabels.REKEY_PSEUDONYM, priorCommunityRoot, channelId, newChannelEpoch)
+
+    /**
+     * The epoch-key commitment (CORD-02 §A.5): `sha256("concord/epoch-key-commitment"
+     * ‖ prev_epoch_be8 ‖ prev_key[32])`. A rekey event carries this as `prevcommit`;
+     * a receiver recomputes it over the key it currently holds and requires equality
+     * before adopting the new key, proving the rotation extends its own chain.
+     */
+    fun epochKeyCommitment(
+        prevEpoch: Long,
+        prevKey: ByteArray,
+    ): ByteArray {
+        val prefix = ConcordLabels.EPOCH_KEY_COMMITMENT.encodeToByteArray()
+        val preimage = ByteArray(prefix.size + 8 + prevKey.size)
+        prefix.copyInto(preimage, 0)
+        writeBe64(preimage, prefix.size, prevEpoch)
+        prevKey.copyInto(preimage, prefix.size + 8)
+        return sha256(preimage)
+    }
+
     // ---- CORD-06 rekey locator ------------------------------------------------
 
     /**

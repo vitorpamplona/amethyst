@@ -66,14 +66,32 @@ class ConcordCommunitySession(
 
     private val controlPlaneKey: GroupKey = ConcordActions.controlPlane(root, communityIdBytes, entry.rootEpoch)
 
+    /** The Guestbook Plane at this epoch — where member join/leave motions ride (CORD-02 §5). */
+    private val guestbookKey: GroupKey = ConcordActions.guestbookPlane(root, communityIdBytes, entry.rootEpoch)
+
+    /**
+     * The base-rotation rekey address for the *next* epoch (CORD-06 §2). A member
+     * precomputes it from the root they already hold so an inbound Refounding — which
+     * delivers the next root here — is received live rather than only on re-open.
+     */
+    private val nextBaseRekeyKey: GroupKey = ConcordActions.nextBaseRekeyPlane(root, communityIdBytes, entry.rootEpoch)
+
     /** The Control Plane stream address to subscribe to (known from the entry alone). */
     val controlPlaneAddress: HexKey get() = controlPlaneKey.publicKeyHex
+
+    /** The Guestbook Plane stream address to subscribe to (known from the entry alone). */
+    val guestbookAddress: HexKey get() = guestbookKey.publicKeyHex
+
+    /** The next-epoch base-rekey stream address to watch for an inbound Refounding. */
+    val nextBaseRekeyAddress: HexKey get() = nextBaseRekeyKey.publicKeyHex
 
     private val lock = KmpLock()
 
     // Deduped inbound wraps.
     private val controlWraps = LinkedHashMap<HexKey, Event>()
     private val channelWrapsById = HashMap<HexKey, LinkedHashMap<HexKey, Event>>() // channelIdHex -> (wrapId -> wrap)
+    private val guestbookWraps = LinkedHashMap<HexKey, Event>()
+    private val baseRekeyWraps = LinkedHashMap<HexKey, Event>()
 
     // channel plane pubkey -> (channelIdHex, key), refreshed on each control re-fold.
     private var channelKeysByAddress = HashMap<HexKey, Pair<HexKey, GroupKey>>()
@@ -81,21 +99,38 @@ class ConcordCommunitySession(
     private val _state = MutableStateFlow<ConcordCommunityState?>(null)
     val state: StateFlow<ConcordCommunityState?> = _state
 
+    private val _members = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /** The live Guestbook membership set (self-signed joins minus later leaves). */
+    val members: StateFlow<Set<HexKey>> = _members
+
     /** The current Chat Plane addresses to subscribe to, one per folded channel. */
     fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys.toSet() }
 
+    /** The base-rotation rekey [GroupKey] a member opens an inbound Refounding under. */
+    fun nextBaseRekeyKey(): GroupKey = nextBaseRekeyKey
+
+    /** The buffered kind-3303 base-rotation wraps seen at [nextBaseRekeyAddress], for the account to drain. */
+    fun pendingBaseRekeyWraps(): List<Event> = lock.withLock { baseRekeyWraps.values.toList() }
+
     /**
-     * Every stream key whose kind-1059 wraps this session reads: the Control Plane plus
-     * one per folded channel. These are the identities a NIP-42 relay must see the
-     * connection authenticate as (kind 22242) to serve the wraps — a Concord wrap is
-     * authored by the stream key and `p`-tagged to a throwaway ephemeral key, so the
-     * member is neither author nor recipient and the relay refuses unless we AUTH as the
-     * stream key itself.
+     * Every stream key whose kind-1059 wraps this session reads: the Control Plane, the
+     * Guestbook Plane, one per folded channel, and the next-epoch base-rekey address.
+     * These are the identities a NIP-42 relay must see the connection authenticate as
+     * (kind 22242) to serve the wraps — a Concord wrap is authored by the stream key and
+     * `p`-tagged to a throwaway ephemeral key, so the member is neither author nor
+     * recipient and the relay refuses unless we AUTH as the stream key itself.
      */
-    fun streamKeys(): List<GroupKey> = lock.withLock { listOf(controlPlaneKey) + channelKeysByAddress.values.map { it.second } }
+    fun streamKeys(): List<GroupKey> =
+        lock.withLock {
+            listOf(controlPlaneKey, guestbookKey, nextBaseRekeyKey) + channelKeysByAddress.values.map { it.second }
+        }
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
     fun controlEditions(): List<ControlEdition> = lock.withLock { ConcordActions.controlEditions(controlWraps.values.toList(), controlPlaneKey) }
+
+    /** The raw Control Plane wraps buffered so far — the input a Refounding compacts (CORD-06 §3). */
+    fun controlPlaneWraps(): List<Event> = lock.withLock { controlWraps.values.toList() }
 
     /** The Control Plane key, for authoring moderation editions. */
     fun controlPlaneKey(): GroupKey = controlPlaneKey
@@ -118,6 +153,19 @@ class ConcordCommunitySession(
                     if (controlWraps.put(wrap.id, wrap) != null) return true // dup
                 }
                 refold()
+                return true
+            }
+            guestbookAddress -> {
+                lock.withLock {
+                    if (guestbookWraps.put(wrap.id, wrap) != null) return true // dup
+                }
+                refoldGuestbook()
+                return true
+            }
+            nextBaseRekeyAddress -> {
+                // Buffer only — decrypting a base-rotation blob needs the account signer, so the
+                // app layer drains [pendingBaseRekeyWraps] with it and authorizes the rotator.
+                lock.withLock { baseRekeyWraps[wrap.id] = wrap }
                 return true
             }
             else -> {
@@ -147,6 +195,11 @@ class ConcordCommunitySession(
 
         // Any channel wraps already buffered can now project.
         for (channelIdHex in folded.channels.keys) reprojectChannel(channelIdHex)
+    }
+
+    private fun refoldGuestbook() {
+        val wraps = lock.withLock { guestbookWraps.values.toList() }
+        _members.value = ConcordActions.guestbookMembers(wraps, guestbookKey)
     }
 
     private fun reprojectChannel(channelIdHex: HexKey) {

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -172,7 +174,20 @@ private fun ConcordMemberRow(
     // never against the owner or yourself. A banned user only offers "unban".
     val canToggleAdmin = viewerIsOwner && !isOwnerTarget && !isBanned && !isSelf
     val canBan = viewerCanBan && !isOwnerTarget && !isSelf
-    val hasMenu = canToggleAdmin || canBan
+    // Hard removal (CORD-06 Refounding) rotates the community key; same authority as ban.
+    val canRemove = viewerCanBan && !isOwnerTarget && !isSelf
+    val hasMenu = canToggleAdmin || canBan || canRemove
+
+    var confirmRemove by remember { mutableStateOf(false) }
+    if (confirmRemove) {
+        ConcordRemoveMemberDialog(
+            onConfirm = {
+                accountViewModel.removeConcordMember(communityId, entry.pubkey)
+                confirmRemove = false
+            },
+            onDismiss = { confirmRemove = false },
+        )
+    }
 
     androidx.compose.foundation.layout.Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -212,6 +227,20 @@ private fun ConcordMemberRow(
                         },
                     )
                 }
+                if (canRemove) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringRes(R.string.concord_members_remove),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = {
+                            confirmRemove = true
+                            expanded = false
+                        },
+                    )
+                }
             }
         }
     }
@@ -237,6 +266,27 @@ private fun MemberBadge(membership: ConcordMembership) {
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }
+}
+
+/** Confirms a hard removal — spells out that it rotates the community key (CORD-06). */
+@Composable
+private fun ConcordRemoveMemberDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.concord_members_remove_title)) },
+        text = { Text(stringRes(R.string.concord_members_remove_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(R.string.concord_members_remove_confirm), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
 }
 
 private class RosterEntry(

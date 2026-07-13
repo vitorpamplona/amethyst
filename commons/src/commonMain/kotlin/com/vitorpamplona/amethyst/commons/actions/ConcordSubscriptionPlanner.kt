@@ -62,6 +62,25 @@ object ConcordSubscriptionPlanner {
             ConcordPlaneSub(channelId = null, pubKeyHex = cp.publicKeyHex, relays = normalize(e.relays))
         }
 
+    /**
+     * The off-channel planes every joined community subscribes to upfront (known
+     * from the entry alone): the Guestbook Plane (membership motions) and the
+     * next-epoch base-rekey address (so an inbound Refounding is received live,
+     * CORD-06). Both are kind-1059 wraps authored by their derived stream address.
+     */
+    fun auxiliaryPlaneSubs(entries: List<ConcordCommunityListEntry>): List<ConcordPlaneSub> =
+        entries.flatMap { e ->
+            val root = e.root.hexToByteArray()
+            val communityId = e.id.hexToByteArray()
+            val relays = normalize(e.relays)
+            val guestbook = ConcordActions.guestbookPlane(root, communityId, e.rootEpoch)
+            val nextRekey = ConcordActions.nextBaseRekeyPlane(root, communityId, e.rootEpoch)
+            listOf(
+                ConcordPlaneSub(channelId = null, pubKeyHex = guestbook.publicKeyHex, relays = relays),
+                ConcordPlaneSub(channelId = null, pubKeyHex = nextRekey.publicKeyHex, relays = relays),
+            )
+        }
+
     /** Chat-plane subscriptions for every live channel in a folded community [state]. */
     fun channelPlaneSubs(
         entry: ConcordCommunityListEntry,

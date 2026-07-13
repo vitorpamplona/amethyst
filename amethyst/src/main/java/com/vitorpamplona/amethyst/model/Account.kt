@@ -144,6 +144,7 @@ import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
@@ -1893,8 +1894,33 @@ class Account(
 
     suspend fun unfollow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.unfollow(channel))
 
-    /** Add a joined Concord community (secret-bearing entry) to the private kind-13302 list. */
-    suspend fun joinConcordCommunity(entry: ConcordCommunityListEntry) = sendMyPublicAndPrivateOutbox(concordChannelList.follow(entry))
+    /**
+     * Add a joined Concord community (secret-bearing entry) to the private kind-13302
+     * list, and announce a self-signed Guestbook JOIN so this member is visible to
+     * whoever later refounds the community (CORD-06 re-keys the Guestbook membership).
+     */
+    suspend fun joinConcordCommunity(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey? = null,
+        inviteLabel: String? = null,
+    ) {
+        sendMyPublicAndPrivateOutbox(concordChannelList.follow(entry))
+        announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
+    }
+
+    /** Publishes a Guestbook JOIN (kind 3306) for [entry] to its community relays. */
+    private suspend fun announceConcordGuestbookJoin(
+        entry: ConcordCommunityListEntry,
+        inviteCreator: HexKey?,
+        inviteLabel: String?,
+    ) {
+        if (!isWriteable()) return
+        val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
+        val wrap = ConcordActions.buildGuestbookJoin(signer, guestbook, TimeUtils.now(), inviteCreator, inviteLabel)
+        concordSessions.ingest(wrap)
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (relays.isNotEmpty()) client.publish(wrap, relays)
+    }
 
     /**
      * Create a new Concord community: mint its genesis (metadata + #general),
@@ -2259,6 +2285,150 @@ class Account(
         val wrap = ConcordModeration.unban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now())
         publishConcordWrap(session.entry, wrap)
         return true
+    }
+
+    // ── Concord refounding / rekey (CORD-06) ──────────────────────────────────
+    // A ban is a soft removal — the banned member still holds the room key and can
+    // still decrypt traffic; every client just declines to *show* their posts. A
+    // Refounding is the hard removal: it rotates the community_root, so a removed
+    // member's key stops working for anything published afterwards.
+
+    /**
+     * Remove [removed] from the community absolutely (CORD-06 Refounding): ban them,
+     * roll the `community_root`, re-key every retained member (Guestbook membership ∪
+     * the privileged roster ∪ self) via kind-3303 blobs, and republish the compacted
+     * Control Plane under the new root. A removed member keeps the prior root (so
+     * their history stays readable) but receives no blob, so they can never decrypt
+     * anything published after the rotation.
+     *
+     * Requires ownership or the BAN permission; returns false otherwise (or if the
+     * community isn't joined/writeable, or a target is the owner).
+     */
+    suspend fun refoundConcordCommunity(
+        communityId: String,
+        removed: Set<HexKey>,
+    ): Boolean {
+        if (!isWriteable()) return false
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        val state = session.state.value ?: return false
+        val authority = state.authority
+        val iCanBan = authority.isOwner(signer.pubKey) || authority.effectivePermissions(signer.pubKey).has(ConcordPermissions.BAN)
+        if (!iCanBan) return false
+        val removedLower = removed.mapTo(HashSet()) { it.lowercase() }
+        if (removedLower.isEmpty() || removedLower.any { authority.isOwner(it) }) return false
+
+        // 1. Ban the removed members on the current Control Plane so the compacted snapshot —
+        //    and thus the new epoch — carries the ban. publishConcordWrap folds it in locally
+        //    first, so each subsequent edition chains onto the updated banlist head.
+        for (target in removedLower) {
+            val banWrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now())
+            publishConcordWrap(session.entry, banWrap)
+        }
+
+        // 2. Recipient set: everyone we're keeping — Guestbook joins ∪ roster ∪ self, minus the
+        //    removed and the already-banned.
+        val recipients =
+            (session.members.value + authority.roleHolders() + state.ownerPubKey + signer.pubKey)
+                .mapTo(HashSet()) { it.lowercase() }
+                .apply {
+                    removeAll(removedLower)
+                    removeAll(authority.bannedMembers())
+                }.toList()
+
+        // 3. Build the refounding: new root, compacted Control Plane, per-recipient rekey blobs.
+        val entry = session.entry
+        val newRoot = RandomInstance.bytes(32)
+        val build =
+            ConcordActions.buildRefounding(
+                rotatorSigner = signer,
+                communityId = communityId,
+                priorRoot = entry.root.hexToByteArray(),
+                newRoot = newRoot,
+                rootEpoch = entry.rootEpoch,
+                priorControlWraps = session.controlPlaneWraps(),
+                priorControlKey = session.controlPlaneKey(),
+                recipientsXOnly = recipients,
+                createdAt = TimeUtils.now(),
+            )
+
+        // 4. Publish the compacted Control Plane (the new epoch's state) then the rekey blobs
+        //    (the key that unlocks it) to the community relays.
+        val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        if (publishTo.isNotEmpty()) {
+            build.controlWraps.forEach { client.publish(it, publishTo) }
+            build.rekeyWraps.forEach { client.publish(it, publishTo) }
+        }
+
+        // 5. Adopt the new epoch ourselves. This rebuilds our session under the new root and
+        //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
+        adoptConcordRoot(entry, newRoot, build.newEpoch)
+        return true
+    }
+
+    // Rotations we've already adopted ("communityId:epoch"), so a base-rekey wrap still buffered
+    // in the pre-rebuild window (the session rebuild off `liveCommunities` is async) is not
+    // adopted — and re-published — twice on successive revision ticks.
+    private val adoptedConcordRotations = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /**
+     * Persist a rotated access root/epoch for [entry], keeping the prior root as a
+     * [HeldRoot], and re-announce our Guestbook membership at the new epoch so the
+     * fresh epoch's Guestbook re-seeds (a later Refounding re-keys that membership —
+     * without this, cascading removals would lose everyone but the roster). No-op if
+     * this exact rotation was already adopted.
+     */
+    private suspend fun adoptConcordRoot(
+        entry: ConcordCommunityListEntry,
+        newRoot: ByteArray,
+        newEpoch: Long,
+    ) {
+        if (!adoptedConcordRotations.add("${entry.id}:$newEpoch")) return
+        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root)).distinctBy { it.epoch }
+        val next =
+            ConcordCommunityListEntry(
+                id = entry.id,
+                owner = entry.owner,
+                ownerSalt = entry.ownerSalt,
+                root = newRoot.toHexKey(),
+                rootEpoch = newEpoch,
+                heldRoots = held,
+                privateChannels = entry.privateChannels,
+                relays = entry.relays,
+                name = entry.name,
+                addedAt = entry.addedAt,
+            )
+        sendMyPublicAndPrivateOutbox(concordChannelList.follow(next))
+        announceConcordGuestbookJoin(next, inviteCreator = null, inviteLabel = null)
+    }
+
+    /**
+     * Drain any buffered inbound base-rotation rekeys (CORD-06 receive path): for
+     * each joined community, look for our new root among the kind-3303 wraps seen at
+     * our next base-rekey address. If a role-authorized rotator (owner or a current
+     * BAN-holder) delivered us one, adopt it. Idempotent — once adopted, the session
+     * rebuilds at the new epoch and its next-rekey address moves on, so a stale wrap
+     * never re-triggers. Called on every Concord revision tick.
+     */
+    private suspend fun drainConcordRekeys() {
+        if (!isWriteable()) return
+        for (session in concordSessions.sessions()) {
+            val wraps = session.pendingBaseRekeyWraps()
+            if (wraps.isEmpty()) continue
+            val entry = session.entry
+            val received =
+                ConcordActions.openBaseRekey(
+                    wraps = wraps,
+                    baseRekey = session.nextBaseRekeyKey(),
+                    recipientSigner = signer,
+                    priorRoot = entry.root.hexToByteArray(),
+                    rootEpoch = entry.rootEpoch,
+                ) ?: continue
+            if (received.newEpoch <= entry.rootEpoch) continue
+            val authority = session.state.value?.authority ?: continue
+            val authorized = authority.isOwner(received.rotator) || authority.effectivePermissions(received.rotator).has(ConcordPermissions.BAN)
+            if (!authorized) continue
+            adoptConcordRoot(entry, received.newRoot, received.newEpoch)
+        }
     }
 
     /**
@@ -4853,7 +5023,11 @@ class Account(
         // per window instead of re-scanning every channel's notes per message.
         scope.launch {
             @OptIn(kotlinx.coroutines.FlowPreview::class)
-            concordSessions.revision.sample(500).collect { refreshConcordChannelIndex() }
+            concordSessions.revision.sample(500).collect {
+                refreshConcordChannelIndex()
+                // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
+                runCatching { drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+            }
         }
 
         scope.launch {

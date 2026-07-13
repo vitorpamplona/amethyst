@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
@@ -33,6 +36,9 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.MintedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
+import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
+import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
+import com.vitorpamplona.quartz.concord.cord06Rekey.RefoundingBuild
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -77,6 +83,24 @@ object ConcordActions {
         channelId: ByteArray,
         rootEpoch: Long,
     ): GroupKey = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+
+    /** The Guestbook Plane address for a community at [rootEpoch] — where join/leave motions ride. */
+    fun guestbookPlane(
+        communityRoot: ByteArray,
+        communityId: ByteArray,
+        rootEpoch: Long,
+    ): GroupKey = ConcordKeyDerivation.guestbookPlaneKey(communityRoot, communityId, rootEpoch)
+
+    /**
+     * The base-rotation rekey address a member watches to receive the *next* epoch's
+     * Refounding (CORD-06 §2): `base-rekey-pseudonym(current_root, community_id,
+     * rootEpoch + 1)`. Precomputed from the root the member already holds.
+     */
+    fun nextBaseRekeyPlane(
+        communityRoot: ByteArray,
+        communityId: ByteArray,
+        rootEpoch: Long,
+    ): GroupKey = ConcordKeyDerivation.baseRekeyAddress(communityRoot, communityId, rootEpoch + 1)
 
     // ---- relay filters (what to REQ) -----------------------------------------
 
@@ -252,4 +276,83 @@ object ConcordActions {
 
     /** Derives the control plane described by a redeemed [invite] so the joiner can read it. */
     fun controlPlaneFor(invite: CommunityInvite): GroupKey = controlPlane(invite.communityRoot.hexToByteArray(), invite.communityId.hexToByteArray(), invite.rootEpoch)
+
+    // ---- guestbook (CORD-02 §5) ----------------------------------------------
+
+    /**
+     * Builds a self-signed Guestbook JOIN (kind 3306) wrap on the community's
+     * Guestbook Plane. Membership is off-consensus best-effort presence, but it is
+     * the member-visible roster a Refounding rotates keys to (CORD-06), so a client
+     * announces one on create/join to be re-keyed on future removals.
+     */
+    suspend fun buildGuestbookJoin(
+        memberSigner: NostrSigner,
+        guestbook: GroupKey,
+        createdAt: Long,
+        inviteCreator: HexKey? = null,
+        inviteLabel: String? = null,
+    ): Event {
+        val rumor = Guestbook.join(memberSigner.pubKey, createdAt, inviteCreator = inviteCreator, inviteLabel = inviteLabel)
+        return ConcordStreamEnvelope.wrap(rumor, guestbook, memberSigner, encrypted = true, createdAt = createdAt)
+    }
+
+    /** Opens the guestbook [wraps] into their live membership set (joins minus later leaves). */
+    fun guestbookMembers(
+        wraps: List<Event>,
+        guestbook: GroupKey,
+    ): Set<HexKey> {
+        val latest = HashMap<HexKey, GuestbookEntry>()
+        for (wrap in wraps) {
+            val rumor = ConcordStreamEnvelope.openOrNull(wrap, guestbook)?.rumor ?: continue
+            val entry = Guestbook.parse(rumor) ?: continue
+            val prev = latest[entry.member.lowercase()]
+            if (prev == null || entry.createdAt > prev.createdAt) latest[entry.member.lowercase()] = entry
+        }
+        return latest.values.filter { it.action == GuestbookAction.JOIN }.mapTo(HashSet()) { it.member.lowercase() }
+    }
+
+    // ---- refounding / rekey (CORD-06) ----------------------------------------
+
+    /**
+     * Builds a whole-community Refounding (CORD-06 §3): the compacted Control Plane
+     * re-sealed under [newRoot] plus the base-rotation rekey blobs delivering
+     * [newRoot] to [recipientsXOnly]. Pure — the caller sources the recipient set
+     * and owns publish + persistence.
+     */
+    suspend fun buildRefounding(
+        rotatorSigner: NostrSigner,
+        communityId: HexKey,
+        priorRoot: ByteArray,
+        newRoot: ByteArray,
+        rootEpoch: Long,
+        priorControlWraps: List<Event>,
+        priorControlKey: GroupKey,
+        recipientsXOnly: List<HexKey>,
+        createdAt: Long,
+    ): RefoundingBuild =
+        ConcordRefounding.build(
+            rotatorSigner = rotatorSigner,
+            communityId = communityId.hexToByteArray(),
+            priorRoot = priorRoot,
+            newRoot = newRoot,
+            rootEpoch = rootEpoch,
+            priorControlWraps = priorControlWraps,
+            priorControlKey = priorControlKey,
+            recipientsXOnly = recipientsXOnly,
+            createdAt = createdAt,
+        )
+
+    /**
+     * Receives an inbound base rotation for the member behind [recipientSigner]:
+     * finds the delivered new root across the buffered kind-3303 [wraps], verifying
+     * scope, epoch and continuity against the [priorRoot] the member holds. Returns
+     * the new root + rotator (for the caller to authorize) or null if not re-keyed.
+     */
+    suspend fun openBaseRekey(
+        wraps: List<Event>,
+        baseRekey: GroupKey,
+        recipientSigner: NostrSigner,
+        priorRoot: ByteArray,
+        rootEpoch: Long,
+    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, priorRoot, rootEpoch)
 }

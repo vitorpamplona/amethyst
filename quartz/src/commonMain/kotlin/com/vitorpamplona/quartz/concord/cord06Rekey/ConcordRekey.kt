@@ -23,7 +23,9 @@ package com.vitorpamplona.quartz.concord.cord06Rekey
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import kotlinx.serialization.builtins.ListSerializer
 import kotlin.io.encoding.Base64
@@ -106,6 +108,54 @@ object ConcordRekey {
         }
 
     const val KIND: Int = 3303
+
+    /** CORD-06 §1: a single kind-3303 event carries at most this many per-recipient blobs. */
+    const val MAX_BLOBS_PER_CHUNK = 120
+
+    /**
+     * Builds a rekey blob for one recipient using [rotatorSigner] instead of a raw
+     * private key, so a NIP-46 bunker rotator can mint blobs without exposing its
+     * key (the wrap is a single `nip44Encrypt` to the recipient). The locator is
+     * public-input-only (CORD-06 §2) and needs no signing.
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    suspend fun blobForSigner(
+        rotatorSigner: NostrSigner,
+        recipientXOnly: ByteArray,
+        scopeId: ByteArray,
+        newEpoch: Long,
+        newKey: ByteArray,
+    ): RekeyBlob {
+        val rotatorXOnly = rotatorSigner.pubKey.hexToByteArray()
+        val locator = ConcordKeyDerivation.recipientLocator(rotatorXOnly, recipientXOnly, scopeId, newEpoch).toHexKey()
+        val payloadB64 = Base64.Default.encode(RekeyPayload(scopeId, newEpoch, newKey).encode())
+        val wrapped = rotatorSigner.nip44Encrypt(payloadB64, recipientXOnly.toHexKey())
+        return RekeyBlob(locator, wrapped)
+    }
+
+    /**
+     * Finds the recipient's rotated key like [findNewKey], but decrypts the blob via
+     * [recipientSigner] (bunker-compatible) rather than a raw private key.
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    suspend fun findNewKeyWithSigner(
+        blobs: List<RekeyBlob>,
+        recipientSigner: NostrSigner,
+        rotatorXOnly: ByteArray,
+        scopeId: ByteArray,
+        newEpoch: Long,
+    ): ByteArray? {
+        val recipientXOnly = recipientSigner.pubKey.hexToByteArray()
+        val myLocator = ConcordKeyDerivation.recipientLocator(rotatorXOnly, recipientXOnly, scopeId, newEpoch).toHexKey()
+        val blob = blobs.firstOrNull { it.locator == myLocator } ?: return null
+        return try {
+            val payload = RekeyPayload.decode(Base64.Default.decode(recipientSigner.nip44Decrypt(blob.wrapped, rotatorXOnly.toHexKey()))) ?: return null
+            if (!payload.scopeId.contentEquals(scopeId) || payload.epoch != newEpoch) return null
+            payload.newKey
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     /**
      * Finds the recipient's rotated key across the [blobs] of one or more chunks,

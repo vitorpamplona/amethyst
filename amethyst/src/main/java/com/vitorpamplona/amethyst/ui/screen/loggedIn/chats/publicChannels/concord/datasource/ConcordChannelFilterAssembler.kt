@@ -78,6 +78,7 @@ class ConcordChannelSubAssembler(
         // kind-1059 filters lives in the shared planner.
         val subs = ArrayList<ConcordPlaneSub>()
         subs += ConcordSubscriptionPlanner.controlPlaneSubs(entries)
+        subs += ConcordSubscriptionPlanner.auxiliaryPlaneSubs(entries)
         for (entry in entries) {
             val state =
                 account.concordSessions

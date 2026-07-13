@@ -66,10 +66,15 @@ class ConcordSessionRegistry(
             val wanted = entries.associateBy { it.id }
             // Drop sessions for communities we've left.
             sessions.keys.retainAll(wanted.keys)
-            // Add sessions for newly-joined communities.
+            // Add sessions for newly-joined communities, and rebuild a session whose access
+            // material changed under it — a Refounding rotates the community_root and bumps
+            // the epoch (CORD-06), so the persisted entry now describes a different set of
+            // planes; the session is a pure function of its entry, so we recreate it to
+            // re-derive every address and re-fold under the new root.
             val created = mutableSetOf<HexKey>()
             for ((id, entry) in wanted) {
-                if (id !in sessions) {
+                val existing = sessions[id]
+                if (existing == null || existing.entry.root != entry.root || existing.entry.rootEpoch != entry.rootEpoch) {
                     sessions[id] = ConcordCommunitySession(entry, myPubKey, onRumor)
                     created += id
                 }
@@ -87,6 +92,8 @@ class ConcordSessionRegistry(
             val out = HashSet<HexKey>()
             for (session in sessions.values) {
                 out += session.controlPlaneAddress
+                out += session.guestbookAddress
+                out += session.nextBaseRekeyAddress
                 out += session.channelAddresses()
             }
             out
