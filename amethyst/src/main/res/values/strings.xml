@@ -1298,6 +1298,8 @@
     <string name="private_note_no_receivers">No receivers yet: only you will be able to see this note. Add people to share it with.</string>
     <string name="notify_add_user">Add</string>
     <string name="notify_remove_user">Remove user from notifications</string>
+    <string name="notify_mute_user">Notifying. Tap to mute the notification for this user</string>
+    <string name="notify_unmute_user">Muted. Tap to notify this user again</string>
     <string name="notify_search_and_add_user">Search and add a user to notify</string>
     <string name="bookmark_absence_indicator">is not a bookmark here</string>
     <string name="bookmark_remove_action_desc">Remove bookmark from list</string>

@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -257,8 +258,12 @@ private fun GenericCommentPostBody(
                 }
 
                 Row {
-                    Notifying(postViewModel.notifying?.toImmutableList(), accountViewModel) {
-                        postViewModel.removeFromReplyList(it)
+                    Notifying(
+                        baseMentions = postViewModel.notifying?.toImmutableList(),
+                        accountViewModel = accountViewModel,
+                        mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
+                    ) {
+                        postViewModel.toggleNotify(it)
                     }
                 }
 

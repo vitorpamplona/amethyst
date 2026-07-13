@@ -164,6 +164,7 @@ object MaterialSymbols {
     val NoAccounts = MaterialSymbol("\uF03E")
     val NoEncryption = MaterialSymbol("\uF03F")
     val Notifications = MaterialSymbol("\uE7F5")
+    val NotificationsOff = MaterialSymbol("\uE7F6")
     val Numbers = MaterialSymbol("\uEAC7")
     val OpenInBrowser = MaterialSymbol("\uE89D")
     val OpenInFull = MaterialSymbol("\uF1CE")
