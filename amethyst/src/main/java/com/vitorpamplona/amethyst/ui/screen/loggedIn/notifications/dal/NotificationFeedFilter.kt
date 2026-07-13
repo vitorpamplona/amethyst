@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -126,9 +127,18 @@ class NotificationFeedFilter(
             // highlights, polls, videos, voice, public messages,
             // live-activities chat) stay here because Desktop has no
             // rendering for those kinds today.
-            com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
-                .SUBSCRIPTION_KINDS
-                .toSet() +
+            //
+            // GiftWrap (1059) is subscription-only: the wrap is an envelope whose
+            // created_at is randomized up to 2 days back (NIP-59), so rendering it
+            // as a feed row would misorder the tab with undecryptable entries. On
+            // Android the unwrapped inner event (kind 14/15/…) is what notifies —
+            // same rule NotificationDispatcher applies to push. Desktop keeps the
+            // wrap in its inbox because it has no unwrap pipeline there yet.
+            (
+                com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
+                    .SUBSCRIPTION_KINDS
+                    .toSet() - GiftWrapEvent.KIND
+            ) +
                 setOf(
                     BadgeAwardEvent.KIND,
                     GitIssueEvent.KIND,
