@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -61,4 +62,31 @@ fun ConcordChannelSubscription(
     }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+}
+
+/**
+ * Always-on account-level preload of every joined community's Control (and folded Chat) planes,
+ * mounted once high in the logged-in tree ([com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage])
+ * — the Concord analog of the always-on account/DM gift-wrap tail
+ * ([com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription]).
+ *
+ * Concord control-plane wraps are addressed to *derived stream keys*, not `#p=self`, so the always-on
+ * DM tail never picks them up — without this, communities only fold (and thus reveal their channels,
+ * metadata/icon and membership) while a Concord screen happens to be open. Uses the non-lifecycle
+ * [KeyDataSourceSubscription] so the planes stay requested app-wide, exactly like DMs, and keeps the
+ * same [com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager.revision] watch so a
+ * fresh fold subscribes its newly-revealed channel planes.
+ */
+@Composable
+fun ConcordChannelPreload(accountViewModel: AccountViewModel) {
+    val account = accountViewModel.account
+    val dataSource = accountViewModel.dataSources().concordChannels
+    val state = remember(account) { ConcordChannelQueryState(account) }
+
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    LaunchedEffect(revision) {
+        dataSource.invalidateFilters()
+    }
+
+    KeyDataSourceSubscription(state, dataSource)
 }
