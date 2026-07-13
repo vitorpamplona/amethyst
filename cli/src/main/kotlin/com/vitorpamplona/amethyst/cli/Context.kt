@@ -258,7 +258,7 @@ class Context(
     private val relayAuth: RelayAuthenticator =
         RelayAuthenticator(
             client = client,
-            signWithAllLoggedInUsers = { _, template ->
+            signWithAllLoggedInUsers = { _, template, _ ->
                 if (signer is NostrSignerInternal) {
                     runCatching { listOf(signer.sign(template)) }.getOrElse { emptyList() }
                 } else {
