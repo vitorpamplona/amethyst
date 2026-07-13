@@ -20,27 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.ui.components.buildLinkString
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import java.text.SimpleDateFormat
 import java.util.Date
 
+/**
+ * Compact pill showing the note's NIP-03 OpenTimestamps proof: how long ago
+ * the note is proven to have existed. Tapping it explains the proof and shows
+ * the attested date. Sits inline in note headers.
+ */
 @Composable
 fun DisplayOts(
     note: Note,
@@ -60,31 +60,26 @@ fun DisplayOts(
                 )
             }
 
-            Text(
-                text =
-                    buildLinkString(stringRes(R.string.existed_since, timeStr)) {
-                        accountViewModel.toastManager.toast(
-                            R.string.ots_info_title,
-                            R.string.ots_info_description,
-                            SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000)),
-                        )
-                    },
-                style =
-                    LocalTextStyle.current.copy(
-                        color = MaterialTheme.colorScheme.lessImportantLink,
-                        fontSize = Font14SP,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                maxLines = 1,
+            HeaderPill(
+                symbol = MaterialSymbols.CheckCircle,
+                text = stringRes(R.string.existed_since, timeStr),
+                modifier = HalfStartPadding,
+                contentDescription = stringRes(R.string.ots_info_title),
+                onClick = {
+                    accountViewModel.toastManager.toast(
+                        R.string.ots_info_title,
+                        R.string.ots_info_description,
+                        SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000)),
+                    )
+                },
             )
         },
         whenPending = {
-            Text(
-                stringRes(id = R.string.timestamp_pending_short),
-                color = MaterialTheme.colorScheme.lessImportantLink,
-                fontSize = Font14SP,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
+            HeaderPill(
+                symbol = MaterialSymbols.Schedule,
+                text = stringRes(id = R.string.timestamp_pending_short),
+                modifier = HalfStartPadding,
+                contentDescription = stringRes(R.string.ots_info_title),
             )
         },
     )

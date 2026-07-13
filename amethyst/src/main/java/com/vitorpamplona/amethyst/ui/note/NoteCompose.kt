@@ -761,7 +761,6 @@ fun InnerNoteWithReactions(
             if (showSecondRow) {
                 SecondUserInfoRow(
                     baseNote,
-                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -883,7 +882,6 @@ fun NoteBody(
     if (showSecondRow) {
         SecondUserInfoRow(
             baseNote,
-            editState,
             accountViewModel,
             nav,
         )
@@ -1737,7 +1735,6 @@ fun ReplyNoteComposition(
 @Composable
 fun SecondUserInfoRow(
     note: Note,
-    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -1756,25 +1753,11 @@ fun SecondUserInfoRow(
             }
         }
 
-        val geo = remember(noteEvent) { noteEvent.geoHashOrScope() }
-        if (geo != null) {
-            Spacer(StdHorzSpacer)
-            DisplayLocation(geo, accountViewModel, nav)
-        }
-
         val baseReward = remember(noteEvent) { noteEvent.bountyBaseReward()?.let { Reward(it) } }
         if (baseReward != null) {
             Spacer(StdHorzSpacer)
             DisplayReward(baseReward, note, accountViewModel, nav)
         }
-
-        val pow = remember(noteEvent) { noteEvent.strongPoWOrNull() }
-        if (pow != null) {
-            Spacer(StdHorzSpacer)
-            DisplayPoW(pow)
-        }
-
-        DisplayOtsIfInOriginal(note, editState, accountViewModel)
     }
 }
 
@@ -1786,13 +1769,14 @@ fun DisplayExpiration(expirationDate: Long) {
         Icon(
             symbol = MaterialSymbols.Timer,
             contentDescription = stringRes(R.string.expiration_date_label),
-            modifier = Modifier.padding(start = 5.dp).size(15.dp),
+            modifier = Modifier.padding(start = 5.dp).size(12.dp),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         val context = LocalContext.current
         Text(
             text = timeAheadNoDot(expirationDate, context),
             color = MaterialTheme.colorScheme.placeholderText,
+            fontSize = Font12SP,
             maxLines = 1,
             modifier = Modifier.padding(start = 3.dp),
         )
@@ -1819,6 +1803,7 @@ fun DisplayDraft() {
     Text(
         "Draft",
         fontWeight = FontWeight.Bold,
+        fontSize = Font12SP,
         color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         modifier = HalfStartPadding,
@@ -1919,6 +1904,22 @@ fun FirstUserInfoRow(
             PinnedMark()
         }
 
+        val noteEvent = baseNote.event
+
+        val geo = remember(noteEvent) { noteEvent?.geoHashOrScope() }
+        if (geo != null) {
+            Spacer(StdHorzSpacer)
+            DisplayLocation(geo, accountViewModel, nav)
+        }
+
+        val pow = remember(noteEvent) { noteEvent?.strongPoWOrNull() }
+        if (pow != null) {
+            Spacer(StdHorzSpacer)
+            DisplayPoW(pow)
+        }
+
+        DisplayOtsIfInOriginal(baseNote, editState, accountViewModel)
+
         Expiration(baseNote)
 
         JumpToParentReplyButton(baseNote, accountViewModel, nav)
@@ -1938,7 +1939,7 @@ fun PinnedMark() {
     Icon(
         symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(R.string.pinned_notes),
-        modifier = Modifier.padding(start = 5.dp).size(16.dp),
+        modifier = Modifier.padding(start = 5.dp).size(14.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
     )
 }
@@ -1948,7 +1949,7 @@ fun PrivateRumorMark() {
     Icon(
         symbol = MaterialSymbols.Lock,
         contentDescription = stringRes(R.string.private_rumor_mark),
-        modifier = Modifier.padding(start = 5.dp).size(16.dp),
+        modifier = Modifier.padding(start = 5.dp).size(14.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
     )
 }

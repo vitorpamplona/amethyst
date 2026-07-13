@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
@@ -50,6 +51,7 @@ fun DisplayEditStatus(editState: EditState) {
             LocalTextStyle.current.copy(
                 color = MaterialTheme.colorScheme.placeholderText,
                 fontWeight = FontWeight.Bold,
+                fontSize = Font12SP,
             ),
         maxLines = 1,
         modifier = HalfStartPadding.clickable { editState.nextModification() },
