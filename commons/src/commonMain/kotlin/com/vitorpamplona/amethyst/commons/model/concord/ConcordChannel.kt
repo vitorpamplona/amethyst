@@ -85,21 +85,42 @@ class ConcordChannel(
      * Refresh this channel's metadata from a freshly-folded community [state] plus
      * the community's [relays] and this account's [myPubKey]. Cheap and idempotent
      * — called whenever the Control Plane re-folds.
+     *
+     * Returns true when a displayed field (channel name, community name/icon,
+     * membership) actually changed, so the caller can invalidate the channel's
+     * metadata flow ([updateChannelInfo]) — and thus recompose the Messages-row
+     * name + community chip — only on a real change, not on every fold tick.
      */
     fun updateFrom(
         state: ConcordCommunityState,
         relays: Set<NormalizedRelayUrl>,
         myPubKey: HexKey,
-    ) {
-        state.channels[channelId.channelId]?.definition?.let {
-            channelName = it.name
-            isVoice = it.voice
-            isPrivate = it.private
-        }
-        communityName = state.metadata?.name
-        communityIcon = state.metadata?.icon
+    ): Boolean {
+        val def = state.channels[channelId.channelId]?.definition
+        // Channel fields keep their prior value until the channel edition folds.
+        val newChannelName = def?.name ?: channelName
+        val newVoice = def?.voice ?: isVoice
+        val newPrivate = def?.private ?: isPrivate
+        val newCommunityName = state.metadata?.name
+        val newCommunityIcon = state.metadata?.icon
+        val newMembership = ConcordMembership.of(state.authority, myPubKey)
+
+        val changed =
+            channelName != newChannelName ||
+                isVoice != newVoice ||
+                isPrivate != newPrivate ||
+                communityName != newCommunityName ||
+                communityIcon != newCommunityIcon ||
+                membership != newMembership
+
+        channelName = newChannelName
+        isVoice = newVoice
+        isPrivate = newPrivate
+        communityName = newCommunityName
+        communityIcon = newCommunityIcon
         communityRelays = relays
-        membership = ConcordMembership.of(state.authority, myPubKey)
+        membership = newMembership
+        return changed
     }
 
     /** A Concord channel is reachable on any of its community's relays. */

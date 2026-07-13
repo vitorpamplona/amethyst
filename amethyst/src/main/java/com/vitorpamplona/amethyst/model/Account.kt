@@ -516,7 +516,10 @@ class Account(
             val relays = relaysByCommunity[communityId] ?: emptySet()
             for (channelIdHex in state.channels.keys) {
                 val channel = cache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
-                channel.updateFrom(state, relays, myPubKey)
+                // Invalidate the channel's metadata flow only on a real change so the Messages-row
+                // name + community chip recompose when the fold first resolves them (they observe
+                // metadata.stateFlow via observeChannel), without churning every row every tick.
+                if (channel.updateFrom(state, relays, myPubKey)) channel.updateChannelInfo()
                 channel.notes
                     .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
                     .forEach { channel.removeNote(it) }
