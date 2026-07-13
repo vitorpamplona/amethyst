@@ -110,8 +110,9 @@ fun ConcordHomeScreen(
     // the stock relays for users who actually use Concord.
     LaunchedEffect(Unit) { accountViewModel.importConcordCommunities() }
 
-    // Communities expanded in the accordion (multi-open, so several can show channels at once).
-    var expanded by remember { mutableStateOf(emptySet<String>()) }
+    // Per-community expansion, cycled on tap: absent = CLOSED → UNREAD (peek only the channels with
+    // new messages) → OPEN (all channels) → CLOSED. Multi-open, so several can be expanded at once.
+    var expandStates by remember { mutableStateOf(emptyMap<String, ChannelExpand>()) }
 
     Scaffold(
         topBar = {
@@ -184,7 +185,7 @@ fun ConcordHomeScreen(
                         ?.state
                         ?.value
                         .takeIf { revision >= 0 }
-                val isOpen = entry.id in expanded
+                val mode = expandStates[entry.id] ?: ChannelExpand.CLOSED
                 val channelKeys = state?.channels?.keys.orEmpty()
 
                 item(key = entry.id) {
@@ -194,19 +195,22 @@ fun ConcordHomeScreen(
                         iconPointer = state?.metadata?.icon,
                         channelKeys = channelKeys,
                         revision = revision,
-                        expanded = isOpen,
+                        mode = mode,
                         accountViewModel = accountViewModel,
-                        onToggle = { expanded = if (isOpen) expanded - entry.id else expanded + entry.id },
+                        onSetMode = { next -> expandStates = if (next == ChannelExpand.CLOSED) expandStates - entry.id else expandStates + (entry.id to next) },
                         onOpen = { nav.nav(Route.ConcordServer(entry.id)) },
                     )
                 }
 
-                if (isOpen && state != null) {
-                    // A banner hero (CORD-02 §6), when the community set one — pops in once decrypted.
-                    state.metadata?.banner?.let { banner ->
-                        item(key = "banner-${entry.id}") { CommunityBanner(banner, accountViewModel) }
+                if (mode != ChannelExpand.CLOSED && state != null) {
+                    // A banner hero (CORD-02 §6) belongs to the full view, not the compact unread peek.
+                    if (mode == ChannelExpand.OPEN) {
+                        state.metadata?.banner?.let { banner ->
+                            item(key = "banner-${entry.id}") { CommunityBanner(banner, accountViewModel) }
+                        }
                     }
                     // Channels, most-recently-active first, each with its last message + unread state.
+                    // In UNREAD mode a row hides itself unless it has new messages (peek).
                     val channels =
                         state.channels.entries.sortedByDescending {
                             LocalCache.getConcordChannelIfExists(ConcordChannelId(entry.id, it.key))?.lastNote?.createdAt() ?: 0L
@@ -224,9 +228,15 @@ fun ConcordHomeScreen(
                                     else -> MaterialSymbols.Tag
                                 },
                             revision = revision,
+                            hideIfRead = mode == ChannelExpand.UNREAD,
                             accountViewModel = accountViewModel,
                             onClick = { nav.nav(Route.Concord(entry.id, ch.key)) },
                         )
+                    }
+                    if (mode == ChannelExpand.UNREAD) {
+                        item(key = "showall-${entry.id}") {
+                            ShowAllChannelsRow(onClick = { expandStates = expandStates + (entry.id to ChannelExpand.OPEN) })
+                        }
                     }
                 }
                 item(key = "div-${entry.id}") {
@@ -281,16 +291,24 @@ private fun CommunityHeader(
     iconPointer: ImagePointer?,
     channelKeys: Set<String>,
     revision: Int,
-    expanded: Boolean,
+    mode: ChannelExpand,
     accountViewModel: AccountViewModel,
-    onToggle: () -> Unit,
+    onSetMode: (ChannelExpand) -> Unit,
     onOpen: () -> Unit,
 ) {
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
     val iconModel = rememberConcordImageModel(iconPointer, accountViewModel)
     val unread = communityUnreadCount(accountViewModel.account, communityId, channelKeys, revision)
+    // Tap cycles CLOSED → UNREAD → OPEN → CLOSED, skipping the UNREAD peek when nothing is unread
+    // (so a quiet community never lands on an empty middle state).
+    val next =
+        when (mode) {
+            ChannelExpand.CLOSED -> if (unread > 0) ChannelExpand.UNREAD else ChannelExpand.OPEN
+            ChannelExpand.UNREAD -> ChannelExpand.OPEN
+            ChannelExpand.OPEN -> ChannelExpand.CLOSED
+        }
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onSetMode(next) }.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -321,7 +339,8 @@ private fun CommunityHeader(
         }
         if (unread > 0) UnreadBadge(unread)
         SymbolIcon(
-            symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+            // ▲ only when fully open; ▼ for both CLOSED and the UNREAD peek ("more to reveal").
+            symbol = if (mode == ChannelExpand.OPEN) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
             contentDescription = null,
             modifier = Modifier.size(22.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -379,6 +398,7 @@ private fun ConcordChannelRow(
     channelName: String,
     icon: MaterialSymbol,
     revision: Int,
+    hideIfRead: Boolean,
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
@@ -387,6 +407,9 @@ private fun ConcordChannelRow(
     val lastNote = remember(revision, channel) { channel?.lastNote }
     val lastReadTime by account.loadLastReadFlow(concordChannelLastReadRoute(communityId, channelKey)).collectAsStateWithLifecycle()
     val unread = (lastNote?.createdAt() ?: Long.MIN_VALUE) > lastReadTime
+
+    // In the UNREAD peek, a read channel simply isn't shown.
+    if (hideIfRead && !unread) return
 
     Row(
         Modifier
@@ -442,4 +465,42 @@ private fun ConcordChannelRow(
             Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
         }
     }
+}
+
+/** The footer in the UNREAD peek that expands a community to all of its channels. */
+@Composable
+private fun ShowAllChannelsRow(onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 40.dp, end = 16.dp)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SymbolIcon(
+            symbol = MaterialSymbols.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            stringRes(R.string.concord_show_all_channels),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/** How much of a community's channel list the hub shows, cycled by tapping its header. */
+private enum class ChannelExpand {
+    /** Header only. */
+    CLOSED,
+
+    /** Only channels with messages newer than this account last read them (the "peek"). */
+    UNREAD,
+
+    /** Every channel, plus the banner hero. */
+    OPEN,
 }
