@@ -54,6 +54,12 @@ class ListWithUniqueSetCache<T, U>(
         return newSet
     }
 
+    /** One representative [T] per unique key — the first occurrence wins. */
+    fun distinctValues(): List<T> {
+        val seen = HashSet<U>()
+        return list.get().filter { seen.add(key(it)) }
+    }
+
     fun forEachSubscriber(action: (T) -> Unit) {
         list.get().forEach(action)
     }

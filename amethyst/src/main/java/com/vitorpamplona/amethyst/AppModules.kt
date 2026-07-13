@@ -79,7 +79,6 @@ import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
@@ -571,13 +570,13 @@ class AppModules(
     // Verifies and inserts in the cache from all relays, all subscriptions
     val cacheClientConnector = CacheClientConnector(client, cache)
 
-    // Show messages from the Relay and controls their dismissal
-    val notifyCoordinator = NotifyCoordinator(client)
+    // Show messages from the Relay and controls their dismissal. Attributes each NOTIFY to the
+    // account whose AUTH the relay rejected (accountsCache is declared below; the lambda reads it
+    // lazily at NOTIFY time, long after init).
+    val notifyCoordinator = NotifyCoordinator(client) { pubkey -> accountsCache.accounts.value[pubkey] }
 
-    // Persists per-relay NIP-42 ALLOW/DENY overrides across app restarts.
-    val relayAuthPermissionStore by lazy {
-        DataStoreRelayAuthPermissionStore(appContext)
-    }
+    // Per-relay NIP-42 ALLOW/DENY overrides are now per-account (Account.relayAuthPermissions,
+    // backed by a file under accounts/<pubkey>/), so there is no app-wide store here anymore.
 
     // Singleton stores for napplet permissions — DataStore v1 enforces one instance per file.
     val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext) }
