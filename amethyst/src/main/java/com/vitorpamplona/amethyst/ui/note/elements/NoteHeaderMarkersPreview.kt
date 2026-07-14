@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction.repost
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -100,21 +101,21 @@ fun NoteHeaderFirstRowDensityPreview() {
     val now = TimeUtils.now()
     val expiresAt = (now + 7200).toString()
 
-    val plain: Note
-    val repost: Note
-    val rumorPinned: Note
-    val edited: Note
-    val editVersion: Note
-    val draft: Note
-    val communityPost: Note
-    val geoPowExpiring: Note
-    val kitchenSink: Note
-
     val plainEvent = TextNoteEvent(PLAIN_ID, AUTHOR, now - 300, emptyArray(), "GM", "x")
 
     // Drafts are addressable: consumption lands on the AddressableNote, so the
     // preview must fetch it by address rather than by event id.
     val draftEvent = DraftWrapEvent(DRAFT_ID, AUTHOR, now - 300, arrayOf(arrayOf("d", "preview-draft")), "", "x")
+
+    val plain: Note = LocalCache.getOrCreateNote(PLAIN_ID)
+    val repost: Note = LocalCache.getOrCreateNote(REPOST_ID)
+    val rumorPinned: Note = LocalCache.getOrCreateNote(RUMOR_ID)
+    val edited: Note = LocalCache.getOrCreateNote(EDITED_ID)
+    val editVersion: Note = LocalCache.getOrCreateNote(EDIT_VERSION_ID)
+    val draft: Note = LocalCache.getOrCreateAddressableNote(draftEvent.address())
+    val communityPost: Note = LocalCache.getOrCreateNote(COMMUNITY_POST_ID)
+    val geoPowExpiring: Note = LocalCache.getOrCreateNote(POW_ID)
+    val kitchenSink: Note = LocalCache.getOrCreateNote(KITCHEN_SINK_ID)
 
     runBlocking {
         withContext(Dispatchers.IO) {
@@ -176,16 +177,6 @@ fun NoteHeaderFirstRowDensityPreview() {
                 null,
                 true,
             )
-
-            plain = LocalCache.getOrCreateNote(PLAIN_ID)
-            repost = LocalCache.getOrCreateNote(REPOST_ID)
-            rumorPinned = LocalCache.getOrCreateNote(RUMOR_ID)
-            edited = LocalCache.getOrCreateNote(EDITED_ID)
-            editVersion = LocalCache.getOrCreateNote(EDIT_VERSION_ID)
-            draft = LocalCache.getOrCreateAddressableNote(draftEvent.address())
-            communityPost = LocalCache.getOrCreateNote(COMMUNITY_POST_ID)
-            geoPowExpiring = LocalCache.getOrCreateNote(POW_ID)
-            kitchenSink = LocalCache.getOrCreateNote(KITCHEN_SINK_ID)
         }
     }
 

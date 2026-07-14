@@ -1834,6 +1834,16 @@ fun FirstUserInfoRow(
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         }
 
+        if (isRepost) {
+            BoostedMark()
+        }
+
+        CheckAndDisplayEditStatus(editState)
+
+        if (isDraft) {
+            DisplayDraft()
+        }
+
         if (isDraft) {
             ObserveDraftEvent(baseNote, accountViewModel) { draftNote ->
                 val isCommunityPost =
@@ -1860,15 +1870,21 @@ fun FirstUserInfoRow(
             }
         }
 
-        if (isRepost) {
-            BoostedMark()
+        val noteEvent = baseNote.event
+
+        val geo = remember(noteEvent) { noteEvent?.geoHashOrScope() }
+        if (geo != null) {
+            DisplayLocation(geo, accountViewModel, nav)
         }
 
-        CheckAndDisplayEditStatus(editState)
+        DisplayOtsIfInOriginal(baseNote, editState, accountViewModel)
 
-        if (isDraft) {
-            DisplayDraft()
+        val pow = remember(noteEvent) { noteEvent?.strongPoWOrNull() }
+        if (pow != null) {
+            DisplayPoW(pow)
         }
+
+        Expiration(baseNote)
 
         if (baseNote.isPrivateRumor()) {
             PrivateRumorMark()
@@ -1877,22 +1893,6 @@ fun FirstUserInfoRow(
         if (isPinned) {
             PinnedMark()
         }
-
-        val noteEvent = baseNote.event
-
-        val geo = remember(noteEvent) { noteEvent?.geoHashOrScope() }
-        if (geo != null) {
-            DisplayLocation(geo, accountViewModel, nav)
-        }
-
-        val pow = remember(noteEvent) { noteEvent?.strongPoWOrNull() }
-        if (pow != null) {
-            DisplayPoW(pow)
-        }
-
-        DisplayOtsIfInOriginal(baseNote, editState, accountViewModel)
-
-        Expiration(baseNote)
 
         JumpToParentReplyButton(baseNote, accountViewModel, nav)
 
