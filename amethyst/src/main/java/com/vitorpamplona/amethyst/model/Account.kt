@@ -151,6 +151,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
@@ -2512,12 +2513,59 @@ class Account(
         name: String,
         description: String?,
         icon: ImagePointer?,
+        banner: ImagePointer?,
         relays: List<String>,
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
-        val metadata = MetadataEntity(name = name, icon = icon, description = description, relays = relays)
+        val metadata = MetadataEntity(name = name, icon = icon, banner = banner, description = description, relays = relays)
         val wrap = ConcordModeration.editMetadata(signer, session.controlPlaneKey(), communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /**
+     * Create a new public text channel in [communityId] (CORD-03/04 channel edition). Honored at fold
+     * only when this account holds MANAGE_CHANNELS (or is the owner); the button should be gated on
+     * the same predicate. The channel id is a fresh random 32-byte entity id.
+     */
+    suspend fun createConcordChannel(
+        communityId: String,
+        name: String,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val channelId = RandomInstance.bytes(32)
+        val channel = ChannelEntity(name = name.trim())
+        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelId, channel, session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /** Rename an existing channel (chains the next channel edition onto its head). MANAGE_CHANNELS only. */
+    suspend fun renameConcordChannel(
+        communityId: String,
+        channelIdHex: String,
+        name: String,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val channel = ChannelEntity(name = name.trim())
+        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now())
+        publishConcordWrap(session.entry, wrap)
+        return true
+    }
+
+    /** Delete (tombstone) a channel — terminal; its id is never reused. MANAGE_CHANNELS only. */
+    suspend fun deleteConcordChannel(
+        communityId: String,
+        channelIdHex: String,
+        name: String,
+    ): Boolean {
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        if (!isWriteable()) return false
+        val channel = ChannelEntity(name = name.trim(), deleted = true)
+        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now())
         publishConcordWrap(session.entry, wrap)
         return true
     }

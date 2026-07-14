@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
@@ -95,6 +96,27 @@ object ConcordModeration {
         val (version, prev) = versioning(current, ControlEntityKind.ROLE, roleId)
         val content = ConcordJson.instance.encodeToString(RoleEntity.serializer(), role)
         return wrap(actor, controlPlane, ControlEntityKind.ROLE, roleId, version, prev, content, createdAt, citation)
+    }
+
+    /**
+     * Defines (or updates) a channel (CORD-03/04, `vsk=2`). [channelId] is the channel's stable
+     * 32-byte entity id — generate one for a new channel and reuse it to rename, flip its
+     * private/voice flags, or [ChannelEntity.deleted] it (terminal; the id is never reused).
+     * Honored at fold only when [actor] holds MANAGE_CHANNELS (or is the owner) tracing to the owner
+     * via [citation].
+     */
+    suspend fun defineChannel(
+        actor: NostrSigner,
+        controlPlane: GroupKey,
+        channelId: ByteArray,
+        channel: ChannelEntity,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+    ): Event {
+        val (version, prev) = versioning(current, ControlEntityKind.CHANNEL, channelId)
+        val content = ConcordJson.instance.encodeToString(ChannelEntity.serializer(), channel)
+        return wrap(actor, controlPlane, ControlEntityKind.CHANNEL, channelId, version, prev, content, createdAt, citation)
     }
 
     /**

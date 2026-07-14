@@ -33,10 +33,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -92,8 +96,60 @@ fun ConcordChannelListScreen(
     var inviteLink by remember { mutableStateOf<String?>(null) }
     var minting by remember { mutableStateOf(false) }
 
+    // Channel create/rename/delete are gated on MANAGE_CHANNELS (or owner) — the same predicate the
+    // fold enforces, so an unauthorized action would be a silent no-op we shouldn't even offer.
+    val canManageChannels =
+        state?.authority?.let {
+            it.isOwner(account.signer.pubKey) ||
+                it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_CHANNELS)
+        } == true
+
+    // channelIdHex == null → create; else → rename that channel.
+    var channelEditor by remember { mutableStateOf<ConcordChannelEditor?>(null) }
+    var channelToDelete by remember { mutableStateOf<ConcordChannelEditor?>(null) }
+
     inviteLink?.let { link ->
         InviteLinkDialog(link = link, onDismiss = { inviteLink = null })
+    }
+
+    channelEditor?.let { editor ->
+        ConcordChannelEditDialog(
+            initialName = editor.initialName,
+            isCreate = editor.channelIdHex == null,
+            onDismiss = { channelEditor = null },
+            onConfirm = { newName ->
+                channelEditor = null
+                scope.launch {
+                    if (editor.channelIdHex == null) {
+                        account.createConcordChannel(communityId, newName)
+                    } else {
+                        account.renameConcordChannel(communityId, editor.channelIdHex, newName)
+                    }
+                }
+            },
+        )
+    }
+
+    channelToDelete?.let { target ->
+        val id = target.channelIdHex ?: return@let
+        AlertDialog(
+            onDismissRequest = { channelToDelete = null },
+            title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete_title)) },
+            text = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete_message, target.initialName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    channelToDelete = null
+                    scope.launch { account.deleteConcordChannel(communityId, id, target.initialName) }
+                }) {
+                    Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { channelToDelete = null }) {
+                    Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel))
+                }
+            },
+        )
     }
 
     Scaffold(
@@ -135,6 +191,13 @@ fun ConcordChannelListScreen(
                 },
             )
         },
+        floatingActionButton = {
+            if (canManageChannels) {
+                FloatingActionButton(onClick = { channelEditor = ConcordChannelEditor(channelIdHex = null, initialName = "") }) {
+                    SymbolIcon(symbol = MaterialSymbols.Add, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_create))
+                }
+            }
+        },
     ) { padding ->
         val channels =
             state
@@ -165,7 +228,7 @@ fun ConcordChannelListScreen(
                         Modifier
                             .fillMaxWidth()
                             .clickable { nav.nav(Route.Concord(communityId, entry.key)) }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                            .padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = if (canManageChannels) 4.dp else 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
@@ -175,13 +238,119 @@ fun ConcordChannelListScreen(
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1)
+                        if (canManageChannels) {
+                            ConcordChannelRowMenu(
+                                onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                                onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                            )
+                        }
                     }
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
     }
+}
+
+/** A pending channel create ([channelIdHex] null) or rename target. */
+private data class ConcordChannelEditor(
+    val channelIdHex: String?,
+    val initialName: String,
+)
+
+/** The per-channel-row overflow menu (rename / delete), shown only to channel managers. */
+@Composable
+private fun ConcordChannelRowMenu(
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            SymbolIcon(
+                symbol = MaterialSymbols.MoreVert,
+                contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.more_options),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_rename)) },
+                onClick = {
+                    expanded = false
+                    onRename()
+                },
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onDelete()
+                },
+            )
+        }
+    }
+}
+
+/** Name-entry dialog for creating a new channel or renaming an existing one. */
+@Composable
+private fun ConcordChannelEditDialog(
+    initialName: String,
+    isCreate: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var name by remember { mutableStateOf(initialName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringRes(
+                    if (isCreate) {
+                        com.vitorpamplona.amethyst.R.string.concord_channel_create
+                    } else {
+                        com.vitorpamplona.amethyst.R.string.concord_channel_rename
+                    },
+                ),
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                label = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_name_label)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank(),
+                onClick = { if (name.isNotBlank()) onConfirm(name.trim()) },
+            ) {
+                Text(
+                    stringRes(
+                        if (isCreate) {
+                            com.vitorpamplona.amethyst.R.string.concord_channel_create
+                        } else {
+                            com.vitorpamplona.amethyst.R.string.concord_channel_rename_save
+                        },
+                    ),
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel))
+            }
+        },
+    )
 }
 
 /** Shows a freshly minted invite link as a QR code with copy + share actions. */

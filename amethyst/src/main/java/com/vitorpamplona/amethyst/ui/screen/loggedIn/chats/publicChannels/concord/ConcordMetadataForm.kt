@@ -24,15 +24,20 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -46,17 +51,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * The shared metadata form for creating and editing a Concord community — a large circular icon
@@ -74,12 +83,15 @@ fun ConcordMetadataFields(
     robotSeed: String,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
+    banner: MutableState<ImagePointer?>? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        banner?.let { ConcordBannerHero(banner = it, accountViewModel = accountViewModel) }
+
         ConcordIconHero(
             robotSeed = robotSeed,
             icon = icon,
@@ -171,5 +183,88 @@ private fun ConcordIconHero(
                     .clickable(enabled = !uploading) { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                     .padding(horizontal = 8.dp, vertical = 4.dp),
         )
+    }
+}
+
+/**
+ * A wide community-banner hero (a 3:1 header image): shows the current decrypted banner, and on tap
+ * opens the photo picker → AES-256-GCM-encrypts + uploads the image and updates [banner] to the
+ * resulting CORD-02 §6 encrypted pointer. Tapping when a banner is set replaces it; a small remove
+ * button clears it. A spinner covers the hero while the upload is in flight.
+ */
+@Composable
+private fun ConcordBannerHero(
+    banner: MutableState<ImagePointer?>,
+    accountViewModel: AccountViewModel,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var uploading by remember { mutableStateOf(false) }
+    val bannerModel = rememberConcordImageModel(banner.value, accountViewModel)
+
+    val picker =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            uploading = true
+            scope.launch {
+                try {
+                    banner.value = ConcordImageUploader(accountViewModel.account).uploadEncrypted(uri, context)
+                } catch (e: Exception) {
+                    Toast.makeText(context, stringRes(context, R.string.failed_to_upload_media_no_details), Toast.LENGTH_SHORT).show()
+                } finally {
+                    uploading = false
+                }
+            }
+        }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(3f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(enabled = !uploading) { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (bannerModel != null) {
+            AsyncImage(
+                model = bannerModel,
+                contentDescription = stringRes(R.string.concord_edit_banner_hint),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().aspectRatio(3f),
+            )
+        }
+        if (uploading) {
+            CircularProgressIndicator(modifier = Modifier.size(36.dp))
+        } else if (bannerModel == null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SymbolIcon(
+                    symbol = MaterialSymbols.AddPhotoAlternate,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringRes(R.string.concord_edit_banner_hint),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+        }
+        if (bannerModel != null && !uploading) {
+            IconButton(
+                onClick = { banner.value = null },
+                modifier = Modifier.align(Alignment.TopEnd),
+            ) {
+                SymbolIcon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = stringRes(R.string.remove),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
     }
 }

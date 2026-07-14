@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,12 +33,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,8 +55,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
@@ -84,17 +91,24 @@ fun ConcordEditScreen(
     val name = remember { mutableStateOf("") }
     val about = remember { mutableStateOf("") }
     val icon = remember { mutableStateOf<ImagePointer?>(null) }
+    val banner = remember { mutableStateOf<ImagePointer?>(null) }
+    val relays = remember { mutableStateListOf<NormalizedRelayUrl>() }
     var prefilled by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    // Seed the fields once, the first time the folded metadata is available.
+    // Seed the fields once, the first time the folded metadata is available. Relays come from the
+    // folded metadata when present, else from this account's list entry (the bootstrap set).
     LaunchedEffect(state?.metadata) {
         val md = state?.metadata
         if (!prefilled && md != null) {
             name.value = md.name
             about.value = md.description.orEmpty()
             icon.value = md.icon
+            banner.value = md.banner
+            val seededRelays = (md.relays.takeIf { it.isNotEmpty() } ?: session?.entry?.relays.orEmpty())
+            relays.clear()
+            relays.addAll(seededRelays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
             prefilled = true
         }
     }
@@ -132,6 +146,26 @@ fun ConcordEditScreen(
                 icon = icon,
                 robotSeed = communityId,
                 accountViewModel = accountViewModel,
+                banner = banner,
+            )
+
+            ConcordSectionHeader(
+                title = stringRes(R.string.concord_create_relays),
+                description = stringRes(R.string.concord_edit_relays_desc),
+            )
+            relays.forEach { relay ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(relay.displayUrl(), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    IconButton(onClick = { relays.remove(relay) }) {
+                        SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.remove))
+                    }
+                }
+            }
+            RelayUrlEditField(
+                onNewRelay = { if (it !in relays) relays.add(it) },
+                modifier = Modifier.fillMaxWidth(),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
 
             Button(
@@ -145,7 +179,8 @@ fun ConcordEditScreen(
                                 name = name.value.trim(),
                                 description = about.value.trim().ifBlank { null },
                                 icon = icon.value,
-                                relays = state?.metadata?.relays ?: session.entry.relays,
+                                banner = banner.value,
+                                relays = relays.map { it.url },
                             )
                         working = false
                         if (ok) nav.popBack()

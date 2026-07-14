@@ -314,6 +314,16 @@
     <string name="concord_show_all_channels">Show all channels</string>
     <string name="concord_send_image_title">Send image</string>
     <string name="concord_open_channel">Open channel</string>
+    <string name="concord_edit_banner_hint">Add a banner</string>
+    <string name="concord_channel_create">New channel</string>
+    <string name="concord_channel_rename">Rename channel</string>
+    <string name="concord_channel_rename_save">Rename</string>
+    <string name="concord_channel_name_label">Channel name</string>
+    <string name="concord_channel_delete">Delete channel</string>
+    <string name="concord_channel_delete_title">Delete channel?</string>
+    <string name="concord_channel_delete_message">Delete #%1$s? This can\'t be undone and the channel can\'t be recreated with the same id.</string>
+    <string name="concord_channel_delete_confirm">Delete</string>
+    <string name="concord_edit_relays_desc">Where this community\'s encrypted planes are published and read.</string>
     <string name="concord_typing_one">%1$s is typing…</string>
     <string name="concord_typing_two">%1$s and %2$s are typing…</string>
     <string name="concord_typing_many">Several people are typing…</string>
