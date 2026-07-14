@@ -113,6 +113,10 @@ fun DrawAdditionalInfo(
     val showAppRecommendations by ui.showProfileAppRecommendations.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = SpacedBy3dp) {
+        // the nickname the account gave this user, on top of (not replacing)
+        // the profile's own display name below
+        UserNicknameCard(baseUser, accountViewModel)
+
         if (displayName != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip85TrustedAssertions.users
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEndTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
@@ -41,40 +42,40 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDa
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountReceivedTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountSentTag
 
-fun TagArrayBuilder<ContactCardEvent>.rank(rank: Int) = addUnique(RankTag.assemble(rank))
+fun TagArray.rank() = fastFirstNotNullOfOrNull(RankTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.followers(count: Int) = addUnique(FollowerCountTag.assemble(count))
+fun TagArray.followerCount() = fastFirstNotNullOfOrNull(FollowerCountTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.firstCreatedAt(timestamp: Long) = addUnique(FirstCreatedAtTag.assemble(timestamp))
+fun TagArray.firstCreatedAt() = fastFirstNotNullOfOrNull(FirstCreatedAtTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.postCount(count: Int) = addUnique(PostCountTag.assemble(count))
+fun TagArray.postCount() = fastFirstNotNullOfOrNull(PostCountTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.replyCount(count: Int) = addUnique(ReplyCountTag.assemble(count))
+fun TagArray.replyCount() = fastFirstNotNullOfOrNull(ReplyCountTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.reactionsCount(count: Int) = addUnique(ReactionsCountTag.assemble(count))
+fun TagArray.reactionsCount() = fastFirstNotNullOfOrNull(ReactionsCountTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.zapAmountReceived(sats: Long) = addUnique(ZapAmountReceivedTag.assemble(sats))
+fun TagArray.zapAmountReceived() = fastFirstNotNullOfOrNull(ZapAmountReceivedTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.zapAmountSent(sats: Long) = addUnique(ZapAmountSentTag.assemble(sats))
+fun TagArray.zapAmountSent() = fastFirstNotNullOfOrNull(ZapAmountSentTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.zapCountReceived(count: Int) = addUnique(ZapCountReceivedTag.assemble(count))
+fun TagArray.zapCountReceived() = fastFirstNotNullOfOrNull(ZapCountReceivedTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.zapCountSent(count: Int) = addUnique(ZapCountSentTag.assemble(count))
+fun TagArray.zapCountSent() = fastFirstNotNullOfOrNull(ZapCountSentTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.zapAvgAmountDayReceived(sats: Long) = addUnique(ZapAvgAmountDayReceivedTag.assemble(sats))
+fun TagArray.zapAvgAmountDayReceived() = fastFirstNotNullOfOrNull(ZapAvgAmountDayReceivedTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.zapAvgAmountDaySent(sats: Long) = addUnique(ZapAvgAmountDaySentTag.assemble(sats))
+fun TagArray.zapAvgAmountDaySent() = fastFirstNotNullOfOrNull(ZapAvgAmountDaySentTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.reportsCountReceived(count: Int) = addUnique(ReportsCountReceivedTag.assemble(count))
+fun TagArray.reportsCountReceived() = fastFirstNotNullOfOrNull(ReportsCountReceivedTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.reportsCountSent(count: Int) = addUnique(ReportsCountSentTag.assemble(count))
+fun TagArray.reportsCountSent() = fastFirstNotNullOfOrNull(ReportsCountSentTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.topic(topic: String) = add(TopicTag.assemble(topic))
+fun TagArray.topics() = mapNotNull(TopicTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.activeHoursStart(hour: Int) = addUnique(ActiveHoursStartTag.assemble(hour))
+fun TagArray.activeHoursStart() = fastFirstNotNullOfOrNull(ActiveHoursStartTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.activeHoursEnd(hour: Int) = addUnique(ActiveHoursEndTag.assemble(hour))
+fun TagArray.activeHoursEnd() = fastFirstNotNullOfOrNull(ActiveHoursEndTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.petName(name: String) = addUnique(PetNameTag.assemble(name))
+fun TagArray.petName() = fastFirstNotNullOfOrNull(PetNameTag::parse)
 
-fun TagArrayBuilder<ContactCardEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
+fun TagArray.summary() = fastFirstNotNullOfOrNull(SummaryTag::parse)

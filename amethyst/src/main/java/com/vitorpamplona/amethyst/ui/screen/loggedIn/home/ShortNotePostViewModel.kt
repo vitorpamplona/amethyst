@@ -36,6 +36,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
@@ -124,8 +124,6 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -536,7 +534,7 @@ open class ShortNotePostViewModel :
         this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
-        this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
     }
 
     /**
@@ -1241,7 +1239,7 @@ open class ShortNotePostViewModel :
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
@@ -1419,16 +1417,6 @@ open class ShortNotePostViewModel :
         return replyingToEvent is TextNoteEvent &&
             replyingToEvent.isNewThread() &&
             replyingToEvent.isClient(AccountCacheState.CLIENT_TAG_NAME)
-    }
-
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
-        }
     }
 
     fun upload(
@@ -1659,12 +1647,8 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-
-        message.replaceCurrentWord(wordToInsert)
+        emojiSuggestions?.autocompleteInto(message, item)
         urlPreviews.update(message.text.toString())
-
-        emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }
