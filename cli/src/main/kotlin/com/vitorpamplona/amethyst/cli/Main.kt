@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
 import com.vitorpamplona.amethyst.cli.commands.EventCommand
 import com.vitorpamplona.amethyst.cli.commands.FetchCommand
 import com.vitorpamplona.amethyst.cli.commands.FilterCommand
+import com.vitorpamplona.amethyst.cli.commands.FofCommand
 import com.vitorpamplona.amethyst.cli.commands.FollowCommand
 import com.vitorpamplona.amethyst.cli.commands.GiftCommands
 import com.vitorpamplona.amethyst.cli.commands.GitCommands
@@ -70,7 +71,6 @@ import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
-import com.vitorpamplona.amethyst.cli.commands.WotCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
@@ -292,7 +292,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
-        "wot" -> WotCommand.dispatch(dataDir, tail)
+        "fof" -> FofCommand.dispatch(dataDir, tail)
+        // `wot` overclaimed the whole web-of-trust concept for a cheap
+        // single-hop follower count; renamed to `fof` (follows-of-follows).
+        // Kept as a warning alias — the real WoT engine is `graperank`.
+        "wot" -> {
+            System.err.println("[amy] `wot` is deprecated — use `fof` (follows-of-follows). The computed web of trust is `graperank`.")
+            FofCommand.dispatch(dataDir, tail)
+        }
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -644,6 +651,14 @@ private fun printUsage() {
         |    [status | relay URL… | keys]              sets the publish target; `keys` maps observer
         |                                              -> service-key. (default: status)
         |  graperank probe                            alias for `relay probe` (the relay census).
+        |
+        |Follows-of-follows (social proof — the cheap counterpart to graperank):
+        |  fof get USER                               USER's score: how many accounts you follow also
+        |                                              follow them (single-hop social proof, not trust).
+        |  fof list [--threshold N] [--limit N]       accounts ranked by that score — who's most
+        |                                              followed inside your network (default N: 1 / 50).
+        |  fof sync [--timeout SECS]                  refresh your follows' kind:3 from the index relays
+        |                                              so the next get/list is current (`wot` = alias).
         |
         |Zaps (NIP-57):
         |  zap user USER SATS               build a profile zap-request, fetch a BOLT11

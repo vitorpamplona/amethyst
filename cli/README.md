@@ -400,6 +400,9 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL]` | Declare a NIP-85 provider in your kind:10040 so clients can discover it (default: self as the `30382:rank` provider). |
 | `amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL]` | The inverse of `register`: remove matching entries (public + private) from your kind:10040 and re-publish it. `--service`/`--relay` narrow the match; without them every entry for that provider key is dropped. |
 | `amy graperank providers [USER]` | List a user's declared NIP-85 trusted providers (public + your own private entries). |
+| `amy fof get USER` | Follows-of-follows social proof: how many accounts you follow also follow USER. Single-hop, cheap — **not** the computed web of trust (that's `graperank`). Read from the local store; run `fof sync` first to freshen it. |
+| `amy fof list [--threshold N] [--limit N]` | Rank accounts by that social-proof score — who's most-followed inside your network (discovery). Defaults: `--threshold 1`, `--limit 50`. |
+| `amy fof sync [--timeout SECS]` | Pull your follows' latest kind:3 from the index relays so the next `get`/`list` is current. (`amy wot …` remains as a deprecation alias for all three.) |
 
 #### GrapeRank scores are persisted locally, then published (NIP-85)
 

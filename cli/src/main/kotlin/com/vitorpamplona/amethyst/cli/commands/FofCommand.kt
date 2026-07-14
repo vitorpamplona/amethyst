@@ -38,15 +38,21 @@ import kotlinx.coroutines.cancel
 import java.util.Collections
 
 /**
- * `amy wot <get|list|sync>` — Web-of-Trust score queries.
+ * `amy fof <get|list|sync>` — follows-of-follows social-proof scores.
  *
  * The score for a pubkey X is the count of accounts in the active user's
- * kind-3 follow set who also follow X. `get` and `list` are read-only —
- * they hydrate the score map from whatever kind-3 events already live in
- * the local event store. `sync` pulls fresh kind-3 events from the
+ * kind:3 follow set who also follow X — cheap single-hop social proof, NOT
+ * the computed web of trust (that's `amy graperank`). `get` and `list` are
+ * read-only — they hydrate the score map from whatever kind:3 events already
+ * live in the local event store. `sync` pulls fresh kind:3 events from the
  * configured relay pool so the next `get` / `list` is up to date.
+ *
+ *  - `fof get USER`  — X's score (how many of your follows follow X).
+ *  - `fof list`      — accounts ranked by score (discovery: who's most
+ *                      followed inside your network).
+ *  - `fof sync`      — refresh your follows' kind:3 from relays.
  */
-object WotCommand {
+object FofCommand {
     suspend fun dispatch(
         dataDir: DataDir,
         rest: Array<String>,
@@ -61,13 +67,13 @@ object WotCommand {
         }
     }
 
-    private fun usage(): Int = Output.error("bad_args", "wot <get|list|sync>")
+    private fun usage(): Int = Output.error("bad_args", "fof <get|list|sync>")
 
     private suspend fun get(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", "wot get <pubkey|npub>")
+        if (rest.isEmpty()) return Output.error("bad_args", "fof get <pubkey|npub>")
         val userArg = rest[0]
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -148,8 +154,8 @@ object WotCommand {
                             // Amy's store lookup is suspending; can't do
                             // it here. The dispatcher then falls through
                             // to Phase 1 discovery for every author, which
-                            // matches the old `amy wot sync` behaviour of
-                            // always re-asking. A future optimisation
+                            // matches the `fof sync` behaviour of always
+                            // re-asking. A future optimisation
                             // could pre-populate a `Map<HexKey,
                             // AdvertisedRelayListEvent>` before dispatch.
                             null
