@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -90,48 +91,54 @@ fun NotificationSidePanel(
 
     WatchAccountForNotifications(notifFeedContentState, accountViewModel)
 
-    Column(
-        modifier
-            .width(NotificationPanelWidth)
-            .fillMaxHeight()
-            .windowInsetsPadding(
+    // The Surface provides the Material container color + onBackground as LocalContentColor;
+    // in a bare Row the default text color falls back to Color.Black and is invisible on the
+    // dark theme (same reason DisappearingScaffold roots itself in a Surface).
+    Surface(
+        modifier = modifier.width(NotificationPanelWidth).fillMaxHeight(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        Column(
+            Modifier.windowInsetsPadding(
                 WindowInsets.systemBars.only(
                     WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End,
                 ),
             ),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { nav.nav(Route.Notification()) }
-                    .padding(horizontal = Size16dp, vertical = Size12dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                symbol = MaterialSymbols.Notifications,
-                contentDescription = null,
-                modifier = Size22Modifier,
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
-            Spacer(modifier = StdHorzSpacer)
-            Text(
-                text = stringRes(R.string.route_notifications),
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { nav.nav(Route.Notification()) }
+                        .padding(horizontal = Size16dp, vertical = Size12dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Notifications,
+                    contentDescription = null,
+                    modifier = Size22Modifier,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+                Spacer(modifier = StdHorzSpacer)
+                Text(
+                    text = stringRes(R.string.route_notifications),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
 
-        HorizontalDivider(thickness = DividerThickness)
+            HorizontalDivider(thickness = DividerThickness)
 
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            SingleNotificationsBody(
-                notifFeedContentState = notifFeedContentState,
-                notifPolls = accountViewModel.feedStates.notificationsOpenPolls,
-                scrollToEventId = null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                scrollStateKey = scrollStateKey,
-            )
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                SingleNotificationsBody(
+                    notifFeedContentState = notifFeedContentState,
+                    notifPolls = accountViewModel.feedStates.notificationsOpenPolls,
+                    scrollToEventId = null,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    scrollStateKey = scrollStateKey,
+                )
+            }
         }
     }
 }
