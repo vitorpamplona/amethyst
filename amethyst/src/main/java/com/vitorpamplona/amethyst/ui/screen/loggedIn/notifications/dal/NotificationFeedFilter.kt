@@ -64,7 +64,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -80,6 +80,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,42 +121,47 @@ class NotificationFeedFilter(
             )
 
         val NOTIFICATION_KINDS =
-            // The core subscription kinds are shared with Desktop through
-            // `commons/.../moderation/notifications/NotificationKinds.SUBSCRIPTION_KINDS`
-            // so a change on either platform automatically propagates.
-            // Android-only extras (badge awards, git issues/patches/PRs,
-            // highlights, polls, videos, voice, public messages,
-            // live-activities chat) stay here because Desktop has no
-            // rendering for those kinds today.
-            //
-            // GiftWrap (1059) is subscription-only: the wrap is an envelope whose
-            // created_at is randomized up to 2 days back (NIP-59), so rendering it
-            // as a feed row would misorder the tab with undecryptable entries. On
-            // Android the unwrapped inner event (kind 14/15/…) is what notifies —
-            // same rule NotificationDispatcher applies to push. Desktop keeps the
-            // wrap in its inbox because it has no unwrap pipeline there yet.
-            (
-                com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
-                    .SUBSCRIPTION_KINDS
-                    .toSet() - GiftWrapEvent.KIND
-            ) +
-                setOf(
-                    BadgeAwardEvent.KIND,
-                    GitIssueEvent.KIND,
-                    GitPatchEvent.KIND,
-                    GitPullRequestEvent.KIND,
-                    GitPullRequestUpdateEvent.KIND,
-                    HighlightEvent.KIND,
-                    LiveActivitiesChatMessageEvent.KIND,
-                    PictureEvent.KIND,
-                    PollEvent.KIND,
-                    ZapPollEvent.KIND,
-                    PublicMessageEvent.KIND,
-                    VideoNormalEvent.KIND,
-                    VideoShortEvent.KIND,
-                    VoiceEvent.KIND,
-                    VoiceReplyEvent.KIND,
-                ) + ADDRESSABLE_KINDS
+            // Kinds that RENDER as a row on the Notifications tab. This is a
+            // display gate over whatever is already in LocalCache — it plays no
+            // part in relay subscriptions (those live in
+            // FilterNotificationsToPubkey, the chat datasources, and the wallet
+            // assembler). It deliberately does NOT share Desktop's
+            // `NotificationKinds.SUBSCRIPTION_KINDS`: that list answers "what to
+            // ask relays for / toast on" and includes envelope kinds like
+            // GiftWrap (1059), whose created_at is randomized up to 2 days back
+            // (NIP-59). Envelopes never render here — the unwrapped inner event
+            // (kind 14/15/…) is the feed row, same rule NotificationDispatcher
+            // applies to push. NotificationKindsContractTest pins the
+            // relationship between the two lists.
+            setOf(
+                BadgeAwardEvent.KIND,
+                ChannelMessageEvent.KIND,
+                ChatMessageEvent.KIND,
+                ChatMessageEncryptedFileHeaderEvent.KIND,
+                CommentEvent.KIND,
+                GenericRepostEvent.KIND,
+                GitIssueEvent.KIND,
+                GitPatchEvent.KIND,
+                GitPullRequestEvent.KIND,
+                GitPullRequestUpdateEvent.KIND,
+                HighlightEvent.KIND,
+                TextNoteEvent.KIND,
+                ReactionEvent.KIND,
+                RepostEvent.KIND,
+                LnZapEvent.KIND,
+                NutzapEvent.KIND,
+                OnchainZapEvent.KIND,
+                LiveActivitiesChatMessageEvent.KIND,
+                PictureEvent.KIND,
+                PollEvent.KIND,
+                ZapPollEvent.KIND,
+                PrivateDmEvent.KIND,
+                PublicMessageEvent.KIND,
+                VideoNormalEvent.KIND,
+                VideoShortEvent.KIND,
+                VoiceEvent.KIND,
+                VoiceReplyEvent.KIND,
+            ) + ADDRESSABLE_KINDS
 
         // How deep to walk a public chat reply chain looking for one of the
         // user's own messages. Bounds the cost on very long threads; the
