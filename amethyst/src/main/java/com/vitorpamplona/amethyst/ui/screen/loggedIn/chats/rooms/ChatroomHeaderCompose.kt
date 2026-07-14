@@ -322,6 +322,7 @@ private fun MarmotGroupRoomCompose(
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
     val image by chatroom.image.collectAsStateWithLifecycle()
     val relays by chatroom.relays.collectAsStateWithLifecycle()
+    val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
     val author = lastMessage.author
     val noteEvent = lastMessage.event
@@ -331,7 +332,7 @@ private fun MarmotGroupRoomCompose(
     // NIP-11 icon of one of the group's relays (fetched on a cache miss).
     val channelPicture =
         if (image != null) {
-            rememberMarmotGroupIconUrl(image, accountViewModel)
+            rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)
         } else {
             loadMarmotRelayIcon(relays)
         }

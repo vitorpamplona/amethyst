@@ -22,24 +22,31 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 
 /**
  * Resolve the URL from which a Marmot group's encrypted avatar can be loaded, and
  * register its decryption cipher in the encrypted-blob HTTP cache so any Coil load
  * of that URL transparently yields the decrypted image (via `EncryptedBlobInterceptor`).
  *
- * The blob is content-addressed on Blossom by [MarmotGroupImage.hash]; because the
- * canonical scheme stores only the hash (not a URL), we reconstruct the URL against
- * the viewer's default Blossom server. When the blob does not live there, the load
- * simply fails and callers fall back to the relay icon.
+ * The blob is content-addressed on Blossom by [MarmotGroupImage.hash]; the canonical
+ * scheme stores only the hash, and the icon usually lives on the *uploader's* Blossom
+ * server rather than the viewer's. So we resolve it through [Amethyst.blossomResolver],
+ * which probes the viewer's default server (passed as a first-try `xs` hint) and the
+ * group admins' configured servers (via their pubkeys as `as` authors, BUD-03). While
+ * that async probe runs, we optimistically load from the viewer's default server so the
+ * common case (shared server) shows instantly; if nothing resolves, callers fall back to
+ * the relay icon.
  *
  * Returns null when there is no image to show.
  */
@@ -47,13 +54,39 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 fun rememberMarmotGroupIconUrl(
     image: MarmotGroupImage?,
     accountViewModel: AccountViewModel,
+    adminPubkeys: List<HexKey> = emptyList(),
 ): String? {
     if (image == null) return null
 
     val serverBaseUrl = accountViewModel.account.settings.defaultFileServer.baseUrl
-    val url = remember(image.hash, serverBaseUrl) { BlossomServerUrl.blob(serverBaseUrl, image.hash) }
+    val fallbackUrl = remember(image.hash, serverBaseUrl) { BlossomServerUrl.blob(serverBaseUrl, image.hash) }
+
+    // A blossom: URI carrying the default server as a first-try hint and the admins as
+    // authors. Extension "bin" keeps the resolver's HEAD check type-agnostic, matching the
+    // application/octet-stream encrypted blob.
+    val blossomUri =
+        remember(image.hash, serverBaseUrl, adminPubkeys) {
+            BlossomUri(
+                sha256 = image.hash,
+                extension = "bin",
+                servers = listOf(serverBaseUrl),
+                authors = adminPubkeys,
+                size = null,
+            ).toUriString()
+        }
+
+    val resolver = Amethyst.instance.blossomResolver
+    val url by produceState(resolver.cachedFindServer(blossomUri)?.serverUrl ?: fallbackUrl, blossomUri) {
+        value = resolver.findServers(blossomUri)?.serverUrl ?: fallbackUrl
+    }
+
     val cipher = remember(image) { MarmotGroupImageCipher(image.key, image.nonce, image.mediaType) }
-    Amethyst.instance.keyCache.add(url, cipher, image.mediaType)
+    // Register the cipher only when the URL or cipher changes (not on every recomposition),
+    // and synchronously during composition so the interceptor can decrypt before Coil fetches.
+    remember(url, cipher) {
+        Amethyst.instance.keyCache.add(url, cipher, image.mediaType)
+        url
+    }
 
     return url
 }

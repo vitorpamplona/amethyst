@@ -24,6 +24,7 @@ import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -34,6 +35,8 @@ import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.utils.Log
+import java.io.File
 
 /**
  * The parameters produced by encrypting + uploading a new Marmot group avatar,
@@ -86,47 +89,64 @@ class MarmotGroupIconUploader(
         server: ServerName,
         context: Context,
     ): MarmotGroupIconUpload {
-        val mediaType = Mip04MediaEncryption.canonicalizeMimeType(mimeType ?: DEFAULT_MIME)
+        // Compress/downscale up front (avatars don't need full resolution) so the stored
+        // media_type reflects the ACTUAL post-compression bytes. The AEAD binds media_type,
+        // and MediaCompressor transcodes images to JPEG — so we must know the final type
+        // before building the cipher, then upload the already-compressed bytes uncompressed.
+        val compressed = MediaCompressor().compress(uri, mimeType, CompressorQuality.MEDIUM, context.applicationContext)
+        val mediaType = Mip04MediaEncryption.canonicalizeMimeType(compressed.contentType ?: mimeType ?: DEFAULT_MIME)
         val cipher = MarmotGroupImageCipher.forNewImage(mediaType)
         val uploadKey = MarmotGroupImageEncryption.generateUploadKey()
         val uploadSigner = NostrSignerInternal(KeyPair(privKey = uploadKey))
 
-        val state =
-            UploadOrchestrator().uploadEncrypted(
-                uri = uri,
-                mimeType = mediaType,
-                alt = null,
-                contentWarningReason = null,
-                compressionQuality = CompressorQuality.MEDIUM,
-                encrypt = cipher,
-                server = server,
-                account = account,
-                context = context,
-                stripMetadata = true,
-                forcedSigner = uploadSigner,
-            )
+        try {
+            val state =
+                UploadOrchestrator().uploadEncrypted(
+                    uri = compressed.uri,
+                    mimeType = mediaType,
+                    alt = null,
+                    contentWarningReason = null,
+                    compressionQuality = CompressorQuality.UNCOMPRESSED,
+                    encrypt = cipher,
+                    server = server,
+                    account = account,
+                    context = context,
+                    stripMetadata = true,
+                    forcedSigner = uploadSigner,
+                )
 
-        if (state is UploadingState.Finished && state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-            val serverResult = state.result
-            val hash =
-                serverResult.uploadedHash
-                    ?: throw IllegalStateException("Blossom server did not return a content hash for the group icon")
-            return MarmotGroupIconUpload(
-                imageHash = hash,
-                imageKey = cipher.imageKey,
-                imageNonce = cipher.imageNonce,
-                imageUploadKey = uploadKey,
-                mediaType = mediaType,
-            )
-        }
-
-        val message =
-            if (state is UploadingState.Error) {
-                stringRes(context, state.errorResource, *state.params)
-            } else {
-                "Group icon upload failed"
+            if (state is UploadingState.Finished && state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                val serverResult = state.result
+                val hash =
+                    serverResult.uploadedHash
+                        ?: throw IllegalStateException("Blossom server did not return a content hash for the group icon")
+                return MarmotGroupIconUpload(
+                    imageHash = hash,
+                    imageKey = cipher.imageKey,
+                    imageNonce = cipher.imageNonce,
+                    imageUploadKey = uploadKey,
+                    mediaType = mediaType,
+                )
             }
-        throw IllegalStateException(message)
+
+            val message =
+                if (state is UploadingState.Error) {
+                    stringRes(context, state.errorResource, *state.params)
+                } else {
+                    "Group icon upload failed"
+                }
+            throw IllegalStateException(message)
+        } finally {
+            // Delete the intermediate compressed temp file (compress returns the original
+            // URI unchanged when it skips compression, so only delete a distinct temp).
+            if (compressed.uri != uri) {
+                try {
+                    compressed.uri.path?.let { path -> File(path).takeIf { it.exists() }?.delete() }
+                } catch (e: Exception) {
+                    Log.w("MarmotGroupIconUploader", "Failed to delete temp icon file", e)
+                }
+            }
+        }
     }
 
     companion object {

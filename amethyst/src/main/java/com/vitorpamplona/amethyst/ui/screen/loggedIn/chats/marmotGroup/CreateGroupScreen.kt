@@ -64,6 +64,10 @@ fun CreateGroupScreen(
     var groupName by remember { mutableStateOf("") }
     var groupDescription by remember { mutableStateOf("") }
     var pickedIcon by remember { mutableStateOf<SelectedMedia?>(null) }
+    // Stable seed for the placeholder avatar shown before an icon is picked. The real
+    // group id is generated per creation attempt (so retries don't collide), so this is
+    // a separate cosmetic seed rather than "".
+    val avatarSeed = remember { RandomInstance.bytes(32).toHexKey() }
     var isCreating by remember { mutableStateOf(false) }
     var showKeyPackageRelayDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -142,7 +146,7 @@ fun CreateGroupScreen(
             )
 
             MarmotGroupIconEditor(
-                groupId = "",
+                groupId = avatarSeed,
                 existingImage = null,
                 pickedMedia = pickedIcon,
                 removeRequested = false,
