@@ -44,7 +44,6 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
@@ -92,9 +91,10 @@ import kotlin.math.roundToInt
  *    relay(s) converge to the local card set via a NIP-77 up-only reconcile
  *    (nothing is re-signed or re-scored), and refresh the observer's kind:10040
  *    pointer when we hold their key.
- *  - `amy graperank probe` — the relay census: mass-connect every relay the store
+ *  - `amy relay probe` — the relay census: mass-connect every relay the store
  *    knows and record live/dead + measured RTT into the reachability cache, so the
  *    next crawl skips the dead and pre-connects the living in one parallel storm.
+ *    Lives in [RelayCommands] (`graperank probe` is kept as an alias).
  *  - bare `amy graperank [OBSERVER]` — the convenience combo: crawl then score.
  *
  * Sub-verbs complete the NIP-85 experience — discovery and consumption:
@@ -201,7 +201,10 @@ object GrapeRankCommand {
             // `sync` is the pre-rename name kept as a back-compat alias; `crawl` is
             // canonical (disambiguates from negentropy `amy sync` / `graperank update`).
             "crawl", "sync" -> crawl(dataDir, tail.drop(1).toTypedArray())
-            "probe" -> probe(dataDir, tail.drop(1).toTypedArray())
+            // The relay census outgrew graperank (it feeds the shared NIP-66
+            // reachability cache every command reads) and moved to `amy relay
+            // probe`; this alias keeps the old spelling working.
+            "probe" -> RelayCommands.probe(dataDir, tail.drop(1).toTypedArray())
             "update" -> update(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             "publish" -> publish(dataDir, tail.drop(1).toTypedArray())
@@ -534,86 +537,6 @@ object GrapeRankCommand {
                     "verify_ms" to stats.verifyMs,
                     "insert_ms" to stats.insertMs,
                     "events_stored" to stats.eventsStored,
-                ),
-            )
-        }
-        return 0
-    }
-
-    /**
-     * `amy graperank probe [--timeout SECS] [--concurrency N]` —
-     * the relay census. Mass-connects the ENTIRE relay universe the local store knows
-     * (every relay advertised in any stored kind:10002, deduped per host, plus
-     * everything already in the reachability cache) in parallel waves with a no-op
-     * REQ, so the "is this relay alive, and how slow?" wait is paid once, up front,
-     * concurrently — then records per-relay verdicts with real measured `rtt-open`
-     * into the NIP-66 reachability cache (kind:30166).
-     *
-     * The next `graperank crawl` reads that cache to (a) skip the dead set without
-     * dialing it and (b) pre-connect the live set in one storm — separating "working
-     * but slow" (kept; the crawler's patient park path waits for them) from "not
-     * working" (skipped entirely). Typical flow the first time:
-     * `graperank crawl --max-hops 2` (cheap, saves the relay lists) → `graperank
-     * probe` → full `graperank crawl`.
-     */
-    private suspend fun probe(
-        dataDir: DataDir,
-        rest: Array<String>,
-    ): Int {
-        val args = Args(rest)
-        val timeoutMs = args.longFlag("timeout", 15L) * 1000
-        val waveSize = args.intFlag("concurrency", Context.defaultPreconnectCap)
-
-        Context.openOrAnonymous(dataDir).use { ctx ->
-            ctx.prepare()
-            val cached = ctx.reachability.snapshot()
-            val universe = RelayProber.knownRelayUniverse(ctx.store) + cached.live + cached.dead
-            if (universe.isEmpty()) {
-                Output.emit(
-                    linkedMapOf<String, Any?>(
-                        "probed" to 0,
-                        "note" to "no relays known locally — run `amy graperank crawl` first to gather kind:10002 relay lists",
-                    ),
-                )
-                return 0
-            }
-
-            System.err.println(
-                "[relay-probe] probing ${universe.size} relays in waves of $waveSize " +
-                    "(${timeoutMs / 1000}s per wave; open-files limit ${Context.maxFileDescriptors})",
-            )
-            val result =
-                RelayProber(ctx.client) { System.err.println(it) }
-                    .probe(universe, timeoutMs, waveSize)
-
-            ctx.reachability.recordProbed(result.reachableRttMs(), result.deadRelays())
-
-            val rtts =
-                result.reachable
-                    .map { it.rttOpenMs }
-                    .filter { it >= 0 }
-                    .sorted()
-
-            fun pct(p: Int): Long? = if (rtts.isEmpty()) null else rtts[(rtts.size - 1) * p / 100]
-            val slowest =
-                result.reachable
-                    .filter { it.rttOpenMs >= 0 }
-                    .sortedByDescending { it.rttOpenMs }
-                    .take(10)
-                    .map { mapOf("relay" to it.relay.url, "rtt_open_ms" to it.rttOpenMs) }
-            val authWalled = result.reachable.count { it.error?.startsWith("closed:") == true }
-
-            Output.emit(
-                linkedMapOf<String, Any?>(
-                    "probed" to result.verdicts.size,
-                    "reachable" to result.reachable.size,
-                    "dead" to result.dead.size,
-                    "closed_by_policy" to authWalled,
-                    "elapsed_ms" to result.elapsedMs,
-                    "rtt_open_p50_ms" to pct(50),
-                    "rtt_open_p90_ms" to pct(90),
-                    "rtt_open_p99_ms" to pct(99),
-                    "slowest" to slowest,
                 ),
             )
         }

@@ -553,6 +553,7 @@ the last facet removes R entirely.
 | `amy relay add URL` / `remove URL` | Fan-out to the transport lists (nip65 `both` + `dm` + `key-package`). |
 | `amy relay list` | Print every configured relay bucket. |
 | `amy relay publish-lists` | Broadcast every configured relay list to the union of your relays. |
+| `amy relay probe [--timeout SECS] [--concurrency N]` | The relay census: mass-connect every relay the local store knows (all stored kind:10002 relays + the reachability cache) in parallel waves and record live/dead + measured `rtt-open` into the NIP-66 reachability cache (kind:30166). Reachability-aware commands (`graperank crawl`/`update`) read it to skip dead relays and pre-connect live ones. (`amy graperank probe` remains as an alias.) |
 
 ### Local store maintenance
 

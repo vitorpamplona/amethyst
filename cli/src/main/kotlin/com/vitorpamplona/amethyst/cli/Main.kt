@@ -484,6 +484,11 @@ private fun printUsage() {
         |  relay list                    print every configured relay bucket
         |  relay publish-lists           broadcast every configured relay list
         |  relay info URL                fetch + print a relay's NIP-11 info document
+        |  relay probe [--timeout SECS]  relay census: mass-connect every relay the store
+        |    [--concurrency N]            knows and record live/dead + measured rtt-open
+        |                                 into the reachability cache (NIP-66 kind:30166),
+        |                                 so reachability-aware commands (graperank crawl/
+        |                                 update) skip dead relays and wait once
         |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
         |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)
         |
@@ -639,10 +644,8 @@ private fun printUsage() {
         |    [--max-hops N] [--preconnect-cap N]      1984/10002) into the local store without scoring.
         |    [--no-preconnect]                        Pre-connects every known-live relay in one parallel
         |                                              storm (seeded from the reachability cache).
-        |  graperank probe [--timeout SECS]           relay census: mass-connect every relay the store
-        |    [--concurrency N]                        knows and record live/dead + measured rtt-open into
-        |                                              the reachability cache (NIP-66 kind:30166), so the
-        |                                              next crawl skips dead relays and waits once.
+        |  graperank probe                            alias for `relay probe` (the census moved there —
+        |                                              it feeds the shared NIP-66 reachability cache).
         |  graperank update [--down] [--up]           refresh every locally-known author's WoT record kinds
         |    [--no-sync-deletions] [--timeout SECS]     (0/3/10002/1984) from their own outbox: reads all
         |    [--relay-concurrency N] [--author-chunk N] kind:10002 in the store, groups authors by write
