@@ -90,7 +90,8 @@ fun NoteHeaderFirstRowDensityPreview() {
     val nav = EmptyNav()
 
     // The jump-to-parent arrow only renders in complete UI mode.
-    accountViewModel.settings.uiSettingsFlow.featureSet.value = FeatureSetType.COMPLETE
+    accountViewModel.settings.uiSettingsFlow.featureSet
+        .tryEmit(FeatureSetType.COMPLETE)
 
     // Let DisplayLocation resolve the geohash synchronously from the cache.
     CachedReversedGeoLocations.locationNames.put(GEOHASH, "Belo Horizonte")
