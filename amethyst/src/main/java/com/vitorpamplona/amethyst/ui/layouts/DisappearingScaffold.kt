@@ -24,10 +24,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -129,7 +132,8 @@ fun DisappearingScaffold(
         }
     val rootModifier =
         baseModifier
-            .let { if (topBar == null) it.statusBarsPadding() else it }
+            // systemBars (not just statusBars) so a desktop window's caption bar is respected too.
+            .let { if (topBar == null) it.windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)) else it }
             .let { if (bottomBar == null) it.navigationBarsPadding() else it }
 
     Surface(
