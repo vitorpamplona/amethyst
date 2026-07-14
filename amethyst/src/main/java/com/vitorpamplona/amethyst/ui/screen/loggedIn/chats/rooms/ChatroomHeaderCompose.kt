@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
@@ -461,10 +462,9 @@ private fun ConcordRoomCompose(
                 channel.communityName?.let { communityName ->
                     Spacer(Modifier.width(6.dp))
                     // The chip names the parent community and, when tapped, opens that community's
-                    // channel list — the "chip that opens the Concord Channel" entry point. Cap the
-                    // name so a long community title can't crowd out the channel name on the row.
-                    RelayNameChip(
-                        label = communityName.ellipsize(20),
+                    // channel list — the "chip that opens the Concord Channel" entry point.
+                    ConcordCommunityPill(
+                        communityName = communityName,
                         onClick = { nav.nav(Route.ConcordServer(channel.channelId.communityId)) },
                     )
                 }
@@ -603,9 +603,6 @@ private fun RelayNameChip(
         }
     }
 }
-
-/** Hard-caps [this] to [max] characters, appending an ellipsis when it was longer. */
-private fun String.ellipsize(max: Int): String = if (length > max) take(max).trimEnd() + "…" else this
 
 @Composable
 private fun ChannelTitleWithLabelInfo(
