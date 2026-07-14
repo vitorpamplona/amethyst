@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Amethyst Desktop
+Comment=Nostr client for desktop
+Categories=Network;InstantMessaging;
+Exec=amethyst-desktop
+Icon=com.vitorpamplona.amethyst.Desktop
+Terminal=false
+StartupWMClass=Amethyst

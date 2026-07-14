@@ -182,8 +182,8 @@ desktopApp/packaging/appimage/squashfs-root/
 
 # flatpak-builder state/cache from local builds (CI uses --state-dir under desktopApp/build/)
 .flatpak-builder/
-desktopApp/packaging/flatpak/build-dir/
-desktopApp/packaging/flatpak/repo/
+desktopApp/packaging/flatpak/**/build-dir/
+desktopApp/packaging/flatpak/**/repo/
 
 # Git worktrees
 .worktrees/

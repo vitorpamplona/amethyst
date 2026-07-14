@@ -6,10 +6,10 @@ used two ways:
 1. **Release CI** (`.github/workflows/create-release.yml`, `linux-portable`
    leg) builds a single-file bundle from it on every tag and attaches it to
    the GitHub Release as `amethyst-desktop-<version>-linux-x64.flatpak`.
-2. **Flathub submission** (future) — the same manifest is the starting
-   point, but Flathub requires building from downloadable sources instead of
-   the local `type: dir` tree, so it will need a source rewrite at
-   submission time.
+2. **Flathub submission** — the `flathub/` subdirectory holds a
+   submission-ready variant that builds from the published GitHub Release
+   tarball (Flathub's build servers must fetch sources themselves; the
+   local `type: dir` tree used by CI is not allowed there).
 
 ## Files
 
@@ -24,6 +24,12 @@ used two ways:
 - `com.vitorpamplona.amethyst.Desktop.desktop` — XDG desktop entry
 - `icons/512/com.vitorpamplona.amethyst.Desktop.png` — 512x512 icon (copy of
   `desktopApp/src/jvmMain/resources/icon.png`)
+- `flathub/` — self-contained, copy-ready Flathub submission dir: its own
+  manifest (archive source pinned to the release tarball URL + sha256, with
+  `x-checker-data` so Flathub's update bot bumps it), its own metainfo
+  (carries the permanent `<releases>` history Flathub requires), desktop
+  entry, icon, and `flathub.json` (`only-arches: x86_64` — we publish no
+  aarch64 tarball, and jpackage can't cross-compile one)
 
 ## Local build
 
@@ -70,16 +76,28 @@ from Flathub automatically on the user's machine.
 
 ## Submission to Flathub
 
-Follow https://docs.flathub.org/docs/for-app-authors/submission
+Follow https://docs.flathub.org/docs/for-app-authors/submission — no
+separate Flathub account exists; everything runs through GitHub PRs.
+
+**Remaining blocker before submitting:** at least one screenshot with a
+publicly reachable URL in `flathub/….metainfo.xml` (the Flathub linter
+rejects the current empty placeholder).
 
 1. Fork `flathub/flathub` on GitHub.
 2. Branch from `new-pr` (NOT `master`).
-3. Copy this manifest + AppStream + desktop into a new directory matching
-   the app id, and rework the `type: dir` source into a
-   buildable-from-source or downloadable-artifact form per Flathub policy.
+3. Copy the contents of `flathub/` verbatim into a new top-level directory
+   named `com.vitorpamplona.amethyst.Desktop`.
 4. Open a PR titled "Add com.vitorpamplona.amethyst.Desktop".
-5. After merge, a per-app repo is created with write access for ongoing
-   updates.
+5. After merge, Flathub creates a per-app repo
+   (`flathub/com.vitorpamplona.amethyst.Desktop`) with write access for
+   ongoing updates. Its `x-checker-data` makes
+   flatpak-external-data-checker open update PRs there automatically on
+   each new GitHub Release (bumping url/sha256 and appending the metainfo
+   `<release>` entry).
+
+To test the Flathub variant locally, run the same flatpak-builder commands
+as above from inside `flathub/` — it downloads the pinned release tarball
+instead of using a local Gradle build.
 
 ## License metadata
 
