@@ -1,0 +1,77 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.relayClient.assemblers
+
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+
+val ContactCardKindList = listOf(ContactCardEvent.KIND)
+
+/**
+ * Kind:30382 cards *about* [targets], written by [trustedAccounts] (the account
+ * itself plus its WoT trust providers). Fetches nicknames and scores for the
+ * users currently on screen.
+ */
+fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+    targets: Set<HexKey>,
+    trustedAccounts: List<HexKey>,
+    relay: NormalizedRelayUrl,
+    since: Long?,
+): RelayBasedFilter? {
+    if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
+    return RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = ContactCardKindList,
+                authors = trustedAccounts,
+                // kind:30382 addresses the target user in the d-tag
+                tags = mapOf(DTag.TAG_NAME to targets.sorted()),
+                since = since,
+            ),
+    )
+}
+
+/**
+ * Every kind:30382 card *written by* [author] — the account's own nicknames —
+ * for the bulk download at login from the account's relays. Addressable events:
+ * one card per target user, hence the larger limit.
+ */
+fun filterContactCardsByAuthorInTheRelay(
+    relay: NormalizedRelayUrl,
+    author: HexKey,
+    since: Long?,
+    limit: Int = 500,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = ContactCardKindList,
+                authors = listOf(author),
+                limit = limit,
+                since = since,
+            ),
+    )

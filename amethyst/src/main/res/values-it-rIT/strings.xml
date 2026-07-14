@@ -2645,6 +2645,7 @@
     <string name="profile_actions_dialog_title">Azioni profilo</string>
     <string name="media_actions_dialog_title">Azioni media</string>
     <string name="playback_actions_dialog_title">Riproduzione</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Trasmetti al dispositivo</string>
     <string name="cast_stop_casting">Interrompi trasmissione</string>

@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
@@ -107,7 +108,12 @@ class NostrClient(
     // new filters will be sent to the relays and a potential reconnect can
     // be triggered.
     // Default: STARTS active
-    private var isActive = true
+    //
+    // A StateFlow (not a plain Boolean) so the keep-alive loop below can
+    // suspend without any scheduled timer while the client is inactive —
+    // e.g. the whole time the app sits in the background after the host
+    // calls [disconnect].
+    private val isActiveFlow = MutableStateFlow(true)
 
     /**
      * Whatches for any changes in the relay list from subscriptions or outbox
@@ -132,16 +138,16 @@ class NostrClient(
 
     // Reconnects all relays that may have disconnected
     override fun connect() {
-        isActive = true
+        isActiveFlow.value = true
         relayPool.connect()
     }
 
     override fun disconnect() {
-        isActive = false
+        isActiveFlow.value = false
         relayPool.disconnect()
     }
 
-    override fun isActive() = isActive
+    override fun isActive() = isActiveFlow.value
 
     class Reconnect(
         val onlyIfChanged: Boolean,
@@ -173,12 +179,19 @@ class NostrClient(
      * error code) would stay disconnected forever in the absence of any
      * subscription change. The per-relay [BasicRelayClient] backoff still
      * gates the actual reconnect attempt, so dead relays are not hammered.
+     *
+     * While the client is inactive (the host called [disconnect], e.g. the
+     * app moved to the background) the loop suspends on [isActiveFlow]
+     * instead of ticking: no timer fires at all until [connect] flips the
+     * flag back, saving periodic CPU wake-ups for the whole background
+     * stretch.
      */
     private val keepAliveJob =
         scope.launch {
             while (true) {
+                isActiveFlow.first { it }
                 delay(KEEP_ALIVE_INTERVAL_MS)
-                if (this@NostrClient.isActive) {
+                if (this@NostrClient.isActive()) {
                     relayPool.reconnectIfNeedsTo(ignoreRetryDelays = false)
                 }
             }
@@ -202,7 +215,7 @@ class NostrClient(
     ) {
         val relaysToUpdate = activeRequests.addOrUpdate(subId, filters, listener)
 
-        if (isActive) {
+        if (isActive()) {
             activeRequests.sendToRelayIfChanged(subId, relaysToUpdate) { relay, cmd ->
                 if (cmd is CloseCmd || cmd is AuthCmd) {
                     relayPool.sendIfConnected(relay, cmd)
@@ -225,7 +238,7 @@ class NostrClient(
     ) {
         val relaysToUpdate = activeCounts.addOrUpdate(subId, filters)
 
-        if (isActive) {
+        if (isActive()) {
             activeCounts.sendToRelayIfChanged(subId, relaysToUpdate) { relay, cmd ->
                 if (cmd is CloseCmd || cmd is AuthCmd) {
                     relayPool.sendIfConnected(relay, cmd)
@@ -245,7 +258,7 @@ class NostrClient(
     ) {
         val relaysToUpdate = eventOutbox.markAsSending(event, relayList)
 
-        if (isActive) {
+        if (isActive()) {
             eventOutbox.sendToRelayIfChanged(event, relaysToUpdate, relayPool::sendOrConnectAndSync)
 
             // wakes up all the other relays
@@ -257,14 +270,14 @@ class NostrClient(
         val relaysToUpdateReqs = activeRequests.remove(subId)
         val relaysToUpdateCounts = activeCounts.remove(subId)
 
-        if (isActive) {
+        if (isActive()) {
             activeRequests.sendToRelayIfChanged(subId, relaysToUpdateReqs, relayPool::sendIfConnected)
             activeCounts.sendToRelayIfChanged(subId, relaysToUpdateCounts, relayPool::sendIfConnected)
         }
     }
 
     override fun syncFilters(relay: IRelayClient) {
-        if (isActive) {
+        if (isActive()) {
             scope.launch {
                 activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
                 activeCounts.syncState(relay.url, relay::sendOrConnectAndSync)
@@ -337,7 +350,7 @@ class NostrClient(
         // The reconnect path is debounced and goes through
         // reconnectIfNeedsTo, which respects each relay's exponential
         // backoff so we don't hammer dead relays.
-        if (isActive && relay.url in allRelays.value) {
+        if (isActive() && relay.url in allRelays.value) {
             reconnect(onlyIfChanged = true)
         }
     }

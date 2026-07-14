@@ -82,10 +82,12 @@ class AntiSpamFilter {
                 (recentAddressables[hash] != null && recentAddressables[hash] != address) ||
                 (spamMessages[hash] != null && !spamMessages[hash].duplicatedEventAddresses.contains(address))
             ) {
+                // may be null if the first duplicate was evicted from the LRU cache
+                // while the spammer record still matches this hash.
                 val existingAddress = recentAddressables[hash]
 
-                val link1 = njumpLink(NAddress.create(existingAddress.kind, existingAddress.pubKeyHex, existingAddress.dTag, relay))
                 val link2 = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
+                val link1 = existingAddress?.let { njumpLink(NAddress.create(it.kind, it.pubKeyHex, it.dTag, relay)) } ?: link2
 
                 Log.w("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
 
@@ -111,8 +113,10 @@ class AntiSpamFilter {
                 (existingEvent != null && existingEvent != event.id) ||
                 (spamMessages[hash] != null && !spamMessages[hash].duplicatedEventIds.contains(event.id))
             ) {
-                val link1 = njumpLink(NEvent.create(existingEvent, null, null, relay))
                 val link2 = njumpLink(NEvent.create(event.id, null, null, relay))
+                // existingEvent may be null if the first duplicate was evicted from the
+                // LRU cache while the spammer record still matches this hash.
+                val link1 = existingEvent?.let { njumpLink(NEvent.create(it, null, null, relay)) } ?: link2
 
                 Log.w("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
 
@@ -149,12 +153,12 @@ class AntiSpamFilter {
                     Spammer(
                         pubkeyHex = event.pubKey,
                         duplicatedEventIds = setOf(),
-                        duplicatedEventAddresses = setOf(recentAddressables[hashCode], event.address()),
+                        duplicatedEventAddresses = setOfNotNull(recentAddressables[hashCode], event.address()),
                     )
                 } else {
                     Spammer(
                         pubkeyHex = event.pubKey,
-                        duplicatedEventIds = setOf(recentEventIds[hashCode], event.id),
+                        duplicatedEventIds = setOfNotNull(recentEventIds[hashCode], event.id),
                         duplicatedEventAddresses = setOf(),
                     )
                 }

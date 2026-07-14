@@ -1704,6 +1704,12 @@ class AccountViewModel(
 
     fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
 
+    fun updateContactCardPetName(
+        user: User,
+        petName: String?,
+        summary: String?,
+    ) = launchSigner { account.updateContactCardPetName(user.pubkeyHex, petName, summary) }
+
     fun hide(word: String) = launchSigner { account.hideWord(word) }
 
     fun showUser(pubkeyHex: String) = launchSigner { account.showUser(pubkeyHex) }

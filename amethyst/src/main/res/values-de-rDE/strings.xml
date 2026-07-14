@@ -3168,6 +3168,7 @@
     <string name="media_actions_dialog_title">Medienaktionen</string>
     <string name="playback_actions_dialog_title">Wiedergabe</string>
     <string name="video_quality_auto">Auto</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">An Gerät streamen</string>
     <string name="cast_stop_casting">Streaming beenden</string>

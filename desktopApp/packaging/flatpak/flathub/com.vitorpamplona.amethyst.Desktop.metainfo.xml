@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.vitorpamplona.amethyst.Desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0</project_license>
+  <name>Amethyst Desktop</name>
+  <summary>Nostr client for desktop</summary>
+
+  <description>
+    <p>
+      Amethyst Desktop is a desktop client for the Nostr protocol.
+      Browse feeds, post notes, send zaps (Lightning Network), and
+      participate in NIP-53 live audio rooms.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">com.vitorpamplona.amethyst.Desktop.desktop</launchable>
+
+  <url type="homepage">https://github.com/vitorpamplona/amethyst</url>
+  <url type="bugtracker">https://github.com/vitorpamplona/amethyst/issues</url>
+  <url type="vcs-browser">https://github.com/vitorpamplona/amethyst</url>
+
+  <developer id="com.vitorpamplona">
+    <name>Vitor Pamplona</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <categories>
+    <category>Network</category>
+    <category>InstantMessaging</category>
+  </categories>
+
+  <screenshots>
+    <!-- BLOCKER for Flathub submission: at least one screenshot with a
+         publicly reachable <image> URL is required by the Flathub linter.
+         Suggested 1280x800 PNG, e.g.:
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/vitorpamplona/amethyst/main/docs/screenshots/desktop-home.png</image>
+      <caption>Home feed</caption>
+    </screenshot>
+    -->
+  </screenshots>
+
+  <!-- Unlike the CI metainfo (release entry injected at build time), Flathub
+       requires the release history to live in-repo. New entries are appended
+       automatically by flatpak-external-data-checker (is-main-source: true
+       on the archive source in the manifest). -->
+  <releases>
+    <release version="1.12.6" date="2026-06-19" />
+  </releases>
+</component>

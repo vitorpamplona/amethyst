@@ -39,6 +39,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusBus
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusState
@@ -106,6 +107,7 @@ class NestForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Amethyst.instance.nestsSession.setActive(true)
         createNotificationChannel()
         wakeLock =
             (getSystemService(Context.POWER_SERVICE) as PowerManager)
@@ -421,6 +423,7 @@ class NestForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        Amethyst.instance.nestsSession.setActive(false)
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
         abandonAudioFocus()

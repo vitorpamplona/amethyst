@@ -237,14 +237,14 @@ fun ProfileContentTemplate(
             AsyncImage(
                 model = profileBanner,
                 contentDescription = stringRes(id = R.string.profile_image),
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Crop,
                 modifier = bannerModifier,
             )
         } else {
             AsyncImage(
                 model = R.drawable.profile_banner,
                 contentDescription = stringResource(R.string.profile_banner),
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Crop,
                 modifier = bannerModifier,
             )
         }

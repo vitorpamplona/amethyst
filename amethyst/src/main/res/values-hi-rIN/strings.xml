@@ -3215,6 +3215,7 @@
     <string name="media_actions_dialog_title">अभिलेख कार्य</string>
     <string name="playback_actions_dialog_title">चालन</string>
     <string name="video_quality_auto">स्वचालित</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">यन्त्र पर निक्षेपण</string>
     <string name="cast_stop_casting">निक्षेपण रोकें</string>

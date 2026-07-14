@@ -3316,6 +3316,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="media_actions_dialog_title">Možnosti predstavnosti</string>
     <string name="playback_actions_dialog_title">Predvajaj</string>
     <string name="video_quality_auto">Samodejno</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Prenesi v napravo</string>
     <string name="cast_stop_casting">Prenehaj s prenašanjem</string>

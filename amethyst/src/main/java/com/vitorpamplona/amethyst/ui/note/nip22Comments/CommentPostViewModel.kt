@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
@@ -74,6 +74,7 @@ import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -96,8 +97,6 @@ import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -176,6 +175,21 @@ open class CommentPostViewModel :
     )
 
     var notifying by mutableStateOf<List<User>?>(null)
+
+    // Members of the notifying list whose bell is off: they keep their chip
+    // (so they are one tap away from being added back) but are dropped from
+    // the extra notification p tags of the outgoing comment.
+    var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
+
+    fun toggleNotify(user: User) {
+        mutedNotifies =
+            if (user.pubkeyHex in mutedNotifies) {
+                mutedNotifies - user.pubkeyHex
+            } else {
+                mutedNotifies + user.pubkeyHex
+            }
+        draftTag.newVersion()
+    }
 
     // NIP-9B: latest community rules document for the community we're posting into.
     // Null when the reply target is not a community, or no rules have been observed yet.
@@ -275,7 +289,7 @@ open class CommentPostViewModel :
         this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
-        this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
     }
 
     fun newPostFor(externalIdentity: ExternalId) {
@@ -303,6 +317,7 @@ open class CommentPostViewModel :
     open fun reply(post: Note) {
         this.replyingTo = post
         this.externalIdentity = (post.event as? CommentEvent)?.scope()
+        mutedNotifies = emptySet()
         (post.event as? LnZapEvent)?.let { zap ->
             notifying = listOfNotNull(zapSenderToNotify(zap))
         }
@@ -498,14 +513,16 @@ open class CommentPostViewModel :
 
         notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
             draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+        mutedNotifies = emptySet()
 
         // Replies to zaps notify the zap sender through a plain p tag (the receipt's
-        // author keys above are the lightning provider). Restore the sender chip only
-        // if the draft still tags them — its absence means the user removed it.
+        // author keys above are the lightning provider). The sender chip always comes
+        // back; a missing p tag in the draft means the user muted their bell.
         (replyingTo?.event as? LnZapEvent)?.let { zap ->
             zapSenderToNotify(zap)?.let { sender ->
-                if (draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
-                    notifying = (notifying ?: emptyList()) + sender
+                notifying = ((notifying ?: emptyList()) + sender).distinct()
+                if (!draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
+                    mutedNotifies = mutedNotifies + sender.pubkeyHex
                 }
             }
         }
@@ -626,7 +643,7 @@ open class CommentPostViewModel :
 
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
 
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
@@ -665,9 +682,9 @@ open class CommentPostViewModel :
                             }
                         } else if (replyingToEvent is LnZapEvent) {
                             val sender = zapSenderToNotify(replyingToEvent)
-                            // notifying starts with the sender; a missing entry means the
-                            // user removed the chip, so respect that and don't tag them.
-                            if (sender != null && notifying?.contains(sender) != false) {
+                            // The sender's chip stays in the list; a muted bell means
+                            // the user doesn't want to ping them, so don't tag them.
+                            if (sender != null && sender.pubkeyHex !in mutedNotifies) {
                                 listOf(sender.toPTag())
                             } else {
                                 emptyList()
@@ -715,21 +732,6 @@ open class CommentPostViewModel :
             }
 
         return template
-    }
-
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let {
-                EmojiUrlTag(
-                    it.code,
-                    it.link,
-                )
-            }
-        }
     }
 
     fun upload(
@@ -855,6 +857,7 @@ open class CommentPostViewModel :
         mediaUploadTracker.finishUpload()
 
         notifying = null
+        mutedNotifies = emptySet()
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -884,10 +887,6 @@ open class CommentPostViewModel :
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
         this.multiOrchestrator?.remove(selected)
-    }
-
-    open fun removeFromReplyList(userToRemove: User) {
-        notifying = notifying?.filter { it != userToRemove }
     }
 
     override fun onMessageChanged() {
@@ -937,12 +936,8 @@ open class CommentPostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-
-        message.replaceCurrentWord(wordToInsert)
+        emojiSuggestions?.autocompleteInto(message, item)
         urlPreviews.update(message.text.toString())
-
-        emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }

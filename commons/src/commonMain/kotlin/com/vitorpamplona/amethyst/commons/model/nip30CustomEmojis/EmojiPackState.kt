@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
@@ -124,6 +125,23 @@ class EmojiPackState(
                 SharingStarted.Eagerly,
                 emptyList(),
             )
+
+    /**
+     * Resolves every `:shortcode:` in [message] against the account's selected
+     * emoji packs, returning the NIP-30 `emoji` tags an event needs to carry for
+     * the codes to render. Unknown codes are simply skipped.
+     */
+    fun findEmojiTags(message: String): List<EmojiUrlTag> {
+        val myEmojiSet = myEmojis.value
+        if (myEmojiSet.isEmpty()) return emptyList()
+        val byCode = myEmojiSet.associateBy { it.code }
+        return CustomEmoji
+            .findAllEmojiCodes(message)
+            .distinct()
+            .mapNotNull { code ->
+                byCode[code]?.let { EmojiUrlTag(it.code, it.link) }
+            }
+    }
 
     suspend fun addEmojiPack(emojiPack: Note): EmojiPackSelectionEvent {
         val emojiPackEvent = emojiPack.event

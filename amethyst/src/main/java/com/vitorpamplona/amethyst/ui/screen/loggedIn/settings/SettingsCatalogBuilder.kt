@@ -103,6 +103,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.calendar_reminder_settings_title, MaterialSymbols.CalendarMonth, R.string.calendar_reminder_search_keywords, Route.CalendarReminderSettings),
                     symEntry(R.string.ots_explorer_settings, MaterialSymbols.Search, R.string.ots_explorer_search_keywords, Route.OtsSettings),
                     symEntry(R.string.namecoin_settings, MaterialSymbols.Security, R.string.namecoin_search_keywords, Route.NamecoinSettings),
+                    symEntry(R.string.resource_usage_title, MaterialSymbols.Bolt, R.string.resource_usage_search_keywords, Route.ResourceUsage),
                 ),
         )
 

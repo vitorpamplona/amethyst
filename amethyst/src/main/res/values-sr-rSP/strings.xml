@@ -2703,6 +2703,7 @@
     <string name="media_actions_dialog_title">Radnje sa medijima</string>
     <string name="playback_actions_dialog_title">Reprodukcija</string>
     <string name="video_quality_auto">Automatski</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Prikaži na uređaju</string>
     <string name="cast_stop_casting">Zaustavi prikazivanje</string>

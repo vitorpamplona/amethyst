@@ -3301,6 +3301,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="media_actions_dialog_title">Akcje multimediów</string>
     <string name="playback_actions_dialog_title">Odtwarzanie</string>
     <string name="video_quality_auto">Automatycznie</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Zrzuć na urządzenie</string>
     <string name="cast_stop_casting">Przestań zrzucać</string>

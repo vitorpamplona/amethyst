@@ -18,31 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
+package com.vitorpamplona.amethyst.service.resourceusage
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import android.os.SystemClock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
-val ContactCardKindList = listOf(ContactCardEvent.KIND)
+/**
+ * Integrates time-with-UI-visible into the ledger ([UsageKeys.APP_FG_MS]).
+ * Screen-on time is what display power is proportional to, and it's the
+ * denominator that makes every other counter interpretable (MB per hour in
+ * app vs MB while backgrounded).
+ */
+class ForegroundTimeIntegrator(
+    private val isForeground: Flow<Boolean>,
+    accountant: ResourceUsageAccountant,
+    nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+) : TimeSegmentIntegrator<Unit>(accountant, nowMs) {
+    fun start(scope: CoroutineScope): Job {
+        registerFlushHook()
+        return scope.launch {
+            isForeground.collect { fg -> transitionTo(if (fg) Unit else null) }
+        }
+    }
 
-fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
-    targets: Set<HexKey>,
-    trustedAccounts: List<HexKey>,
-    relay: NormalizedRelayUrl,
-    since: Long?,
-): RelayBasedFilter? {
-    if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
-    return RelayBasedFilter(
-        relay = relay,
-        filter =
-            Filter(
-                kinds = ContactCardKindList,
-                authors = trustedAccounts,
-                tags = mapOf("d" to targets.sorted()),
-                since = since,
-            ),
-    )
+    override fun account(
+        state: Unit,
+        elapsedMs: Long,
+    ) {
+        if (elapsedMs > 0) accountant.add(UsageKeys.APP_FG_MS, elapsedMs)
+    }
 }

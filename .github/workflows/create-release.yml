@@ -44,7 +44,7 @@ jobs:
           - { os: ubuntu-latest,  arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
           - { os: ubuntu-latest,  arch: x64,   family: linux-portable, tasks: "createReleaseAppImage createReleaseDistributable" }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60  # linux-portable leg also downloads the freedesktop runtime + builds the Flatpak bundle
     defaults:
       run:
         shell: bash
@@ -100,6 +100,25 @@ jobs:
             exit 1
           fi
           chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
+
+      # Flatpak tooling + the freedesktop runtime/sdk the manifest pins
+      # (runtime-version is greped from the manifest so this never drifts).
+      # Retried: the runtime download from Flathub is ~1 GB and flatpak
+      # install resumes cleanly on re-run.
+      - name: Install Flatpak tooling + runtimes (linux-portable only)
+        if: matrix.family == 'linux-portable'
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        with:
+          max_attempts: 3
+          timeout_minutes: 15
+          command: |
+            set -euo pipefail
+            sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder
+            flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+            FDO_VER=$(grep -E "^runtime-version:" desktopApp/packaging/flatpak/com.vitorpamplona.amethyst.Desktop.yml | cut -d"'" -f2)
+            flatpak install --user --noninteractive flathub \
+              "org.freedesktop.Platform//${FDO_VER}" \
+              "org.freedesktop.Sdk//${FDO_VER}"
 
       # macOS only: import the Developer ID Application cert into a throwaway
       # keychain so jpackage's codesign pass can find it. Soft — if the
@@ -160,6 +179,36 @@ jobs:
           else
             ( cd "$APP" && tar czf "../../../../portable/amethyst-desktop-${VER}-linux-x64.tar.gz" Amethyst/ )
           fi
+
+      # Flatpak bundle: wraps the same createReleaseDistributable tree the
+      # AppImage uses. The manifest (desktopApp/packaging/flatpak/) copies the
+      # prebuilt jpackage tree into /app — no Gradle runs inside the sandbox.
+      # build-bundle emits a single-file .flatpak whose baked-in runtime-repo
+      # lets the user's flatpak fetch the freedesktop runtime from Flathub on
+      # install. --disable-rofiles-fuse: GH runners lack a usable rofiles-fuse.
+      - name: Build Flatpak bundle (linux-portable only)
+        if: matrix.family == 'linux-portable'
+        run: |
+          set -euo pipefail
+          VER="${{ steps.ver.outputs.version }}"
+          PKG="desktopApp/packaging/flatpak"
+          APP_ID="com.vitorpamplona.amethyst.Desktop"
+          OUT="desktopApp/build/flatpak"
+          # Inject the AppStream <release> entry for this build (the checked-in
+          # metainfo deliberately carries none — CI is the source of truth).
+          sed -i "s|<releases>|<releases>\n    <release version=\"${VER}\" date=\"$(date -u +%F)\" />|" \
+            "${PKG}/${APP_ID}.metainfo.xml"
+          mkdir -p "$OUT"
+          flatpak-builder --user --force-clean --disable-rofiles-fuse \
+            --state-dir="${OUT}/.flatpak-builder" \
+            --repo="${OUT}/repo" \
+            "${OUT}/build-dir" \
+            "${PKG}/${APP_ID}.yml"
+          flatpak build-bundle "${OUT}/repo" \
+            "${OUT}/Amethyst-${VER}-x86_64.flatpak" \
+            "$APP_ID" \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          ls -la "$OUT"
 
       - name: Collect + rename assets
         run: |

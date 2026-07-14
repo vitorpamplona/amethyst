@@ -34,6 +34,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.ui.call.CallActivity
@@ -61,6 +62,7 @@ class CallForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Amethyst.instance.callSession.setActive(true)
         createNotificationChannel()
     }
 
@@ -151,6 +153,7 @@ class CallForegroundService : Service() {
         // because CallManager.hangup() transitions to Ended and a second
         // hangup() from Ended state returns immediately.
         publishHangupBlocking()
+        Amethyst.instance.callSession.setActive(false)
         super.onDestroy()
     }
 

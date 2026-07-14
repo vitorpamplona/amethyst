@@ -3172,6 +3172,7 @@
     <string name="media_actions_dialog_title">Medieåtgärder</string>
     <string name="playback_actions_dialog_title">Uppspelning</string>
     <string name="video_quality_auto">Auto</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Casta till enhet</string>
     <string name="cast_stop_casting">Sluta casta</string>

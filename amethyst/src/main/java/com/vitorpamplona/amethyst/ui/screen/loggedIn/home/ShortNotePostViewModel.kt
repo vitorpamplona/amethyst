@@ -36,6 +36,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
@@ -124,8 +124,6 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -367,10 +365,29 @@ open class ShortNotePostViewModel :
         }
     }
 
+    // Members of pTags whose bell is off: they keep their chip in the Notify
+    // list (so they are one tap away from being added back) but are dropped
+    // from the outgoing event's p tags.
+    var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
+
+    fun toggleNotify(user: User) {
+        mutedNotifies =
+            if (user.pubkeyHex in mutedNotifies) {
+                mutedNotifies - user.pubkeyHex
+            } else {
+                mutedNotifies + user.pubkeyHex
+            }
+        draftTag.newVersion()
+    }
+
+    // The users that will actually be p-tagged: the chip list minus the muted ones.
+    fun activeNotifies(): List<User>? = pTags?.filter { it.pubkeyHex !in mutedNotifies }
+
     fun addToReplyList(user: User) {
         if (pTags?.contains(user) != true) {
             pTags = (pTags ?: emptyList()).plus(user)
         }
+        mutedNotifies = mutedNotifies - user.pubkeyHex
     }
 
     // A single ephemeral signer reused for the whole compose session so that media
@@ -517,7 +534,7 @@ open class ShortNotePostViewModel :
         this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
-        this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
     }
 
     /**
@@ -569,6 +586,7 @@ open class ShortNotePostViewModel :
             originalNote = replyingTo
             privateNoteLocked = replyingTo?.isPrivateRumor() == true
             wantsPrivateNote = privateNoteLocked
+            mutedNotifies = emptySet()
             replyingTo?.let { replyNote ->
                 if (replyNote.event is BaseThreadedEvent) {
                     this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -577,20 +595,7 @@ open class ShortNotePostViewModel :
                 }
 
                 if (replyNote.event !is CommunityDefinitionEvent) {
-                    replyNote.author?.let { replyUser ->
-                        val currentMentions =
-                            (replyNote.event as? TextNoteEvent)
-                                ?.mentions()
-                                ?.toSet()
-                                ?.map { LocalCache.getOrCreateUser(it.pubKey) }
-                                ?: emptyList()
-
-                        if (currentMentions.contains(replyUser)) {
-                            this.pTags = currentMentions
-                        } else {
-                            this.pTags = currentMentions.plus(replyUser)
-                        }
-                    }
+                    this.pTags = threadMembers(replyNote, this.eTags)
                 }
             }
                 ?: run {
@@ -708,6 +713,22 @@ open class ShortNotePostViewModel :
         }
     }
 
+    // Everyone taking part in the thread gets a Notify chip: whoever the parent
+    // already p-tags, plus the author of every note in the reply chain. Members
+    // the user doesn't want to ping are muted via their chip's bell, not removed.
+    private fun threadMembers(
+        replyNote: Note,
+        threadNotes: List<Note>?,
+    ): List<User> {
+        val mentions =
+            (replyNote.event as? TextNoteEvent)
+                ?.mentions()
+                ?.map { LocalCache.getOrCreateUser(it.pubKey) }
+                ?: emptyList()
+        val authors = threadNotes?.mapNotNull { it.author } ?: emptyList()
+        return (mentions + authors + listOfNotNull(replyNote.author)).distinct()
+    }
+
     private fun loadFromDraft(draftEvent: TextNoteEvent) {
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
@@ -786,6 +807,19 @@ open class ShortNotePostViewModel :
         privateNoteLocked = originalNote?.isPrivateRumor() == true
         wantsPrivateNote = privateNoteLocked
 
+        // A muted thread member is simply absent from the draft's p tags, so
+        // rebuild the full chip list and mark whoever the draft dropped as muted.
+        val draftNotifies = pTags.orEmpty().map { it.pubkeyHex }.toSet()
+        val members =
+            originalNote
+                ?.takeIf { it.event !is CommunityDefinitionEvent }
+                ?.let { threadMembers(it, eTags) }
+                .orEmpty()
+        mutedNotifies = members.mapNotNullTo(mutableSetOf()) { member -> member.pubkeyHex.takeIf { it !in draftNotifies } }
+        if (members.isNotEmpty()) {
+            pTags = (pTags.orEmpty() + members).distinct()
+        }
+
         if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
         }
@@ -845,6 +879,7 @@ open class ShortNotePostViewModel :
             draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
                 LocalCache.checkGetOrCreateUser(it[1])
             }
+        mutedNotifies = emptySet()
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -917,6 +952,7 @@ open class ShortNotePostViewModel :
             draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
                 LocalCache.checkGetOrCreateUser(it[1])
             }
+        mutedNotifies = emptySet()
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -1168,9 +1204,11 @@ open class ShortNotePostViewModel :
                     val tags = prepareETagsAsReplyTo(replyingTo, null)
                     accountViewModel.fixReplyTagHints(tags)
                     markedETags(tags)
-                    notify(replyingTo.toPTag())
+                    if (replyingTo.event.pubKey !in mutedNotifies) {
+                        notify(replyingTo.toPTag())
+                    }
                 }
-                pTags?.let { userList ->
+                activeNotifies()?.let { userList ->
                     val tags =
                         userList.map {
                             val tag = it.toPTag()
@@ -1190,7 +1228,7 @@ open class ShortNotePostViewModel :
         val tagger =
             NewMessageTagger(
                 message.text.toString().trim(),
-                pTags,
+                activeNotifies(),
                 eTags,
                 accountViewModel,
             )
@@ -1201,7 +1239,7 @@ open class ShortNotePostViewModel :
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
@@ -1381,16 +1419,6 @@ open class ShortNotePostViewModel :
             replyingToEvent.isClient(AccountCacheState.CLIENT_TAG_NAME)
     }
 
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
-        }
-    }
-
     fun upload(
         alt: String?,
         contentWarningReason: String?,
@@ -1512,6 +1540,7 @@ open class ShortNotePostViewModel :
         voiceSelectedServer = null
         voiceOrchestrator = null
         pTags = null
+        mutedNotifies = emptySet()
 
         wantsPoll = false
         pollOptions = newStateMapPollOptions()
@@ -1560,10 +1589,6 @@ open class ShortNotePostViewModel :
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
         this.multiOrchestrator?.remove(selected)
-    }
-
-    open fun removeFromReplyList(userToRemove: User) {
-        pTags = pTags?.filter { it != userToRemove }
     }
 
     open fun addToMessage(it: String) {
@@ -1622,12 +1647,8 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-
-        message.replaceCurrentWord(wordToInsert)
+        emojiSuggestions?.autocompleteInto(message, item)
         urlPreviews.update(message.text.toString())
-
-        emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }

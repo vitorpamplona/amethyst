@@ -2717,6 +2717,7 @@
     <string name="media_actions_dialog_title">اقدامات رسانه</string>
     <string name="playback_actions_dialog_title">پخش</string>
     <string name="video_quality_auto">خودکار</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">پخش روی دستگاه</string>
     <string name="cast_stop_casting">توقف پخش</string>

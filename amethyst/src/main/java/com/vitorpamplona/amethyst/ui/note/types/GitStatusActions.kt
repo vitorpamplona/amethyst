@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ButtonDefaults
@@ -55,6 +57,10 @@ import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
 private enum class StatusTarget { OPEN, CLOSED, APPLIED }
 
+/** Compact sizing shared by the small action buttons on git cards. */
+internal val CompactButtonHeight = Modifier.height(32.dp)
+internal val CompactButtonPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+
 /**
  * NIP-34 status controls for an issue, patch or pull request. Visible only to the
  * people allowed to moderate the thread — the item's author and the repository
@@ -85,23 +91,33 @@ fun GitStatusActions(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (closedOrApplied) {
-            FilledTonalButton(onClick = { sendStatus(accountViewModel, note, StatusTarget.OPEN) }) {
-                Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringRes(R.string.git_status_reopen), modifier = Modifier.padding(start = 6.dp))
+            FilledTonalButton(
+                onClick = { sendStatus(accountViewModel, note, StatusTarget.OPEN) },
+                modifier = CompactButtonHeight,
+                contentPadding = CompactButtonPadding,
+            ) {
+                Icon(MaterialSymbols.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(stringRes(R.string.git_status_reopen), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
         } else {
             if (isPatchOrPr) {
-                FilledTonalButton(onClick = { sendStatus(accountViewModel, note, StatusTarget.APPLIED) }) {
-                    Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(stringRes(R.string.git_status_mark_merged), modifier = Modifier.padding(start = 6.dp))
+                FilledTonalButton(
+                    onClick = { sendStatus(accountViewModel, note, StatusTarget.APPLIED) },
+                    modifier = CompactButtonHeight,
+                    contentPadding = CompactButtonPadding,
+                ) {
+                    Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(stringRes(R.string.git_status_mark_merged), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
                 }
             }
             OutlinedButton(
                 onClick = { sendStatus(accountViewModel, note, StatusTarget.CLOSED) },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = CompactButtonHeight,
+                contentPadding = CompactButtonPadding,
             ) {
-                Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringRes(R.string.git_status_close), modifier = Modifier.padding(start = 6.dp))
+                Icon(MaterialSymbols.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(stringRes(R.string.git_status_close), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp))
             }
         }
     }
