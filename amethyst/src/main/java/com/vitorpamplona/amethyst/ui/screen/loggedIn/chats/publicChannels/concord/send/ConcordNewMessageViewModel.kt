@@ -28,6 +28,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.model.Account
@@ -66,6 +68,7 @@ open class ConcordNewMessageViewModel : ViewModel() {
     val replyMode = mutableStateOf(ReplyMode.INLINE)
 
     var userSuggestions: UserSuggestionState? = null
+    var emojiSuggestions: EmojiSuggestionState? = null
 
     // Encrypted image attachments ride through the shared NIP-17 upload pipeline; a picked image
     // opens the upload dialog, which encrypts + uploads and sends an Armada-shaped image message.
@@ -83,6 +86,9 @@ open class ConcordNewMessageViewModel : ViewModel() {
                 // Rank people who have posted in this channel first.
                 priorityPubkeys = { channelAuthors() },
             )
+
+        this.emojiSuggestions?.reset()
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
 
         this.uploadState = ChatFileUploadState(account.settings.defaultFileServer, account.settings.stripLocationOnUpload)
     }
@@ -145,8 +151,13 @@ open class ConcordNewMessageViewModel : ViewModel() {
             val lastWord = message.currentWord()
             if (lastWord.startsWith("@")) {
                 userSuggestions?.processCurrentWord(lastWord)
+                emojiSuggestions?.reset()
+            } else if (lastWord.startsWith(":")) {
+                emojiSuggestions?.processCurrentWord(lastWord)
+                userSuggestions?.reset()
             } else {
                 userSuggestions?.reset()
+                emojiSuggestions?.reset()
             }
         }
     }
@@ -156,6 +167,10 @@ open class ConcordNewMessageViewModel : ViewModel() {
             it.replaceCurrentWord(message, message.currentWord(), item)
             it.reset()
         }
+    }
+
+    fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
+        emojiSuggestions?.autocompleteInto(message, item)
     }
 
     /** Sends the field's text as a channel message (or a reply). Throws on failure. */

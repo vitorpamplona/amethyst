@@ -2074,6 +2074,10 @@ class Account(
         val entry = session.entry
         val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
 
+        // NIP-30 custom-emoji tags for any `:shortcode:` the user typed, so the message renders the
+        // custom image everywhere (the kind-9 rumor carries them; recipients render via the tags).
+        val emojiTags = emoji.findEmojiTags(text).map { it.toTagArray() }.toTypedArray()
+
         val parent = replyTo?.event
         val wrap =
             when {
@@ -2082,9 +2086,9 @@ class Account(
                 parent != null && replyMode == ReplyMode.MINICHAT ->
                     ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now())
                 parent != null ->
-                    ConcordActions.buildChannelInlineReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now())
+                    ConcordActions.buildChannelInlineReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
                 else ->
-                    ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now())
+                    ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now(), emojiTags)
             }
         publishConcordWrap(entry, wrap)
         return true

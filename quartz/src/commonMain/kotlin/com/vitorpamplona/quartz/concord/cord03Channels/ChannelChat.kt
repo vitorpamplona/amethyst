@@ -89,6 +89,7 @@ object ChannelChat {
         parentId: HexKey,
         parentAuthor: HexKey,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event =
         message(
             authorPubKey = authorPubKey,
@@ -96,7 +97,7 @@ object ChannelChat {
             epoch = epoch,
             text = text,
             createdAt = createdAt,
-            extraTags = arrayOf(arrayOf("q", parentId), arrayOf("p", parentAuthor)),
+            extraTags = arrayOf(arrayOf("q", parentId), arrayOf("p", parentAuthor)) + extraTags,
         )
 
     /**

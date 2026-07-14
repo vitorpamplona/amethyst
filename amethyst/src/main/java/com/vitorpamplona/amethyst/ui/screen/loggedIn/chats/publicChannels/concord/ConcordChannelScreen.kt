@@ -55,6 +55,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
@@ -129,6 +131,8 @@ fun ConcordChannelScreen(
     nav: INav,
 ) {
     ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
+    // Load the user's custom-emoji packs so the `:shortcode:` composer autocomplete has entries.
+    WatchAndLoadMyEmojiList(accountViewModel)
     ConcordChannelHistorySubscription(communityId, channelId, accountViewModel.dataSources().concordChannelHistory, accountViewModel)
 
     val account = accountViewModel.account
@@ -408,6 +412,15 @@ private fun ConcordMessageComposer(
                 it,
                 newMessageModel::autocompleteWithUser,
                 accountViewModel,
+                SuggestionListDefaultHeightChat,
+            )
+        }
+
+        newMessageModel.emojiSuggestions?.let {
+            ShowEmojiSuggestionList(
+                it,
+                newMessageModel::autocompleteWithEmoji,
+                newMessageModel::autocompleteWithEmoji,
                 SuggestionListDefaultHeightChat,
             )
         }

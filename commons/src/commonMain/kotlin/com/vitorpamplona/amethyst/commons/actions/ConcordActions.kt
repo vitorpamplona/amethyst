@@ -156,8 +156,9 @@ object ConcordActions {
         epoch: Long,
         text: String,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event {
-        val rumor = ChannelChat.message(authorSigner.pubKey, channelId, epoch, text, createdAt)
+        val rumor = ChannelChat.message(authorSigner.pubKey, channelId, epoch, text, createdAt, extraTags)
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
@@ -187,8 +188,9 @@ object ConcordActions {
         parent: Event,
         text: String,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event {
-        val rumor = ChannelChat.inlineReply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt)
+        val rumor = ChannelChat.inlineReply(authorSigner.pubKey, channelId, epoch, text, parent.id, parent.pubKey, createdAt, extraTags)
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
