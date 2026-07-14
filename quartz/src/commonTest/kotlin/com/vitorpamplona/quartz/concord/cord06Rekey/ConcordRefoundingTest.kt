@@ -22,6 +22,13 @@ package com.vitorpamplona.quartz.concord.cord06Rekey
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -124,6 +131,70 @@ class ConcordRefoundingTest {
                 assertNotNull(opened)
                 assertEquals(owner.pubKey, opened.author)
             }
+        }
+
+    @Test
+    fun freshJoinerSeesEntitiesEditedAfterGenesisThenRefounded() =
+        runTest {
+            // A real, long-lived community edits its metadata (adds an icon) and renames
+            // #general AFTER genesis, THEN gets refounded. Those edits produce version-1
+            // editions whose `ep` chains onto the genesis edition. Compaction keeps only
+            // each entity's head — so the re-wrapped heads still carry a `prev` pointing at
+            // the (now absent) prior-epoch edition. A fresh joiner fetching only the
+            // compacted heads must still see them (CORD-04 §1 "Folding across a Refounding",
+            // CORD-06 §3): the signature + current-authority check is the whole test.
+            val community = ConcordCommunityFactory.create(owner, "NosFabrica", now)
+            val communityId = community.communityId
+            val control = community.controlPlane
+
+            val genesisMeta = community.genesisEditions.first { it.entityKind == ControlEntityKind.METADATA }
+            val genesisChannel = community.genesisEditions.first { it.entityKind == ControlEntityKind.CHANNEL }
+
+            val icon = ImagePointer(url = "https://media/icon.enc", key = "1a".repeat(32), nonce = "2b".repeat(16), hash = "3c".repeat(32))
+
+            // v1 metadata: add the icon, chained onto genesis.
+            val metaV1Json = ConcordJson.instance.encodeToString(MetadataEntity.serializer(), MetadataEntity(name = "NosFabrica", icon = icon))
+            val metaV1Rumor = ControlEditionBuilder.rumor(owner.pubKey, ControlEntityKind.METADATA, communityId, 1, genesisMeta.hash, metaV1Json, now + 1)
+            val metaV1Wrap = ConcordStreamEnvelope.wrap(metaV1Rumor, control, owner, encrypted = false, createdAt = now + 1)
+
+            // v1 channel: rename #general, chained onto genesis.
+            val chanV1Json = ConcordJson.instance.encodeToString(ChannelEntity.serializer(), ChannelEntity(name = "lobby", private = false))
+            val chanV1Rumor = ControlEditionBuilder.rumor(owner.pubKey, ControlEntityKind.CHANNEL, community.generalChannelId, 1, genesisChannel.hash, chanV1Json, now + 1)
+            val chanV1Wrap = ConcordStreamEnvelope.wrap(chanV1Rumor, control, owner, encrypted = false, createdAt = now + 1)
+
+            val priorWraps = community.genesisWraps + metaV1Wrap + chanV1Wrap
+
+            val build =
+                ConcordRefounding.build(
+                    rotatorSigner = owner,
+                    communityId = communityId,
+                    priorRoot = community.communityRoot,
+                    newRoot = newRoot,
+                    rootEpoch = community.rootEpoch,
+                    priorControlWraps = priorWraps,
+                    priorControlKey = control,
+                    recipientsXOnly = listOf(alice.pubKey),
+                    createdAt = now,
+                )
+
+            val newControl = ConcordKeyDerivation.controlPlaneKey(newRoot, communityId, build.newEpoch)
+            val editions =
+                build.controlWraps.mapNotNull { wrap ->
+                    ConcordStreamEnvelope.openOrNull(wrap, newControl)?.let { ControlEdition.fromRumor(it.rumor) }
+                }
+            val folded = ConcordCommunityState.fold(editions, owner.pubKey)
+
+            // A fresh joiner MUST see the compacted heads — name, icon, and the renamed channel.
+            assertEquals("NosFabrica", folded.metadata?.name, "fresh joiner lost the community name after refounding")
+            assertEquals(icon, folded.metadata?.icon, "fresh joiner lost the community icon after refounding")
+            assertEquals(
+                "lobby",
+                folded.channels.values
+                    .firstOrNull()
+                    ?.definition
+                    ?.name,
+                "fresh joiner lost the (edited) channel after refounding",
+            )
         }
 
     @Test

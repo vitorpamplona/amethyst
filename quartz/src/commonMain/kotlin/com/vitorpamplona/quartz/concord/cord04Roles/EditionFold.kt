@@ -28,8 +28,18 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  *
  * Rules enforced here:
  *  - **Genesis anchoring** — a chain starts at the lowest-version edition with no
- *    `ep` (prev hash). Without a genesis, the entity has no accepted head (we
- *    hold rather than trust an unrooted later edition).
+ *    `ep` (prev hash).
+ *  - **Refounding fallback (fresh joiner)** — when no genesis is present, anchor
+ *    at the lowest-version edition available and accept it as the baseline. After
+ *    a Refounding (CORD-06 §3) the compacted head still carries the `ep` it had
+ *    before compaction, citing an edition in the *prior* epoch that a fresh joiner
+ *    never fetches — so a dangling `prev` is the norm, not corruption, and CORD-04
+ *    §1 ("Folding across a Refounding") requires the joiner to take that head as
+ *    its baseline. The signature + owner-rooted authority check (applied by
+ *    [com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver] on top of this
+ *    structural fold) is the whole test, so an unrooted forgery is still dropped
+ *    there. Amethyst always re-folds the whole buffer from scratch, so it is
+ *    structurally always a fresh joiner; it holds no prior chain to fail closed on.
  *  - **Intact chain / no downgrades** — the head advances to `version + 1` only
  *    when that edition's `ep` cites the current head's [ControlEdition.hash].
  *    Lower or non-chaining versions are ignored.
@@ -60,11 +70,16 @@ object EditionFold {
         val byVersion = HashMap<Long, MutableList<ControlEdition>>()
         for (e in editions) byVersion.getOrPut(e.version) { ArrayList() }.add(e)
 
-        // Genesis: lowest version with no prev hash. Prefer the tie-break winner.
+        // Anchor at the genesis (lowest version with no prev hash), preferring the
+        // tie-break winner. When no genesis is present — the compacted head of a
+        // Refounded community carries a prev citing the prior epoch — a fresh joiner
+        // anchors at the lowest-version edition it does hold and accepts it as the
+        // baseline (CORD-04 §1 / CORD-06 §3). `editions` is non-empty here.
         var head =
             editions
                 .filter { it.prevHash == null }
                 .minWithOrNull(compareBy({ it.version }, { it.rumorId }))
+                ?: editions.minWithOrNull(compareBy({ it.version }, { it.rumorId }))
                 ?: return null
 
         // Walk the chain upward while the next version chains from the current head.

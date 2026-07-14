@@ -148,9 +148,15 @@ class ControlEditionTest {
         assertEquals("aaa", EditionFold.foldEntity(listOf(b, a))?.rumorId)
     }
 
+    /**
+     * A lone edition with a dangling `prev` and no genesis is the compacted head of a Refounded
+     * community (CORD-06 §3): a fresh joiner never holds the prior epoch it chains onto, so the
+     * head is accepted as the baseline rather than dropped (CORD-04 §1). Dropping it was the bug
+     * that hid a refounded community's icon, name, and edited channels. See [EditionFoldTest].
+     */
     @Test
-    fun foldWithoutGenesisReturnsNull() {
+    fun foldWithoutGenesisAcceptsCompactedHead() {
         val v1 = edition(1, ByteArray(32) { 0x05 }, """{"name":"x"}""", "id1")
-        assertNull(EditionFold.foldEntity(listOf(v1)))
+        assertEquals("id1", EditionFold.foldEntity(listOf(v1))?.rumorId)
     }
 }
