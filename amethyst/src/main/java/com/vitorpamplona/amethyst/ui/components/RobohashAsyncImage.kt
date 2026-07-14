@@ -149,7 +149,16 @@ fun RobohashFallbackAsyncImage(
 
         val resources = LocalContext.current.resources
         SubcomposeAsyncImage(
-            model = ProfilePictureUrl(bridgedModel),
+            // The thumbnail-cache fetcher behind ProfilePictureUrl delegates to Coil's http-only
+            // NetworkFetcher, so a LOCAL model (e.g. a decrypted Concord community icon cached at
+            // file://) would fail there. Route only remote http(s) pictures through the thumbnail
+            // cache; hand local/content URIs to Coil's native fetchers, which load them directly.
+            model =
+                if (bridgedModel.startsWith("http://", ignoreCase = true) || bridgedModel.startsWith("https://", ignoreCase = true)) {
+                    ProfilePictureUrl(bridgedModel)
+                } else {
+                    bridgedModel
+                },
             contentDescription = contentDescription,
             modifier = modifier,
             alignment = alignment,
