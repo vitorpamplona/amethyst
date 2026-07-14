@@ -118,11 +118,12 @@ fun routeFor(
     }
 
     // Concord channel content (kind 9 chat, 1111 reply, 7 reaction) lands in LocalCache as a real
-    // Note attached to its ConcordChannel gatherer. Like the relay-group case above, route to the
-    // Concord channel screen instead of the generic thread view it would otherwise fall through to.
+    // Note attached to its ConcordChannel gatherer. Route to the Concord chat instead of the generic
+    // thread view it would otherwise fall through to: a minichat reply (kind-1111) opens its thread
+    // ([minichatRouteFor]); a top-level message / reaction opens the channel.
     val concordChannel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
     if (concordChannel != null) {
-        return routeFor(concordChannel)
+        return minichatRouteFor(note) ?: routeFor(concordChannel)
     }
 
     val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
