@@ -1,8 +1,16 @@
-# Flathub manifest for Amethyst Desktop.
+# Flathub submission manifest for Amethyst Desktop.
 #
-# Pattern based on flathub/com.jetpackduba.Gitnuro (Kotlin Compose Desktop).
-# Submission to Flathub is a separate operation — see
-# desktopApp/packaging/flatpak/README.md for the workflow.
+# Unlike ../com.vitorpamplona.amethyst.Desktop.yml (which packages the locally
+# built tree for release CI), this variant builds from the published GitHub
+# Release tarball — Flathub's build servers must be able to fetch every source
+# themselves. This directory is copy-ready: everything in it (manifest,
+# metainfo, desktop entry, icon, flathub.json) is exactly what gets committed
+# to the flathub per-app repo at submission time.
+#
+# Update flow after each Amethyst release: bump url + sha256 on the archive
+# source and append a <release> entry to the metainfo. The x-checker-data
+# block below lets Flathub's flatpak-external-data-checker bot do both
+# automatically once the app is published.
 
 app-id: com.vitorpamplona.amethyst.Desktop
 runtime: org.freedesktop.Platform
@@ -38,9 +46,8 @@ finish-args:
   # GStreamer plugin/cache paths (org.freedesktop.Platform exposes them by default).
   - --env=GST_PLUGIN_SYSTEM_PATH=/usr/lib/x86_64-linux-gnu/gstreamer-1.0
 
-# No openjdk module / sdk-extension: the jpackage tree copied below already
-# bundles its own trimmed JRE under Amethyst/lib/runtime/, so installing a
-# second JRE at /app/jre would only bloat the bundle.
+# No openjdk module / sdk-extension: the jpackage tree in the release tarball
+# already bundles its own trimmed JRE under Amethyst/lib/runtime/.
 modules:
   - name: amethyst-desktop
     buildsystem: simple
@@ -54,11 +61,25 @@ modules:
       - install -Dm644 com.vitorpamplona.amethyst.Desktop.desktop -t /app/share/applications/
       - install -Dm644 icons/512/com.vitorpamplona.amethyst.Desktop.png -t /app/share/icons/hicolor/512x512/apps/
     sources:
-      # Built artifact from `./gradlew :desktopApp:createReleaseDistributable`.
-      # Path matches Compose Multiplatform 1.11's output layout.
-      - type: dir
-        path: ../../build/compose/binaries/main-release/app
-        dest: ./
+      # jpackage self-contained tree published by release CI. The tarball
+      # carries a single Amethyst/ top-level dir — keep it (strip-components
+      # defaults to 1, which would flatten it away).
+      - type: archive
+        url: https://github.com/vitorpamplona/amethyst/releases/download/v1.12.6/amethyst-desktop-1.12.6-linux-x64.tar.gz
+        sha256: 42250027857b37f184ebca52bf6124ff6524be4bc15fedf819e4acaca8bc9538
+        strip-components: 0
+        # flatpak-external-data-checker: watches GitHub Releases and opens
+        # update PRs against the flathub repo (bumps url/sha256 above and,
+        # via is-main-source, appends the <release> entry to the metainfo).
+        x-checker-data:
+          type: json
+          is-main-source: true
+          url: https://api.github.com/repos/vitorpamplona/amethyst/releases/latest
+          version-query: .tag_name | sub("^v"; "")
+          timestamp-query: .published_at
+          url-query: '"https://github.com/vitorpamplona/amethyst/releases/download/"
+            + .tag_name + "/amethyst-desktop-" + (.tag_name | sub("^v"; ""))
+            + "-linux-x64.tar.gz"'
 
       - type: script
         dest-filename: amethyst-desktop.sh

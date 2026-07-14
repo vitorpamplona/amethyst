@@ -8,7 +8,7 @@
 #   <version> = tag stripped of leading 'v' (e.g. "1.08.0")
 #   <family>  = macos | windows | linux
 #   <arch>    = x64 | arm64
-#   <ext>     = dmg | msi | zip | deb | rpm | AppImage | tar.gz
+#   <ext>     = dmg | msi | zip | deb | rpm | AppImage | flatpak | tar.gz
 #
 # Consumed by: .github/workflows/create-release.yml, .github/workflows/bump-*.yml,
 #              BUILDING.md, local release runbooks.
@@ -26,6 +26,7 @@
 #   amethyst-desktop-1.08.0-linux-x64.deb
 #   amethyst-desktop-1.08.0-linux-x64.rpm
 #   amethyst-desktop-1.08.0-linux-x64.AppImage
+#   amethyst-desktop-1.08.0-linux-x64.flatpak
 #   amethyst-desktop-1.08.0-linux-x64.tar.gz
 #   amy-1.08.0-macos-arm64.tar.gz
 #   amy-1.08.0-macos-x64.tar.gz
@@ -74,6 +75,7 @@ collect_assets() {
         desktopApp/build/compose/binaries/main-release/deb/*.deb \
         desktopApp/build/compose/binaries/main-release/rpm/*.rpm \
         desktopApp/build/appimage/*.AppImage \
+        desktopApp/build/flatpak/*.flatpak \
         desktopApp/build/portable/*.tar.gz \
         desktopApp/build/portable/*.zip \
     ; do
