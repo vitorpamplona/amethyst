@@ -180,6 +180,11 @@ desktopApp/src/jvmMain/appResources/*/ffmpeg/*
 desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
 desktopApp/packaging/appimage/squashfs-root/
 
+# flatpak-builder state/cache from local builds (CI uses --state-dir under desktopApp/build/)
+.flatpak-builder/
+desktopApp/packaging/flatpak/build-dir/
+desktopApp/packaging/flatpak/repo/
+
 # Git worktrees
 .worktrees/
 .claude/worktrees/
