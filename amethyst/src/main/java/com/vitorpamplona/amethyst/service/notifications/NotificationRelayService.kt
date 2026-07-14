@@ -138,6 +138,7 @@ class NotificationRelayService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service created")
+        Amethyst.instance.alwaysOnSession.setActive(true)
         createNotificationChannel()
         ensureForeground()
     }
@@ -197,6 +198,7 @@ class NotificationRelayService : Service() {
      */
     override fun onDestroy() {
         Log.d(TAG, "Service destroyed")
+        Amethyst.instance.alwaysOnSession.setActive(false)
         relayServiceCollectorJob?.cancel()
         scope.cancel()
 

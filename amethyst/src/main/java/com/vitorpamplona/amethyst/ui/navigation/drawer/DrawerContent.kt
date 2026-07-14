@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +57,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +104,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerNavigateItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerYouItems
@@ -147,56 +150,90 @@ fun DrawerContent(
     openSheet: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val onClickUser = {
-        nav.nav(routeFor(accountViewModel.userProfile()))
-        nav.closeDrawer()
-    }
-
     ModalDrawerSheet(
         windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Start),
         drawerContainerColor = MaterialTheme.colorScheme.background,
         drawerTonalElevation = 0.dp,
     ) {
+        DrawerContentBody(nav, openSheet, accountViewModel)
+    }
+}
+
+/**
+ * Expanded windows: the same drawer content, permanently docked on the left of the shell
+ * instead of sliding in as a modal sheet.
+ */
+@Composable
+fun PermanentDrawerContent(
+    nav: INav,
+    openSheet: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    Surface(
+        modifier = Modifier.width(PermanentDrawerWidth).fillMaxHeight(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
         Column(
-            Modifier
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState()),
+            Modifier.windowInsetsPadding(
+                WindowInsets.systemBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Start),
+            ),
         ) {
-            ProfileContent(
-                baseAccountUser = accountViewModel.account.userProfile(),
-                modifier = profileContentHeaderModifier,
-                accountViewModel,
-                onClickUser,
-            )
-
-            Column(drawerSpacing) {
-                EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, nav)
-            }
-
-            FollowingAndFollowerCounts(accountViewModel.account, accountViewModel, onClickUser)
-
-            HorizontalDivider(
-                thickness = DividerThickness,
-                modifier = Modifier.padding(top = 20.dp),
-            )
-
-            Spacer(modifier = StdHorzSpacer)
-
-            ListContent(
-                modifier = Modifier.fillMaxWidth(),
-                openSheet,
-                accountViewModel,
-                nav,
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            BottomContent(
-                accountViewModel.account.userProfile(),
-                accountViewModel,
-                nav,
-            )
+            DrawerContentBody(nav, openSheet, accountViewModel)
         }
+    }
+}
+
+@Composable
+private fun DrawerContentBody(
+    nav: INav,
+    openSheet: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    val onClickUser = {
+        nav.nav(routeFor(accountViewModel.userProfile()))
+        nav.closeDrawer()
+    }
+
+    Column(
+        Modifier
+            .fillMaxHeight()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        ProfileContent(
+            baseAccountUser = accountViewModel.account.userProfile(),
+            modifier = profileContentHeaderModifier,
+            accountViewModel,
+            onClickUser,
+        )
+
+        Column(drawerSpacing) {
+            EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, nav)
+        }
+
+        FollowingAndFollowerCounts(accountViewModel.account, accountViewModel, onClickUser)
+
+        HorizontalDivider(
+            thickness = DividerThickness,
+            modifier = Modifier.padding(top = 20.dp),
+        )
+
+        Spacer(modifier = StdHorzSpacer)
+
+        ListContent(
+            modifier = Modifier.fillMaxWidth(),
+            openSheet,
+            accountViewModel,
+            nav,
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        BottomContent(
+            accountViewModel.account.userProfile(),
+            accountViewModel,
+            nav,
+        )
     }
 }
 
@@ -237,14 +274,14 @@ fun ProfileContentTemplate(
             AsyncImage(
                 model = profileBanner,
                 contentDescription = stringRes(id = R.string.profile_image),
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Crop,
                 modifier = bannerModifier,
             )
         } else {
             AsyncImage(
                 model = R.drawable.profile_banner,
                 contentDescription = stringResource(R.string.profile_banner),
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Crop,
                 modifier = bannerModifier,
             )
         }
@@ -392,8 +429,10 @@ fun StatusEditBar(
 
     val currentStatus = remember { mutableStateOf(savedStatus ?: "") }
 
+    // In the docked drawer the DrawerState never opens (it stays Closed while the drawer
+    // is always on screen), so the modal close-cancels-editing behavior must not apply there.
     LaunchedEffect(nav.drawerState.isClosed) {
-        if (nav.drawerState.isClosed) {
+        if (!nav.isDrawerDocked && nav.drawerState.isClosed) {
             focusManager.clearFocus(true)
             onDone()
         } else {
@@ -427,6 +466,10 @@ fun StatusEditBar(
                     }
 
                     focusManager.clearFocus(true)
+                    // Collapse back to the read-only bar: in the docked drawer no
+                    // drawer-close will ever do it, and in the modal drawer this beats
+                    // staying in edit mode until the drawer closes.
+                    onDone()
                 },
             ),
         singleLine = true,
@@ -442,12 +485,14 @@ fun StatusEditBar(
                         accountViewModel.updateStatus(address, currentStatus.value)
                     }
                     focusManager.clearFocus(true)
+                    onDone()
                 }
             } else {
                 if (address != null) {
                     UserStatusDeleteButton {
                         accountViewModel.deleteStatus(address)
                         focusManager.clearFocus(true)
+                        onDone()
                     }
                 }
             }

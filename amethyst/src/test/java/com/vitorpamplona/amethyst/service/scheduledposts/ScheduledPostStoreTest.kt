@@ -61,6 +61,22 @@ class ScheduledPostStoreTest {
     )
 
     @Test
+    fun stalePublishingClaimsAreReleasedOnLoad() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(id = "a"))
+            val claimed = store.claimDuePosts(nowSec = 2_000)
+            assertEquals(1, claimed.size)
+            assertEquals(ScheduledPostStatus.PUBLISHING, store.list().single().status)
+
+            // A fresh store (new process) finds the on-disk PUBLISHING row: the
+            // worker that claimed it died with the old process, so the claim
+            // must be released for the next cycle to retry.
+            val reloaded = newStore().list().single()
+            assertEquals(ScheduledPostStatus.PENDING, reloaded.status)
+        }
+
+    @Test
     fun add_persists_to_disk() =
         runTest {
             val store = newStore()

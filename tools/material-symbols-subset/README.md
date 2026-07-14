@@ -54,3 +54,15 @@ Commit the regenerated `.ttf` alongside the `MaterialSymbols.kt` change.
 glyph and OpenType feature not reachable from those codepoints, and rewrites
 `name`, `cmap`, and `GSUB` tables accordingly. The Compose resource pipeline
 treats the result as a normal TTF — no code changes needed.
+
+## Custom glyphs
+
+`custom/` holds traced SVG outlines for icons the upstream font will never
+carry (third-party logos — currently the OpenTimestamps stamp).
+`add_custom_glyphs.py` bakes them into the subset TTF at end-of-PUA
+codepoints (U+F8F0 and up); `subset.sh` runs it automatically after
+`pyftsubset`, so regenerating the subset keeps them. To add one: trace the
+logo to a single-color SVG (potrace output works as-is), drop it in
+`custom/`, register it in the `CUSTOM` map in `add_custom_glyphs.py`, add the
+matching `MaterialSymbol("\uF8Fx")` to `MaterialSymbols.kt`, and rerun
+`subset.sh` (or `add_custom_glyphs.py <ttf>` to patch the existing font).

@@ -422,6 +422,8 @@ sealed class Route {
 
     @Serializable object CalendarReminderSettings : Route()
 
+    @Serializable object ResourceUsage : Route()
+
     @Serializable object Lists : Route()
 
     @Serializable data class MyPeopleListView(

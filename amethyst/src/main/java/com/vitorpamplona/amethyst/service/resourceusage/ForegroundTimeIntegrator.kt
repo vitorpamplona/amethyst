@@ -18,24 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.service.resourceusage
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.font.FontWeight
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import android.os.SystemClock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
-@Composable
-fun BoostedMark() {
-    Text(
-        stringRes(id = R.string.boosted),
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.placeholderText,
-        maxLines = 1,
-        modifier = HalfStartPadding,
-    )
+/**
+ * Integrates time-with-UI-visible into the ledger ([UsageKeys.APP_FG_MS]).
+ * Screen-on time is what display power is proportional to, and it's the
+ * denominator that makes every other counter interpretable (MB per hour in
+ * app vs MB while backgrounded).
+ */
+class ForegroundTimeIntegrator(
+    private val isForeground: Flow<Boolean>,
+    accountant: ResourceUsageAccountant,
+    nowMs: () -> Long = { SystemClock.elapsedRealtime() },
+) : TimeSegmentIntegrator<Unit>(accountant, nowMs) {
+    fun start(scope: CoroutineScope): Job {
+        registerFlushHook()
+        return scope.launch {
+            isForeground.collect { fg -> transitionTo(if (fg) Unit else null) }
+        }
+    }
+
+    override fun account(
+        state: Unit,
+        elapsedMs: Long,
+    ) {
+        if (elapsedMs > 0) accountant.add(UsageKeys.APP_FG_MS, elapsedMs)
+    }
 }

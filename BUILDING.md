@@ -37,7 +37,9 @@ Platform-specific:
 - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
 - **Windows**: WiX Toolset 3.x on PATH (for MSI). `winget install WiXToolset.WiXToolset`
 - **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
-  `appimagetool` + `desktop-file-utils` for AppImage
+  `appimagetool` + `desktop-file-utils` for AppImage; `flatpak` +
+  `flatpak-builder` for the Flatpak bundle (see
+  [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md))
 
 Install Linux RPM tooling:
 
@@ -109,6 +111,7 @@ are **not** required to build Amethyst from the committed sources.
 | Linux `.deb` | `./gradlew :desktopApp:packageReleaseDeb` | `desktopApp/build/compose/binaries/main-release/deb/amethyst_*.deb` |
 | Linux `.rpm` | `./gradlew :desktopApp:packageReleaseRpm` | `desktopApp/build/compose/binaries/main-release/rpm/amethyst-*.rpm` |
 | Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-x86_64.AppImage` |
+| Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-x86_64.flatpak` (CI) |
 | Windows `.zip` portable | See below (inline `7z`) | — |
 | Linux `.tar.gz` portable | See below (inline `tar`) | — |
 
@@ -148,7 +151,7 @@ Where:
 | `<version>` | Tag stripped of leading `vX.YY.ZZ`                    |
 | `<family>` | `macos`, `windows`, `linux`                           |
 | `<arch>` | `x64`, `arm64`                                        |
-| `<ext>` | `dmg`, `msi`, `zip`, `deb`, `rpm`, `AppImage`, `tar.gz` |
+| `<ext>` | `dmg`, `msi`, `zip`, `deb`, `rpm`, `AppImage`, `flatpak`, `tar.gz` |
 
 Single source of truth: [`scripts/asset-name.sh`](scripts/asset-name.sh).
 Package manager manifests (Homebrew cask, Winget) depend on this exact scheme —
@@ -160,6 +163,7 @@ Examples:
 - `amethyst-desktop-1.12.1-macos-arm64.dmg`
 - `amethyst-desktop-1.12.1-windows-x64.msi`
 - `amethyst-desktop-1.12.1-linux-x64.AppImage`
+- `amethyst-desktop-1.12.1-linux-x64.flatpak`
 
 ---
 
@@ -625,12 +629,18 @@ State is shared across install channels (DMG, Homebrew, MSI, Winget, .deb,
 expose downgrade migration risks — **prefer a single install channel per
 machine**.
 
+**Exception: Flatpak.** The sandbox redirects XDG dirs into
+`~/.var/app/com.vitorpamplona.amethyst.Desktop/`, so a Flatpak install keeps
+its own separate state and does not see (or risk downgrading) state written
+by any other channel.
+
 | OS | App location | State directories |
 |---|---|---|
 | macOS | `/Applications/Amethyst.app` | `~/Library/Application Support/Amethyst`<br>`~/Library/Preferences/com.vitorpamplona.amethyst.desktop.plist`<br>`~/Library/Caches/Amethyst` |
 | Windows | `%LOCALAPPDATA%\Amethyst` or `C:\Program Files\Amethyst` | `%APPDATA%\Amethyst`<br>`%LOCALAPPDATA%\Amethyst` |
 | Linux (deb/rpm) | `/opt/amethyst` | `~/.config/amethyst`<br>`~/.local/share/amethyst`<br>`~/.cache/amethyst` |
 | Linux (AppImage/tar.gz) | user-chosen | Same as above |
+| Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Desktop/` |
 
 Uninstall:
 
@@ -639,6 +649,8 @@ Uninstall:
 - .deb: `sudo apt remove amethyst`
 - .rpm: `sudo dnf remove amethyst`
 - AppImage / tar.gz: delete the file / extracted directory
+- Flatpak: `flatpak uninstall com.vitorpamplona.amethyst.Desktop` (add
+  `--delete-data` to also remove `~/.var/app/…`)
 - macOS `.dmg`: drag from `/Applications` to Trash, then delete state dirs manually
 
 ---

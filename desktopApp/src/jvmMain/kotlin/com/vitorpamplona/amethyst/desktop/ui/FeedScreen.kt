@@ -99,7 +99,6 @@ import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.feeds.NewPostsChip
 import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
@@ -304,7 +303,6 @@ private fun FeedNoteCardBody(
                         )
                     },
                 )
-                BoostedMark()
             }
 
             // Original note content with actions inside card

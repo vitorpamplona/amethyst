@@ -25,6 +25,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,7 +33,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -53,7 +53,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -61,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
-import com.vitorpamplona.amethyst.ui.note.elements.BoostedMark
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
@@ -205,10 +206,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -216,7 +214,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.UserNameMaxRowHeight
 import com.vitorpamplona.amethyst.ui.theme.UserNameRowHeight
 import com.vitorpamplona.amethyst.ui.theme.channelNotePictureModifier
@@ -353,9 +351,12 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
 
 @Composable
 fun NoteCompose(
@@ -761,7 +762,6 @@ fun InnerNoteWithReactions(
             if (showSecondRow) {
                 SecondUserInfoRow(
                     baseNote,
-                    editState,
                     accountViewModel,
                     nav,
                 )
@@ -883,7 +883,6 @@ fun NoteBody(
     if (showSecondRow) {
         SecondUserInfoRow(
             baseNote,
-            editState,
             accountViewModel,
             nav,
         )
@@ -1737,7 +1736,6 @@ fun ReplyNoteComposition(
 @Composable
 fun SecondUserInfoRow(
     note: Note,
-    editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -1746,6 +1744,7 @@ fun SecondUserInfoRow(
 
     Row(
         verticalAlignment = CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Size5dp),
         modifier = UserNameMaxRowHeight,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -1756,47 +1755,39 @@ fun SecondUserInfoRow(
             }
         }
 
-        val geo = remember(noteEvent) { noteEvent.geoHashOrScope() }
-        if (geo != null) {
-            Spacer(StdHorzSpacer)
-            DisplayLocation(geo, accountViewModel, nav)
-        }
-
         val baseReward = remember(noteEvent) { noteEvent.bountyBaseReward()?.let { Reward(it) } }
         if (baseReward != null) {
-            Spacer(StdHorzSpacer)
-            DisplayReward(baseReward, note, accountViewModel, nav)
+            DisplayReward(baseReward, note, accountViewModel)
         }
-
-        val pow = remember(noteEvent) { noteEvent.strongPoWOrNull() }
-        if (pow != null) {
-            Spacer(StdHorzSpacer)
-            DisplayPoW(pow)
-        }
-
-        DisplayOtsIfInOriginal(note, editState, accountViewModel)
     }
 }
 
 @Composable
-fun DisplayExpiration(expirationDate: Long) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Timer,
-            contentDescription = stringRes(R.string.expiration_date_label),
-            modifier = Modifier.padding(start = 5.dp).size(15.dp),
-            tint = MaterialTheme.colorScheme.placeholderText,
-        )
-        val context = LocalContext.current
-        Text(
-            text = timeAheadNoDot(expirationDate, context),
-            color = MaterialTheme.colorScheme.placeholderText,
-            maxLines = 1,
-            modifier = Modifier.padding(start = 3.dp),
-        )
-    }
+fun DisplayExpiration(
+    expirationDate: Long,
+    accountViewModel: AccountViewModel,
+) {
+    val context = LocalContext.current
+    // Beyond a year timeAheadNoDot switches to a full date, which is too wide
+    // for the pill: clamp it.
+    val text =
+        if (expirationDate - TimeUtils.now() > TimeUtils.ONE_YEAR) {
+            stringRes(R.string.one_year_plus)
+        } else {
+            timeAheadNoDot(expirationDate, context)
+        }
+    HeaderPill(
+        symbol = MaterialSymbols.Timer,
+        text = text,
+        contentDescription = stringRes(R.string.expiration_date_label),
+        onClick = {
+            accountViewModel.toastManager.toast(
+                R.string.expiration_date_label,
+                R.string.expiration_info_description,
+                SimpleDateFormat.getDateTimeInstance().format(Date(expirationDate * 1000)),
+            )
+        },
+    )
 }
 
 @Composable
@@ -1816,25 +1807,12 @@ fun DisplayOtsIfInOriginal(
 
 @Composable
 fun DisplayDraft() {
-    Text(
-        "Draft",
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.placeholderText,
-        maxLines = 1,
-        modifier = HalfStartPadding,
-    )
+    QuietMark(text = stringRes(R.string.draft))
 }
 
 @Composable
 fun DisplayDraftChat() {
-    Text(
-        "Draft",
-        color = MaterialTheme.colorScheme.placeholderText,
-        modifier = Modifier,
-        fontWeight = FontWeight.Bold,
-        fontSize = Font12SP,
-        maxLines = 1,
-    )
+    QuietMark(text = stringRes(R.string.draft))
 }
 
 @Composable
@@ -1847,7 +1825,11 @@ fun FirstUserInfoRow(
     nav: INav,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
-    Row(verticalAlignment = CenterVertically, modifier = UserNameRowHeight) {
+    Row(
+        verticalAlignment = CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+        modifier = UserNameRowHeight,
+    ) {
         val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
         val isDraft = baseNote.isDraft()
         val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
@@ -1864,15 +1846,19 @@ fun FirstUserInfoRow(
         if (zapSender != null) {
             if (showAuthorPicture) {
                 UserPicture(zapSender, Size25dp, accountViewModel = accountViewModel, nav = nav)
-                Spacer(HalfPadding)
             }
             UsernameDisplay(zapSender, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         } else if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
-            Spacer(HalfPadding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         } else {
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+        }
+
+        CheckAndDisplayEditStatus(editState)
+
+        if (isDraft) {
+            DisplayDraft()
         }
 
         if (isDraft) {
@@ -1901,55 +1887,65 @@ fun FirstUserInfoRow(
             }
         }
 
-        if (isRepost) {
-            BoostedMark()
+        val noteEvent = baseNote.event
+
+        val geo = remember(noteEvent) { noteEvent?.geoHashOrScope() }
+        if (geo != null) {
+            DisplayLocation(geo, accountViewModel, nav)
         }
 
-        CheckAndDisplayEditStatus(editState)
+        DisplayOtsIfInOriginal(baseNote, editState, accountViewModel)
 
-        if (isDraft) {
-            DisplayDraft()
+        val pow = remember(noteEvent) { noteEvent?.strongPoWOrNull() }
+        if (pow != null) {
+            DisplayPoW(pow, accountViewModel)
         }
+
+        Expiration(baseNote, accountViewModel)
 
         if (baseNote.isPrivateRumor()) {
-            PrivateRumorMark()
+            PrivateRumorMark(accountViewModel)
         }
 
         if (isPinned) {
             PinnedMark()
         }
 
-        Expiration(baseNote)
-
         JumpToParentReplyButton(baseNote, accountViewModel, nav)
 
-        TimeAgo(baseNote)
+        // The dotted TimeAgo carries its own " • " separator and the options
+        // button has slack around its icon, so this pair stays unspaced.
+        Row(verticalAlignment = CenterVertically) {
+            TimeAgo(baseNote, style = TimeAgoStyle.DottedTight)
 
-        if (moreOptions == null) {
-            MoreOptionsButton(baseNote, editState, accountViewModel, nav)
-        } else {
-            moreOptions()
+            if (moreOptions == null) {
+                MoreOptionsButton(baseNote, editState, accountViewModel, nav)
+            } else {
+                moreOptions()
+            }
         }
     }
 }
 
 @Composable
 fun PinnedMark() {
-    Icon(
+    QuietMark(
         symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(R.string.pinned_notes),
-        modifier = Modifier.padding(start = 5.dp).size(16.dp),
-        tint = MaterialTheme.colorScheme.placeholderText,
     )
 }
 
 @Composable
-fun PrivateRumorMark() {
-    Icon(
+fun PrivateRumorMark(accountViewModel: AccountViewModel) {
+    QuietMark(
         symbol = MaterialSymbols.Lock,
         contentDescription = stringRes(R.string.private_rumor_mark),
-        modifier = Modifier.padding(start = 5.dp).size(16.dp),
-        tint = MaterialTheme.colorScheme.placeholderText,
+        onClick = {
+            accountViewModel.toastManager.toast(
+                R.string.private_rumor_info_title,
+                R.string.private_rumor_info_description,
+            )
+        },
     )
 }
 
@@ -1975,7 +1971,7 @@ fun JumpToParentReplyButton(
         } ?: return
 
     ClickableBox(
-        modifier = Modifier.padding(start = 5.dp).size(20.dp),
+        modifier = Modifier.size(20.dp),
         onClick = {
             nav.nav { routeFor(parentNote, accountViewModel.account) }
         },
@@ -1990,12 +1986,15 @@ fun JumpToParentReplyButton(
 }
 
 @Composable
-fun Expiration(note: Note) {
+fun Expiration(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
     val event = note.event
     if (event != null) {
         val expires = remember(event) { event.expiration() }
         if (expires != null) {
-            DisplayExpiration(expires)
+            DisplayExpiration(expires, accountViewModel)
         }
     }
 }

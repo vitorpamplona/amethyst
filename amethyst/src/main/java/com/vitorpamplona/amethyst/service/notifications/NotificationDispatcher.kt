@@ -80,6 +80,8 @@ import kotlinx.coroutines.launch
 class NotificationDispatcher(
     private val context: Context,
     private val scope: CoroutineScope,
+    /** Forwarded to [EventNotificationConsumer]: reports wakelock held-time to the resource-usage ledger. */
+    onWakeLockHeld: ((heldMs: Long) -> Unit)? = null,
 ) {
     companion object {
         private const val TAG = "NotificationDispatcher"
@@ -127,7 +129,7 @@ class NotificationDispatcher(
             )
     }
 
-    private val consumer = EventNotificationConsumer(context)
+    private val consumer = EventNotificationConsumer(context, onWakeLockHeld)
     private var job: Job? = null
 
     fun start() {

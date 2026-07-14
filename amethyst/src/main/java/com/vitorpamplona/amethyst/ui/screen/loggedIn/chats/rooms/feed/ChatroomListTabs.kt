@@ -42,12 +42,12 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -124,11 +124,7 @@ fun MessagesPager(
     HorizontalPager(
         state = pagerState,
         userScrollEnabled = true,
-        modifier =
-            modifier.zonedDrawerSwipe(
-                pagerState = pagerState,
-                openDrawer = nav::openDrawer,
-            ),
+        modifier = modifier.zonedDrawerSwipeIfModal(pagerState, nav),
     ) { page ->
         ChatroomListFeedView(
             feedContentState = tabs[page].feedContentState,

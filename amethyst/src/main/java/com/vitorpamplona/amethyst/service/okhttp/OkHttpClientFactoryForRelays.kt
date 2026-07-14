@@ -40,6 +40,19 @@ class OkHttpClientFactoryForRelays(
         const val DEFAULT_IS_MOBILE: Boolean = false
         const val DEFAULT_TIMEOUT_ON_WIFI_SECS: Int = 10
         const val DEFAULT_TIMEOUT_ON_MOBILE_SECS: Int = 30
+
+        // 120s is a measured sweet spot, not a guess — see
+        // amethyst/plans/2026-07-12-relay-ping-interval-study.md (probe of 122
+        // production relays). Idle-timeout tiers observed in production are
+        // ~60s / ~120s / ~240s / ~300s / ~600s, and a client ping only reliably
+        // resets a relay's idle timer when the interval sits well BELOW the
+        // tier (240s pings already lose the ~240s and ~300s tiers, incl. every
+        // nostr1.com-hosted relay; 300s pings lose relay.snort.social). Raising
+        // the interval also saves almost no battery: 90% of surveyed relays
+        // send their own server pings every 30-70s, which OkHttp must answer,
+        // so the radio's wake cadence is set by the relays, not by this value.
+        // Lowering it would only rescue the ~120s tier (6/122 relays, already
+        // cycling today) at 2x the ping traffic on every other connection.
         const val WEBSOCKET_PING_INTERVAL_SECS: Long = 120
     }
 

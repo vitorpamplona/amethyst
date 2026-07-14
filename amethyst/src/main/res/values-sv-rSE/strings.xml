@@ -2688,7 +2688,6 @@
     <string name="nsite_source">Källa:</string>
     <string name="nsite_servers">Servrar:</string>
     <string name="nsite_open">Öppna</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Tidsstämpel Bevis</string>
     <string name="ots_info_description">Det finns bevis på att detta inlägg signerades någon gång före %1$s. Beviset stämplades i Bitcoin-blockchainen vid det datumet och den tiden.</string>
     <string name="edit_article">Redigera artikel</string>

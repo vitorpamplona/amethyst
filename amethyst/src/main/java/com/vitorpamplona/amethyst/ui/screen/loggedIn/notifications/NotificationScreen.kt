@@ -214,16 +214,23 @@ private fun SplitNotificationsScaffold(
     }
 }
 
+/**
+ * The refreshable notifications card feed (list + scroll-to-top watcher + inbox-relay
+ * warning header). Shared between the Notifications screen and the docked
+ * [NotificationSidePanel], parameterized by the persisted scroll-state key so each
+ * surface keeps its own position.
+ */
 @Composable
-private fun SingleNotificationsBody(
+internal fun SingleNotificationsBody(
     notifFeedContentState: CardFeedContentState,
     notifPolls: OpenPollsState,
     scrollToEventId: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
+    scrollStateKey: String = ScrollStateKeys.NOTIFICATION_SCREEN,
 ) {
     RefresheableBox(notifFeedContentState, true) {
-        val listState = rememberForeverLazyListState(ScrollStateKeys.NOTIFICATION_SCREEN)
+        val listState = rememberForeverLazyListState(scrollStateKey)
 
         WatchScrollToTop(notifFeedContentState, listState)
 

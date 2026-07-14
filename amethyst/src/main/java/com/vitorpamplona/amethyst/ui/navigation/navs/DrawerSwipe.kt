@@ -18,23 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.elements
+package com.vitorpamplona.amethyst.ui.navigation.navs
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.components.zonedDrawerSwipe
 
+/**
+ * [zonedDrawerSwipe] gated on the drawer actually being modal. With the drawer permanently
+ * docked ([INav.isDrawerDocked]) there is nothing to open, so the left-edge swipe zone is
+ * not attached at all and the pager keeps its own gestures. Use this instead of calling
+ * [zonedDrawerSwipe] directly from screens — the guard then can't be forgotten at new
+ * call sites.
+ */
 @Composable
-fun BoostedMark() {
-    Text(
-        "Boosted",
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        modifier = Modifier.padding(start = 5.dp),
-    )
-}
+fun Modifier.zonedDrawerSwipeIfModal(
+    pagerState: PagerState,
+    nav: INav,
+): Modifier =
+    if (nav.isDrawerDocked) {
+        this
+    } else {
+        zonedDrawerSwipe(pagerState, nav::openDrawer)
+    }

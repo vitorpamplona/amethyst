@@ -2996,8 +2996,6 @@
     
     <string name="nsite_open">Aç</string>
     
-    <string name="existed_since">OTS: %1$s</string>
-    
     <string name="ots_info_title">Zaman Damgası Kanıtı</string>
     
     <string name="ots_info_description">Bu gönderinin %1$s tarihinden önce imzalandığına dair kanıt var. Kanıt, o tarih ve saatte Bitcoin blok zincirine işlendi.</string>

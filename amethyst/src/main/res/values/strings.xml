@@ -45,6 +45,7 @@
     <string name="timestamp_it">Timestamp it</string>
     <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
     <string name="timestamp_pending_short">OTS: Pending</string>
+    <string name="one_year_plus">1y+</string>
     <string name="request_deletion">Request Deletion</string>
     <string name="block_report">Block / Report</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
@@ -1299,6 +1300,8 @@
     <string name="public_bookmark_presence_indicator">is a public bookmark here</string>
     <string name="private_bookmark_presence_indicator">is a private bookmark here</string>
     <string name="private_rumor_mark">Private — only visible to tagged participants</string>
+    <string name="private_rumor_info_title">Private Note</string>
+    <string name="private_rumor_info_description">This note was delivered privately and is not signed. Only the tagged participants can see it, and nobody can prove to outsiders who wrote it.</string>
     <string name="private_note">Make private: gift-wrap the note to the notified users only</string>
     <string name="disable_private_note">Make public</string>
     <string name="private_note_locked">Replies to a private note always stay private</string>
@@ -2889,6 +2892,7 @@
     <string name="add_expiration_date">Add expiration date</string>
     <string name="remove_expiration_date">Remove expiration date</string>
     <string name="expiration_date_label">Expiration Date</string>
+    <string name="expiration_info_description">The author asked relays to delete this note after %1$s. It will disappear from feeds once it expires.</string>
     <string name="expiration_date_explainer">Post will be hidden by clients after this date (NIP-40)</string>
     <string name="expiration_date_select">Select expiration date and time</string>
     <string name="expiration_expires_in">Expires in %1$s</string>
@@ -3085,10 +3089,10 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
-<string name="existed_since">OTS: %1$s</string>
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
+    <string name="ots_info_pending_description">A timestamp proof for this post has been requested and is waiting to be stamped in the Bitcoin blockchain. It usually completes within a few hours.</string>
 
     <string name="edit_article">Edit Article</string>
     <string name="edit_post">Edit Post</string>
@@ -3109,6 +3113,8 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
     <string name="draft_note">Draft Note</string>
+    <string name="draft">Draft</string>
+    <string name="bounty_label">Bounty</string>
 
     <string name="load_from_text">From Msg</string>
 
@@ -3248,6 +3254,102 @@
     <string name="crashreport_found">Crash Report found</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Would you like to send the recent crash report to Amethyst in a DM? No personal information will be shared</string>
     <string name="crashreport_found_send">Send it</string>
+
+    <string name="resource_usage_title">App resource usage</string>
+    <string name="resource_usage_search_keywords">battery data usage consumption power network diagnostics ledger</string>
+    <string name="resource_usage_today">Today</string>
+    <string name="resource_usage_week">Last 7 days</string>
+    <string name="resource_usage_tile_cellular">Cellular today</string>
+    <string name="resource_usage_tile_wifi">Wi-Fi today</string>
+    <string name="resource_usage_tile_relay">Relay time today</string>
+    <string name="resource_usage_tile_in_app">In app today</string>
+    <string name="resource_usage_trend_section">Data per day</string>
+    <string name="resource_usage_legend_cellular">Cellular (MB)</string>
+    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
+    <string name="resource_usage_activity_section">Activity (7 days)</string>
+    <string name="resource_usage_cellular_bg">Cellular data (background)</string>
+    <string name="resource_usage_cellular_fg">Cellular data (in app)</string>
+    <string name="resource_usage_wifi">Wi-Fi data</string>
+    <string name="resource_usage_relay_time">Relay connection time</string>
+    <string name="resource_usage_relay_time_bg_mobile">\u2026 backgrounded on cellular</string>
+    <string name="resource_usage_wakelock">Notification processing (CPU awake)</string>
+    <string name="resource_usage_worker_runs">Background jobs run</string>
+    <string name="resource_usage_reconnects">Relay reconnections (failed)</string>
+    <string name="resource_usage_http_requests">Web requests</string>
+    <string name="resource_usage_radio_bursts">Radio wake-ups for downloads (est.)</string>
+    <string name="resource_usage_http_active">Active transfer time</string>
+    <string name="resource_usage_media_play">Media playback time</string>
+    <string name="resource_usage_verifies">Signatures verified</string>
+    <string name="resource_usage_cpu">Processor time used</string>
+    <string name="resource_usage_fg_time">Time in app</string>
+    <string name="resource_usage_app_starts">App process starts</string>
+    <string name="resource_usage_decrypts">Messages decrypted</string>
+    <string name="resource_usage_remote_signs">Remote signatures</string>
+    <string name="resource_usage_pow">Proof-of-work mining</string>
+    <string name="resource_usage_tor">Tor uptime</string>
+    <string name="resource_usage_calls">Time in calls</string>
+    <string name="resource_usage_nests">Time in audio rooms</string>
+    <string name="resource_usage_location">Location listening</string>
+    <string name="resource_usage_battery_drain">Battery used (in app / background)</string>
+    <string name="resource_usage_alwayson_section">Background notification service</string>
+    <string name="resource_usage_alwayson_explanation">Keeps connections to your relays open while the app is closed, so notifications arrive without Google’s push servers. While enabled, this is usually the largest background battery cost. If battery matters more to you than instant notifications, you can change the delivery method or turn it off.</string>
+    <string name="resource_usage_alwayson_uptime">Running time</string>
+    <plurals name="resource_usage_alwayson_starts">
+        <item quantity="one">%1$d start</item>
+        <item quantity="other">%1$d starts</item>
+    </plurals>
+    <string name="resource_usage_alwayson_bg_relay">Relay connections held while closed</string>
+    <string name="resource_usage_alwayson_battery">Battery drained meanwhile (whole device)</string>
+    <string name="resource_usage_alwayson_settings_button">Change notification settings</string>
+    <string name="resource_usage_tor_settings_button">Privacy options</string>
+    <string name="resource_usage_tile_battery_rate">Battery / hour in app</string>
+    <string name="resource_usage_tile_data_rate">Data / hour in app</string>
+    <string name="resource_usage_tile_avg_relays">Avg. relay connections</string>
+    <string name="resource_usage_by_subsystem_cellular">Cellular data by feature (7 days)</string>
+    <string name="resource_usage_cell_of_total">%1$s · %2$s total</string>
+    <string name="resource_usage_screen_time_section">Time by screen (7 days)</string>
+    <string name="resource_usage_tor_section">Built-in Tor</string>
+    <string name="resource_usage_tor_explanation">Routes the app’s traffic through the Tor network for privacy. While running it spends extra battery on encryption and keep-alive traffic, and every start pays a bootstrap. If your threat model allows, Tor use can be adjusted or turned off.</string>
+    <string name="resource_usage_by_subsystem">Data by feature (7 days)</string>
+    <string name="resource_usage_subsystem_relay">Relay sync</string>
+    <string name="resource_usage_subsystem_image">Images</string>
+    <string name="resource_usage_subsystem_video">Video &amp; audio</string>
+    <string name="resource_usage_subsystem_uploads">Uploads</string>
+    <string name="resource_usage_subsystem_money">Wallet &amp; zaps</string>
+    <string name="resource_usage_subsystem_nip05">Address verification</string>
+    <string name="resource_usage_subsystem_preview">Link previews</string>
+    <string name="resource_usage_subsystem_push">Push registration</string>
+    <string name="resource_usage_subsystem_other">Other</string>
+    <string name="resource_usage_empty">No usage recorded yet.</string>
+    <string name="resource_usage_memory_section">Memory right now</string>
+    <string name="resource_usage_memory_heap">App memory (heap)</string>
+    <string name="resource_usage_memory_native">Native memory</string>
+    <string name="resource_usage_memory_image_cache">Image cache (RAM)</string>
+    <string name="resource_usage_memory_image_disk">Image cache (disk)</string>
+    <string name="resource_usage_memory_notes">Notes in memory</string>
+    <string name="resource_usage_memory_users">Profiles in memory</string>
+    <string name="resource_usage_memory_addressables">Addressable events in memory</string>
+    <string name="resource_usage_memory_chatrooms">Chatroom lists in memory</string>
+    <string name="resource_usage_memory_device_class">Device memory class</string>
+    <string name="resource_usage_send_section">Share with the developers</string>
+    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, or browsing details. Nothing is sent until you tap Send in the message screen.</string>
+    <string name="resource_usage_send_button">Send report via DM</string>
+    <string name="resource_usage_alert_title">High resource usage detected</string>
+    <string name="resource_usage_alert_message">Amethyst consumed more than expected recently: %1$s. Would you like to send a usage report to the developers in an encrypted DM? You will see the full report before anything is sent.</string>
+    <string name="resource_usage_reason_bg_data">%1$s of cellular data in the background in one day</string>
+    <string name="resource_usage_reason_conn_time">%1$s of relay connections while backgrounded on cellular in one day</string>
+    <string name="resource_usage_reason_wakelock">the CPU was held awake for %1$s processing notifications in one day</string>
+    <plurals name="resource_usage_reason_churn">
+        <item quantity="one">the app process restarted %1$d time in one day</item>
+        <item quantity="other">the app process restarted %1$d times in one day</item>
+    </plurals>
+    <plurals name="resource_usage_reason_reconnects">
+        <item quantity="one">the app reconnected to relays %1$d time in one day</item>
+        <item quantity="other">the app reconnected to relays %1$d times in one day</item>
+    </plurals>
+    <string name="resource_usage_alert_send">Review &amp; send</string>
+    <string name="resource_usage_alert_not_now">Not now</string>
+    <string name="resource_usage_alert_opt_out">Don\u2019t ask again</string>
     <string name="this_message_will_disappear_in">This message will disappear in %1$s</string>
     <string name="select_signer">Select Signer</string>
 
@@ -3845,6 +3947,7 @@
     <string name="compose_signature_setting_description">Added at the end of the message when opening a new post, reply, quote, or article. Leave empty to disable.</string>
     <string name="compose_signature_setting_hint">Your signature</string>
     <string name="pow_settings_title">Proof of Work</string>
+    <string name="pow_info_description">The author spent computing power to mine this note to difficulty %1$s — a proof-of-work stamp that makes spamming expensive.</string>
     <string name="pow_difficulty_title">Difficulty</string>
     <string name="pow_difficulty_explainer">Mines a NIP-13 proof of work into your posts before publishing so relays and readers can weigh them against spam. Higher values take exponentially longer to mine. Posts publish in the background once mined.</string>
     <string name="pow_difficulty_off">Off</string>

@@ -2813,7 +2813,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="nsite_source">Vir:</string>
     <string name="nsite_servers">Strežniki:</string>
     <string name="nsite_open">Odpri</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Dokaz časovnega žiga</string>
     <string name="ots_info_description">Obstaja dokaz, da je bil ta zapisek podpisan pred %1$s. Dokaz je bil ožigosan v Bitcoin verigi blokov na ta datum in čas.</string>
     <string name="edit_article">Uredi članek</string>
