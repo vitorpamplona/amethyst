@@ -110,30 +110,36 @@ fun NoteHeaderFirstRowDensityPreview() {
     val geoPowExpiring: Note
     val kitchenSink: Note
 
+    val plainEvent = TextNoteEvent(PLAIN_ID, AUTHOR, now - 300, emptyArray(), "GM", "x")
+
+    // Drafts are addressable: consumption lands on the AddressableNote, so the
+    // preview must fetch it by address rather than by event id.
+    val draftEvent = DraftWrapEvent(DRAFT_ID, AUTHOR, now - 300, arrayOf(arrayOf("d", "preview-draft")), "", "x")
+
     runBlocking {
         withContext(Dispatchers.IO) {
             LocalCache.justConsume(
                 MetadataEvent(AUTHOR_METADATA_ID, AUTHOR, now, emptyArray(), """{"name":"Vitor"}""", "x"),
                 null,
-                false,
+                true,
             )
             LocalCache.justConsume(
                 MetadataEvent(LONG_NAME_METADATA_ID, LONG_NAME_AUTHOR, now, emptyArray(), """{"name":"A user with a very long display name"}""", "x"),
                 null,
-                false,
+                true,
             )
 
-            LocalCache.justConsume(TextNoteEvent(PLAIN_ID, AUTHOR, now - 300, emptyArray(), "GM", "x"), null, false)
-            LocalCache.justConsume(TextNoteEvent(EDIT_VERSION_ID, AUTHOR, now - 60, emptyArray(), "GM! (fixed typo)", "x"), null, false)
-            LocalCache.justConsume(RepostEvent(REPOST_ID, AUTHOR, now - 300, arrayOf(arrayOf("e", PLAIN_ID)), "", "x"), null, false)
+            LocalCache.justConsume(plainEvent, null, true)
+            LocalCache.justConsume(TextNoteEvent(EDIT_VERSION_ID, AUTHOR, now - 60, emptyArray(), "GM! (fixed typo)", "x"), null, true)
+            LocalCache.justConsume(RepostEvent(REPOST_ID, AUTHOR, now - 300, arrayOf(arrayOf("e", PLAIN_ID)), plainEvent.toJson(), "x"), null, true)
             // An empty sig is what marks a note as a private rumor.
-            LocalCache.justConsume(TextNoteEvent(RUMOR_ID, AUTHOR, now - 300, emptyArray(), "just between us", ""), null, false)
-            LocalCache.justConsume(TextNoteEvent(EDITED_ID, AUTHOR, now - 300, emptyArray(), "GM!", "x"), null, false)
-            LocalCache.justConsume(DraftWrapEvent(DRAFT_ID, AUTHOR, now - 300, emptyArray(), "", "x"), null, false)
+            LocalCache.justConsume(TextNoteEvent(RUMOR_ID, AUTHOR, now - 300, emptyArray(), "just between us", ""), null, true)
+            LocalCache.justConsume(TextNoteEvent(EDITED_ID, AUTHOR, now - 300, emptyArray(), "GM!", "x"), null, true)
+            LocalCache.justConsume(draftEvent, null, true)
             LocalCache.justConsume(
                 TextNoteEvent(COMMUNITY_POST_ID, AUTHOR, now - 300, arrayOf(arrayOf("a", COMMUNITY_ADDRESS)), "hello community", "x"),
                 null,
-                false,
+                true,
             )
             LocalCache.justConsume(
                 TextNoteEvent(
@@ -149,7 +155,7 @@ fun NoteHeaderFirstRowDensityPreview() {
                     "x",
                 ),
                 null,
-                false,
+                true,
             )
             LocalCache.justConsume(
                 TextNoteEvent(
@@ -168,7 +174,7 @@ fun NoteHeaderFirstRowDensityPreview() {
                     "",
                 ),
                 null,
-                false,
+                true,
             )
 
             plain = LocalCache.getOrCreateNote(PLAIN_ID)
@@ -176,7 +182,7 @@ fun NoteHeaderFirstRowDensityPreview() {
             rumorPinned = LocalCache.getOrCreateNote(RUMOR_ID)
             edited = LocalCache.getOrCreateNote(EDITED_ID)
             editVersion = LocalCache.getOrCreateNote(EDIT_VERSION_ID)
-            draft = LocalCache.getOrCreateNote(DRAFT_ID)
+            draft = LocalCache.getOrCreateAddressableNote(draftEvent.address())
             communityPost = LocalCache.getOrCreateNote(COMMUNITY_POST_ID)
             geoPowExpiring = LocalCache.getOrCreateNote(POW_ID)
             kitchenSink = LocalCache.getOrCreateNote(KITCHEN_SINK_ID)

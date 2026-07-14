@@ -127,7 +127,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
-import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
@@ -232,7 +231,6 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
@@ -743,9 +741,13 @@ private fun FullBleedNoteCompose(
 
                     Expiration(baseNote)
 
-                    TimeAgo(note = baseNote, style = TimeAgoStyle.Short, fontSize = Font12SP)
+                    // The dotted TimeAgo carries its own " • " separator and the
+                    // options button has slack around its icon: keep the pair unspaced.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TimeAgo(note = baseNote)
 
-                    MoreOptionsButton(baseNote, editState, accountViewModel, nav)
+                        MoreOptionsButton(baseNote, editState, accountViewModel, nav)
+                    }
                 }
 
                 Row(

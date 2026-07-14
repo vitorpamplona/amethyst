@@ -91,7 +91,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
-import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
@@ -207,7 +206,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -1898,12 +1896,16 @@ fun FirstUserInfoRow(
 
         JumpToParentReplyButton(baseNote, accountViewModel, nav)
 
-        TimeAgo(baseNote, style = TimeAgoStyle.Short, fontSize = Font12SP)
+        // The dotted TimeAgo carries its own " • " separator and the options
+        // button has slack around its icon, so this pair stays unspaced.
+        Row(verticalAlignment = CenterVertically) {
+            TimeAgo(baseNote)
 
-        if (moreOptions == null) {
-            MoreOptionsButton(baseNote, editState, accountViewModel, nav)
-        } else {
-            moreOptions()
+            if (moreOptions == null) {
+                MoreOptionsButton(baseNote, editState, accountViewModel, nav)
+            } else {
+                moreOptions()
+            }
         }
     }
 }

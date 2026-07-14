@@ -37,12 +37,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
 /**
  * Compact squared chip for note-header metadata (PoW, OTS, location, relay
- * hosts, ...). Matches the relay information pills used in the NIP-29 chat
- * headers so all header badges share one look: a small icon plus a short
- * label on a secondary-container surface with slightly rounded corners.
+ * hosts, ...) so all header badges share one look: a small icon plus a short
+ * label on a faint surface tint with slightly rounded corners. The wash is
+ * deliberately subtle — just enough of an outline to read as tappable
+ * metadata without competing with the note content.
  */
 @Composable
 fun HeaderPill(
@@ -55,7 +57,8 @@ fun HeaderPill(
 ) {
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
+        contentColor = MaterialTheme.colorScheme.placeholderText,
         modifier = if (onClick != null) modifier.clickable(onClick = onClick) else modifier,
     ) {
         Row(
@@ -66,13 +69,13 @@ fun HeaderPill(
             Icon(
                 symbol = symbol,
                 contentDescription = contentDescription,
-                tint = iconTint ?: MaterialTheme.colorScheme.onSecondaryContainer,
+                tint = iconTint ?: MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.size(11.dp),
             )
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
