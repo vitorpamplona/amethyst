@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -81,6 +82,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -136,6 +138,10 @@ class NotificationFeedFilter(
             setOf(
                 BadgeAwardEvent.KIND,
                 ChannelMessageEvent.KIND,
+                // kind-9 chat message (NIP-C7 / Concord): notifies only when it p-tags me — an inline
+                // reply (Concord's default reply mode) or an @-mention. A minichat reply is a kind-1111
+                // CommentEvent below; a plain channel message tags no one and never reaches here.
+                ChatEvent.KIND,
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
                 CommentEvent.KIND,
@@ -434,6 +440,12 @@ class NotificationFeedFilter(
         // Chess events bypass the follow filter — opponents may not be followed
         val isChessEvent = noteEvent is LiveChessGameAcceptEvent || noteEvent is LiveChessMoveEvent
 
+        // Concord community messages bypass the follow filter too: a reply/reaction that p-tags me
+        // in a community I've joined is relevant whether or not I follow that member (fellow members
+        // usually aren't follows). The p-tag gate below still applies, so only genuine replies /
+        // reactions / mentions notify — general channel chatter that doesn't tag me never does.
+        val isConcord = it.inGatherers?.any { g -> g is ConcordChannel } == true
+
         // Global keeps every event that p-tags the user; Selected (and the
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
@@ -447,11 +459,14 @@ class NotificationFeedFilter(
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            (isChessEvent || isConcord || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex)) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
-            (isRawGlobal || tagsAnEventByUser(it, loggedInUserHex))
+            // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/
+            // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
+            // otherwise need my target message already loaded to resolve replyTo.
+            (isRawGlobal || isConcord || tagsAnEventByUser(it, loggedInUserHex))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
