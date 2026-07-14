@@ -289,7 +289,7 @@ fun NormalChatNote(
                             val pow = remember(note) { note.event?.strongPoWOrNull() }
                             if (pow != null) {
                                 Spacer(StdHorzSpacer)
-                                DisplayPoW(pow)
+                                DisplayPoW(pow, accountViewModel)
                             }
                         } else {
                             DisplayDraftChat()

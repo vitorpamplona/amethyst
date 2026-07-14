@@ -20,20 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withLink
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 
+/**
+ * Compact pill showing the geohash a note is scoped to, resolved to a city
+ * name. Tapping it opens the geohash feed. Sits inline in note headers.
+ * City names are unbounded user data, so the pill is capped and ellipsizes
+ * to protect the author's name from being squeezed out of the row.
+ */
 @Composable
 fun DisplayLocation(
     geohashStr: String,
@@ -41,25 +44,11 @@ fun DisplayLocation(
     nav: INav,
 ) {
     LoadCityName(geohashStr) { cityName ->
-        Text(
-            text =
-                buildAnnotatedString {
-                    withLink(
-                        LinkAnnotation.Clickable("cityname") { nav.nav(Route.Geohash(geohashStr)) },
-                    ) {
-                        append(cityName)
-                    }
-                },
-            style =
-                LocalTextStyle.current.copy(
-                    color =
-                        MaterialTheme.colorScheme.primary.copy(
-                            alpha = 0.52f,
-                        ),
-                    fontSize = Font14SP,
-                    fontWeight = FontWeight.Bold,
-                ),
-            maxLines = 1,
+        HeaderPill(
+            symbol = MaterialSymbols.LocationOn,
+            text = cityName,
+            modifier = Modifier.widthIn(max = 110.dp),
+            onClick = { nav.nav(Route.Geohash(geohashStr)) },
         )
     }
 }

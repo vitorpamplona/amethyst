@@ -2125,7 +2125,6 @@
 <string name="nsite_source">மூலம்:</string>
 <string name="nsite_servers">சேவையகங்கள்:</string>
 <string name="nsite_open">திறக்கவும்</string>
-<string name="existed_since">OTS: %1$s</string>
 <string name="ots_info_title">நேர முத்திரை சான்று</string>
 <string name="ots_info_description">இந்த இடுகை %1$s-க்கு முன்பு ஒரு நேரத்தில் கையொப்பமிடப்பட்டது என்பதற்கான சான்று உள்ளது. சான்று அந்த தேதியிலும் நேரத்திலும் Bitcoin blockchain-ல் முத்திரையிடப்பட்டது.</string>
 <string name="edit_article">கட்டுரையைத் திருத்து</string>

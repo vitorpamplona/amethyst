@@ -2125,7 +2125,6 @@
 <string name="nsite_source">Fonto:</string>
 <string name="nsite_servers">Serviloj:</string>
 <string name="nsite_open">Malfermi</string>
-<string name="existed_since">OTS: %1$s</string>
 <string name="ots_info_title">Tempomarko-Pruvo</string>
 <string name="ots_info_description">Estas pruvo ke ĉi tiu afiŝo estis subskribita iam antaŭ %1$s. La pruvo estis stampita en la Bitcoin-blokĉeno en tiu dato kaj horo.</string>
 <string name="edit_article">Redakti Artikolon</string>

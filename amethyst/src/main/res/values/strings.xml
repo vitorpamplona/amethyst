@@ -45,6 +45,7 @@
     <string name="timestamp_it">Timestamp it</string>
     <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
     <string name="timestamp_pending_short">OTS: Pending</string>
+    <string name="one_year_plus">1y+</string>
     <string name="request_deletion">Request Deletion</string>
     <string name="block_report">Block / Report</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
@@ -1233,6 +1234,8 @@
     <string name="public_bookmark_presence_indicator">is a public bookmark here</string>
     <string name="private_bookmark_presence_indicator">is a private bookmark here</string>
     <string name="private_rumor_mark">Private — only visible to tagged participants</string>
+    <string name="private_rumor_info_title">Private Note</string>
+    <string name="private_rumor_info_description">This note was delivered privately and is not signed. Only the tagged participants can see it, and nobody can prove to outsiders who wrote it.</string>
     <string name="private_note">Make private: gift-wrap the note to the notified users only</string>
     <string name="disable_private_note">Make public</string>
     <string name="private_note_locked">Replies to a private note always stay private</string>
@@ -2823,6 +2826,7 @@
     <string name="add_expiration_date">Add expiration date</string>
     <string name="remove_expiration_date">Remove expiration date</string>
     <string name="expiration_date_label">Expiration Date</string>
+    <string name="expiration_info_description">The author asked relays to delete this note after %1$s. It will disappear from feeds once it expires.</string>
     <string name="expiration_date_explainer">Post will be hidden by clients after this date (NIP-40)</string>
     <string name="expiration_date_select">Select expiration date and time</string>
     <string name="expiration_expires_in">Expires in %1$s</string>
@@ -3019,10 +3023,10 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
-<string name="existed_since">OTS: %1$s</string>
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
+    <string name="ots_info_pending_description">A timestamp proof for this post has been requested and is waiting to be stamped in the Bitcoin blockchain. It usually completes within a few hours.</string>
 
     <string name="edit_article">Edit Article</string>
     <string name="edit_post">Edit Post</string>
@@ -3043,6 +3047,8 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
     <string name="draft_note">Draft Note</string>
+    <string name="draft">Draft</string>
+    <string name="bounty_label">Bounty</string>
 
     <string name="load_from_text">From Msg</string>
 
@@ -3875,6 +3881,7 @@
     <string name="compose_signature_setting_description">Added at the end of the message when opening a new post, reply, quote, or article. Leave empty to disable.</string>
     <string name="compose_signature_setting_hint">Your signature</string>
     <string name="pow_settings_title">Proof of Work</string>
+    <string name="pow_info_description">The author spent computing power to mine this note to difficulty %1$s — a proof-of-work stamp that makes spamming expensive.</string>
     <string name="pow_difficulty_title">Difficulty</string>
     <string name="pow_difficulty_explainer">Mines a NIP-13 proof of work into your posts before publishing so relays and readers can weigh them against spam. Higher values take exponentially longer to mine. Posts publish in the background once mined.</string>
     <string name="pow_difficulty_off">Off</string>

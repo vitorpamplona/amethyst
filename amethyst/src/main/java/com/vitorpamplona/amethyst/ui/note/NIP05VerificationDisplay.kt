@@ -472,7 +472,7 @@ fun RenderNIP05VerifiedSymbol(
                     symbol = MaterialSymbols.Downloading,
                     contentDescription = stringRes(id = R.string.nip05_checking),
                     modifier = modifier,
-                    tint = Color.Yellow,
+                    tint = MaterialTheme.colorScheme.placeholderText,
                 )
             }
 
@@ -492,7 +492,7 @@ fun RenderNIP05VerifiedSymbol(
                     symbol = MaterialSymbols.Report,
                     contentDescription = stringRes(id = R.string.nip05_failed),
                     modifier = modifier,
-                    tint = Color.Red,
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
         }

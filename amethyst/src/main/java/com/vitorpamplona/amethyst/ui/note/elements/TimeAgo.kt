@@ -53,6 +53,12 @@ enum class TimeAgoStyle {
     /** "• 5m", uses [timeAgo]. Used by note timestamps and chatroom row last-message time. */
     Dotted,
 
+    /**
+     * "• 5m" without the leading space — for rows whose `Arrangement.spacedBy`
+     * already provides the gap before the timestamp (the note-header first row).
+     */
+    DottedTight,
+
     /** "5m" (no dot, no leading space), uses [timeAgoShort]. Used by chat bubbles and channel headers. */
     Short,
 }
@@ -96,6 +102,7 @@ fun ToggleableTimeAgoText(
                 if (showAbsolute) {
                     when (style) {
                         TimeAgoStyle.Dotted -> timeAbsolute(timestamp, context)
+                        TimeAgoStyle.DottedTight -> timeAbsolute(timestamp, context).trimStart()
                         TimeAgoStyle.Short -> timeAbsoluteNoDot(timestamp, context)
                     }
                 } else {
@@ -104,6 +111,7 @@ fun ToggleableTimeAgoText(
                     nowState.value
                     when (style) {
                         TimeAgoStyle.Dotted -> timeAgo(timestamp, context)
+                        TimeAgoStyle.DottedTight -> timeAgo(timestamp, context).trimStart()
                         TimeAgoStyle.Short -> timeAgoShort(timestamp, nowStr)
                     }
                 }
@@ -125,16 +133,22 @@ fun ToggleableTimeAgoText(
 }
 
 @Composable
-fun TimeAgo(note: Note) {
+fun TimeAgo(
+    note: Note,
+    style: TimeAgoStyle = TimeAgoStyle.Dotted,
+) {
     val time = note.createdAt() ?: return
-    TimeAgo(time)
+    TimeAgo(time, style)
 }
 
 @Composable
-fun TimeAgo(time: Long) {
+fun TimeAgo(
+    time: Long,
+    style: TimeAgoStyle = TimeAgoStyle.Dotted,
+) {
     ToggleableTimeAgoText(
         timestamp = time,
-        style = TimeAgoStyle.Dotted,
+        style = style,
         color = MaterialTheme.colorScheme.placeholderText,
     )
 }

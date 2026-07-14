@@ -20,25 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
@@ -46,39 +34,30 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 @Preview
 fun DisplayPoWPreview() {
     ThemeComparisonColumn(
-        toPreview = { DisplayPoW(pow = 24) },
+        toPreview = { DisplayPoW(pow = 24, accountViewModel = mockAccountViewModel()) },
     )
 }
 
 /**
- * Compact pill showing the proof of work a received note carries: a bolt plus
- * the difficulty in leading zero bits. Sits inline in note headers, so it
- * stays at text height.
+ * Compact pill showing the proof of work a received note carries: a gear plus
+ * the difficulty in leading zero bits. Tapping it explains what the number
+ * means. Sits inline in note headers, so it stays at text height.
  */
 @Composable
-fun DisplayPoW(pow: Int) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(horizontal = 5.dp, vertical = 1.dp),
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Manufacturing,
-            contentDescription = stringRes(R.string.pow_settings_title),
-            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.size(10.dp),
-        )
-        Text(
-            text = pow.toString(),
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            fontSize = 10.sp,
-            lineHeight = 10.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-        )
-    }
+fun DisplayPoW(
+    pow: Int,
+    accountViewModel: AccountViewModel,
+) {
+    HeaderPill(
+        symbol = MaterialSymbols.Manufacturing,
+        text = pow.toString(),
+        contentDescription = stringRes(R.string.pow_settings_title),
+        onClick = {
+            accountViewModel.toastManager.toast(
+                R.string.pow_settings_title,
+                R.string.pow_info_description,
+                pow.toString(),
+            )
+        },
+    )
 }

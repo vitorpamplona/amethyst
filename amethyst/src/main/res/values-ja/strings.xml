@@ -2818,8 +2818,6 @@
     
     <string name="nsite_open">開く</string>
     
-    <string name="existed_since">OTS: %1$s</string>
-    
     <string name="ots_info_title">タイムスタンプ証明</string>
     
     <string name="ots_info_description">この投稿が %1$s より前に署名されたことの証明があります。この証明はその日時に Bitcoin ブロックチェーンに刻印されています。</string>

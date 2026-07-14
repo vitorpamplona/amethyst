@@ -59,4 +59,8 @@ pyftsubset "$SOURCE_TTF" \
     --glyph-names \
     --symbol-cmap
 
+# Bake in the custom (non-Material) glyphs from custom/ — third-party logos
+# like OpenTimestamps that the upstream font will never carry.
+python3 "$REPO_ROOT/tools/material-symbols-subset/add_custom_glyphs.py" "$TARGET"
+
 echo "Wrote $TARGET ($(du -h "$TARGET" | cut -f1))"

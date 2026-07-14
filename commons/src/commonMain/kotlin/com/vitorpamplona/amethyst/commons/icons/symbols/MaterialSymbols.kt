@@ -117,6 +117,7 @@ object MaterialSymbols {
     val FitnessCenter = MaterialSymbol("\uEB43")
     val Folder = MaterialSymbol("\uE2C7")
     val FolderZip = MaterialSymbol("\uEB2C")
+    val ForkRight = MaterialSymbol("\uEBAC")
     val FormatBold = MaterialSymbol("\uE238")
     val FormatItalic = MaterialSymbol("\uE23F")
     val FormatListNumbered = MaterialSymbol("\uE242")
@@ -168,6 +169,12 @@ object MaterialSymbols {
     val Numbers = MaterialSymbol("\uEAC7")
     val OpenInBrowser = MaterialSymbol("\uE89D")
     val OpenInFull = MaterialSymbol("\uF1CE")
+
+    // Custom glyph (not part of Google's Material Symbols): the OpenTimestamps
+    // stamp logo, baked into the subset font by
+    // tools/material-symbols-subset/add_custom_glyphs.py from custom/opentimestamps.svg.
+    val OpenTimestamps = MaterialSymbol("\uF8F0")
+
     val Paid = MaterialSymbol("\uF041")
     val PanTool = MaterialSymbol("\uE925")
     val Pause = MaterialSymbol("\uE034")
