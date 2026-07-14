@@ -215,6 +215,7 @@ fun ChatFeedLoaded(
                         shouldHighlight = highlightedNoteId.value == item.idHex,
                         onHighlightFinished = { highlightedNoteId.value = null },
                         groupPosition = watchChatGroupPosition(newer, item, older),
+                        previousNoteId = older?.idHex,
                     )
 
                     NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)

@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -110,6 +111,10 @@ fun ChatroomMessageCompose(
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
+    // The id of the message rendered directly above this one in the feed. A reply
+    // quote that targets it is redundant (the reader can see the parent right
+    // there), so the reply row is skipped.
+    previousNoteId: HexKey? = null,
     // Replaces the generic "post not found" blank while baseNote's event hasn't loaded. Used for
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
@@ -154,6 +159,7 @@ fun ChatroomMessageCompose(
                     shouldHighlight,
                     onHighlightFinished,
                     groupPosition,
+                    previousNoteId,
                 )
             }
         }
@@ -183,6 +189,7 @@ fun NormalChatNote(
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
+    previousNoteId: HexKey? = null,
 ) {
     val isLoggedInUser =
         remember(note.author) {
@@ -379,6 +386,7 @@ fun NormalChatNote(
             accountViewModel,
             nav,
             onScrollToNote,
+            previousNoteId,
         )
     }
 }
@@ -415,6 +423,7 @@ private fun MessageBubbleLines(
     accountViewModel: AccountViewModel,
     nav: INav,
     onScrollToNote: ((Note) -> Unit)? = null,
+    previousNoteId: HexKey? = null,
 ) {
     if (baseNote.event !is DraftWrapEvent) {
         RenderReplyRow(
@@ -426,6 +435,7 @@ private fun MessageBubbleLines(
             onWantsToReply = onWantsToReply,
             onWantsToEditDraft = onWantsToEditDraft,
             onScrollToNote = onScrollToNote,
+            previousNoteId = previousNoteId,
         )
     }
 
@@ -463,10 +473,17 @@ fun RenderReplyRow(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
+    previousNoteId: HexKey? = null,
 ) {
     val replyTo = note.replyTo?.lastOrNull()
-    if (!innerQuote && replyTo != null && !isCitedInContent(note, replyTo)) {
-        RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
+    if (!innerQuote &&
+        replyTo != null &&
+        // The reply target is the message rendered directly above this one, so the
+        // quote would just repeat what the reader already sees.
+        replyTo.idHex != previousNoteId &&
+        !isCitedInContent(note, replyTo)
+    ) {
+        RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote, previousNoteId)
     }
 }
 
@@ -495,6 +512,7 @@ private fun RenderReply(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
+    previousNoteId: HexKey? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         @Suppress("ProduceStateDoesNotAssignValue")
@@ -505,7 +523,9 @@ private fun RenderReply(
                 }
             }
 
-        replyTo.value?.let { replyNote ->
+        // Unwrapping can map a gift-wrap id to its rumor, so the previous-message
+        // match has to be re-checked on the resolved note as well.
+        replyTo.value?.takeIf { it.idHex != previousNoteId }?.let { replyNote ->
             // For a DM, a reply target that hasn't arrived isn't lost — it's older than the loaded
             // window (and for gift wraps can't be fetched by id). Swap the generic blank for one that
             // walks history backward until it surfaces. Pick the pager by the PARENT's protocol; leave
