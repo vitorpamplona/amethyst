@@ -2678,6 +2678,7 @@
     <string name="media_actions_dialog_title">Median toiminnot</string>
     <string name="playback_actions_dialog_title">Toisto</string>
     <string name="video_quality_auto">Automaattinen</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Suoratoista laitteeseen</string>
     <string name="cast_stop_casting">Lopeta suoratoisto</string>

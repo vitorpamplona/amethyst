@@ -3301,6 +3301,7 @@
     <string name="media_actions_dialog_title">Akce médií</string>
     <string name="playback_actions_dialog_title">Přehrávání</string>
     <string name="video_quality_auto">Auto</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Odeslat do zařízení</string>
     <string name="cast_stop_casting">Ukončit odesílání</string>

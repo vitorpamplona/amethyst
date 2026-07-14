@@ -2770,6 +2770,7 @@
     <string name="media_actions_dialog_title">Acciones de medios</string>
     <string name="playback_actions_dialog_title">Reproducción</string>
     <string name="video_quality_auto">Automático</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Emitir al dispositivo</string>
     <string name="cast_stop_casting">Detener emisión</string>

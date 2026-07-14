@@ -2702,6 +2702,7 @@
     <string name="media_actions_dialog_title">মিডিয়া অ্যাকশন</string>
     <string name="playback_actions_dialog_title">প্লেব্যাক</string>
     <string name="video_quality_auto">স্বয়ংক্রিয়</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">ডিভাইসে কাস্ট করুন</string>
     <string name="cast_stop_casting">কাস্টিং বন্ধ করুন</string>

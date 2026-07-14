@@ -2606,6 +2606,7 @@ Seharusnya %3$s</string>
     <string name="media_actions_dialog_title">Tindakan Media</string>
     <string name="playback_actions_dialog_title">Pemutaran</string>
     <string name="video_quality_auto">Otomatis</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Tampilkan ke perangkat</string>
     <string name="cast_stop_casting">Hentikan penayangan</string>

@@ -2720,6 +2720,7 @@
     <string name="media_actions_dialog_title">Multivides darbības</string>
     <string name="playback_actions_dialog_title">Atskaņošana</string>
     <string name="video_quality_auto">Automātiski</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Apraidīt uz ierīci</string>
     <string name="cast_stop_casting">Pārtraukt apraidi</string>
