@@ -70,7 +70,9 @@ class CommunityPostApprovalEvent(
 
     fun containedPost(): Event? =
         try {
-            content.ifBlank { null }?.let { fromJson(it) }
+            // Only attempts to parse contents that could be an event json.
+            // Clients in the wild put all sorts of non-event text in here.
+            content.trim().takeIf { it.startsWith("{") }?.let { fromJson(it) }
         } catch (e: Exception) {
             Log.w(
                 "CommunityPostEvent",
