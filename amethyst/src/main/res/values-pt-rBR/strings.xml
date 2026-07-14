@@ -2680,7 +2680,6 @@
     <string name="nsite_source">Fonte:</string>
     <string name="nsite_servers">Servidores:</string>
     <string name="nsite_open">Abrir</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Prova de Carimbo de data/hora</string>
     <string name="ots_info_description">Há prova de que esta postagem foi assinada antes de %1$s. A prova foi carimbada no blockchain do Bitcoin naquela data e hora.</string>
     <string name="edit_article">Editar artigo</string>

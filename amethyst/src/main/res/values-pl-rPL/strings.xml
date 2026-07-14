@@ -2798,7 +2798,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nsite_source">Źródło:</string>
     <string name="nsite_servers">Serwery:</string>
     <string name="nsite_open">Otwórz</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Potwierdzenie znacznika czasu</string>
     <string name="ots_info_description">Istnieje dowód na to, że ten post został podpisany przed %1$s. Dowód został opatrzony pieczęcią w łańcuchu bloków Bitcoin w tym dniu i czasie.</string>
     <string name="edit_article">Redaguj artykuł</string>
