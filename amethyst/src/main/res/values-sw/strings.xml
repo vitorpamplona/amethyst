@@ -2684,6 +2684,7 @@
     <string name="media_actions_dialog_title">Vitendo vya Midia</string>
     <string name="playback_actions_dialog_title">Uchezaji</string>
     <string name="video_quality_auto">Otomatiki</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Tuma kwenye kifaa</string>
     <string name="cast_stop_casting">Acha kutuma</string>

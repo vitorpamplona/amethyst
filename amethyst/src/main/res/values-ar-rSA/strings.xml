@@ -2823,6 +2823,7 @@
     <string name="media_actions_dialog_title">إجراءات الوسائط</string>
     <string name="playback_actions_dialog_title">التشغيل</string>
     <string name="video_quality_auto">تلقائي</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">البث إلى جهاز</string>
     <string name="cast_stop_casting">إيقاف البث</string>
