@@ -43,9 +43,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
@@ -63,14 +65,18 @@ fun EditGroupInfoScreen(
         }
     val currentName by chatroom.displayName.collectAsStateWithLifecycle()
     val currentDescription by chatroom.description.collectAsStateWithLifecycle()
+    val currentImage by chatroom.image.collectAsStateWithLifecycle()
 
     var name by remember(currentName) { mutableStateOf(currentName ?: "") }
     var description by remember(currentDescription) { mutableStateOf(currentDescription ?: "") }
+    var pickedIcon by remember { mutableStateOf<SelectedMedia?>(null) }
+    var removeIcon by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val hasChanges = name != (currentName ?: "") || description != (currentDescription ?: "")
+    val iconChanged = pickedIcon != null || removeIcon
+    val hasChanges = name != (currentName ?: "") || description != (currentDescription ?: "") || iconChanged
 
     Scaffold(
         topBar = {
@@ -81,10 +87,17 @@ fun EditGroupInfoScreen(
                     isSaving = true
                     scope.launch(Dispatchers.IO) {
                         try {
+                            val iconChange =
+                                pickedIcon?.let { media ->
+                                    MarmotGroupIconChange.Set(
+                                        accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, context),
+                                    )
+                                } ?: if (removeIcon) MarmotGroupIconChange.Clear else MarmotGroupIconChange.Keep
                             accountViewModel.updateMarmotGroupMetadata(
                                 nostrGroupId = nostrGroupId,
                                 name = name.trim(),
                                 description = description.trim(),
+                                icon = iconChange,
                             )
                             launch(Dispatchers.Main) {
                                 Toast
@@ -118,6 +131,25 @@ fun EditGroupInfoScreen(
                     .padding(horizontal = 16.dp),
         ) {
             Spacer(modifier = Modifier.height(8.dp))
+
+            MarmotGroupIconEditor(
+                groupId = nostrGroupId,
+                existingImage = currentImage,
+                pickedMedia = pickedIcon,
+                removeRequested = removeIcon,
+                enabled = !isSaving,
+                accountViewModel = accountViewModel,
+                onPick = {
+                    pickedIcon = it
+                    removeIcon = false
+                },
+                onRemove = {
+                    pickedIcon = null
+                    removeIcon = true
+                },
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = name,
