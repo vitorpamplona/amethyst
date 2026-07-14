@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -31,6 +34,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 /**
  * Compact pill showing the geohash a note is scoped to, resolved to a city
  * name. Tapping it opens the geohash feed. Sits inline in note headers.
+ * City names are unbounded user data, so the pill is capped and ellipsizes
+ * to protect the author's name from being squeezed out of the row.
  */
 @Composable
 fun DisplayLocation(
@@ -42,6 +47,7 @@ fun DisplayLocation(
         HeaderPill(
             symbol = MaterialSymbols.LocationOn,
             text = cityName,
+            modifier = Modifier.widthIn(max = 110.dp),
             onClick = { nav.nav(Route.Geohash(geohashStr)) },
         )
     }

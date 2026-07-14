@@ -117,6 +117,7 @@ object MaterialSymbols {
     val FitnessCenter = MaterialSymbol("\uEB43")
     val Folder = MaterialSymbol("\uE2C7")
     val FolderZip = MaterialSymbol("\uEB2C")
+    val ForkRight = MaterialSymbol("\uEBAC")
     val FormatBold = MaterialSymbol("\uE238")
     val FormatItalic = MaterialSymbol("\uE23F")
     val FormatListNumbered = MaterialSymbol("\uE242")

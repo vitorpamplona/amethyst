@@ -22,23 +22,31 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.stringRes
 
+/**
+ * Pencil marking an edited note; tapping cycles through the versions. The
+ * bare pencil is the latest edit — a suffix appears only while browsing
+ * older versions.
+ */
 @Composable
 fun DisplayEditStatus(editState: EditState) {
     val label =
-        if (editState.showingVersion.value == editState.originalVersionId()) {
+        if (editState.showingVersion.value == editState.lastVersionId()) {
+            null
+        } else if (editState.showingVersion.value == editState.originalVersionId()) {
             stringRes(id = R.string.original)
-        } else if (editState.showingVersion.value == editState.lastVersionId()) {
-            stringRes(id = R.string.edited)
         } else {
-            stringRes(id = R.string.edited_number, editState.versionId())
+            "#${editState.versionId()}"
         }
 
     QuietMark(
+        symbol = MaterialSymbols.Edit,
         text = label,
+        contentDescription = stringRes(id = R.string.edited),
         onClick = { editState.nextModification() },
     )
 }

@@ -2297,7 +2297,6 @@
     <string name="nsite_source">Fuente:</string>
     <string name="nsite_servers">Servidores:</string>
     <string name="nsite_open">Abrir</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Prueba de marca de tiempo</string>
     <string name="ots_info_description">Hay prueba de que esta publicación se firmó en algún momento antes de %1$s. La prueba se marcó en la cadena de bloques de Bitcoin en esa fecha y hora.</string>
     <string name="edit_article">Editar artículo</string>

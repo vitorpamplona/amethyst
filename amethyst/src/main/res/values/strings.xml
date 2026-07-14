@@ -45,6 +45,7 @@
     <string name="timestamp_it">Timestamp it</string>
     <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
     <string name="timestamp_pending_short">OTS: Pending</string>
+    <string name="one_year_plus">1y+</string>
     <string name="request_deletion">Request Deletion</string>
     <string name="block_report">Block / Report</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
@@ -3017,7 +3018,6 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
-<string name="existed_since">OTS: %1$s</string>
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>

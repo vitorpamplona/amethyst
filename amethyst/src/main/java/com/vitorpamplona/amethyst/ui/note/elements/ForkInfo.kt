@@ -20,26 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 
 @Composable
@@ -54,20 +49,21 @@ fun ShowForkInformation(
     if (forkedAddress != null) {
         LoadAddressableNote(forkedAddress, accountViewModel) { addressableNote ->
             if (addressableNote != null) {
-                ForkInformationRowLightColor(addressableNote, modifier, accountViewModel, nav)
+                ForkMark(addressableNote, modifier, accountViewModel, nav)
             }
         }
     } else if (forkedEvent != null) {
         LoadNote(forkedEvent, accountViewModel) { event ->
             if (event != null) {
-                ForkInformationRowLightColor(event, modifier, accountViewModel, nav)
+                ForkMark(event, modifier, accountViewModel, nav)
             }
         }
     }
 }
 
+/** Fork-right icon marking a forked note; tapping opens the original version. */
 @Composable
-fun ForkInformationRowLightColor(
+fun ForkMark(
     originalVersion: Note,
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
@@ -75,22 +71,14 @@ fun ForkInformationRowLightColor(
 ) {
     val noteState by observeNote(originalVersion, accountViewModel)
     val note = noteState.note
-    val author = note.author ?: return
     val route = remember(note) { routeFor(note, accountViewModel.account) }
 
     if (route != null) {
-        Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-            val userState by observeUserInfo(author, accountViewModel)
-
-            CreateClickableTextWithEmoji(
-                clickablePart = stringRes(id = R.string.forked_from) + " " + (userState?.info?.bestName() ?: author.pubkeyDisplayHex()),
-                maxLines = 1,
-                route = route,
-                overrideColor = MaterialTheme.colorScheme.lessImportantLink,
-                fontSize = Font14SP,
-                nav = nav,
-                tags = userState?.tags,
-            )
-        }
+        QuietMark(
+            symbol = MaterialSymbols.ForkRight,
+            contentDescription = stringRes(id = R.string.forked_from),
+            modifier = modifier,
+            onClick = { nav.nav(route) },
+        )
     }
 }

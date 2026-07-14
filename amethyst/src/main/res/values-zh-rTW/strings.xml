@@ -2209,7 +2209,6 @@
     <string name="nsite_source">來源：</string>
     <string name="nsite_servers">伺服器：</string>
     <string name="nsite_open">開啟</string>
-    <string name="existed_since">OTS：%1$s</string>
     <string name="ots_info_title">時間戳證明</string>
     <string name="ots_info_description">有在 %1$s 之前的某個時間簽署了此帖子的證明。此證明是在那個日期和時間在比特幣區塊鏈中記錄的時間戳。</string>
     <string name="edit_article">編輯文章</string>

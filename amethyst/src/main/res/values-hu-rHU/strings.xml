@@ -2731,7 +2731,6 @@
     <string name="nsite_source">Forrás:</string>
     <string name="nsite_servers">Kiszolgálók:</string>
     <string name="nsite_open">Megnyitás</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Időbélyeg-igazolás</string>
     <string name="ots_info_description">Bizonyíték van arra, hogy ezt a bejegyzést valamikor %1$s előtt írták alá. A bizonyítékot ezen a napon és időpontban bélyegezték a Bitcoin blokkláncába.</string>
     <string name="edit_article">Cikk szerkesztése</string>

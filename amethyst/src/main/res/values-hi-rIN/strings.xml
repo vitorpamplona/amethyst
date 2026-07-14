@@ -2730,7 +2730,6 @@
     <string name="nsite_source">स्रोत :</string>
     <string name="nsite_servers">सेवासंगणक :</string>
     <string name="nsite_open">खोलें</string>
-    <string name="existed_since">ओ॰टी॰एस : %1$s</string>
     <string name="ots_info_title">समयांकन प्रमाण</string>
     <string name="ots_info_description">प्रमाण उपलब्ध है कि इस पत्र पर हस्ताक्षर किया गया %1$s के कुछ पहले। प्रमाण अंकित किया गया द्व्यंकरूप्य खण्डश्रृंखला में उस समय उस दिन पर।</string>
     <string name="edit_article">लेख सम्पादित करें</string>

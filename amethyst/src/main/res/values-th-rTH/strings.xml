@@ -2171,7 +2171,6 @@
     <string name="nsite_source">แหล่งที่มา:</string>
     <string name="nsite_servers">เซิร์ฟเวอร์:</string>
     <string name="nsite_open">เปิด</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Timestamp ถูกยืนยัน</string>
     <string name="ots_info_description">มีหลักฐานว่าโพสต์นี้มีการลงนามก่อน %1$s หลักฐานถูกประทับตราใน Bitcoin blockchain ณ วันและเวลาดังกล่าว</string>
     <string name="edit_article">แก้ไขบทความ</string>

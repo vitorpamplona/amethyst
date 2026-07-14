@@ -351,6 +351,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -1762,9 +1763,17 @@ fun SecondUserInfoRow(
 @Composable
 fun DisplayExpiration(expirationDate: Long) {
     val context = LocalContext.current
+    // Beyond a year timeAheadNoDot switches to a full date, which is too wide
+    // for the pill: clamp it.
+    val text =
+        if (expirationDate - TimeUtils.now() > TimeUtils.ONE_YEAR) {
+            stringRes(R.string.one_year_plus)
+        } else {
+            timeAheadNoDot(expirationDate, context)
+        }
     HeaderPill(
         symbol = MaterialSymbols.Timer,
-        text = timeAheadNoDot(expirationDate, context),
+        text = text,
         contentDescription = stringRes(R.string.expiration_date_label),
     )
 }
