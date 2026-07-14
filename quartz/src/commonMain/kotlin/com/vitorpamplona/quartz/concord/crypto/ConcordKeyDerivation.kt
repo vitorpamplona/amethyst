@@ -219,11 +219,14 @@ object ConcordKeyDerivation {
 
     /**
      * Derives the invite bundle decryption key from a link's 16-byte unlock
-     * [token] (CORD-05): `hkdf32(token, "concord/invite-key" ‖ 0x00)`. The token
-     * lives only in the URL fragment, so a server that sees the naddr can never
-     * open the bundle.
+     * [token] (CORD-05): `hkdf32(token, "concord/invite-key" ‖ 0x00 ‖ ZERO32)`. Per
+     * Appendix A.1 the `id` is *always present*, 32 bytes, all-zeroes for a label
+     * with no meaningful id (A.6 lists `concord/invite-key` with `id = 0…0`), so the
+     * 32 zero bytes must be fed into the HKDF `info` — omitting them yields a key that
+     * fails to open a reference-client (Armada) bundle. The token lives only in the URL
+     * fragment, so a server that sees the naddr can never open the bundle.
      */
-    fun inviteBundleKey(token: ByteArray): ByteArray = hkdf32(token, buildInfo(ConcordLabels.INVITE_KEY))
+    fun inviteBundleKey(token: ByteArray): ByteArray = hkdf32(token, buildInfo(ConcordLabels.INVITE_KEY, ByteArray(32)))
 
     // ---- CORD-06 rekey addresses & commitment ---------------------------------
 

@@ -66,6 +66,24 @@ class ConcordKeyDerivationTest {
         assertEquals(ConcordLabels.CONTROL.encodeToByteArray().size + 1 + 8, info.size)
     }
 
+    // ---- CORD-05 invite bundle key --------------------------------------------
+
+    /**
+     * The invite-key HKDF `info` MUST carry the 32-byte all-zero id (CORD-05 A.1: "the id is
+     * always present, 32 bytes, all-zeroes where a label has no meaningful id" — A.6 lists
+     * `concord/invite-key` with `id = 0…0`). Omitting it derived a key that could not open a
+     * reference-client (Armada) bundle — confirmed by decrypting a live Soapbox invite: only the
+     * zero-id key produced valid JSON. This pins the id in so the derivation can't silently regress.
+     */
+    @Test
+    fun inviteBundleKeyIncludesZeroId() {
+        val token = ByteArray(16) { it.toByte() }
+        val zeroId = ConcordKeyDerivation.hkdf32(token, ConcordKeyDerivation.buildInfo(ConcordLabels.INVITE_KEY, ByteArray(32)))
+        val idLess = ConcordKeyDerivation.hkdf32(token, ConcordKeyDerivation.buildInfo(ConcordLabels.INVITE_KEY))
+        assertContentEquals(zeroId, ConcordKeyDerivation.inviteBundleKey(token))
+        assertNotEquals(zeroId.toHexKey(), idLess.toHexKey())
+    }
+
     // ---- groupKey -------------------------------------------------------------
 
     @Test
