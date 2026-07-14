@@ -75,11 +75,18 @@ fun DisplayOts(
         },
         whenPending = {
             // The stamp icon plus an ellipsis: attestation requested, not yet
-            // anchored. The content description carries the words.
+            // anchored. The content description carries the words; tapping
+            // explains what is being waited on.
             HeaderPill(
                 symbol = MaterialSymbols.OpenTimestamps,
                 text = "…",
                 contentDescription = stringRes(R.string.timestamp_pending_short),
+                onClick = {
+                    accountViewModel.toastManager.toast(
+                        R.string.ots_info_title,
+                        R.string.ots_info_pending_description,
+                    )
+                },
             )
         },
     )

@@ -3021,6 +3021,7 @@
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
+    <string name="ots_info_pending_description">A timestamp proof for this post has been requested and is waiting to be stamped in the Bitcoin blockchain. It usually completes within a few hours.</string>
 
     <string name="edit_article">Edit Article</string>
     <string name="edit_post">Edit Post</string>

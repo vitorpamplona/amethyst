@@ -70,7 +70,7 @@ fun HeaderPill(
                 symbol = symbol,
                 contentDescription = contentDescription,
                 tint = iconTint ?: MaterialTheme.colorScheme.placeholderText,
-                modifier = Modifier.size(11.dp),
+                modifier = Modifier.size(13.dp),
             )
             Text(
                 text = text,

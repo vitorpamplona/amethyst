@@ -30,17 +30,16 @@ from fontTools.ttLib import TTFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# codepoint -> (glyph name, traced SVG). Keep codepoints at the very end of
-# the BMP private-use area (U+F8xx tail) to stay clear of the range Material
-# Symbols actually allocates.
+# codepoint -> (glyph name, traced SVG, content-box fractions). Keep
+# codepoints at the very end of the BMP private-use area (U+F8xx tail) to
+# stay clear of the range Material Symbols actually allocates.
+#
+# Material's own solid shapes draw inside 80..880 of a 960 upm em; a glyph
+# with fine outlines (like the OpenTimestamps stamp) reads much lighter at
+# the same bounds, so it gets a near-full-em box to appear the same size.
 CUSTOM = {
-    0xF8F0: ("opentimestamps", os.path.join(HERE, "custom", "opentimestamps.svg")),
+    0xF8F0: ("opentimestamps", os.path.join(HERE, "custom", "opentimestamps.svg"), 20 / 960, 940 / 960),
 }
-
-# Fit content into the same square Material Symbols draw in (its check_circle
-# glyph spans 80..880 in a 960 upm font). Scaled to the font's real upm.
-BOX_MIN_FRAC = 80 / 960
-BOX_MAX_FRAC = 880 / 960
 
 
 def svg_path_data(svg_file):
@@ -54,15 +53,15 @@ def draw_svg(paths, pen):
         parse_path(d, pen)
 
 
-def build_glyph(paths, upm):
+def build_glyph(paths, upm, box_min_frac, box_max_frac):
     # First pass: raw outline bounds.
     bounds = BoundsPen(None)
     draw_svg(paths, bounds)
     x_min, y_min, x_max, y_max = bounds.bounds
 
-    # Uniform scale into the Material content box, centered on both axes.
-    box_min = BOX_MIN_FRAC * upm
-    box_max = BOX_MAX_FRAC * upm
+    # Uniform scale into the content box, centered on both axes.
+    box_min = box_min_frac * upm
+    box_max = box_max_frac * upm
     box = box_max - box_min
     scale = box / max(x_max - x_min, y_max - y_min)
     tx = box_min + (box - (x_max - x_min) * scale) / 2 - x_min * scale
@@ -79,8 +78,8 @@ def main(font_path):
     upm = font["head"].unitsPerEm
     order = font.getGlyphOrder()
 
-    for codepoint, (name, svg_file) in sorted(CUSTOM.items()):
-        glyph = build_glyph(svg_path_data(svg_file), upm)
+    for codepoint, (name, svg_file, box_min_frac, box_max_frac) in sorted(CUSTOM.items()):
+        glyph = build_glyph(svg_path_data(svg_file), upm, box_min_frac, box_max_frac)
 
         if name not in order:
             order.append(name)
