@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -73,6 +74,10 @@ fun AppBottomBar(
     accountViewModel: AccountViewModel,
     onClick: (Route) -> Unit,
 ) {
+    // Large screens replace the bottom bar with the navigation rail (Medium) or the
+    // permanently docked drawer (Expanded).
+    if (LocalScreenLayout.current.isLargeScreen) return
+
     // Hide the bar on entries that aren't a tab root (drawer or in-app
     // pushes). Mirrors the back-arrow rule in canPop().
     if (nav.canPop()) return

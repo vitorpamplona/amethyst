@@ -47,6 +47,8 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -121,14 +123,22 @@ fun MessagesPager(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
+    // The left-edge swipe opens the modal drawer; with the drawer permanently docked
+    // there is nothing to open, so leave the pager's own gestures alone.
+    val modalDrawerExists =
+        LocalScreenLayout.current.navigationStyle != NavigationStyle.PERMANENT_DRAWER
     HorizontalPager(
         state = pagerState,
         userScrollEnabled = true,
         modifier =
-            modifier.zonedDrawerSwipe(
-                pagerState = pagerState,
-                openDrawer = nav::openDrawer,
-            ),
+            if (modalDrawerExists) {
+                modifier.zonedDrawerSwipe(
+                    pagerState = pagerState,
+                    openDrawer = nav::openDrawer,
+                )
+            } else {
+                modifier
+            },
     ) { page ->
         ChatroomListFeedView(
             feedContentState = tabs[page].feedContentState,

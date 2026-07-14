@@ -29,6 +29,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,6 +60,8 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.ui.layouts.rememberScreenLayoutSpec
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
@@ -282,6 +285,22 @@ fun AppNavigation(
 ) {
     val nav = rememberNav()
 
+    // One layout decision per window size for the whole shell: bottom bar vs rail vs
+    // permanent drawer, plus the docked notification panel. Every screen, bar and panel
+    // below reads the same spec through LocalScreenLayout.
+    val screenLayout = rememberScreenLayoutSpec()
+
+    CompositionLocalProvider(LocalScreenLayout provides screenLayout) {
+        AppNavigationLayers(accountViewModel, accountSessionManager, nav)
+    }
+}
+
+@Composable
+private fun AppNavigationLayers(
+    accountViewModel: AccountViewModel,
+    accountSessionManager: AccountSessionManager,
+    nav: Nav,
+) {
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
         Box(Modifier.fillMaxSize()) {
             BuildNavigation(accountViewModel, nav)

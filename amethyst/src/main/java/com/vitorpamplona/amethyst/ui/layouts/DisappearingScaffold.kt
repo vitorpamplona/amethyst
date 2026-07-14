@@ -80,10 +80,14 @@ fun DisappearingScaffold(
 ) {
     val state = rememberDisappearingBarState()
 
+    // Large screens (rail / permanent drawer) pin the chrome: bars never slide away on
+    // scroll, and the immersive status-bar hiding stays off.
+    val canHideBars = allowBarHide && !LocalScreenLayout.current.isLargeScreen
+
     // Hold the latest values in state so the NSC's captured lambda stays fresh across
     // recompositions without rebuilding the NSC itself.
     val latestIsActive by rememberUpdatedState(isActive)
-    val latestAllowBarHide by rememberUpdatedState(allowBarHide)
+    val latestAllowBarHide by rememberUpdatedState(canHideBars)
     val latestAccountViewModel by rememberUpdatedState(accountViewModel)
 
     val connection =
@@ -100,7 +104,7 @@ fun DisappearingScaffold(
         }
 
     // Only wire the lifecycle observer + system-bar control when the scaffold actually moves its bars.
-    if (allowBarHide) {
+    if (canHideBars) {
         ResetBarsOnResume(state)
         ImmersiveStatusBarEffect(state)
     }
@@ -110,7 +114,7 @@ fun DisappearingScaffold(
     // LocalContentColor, matching M3 Scaffold's behaviour (without it, default text
     // color falls back to Color.Black and is invisible on the dark theme).
     val baseModifier =
-        if (allowBarHide) {
+        if (canHideBars) {
             Modifier.imePadding().nestedScroll(connection)
         } else {
             Modifier.imePadding()

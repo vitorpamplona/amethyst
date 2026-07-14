@@ -38,6 +38,7 @@ private data class ScrollState(
 
 object ScrollStateKeys {
     const val NOTIFICATION_SCREEN = "NotificationsFeed"
+    const val NOTIFICATION_SIDE_PANEL = "NotificationsSidePanel"
     const val NOTIFICATION_FOLLOWING = "NotificationsFollowingFeed"
     const val NOTIFICATION_EVERYONE = "NotificationsEveryoneFeed"
     const val VIDEO_SCREEN = "VideoFeed"

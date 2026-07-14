@@ -49,6 +49,18 @@ val LocalDisappearingScaffoldPadding = compositionLocalOf { PaddingValues(0.dp) 
 val LocalDisappearingBarState = compositionLocalOf<DisappearingBarState?> { null }
 
 /**
+ * Extra start/end padding wide layouts ask feeds to apply so their content column stays at a
+ * readable width. The shell computes it as `(paneWidth - feedMaxWidth) / 2` and provides it
+ * around the center pane; feeds pick it up through [rememberFeedContentPadding], so the
+ * scroll surface stays full-pane-width (scrolling and pull-to-refresh keep working edge to
+ * edge) while items center themselves. Defaults to 0 (phones, and any host that doesn't cap).
+ *
+ * Full-bleed surfaces (video/shorts pagers) and secondary panes with their own width (side
+ * panels, two-pane splits) must override this back to 0 for their subtree.
+ */
+val LocalFeedSidePadding = compositionLocalOf { 0.dp }
+
+/**
  * Merges two [PaddingValues] component-wise, resolving start/end against the current
  * [LocalLayoutDirection].
  */
@@ -70,7 +82,13 @@ fun rememberMergedPadding(
 
 /**
  * Convenience for inner LazyColumns/LazyVerticalGrids inside a [DisappearingScaffold]:
- * merges the scaffold's reserved space with the list's own baseline padding.
+ * merges the scaffold's reserved space with the list's own baseline padding, plus the
+ * [LocalFeedSidePadding] width cap requested by wide layouts.
  */
 @Composable
-fun rememberFeedContentPadding(inner: PaddingValues): PaddingValues = rememberMergedPadding(LocalDisappearingScaffoldPadding.current, inner)
+fun rememberFeedContentPadding(inner: PaddingValues): PaddingValues {
+    val merged = rememberMergedPadding(LocalDisappearingScaffoldPadding.current, inner)
+    val sidePadding = LocalFeedSidePadding.current
+    if (sidePadding <= 0.dp) return merged
+    return rememberMergedPadding(merged, PaddingValues(start = sidePadding, end = sidePadding))
+}

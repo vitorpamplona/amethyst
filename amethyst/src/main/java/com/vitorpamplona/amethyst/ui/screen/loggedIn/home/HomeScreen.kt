@@ -76,6 +76,8 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -273,14 +275,22 @@ private fun HomePages(
         // scaffold padding from LocalDisappearingScaffoldPadding via
         // rememberFeedContentPadding, so feed items still scroll behind the bars.
         Box(modifier = Modifier.fillMaxSize()) {
+            // The left-edge swipe opens the modal drawer; with the drawer permanently
+            // docked there is nothing to open, so leave the pager's own gestures alone.
+            val modalDrawerExists =
+                LocalScreenLayout.current.navigationStyle != NavigationStyle.PERMANENT_DRAWER
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = true,
                 modifier =
-                    Modifier.zonedDrawerSwipe(
-                        pagerState = pagerState,
-                        openDrawer = nav::openDrawer,
-                    ),
+                    if (modalDrawerExists) {
+                        Modifier.zonedDrawerSwipe(
+                            pagerState = pagerState,
+                            openDrawer = nav::openDrawer,
+                        )
+                    } else {
+                        Modifier
+                    },
             ) { page ->
                 HomeFeeds(
                     feedState = tabs[page].feedState,
