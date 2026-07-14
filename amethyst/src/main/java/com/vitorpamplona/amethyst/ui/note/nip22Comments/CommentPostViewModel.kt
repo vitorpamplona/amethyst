@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
@@ -97,8 +97,6 @@ import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -291,7 +289,7 @@ open class CommentPostViewModel :
         this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
 
         this.emojiSuggestions?.reset()
-        this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
     }
 
     fun newPostFor(externalIdentity: ExternalId) {
@@ -645,7 +643,7 @@ open class CommentPostViewModel :
 
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
 
-        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
+        val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
@@ -734,21 +732,6 @@ open class CommentPostViewModel :
             }
 
         return template
-    }
-
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let {
-                EmojiUrlTag(
-                    it.code,
-                    it.link,
-                )
-            }
-        }
     }
 
     fun upload(
@@ -953,12 +936,8 @@ open class CommentPostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-
-        message.replaceCurrentWord(wordToInsert)
+        emojiSuggestions?.autocompleteInto(message, item)
         urlPreviews.update(message.text.toString())
-
-        emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }

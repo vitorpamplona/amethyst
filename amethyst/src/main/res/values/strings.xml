@@ -3611,6 +3611,10 @@
     <string name="playback_actions_dialog_title">Playback</string>
     <string name="video_quality_auto">Auto</string>
 
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
+    <string name="edit_nickname">Edit nickname</string>
+    <string name="nickname_private">Only visible to you</string>
+
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Cast to device</string>
     <string name="cast_stop_casting">Stop casting</string>

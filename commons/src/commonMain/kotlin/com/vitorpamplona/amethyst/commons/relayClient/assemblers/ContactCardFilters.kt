@@ -18,16 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
+package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 
 val ContactCardKindList = listOf(ContactCardEvent.KIND)
 
+/**
+ * Kind:30382 cards *about* [targets], written by [trustedAccounts] (the account
+ * itself plus its WoT trust providers). Fetches nicknames and scores for the
+ * users currently on screen.
+ */
 fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
     targets: Set<HexKey>,
     trustedAccounts: List<HexKey>,
@@ -41,8 +47,31 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
             Filter(
                 kinds = ContactCardKindList,
                 authors = trustedAccounts,
-                tags = mapOf("d" to targets.sorted()),
+                // kind:30382 addresses the target user in the d-tag
+                tags = mapOf(DTag.TAG_NAME to targets.sorted()),
                 since = since,
             ),
     )
 }
+
+/**
+ * Every kind:30382 card *written by* [author] — the account's own nicknames —
+ * for the bulk download at login from the account's relays. Addressable events:
+ * one card per target user, hence the larger limit.
+ */
+fun filterContactCardsByAuthorInTheRelay(
+    relay: NormalizedRelayUrl,
+    author: HexKey,
+    since: Long?,
+    limit: Int = 500,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = ContactCardKindList,
+                authors = listOf(author),
+                limit = limit,
+                since = since,
+            ),
+    )

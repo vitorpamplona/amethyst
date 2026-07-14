@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
+package com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement.spacedBy
@@ -39,14 +39,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.use_direct_url
+import org.jetbrains.compose.resources.stringResource
+
+private val DividerThickness = 0.25.dp
+private val RowSpacing = 10.dp
+private val EmojiSize = Modifier.size(40.dp)
 
 @Composable
 fun ShowEmojiSuggestionList(
@@ -72,23 +75,23 @@ fun ShowEmojiSuggestionList(
                             bottom = 10.dp,
                         ),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = spacedBy(Size10dp),
+                    horizontalArrangement = spacedBy(RowSpacing),
                 ) {
                     AsyncImage(
                         it.link,
                         contentDescription = it.code,
-                        modifier = Size40Modifier,
+                        modifier = EmojiSize,
                     )
                     Text(it.code, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     IconButton(
-                        modifier = Size40Modifier,
+                        modifier = EmojiSize,
                         onClick = {
                             onFullSize(it)
                         },
                     ) {
                         Icon(
                             symbol = MaterialSymbols.OpenInFull,
-                            contentDescription = stringRes(R.string.use_direct_url),
+                            contentDescription = stringResource(Res.string.use_direct_url),
                             modifier = Modifier.size(20.dp),
                         )
                     }

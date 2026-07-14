@@ -52,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDateButton
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePicker

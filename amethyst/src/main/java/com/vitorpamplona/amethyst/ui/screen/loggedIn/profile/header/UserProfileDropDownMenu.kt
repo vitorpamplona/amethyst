@@ -22,16 +22,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip85TrustedAssertions.ui.EditNicknameDialog
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -45,6 +49,19 @@ fun UserProfileDropDownMenu(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
+    val isNicknameDialogOpen = remember { mutableStateOf(false) }
+
+    if (isNicknameDialogOpen.value) {
+        // keeps the account's selected emoji packs loaded for the : autocomplete
+        WatchAndLoadMyEmojiList(accountViewModel)
+        EditNicknameDialog(
+            user = user,
+            contactCards = accountViewModel.account.contactCards,
+            onSave = { petName, summary -> accountViewModel.updateContactCardPetName(user, petName, summary) },
+            onDismiss = { isNicknameDialogOpen.value = false },
+        )
+    }
+
     if (!popupExpanded) return
 
     M3ActionDialog(
@@ -88,6 +105,16 @@ fun UserProfileDropDownMenu(
 
         // Moderation section (if not self)
         if (accountViewModel.userProfile() != user) {
+            M3ActionSection {
+                M3ActionRow(
+                    icon = MaterialSymbols.Edit,
+                    text = stringRes(R.string.edit_nickname),
+                ) {
+                    isNicknameDialogOpen.value = true
+                    onDismiss()
+                }
+            }
+
             M3ActionSection {
                 if (accountViewModel.account.isHidden(user)) {
                     M3ActionRow(

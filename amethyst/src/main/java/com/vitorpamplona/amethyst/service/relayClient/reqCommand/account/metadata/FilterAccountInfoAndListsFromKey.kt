@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsByAuthorInTheRelay
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -130,6 +131,13 @@ fun filterAccountInfoAndListsFromKey(
                     limit = 80,
                     since = since,
                 ),
+        ),
+        // The account's own kind:30382 contact cards (nicknames, NIP-44 encrypted).
+        // Addressable — one card per target user — hence its own larger-limit filter.
+        filterContactCardsByAuthorInTheRelay(
+            relay = relay,
+            author = pubkey,
+            since = since,
         ),
         RelayBasedFilter(
             relay = relay,

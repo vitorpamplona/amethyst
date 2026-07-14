@@ -33,6 +33,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
@@ -46,7 +47,6 @@ import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
@@ -80,8 +80,6 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -276,7 +274,7 @@ class ChatNewMessageViewModel :
             )
 
         this.emojiSuggestions?.reset()
-        this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
 
         this.uploadState =
             ChatFileUploadState(
@@ -580,7 +578,7 @@ class ChatNewMessageViewModel :
         val messageText = message.text.toString()
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-        val emojis = findEmoji(messageText, accountViewModel.account.emoji.myEmojis.value)
+        val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
         val message = messageText
 
@@ -632,16 +630,6 @@ class ChatNewMessageViewModel :
 
         if (draftTag == null) {
             ChatFileSender(room, accountViewModel.account).sendNIP17(uploadsWaitingToBeSent)
-        }
-    }
-
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
         }
     }
 
@@ -776,12 +764,8 @@ class ChatNewMessageViewModel :
     }
 
     fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-
-        message.replaceCurrentWord(wordToInsert)
+        emojiSuggestions?.autocompleteInto(message, item)
         urlPreviews.update(message.text.toString())
-
-        emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }

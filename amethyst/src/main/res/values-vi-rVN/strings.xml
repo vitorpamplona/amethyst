@@ -2630,6 +2630,7 @@
     <string name="media_actions_dialog_title">Thao tác phương tiện</string>
     <string name="playback_actions_dialog_title">Phát lại</string>
     <string name="video_quality_auto">Tự động</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Chiếu đến thiết bị</string>
     <string name="cast_stop_casting">Dừng chiếu</string>

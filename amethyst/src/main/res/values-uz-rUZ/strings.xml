@@ -2689,6 +2689,7 @@
     <string name="media_actions_dialog_title">Media amallar</string>
     <string name="playback_actions_dialog_title">Ijro etish</string>
     <string name="video_quality_auto">Avtomatik</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Qurilmaga uzatish</string>
     <string name="cast_stop_casting">Uzatishni to\'xtatish</string>
