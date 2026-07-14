@@ -61,7 +61,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-51 lists (bookmarks, mute, follow sets) | 🆕 | `amethyst/model/nip51Lists/` |
 | NIP-57 zaps (send + verify) | 🆕 | Needs LN-URL plumbing; `amethyst/service/lnurl/`. |
 | NIP-65 outbox model queries | 🆕 | |
-| NIP-85 GrapeRank web-of-trust (`amy graperank`) | ✅ | `GrapeRankCommand` — outbox-model crawl + scoring engine in `commons/wot/` (`GrapeRank`, `TrustGraph`, `TrustGraphBuilder`); publishes kind:30382 `ContactCardEvent` (diffed against prior ranks), plus `register` / `providers` for the kind:10040 `TrustProviderListEvent` discovery layer. |
+| NIP-85 GrapeRank web-of-trust (`amy graperank`) | ✅ | `GrapeRankCommand` — outbox-model crawl + scoring engine in `commons/wot/` (`GrapeRank`, `TrustGraph`, `TrustGraphBuilder`); every score run persists kind:30382 `ContactCardEvent` cards to the local store (diffed against prior ranks, kind:5 retractions), `publish` mirrors that set to the operator relays via NIP-77 up-sync, `rank` reads cards back, plus `register` / `providers` for the kind:10040 `TrustProviderListEvent` discovery layer. |
 | NIP-72 communities | 🆕 | |
 | NIP-78 app-specific data (settings sync) | 🆕 | |
 | Long-form (NIP-23) publish / read | 🆕 | |
