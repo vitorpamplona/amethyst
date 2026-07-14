@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -118,6 +119,55 @@ class ChannelChatEndToEndTest {
             assertTrue(ChannelChat.isBoundTo(opened.rumor, channelIdHex, rootEpoch))
             assertFalse(ChannelChat.isTyping(ChannelChat.message(alice.pubKey, channelIdHex, rootEpoch, "hi", 1L)))
         }
+
+    @Test
+    fun encryptedImageMessageMatchesArmadaWireFormatAndRoundTrips() {
+        val author = KeyPair().pubKey.toHexKey()
+        val cipher = AESGCM(ByteArray(32) { 0x11 }, ByteArray(16) { 0x22 })
+        val url = "https://blossom.example/ciphertext.bin"
+        val ox = "aa".repeat(32)
+
+        val imeta =
+            ChannelChat.encryptedImageImeta(
+                url = url,
+                mimeType = "image/jpeg",
+                dim = "800x600",
+                blurhash = "LKO2",
+                cipher = cipher,
+                originalHash = ox,
+            )
+        val msg = ChannelChat.imageMessage(author, channelIdHex, 0L, "look", listOf(imeta), createdAt = 5L)
+
+        // Still a channel-bound kind-9; the ciphertext url is appended to content (Armada assembly).
+        assertEquals(9, msg.kind)
+        assertTrue(ChannelChat.isBoundTo(msg, channelIdHex, 0L))
+        assertEquals("look\n$url", msg.content)
+
+        // The imeta tag carries exactly Armada's fields: aes-gcm + hex key/nonce + ox, and NO `x`.
+        val imetaTag = msg.tags.first { it[0] == "imeta" }
+        assertTrue(imetaTag.contains("url $url"))
+        assertTrue(imetaTag.contains("m image/jpeg"))
+        assertTrue(imetaTag.contains("dim 800x600"))
+        assertTrue(imetaTag.contains("encryption-algorithm aes-gcm"))
+        assertTrue(imetaTag.contains("decryption-key ${ByteArray(32) { 0x11 }.toHexKey()}"))
+        assertTrue(imetaTag.contains("decryption-nonce ${ByteArray(16) { 0x22 }.toHexKey()}"))
+        assertTrue(imetaTag.contains("ox $ox"))
+        assertTrue(imetaTag.none { it.startsWith("x ") })
+
+        // Receiver parses the attachment back with the same key/nonce for decryption.
+        val parsed = ChannelChat.encryptedImagesOf(msg)
+        assertEquals(1, parsed.size)
+        val att = parsed.first()
+        assertEquals(url, att.url)
+        assertEquals("image/jpeg", att.mimeType)
+        assertEquals("aes-gcm", att.algo)
+        assertEquals(ox, att.originalHash)
+        assertTrue(att.key.contentEquals(ByteArray(32) { 0x11 }))
+        assertTrue(att.nonce.contentEquals(ByteArray(16) { 0x22 }))
+
+        // A plaintext message has no encrypted attachments.
+        assertTrue(ChannelChat.encryptedImagesOf(ChannelChat.message(author, channelIdHex, 0L, "hi", 1L)).isEmpty())
+    }
 
     @Test
     fun nonMembersCannotDeriveThePlane() =

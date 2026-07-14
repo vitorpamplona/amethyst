@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
@@ -148,6 +149,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntr
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
@@ -330,6 +332,7 @@ import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -495,7 +498,26 @@ class Account(
                 ?.value
                 ?.authority
         if (authority?.isBanned(rumor.pubKey) == true) return
+        registerConcordEncryptedImages(rumor)
         cache.consumeConcordRumor(communityId, channelIdHex, rumor)
+    }
+
+    /**
+     * Register any encrypted image attachments on a Concord message ([ChannelChat.encryptedImagesOf])
+     * so the shared media pipeline can display them: the ciphertext blob's AES-256-GCM key/nonce go
+     * into [com.vitorpamplona.amethyst.AppModules.keyCache], and the OkHttp EncryptedBlobInterceptor
+     * decrypts the blob transparently on fetch (keyed by URL) — the same path NIP-17 encrypted media
+     * uses. Runs for both inbound wraps and our own local echo, so a sent image renders immediately.
+     */
+    private fun registerConcordEncryptedImages(rumor: Event) {
+        val images = ChannelChat.encryptedImagesOf(rumor)
+        if (images.isEmpty()) return
+        val keyCache = Amethyst.instance.keyCache
+        images.forEach { img ->
+            if (img.algo == AESGCM.NAME) {
+                keyCache.add(img.url, AESGCM(img.key, img.nonce), img.mimeType)
+            }
+        }
     }
 
     /**
@@ -2063,6 +2085,28 @@ class Account(
                 else ->
                     ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now())
             }
+        publishConcordWrap(entry, wrap)
+        return true
+    }
+
+    /**
+     * Send a channel message carrying encrypted image attachments ([imetas], built by the composer
+     * from the encrypted upload) — Armada's `encryptAttachments` shape. The ciphertext URLs are
+     * appended to [text] and each rides as a NIP-92 `imeta` with `aes-gcm` decryption params. With no
+     * attachments this is just a plain [sendConcordChannelMessage].
+     */
+    suspend fun sendConcordChannelImageMessage(
+        communityId: String,
+        channelIdHex: String,
+        text: String,
+        imetas: List<IMetaTag>,
+    ): Boolean {
+        if (imetas.isEmpty()) return sendConcordChannelMessage(communityId, channelIdHex, text)
+        if (!isWriteable()) return false
+        val session = concordSessions.sessionFor(communityId) ?: return false
+        val entry = session.entry
+        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now())
         publishConcordWrap(entry, wrap)
         return true
     }

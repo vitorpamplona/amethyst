@@ -24,7 +24,9 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
@@ -32,10 +34,13 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * Composition state for the Concord channel message field, mirroring the other
@@ -62,6 +67,10 @@ open class ConcordNewMessageViewModel : ViewModel() {
 
     var userSuggestions: UserSuggestionState? = null
 
+    // Encrypted image attachments ride through the shared NIP-17 upload pipeline; a picked image
+    // opens the upload dialog, which encrypts + uploads and sends an Armada-shaped image message.
+    var uploadState by mutableStateOf<ChatFileUploadState?>(null)
+
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
@@ -74,6 +83,12 @@ open class ConcordNewMessageViewModel : ViewModel() {
                 // Rank people who have posted in this channel first.
                 priorityPubkeys = { channelAuthors() },
             )
+
+        this.uploadState = ChatFileUploadState(account.settings.defaultFileServer, account.settings.stripLocationOnUpload)
+    }
+
+    fun pickedMedia(media: ImmutableList<SelectedMedia>) {
+        uploadState?.load(media)
     }
 
     private fun channelAuthors(): Set<HexKey> {

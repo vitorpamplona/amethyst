@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /** One decrypted, verified Concord channel message projected for display. */
@@ -157,6 +158,23 @@ object ConcordActions {
         createdAt: Long,
     ): Event {
         val rumor = ChannelChat.message(authorSigner.pubKey, channelId, epoch, text, createdAt)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+    }
+
+    /**
+     * Builds an encrypted-seal channel message wrap carrying one or more encrypted image [imetas]
+     * (Armada `encryptAttachments` shape) to publish on the [channel] plane.
+     */
+    suspend fun buildChannelImageMessage(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        text: String,
+        imetas: List<IMetaTag>,
+        createdAt: Long,
+    ): Event {
+        val rumor = ChannelChat.imageMessage(authorSigner.pubKey, channelId, epoch, text, imetas, createdAt)
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 

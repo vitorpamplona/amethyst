@@ -43,6 +43,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +66,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -72,11 +75,15 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSugge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.send.ConcordNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ReplyModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
@@ -87,10 +94,13 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -369,6 +379,21 @@ private fun ConcordMessageComposer(
         onDispose { newMessageModel.userSuggestions?.reset() }
     }
 
+    // Encrypted image attachments: a picked image opens this dialog, which encrypts + uploads via the
+    // shared NIP-17 pipeline and sends an Armada-shaped image message on the channel plane.
+    newMessageModel.uploadState?.let { uploadState ->
+        uploadState.multiOrchestrator?.let {
+            ConcordFileUploadDialog(
+                newMessageModel = newMessageModel,
+                state = uploadState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onUpload = { onMessageSent() },
+                onCancel = uploadState::reset,
+            )
+        }
+    }
+
     newMessageModel.replyTo.value?.let {
         DisplayReplyingToNote(it, accountViewModel, nav) { newMessageModel.clearReply() }
         ReplyModeToggle(
@@ -402,6 +427,9 @@ private fun ConcordMessageComposer(
                     accountViewModel.sendConcordTyping(community, channel)
                 }
             },
+            onContentReceived = { uri, mimeType ->
+                newMessageModel.pickedMedia(persistentListOf(SelectedMedia(uri, mimeType)))
+            },
             inputTransformation = MentionPreservingInputTransformation,
             outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth(),
@@ -411,6 +439,19 @@ private fun ConcordMessageComposer(
                     text = stringRes(com.vitorpamplona.amethyst.R.string.reply_here),
                     color = MaterialTheme.colorScheme.placeholderText,
                 )
+            },
+            leadingIcon = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 4.dp, end = 4.dp),
+                ) {
+                    SelectFromGallery(
+                        isUploading = false,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                        modifier = Modifier,
+                        onImageChosen = newMessageModel::pickedMedia,
+                    )
+                }
             },
             trailingIcon = {
                 ThinSendButton(
@@ -436,4 +477,76 @@ private fun ConcordMessageComposer(
                 ),
         )
     }
+}
+
+/**
+ * The picked-image confirmation dialog for a Concord channel. Reuses the shared NIP-17 upload
+ * pipeline: it always encrypts (no encryption toggle is shown, and [SuccessfulUploads.toConcordImeta]
+ * fails closed if a cipher is somehow absent), uploads the ciphertext, then sends one Armada-shaped
+ * image message ([Account.sendConcordChannelImageMessage]) carrying every attachment's `imeta`.
+ */
+@Composable
+private fun ConcordFileUploadDialog(
+    newMessageModel: ConcordNewMessageViewModel,
+    state: ChatFileUploadState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onUpload: suspend () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    ChatFileUploadDialog(
+        state = state,
+        title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_send_image_title)) },
+        upload = {
+            scope.launch(Dispatchers.IO) {
+                val community = newMessageModel.communityId
+                val channel = newMessageModel.channelId
+                if (community == null || channel == null) return@launch
+
+                ChatFileUploader(accountViewModel.account).justUploadNIP17(
+                    viewState = state,
+                    onError = { title, message ->
+                        scope.launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                    },
+                    onEncryptedUploadError = { title, message ->
+                        scope.launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                    },
+                    context = context,
+                    onceUploaded = { uploads ->
+                        val imetas = uploads.mapNotNull { it.toConcordImeta() }
+                        if (imetas.isNotEmpty()) {
+                            accountViewModel.account.sendConcordChannelImageMessage(community, channel, "", imetas)
+                        }
+                        onUpload()
+                    },
+                )
+
+                accountViewModel.account.settings.changeDefaultFileServer(state.selectedServer)
+                accountViewModel.account.settings.changeStripLocationOnUpload(state.stripMetadata)
+            }
+        },
+        onCancel = onCancel,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+/**
+ * Turns an encrypted upload into the Armada-shaped `imeta` (via [ChannelChat.encryptedImageImeta]).
+ * Returns null when the upload carried no cipher — so a non-encrypted blob is never sent as a Concord
+ * image (fails closed, protecting the community's end-to-end guarantee).
+ */
+private fun SuccessfulUploads.toConcordImeta(): IMetaTag? {
+    val cipher = cipher ?: return null
+    return ChannelChat.encryptedImageImeta(
+        url = result.url,
+        mimeType = result.mimeTypeBeforeEncryption,
+        dim = result.fileHeader.dim?.toString(),
+        blurhash = result.fileHeader.blurHash?.blurhash,
+        cipher = cipher,
+        originalHash = result.hashBeforeEncryption,
+    )
 }
