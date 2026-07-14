@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction.repost
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -44,7 +43,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +57,6 @@ private val AUTHOR_METADATA_ID = "e1".repeat(32)
 private val LONG_NAME_METADATA_ID = "e2".repeat(32)
 
 private val PLAIN_ID = "1".repeat(64)
-private val REPOST_ID = "2".repeat(64)
 private val RUMOR_ID = "3".repeat(64)
 private val EDITED_ID = "4".repeat(64)
 private val EDIT_VERSION_ID = "5".repeat(64)
@@ -108,7 +105,6 @@ fun NoteHeaderFirstRowDensityPreview() {
     val draftEvent = DraftWrapEvent(DRAFT_ID, AUTHOR, now - 300, arrayOf(arrayOf("d", "preview-draft")), "", "x")
 
     val plain: Note = LocalCache.getOrCreateNote(PLAIN_ID)
-    val repost: Note = LocalCache.getOrCreateNote(REPOST_ID)
     val rumorPinned: Note = LocalCache.getOrCreateNote(RUMOR_ID)
     val edited: Note = LocalCache.getOrCreateNote(EDITED_ID)
     val editVersion: Note = LocalCache.getOrCreateNote(EDIT_VERSION_ID)
@@ -132,7 +128,6 @@ fun NoteHeaderFirstRowDensityPreview() {
 
             LocalCache.justConsume(plainEvent, null, true)
             LocalCache.justConsume(TextNoteEvent(EDIT_VERSION_ID, AUTHOR, now - 60, emptyArray(), "GM! (fixed typo)", "x"), null, true)
-            LocalCache.justConsume(RepostEvent(REPOST_ID, AUTHOR, now - 300, arrayOf(arrayOf("e", PLAIN_ID)), plainEvent.toJson(), "x"), null, true)
             // An empty sig is what marks a note as a private rumor.
             LocalCache.justConsume(TextNoteEvent(RUMOR_ID, AUTHOR, now - 300, emptyArray(), "just between us", ""), null, true)
             LocalCache.justConsume(TextNoteEvent(EDITED_ID, AUTHOR, now - 300, emptyArray(), "GM!", "x"), null, true)
@@ -196,9 +191,6 @@ fun NoteHeaderFirstRowDensityPreview() {
         Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
             // Bare minimum: username + time + options
             HeaderRowSample(plain, accountViewModel)
-
-            // One quiet mark: repost
-            HeaderRowSample(repost, accountViewModel)
 
             // Quiet icon marks: private rumor + pinned
             HeaderRowSample(rumorPinned, accountViewModel, isPinned = true)

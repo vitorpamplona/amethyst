@@ -45,7 +45,6 @@
     <string name="timestamp_it">Timestamp it</string>
     <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
     <string name="timestamp_pending_short">OTS: Pending</string>
-    <string name="pending">Pending</string>
     <string name="request_deletion">Request Deletion</string>
     <string name="block_report">Block / Report</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>

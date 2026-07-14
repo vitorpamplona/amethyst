@@ -31,18 +31,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
-private val QuietMarkFontSize = 12.sp
-
 /**
- * Quiet passive-state marker for note headers: Boosted, Draft, Edited, pinned,
+ * Quiet passive-state marker for note headers: Draft, Edited, pinned,
  * private rumor, ... One spec for all of them so the header reads as a single
- * system: 12sp medium gray text with an optional 12dp icon. Contrast with
- * [HeaderPill], which is the loud tier for tappable/verifiable metadata.
+ * system: bold gray text at the row's text size with an optional 16dp icon.
+ * Contrast with [HeaderPill], the chip tier for tappable/verifiable metadata.
  *
  * Spacing between markers is owned by the parent row (`Arrangement.spacedBy`),
  * not baked in here.
@@ -65,16 +62,14 @@ fun QuietMark(
                 symbol = symbol,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.placeholderText,
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(16.dp),
             )
         }
         if (text != null) {
             Text(
                 text = text,
                 color = MaterialTheme.colorScheme.placeholderText,
-                fontSize = QuietMarkFontSize,
-                lineHeight = QuietMarkFontSize,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
             )
         }

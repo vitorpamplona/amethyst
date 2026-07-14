@@ -74,10 +74,12 @@ fun DisplayOts(
             )
         },
         whenPending = {
+            // The stamp icon plus an ellipsis: attestation requested, not yet
+            // anchored. The content description carries the words.
             HeaderPill(
                 symbol = MaterialSymbols.OpenTimestamps,
-                text = stringRes(id = R.string.pending),
-                contentDescription = stringRes(R.string.ots_info_title),
+                text = "…",
+                contentDescription = stringRes(R.string.timestamp_pending_short),
             )
         },
     )

@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
@@ -744,7 +745,7 @@ private fun FullBleedNoteCompose(
                     // The dotted TimeAgo carries its own " • " separator and the
                     // options button has slack around its icon: keep the pair unspaced.
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TimeAgo(note = baseNote)
+                        TimeAgo(note = baseNote, style = TimeAgoStyle.DottedTight)
 
                         MoreOptionsButton(baseNote, editState, accountViewModel, nav)
                     }

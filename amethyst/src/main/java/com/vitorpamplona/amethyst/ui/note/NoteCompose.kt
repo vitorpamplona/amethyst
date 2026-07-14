@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
-import com.vitorpamplona.amethyst.ui.note.elements.BoostedMark
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
@@ -91,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
@@ -1834,10 +1834,6 @@ fun FirstUserInfoRow(
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         }
 
-        if (isRepost) {
-            BoostedMark()
-        }
-
         CheckAndDisplayEditStatus(editState)
 
         if (isDraft) {
@@ -1899,7 +1895,7 @@ fun FirstUserInfoRow(
         // The dotted TimeAgo carries its own " • " separator and the options
         // button has slack around its icon, so this pair stays unspaced.
         Row(verticalAlignment = CenterVertically) {
-            TimeAgo(baseNote)
+            TimeAgo(baseNote, style = TimeAgoStyle.DottedTight)
 
             if (moreOptions == null) {
                 MoreOptionsButton(baseNote, editState, accountViewModel, nav)

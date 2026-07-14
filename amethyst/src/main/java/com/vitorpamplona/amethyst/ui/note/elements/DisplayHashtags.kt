@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,7 +38,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -85,7 +83,6 @@ private fun DisplayTagList(
 ) {
     ClickableTextColor(
         "#$firstTag",
-        style = LocalTextStyle.current.copy(fontSize = Font12SP),
         linkColor = MaterialTheme.colorScheme.lessImportantLink,
         overflow = TextOverflow.Ellipsis,
         maxLines = 1,
