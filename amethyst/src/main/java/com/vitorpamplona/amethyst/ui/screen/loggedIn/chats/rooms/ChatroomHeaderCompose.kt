@@ -372,9 +372,20 @@ private fun RelayGroupRoomCompose(
             stringRes(R.string.relay_group_no_messages_yet)
         }
 
+    val groupPicture = channel.profilePicture()?.ifBlank { null }
+    val channelPicture =
+        if (groupPicture != null) {
+            groupPicture
+        } else {
+            // Missing/blank group picture: fall back to the host relay's NIP-11 icon
+            // (loadRelayInfo fetches the doc on a cache miss).
+            val relayInfo by loadRelayInfo(channel.groupId.relayUrl)
+            relayInfo.icon?.ifBlank { null }
+        }
+
     ChannelName(
         channelIdHex = channel.groupId.id,
-        channelPicture = channel.profilePicture(),
+        channelPicture = channelPicture,
         channelTitle = { modifier ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
                 Text(

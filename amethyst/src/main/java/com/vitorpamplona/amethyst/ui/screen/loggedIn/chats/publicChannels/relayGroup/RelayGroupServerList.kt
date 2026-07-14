@@ -35,11 +35,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.looksLikeNonNip29Relay
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
@@ -54,6 +59,7 @@ fun RelayGroupServerRow(
     val host = relay?.displayUrl() ?: relayUrl
     val info = relay?.let { loadRelayInfo(it) }
     val name = info?.value?.name?.takeIf { it.isNotBlank() } ?: host
+    val missingNip29 = info?.value?.let { looksLikeNonNip29Relay(it) } == true
 
     Row(
         modifier =
@@ -70,6 +76,7 @@ fun RelayGroupServerRow(
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             pingInMs = 0,
+            iconModifier = LargeRelayIconModifier,
         )
         Column(Modifier.weight(1f)) {
             Text(
@@ -86,6 +93,26 @@ fun RelayGroupServerRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+            if (missingNip29) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.warningColor,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        text = stringRes(R.string.relay_group_relay_not_nip29),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.warningColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
         Icon(
