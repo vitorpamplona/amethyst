@@ -620,6 +620,35 @@ On Fedora Silverblue / very minimal distros, FUSE might be missing. Use
 ./Amethyst-*.AppImage --appimage-extract-and-run
 ```
 
+### Linux — blurry UI on Wayland with fractional scaling
+
+Amethyst Desktop (like every Compose Desktop app) renders through XWayland on
+Wayland sessions — Compose's Skia layer has no native Wayland backend yet
+(tracked upstream as
+[SKIKO-890](https://youtrack.jetbrains.com/issue/SKIKO-890); our migration
+plan lives in `desktopApp/plans/2026-07-14-wayland-migration.md`). With a
+fractional display scale (125%/150%/175%) some compositors upscale XWayland
+clients, which looks blurry.
+
+Workarounds, best first:
+
+1. Tell the app to render at the higher scale itself, then launch it:
+
+   ```bash
+   Amethyst -Dsun.java2d.uiScale=2 &     # tar.gz / deb / rpm binary
+   ```
+
+   For a `.desktop`-launched install, edit the `Exec=` line to add the flag.
+2. GNOME: enable `scale-monitor-framebuffer` +
+   `xwayland-native-scaling` experimental features (GNOME 47+), which let
+   XWayland clients render sharp at fractional scales.
+3. KDE Plasma: System Settings → Display → "Legacy applications (X11)" →
+   *Apply scaling themselves*.
+4. Use an integer scale (100%/200%) — no upscaling happens.
+
+Do **not** set `-Dawt.toolkit.name=WLToolkit`: the app will crash at startup
+(see the migration plan above).
+
 ---
 
 ## Uninstall + state paths

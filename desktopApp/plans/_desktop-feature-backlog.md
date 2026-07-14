@@ -55,6 +55,7 @@ priority queue above; 3–10 captured for later.
 | 9 | WoT-scored notification filter + undo-send | Gossip, Snort | commons | Calmer UX |
 | 10 | Per-relay column health (sparkline + dot) | Wisp, Gossip | commons | Reuse EOSE manager |
 | 11 | Discord-style "communities" sidebar (NIP-29) | Flotilla, Chachi | desktopApp + commons | Sidebar second purpose |
+| 12 | xdg-desktop-portal file picker (Linux) | — (platform hygiene) | desktopApp | Replace AWT `FileDialog` with the `org.freedesktop.portal.FileChooser` D-Bus portal (AWT fallback kept). Native GTK/KDE dialogs, lets the Flatpak drop broad fs access, and removes the biggest app-side unknown for the eventual Wayland migration — see `2026-07-14-wayland-migration.md` Phase 0. Needs a D-Bus client dep (license-check first, e.g. hypfvieh/dbus-java MIT) |
 
 (Extra row #11 added: communities sidebar was the 10th in the original survey;
 WoT-notif-filter + undo-send promoted to its own row for clarity.)

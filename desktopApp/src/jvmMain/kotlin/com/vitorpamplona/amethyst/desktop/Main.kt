@@ -247,6 +247,21 @@ fun main() {
     }
 
     Log.minLevel = LogLevel.DEBUG
+
+    // Linux: record the session type once so display bug reports (blurry
+    // fractional scaling, rendering glitches) are triageable. Compose/Skiko
+    // has no native Wayland backend (SKIKO-890) — on a Wayland session we
+    // always run through XWayland. See
+    // desktopApp/plans/2026-07-14-wayland-migration.md.
+    if (PlatformInfo.host.isLinux) {
+        val sessionType = System.getenv("XDG_SESSION_TYPE") ?: "unset"
+        val onWayland = sessionType == "wayland" || System.getenv("WAYLAND_DISPLAY") != null
+        Log.i("Main") {
+            "Linux session type: $sessionType" +
+                if (onWayland) " — rendering via XWayland (no native Wayland support yet)" else ""
+        }
+    }
+
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
         Thread {
