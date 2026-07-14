@@ -355,6 +355,8 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
 
 @Composable
 fun NoteCompose(
@@ -1761,7 +1763,10 @@ fun SecondUserInfoRow(
 }
 
 @Composable
-fun DisplayExpiration(expirationDate: Long) {
+fun DisplayExpiration(
+    expirationDate: Long,
+    accountViewModel: AccountViewModel,
+) {
     val context = LocalContext.current
     // Beyond a year timeAheadNoDot switches to a full date, which is too wide
     // for the pill: clamp it.
@@ -1775,6 +1780,13 @@ fun DisplayExpiration(expirationDate: Long) {
         symbol = MaterialSymbols.Timer,
         text = text,
         contentDescription = stringRes(R.string.expiration_date_label),
+        onClick = {
+            accountViewModel.toastManager.toast(
+                R.string.expiration_date_label,
+                R.string.expiration_info_description,
+                SimpleDateFormat.getDateTimeInstance().format(Date(expirationDate * 1000)),
+            )
+        },
     )
 }
 
@@ -1886,13 +1898,13 @@ fun FirstUserInfoRow(
 
         val pow = remember(noteEvent) { noteEvent?.strongPoWOrNull() }
         if (pow != null) {
-            DisplayPoW(pow)
+            DisplayPoW(pow, accountViewModel)
         }
 
-        Expiration(baseNote)
+        Expiration(baseNote, accountViewModel)
 
         if (baseNote.isPrivateRumor()) {
-            PrivateRumorMark()
+            PrivateRumorMark(accountViewModel)
         }
 
         if (isPinned) {
@@ -1924,10 +1936,16 @@ fun PinnedMark() {
 }
 
 @Composable
-fun PrivateRumorMark() {
+fun PrivateRumorMark(accountViewModel: AccountViewModel) {
     QuietMark(
         symbol = MaterialSymbols.Lock,
         contentDescription = stringRes(R.string.private_rumor_mark),
+        onClick = {
+            accountViewModel.toastManager.toast(
+                R.string.private_rumor_info_title,
+                R.string.private_rumor_info_description,
+            )
+        },
     )
 }
 
@@ -1968,12 +1986,15 @@ fun JumpToParentReplyButton(
 }
 
 @Composable
-fun Expiration(note: Note) {
+fun Expiration(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
     val event = note.event
     if (event != null) {
         val expires = remember(event) { event.expiration() }
         if (expires != null) {
-            DisplayExpiration(expires)
+            DisplayExpiration(expires, accountViewModel)
         }
     }
 }

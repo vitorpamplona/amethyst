@@ -740,7 +740,7 @@ private fun FullBleedNoteCompose(
 
                     CheckAndDisplayEditStatus(editState)
 
-                    Expiration(baseNote)
+                    Expiration(baseNote, accountViewModel)
 
                     // The dotted TimeAgo carries its own " • " separator and the
                     // options button has slack around its icon: keep the pair unspaced.
@@ -781,7 +781,7 @@ private fun FullBleedNoteCompose(
 
                     val pow = remember(noteEvent) { noteEvent.strongPoWOrNull() }
                     if (pow != null) {
-                        DisplayPoW(pow)
+                        DisplayPoW(pow, accountViewModel)
                     }
 
                     if (isDraft) {

@@ -25,6 +25,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
@@ -32,20 +34,30 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 @Preview
 fun DisplayPoWPreview() {
     ThemeComparisonColumn(
-        toPreview = { DisplayPoW(pow = 24) },
+        toPreview = { DisplayPoW(pow = 24, accountViewModel = mockAccountViewModel()) },
     )
 }
 
 /**
  * Compact pill showing the proof of work a received note carries: a gear plus
- * the difficulty in leading zero bits. Sits inline in note headers, so it
- * stays at text height.
+ * the difficulty in leading zero bits. Tapping it explains what the number
+ * means. Sits inline in note headers, so it stays at text height.
  */
 @Composable
-fun DisplayPoW(pow: Int) {
+fun DisplayPoW(
+    pow: Int,
+    accountViewModel: AccountViewModel,
+) {
     HeaderPill(
         symbol = MaterialSymbols.Manufacturing,
         text = pow.toString(),
         contentDescription = stringRes(R.string.pow_settings_title),
+        onClick = {
+            accountViewModel.toastManager.toast(
+                R.string.pow_settings_title,
+                R.string.pow_info_description,
+                pow.toString(),
+            )
+        },
     )
 }
