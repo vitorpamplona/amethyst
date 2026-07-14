@@ -36,13 +36,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
-import com.vitorpamplona.amethyst.ui.navigation.topbars.LoggedInUserPictureDrawer
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarNavigationIcon
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -71,13 +69,7 @@ fun NappletsTopBar(
                 NappletsTopNavFilterBar(accountViewModel)
             }
         },
-        navigationIcon = {
-            if (nav.canPop()) {
-                IconButton(onClick = nav::popBack) { ArrowBackIcon() }
-            } else if (!LocalScreenLayout.current.isLargeScreen) {
-                LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
-            }
-        },
+        navigationIcon = { TopBarNavigationIcon(accountViewModel, nav) },
         actions = {
             IconButton(onClick = { nav.nav(Route.ConnectedApps) }) {
                 Icon(MaterialSymbols.Tune, contentDescription = stringResource(R.string.napplet_manage_permissions))

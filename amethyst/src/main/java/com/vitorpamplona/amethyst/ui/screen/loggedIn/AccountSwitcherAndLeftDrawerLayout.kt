@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,13 +37,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -91,15 +94,30 @@ fun AccountSwitcherAndLeftDrawerLayout(
             }
         }
 
-    when (LocalScreenLayout.current.navigationStyle) {
-        NavigationStyle.PERMANENT_DRAWER ->
-            PermanentDrawerShell(accountViewModel, nav, openSheetFunction, content)
+    // The layout tier can change while the app runs (fold/unfold, rotation, window resize)
+    // and the shells below place `content` at different composition positions. Movable
+    // content lets the whole NavHost subtree MOVE between those positions instead of being
+    // disposed and rebuilt, preserving every screen's remember/rememberSaveable state.
+    val currentContent by rememberUpdatedState(content)
+    val movableContent = remember { movableContentOf { currentContent() } }
 
-        NavigationStyle.NAV_RAIL ->
-            ModalDrawerShell(accountViewModel, nav, openSheetFunction, showRail = true, content)
+    val docked = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
-        NavigationStyle.BOTTOM_BAR ->
-            ModalDrawerShell(accountViewModel, nav, openSheetFunction, showRail = false, content)
+    // Publish docked-ness on the Nav so drawer consumers (openDrawer, edge swipes, the
+    // status editor) can behave correctly without each re-deriving the layout tier.
+    LaunchedEffect(docked) {
+        nav.isDrawerDocked = docked
+        // Entering the permanent tier with the modal drawer still Open would otherwise
+        // carry the stale Open value back to the modal tier and pop the drawer uninvited.
+        if (docked && !nav.drawerState.isClosed) {
+            nav.drawerState.snapTo(DrawerValue.Closed)
+        }
+    }
+
+    if (docked) {
+        PermanentDrawerShell(accountViewModel, nav, openSheetFunction, movableContent)
+    } else {
+        ModalDrawerShell(accountViewModel, nav, openSheetFunction, movableContent)
     }
 
     // Sheet content
@@ -125,7 +143,7 @@ fun AccountSwitcherAndLeftDrawerLayout(
 }
 
 /**
- * Compact and Medium windows: the drawer slides in as a modal sheet. On Medium a
+ * Compact and Medium windows: the drawer slides in as a modal sheet. On Medium an
  * [AppNavigationRail] sits at the left edge in place of the phone bottom bar.
  */
 @Composable
@@ -133,15 +151,13 @@ private fun ModalDrawerShell(
     accountViewModel: AccountViewModel,
     nav: Nav,
     openSheet: () -> Unit,
-    showRail: Boolean,
     content: @Composable () -> Unit,
 ) {
     val orientation = LocalConfiguration.current.orientation
-    val currentDrawerState = nav.drawerState.currentValue
     LaunchedEffect(key1 = orientation) {
-        if (
-            orientation == Configuration.ORIENTATION_LANDSCAPE && currentDrawerState == DrawerValue.Closed
-        ) {
+        // Dismiss an open drawer when the device rotates to landscape; the layout
+        // underneath changes too much for the sheet to stay meaningful.
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
             nav.drawerState.close()
         }
     }
@@ -160,6 +176,8 @@ private fun ModalDrawerShell(
             // Suspend the left-edge swipe while a selection/caret handle is dragged over an embedded surface,
             // so a handle drag near the left edge (or the auto-scroll edge drag) doesn't open the drawer.
             !EmbeddedSelectionDrag.dragging
+
+    val showRail = LocalScreenLayout.current.navigationStyle == NavigationStyle.NAV_RAIL
 
     ModalNavigationDrawer(
         drawerState = nav.drawerState,
@@ -213,6 +231,10 @@ private fun PermanentDrawerShell(
     }
 }
 
+/** Step size for the feed side padding, so continuous window resizes republish the value
+ * (and invalidate every feed reading it) at most once per step instead of once per pixel. */
+private val SidePaddingQuantum = 8.dp
+
 /**
  * Hosts the navigation content and publishes the side padding feeds need to cap their content
  * at [FeedContentMaxWidth] within this pane, via [LocalFeedSidePadding].
@@ -222,12 +244,11 @@ private fun CenterPane(
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
-    BoxWithConstraints(modifier) {
-        val sidePadding = ((maxWidth - FeedContentMaxWidth) / 2).coerceAtLeast(0.dp)
+    BoxWithConstraints(modifier.fillMaxHeight()) {
+        val rawPadding = ((maxWidth - FeedContentMaxWidth) / 2).coerceAtLeast(0.dp)
+        val sidePadding = Dp((rawPadding.value / SidePaddingQuantum.value).toInt() * SidePaddingQuantum.value)
         CompositionLocalProvider(LocalFeedSidePadding provides sidePadding) {
-            Box(Modifier.fillMaxSize()) {
-                content()
-            }
+            content()
         }
     }
 }

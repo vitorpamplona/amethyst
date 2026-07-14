@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -38,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
-import com.google.accompanist.adaptive.TwoPaneStrategy
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalFeedSidePadding
@@ -68,14 +66,20 @@ fun MessagesTwoPane(
     val scope = rememberCoroutineScope()
     val twoPaneNav = remember { TwoPaneNav(nav, scope) }
 
+    // Keyed on the size class: the pane can cross the Medium/Expanded boundary while this
+    // screen stays composed (window resize, the notification panel docking/undocking), and
+    // an unkeyed remember would keep serving the stale split fraction.
     val strategy =
-        remember {
+        remember(widthSizeClass) {
             if (widthSizeClass == WindowWidthSizeClass.Expanded) {
                 HorizontalTwoPaneStrategy(splitFraction = 1f / 3f)
             } else {
                 HorizontalTwoPaneStrategy(splitFraction = 1f / 2.5f)
             }
         }
+
+    val act = LocalContext.current.getActivity()
+    val displayFeatures = calculateDisplayFeatures(act)
 
     Scaffold(
         modifier = Modifier.imePadding(),
@@ -96,75 +100,59 @@ fun MessagesTwoPane(
         // Each pane manages its own width; the shell's center-pane reading cap must not
         // re-pad the lists inside them.
         CompositionLocalProvider(LocalFeedSidePadding provides 0.dp) {
-            TwoPaneContent(padding, knownFeedContentState, newFeedContentState, twoPaneNav, strategy, accountViewModel, nav)
+            TwoPane(
+                first = {
+                    Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
+                        RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
+
+                        // Pre-warm NIP-11 for joined groups' host relays so the relay-signed check is a
+                        // cache hit when those groups surface in discovery or any gated surface.
+                        WarmJoinedRelayGroupNip11(accountViewModel)
+
+                        // The inline-vs-grouped NIP-29 preference lives in Settings › Messages; joined
+                        // groups (or per-relay rows in grouped mode) are woven into the list itself.
+                        ChatroomList(
+                            knownFeedContentState,
+                            newFeedContentState,
+                            accountViewModel,
+                            twoPaneNav,
+                        )
+
+                        Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
+                            ChannelFabColumn(nav)
+                        }
+                    }
+                },
+                second = {
+                    Box(Modifier.fillMaxSize().padding(padding)) {
+                        twoPaneNav.innerNav.value?.let {
+                            if (it is Route.Room) {
+                                ChatroomView(
+                                    room = it.toKey(),
+                                    accountViewModel = accountViewModel,
+                                    draftMessage = it.message,
+                                    replyToNote = it.replyId,
+                                    editFromDraft = it.draftId,
+                                    expiresDays = it.expiresDays,
+                                    nav = nav,
+                                )
+                            }
+
+                            if (it is Route.PublicChatChannel) {
+                                PublicChatChannelView(
+                                    channelId = it.id,
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                )
+                            }
+                        }
+                    }
+                },
+                strategy = strategy,
+                displayFeatures = displayFeatures,
+                foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
-}
-
-@Composable
-private fun TwoPaneContent(
-    padding: PaddingValues,
-    knownFeedContentState: FeedContentState,
-    newFeedContentState: FeedContentState,
-    twoPaneNav: TwoPaneNav,
-    strategy: TwoPaneStrategy,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val act = LocalContext.current.getActivity()
-    val displayFeatures = calculateDisplayFeatures(act)
-
-    TwoPane(
-        first = {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
-                RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
-
-                // Pre-warm NIP-11 for joined groups' host relays so the relay-signed check is a
-                // cache hit when those groups surface in discovery or any gated surface.
-                WarmJoinedRelayGroupNip11(accountViewModel)
-
-                // The inline-vs-grouped NIP-29 preference lives in Settings › Messages; joined
-                // groups (or per-relay rows in grouped mode) are woven into the list itself.
-                ChatroomList(
-                    knownFeedContentState,
-                    newFeedContentState,
-                    accountViewModel,
-                    twoPaneNav,
-                )
-
-                Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
-                    ChannelFabColumn(nav)
-                }
-            }
-        },
-        second = {
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                twoPaneNav.innerNav.value?.let {
-                    if (it is Route.Room) {
-                        ChatroomView(
-                            room = it.toKey(),
-                            accountViewModel = accountViewModel,
-                            draftMessage = it.message,
-                            replyToNote = it.replyId,
-                            editFromDraft = it.draftId,
-                            expiresDays = it.expiresDays,
-                            nav = nav,
-                        )
-                    }
-
-                    if (it is Route.PublicChatChannel) {
-                        PublicChatChannelView(
-                            channelId = it.id,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                }
-            }
-        },
-        strategy = strategy,
-        displayFeatures = displayFeatures,
-        foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
-        modifier = Modifier.fillMaxSize(),
-    )
 }

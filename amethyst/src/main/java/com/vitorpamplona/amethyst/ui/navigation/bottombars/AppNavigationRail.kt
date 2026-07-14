@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,28 +34,20 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
-import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
-import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.navigation.topbars.LoggedInUserPictureDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size27Modifier
-import com.vitorpamplona.amethyst.ui.theme.onSurface65
 
 /**
  * Medium-width windows: a left rail that carries the same user-configured destinations as the
  * phone bottom bar ([BottomBarEntry] list, built-ins and pinned favorites interleaved), so the
  * user's customization and new-item dots carry over. The header avatar opens the modal drawer,
- * mirroring the avatar button in the phone top bars.
+ * mirroring the avatar button in the phone top bars. Re-tapping the selected item routes
+ * through [TabReselectCoordinator] to the screen's own scroll-to-top/refresh handler.
  */
 @Composable
 fun AppNavigationRail(
@@ -68,8 +59,7 @@ fun AppNavigationRail(
     val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
     val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
 
-    // Captured favicons, so a pinned web favorite shows the site's icon instead of the generic globe.
-    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+    val reselectCoordinator = LocalTabReselectCoordinator.current
 
     val navBackStackEntry by nav.controller.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -93,18 +83,14 @@ fun AppNavigationRail(
                         val selected = currentDestination?.hasRoute(destination::class) == true
                         NavigationRailItem(
                             selected = selected,
-                            onClick = { if (!selected) nav.navBottomBar(destination) },
-                            icon = {
-                                Box(Size27Modifier, contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        symbol = def.icon,
-                                        contentDescription = stringRes(def.labelRes),
-                                        modifier = Size25Modifier,
-                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
-                                    )
-                                    AddNotifIconIfNeeded(destination, accountViewModel, Modifier.align(Alignment.TopEnd))
+                            onClick = {
+                                if (selected) {
+                                    reselectCoordinator.reselect(destination)
+                                } else {
+                                    nav.navBottomBar(destination)
                                 }
                             },
+                            icon = { NotifiableIcon(selected, def, destination, accountViewModel) },
                         )
                     }
 
@@ -125,27 +111,16 @@ fun AppNavigationRail(
                                     else -> false
                                 }
                             }
-                        val iconModel =
-                            when (fav) {
-                                is FavoriteApp.WebApp ->
-                                    remember(fav, iconKeys) {
-                                        OmniboxInput.hostOf(fav.url)?.let(BrowserIconRegistry::iconModelFor)
-                                    }
-                                is FavoriteApp.NostrApp -> rememberNappletIconModel(fav.coordinate)
-                            }
                         NavigationRailItem(
                             selected = selected,
-                            onClick = { if (!selected) nav.navBottomBar(destination) },
-                            icon = {
-                                Box(Size27Modifier, contentAlignment = Alignment.Center) {
-                                    FavoriteAppIcon(
-                                        app = fav,
-                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
-                                        modifier = Size25Modifier,
-                                        iconModel = iconModel,
-                                    )
+                            onClick = {
+                                if (selected) {
+                                    reselectCoordinator.reselect(destination)
+                                } else {
+                                    nav.navBottomBar(destination)
                                 }
                             },
+                            icon = { FavoriteEntryIcon(fav, selected, rememberFavoriteIconModel(fav)) },
                         )
                     }
                 }

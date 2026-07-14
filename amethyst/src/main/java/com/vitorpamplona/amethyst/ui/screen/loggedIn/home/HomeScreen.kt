@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.ui.components.zonedDrawerSwipe
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
@@ -76,11 +75,10 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
-import com.vitorpamplona.amethyst.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -275,22 +273,10 @@ private fun HomePages(
         // scaffold padding from LocalDisappearingScaffoldPadding via
         // rememberFeedContentPadding, so feed items still scroll behind the bars.
         Box(modifier = Modifier.fillMaxSize()) {
-            // The left-edge swipe opens the modal drawer; with the drawer permanently
-            // docked there is nothing to open, so leave the pager's own gestures alone.
-            val modalDrawerExists =
-                LocalScreenLayout.current.navigationStyle != NavigationStyle.PERMANENT_DRAWER
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = true,
-                modifier =
-                    if (modalDrawerExists) {
-                        Modifier.zonedDrawerSwipe(
-                            pagerState = pagerState,
-                            openDrawer = nav::openDrawer,
-                        )
-                    } else {
-                        Modifier
-                    },
+                modifier = Modifier.zonedDrawerSwipeIfModal(pagerState, nav),
             ) { page ->
                 HomeFeeds(
                     feedState = tabs[page].feedState,

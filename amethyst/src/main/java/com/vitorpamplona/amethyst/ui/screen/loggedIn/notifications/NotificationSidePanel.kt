@@ -39,30 +39,35 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalFeedSidePadding
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Size12dp
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 
 /**
  * The docked notification feed shown on very wide windows, to the right of the center pane.
- * It renders the same card feed as the Notifications screen (same last-read marking, so
- * reading here clears the new-item dot too); tapping its header opens the full screen,
- * which keeps the summary chart and the Following/Everyone split.
+ * It renders the same card feed body as the Notifications screen (same last-read marking —
+ * cards mark themselves read as they become visible here, exactly as they would on the
+ * screen, so the new-item dot only lights for items the panel hasn't displayed). When the
+ * user has split notifications enabled, the panel shows the Following feed to match the
+ * screen's default tab. Tapping the header opens the full screen, which adds the summary
+ * chart and the Following/Everyone tabs.
  */
 @Composable
 fun NotificationSidePanel(
@@ -70,7 +75,22 @@ fun NotificationSidePanel(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val notifFeedContentState = accountViewModel.feedStates.notifications
+    val split by accountViewModel.account.settings.splitNotificationsEnabled
+        .collectAsStateWithLifecycle()
+
+    val notifFeedContentState =
+        if (split) {
+            accountViewModel.feedStates.notificationsFollowing
+        } else {
+            accountViewModel.feedStates.notifications
+        }
+    val scrollStateKey =
+        if (split) {
+            ScrollStateKeys.NOTIFICATION_SIDE_PANEL_FOLLOWING
+        } else {
+            ScrollStateKeys.NOTIFICATION_SIDE_PANEL
+        }
+
     WatchAccountForNotifications(notifFeedContentState, accountViewModel)
 
     Column(
@@ -88,7 +108,7 @@ fun NotificationSidePanel(
                 Modifier
                     .fillMaxWidth()
                     .clickable { nav.nav(Route.Notification()) }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = Size16dp, vertical = Size12dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -108,19 +128,15 @@ fun NotificationSidePanel(
 
         // The panel is its own narrow pane; never apply the center pane's reading-width cap here.
         CompositionLocalProvider(LocalFeedSidePadding provides 0.dp) {
-            Box(Modifier.fillMaxWidth()) {
-                RefresheableBox(notifFeedContentState, true) {
-                    val listState = rememberForeverLazyListState(ScrollStateKeys.NOTIFICATION_SIDE_PANEL)
-
-                    RenderCardFeed(
-                        feedContent = notifFeedContentState,
-                        pollContent = accountViewModel.feedStates.notificationsOpenPolls,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = NOTIFICATION_LAST_READ_KEY,
-                    )
-                }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                SingleNotificationsBody(
+                    notifFeedContentState = notifFeedContentState,
+                    notifPolls = accountViewModel.feedStates.notificationsOpenPolls,
+                    scrollToEventId = null,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    scrollStateKey = scrollStateKey,
+                )
             }
         }
     }

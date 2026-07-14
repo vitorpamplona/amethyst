@@ -55,8 +55,9 @@ val LocalDisappearingBarState = compositionLocalOf<DisappearingBarState?> { null
  * scroll surface stays full-pane-width (scrolling and pull-to-refresh keep working edge to
  * edge) while items center themselves. Defaults to 0 (phones, and any host that doesn't cap).
  *
- * Full-bleed surfaces (video/shorts pagers) and secondary panes with their own width (side
- * panels, two-pane splits) must override this back to 0 for their subtree.
+ * Panes that manage their own width — side panels, the panes of a two-pane split — must
+ * override this back to 0 for their subtree: the shell's value was computed against the full
+ * center pane and would over-pad a narrower list.
  */
 val LocalFeedSidePadding = compositionLocalOf { 0.dp }
 
@@ -83,12 +84,20 @@ fun rememberMergedPadding(
 /**
  * Convenience for inner LazyColumns/LazyVerticalGrids inside a [DisappearingScaffold]:
  * merges the scaffold's reserved space with the list's own baseline padding, plus the
- * [LocalFeedSidePadding] width cap requested by wide layouts.
+ * [LocalFeedSidePadding] width cap requested by wide layouts — all folded into a single
+ * remember slot, since this runs in every feed on every recomposition.
  */
 @Composable
 fun rememberFeedContentPadding(inner: PaddingValues): PaddingValues {
-    val merged = rememberMergedPadding(LocalDisappearingScaffoldPadding.current, inner)
+    val outer = LocalDisappearingScaffoldPadding.current
     val sidePadding = LocalFeedSidePadding.current
-    if (sidePadding <= 0.dp) return merged
-    return rememberMergedPadding(merged, PaddingValues(start = sidePadding, end = sidePadding))
+    val layoutDirection = LocalLayoutDirection.current
+    return remember(outer, inner, sidePadding, layoutDirection) {
+        PaddingValues(
+            start = outer.calculateStartPadding(layoutDirection) + inner.calculateStartPadding(layoutDirection) + sidePadding,
+            top = outer.calculateTopPadding() + inner.calculateTopPadding(),
+            end = outer.calculateEndPadding(layoutDirection) + inner.calculateEndPadding(layoutDirection) + sidePadding,
+            bottom = outer.calculateBottomPadding() + inner.calculateBottomPadding(),
+        )
+    }
 }

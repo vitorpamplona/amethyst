@@ -22,15 +22,18 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpSize
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.singlepane.MessagesSinglePane
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane.MessagesTwoPane
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun MessagesScreen(
     accountViewModel: AccountViewModel,
@@ -39,26 +42,26 @@ fun MessagesScreen(
     // Decide single- vs two-pane from the pane this screen actually occupies, not the
     // window: on large screens the shell already spends width on the rail / permanent
     // drawer / notification panel, so window-level size classes would overestimate.
+    // calculateFromSize keeps the Compact/Medium/Expanded breakpoints in one place
+    // (Material's) instead of restating 600/840 here.
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val paneWidth = maxWidth
+        val paneWidthClass =
+            WindowSizeClass
+                .calculateFromSize(DpSize(maxWidth, maxHeight))
+                .widthSizeClass
 
-        if (paneWidth >= 600.dp) {
-            MessagesTwoPane(
+        if (paneWidthClass == WindowWidthSizeClass.Compact) {
+            MessagesSinglePane(
                 knownFeedContentState = accountViewModel.feedStates.dmKnown,
                 newFeedContentState = accountViewModel.feedStates.dmNew,
-                widthSizeClass =
-                    if (paneWidth >= 840.dp) {
-                        WindowWidthSizeClass.Expanded
-                    } else {
-                        WindowWidthSizeClass.Medium
-                    },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         } else {
-            MessagesSinglePane(
+            MessagesTwoPane(
                 knownFeedContentState = accountViewModel.feedStates.dmKnown,
                 newFeedContentState = accountViewModel.feedStates.dmNew,
+                widthSizeClass = paneWidthClass,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

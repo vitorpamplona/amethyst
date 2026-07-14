@@ -104,8 +104,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
-import com.vitorpamplona.amethyst.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.ui.layouts.PermanentDrawerWidth
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerNavigateItems
@@ -431,11 +429,10 @@ fun StatusEditBar(
 
     val currentStatus = remember { mutableStateOf(savedStatus ?: "") }
 
-    // In the permanent drawer the DrawerState never opens (it stays Closed while the drawer
+    // In the docked drawer the DrawerState never opens (it stays Closed while the drawer
     // is always on screen), so the modal close-cancels-editing behavior must not apply there.
-    val isPermanentDrawer = LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
     LaunchedEffect(nav.drawerState.isClosed) {
-        if (!isPermanentDrawer && nav.drawerState.isClosed) {
+        if (!nav.isDrawerDocked && nav.drawerState.isClosed) {
             focusManager.clearFocus(true)
             onDone()
         } else {
@@ -469,6 +466,10 @@ fun StatusEditBar(
                     }
 
                     focusManager.clearFocus(true)
+                    // Collapse back to the read-only bar: in the docked drawer no
+                    // drawer-close will ever do it, and in the modal drawer this beats
+                    // staying in edit mode until the drawer closes.
+                    onDone()
                 },
             ),
         singleLine = true,
@@ -484,12 +485,14 @@ fun StatusEditBar(
                         accountViewModel.updateStatus(address, currentStatus.value)
                     }
                     focusManager.clearFocus(true)
+                    onDone()
                 }
             } else {
                 if (address != null) {
                     UserStatusDeleteButton {
                         accountViewModel.deleteStatus(address)
                         focusManager.clearFocus(true)
+                        onDone()
                     }
                 }
             }

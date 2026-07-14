@@ -109,6 +109,14 @@ fun DisappearingScaffold(
         ImmersiveStatusBarEffect(state)
     }
 
+    // If the bars were scrolled away when hiding got disabled (e.g. the window grew to a
+    // large tier mid-scroll), nothing above can bring them back — the nested-scroll
+    // connection and the resume reset are gone. Snap them visible here instead of
+    // leaving the chrome stranded off-screen.
+    LaunchedEffect(canHideBars, state) {
+        if (!canHideBars) state.resetToVisible()
+    }
+
     // When bars are pinned, skip attaching the nested-scroll connection entirely.
     // The outer Surface provides the Material container color + onBackground as
     // LocalContentColor, matching M3 Scaffold's behaviour (without it, default text
