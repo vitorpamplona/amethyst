@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
+import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -86,7 +87,7 @@ import okhttp3.Request
  */
 object RelayCommands {
     private const val USAGE =
-        "relay <outbox|inbox|nip65|dm|key-package|search|private|blocked|trusted|proxy|indexer|broadcast|feeds|add|remove|list|publish-lists|info> …"
+        "relay <outbox|inbox|nip65|dm|key-package|search|private|blocked|trusted|proxy|indexer|broadcast|feeds|add|remove|list|publish-lists|info|probe> …"
 
     // ------------------------------------------------------------------
     // Flat buckets — a plain list of relay URLs, one Nostr replaceable kind.
@@ -216,6 +217,7 @@ object RelayCommands {
             // `info` is also intercepted in Main before account resolution
             // (it needs no account); routed here too for when one exists.
             "info" -> info(rest)
+            "probe" -> probe(dataDir, rest)
             "add" -> fanOut(dataDir, Args(rest), add = true)
             "remove", "rm" -> fanOut(dataDir, Args(rest), add = false)
             "outbox" -> facetVerb(dataDir, Facet.OUTBOX, rest)
@@ -267,6 +269,94 @@ object RelayCommands {
         } catch (e: Exception) {
             Output.error("fetch_failed", "could not fetch NIP-11 from $httpUrl: ${e.message}")
         }
+    }
+
+    // ------------------------------------------------------------------
+    // relay probe — the relay census (feeds the NIP-66 reachability cache)
+    // ------------------------------------------------------------------
+
+    /**
+     * `amy relay probe [--timeout SECS] [--concurrency N]` —
+     * the relay census. Mass-connects the ENTIRE relay universe the local store knows
+     * (every relay advertised in any stored kind:10002, deduped per host, plus
+     * everything already in the reachability cache) in parallel waves with a no-op
+     * REQ, so the "is this relay alive, and how slow?" wait is paid once, up front,
+     * concurrently — then records per-relay verdicts with real measured `rtt-open`
+     * into the NIP-66 reachability cache (kind:30166).
+     *
+     * Every reachability-aware command reads that cache to skip the dead set without
+     * dialing it: `graperank crawl` also pre-connects the live set in one storm,
+     * separating "working but slow" (kept; the crawler's patient park path waits for
+     * them) from "not working" (skipped entirely). Typical flow the first time:
+     * `graperank crawl --max-hops 2` (cheap, saves the relay lists) → `relay probe`
+     * → full `graperank crawl`. (`graperank probe` is kept as an alias.)
+     */
+    suspend fun probe(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        // Per probe WAVE, not per relay or total — a wave's stragglers are cut off
+        // together when it elapses.
+        val timeoutMs = args.longFlag("timeout", 15L) * 1000
+        // Relays dialed at once; --relay-concurrency accepted as the alias the
+        // graperank verbs spell it with.
+        val waveSize = args.intFlag("concurrency", args.intFlag("relay-concurrency", Context.defaultPreconnectCap))
+
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+            val cached = ctx.reachability.snapshot()
+            val universe = RelayProber.knownRelayUniverse(ctx.store) + cached.live + cached.dead
+            if (universe.isEmpty()) {
+                Output.emit(
+                    linkedMapOf<String, Any?>(
+                        "probed" to 0,
+                        "note" to "no relays known locally — run `amy graperank crawl` first to gather kind:10002 relay lists",
+                    ),
+                )
+                return 0
+            }
+
+            System.err.println(
+                "[relay-probe] probing ${universe.size} relays in waves of $waveSize " +
+                    "(${timeoutMs / 1000}s per wave; open-files limit ${Context.maxFileDescriptors})",
+            )
+            val result =
+                RelayProber(ctx.client) { System.err.println(it) }
+                    .probe(universe, timeoutMs, waveSize)
+
+            ctx.reachability.recordProbed(result.reachableRttMs(), result.deadRelays())
+
+            val rtts =
+                result.reachable
+                    .map { it.rttOpenMs }
+                    .filter { it >= 0 }
+                    .sorted()
+
+            fun pct(p: Int): Long? = if (rtts.isEmpty()) null else rtts[(rtts.size - 1) * p / 100]
+            val slowest =
+                result.reachable
+                    .filter { it.rttOpenMs >= 0 }
+                    .sortedByDescending { it.rttOpenMs }
+                    .take(10)
+                    .map { mapOf("relay" to it.relay.url, "rtt_open_ms" to it.rttOpenMs) }
+            val authWalled = result.reachable.count { it.error?.startsWith("closed:") == true }
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "probed" to result.verdicts.size,
+                    "reachable" to result.reachable.size,
+                    "dead" to result.dead.size,
+                    "closed_by_policy" to authWalled,
+                    "elapsed_ms" to result.elapsedMs,
+                    "rtt_open_p50_ms" to pct(50),
+                    "rtt_open_p90_ms" to pct(90),
+                    "rtt_open_p99_ms" to pct(99),
+                    "slowest" to slowest,
+                ),
+            )
+        }
+        return 0
     }
 
     // ------------------------------------------------------------------
