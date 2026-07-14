@@ -85,7 +85,6 @@ import kotlin.math.roundToInt
  *  - `amy graperank crawl [OBSERVER]` — network only: crawl the reachable graph's
  *    kind 3/10000/1984/10002 into the local store. Idempotent and cumulative, so
  *    run it a few times to make sure everything is loaded. Scores nothing.
- *    (`sync` is a deprecated alias — it warns and will be removed.)
  *  - `amy graperank status` — read-only inventory of all of the above: WoT record
  *    counts, reachability-cache freshness, operator state, persisted card sets.
  *    Answers "do I need to crawl again?" with no network and no signing.
@@ -210,17 +209,6 @@ object GrapeRankCommand {
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
             "crawl" -> crawl(dataDir, tail.drop(1).toTypedArray())
-            // Deprecated pre-rename alias for `crawl`. Actively misleading now that
-            // the negentropy record refresh is `graperank refresh` (and `amy sync`
-            // is the generic negentropy verb), so it warns before it runs — next
-            // step is removal.
-            "sync" -> {
-                System.err.println(
-                    "[graperank] `graperank sync` is deprecated and will be removed — use `graperank crawl` " +
-                        "(or `graperank refresh` to re-sync known authors' records).",
-                )
-                crawl(dataDir, tail.drop(1).toTypedArray())
-            }
             "status" -> status(dataDir)
             // The relay census outgrew graperank (it feeds the shared NIP-66
             // reachability cache every command reads) and moved to `amy relay
