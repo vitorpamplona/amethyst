@@ -77,7 +77,7 @@ fun HeaderPill(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.MiddleEllipsis,
             )
         }
     }
