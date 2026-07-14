@@ -47,6 +47,9 @@ object ConcordChannelCommands {
             Output.emit(
                 mapOf(
                     "name" to state.metadata?.name,
+                    "description" to state.metadata?.description,
+                    "icon" to state.metadata?.icon?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
+                    "banner" to state.metadata?.banner?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
                     "channels" to
                         state.channels.values.map {
                             mapOf("id" to it.channelIdHex, "name" to it.definition.name, "voice" to it.definition.voice, "private" to it.definition.private)
@@ -72,7 +75,10 @@ object ConcordChannelCommands {
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
             val channel = ConcordActions.publicChannel(sc.root.hexToByteArray(), channelId.hexToByteArray(), sc.rootEpoch)
             val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, sc.rootEpoch, text, TimeUtils.now())
-            val acked = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc)).filterValues { it }.keys
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+            // A relay that gates writes behind NIP-42 wants the wrap's author (the stream key) authenticated.
+            ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
+            val acked = ctx.publish(wrap, relays).filterValues { it }.keys
             Output.emit(mapOf("event_id" to wrap.id, "channel" to channelId, "published_to" to acked.map { it.url }))
             return 0
         }
@@ -92,7 +98,10 @@ object ConcordChannelCommands {
             ctx.prepare()
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
             val channel = ConcordActions.publicChannel(sc.root.hexToByteArray(), channelId.hexToByteArray(), sc.rootEpoch)
-            val wraps = ctx.drain(ConcordCommands.relaysFor(ctx, sc).associateWith { listOf(ConcordActions.planeFilter(channel.publicKeyHex)) }).map { it.second }
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+            // The channel plane is NIP-42-gated to its own derived stream key; register it so the drain authenticates.
+            ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
+            val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(channel.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
             val msgs = ConcordActions.channelMessages(wraps, channel, channelId, sc.rootEpoch).takeLast(limit)
             Output.emit(
                 mapOf(
@@ -111,7 +120,11 @@ object ConcordChannelCommands {
         sc: StoredCommunity,
     ): ConcordCommunityState {
         val controlPlane = ConcordActions.controlPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
-        val wraps = ctx.drain(ConcordCommands.relaysFor(ctx, sc).associateWith { listOf(ConcordActions.planeFilter(controlPlane.publicKeyHex)) }).map { it.second }
+        val relays = ConcordCommands.relaysFor(ctx, sc)
+        // The relays gate the plane's kind-1059 behind NIP-42 as the derived stream key — register
+        // it so the drain's AUTH challenge is answered as the control plane, not the account.
+        ctx.registerConcordStreamKeys(relays, listOf(controlPlane.secretKey))
+        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(controlPlane.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
         return ConcordActions.foldCommunity(wraps, controlPlane, sc.owner)
     }
 
