@@ -44,6 +44,15 @@ fun relayAdvertisesNip(
 fun relayAdvertisesNip29(relay: NormalizedRelayUrl): Boolean = relayAdvertisesNip(relay, "29")
 
 /**
+ * Whether [relayInfo] affirmatively signals that its relay does NOT run NIP-29 groups: the doc
+ * resolved with an explicit `supported_nips` list that lacks "29" and no `self` key (the field
+ * NIP-29 relays publish so clients can verify their relay-signed group metadata — see
+ * [isRelaySignedRelayGroup]). A doc with a null `supported_nips` proves nothing (still loading,
+ * or the fetch failed), so it never triggers the warning.
+ */
+fun looksLikeNonNip29Relay(relayInfo: Nip11RelayInformation): Boolean = relayInfo.supported_nips?.none { it == "29" } == true && relayInfo.self == null
+
+/**
  * Whether [channel]'s relay-signed metadata is genuinely from its host relay, per NIP-29:
  * "these are addressable events signed by the relay keypair directly … as stated by the NIP-11
  * `self` pubkey", and "relays shouldn't accept these events if they're signed by anyone else".
