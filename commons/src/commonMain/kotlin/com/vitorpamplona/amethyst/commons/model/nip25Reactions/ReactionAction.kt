@@ -24,12 +24,16 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 
 /**
@@ -64,21 +68,39 @@ object ReactionAction {
             throw IllegalStateException("Cannot react publicly to a private rumor")
         }
 
-        // Handle custom emoji reactions (format: ":emoji_name:")
-        val template =
-            if (reaction.startsWith(":")) {
-                val emojiUrl = EmojiUrlTag.decode(reaction)
-                if (emojiUrl != null) {
-                    ReactionEvent.build(emojiUrl, eventHint)
-                } else {
-                    // Fallback to text if emoji decode fails
-                    ReactionEvent.build(reaction, eventHint)
-                }
-            } else {
-                ReactionEvent.build(reaction, eventHint)
-            }
+        return signer.sign(buildPublicReaction(eventHint, reaction))
+    }
 
-        return signer.sign(template)
+    /**
+     * Builds a public reaction template for [eventHint], decoding a custom-emoji
+     * reaction when present and falling back to plain text otherwise.
+     *
+     * When the target is a NIP-29 group event (it carries an `h` tag), the
+     * reaction copies that `h` tag so the like stays scoped to the group and
+     * lands on the group's host relay — where the recipient's group-notification
+     * subscription (`#p`=them + `#h`=their groups, kind 7 included) can match it.
+     * Without the `h` tag the like is a plain kind-7 that the host-relay query
+     * never sees, so a reaction to someone's group message would only reach them
+     * on the off chance NIP-65 routing delivered it to one of their inbox relays
+     * — never for a host-relay-only group. This mirrors how kind-9 replies carry
+     * the `h` tag to be notifiable.
+     */
+    private fun buildPublicReaction(
+        eventHint: EventHintBundle<Event>,
+        reaction: String,
+    ): EventTemplate<ReactionEvent> {
+        val groupScope: TagArrayBuilder<ReactionEvent>.() -> Unit = {
+            eventHint.event.groupId()?.let { hTag(it) }
+        }
+
+        if (reaction.startsWith(":")) {
+            val emojiUrl = EmojiUrlTag.decode(reaction)
+            if (emojiUrl != null) {
+                return ReactionEvent.build(emojiUrl, eventHint, initializer = groupScope)
+            }
+            // Fallback to text if emoji decode fails
+        }
+        return ReactionEvent.build(reaction, eventHint, initializer = groupScope)
     }
 
     /**
@@ -159,19 +181,7 @@ object ReactionAction {
             )
         } else {
             // Public reaction
-            val template =
-                if (reaction.startsWith(":")) {
-                    val emojiUrl = EmojiUrlTag.decode(reaction)
-                    if (emojiUrl != null) {
-                        ReactionEvent.build(emojiUrl, eventHint)
-                    } else {
-                        ReactionEvent.build(reaction, eventHint)
-                    }
-                } else {
-                    ReactionEvent.build(reaction, eventHint)
-                }
-
-            onPublic(signer.sign(template))
+            onPublic(signer.sign(buildPublicReaction(eventHint, reaction)))
         }
     }
 

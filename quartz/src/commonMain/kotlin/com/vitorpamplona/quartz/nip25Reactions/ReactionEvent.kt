@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -88,6 +89,7 @@ class ReactionEvent(
             reaction: String,
             reactedTo: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<ReactionEvent>.() -> Unit = {},
         ) = eventTemplate<ReactionEvent>(KIND, reaction, createdAt) {
             eTag(reactedTo.toETag())
             if (reactedTo.event is AddressableEvent) {
@@ -95,12 +97,14 @@ class ReactionEvent(
             }
             pTag(reactedTo.event.pubKey, reactedTo.relay)
             kind(reactedTo.event.kind)
+            initializer()
         }
 
         fun build(
             reaction: EmojiUrlTag,
             reactedTo: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<ReactionEvent>.() -> Unit = {},
         ) = eventTemplate<ReactionEvent>(KIND, reaction.toContentEncode(), createdAt) {
             eTag(reactedTo.toETag())
             if (reactedTo.event is AddressableEvent) {
@@ -109,6 +113,7 @@ class ReactionEvent(
             pTag(reactedTo.event.pubKey, reactedTo.relay)
             kind(reactedTo.event.kind)
             emoji(reaction)
+            initializer()
         }
     }
 }

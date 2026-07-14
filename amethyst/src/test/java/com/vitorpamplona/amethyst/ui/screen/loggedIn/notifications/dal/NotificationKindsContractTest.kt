@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -71,6 +72,25 @@ class NotificationKindsContractTest {
                 "should render them) or to envelopeKinds in this test (if they only " +
                 "deliver an inner payload).",
             unaccounted.isEmpty(),
+        )
+    }
+
+    /**
+     * A reply to my message inside a NIP-29 relay group is a kind-9 [ChatEvent]
+     * that p-tags me. It is fetched at startup by `filterGroupNotificationsToPubkey`
+     * (scoped `#p`=me + `#h`=my groups on the group's host relay), but the
+     * `acceptableEvent` gate first checks `kind in NOTIFICATION_KINDS`, so without
+     * kind 9 in the set the reply is dropped before the p-tag check and never
+     * surfaces on the Notifications tab. Pin its presence so it can't silently
+     * regress.
+     */
+    @Test
+    fun `nip-29 group chat replies render on the Android notifications tab`() {
+        assertTrue(
+            "ChatEvent.KIND (9) is missing from NOTIFICATION_KINDS. NIP-29 group " +
+                "replies that p-tag the user would be dropped by the acceptableEvent " +
+                "kind gate before the p-tag check and never notify.",
+            ChatEvent.KIND in NotificationFeedFilter.NOTIFICATION_KINDS,
         )
     }
 }

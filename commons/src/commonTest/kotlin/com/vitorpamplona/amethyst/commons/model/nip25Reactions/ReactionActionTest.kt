@@ -27,9 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.hTag
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -57,8 +60,42 @@ class ReactionActionTest {
                     publicCalls++
                     assertTrue(reaction.sig.isNotEmpty(), "public reaction must be signed")
                     assertTrue(reaction.tags.any { it.size >= 2 && it[0] == "e" && it[1] == note.id })
+                    assertFalse(
+                        reaction.tags.any { it.isNotEmpty() && it[0] == "h" },
+                        "a reaction to a non-group note must not carry an `h` tag",
+                    )
                 },
                 onPrivate = { fail("reaction to a public note must not be gift-wrapped") },
+            )
+            assertEquals(1, publicCalls)
+        }
+
+    @Test
+    fun reactionToRelayGroupMessage_carriesTheGroupHTag() =
+        runTest {
+            // A NIP-29 group chat message: a kind-9 ChatEvent scoped by `h`.
+            val groupId = "abcd1234"
+            val groupMessage = aliceSigner.sign(ChatEvent.build("gm") { hTag(groupId) })
+
+            var publicCalls = 0
+            ReactionAction.reactToWithGroupSupport(
+                eventHint = EventHintBundle(groupMessage, null),
+                reaction = "+",
+                signer = bobSigner,
+                onPublic = { reaction ->
+                    publicCalls++
+                    // Standard NIP-25 targeting …
+                    assertTrue(reaction.tags.any { it.size >= 2 && it[0] == "e" && it[1] == groupMessage.id })
+                    assertTrue(reaction.tags.any { it.size >= 2 && it[0] == "p" && it[1] == aliceSigner.pubKey })
+                    // … plus the group `h` tag copied from the target, so the like
+                    // stays in the group and the recipient's `#p`+`#h` host-relay
+                    // notification query can match it.
+                    assertTrue(
+                        reaction.tags.any { it.size >= 2 && it[0] == "h" && it[1] == groupId },
+                        "a reaction to a NIP-29 group message must copy the group's `h` tag",
+                    )
+                },
+                onPrivate = { fail("a public group message reaction must not be gift-wrapped") },
             )
             assertEquals(1, publicCalls)
         }
