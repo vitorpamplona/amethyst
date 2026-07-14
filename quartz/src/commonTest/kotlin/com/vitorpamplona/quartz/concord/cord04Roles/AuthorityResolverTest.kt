@@ -163,4 +163,48 @@ class AuthorityResolverTest {
         val r = AuthorityResolver.resolve(heads, owner)
         assertNull(r.rank(alice)) // both assigned roles are invalid
     }
+
+    /**
+     * The reference client (Armada) writes a role's `scope` as an object
+     * (`{"kind":"server"}`), NOT a bare string. Typing the field as `String` made the whole
+     * RoleEntity fail to decode, dropping the role and every grant that depended on it — the
+     * community then had no resolvable admins, so authority-gated metadata/channels vanished.
+     */
+    @Test
+    fun objectScopedRoleDecodesAndItsGrantResolves() {
+        val heads =
+            listOf(
+                role(adminRole, """{"name":"Admin","position":1,"permissions":"25","scope":{"kind":"server"},"color":0}"""),
+                grant("ab".repeat(32), alice, listOf(adminRole), granter = owner),
+            )
+        val r = AuthorityResolver.resolve(heads, owner)
+        assertEquals(1L, r.rank(alice))
+        assertTrue(r.effectivePermissions(alice).has(BAN))
+    }
+
+    /**
+     * The owner grants alice Admin (v0); an UNAUTHORIZED key mints a higher-version grant on the
+     * same coordinate stripping her roles. The structural head is the rogue v1, but an edition
+     * whose signer isn't authorized is dropped (CORD-04 §1) — so the fold must NOT let the rogue
+     * supersede the owner's grant. alice keeps Admin. (This was the live Soapbox failure.)
+     */
+    @Test
+    fun rogueHigherVersionGrantCannotSupersedeALegitGrant() {
+        val grantId = "ab".repeat(32)
+        val ownerGrant = grant(grantId, alice, listOf(adminRole), granter = owner) // v0, prev null
+        val rogueV1 =
+            ControlEdition(
+                ControlEntityKind.GRANT,
+                grantId.hexToByteArray(),
+                1,
+                ownerGrant.hash, // chains onto the owner's grant, so it wins the STRUCTURAL fold
+                null,
+                """{"member":"$alice","role_ids":[]}""",
+                carol, // an unauthorized signer
+                "grant-$grantId-rogue",
+                1,
+            )
+        val r = AuthorityResolver.resolve(listOf(role(adminRole, adminJson), ownerGrant, rogueV1), owner)
+        assertEquals(1L, r.rank(alice)) // rogue v1 dropped; the owner's v0 grant stands
+    }
 }

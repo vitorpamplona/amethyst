@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.concord.cord02Community
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
@@ -60,21 +61,46 @@ class ConcordCommunityState(
             ownerPubKey: String,
         ): ConcordCommunityState {
             val heads = EditionFold.fold(editions).values
+            // Resolve authority from the FULL edition set (not the structural heads): the resolver
+            // folds each role/grant chain through authorized editions only, so a rogue higher-version
+            // edition can't supersede a legit one before authority is even judged.
+            val authority = AuthorityResolver.resolve(editions, ownerPubKey)
 
+            // CORD-04 §1: "an edition whose signer isn't authorized is dropped." Authority is
+            // owner-rooted (the AuthorityResolver resolves it from the owner outward via the grant
+            // fixpoint), so gating each managed entity by its required permission BEFORE the
+            // structural fold filters out spoofed editions — e.g. a decoy metadata genesis minted by
+            // an unprivileged key — instead of letting a higher-version forgery win the chain. The
+            // permission check also excludes banned authors (hasPermission is false for a banned npub).
+            fun editorsWith(
+                kind: ControlEntityKind,
+                bit: Int,
+            ): List<ControlEdition> =
+                editions.filter {
+                    it.entityKind == kind && (authority.isOwner(it.author) || authority.hasPermission(it.author, bit))
+                }
+
+            // Metadata is one entity (== community id), gated by MANAGE_METADATA. Fold only the
+            // authorized editions, then take the highest-version head (guarding against strays).
             val metadata =
-                heads
-                    .filter { it.entityKind == ControlEntityKind.METADATA }
-                    .maxByOrNull { it.version } // one metadata entity; guard against strays
+                EditionFold
+                    .fold(editorsWith(ControlEntityKind.METADATA, ConcordPermissions.MANAGE_METADATA))
+                    .values
+                    .maxByOrNull { it.version }
                     ?.let { ConcordJson.decodeOrNull<MetadataEntity>(it.content) }
 
+            // Channels are gated by MANAGE_CHANNELS. Fold each channel entity from its authorized
+            // editions only, dropping the tombstoned ones.
             val channels = LinkedHashMap<String, ConcordChannel>()
-            for (e in heads) {
-                if (e.entityKind != ControlEntityKind.CHANNEL) continue
-                val def = ConcordJson.decodeOrNull<ChannelEntity>(e.content) ?: continue
+            for (head in EditionFold.fold(editorsWith(ControlEntityKind.CHANNEL, ConcordPermissions.MANAGE_CHANNELS)).values) {
+                val def = ConcordJson.decodeOrNull<ChannelEntity>(head.content) ?: continue
                 if (def.deleted) continue
-                channels[e.entityIdHex] = ConcordChannel(e.entityIdHex, def)
+                channels[head.entityIdHex] = ConcordChannel(head.entityIdHex, def)
             }
 
+            // Role definitions ride along for display; the AuthorityResolver already owner-roots the
+            // privileged roster via the grant fixpoint, so a role a rogue defines is inert until an
+            // authorized granter (who must outrank it and hold MANAGE_ROLES) actually hands it out.
             val roles = HashMap<String, RoleEntity>()
             for (e in heads) {
                 if (e.entityKind != ControlEntityKind.ROLE) continue
@@ -83,14 +109,15 @@ class ConcordCommunityState(
                 roles[e.entityIdHex] = r
             }
 
-            val dissolved = heads.any { it.entityKind == ControlEntityKind.DISSOLVED }
+            // Dissolution is owner-only — a rogue tombstone must not appear to kill the community.
+            val dissolved = heads.any { it.entityKind == ControlEntityKind.DISSOLVED && authority.isOwner(it.author) }
 
             return ConcordCommunityState(
                 ownerPubKey = ownerPubKey.lowercase(),
                 metadata = metadata,
                 channels = channels,
                 roles = roles,
-                authority = AuthorityResolver.resolve(heads, ownerPubKey),
+                authority = authority,
                 dissolved = dissolved,
             )
         }

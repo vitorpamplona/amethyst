@@ -57,6 +57,19 @@ object ConcordJson {
 }
 
 /**
+ * A Role's scope (CORD-04 §2): server-wide (`{"kind":"server"}`) or restricted to a
+ * single channel (`{"kind":"channel","channel_id":"<hex32>"}`). It is an **object** on
+ * the wire, pinned to the Concord v2 reference client — NOT a bare string. Typing it as
+ * a `String` (the old bug) makes the whole [RoleEntity] fail to decode, which silently
+ * drops the role, and with it every authority (grant) that depends on it.
+ */
+@Serializable
+class RoleScope(
+    val kind: String = "server",
+    @SerialName("channel_id") val channelId: String? = null,
+)
+
+/**
  * A Role's content (CORD-04): a named bundle of permissions at a [position].
  * The role's id is the edition's entity id, not a content field. Lower [position]
  * ranks higher; no role may claim position 0 (reserved for the owner).
@@ -67,8 +80,8 @@ class RoleEntity(
     val position: Long = 0,
     /** u64 permission bitfield as a decimal string. */
     val permissions: String = "0",
-    /** "server"-wide, or a channel id for a channel-scoped role. Null = server. */
-    val scope: String? = null,
+    /** Server-wide, or a single channel — an object (see [RoleScope]). Null = server. */
+    val scope: RoleScope? = null,
     val color: Long = 0,
     val deleted: Boolean = false,
 ) {

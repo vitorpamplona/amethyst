@@ -113,38 +113,24 @@ class AuthorityResolver private constructor(
         const val OWNER_RANK = 0L
 
         fun resolve(
-            heads: Collection<ControlEdition>,
+            editions: Collection<ControlEdition>,
             ownerPubKey: String,
         ): AuthorityResolver {
             val ownerLower = ownerPubKey.lowercase()
 
-            // Roles: keyed by role id (the edition entity id). Drop deleted roles
-            // and any that illegally claim position 0 (owner-peer).
-            val roles = HashMap<String, RoleEntity>()
-            for (e in heads) {
-                if (e.entityKind != ControlEntityKind.ROLE) continue
-                val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: continue
-                if (r.deleted || r.position < 1) continue
-                roles[e.entityIdHex] = r
-            }
+            // Chains grouped by entity: one role chain per role id, one grant chain per member
+            // coordinate. We fold each chain through AUTHORIZED editions only, so a rogue cannot
+            // supersede a legit edition by minting a higher version from an unprivileged key
+            // (CORD-04 §1: "an edition whose signer isn't authorized is dropped").
+            val roleChains = editions.filter { it.entityKind == ControlEntityKind.ROLE }.groupBy { it.entityIdHex }
+            val grantChains = editions.filter { it.entityKind == ControlEntityKind.GRANT }.groupBy { it.entityIdHex }
 
-            // Grants: one head per member; remember the signing actor (granter).
-            val grants =
-                heads.mapNotNull { e ->
-                    if (e.entityKind != ControlEntityKind.GRANT) return@mapNotNull null
-                    val g = ConcordJson.decodeOrNull<GrantEntity>(e.content) ?: return@mapNotNull null
-                    ParsedGrant(g.member.lowercase(), g.roleIds, e.author.lowercase())
-                }
+            var roles: Map<String, RoleEntity> = emptyMap()
+            var memberRoles: Map<String, Set<String>> = emptyMap()
 
-            // Banlist: heal to the union of every banlist head.
-            val banned = HashSet<String>()
-            for (e in heads) {
-                if (e.entityKind != ControlEntityKind.BANLIST) continue
-                ConcordJson.decodeBanlist(e.content)?.forEach { banned.add(it.lowercase()) }
-            }
-
-            val memberRoles = HashMap<String, Set<String>>()
-
+            // Authority helpers read the CURRENT (previous-pass) roster, so within a pass a granter's
+            // rank is judged by the chain already settled behind it — the owner-rooted resolution the
+            // spec requires ("the fold starts at the owner ... and resolves outward").
             fun rankOf(member: String): Long? {
                 if (member == ownerLower) return OWNER_RANK
                 val held = memberRoles[member] ?: return null
@@ -157,32 +143,70 @@ class AuthorityResolver private constructor(
                 return held.any { roles[it]?.permissionBits()?.has(ConcordPermissions.MANAGE_ROLES) == true }
             }
 
-            // Fixpoint: apply grants whose signer outranks every assigned role and
-            // holds MANAGE_ROLES. Only the owner is empowered a priori, so the
-            // roster grows strictly outward from the owner.
-            var changed = true
-            while (changed) {
-                changed = false
-                for (g in grants) {
-                    val granterRank = rankOf(g.granter) ?: continue
-                    if (!holdsManageRoles(g.granter)) continue
-                    val assigned = g.roleIds.filter { roles.containsKey(it) }
-                    if (assigned.any { granterRank >= roles.getValue(it).position }) continue // must strictly outrank each
-                    val newSet = assigned.toSet()
-                    if (memberRoles[g.member] != newSet) {
-                        memberRoles[g.member] = newSet
-                        changed = true
-                    }
+            // Owner-rooted fixpoint: each pass only ever empowers members reachable from the owner, so
+            // the roster grows monotonically and settles. Bounded by the edition count as a backstop.
+            val maxPasses = editions.size + 1
+            var pass = 0
+            while (pass++ <= maxPasses) {
+                // Roles: a role edition is authorized when its author is the owner or holds MANAGE_ROLES.
+                // Fold each role chain through its authorized editions, then keep a live, ranked head.
+                val newRoles = HashMap<String, RoleEntity>()
+                for ((entity, chain) in roleChains) {
+                    val head =
+                        EditionFold.foldEntity(chain.filter { it.author.lowercase() == ownerLower || holdsManageRoles(it.author.lowercase()) })
+                            ?: continue
+                    val r = ConcordJson.decodeOrNull<RoleEntity>(head.content) ?: continue
+                    if (r.deleted || r.position < 1) continue // no role may claim the owner's position 0
+                    newRoles[entity] = r
                 }
+
+                // Grants: an edition is authorized when its granter is the owner, or holds MANAGE_ROLES
+                // AND strictly outranks every role it hands out. Fold each member's grant chain through
+                // its authorized editions so a rogue higher-version grant is dropped, not honored.
+                val newMemberRoles = HashMap<String, Set<String>>()
+                for ((_, chain) in grantChains) {
+                    val head =
+                        EditionFold.foldEntity(
+                            chain.filter { e ->
+                                val granter = e.author.lowercase()
+                                if (granter == ownerLower) return@filter true
+                                if (!holdsManageRoles(granter)) return@filter false
+                                val granterRank = rankOf(granter) ?: return@filter false
+                                val g = ConcordJson.decodeOrNull<GrantEntity>(e.content) ?: return@filter false
+                                // Must strictly outrank each assigned role that actually exists.
+                                g.roleIds.all { rid -> newRoles[rid]?.let { granterRank < it.position } ?: true }
+                            },
+                        ) ?: continue
+                    val g = ConcordJson.decodeOrNull<GrantEntity>(head.content) ?: continue
+                    newMemberRoles[g.member.lowercase()] = g.roleIds.filter { newRoles.containsKey(it) }.toSet()
+                }
+
+                if (newRoles == roles && newMemberRoles == memberRoles) break
+                roles = newRoles
+                memberRoles = newMemberRoles
             }
 
-            return AuthorityResolver(ownerLower, roles, memberRoles, banned)
+            // The union of a member's roles' permission bits (owner holds every bit).
+            fun effectivePermissionsOf(member: String): ConcordPermissions {
+                if (member == ownerLower) return ConcordPermissions.ALL
+                val held = memberRoles[member] ?: return ConcordPermissions.NONE
+                var acc = ConcordPermissions.NONE
+                for (id in held) roles[id]?.let { acc = acc union it.permissionBits() }
+                return acc
+            }
+
+            // Banlist: honored only from a signer holding BAN (or the owner), then healed to the head.
+            val banHead =
+                EditionFold.foldEntity(
+                    editions.filter {
+                        it.entityKind == ControlEntityKind.BANLIST &&
+                            (it.author.lowercase() == ownerLower || effectivePermissionsOf(it.author.lowercase()).has(ConcordPermissions.BAN))
+                    },
+                )
+            val banned = HashSet<String>()
+            banHead?.let { ConcordJson.decodeBanlist(it.content) }?.forEach { banned.add(it.lowercase()) }
+
+            return AuthorityResolver(ownerLower, roles, memberRoles.toMap(), banned)
         }
     }
-
-    private class ParsedGrant(
-        val member: String,
-        val roleIds: List<String>,
-        val granter: String,
-    )
 }
