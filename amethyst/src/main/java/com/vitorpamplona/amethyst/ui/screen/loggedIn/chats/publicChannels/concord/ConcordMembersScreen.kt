@@ -88,6 +88,11 @@ fun ConcordMembersScreen(
     // screen is opened directly (deep link), not only from the hub.
     ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
 
+    // Page every channel's bounded history once so the roster includes observed authors who only posted
+    // outside the live tail (CORD-02 §5) — the difference between a handful of recent posters and the
+    // real membership.
+    ConcordMemberHarvest(communityId, accountViewModel)
+
     // Re-resolve the session as sessions are created/folded (revision-keyed), so a deep link that
     // lands before the community's session exists still picks it up once it does.
     val revision by account.concordSessions.revision.collectAsStateWithLifecycle()

@@ -140,6 +140,23 @@ class ConcordCommunitySession(
      */
     val observedAuthors: StateFlow<Set<HexKey>> = _observedAuthors
 
+    private var memberHarvestStarted = false
+
+    /**
+     * Returns true exactly once — for the caller that should run the one-shot full-history member-roster
+     * harvest (page every channel's history back to a bounded window so ingest can fold the older posters
+     * into [observedAuthors]). Idempotent, so re-opening the members screen never re-pages.
+     */
+    fun beginMemberHarvest(): Boolean =
+        lock.withLock {
+            if (memberHarvestStarted) {
+                false
+            } else {
+                memberHarvestStarted = true
+                true
+            }
+        }
+
     // channelIdHex -> (other member pubkey -> createdAt secs of their latest typing heartbeat).
     private val typingByChannel = HashMap<HexKey, HashMap<HexKey, Long>>()
     private val _typing = MutableStateFlow<Map<HexKey, Map<HexKey, Long>>>(emptyMap())
@@ -266,7 +283,8 @@ class ConcordCommunitySession(
                 // Project only the newly-arrived wrap — the buffer's earlier wraps were already
                 // emitted when they landed, so re-decrypting the whole history on every message
                 // would be O(history) per message (quadratic over a channel's lifetime). A duplicate
-                // re-delivery (isNew == false) is a no-op.
+                // re-delivery (isNew == false) is a no-op. A full-history sweep (member-roster harvest)
+                // relies on this staying O(1) per wrap.
                 if (isNew) emitChannelRumors(channelIdHex, key, listOf(wrap))
                 // A chat message lands in the feed via [onRumor] → LocalCache, independent of the
                 // revision; it changes no plane address, so it must NOT bump (see the storm note above).
@@ -334,14 +352,18 @@ class ConcordCommunitySession(
         }
     }
 
+    /** Re-decrypts and re-projects a channel's WHOLE wrap buffer. Only for a re-fold (keys may change). */
     private fun reprojectChannel(channelIdHex: HexKey) {
         val key = lock.withLock { channelKeysByAddress.values.firstOrNull { it.first == channelIdHex }?.second } ?: return
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
         emitChannelRumors(channelIdHex, key, wraps)
     }
 
-    /** Decrypt + validate the given [wraps], hand each bound rumor to the sink, and fold its author into
-     *  the observed roster. The sink dedups by rumor id, so re-emitting a wrap is idempotent. */
+    /**
+     * Decrypts + validates [wraps] on [channelIdHex], hands each bound rumor to the sink (which dedups
+     * by rumor id, so re-emitting is idempotent), and folds their authors into [observedAuthors] — every
+     * author we decrypt is observably present (CORD-02 §5), a member even without a Guestbook Join.
+     */
     private fun emitChannelRumors(
         channelIdHex: HexKey,
         key: GroupKey,

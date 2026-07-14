@@ -95,6 +95,13 @@ class ConcordCommunitySessionTest {
             assertEquals(message.id, reply.tags.first { it[0] == "e" }[1])
             assertTrue(ChannelChat.isBoundTo(reply, community.generalChannelIdHex, community.rootEpoch))
 
+            // Each incoming wrap is projected to the sink exactly ONCE (message + reaction + reply = 3),
+            // never by re-decrypting the whole channel buffer per message — the O(1) ingest path that
+            // keeps a full-history member harvest from being O(n²).
+            assertEquals(3, captured.size)
+            // Both channel authors observed (owner posted all three) — folded into the roster.
+            assertEquals(setOf(owner.pubKey.lowercase()), session.observedAuthors.value)
+
             // A stray wrap from a different community is ignored.
             val outsider = ConcordCommunityFactory.create(owner, "Other", createdAt = 1L, relays = listOf("wss://r.example"))
             assertEquals(ConcordIngestOutcome.NOT_MINE, session.ingest(outsider.genesisWraps.first()))
