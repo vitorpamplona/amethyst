@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
@@ -44,6 +46,21 @@ import com.vitorpamplona.amethyst.ui.layouts.CappedScreenContent
 const val BOTTOM_NAV_ROOT_KEY = "bottomNavRoot"
 
 fun NavBackStackEntry.isBottomNavRoot(): Boolean = savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) == true
+
+/**
+ * The shell's current layout tier, mirrored for the transition specs below. Transition
+ * lambdas run when a navigation starts — outside composition — so they can't read
+ * LocalScreenLayout; AppNavigation mirrors the spec here instead.
+ *
+ * One navigation grammar, tier-scaled motion: phones keep full-width slides (a pushed
+ * screen physically stacks on top), while large screens use short shared-axis moves —
+ * content there swaps inside a persistent shell, and a full-pane slide from the right
+ * reads as disconnected when the click came from the docked drawer on the left.
+ */
+object NavTransitionTier {
+    @Volatile
+    var isLargeScreen: Boolean = false
+}
 
 /**
  * Applies the wide-pane reading-column cap ([CappedScreenContent]) to a destination unless
@@ -74,10 +91,10 @@ inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(
     noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
 ) {
     composable<T>(
-        enterTransition = { if (targetState.isBottomNavRoot()) null else slideInHorizontallyFromEnd },
-        exitTransition = { if (targetState.isBottomNavRoot()) null else scaleOut },
-        popEnterTransition = { if (initialState.isBottomNavRoot()) null else scaleIn },
-        popExitTransition = { if (initialState.isBottomNavRoot()) null else slideOutHorizontallyToEnd },
+        enterTransition = { if (targetState.isBottomNavRoot()) null else enterFromEnd() },
+        exitTransition = { if (targetState.isBottomNavRoot()) null else exitBehind() },
+        popEnterTransition = { if (initialState.isBottomNavRoot()) null else popEnterFromBehind() },
+        popExitTransition = { if (initialState.isBottomNavRoot()) null else popExitToEnd() },
         content = { entry ->
             MaybeCappedScreen(capWidth) { content(entry) }
         },
@@ -98,10 +115,10 @@ inline fun <reified T : Any> NavGraphBuilder.composableFromBottom(
     noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
 ) {
     composable<T>(
-        enterTransition = { slideInVerticallyFromBottom },
-        exitTransition = { scaleOut },
-        popEnterTransition = { scaleIn },
-        popExitTransition = { slideOutVerticallyToBottom },
+        enterTransition = { enterFromBottom() },
+        exitTransition = { exitBehind() },
+        popEnterTransition = { popEnterFromBehind() },
+        popExitTransition = { popExitToBottom() },
         content = { entry ->
             MaybeCappedScreen(capWidth) { content(entry) }
         },
@@ -134,3 +151,29 @@ val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), ta
 
 val scaleIn = scaleIn(animationSpec = tween(), initialScale = 0.9f)
 val scaleOut = scaleOut(animationSpec = tween(), targetScale = 0.9f)
+
+/** Fraction of the pane a shared-axis move travels on large screens — a nudge, not a fly-in. */
+private const val SHARED_AXIS_FRACTION = 10
+
+val sharedAxisEnterFromEnd = slideInHorizontally(animationSpec = tween()) { it / SHARED_AXIS_FRACTION } + fadeIn(animationSpec = tween())
+val sharedAxisExitToEnd = slideOutHorizontally(animationSpec = tween()) { it / SHARED_AXIS_FRACTION } + fadeOut(animationSpec = tween())
+val sharedAxisEnterFromBottom = slideInVertically(animationSpec = tween()) { it / SHARED_AXIS_FRACTION } + fadeIn(animationSpec = tween())
+val sharedAxisExitToBottom = slideOutVertically(animationSpec = tween()) { it / SHARED_AXIS_FRACTION } + fadeOut(animationSpec = tween())
+
+// The outgoing/incoming screen *behind* a push: on phones the pushed screen covers it, so a
+// slight scale is enough; on large screens the incoming screen fades, so the one behind must
+// fade too or both stay visible mid-transition.
+val fadeScaleOut = scaleOut + fadeOut(animationSpec = tween())
+val fadeScaleIn = scaleIn + fadeIn(animationSpec = tween())
+
+fun enterFromEnd() = if (NavTransitionTier.isLargeScreen) sharedAxisEnterFromEnd else slideInHorizontallyFromEnd
+
+fun popExitToEnd() = if (NavTransitionTier.isLargeScreen) sharedAxisExitToEnd else slideOutHorizontallyToEnd
+
+fun enterFromBottom() = if (NavTransitionTier.isLargeScreen) sharedAxisEnterFromBottom else slideInVerticallyFromBottom
+
+fun popExitToBottom() = if (NavTransitionTier.isLargeScreen) sharedAxisExitToBottom else slideOutVerticallyToBottom
+
+fun exitBehind() = if (NavTransitionTier.isLargeScreen) fadeScaleOut else scaleOut
+
+fun popEnterFromBehind() = if (NavTransitionTier.isLargeScreen) fadeScaleIn else scaleIn

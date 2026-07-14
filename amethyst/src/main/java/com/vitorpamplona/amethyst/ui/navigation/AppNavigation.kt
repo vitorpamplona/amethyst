@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -293,6 +294,10 @@ fun AppNavigation(
     // function body so anything added to AppNavigation later is inside it by construction.
     val screenLayout = rememberScreenLayoutSpec()
     val tabReselectCoordinator = remember { TabReselectCoordinator() }
+
+    // Mirror the tier for the nav-transition specs, which run outside composition and so
+    // can't read LocalScreenLayout (see NavTransitionTier).
+    SideEffect { NavTransitionTier.isLargeScreen = screenLayout.isLargeScreen }
 
     CompositionLocalProvider(
         LocalScreenLayout provides screenLayout,
