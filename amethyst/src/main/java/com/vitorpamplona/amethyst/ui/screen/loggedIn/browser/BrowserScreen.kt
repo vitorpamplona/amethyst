@@ -28,12 +28,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
@@ -313,8 +317,9 @@ private fun OmniBar(
             Modifier
                 .fillMaxWidth()
                 // The omnibox is a plain Row in the topBar slot (not a Material3 TopAppBar), so it must
-                // apply the status-bar inset itself — otherwise it draws under the status bar.
-                .statusBarsPadding()
+                // apply the top system insets itself — systemBars rather than just statusBars, so the
+                // caption bar of a desktop window (Waydroid/DeX freeform) is respected too.
+                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
                 .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

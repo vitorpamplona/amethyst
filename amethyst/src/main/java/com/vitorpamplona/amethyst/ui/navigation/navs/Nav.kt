@@ -26,6 +26,8 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -44,11 +46,17 @@ class Nav(
 ) : INav {
     override val drawerState = DrawerState(DrawerValue.Closed)
 
+    /** Set by the shell when the layout tier docks the drawer permanently. */
+    override var isDrawerDocked: Boolean by mutableStateOf(false)
+
     override fun closeDrawer() {
         navigationScope.launch { drawerState.close() }
     }
 
     override fun openDrawer() {
+        // Nothing renders the modal drawer while it is docked; opening the state would
+        // only strand an Open value for the next modal tier to trip over.
+        if (isDrawerDocked) return
         navigationScope.launch { drawerState.open() }
     }
 

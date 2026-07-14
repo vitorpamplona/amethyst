@@ -20,15 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.ui.components.getActivity
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.DpSize
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.singlepane.MessagesSinglePane
@@ -40,37 +39,32 @@ fun MessagesScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val act = LocalContext.current.getActivity()
-    val windowSizeClass = calculateWindowSizeClass(act)
+    // Decide single- vs two-pane from the pane this screen actually occupies, not the
+    // window: on large screens the shell already spends width on the rail / permanent
+    // drawer / notification panel, so window-level size classes would overestimate.
+    // calculateFromSize keeps the Compact/Medium/Expanded breakpoints in one place
+    // (Material's) instead of restating 600/840 here.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val paneWidthClass =
+            WindowSizeClass
+                .calculateFromSize(DpSize(maxWidth, maxHeight))
+                .widthSizeClass
 
-    val twoPane by remember(windowSizeClass.widthSizeClass) {
-        derivedStateOf {
-            when (windowSizeClass.widthSizeClass) {
-                WindowWidthSizeClass.Compact -> false
-
-                WindowWidthSizeClass.Expanded,
-                WindowWidthSizeClass.Medium,
-                -> true
-
-                else -> false
-            }
+        if (paneWidthClass == WindowWidthSizeClass.Compact) {
+            MessagesSinglePane(
+                knownFeedContentState = accountViewModel.feedStates.dmKnown,
+                newFeedContentState = accountViewModel.feedStates.dmNew,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        } else {
+            MessagesTwoPane(
+                knownFeedContentState = accountViewModel.feedStates.dmKnown,
+                newFeedContentState = accountViewModel.feedStates.dmNew,
+                widthSizeClass = paneWidthClass,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
-    }
-
-    if (twoPane) {
-        MessagesTwoPane(
-            knownFeedContentState = accountViewModel.feedStates.dmKnown,
-            newFeedContentState = accountViewModel.feedStates.dmNew,
-            widthSizeClass = windowSizeClass.widthSizeClass,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    } else {
-        MessagesSinglePane(
-            knownFeedContentState = accountViewModel.feedStates.dmKnown,
-            newFeedContentState = accountViewModel.feedStates.dmNew,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
     }
 }

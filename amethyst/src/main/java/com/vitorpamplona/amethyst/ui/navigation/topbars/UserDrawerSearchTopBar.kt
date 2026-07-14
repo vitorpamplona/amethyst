@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -62,24 +63,33 @@ fun UserDrawerSearchTopBar(
                 content()
             }
         },
-        navigationIcon = {
-            // When this screen sits on top of a back stack (entered via the drawer
-            // or any deep link), show a back arrow. When it's the root (entered via
-            // the bottom nav, which clears the stack), show the drawer opener.
-            if (nav.canPop()) {
-                IconButton(onClick = nav::popBack) {
-                    ArrowBackIcon()
-                }
-            } else {
-                LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
-            }
-        },
+        navigationIcon = { TopBarNavigationIcon(accountViewModel, nav) },
         actions = {
             IconButton(onClick = { nav.nav(Route.Search) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
         },
     )
+}
+
+/**
+ * The standard leading slot for root-capable top bars: a back arrow when the screen sits on
+ * top of a back stack; otherwise the avatar drawer-opener — unless a large-screen shell
+ * already presents the drawer (rail avatar or permanently docked pane), in which case
+ * nothing is shown. Use this instead of hand-writing the branches per top bar.
+ */
+@Composable
+fun TopBarNavigationIcon(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (nav.canPop()) {
+        IconButton(onClick = nav::popBack) {
+            ArrowBackIcon()
+        }
+    } else if (!LocalScreenLayout.current.isLargeScreen) {
+        LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
+    }
 }
 
 @Composable

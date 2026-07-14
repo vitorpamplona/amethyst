@@ -20,45 +20,25 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.navs
 
-import androidx.compose.material3.DrawerState
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import kotlinx.coroutines.CoroutineScope
-import kotlin.reflect.KClass
+import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.commons.ui.components.zonedDrawerSwipe
 
-@Stable
-interface INav {
-    val navigationScope: CoroutineScope
-    val drawerState: DrawerState
-
-    /**
-     * True while the shell renders the drawer permanently docked (Expanded windows). In that
-     * mode [drawerState] never transitions — it stays [androidx.compose.material3.DrawerValue.Closed]
-     * while the drawer is visibly on screen — so drawer consumers (edge swipes, open buttons,
-     * close-driven effects) should consult this instead of inferring from [drawerState].
-     */
-    val isDrawerDocked: Boolean get() = false
-
-    fun closeDrawer()
-
-    fun openDrawer()
-
-    fun nav(route: Route)
-
-    fun nav(computeRoute: suspend () -> Route?)
-
-    fun newStack(route: Route)
-
-    fun navBottomBar(route: Route)
-
-    @Composable
-    fun canPop(): Boolean
-
-    fun popBack()
-
-    fun <T : Route> popUpTo(
-        route: Route,
-        klass: KClass<T>,
-    )
-}
+/**
+ * [zonedDrawerSwipe] gated on the drawer actually being modal. With the drawer permanently
+ * docked ([INav.isDrawerDocked]) there is nothing to open, so the left-edge swipe zone is
+ * not attached at all and the pager keeps its own gestures. Use this instead of calling
+ * [zonedDrawerSwipe] directly from screens — the guard then can't be forgotten at new
+ * call sites.
+ */
+@Composable
+fun Modifier.zonedDrawerSwipeIfModal(
+    pagerState: PagerState,
+    nav: INav,
+): Modifier =
+    if (nav.isDrawerDocked) {
+        this
+    } else {
+        zonedDrawerSwipe(pagerState, nav::openDrawer)
+    }

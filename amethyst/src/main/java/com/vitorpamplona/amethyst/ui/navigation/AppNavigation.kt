@@ -29,8 +29,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +61,10 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.ui.layouts.rememberScreenLayoutSpec
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.LocalTabReselectCoordinator
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.TabReselectCoordinator
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
@@ -282,40 +288,56 @@ fun AppNavigation(
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
-        Box(Modifier.fillMaxSize()) {
-            BuildNavigation(accountViewModel, nav)
-            // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
-            // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
-            // preloader below and the full-screen launcher both need. Not API-gated: every device's
-            // launcher benefits, and it's the only preload step that runs below API 30.
-            FavoriteAppManifestPreloader(accountViewModel)
-            // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
-            // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
-            // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
-                    .collectAsStateWithLifecycle()
-                EmbeddedTabLayer(bottomBarItems.favoriteIds())
-                // Warm every pinned tab at startup so the first tap is instant (content already local).
-                EmbeddedTabPreloader(accountViewModel)
-                // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
-                // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
-                EmbeddedTabThemeWatcher()
+    // One layout decision per window size for the whole shell: bottom bar vs rail vs
+    // permanent drawer, plus the docked notification panel. Every screen, bar and panel
+    // below reads the same spec through LocalScreenLayout. The provider wraps this whole
+    // function body so anything added to AppNavigation later is inside it by construction.
+    val screenLayout = rememberScreenLayoutSpec()
+    val tabReselectCoordinator = remember { TabReselectCoordinator() }
+
+    // Mirror the tier for the nav-transition specs, which run outside composition and so
+    // can't read LocalScreenLayout (see NavTransitionTier).
+    SideEffect { NavTransitionTier.isLargeScreen = screenLayout.isLargeScreen }
+
+    CompositionLocalProvider(
+        LocalScreenLayout provides screenLayout,
+        LocalTabReselectCoordinator provides tabReselectCoordinator,
+    ) {
+        AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
+            Box(Modifier.fillMaxSize()) {
+                BuildNavigation(accountViewModel, nav)
+                // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
+                // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
+                // preloader below and the full-screen launcher both need. Not API-gated: every device's
+                // launcher benefits, and it's the only preload step that runs below API 30.
+                FavoriteAppManifestPreloader(accountViewModel)
+                // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
+                // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
+                // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+                        .collectAsStateWithLifecycle()
+                    EmbeddedTabLayer(bottomBarItems.favoriteIds())
+                    // Warm every pinned tab at startup so the first tap is instant (content already local).
+                    EmbeddedTabPreloader(accountViewModel)
+                    // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
+                    // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
+                    EmbeddedTabThemeWatcher()
+                }
             }
         }
+
+        TrackScreenTime(nav)
+        NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
+
+        DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
+        DisplayNotifyMessages(accountViewModel, nav)
+        DisplayCrashMessages(accountViewModel, nav)
+        DisplayResourceUsageAlert(accountViewModel, nav)
+        DisplayBroadcastProgress(accountViewModel)
+
+        ObserveIncomingCalls(accountViewModel)
     }
-
-    TrackScreenTime(nav)
-    NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
-
-    DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
-    DisplayNotifyMessages(accountViewModel, nav)
-    DisplayCrashMessages(accountViewModel, nav)
-    DisplayResourceUsageAlert(accountViewModel, nav)
-    DisplayBroadcastProgress(accountViewModel)
-
-    ObserveIncomingCalls(accountViewModel)
 }
 
 @Composable
@@ -363,9 +385,9 @@ fun BuildNavigation(
         enterTransition = { fadeIn(animationSpec = tween(200)) },
         exitTransition = { fadeOut(animationSpec = tween(200)) },
     ) {
-        composable<Route.Home> { HomeScreen(accountViewModel, nav) }
+        composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
-        composable<Route.Video> { VideoScreen(accountViewModel, nav) }
+        composableCapped<Route.Video> { VideoScreen(accountViewModel, nav) }
         composableArgs<Route.Discover> { DiscoverScreen(it.initialTab, accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
@@ -382,10 +404,10 @@ fun BuildNavigation(
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
-        composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Browser>(capWidth = false) { BrowserScreen(accountViewModel, nav) }
         composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
-        composableFromEndArgs<Route.WebApp> { WebAppScreen(it.url, accountViewModel, nav) }
-        composableFromEndArgs<Route.NostrApp> { NostrAppScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEndArgs<Route.WebApp>(capWidth = false) { WebAppScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.NostrApp>(capWidth = false) { NostrAppScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
@@ -424,7 +446,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.NewMusicPlaylist> { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
-        composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
+        composableCapped<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletSend> { WalletSendScreen(it.walletId, accountViewModel, nav) }
@@ -477,7 +499,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.TopUpMint> { TopUpMintScreen(it.mintUrl, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
-        composable<Route.Search> { SearchScreen(accountViewModel, nav) }
+        composableCapped<Route.Search> { SearchScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
