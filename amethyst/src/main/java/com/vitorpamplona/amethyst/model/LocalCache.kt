@@ -3847,7 +3847,15 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is GiftWrapEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
+                    // A wrap with an empty content carries no NIP-44 ciphertext and can
+                    // never be unwrapped — reject it before paying for a signature check
+                    // and a cache slot. Locally stripped copies (copyNoContent) are
+                    // assigned straight to note.event and never pass through here.
+                    if (event.content.isEmpty()) {
+                        false
+                    } else {
+                        consumeRegularEvent(event, relay, wasVerified)
+                    }
                 }
 
                 is GroupEvent -> {
