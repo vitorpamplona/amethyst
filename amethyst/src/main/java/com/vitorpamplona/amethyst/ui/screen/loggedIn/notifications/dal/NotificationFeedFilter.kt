@@ -81,6 +81,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -136,6 +137,12 @@ class NotificationFeedFilter(
             setOf(
                 BadgeAwardEvent.KIND,
                 ChannelMessageEvent.KIND,
+                // NIP-29 group chat (kind 9). A reply to my group message is a
+                // kind-9 that p-tags me (see ChannelNewMessageViewModel), fetched
+                // at startup by filterGroupNotificationsToPubkey. Without kind 9
+                // here the acceptableEvent kind gate drops it before the p-tag
+                // check, so those replies never render on the Notifications tab.
+                ChatEvent.KIND,
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
                 CommentEvent.KIND,
