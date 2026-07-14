@@ -102,7 +102,8 @@ import kotlin.math.roundToInt
  *    store first, `--refresh` to drain providers' relays): the consumer side.
  *  - `amy graperank register` — advertise a `30382:rank` provider in the
  *    account's kind:10040 [TrustProviderListEvent] (defaults to self, so a
- *    provider publishing ranks announces where to find them).
+ *    provider publishing ranks announces where to find them);
+ *    `amy graperank unregister PROVIDER` removes entries again.
  *  - `amy graperank providers [USER]` — list a user's trusted providers.
  */
 object GrapeRankCommand {
@@ -196,16 +197,19 @@ object GrapeRankCommand {
         // NIP-05, or nothing) is the OBSERVER positional for a score computation.
         when (tail.firstOrNull()) {
             "register" -> register(dataDir, tail.drop(1).toTypedArray())
+            "unregister" -> unregister(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
             // `sync` is the pre-rename name kept as a back-compat alias; `crawl` is
-            // canonical (disambiguates from negentropy `amy sync` / `graperank update`).
+            // canonical (disambiguates from negentropy `amy sync` / `graperank refresh`).
             "crawl", "sync" -> crawl(dataDir, tail.drop(1).toTypedArray())
             // The relay census outgrew graperank (it feeds the shared NIP-66
             // reachability cache every command reads) and moved to `amy relay
             // probe`; this alias keeps the old spelling working.
             "probe" -> RelayCommands.probe(dataDir, tail.drop(1).toTypedArray())
-            "update" -> update(dataDir, tail.drop(1).toTypedArray())
+            // `refresh` is canonical (it refreshes the WoT record kinds from each
+            // author's outbox); `update` is the pre-rename back-compat alias.
+            "refresh", "update" -> refresh(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             "publish" -> publish(dataDir, tail.drop(1).toTypedArray())
             "rank" -> rank(dataDir, tail.drop(1).toTypedArray())
@@ -544,7 +548,7 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank update [flags]` — refresh every locally-known author's WoT
+     * `amy graperank refresh [flags]` (alias: `update`) — refresh every locally-known author's WoT
      * record kinds (0 / 3 / 10002 / 1984) straight from their own outbox, so the
      * next `graperank score` runs on current data without a full follow-graph crawl.
      *
@@ -563,7 +567,7 @@ object GrapeRankCommand {
      * `--report-limit N` (per-relay rows in the JSON, default 50),
      * `--down` / `--up` / `--no-sync-deletions`.
      */
-    private suspend fun update(
+    private suspend fun refresh(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
@@ -854,13 +858,15 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank operator [status | relay <url>… | providers]`
+     * `amy graperank operator [status | relay <url>… | keys]`
      *
      * Manage the machine's operator keys used to sign trusted-assertion cards.
-     *  - `status` (default): master pubkey, configured relay(s), provider count.
+     *  - `status` (default): master pubkey, configured relay(s), service-key count.
      *  - `relay <url>…`: set the operator relay(s) the cards + retractions publish
      *    to; creates the operator master on first use.
-     *  - `providers`: the observer -> provider-pubkey mapping learned so far.
+     *  - `keys` (alias: the pre-rename `providers`, which collided with
+     *    `graperank providers`): the observer -> service-key mapping derived so
+     *    far — what a third-party observer wires into their kind:10040.
      */
     private fun operator(
         dataDir: DataDir,
@@ -877,11 +883,11 @@ object GrapeRankCommand {
                 0
             }
 
-            "providers" -> {
+            "keys", "providers" -> {
                 Output.emit(
                     mapOf(
                         "master_pubkey" to if (opKeys.exists()) opKeys.masterPubKey() else null,
-                        "providers" to opKeys.providers().map { (observer, rec) -> mapOf("observer" to observer, "provider_pubkey" to rec.providerPubKey) },
+                        "keys" to opKeys.providers().map { (observer, rec) -> mapOf("observer" to observer, "provider_pubkey" to rec.providerPubKey) },
                     ),
                 )
                 0
@@ -896,14 +902,14 @@ object GrapeRankCommand {
                             "initialized" to true,
                             "master_pubkey" to opKeys.masterPubKey(),
                             "relays" to opKeys.operatorRelays().map { it.url },
-                            "providers" to opKeys.providers().size,
+                            "keys" to opKeys.providers().size,
                         ),
                     )
                 }
                 0
             }
 
-            else -> Output.error("bad_args", "unknown operator subcommand '${rest.first()}' (status | relay | providers)")
+            else -> Output.error("bad_args", "unknown operator subcommand '${rest.first()}' (status | relay | keys)")
         }
     }
 
@@ -982,6 +988,96 @@ object GrapeRankCommand {
                     "changed" to true,
                     "event_id" to event.id,
                     "based_on" to latest?.id,
+                    "published_to" to ack.filterValues { it }.keys.map { it.url },
+                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
+                ),
+            )
+            return 0
+        }
+    }
+
+    /**
+     * `amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL] [--timeout SECS]`
+     *
+     * The inverse of [register]: drop matching provider entries — public AND
+     * private — from the account's kind:10040 [TrustProviderListEvent] and
+     * re-publish it. PROVIDER is required; `--service` / `--relay` narrow the
+     * match when the same key is listed for several services or relays — without
+     * them, every entry for that provider key is removed. Fetches the freshest
+     * list first so the removal applies to the current provider set.
+     */
+    private suspend fun unregister(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val providerArg =
+            args.positionalOrNull(0)
+                ?: args.flag("provider")
+                ?: return Output.error("bad_args", "usage: amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL]")
+        val serviceArg = args.flag("service")
+        val relayArg = args.flag("relay")
+        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+
+        val service =
+            serviceArg?.let {
+                ServiceType.parse(it) ?: return Output.error("bad_args", "--service must be KIND:TAG, e.g. 30382:rank")
+            }
+        val relay =
+            relayArg?.let {
+                RelayUrlNormalizer.normalizeOrNull(it) ?: return Output.error("bad_args", "--relay is not a valid relay URL")
+            }
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val provider = ctx.requireUserHex(providerArg)
+            val outbox = ctx.outboxRelays()
+
+            val latest =
+                fetchLatestProviderList(ctx, ctx.identity.pubKeyHex, outbox, timeoutMs)
+                    ?: return Output.error("not_found", "no kind:10040 provider list found for this account")
+
+            fun matches(tag: ServiceProviderTag) =
+                tag.pubkey == provider &&
+                    (service == null || tag.service == service) &&
+                    (relay == null || tag.relayUrl == relay)
+
+            val publicMatches = latest.serviceProviders().filter(::matches)
+            val privateMatches =
+                latest
+                    .privateTags(ctx.signer)
+                    ?.serviceProviders()
+                    .orEmpty()
+                    .filter(::matches)
+            val toRemove = (publicMatches + privateMatches).distinct()
+
+            if (toRemove.isEmpty()) {
+                Output.emit(
+                    mapOf(
+                        "provider" to provider,
+                        "changed" to false,
+                        "removed" to emptyList<Any>(),
+                        "based_on" to latest.id,
+                    ),
+                )
+                return 0
+            }
+
+            // remove() strips the tag from both the public and the private set,
+            // re-signing each round; only the final version is published.
+            var event = latest
+            for (tag in toRemove) {
+                event = TrustProviderListEvent.remove(event, tag, ctx.signer)
+            }
+
+            val ack = ctx.publish(event, outbox)
+            Output.emit(
+                mapOf(
+                    "provider" to provider,
+                    "changed" to true,
+                    "removed" to toRemove.map { mapOf("service" to it.service.toValue(), "relay" to it.relayUrl.url) },
+                    "event_id" to event.id,
+                    "based_on" to latest.id,
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
                 ),

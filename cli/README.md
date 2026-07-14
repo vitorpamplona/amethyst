@@ -392,8 +392,10 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy graperank [OBSERVER] [--offline] [--min-rank N]` | Compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph. Exhaustively crawls each user's kind:10002 outbox for their latest kind:3/10000/1984 until every discovered user is checked (no user cap), dropping reports the author retracted via NIP-09. **Every score run persists its result locally**: the ranks (cutoff `--min-rank`, default 2) are reconciled into the shared store as NIP-85 kind:30382 cards signed by a per-observer **service key** — changed ranks re-signed, unchanged skipped (no event-id churn), dropped targets retracted (kind:5). `graperank score` is the local-only variant (same as `--offline`). |
 | `amy graperank publish [OBSERVER] [--relay URL[,URL…]]` | Transport only: make the operator relay(s) converge to the locally persisted card set — one NIP-77 up-only reconcile per relay over the service key's kind:30382 + kind:5 (nothing is re-scored or re-signed; a relay that can't reconcile gets the full set published instead). Also refreshes the observer's kind:10040 pointer when we hold their key. |
 | `amy graperank rank USER [--provider PUBKEY] [--refresh]` | The consumer side: read the kind:30382 cards about USER — one rank per provider, newest card each. Local store first; `--refresh` (or a miss) drains the operator relays, the relays your kind:10040 declares, and the bootstrap set. |
-| `amy graperank operator [status \| relay <url>… \| providers]` | Manage the machine's operator keys (independent of any account, under `~/.amy/operator/`). `relay` sets where `publish` sends cards + retractions; `status` shows the master pubkey and relays; `providers` lists the observer → service-pubkey map. |
+| `amy graperank refresh [--down] [--up]` | Refresh every locally-known author's WoT record kinds (0/3/10002/1984) from their own outbox: one NIP-77 negentropy reconcile per write relay scoped to its authors, so the next `score` runs on current data without a full re-crawl. (`update` is the pre-rename alias.) |
+| `amy graperank operator [status \| relay <url>… \| keys]` | Manage the machine's operator keys (independent of any account, under `~/.amy/operator/`). `relay` sets where `publish` sends cards + retractions; `status` shows the master pubkey and relays; `keys` lists the observer → service-pubkey map (`providers` is the pre-rename alias). |
 | `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL]` | Declare a NIP-85 provider in your kind:10040 so clients can discover it (default: self as the `30382:rank` provider). |
+| `amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL]` | The inverse of `register`: remove matching entries (public + private) from your kind:10040 and re-publish it. `--service`/`--relay` narrow the match; without them every entry for that provider key is dropped. |
 | `amy graperank providers [USER]` | List a user's declared NIP-85 trusted providers (public + your own private entries). |
 
 #### GrapeRank scores are persisted locally, then published (NIP-85)
@@ -432,7 +434,7 @@ negentropy-reconcile gets the full set published event-by-event instead. When
 the observer is your own account (we hold the key), `publish` also writes their
 kind:10040 pointing `30382:rank → serviceKey @ operator relay` to their outbox,
 so clients can find the cards. For a third-party observer, `graperank operator
-providers` prints the `observer → service-pubkey` mapping to wire their
+keys` prints the `observer → service-pubkey` mapping to wire their
 kind:10040 out-of-band.
 
 ### Direct messages (NIP-17)
@@ -553,7 +555,7 @@ the last facet removes R entirely.
 | `amy relay add URL` / `remove URL` | Fan-out to the transport lists (nip65 `both` + `dm` + `key-package`). |
 | `amy relay list` | Print every configured relay bucket. |
 | `amy relay publish-lists` | Broadcast every configured relay list to the union of your relays. |
-| `amy relay probe [--timeout SECS] [--concurrency N]` | The relay census: mass-connect every relay the local store knows (all stored kind:10002 relays + the reachability cache) in parallel waves and record live/dead + measured `rtt-open` into the NIP-66 reachability cache (kind:30166). Reachability-aware commands (`graperank crawl`/`update`) read it to skip dead relays and pre-connect live ones. (`amy graperank probe` remains as an alias.) |
+| `amy relay probe [--timeout SECS] [--concurrency N]` | The relay census: mass-connect every relay the local store knows (all stored kind:10002 relays + the reachability cache) in parallel waves and record live/dead + measured `rtt-open` into the NIP-66 reachability cache (kind:30166). Reachability-aware commands (`graperank crawl`/`refresh`) read it to skip dead relays and pre-connect live ones. (`amy graperank probe` remains as an alias.) |
 
 ### Local store maintenance
 

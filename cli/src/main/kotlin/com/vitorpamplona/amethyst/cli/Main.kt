@@ -646,7 +646,7 @@ private fun printUsage() {
         |                                              storm (seeded from the reachability cache).
         |  graperank probe                            alias for `relay probe` (the census moved there —
         |                                              it feeds the shared NIP-66 reachability cache).
-        |  graperank update [--down] [--up]           refresh every locally-known author's WoT record kinds
+        |  graperank refresh [--down] [--up]          refresh every locally-known author's WoT record kinds
         |    [--no-sync-deletions] [--timeout SECS]     (0/3/10002/1984) from their own outbox: reads all
         |    [--relay-concurrency N] [--author-chunk N] kind:10002 in the store, groups authors by write
         |    [--min-authors N] [--report-limit N]       relay, and runs one NIP-77 negentropy reconcile per
@@ -654,14 +654,19 @@ private fun printUsage() {
         |                                              the deletion settle downloads the relay's kind:5 when
         |                                              an uploaded record was rejected (author retracted it).
         |                                              Falls back to a full paged download when a relay
-        |                                              can't reconcile via negentropy.
+        |                                              can't reconcile via negentropy. (`update` is the
+        |                                              pre-rename alias.)
         |  graperank operator [status|relay <url>…    manage the machine's operator keys (~/.amy/operator/,
-        |    |providers]                               independent of accounts): relay sets where cards +
+        |    |keys]                                    independent of accounts): relay sets where cards +
         |                                              retractions publish; status shows master + relays;
-        |                                              providers lists observer -> service-pubkey.
+        |                                              keys lists observer -> service-pubkey.
         |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040 so
         |    [--service KIND:TAG] [--relay URL]        clients can discover it (default: self as the
         |    [--private]                               30382:rank provider at your first outbox relay).
+        |  graperank unregister PROVIDER              remove matching provider entries (public + private)
+        |    [--service KIND:TAG] [--relay URL]        from your kind:10040 and re-publish it; --service/
+        |                                              --relay narrow the match, else every entry for
+        |                                              that provider key is dropped.
         |  graperank providers [USER] [--refresh]     list a user's declared NIP-85 trusted providers
         |    [--timeout SECS]                          (default: active account).
         |
