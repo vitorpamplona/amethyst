@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalSuppressReplyToNoteId
@@ -144,6 +145,16 @@ fun MinichatScreen(
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
+                    }
+                },
+                actions = {
+                    // For a Concord thread, always offer a jump to the full channel — the "chat room
+                    // itself", where the whole timeline loads and (if you aren't a member yet) you can
+                    // join. This is the way out when the pinned root is still backfilling or unavailable.
+                    if (isConcord) {
+                        IconButton(onClick = { nav.nav(Route.Concord(communityId!!, channelId!!)) }) {
+                            SymbolIcon(symbol = MaterialSymbols.Forum, contentDescription = stringRes(R.string.concord_open_channel))
+                        }
                     }
                 },
             )
