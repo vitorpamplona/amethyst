@@ -48,6 +48,12 @@ class AuthorityResolver private constructor(
     private val memberRoles: Map<String, Set<String>>,
     private val banned: Set<String>,
 ) {
+    /** The resolved role definitions (authority-gated), keyed by role id. Safe for display. */
+    fun roles(): Map<String, RoleEntity> = roles
+
+    /** The role definitions [pubKey] currently holds (empty for the owner and plain members). */
+    fun rolesFor(pubKey: String): List<RoleEntity> = rolesOf(pubKey).mapNotNull { roles[it] }
+
     fun isOwner(pubKey: String): Boolean = pubKey.lowercase() == ownerLower
 
     fun isBanned(pubKey: String): Boolean = pubKey.lowercase() in banned

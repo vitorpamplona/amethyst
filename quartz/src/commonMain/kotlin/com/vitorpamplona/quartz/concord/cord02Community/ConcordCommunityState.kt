@@ -98,16 +98,11 @@ class ConcordCommunityState(
                 channels[head.entityIdHex] = ConcordChannel(head.entityIdHex, def)
             }
 
-            // Role definitions ride along for display; the AuthorityResolver already owner-roots the
-            // privileged roster via the grant fixpoint, so a role a rogue defines is inert until an
-            // authorized granter (who must outrank it and hold MANAGE_ROLES) actually hands it out.
-            val roles = HashMap<String, RoleEntity>()
-            for (e in heads) {
-                if (e.entityKind != ControlEntityKind.ROLE) continue
-                val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: continue
-                if (r.deleted) continue
-                roles[e.entityIdHex] = r
-            }
+            // Role definitions come from the authority-gated fold (not the raw structural heads): a
+            // rogue can mint a higher-version edition on a legit role's coordinate (e.g. marking the
+            // Admin role deleted) that would win a structural fold and corrupt the displayed roster,
+            // so we take the roles the AuthorityResolver actually accepted from the owner outward.
+            val roles = authority.roles()
 
             // Dissolution is owner-only — a rogue tombstone must not appear to kill the community.
             val dissolved = heads.any { it.entityKind == ControlEntityKind.DISSOLVED && authority.isOwner(it.author) }

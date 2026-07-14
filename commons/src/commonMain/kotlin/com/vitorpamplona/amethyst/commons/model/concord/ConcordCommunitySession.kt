@@ -130,6 +130,15 @@ class ConcordCommunitySession(
     /** The live Guestbook membership set (self-signed joins minus later leaves). */
     val members: StateFlow<Set<HexKey>> = _members
 
+    private val _observedAuthors = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /**
+     * Everyone whose decrypted channel message this session has seen (lowercase hex). CORD-02 §5:
+     * "an author seen publishing is observably present, auto-included even if their Join never
+     * arrived." Most members never send a Guestbook Join, so this is the bulk of the real roster.
+     */
+    val observedAuthors: StateFlow<Set<HexKey>> = _observedAuthors
+
     // channelIdHex -> (other member pubkey -> createdAt secs of their latest typing heartbeat).
     private val typingByChannel = HashMap<HexKey, HashMap<HexKey, Long>>()
     private val _typing = MutableStateFlow<Map<HexKey, Map<HexKey, Long>>>(emptyMap())
@@ -141,16 +150,17 @@ class ConcordCommunitySession(
     val typing: StateFlow<Map<HexKey, Map<HexKey, Long>>> = _typing
 
     /**
-     * The community's full membership (lowercase hex): everyone who announced on the Guestbook,
-     * plus the owner and every role-holder (who are members whether or not they posted a join),
-     * minus the banned. Best-effort — a member who joined without a Guestbook motion and holds no
-     * role is invisible (key possession leaves no trace), so this is a floor, not a census.
+     * The community's full membership (lowercase hex): everyone who announced on the Guestbook or
+     * was seen publishing a channel message ([observedAuthors]), plus the owner and every
+     * role-holder, minus the banned. Best-effort — a member who joined without a Guestbook motion,
+     * holds no role, and never posted is invisible (key possession leaves no trace), so this is a
+     * floor, not a census.
      */
     fun allMembers(): Set<HexKey> {
         val s = _state.value
         val roster = if (s != null) s.authority.roleHolders() + s.ownerPubKey.lowercase() else emptySet()
         val banned = s?.authority?.bannedMembers().orEmpty()
-        return (_members.value + roster) - banned
+        return (_members.value + _observedAuthors.value + roster) - banned
     }
 
     /** The size of [allMembers] — the community's true (best-effort) member count. */
@@ -308,8 +318,15 @@ class ConcordCommunitySession(
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
         // Decrypt + validate every bound rumor and hand it to the sink. The sink dedups
         // by rumor id, so re-emitting the whole buffer on each fold is idempotent.
+        val authors = HashSet<HexKey>()
         ConcordActions.channelRumors(wraps, key, channelIdHex, entry.rootEpoch).forEach { rumor ->
+            authors.add(rumor.pubKey.lowercase())
             onRumor(entry.id, channelIdHex, rumor)
+        }
+        // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the
+        // roster even if they never posted a Guestbook Join. Only publish when the set actually grew.
+        if (authors.isNotEmpty() && !_observedAuthors.value.containsAll(authors)) {
+            _observedAuthors.value = _observedAuthors.value + authors
         }
     }
 

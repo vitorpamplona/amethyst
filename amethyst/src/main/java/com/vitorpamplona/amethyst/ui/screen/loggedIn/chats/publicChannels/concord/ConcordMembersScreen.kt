@@ -94,22 +94,33 @@ fun ConcordMembersScreen(
     val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
     val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
 
-    // The Guestbook membership (self-signed joins), so plain members show alongside the owner,
-    // admins and banned — not just the privileged roster the Control Plane traces.
+    // The Guestbook membership (self-signed joins) plus everyone seen publishing a channel message
+    // (observed authors, CORD-02 §5) — most members never post a Join, so without the latter the
+    // roster collapses to just the owner + privileged roles.
     val guestbookMembers by (session?.members ?: remember { MutableStateFlow(emptySet<HexKey>()) }).collectAsStateWithLifecycle()
+    val observedAuthors by (session?.observedAuthors ?: remember { MutableStateFlow(emptySet<HexKey>()) }).collectAsStateWithLifecycle()
 
     val myPubKey = account.signer.pubKey
     val roster =
-        remember(state, guestbookMembers) {
+        remember(state, guestbookMembers, observedAuthors) {
             val s = state ?: return@remember emptyList<RosterEntry>()
             val authority = s.authority
             val pubkeys =
-                (listOf(s.ownerPubKey) + authority.roleHolders() + authority.bannedMembers() + guestbookMembers)
+                (listOf(s.ownerPubKey) + authority.roleHolders() + authority.bannedMembers() + guestbookMembers + observedAuthors)
                     .map { it.lowercase() }
                     .distinct()
             pubkeys
-                .map { RosterEntry(it, ConcordMembership.of(authority, it)) }
-                .sortedWith(compareBy({ it.membership.sortRank() }, { it.pubkey }))
+                .map {
+                    // The member's most-privileged role name (lowest position ranks highest), so the
+                    // roster shows the real "Admin"/"Moderator"/custom label instead of a coarse badge.
+                    val roleName =
+                        authority
+                            .rolesFor(it)
+                            .minByOrNull { r -> r.position }
+                            ?.name
+                            ?.takeIf { n -> n.isNotBlank() }
+                    RosterEntry(it, ConcordMembership.of(authority, it), roleName)
+                }.sortedWith(compareBy({ it.membership.sortRank() }, { it.pubkey }))
         }
 
     val iAmOwner = state?.authority?.isOwner(myPubKey) == true
@@ -209,7 +220,7 @@ private fun ConcordMemberRow(
                 Text(entry.pubkey.take(8), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        MemberBadge(entry.membership)
+        MemberBadge(entry.membership, entry.roleName)
         if (hasMenu) {
             var expanded by remember { mutableStateOf(false) }
             IconButton(onClick = { expanded = true }) {
@@ -253,14 +264,21 @@ private fun ConcordMemberRow(
     }
 }
 
-/** A small pill labelling the member's standing (owner / admin / banned; plain members render nothing). */
+/** A small pill labelling the member's standing (owner / role name / banned; plain members render nothing). */
 @Composable
-private fun MemberBadge(membership: ConcordMembership) {
+private fun MemberBadge(
+    membership: ConcordMembership,
+    roleName: String?,
+) {
     val label =
-        when (membership) {
-            ConcordMembership.OWNER -> stringRes(R.string.concord_role_owner)
-            ConcordMembership.ADMIN -> stringRes(R.string.concord_role_admin)
-            ConcordMembership.BANNED -> stringRes(R.string.concord_role_banned)
+        when {
+            membership == ConcordMembership.BANNED -> stringRes(R.string.concord_role_banned)
+            membership == ConcordMembership.OWNER -> stringRes(R.string.concord_role_owner)
+            // Show the actual granted role ("Admin", "Moderator", or a custom role) rather than a
+            // one-size-fits-all badge; fall back to the generic "Admin" label if a role-holder's
+            // role name somehow didn't resolve.
+            roleName != null -> roleName
+            membership == ConcordMembership.ADMIN -> stringRes(R.string.concord_role_admin)
             else -> return
         }
     val container = if (membership == ConcordMembership.BANNED) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
@@ -299,6 +317,8 @@ private fun ConcordRemoveMemberDialog(
 private class RosterEntry(
     val pubkey: HexKey,
     val membership: ConcordMembership,
+    /** The member's most-privileged role name (e.g. "Admin"/"Moderator"), null for a plain member. */
+    val roleName: String?,
 )
 
 /** Owner first, then admins, then plain members, then banned last. */

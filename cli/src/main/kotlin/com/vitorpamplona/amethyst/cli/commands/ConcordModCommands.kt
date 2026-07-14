@@ -155,7 +155,11 @@ object ConcordModCommands {
         sc: StoredCommunity,
     ): Pair<GroupKey, List<ControlEdition>> {
         val cp = ConcordActions.controlPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
-        val wraps = ctx.drain(ConcordCommands.relaysFor(ctx, sc).associateWith { listOf(ConcordActions.planeFilter(cp.publicKeyHex)) }).map { it.second }
+        val relays = ConcordCommands.relaysFor(ctx, sc)
+        // Concord relays serve the plane's kind-1059 only to a connection AUTHed as the derived
+        // stream key — register the control key so the drain isn't refused (else the fold is empty).
+        ctx.registerConcordStreamKeys(relays, listOf(cp.secretKey))
+        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
         return cp to ConcordActions.controlEditions(wraps, cp)
     }
 
