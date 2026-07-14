@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowLabelsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
@@ -788,6 +789,8 @@ fun InnerNoteWithReactions(
                     Spacer(modifier = HalfDoubleVertSpacer)
                     DisplayZapSplits(noteEvent, false, accountViewModel, nav)
                 }
+
+                DisplayFollowLabelsInPost(baseNote, accountViewModel, nav)
             }
 
             RenderApprovalIfNeeded(baseNote, accountViewModel, nav)

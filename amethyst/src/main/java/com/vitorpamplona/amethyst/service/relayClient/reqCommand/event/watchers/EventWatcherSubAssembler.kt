@@ -58,6 +58,8 @@ class EventWatcherSubAssembler(
             return null
         }
 
+        val account = keys.first().account
+
         lastNotesOnFilter = keys.map { it.note }
 
         return groupByRelayPresence(lastNotesOnFilter, latestEOSEs)
@@ -65,10 +67,12 @@ class EventWatcherSubAssembler(
                 if (group.isNotEmpty()) {
                     val addressables = group.filterIsInstance<AddressableNote>()
                     val events = group.mapNotNull { if (it !is AddressableNote) it else null }
+                    val eventEoses = findMinimumEOSEs(events, latestEOSEs)
 
                     listOfNotNull(
-                        filterRepliesAndReactionsToNotes(events, findMinimumEOSEs(events, latestEOSEs)),
+                        filterRepliesAndReactionsToNotes(events, eventEoses),
                         filterRepliesAndReactionsToAddresses(addressables, findMinimumEOSEs(addressables, latestEOSEs)),
+                        filterLabelsByFollowsToNotes(account, events, eventEoses),
                     ).flatten()
                 } else {
                     emptyList()

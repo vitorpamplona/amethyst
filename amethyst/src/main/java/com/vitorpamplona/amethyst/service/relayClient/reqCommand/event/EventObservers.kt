@@ -266,6 +266,19 @@ fun observeNoteZaps(
 }
 
 @Composable
+fun observeNoteLabels(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
+    // Subscribe in the relay for changes in this note.
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow = remember(note) { note.flow().labels.stateFlow }
+    return flow.collectAsStateWithLifecycle()
+}
+
+@Composable
 fun observeNoteReposts(
     note: Note,
     accountViewModel: AccountViewModel,

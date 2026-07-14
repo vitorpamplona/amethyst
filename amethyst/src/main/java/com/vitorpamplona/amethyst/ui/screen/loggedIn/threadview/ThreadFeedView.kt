@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowLabelsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
@@ -1134,6 +1135,8 @@ private fun FullBleedNoteCompose(
                 DisplayZapSplits(noteEvent, false, accountViewModel, nav)
             }
         }
+
+        DisplayFollowLabelsInPost(baseNote, accountViewModel, nav, PaddingHorizontal12Modifier)
 
         RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
 
