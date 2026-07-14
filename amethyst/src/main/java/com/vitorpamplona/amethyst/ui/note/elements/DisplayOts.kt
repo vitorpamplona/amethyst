@@ -61,8 +61,8 @@ fun DisplayOts(
             }
 
             HeaderPill(
-                symbol = MaterialSymbols.CheckCircle,
-                text = stringRes(R.string.existed_since, timeStr),
+                symbol = MaterialSymbols.OpenTimestamps,
+                text = timeStr,
                 contentDescription = stringRes(R.string.ots_info_title),
                 onClick = {
                     accountViewModel.toastManager.toast(
@@ -75,8 +75,8 @@ fun DisplayOts(
         },
         whenPending = {
             HeaderPill(
-                symbol = MaterialSymbols.Schedule,
-                text = stringRes(id = R.string.timestamp_pending_short),
+                symbol = MaterialSymbols.OpenTimestamps,
+                text = stringRes(id = R.string.pending),
                 contentDescription = stringRes(R.string.ots_info_title),
             )
         },
