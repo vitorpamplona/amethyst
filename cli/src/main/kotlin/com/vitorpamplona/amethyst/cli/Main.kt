@@ -488,7 +488,8 @@ private fun printUsage() {
         |    [--concurrency N]            knows and record live/dead + measured rtt-open
         |                                 into the reachability cache (NIP-66 kind:30166),
         |                                 so reachability-aware commands (graperank crawl/
-        |                                 update) skip dead relays and wait once
+        |                                 refresh) skip dead relays and wait once
+        |                                 (--timeout: per wave, default 15s)
         |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
         |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)
         |
@@ -616,7 +617,8 @@ private fun printUsage() {
         |    [--rigor X] [--attenuation X]             Exhaustively crawls each user's kind:10002 outbox
         |    [--max-rounds N] [--max-hops N]           for their latest kind:3/10000/1984 until every
         |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap;
-        |    [--diagnose] [--min-rank N]               --max-hops bounds follow distance, e.g. 8;
+        |    [--diagnose] [--min-rank N]               --timeout: per-REQ drain, default 10s;
+        |                                              --max-hops bounds follow distance, e.g. 8;
         |                                              --diagnose dumps per-relay telemetry: outcome
         |                                              mix, yield, latency, and a LIVE/DEAD + limits
         |                                              classification table of every relay contacted).
@@ -637,9 +639,15 @@ private fun printUsage() {
         |                                              re-signed; full-set publish fallback when a relay
         |                                              can't reconcile). Also refreshes the observer's
         |                                              kind:10040 pointer when we hold their key.
+        |                                              --timeout: idle watchdog per relay, default 30s.
         |  graperank rank USER [--provider PUBKEY]    read the kind:30382 cards about USER — one rank
         |    [--refresh] [--timeout SECS]              per provider, local store first, --refresh drains
-        |                                              the operator/declared/bootstrap relays.
+        |                                              the operator/declared/bootstrap relays
+        |                                              (--timeout: drain, default 8s).
+        |  graperank status                           read-only local inventory, no network: WoT record
+        |                                              counts (do I need to crawl again?), reachability
+        |                                              cache size + age, operator state, and the
+        |                                              persisted card set per observer.
         |  graperank crawl [OBSERVER]                 network only: crawl the WoT graph (kind 3/10000/
         |    [--max-hops N] [--preconnect-cap N]      1984/10002) into the local store without scoring.
         |    [--no-preconnect]                        Pre-connects every known-live relay in one parallel
@@ -655,7 +663,8 @@ private fun printUsage() {
         |                                              an uploaded record was rejected (author retracted it).
         |                                              Falls back to a full paged download when a relay
         |                                              can't reconcile via negentropy. (`update` is the
-        |                                              pre-rename alias.)
+        |                                              pre-rename alias; --timeout: idle watchdog per
+        |                                              relay, default 30s.)
         |  graperank operator [status|relay <url>…    manage the machine's operator keys (~/.amy/operator/,
         |    |keys]                                    independent of accounts): relay sets where cards +
         |                                              retractions publish; status shows master + relays;

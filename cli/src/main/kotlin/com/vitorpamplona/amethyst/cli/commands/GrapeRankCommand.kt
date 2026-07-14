@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.experimental.graperank.TrustGraphBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -44,12 +46,16 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -77,9 +83,12 @@ import kotlin.math.roundToInt
  * fetches; the score is a pure function over the store; every score run persists
  * its result as locally-signed NIP-85 kind:30382 cards):
  *  - `amy graperank crawl [OBSERVER]` — network only: crawl the reachable graph's
- *    kind 3/10000/1984/10002 into the local store (aliased as the former `sync`).
- *    Idempotent and cumulative, so run it a few times to make sure everything is
- *    loaded. Scores nothing.
+ *    kind 3/10000/1984/10002 into the local store. Idempotent and cumulative, so
+ *    run it a few times to make sure everything is loaded. Scores nothing.
+ *    (`sync` is a deprecated alias — it warns and will be removed.)
+ *  - `amy graperank status` — read-only inventory of all of the above: WoT record
+ *    counts, reachability-cache freshness, operator state, persisted card sets.
+ *    Answers "do I need to crawl again?" with no network and no signing.
  *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store,
  *    score (same as bare `--offline`), and ALWAYS reconcile the result into the
  *    store as kind:30382 [ContactCardEvent] cards signed by the observer's
@@ -200,9 +209,19 @@ object GrapeRankCommand {
             "unregister" -> unregister(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
-            // `sync` is the pre-rename name kept as a back-compat alias; `crawl` is
-            // canonical (disambiguates from negentropy `amy sync` / `graperank refresh`).
-            "crawl", "sync" -> crawl(dataDir, tail.drop(1).toTypedArray())
+            "crawl" -> crawl(dataDir, tail.drop(1).toTypedArray())
+            // Deprecated pre-rename alias for `crawl`. Actively misleading now that
+            // the negentropy record refresh is `graperank refresh` (and `amy sync`
+            // is the generic negentropy verb), so it warns before it runs — next
+            // step is removal.
+            "sync" -> {
+                System.err.println(
+                    "[graperank] `graperank sync` is deprecated and will be removed — use `graperank crawl` " +
+                        "(or `graperank refresh` to re-sync known authors' records).",
+                )
+                crawl(dataDir, tail.drop(1).toTypedArray())
+            }
+            "status" -> status(dataDir)
             // The relay census outgrew graperank (it feeds the shared NIP-66
             // reachability cache every command reads) and moved to `amy relay
             // probe`; this alias keeps the old spelling working.
@@ -505,9 +524,9 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank crawl [OBSERVER]` — network-only WoT data crawl (aliased as the
-     * former `sync`). Crawls the reachable follow/mute/report graph into the local
-     * store (kind 3/10000/1984/10002) and reports what it loaded, WITHOUT scoring.
+     * `amy graperank crawl [OBSERVER]` — network-only WoT data crawl. Crawls the
+     * reachable follow/mute/report graph into the local store (kind
+     * 3/10000/1984/10002) and reports what it loaded, WITHOUT scoring.
      * Idempotent + cumulative: run it a few times to make sure everything is loaded,
      * then `graperank score`.
      */
@@ -541,6 +560,80 @@ object GrapeRankCommand {
                     "verify_ms" to stats.verifyMs,
                     "insert_ms" to stats.insertMs,
                     "events_stored" to stats.eventsStored,
+                ),
+            )
+        }
+        return 0
+    }
+
+    /**
+     * `amy graperank status` — read-only inventory of everything a GrapeRank run
+     * depends on, straight from the local store: WoT record counts (the "do I
+     * need to crawl again?" answer), reachability-cache size + freshness,
+     * operator/service-key state, and the persisted card set per observer.
+     * No network, no signing, no side effects.
+     */
+    private suspend fun status(dataDir: DataDir): Int {
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            // Deliberately no ctx.prepare(): status must stay offline (nothing here
+            // needs a relay connection or marmot state).
+            suspend fun countKind(kind: Int) = ctx.store.count(Filter(kinds = listOf(kind)))
+
+            // The store keeps only the newest replaceable event per author, so the
+            // kind:3 count is "users whose follow list we hold" — the graph size a
+            // `score` would see.
+            val contactLists = countKind(ContactListEvent.KIND)
+
+            // Read-only reachability view: ctx.reachability would lazily derive the
+            // monitor key and thereby CREATE the operator master on a fresh machine;
+            // a throwaway signer reads the same kind:30166 records without that
+            // side effect (the signer is only used for writes).
+            val reach = RelayReachabilityStore(store = ctx.store, signer = NostrSignerInternal(KeyPair())).snapshot()
+            val newestReachRecord =
+                ctx.store
+                    .query<Event>(Filter(kinds = listOf(RelayDiscoveryEvent.KIND), limit = 1))
+                    .firstOrNull()
+                    ?.createdAt
+
+            val opKeys = ctx.dataDir.operatorKeys()
+            val cards =
+                opKeys.providers().map { (observer, rec) ->
+                    linkedMapOf<String, Any?>(
+                        "observer" to observer,
+                        "provider_pubkey" to rec.providerPubKey,
+                        "cards" to ctx.store.count(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(rec.providerPubKey))),
+                        "retractions" to ctx.store.count(Filter(kinds = listOf(DeletionEvent.KIND), authors = listOf(rec.providerPubKey))),
+                    )
+                }
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "store" to
+                        linkedMapOf<String, Any?>(
+                            "profiles" to countKind(MetadataEvent.KIND),
+                            "contact_lists" to contactLists,
+                            "mute_lists" to countKind(MuteListEvent.KIND),
+                            "reports" to countKind(ReportEvent.KIND),
+                            "relay_lists" to countKind(AdvertisedRelayListEvent.KIND),
+                        ),
+                    "reachability" to
+                        linkedMapOf<String, Any?>(
+                            "live" to reach.live.size,
+                            "dead" to reach.dead.size,
+                            "newest_record_age_s" to newestReachRecord?.let { (TimeUtils.now() - it).coerceAtLeast(0) },
+                        ),
+                    "operator" to
+                        if (opKeys.exists()) {
+                            linkedMapOf<String, Any?>(
+                                "initialized" to true,
+                                "master_pubkey" to opKeys.masterPubKey(),
+                                "relays" to opKeys.operatorRelays().map { it.url },
+                            )
+                        } else {
+                            linkedMapOf<String, Any?>("initialized" to false)
+                        },
+                    "cards" to cards,
+                    "note" to if (contactLists == 0) "no contact lists in the local store — run `amy graperank crawl` first" else null,
                 ),
             )
         }
@@ -596,7 +689,7 @@ object GrapeRankCommand {
                             down = downFlag || !upFlag,
                             up = upFlag || !downFlag,
                             syncDeletions = !args.bool("no-sync-deletions"),
-                            relayConcurrency = args.intFlag("relay-concurrency", 4),
+                            relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 4)),
                             authorChunk = args.intFlag("author-chunk", 500),
                             minAuthors = args.intFlag("min-authors", 1),
                             idleTimeoutMs = args.longFlag("timeout", 30L) * 1000,
@@ -679,7 +772,10 @@ object GrapeRankCommand {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
         val relayArg = args.flag("relay")
-        val relayConcurrency = args.intFlag("relay-concurrency", 4)
+        // --relay-concurrency is canonical for "relays worked at once" across the
+        // graperank verbs; --concurrency is accepted everywhere as its alias.
+        val relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 4))
+        // Idle watchdog per relay reconcile (not a total budget), like `refresh`.
         val idleTimeoutMs = args.longFlag("timeout", 30L) * 1000
 
         Context.open(dataDir).use { ctx ->
