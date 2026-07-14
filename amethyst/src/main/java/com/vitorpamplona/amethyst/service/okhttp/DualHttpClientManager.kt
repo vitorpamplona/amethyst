@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import okhttp3.Call
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.InetSocketAddress
@@ -46,8 +47,11 @@ class DualHttpClientManager(
     // is uniform across image, upload, NIP-05, money, preview, and push roles.
     // See [OkHttpClientFactory] kdoc.
     onionCache: OnionLocationCache,
+    // Resource-usage ledger counter, installed on the shared base client so
+    // every derived client is accounted. See [OkHttpClientFactory].
+    usageInterceptor: Interceptor? = null,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache)
+    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->

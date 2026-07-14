@@ -206,9 +206,28 @@ class ScheduledPostStore(
                 mutableListOf()
             }
         loaded = true
+        val recovered = releaseStaleClaims()
         val purged = purgeStale(nowSec())
         _flow.value = posts.toList()
-        if (purged) persist()
+        if (purged || recovered) persist()
+    }
+
+    /**
+     * A PUBLISHING row found at initial disk load is a claim from a previous
+     * process — the worker that held it died (crash, cancellation) before
+     * markSent/markFailed/releaseClaim ran. No worker in THIS process can
+     * hold a claim before the first load, so reset them to PENDING for the
+     * next cycle to retry. Returns true if any row was recovered.
+     */
+    private fun releaseStaleClaims(): Boolean {
+        var recovered = false
+        posts.forEachIndexed { idx, post ->
+            if (post.status == ScheduledPostStatus.PUBLISHING) {
+                posts[idx] = post.copy(status = ScheduledPostStatus.PENDING)
+                recovered = true
+            }
+        }
+        return recovered
     }
 
     /**

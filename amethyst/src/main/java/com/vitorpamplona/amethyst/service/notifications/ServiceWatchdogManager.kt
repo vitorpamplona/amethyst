@@ -52,8 +52,13 @@ class ServiceWatchdogManager {
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 )
 
+            // ELAPSED_REALTIME (not _WAKEUP): a health check is not worth pulling
+            // the CPU out of sleep — if the device is asleep, a restarted service
+            // couldn't do useful network work anyway. The alarm fires as soon as
+            // the device is next awake, and the deeper restart layers (15-min
+            // WorkManager job, FCM/UnifiedPush) cover the force-stop/doze cases.
             alarmManager.setInexactRepeating(
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                AlarmManager.ELAPSED_REALTIME,
                 SystemClock.elapsedRealtime() + WATCHDOG_INTERVAL_MS,
                 WATCHDOG_INTERVAL_MS,
                 pendingIntent,

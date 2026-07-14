@@ -26,9 +26,11 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -47,15 +49,26 @@ import java.util.concurrent.TimeUnit
  * consults [CalendarReminderStore] to skip events that have already been notified for. Run as
  * a 15-minute periodic worker: that's the WorkManager minimum and matches the resolution of
  * the reminder UI ("starts in ~15 min" is the smallest interval users perceive as "soon").
+ *
+ * The periodic chain is only kept alive while it can plausibly fire: the ACCEPTED-RSVP
+ * observer in AppModules calls [schedule] when an accepted RSVP lands in LocalCache, and
+ * [doWork] cancels the chain when the cache holds no accepted RSVP that could still start.
+ * LocalCache is memory-only, so a WorkManager wake of a dead process always sees an empty
+ * cache and can never fire a reminder — an unconditional periodic schedule would cold-start
+ * the whole app graph every 15 minutes forever for zero benefit.
  */
 class CalendarReminderWorker(
     appContext: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
+        runCatching { Amethyst.instance.resourceUsage.add(UsageKeys.workerRuns("calendarReminder"), 1) }
         val prefs = CalendarReminderPrefs(applicationContext)
         if (!prefs.isEnabled()) {
-            Log.d(TAG) { "Reminders disabled; skipping scan." }
+            Log.d(TAG) { "Reminders disabled; ending periodic chain." }
+            // The settings toggle re-schedules on enable; no reason to keep
+            // waking the process while the feature is off.
+            cancel(applicationContext)
             return Result.success()
         }
         val now = TimeUtils.now()
@@ -66,12 +79,7 @@ class CalendarReminderWorker(
         // multi-account "all logged-in pubkeys" view here, so we accept any RSVP that's
         // present in cache — the alternative (looking only at the foreground account) would
         // silently break notifications for account switching during the lead window.
-        val acceptedRsvps =
-            LocalCache.addressables
-                .filterIntoSet { _, note ->
-                    val e = note.event
-                    e is CalendarRSVPEvent && e.status() == RSVPStatusTag.STATUS.ACCEPTED
-                }.mapNotNull { it.event as? CalendarRSVPEvent }
+        val acceptedRsvps = acceptedRsvpsInCache()
 
         Log.d(TAG) { "Worker scanning ${acceptedRsvps.size} accepted RSVPs (now=$now, lead=${prefs.leadMinutes()}m)" }
 
@@ -110,6 +118,22 @@ class CalendarReminderWorker(
 
         // Prune entries for events that ended more than a day ago — they can't fire again.
         store.forgetBefore(now - PRUNE_AGE_SECONDS)
+
+        // Nothing left that could ever fire → end the periodic chain instead of
+        // waking the process every 15 minutes forever. The observers in
+        // AppModules re-schedule the worker the next time a live session sees
+        // an accepted RSVP or a calendar-event update.
+        //
+        // Decide on a FRESH cache snapshot, not the one from the start of the
+        // run: an RSVP accepted while this run was scanning already fired the
+        // observer, whose schedule() uses KEEP and no-ops while this chain
+        // still exists — cancelling on the stale snapshot would kill the chain
+        // with that RSVP's reminder permanently lost (observeNewEvents never
+        // re-fires for an event that is already in cache).
+        if (!couldStillFire(acceptedRsvpsInCache(), TimeUtils.now())) {
+            Log.d(TAG) { "No accepted RSVP can still fire; ending periodic chain." }
+            cancel(applicationContext)
+        }
         return Result.success()
     }
 
@@ -120,6 +144,35 @@ class CalendarReminderWorker(
         // Don't bother remembering "I notified for this" entries for events whose start was
         // more than a day ago; they can't fire again so the entry is pure overhead.
         private const val PRUNE_AGE_SECONDS = 24L * 60L * 60L
+
+        /** Every ACCEPTED kind-31925 RSVP currently present in LocalCache. */
+        fun acceptedRsvpsInCache(): List<CalendarRSVPEvent> =
+            LocalCache.addressables
+                .filterIntoSet { _, note ->
+                    val e = note.event
+                    e is CalendarRSVPEvent && e.status() == RSVPStatusTag.STATUS.ACCEPTED
+                }.mapNotNull { it.event as? CalendarRSVPEvent }
+
+        /**
+         * True while at least one accepted RSVP could still produce a reminder:
+         * its target event either starts in the future, or hasn't been fetched
+         * yet (start unknown — the chain must survive until the target
+         * resolves). False means the periodic worker has nothing it could ever
+         * notify about and may cancel its own chain.
+         */
+        fun couldStillFire(
+            rsvps: Collection<CalendarRSVPEvent>,
+            now: Long,
+        ): Boolean =
+            rsvps.any { rsvp ->
+                val targetAddress = rsvp.calendarEventAddress() ?: return@any false
+                val start =
+                    LocalCache.addressables
+                        .get(targetAddress)
+                        ?.appointmentView()
+                        ?.startSeconds
+                start == null || start > now
+            }
 
         fun schedule(context: Context) {
             val request =

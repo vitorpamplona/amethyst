@@ -86,6 +86,7 @@ class ExoPlayerBuilder(
                 addListener(AutoReplayLimiter(pause = ::pause))
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))
+                addListener(MediaPlayTimeTracker())
             }
     }
 

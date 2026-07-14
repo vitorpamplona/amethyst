@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst
 
 import android.content.ComponentCallbacks2
 import android.content.Context
+import android.os.BatteryManager
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
@@ -50,6 +51,8 @@ import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
+import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
@@ -84,8 +87,24 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscripti
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
+import com.vitorpamplona.amethyst.service.resourceusage.BatteryDrainSampler
+import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTimeIntegrator
+import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
+import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
+import com.vitorpamplona.amethyst.service.resourceusage.MeteringNostrSigner
+import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
+import com.vitorpamplona.amethyst.service.resourceusage.RadioBurstEstimator
+import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
+import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
+import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
+import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageStore
+import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
+import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
+import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
@@ -96,7 +115,9 @@ import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
@@ -104,6 +125,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
@@ -123,10 +145,15 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClie
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -139,6 +166,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -209,7 +237,7 @@ class AppModules(
     // App services that should be run as soon as there are subscribers to their flows
     val locationManager by lazy {
         Log.d("AppModules", "LocationManager Init")
-        LocationState(appContext, applicationIOScope)
+        LocationState(appContext, applicationIOScope, onListening = { locationSession.setActive(it) })
     }
     val connManager = ConnectivityManager(appContext, applicationIOScope)
 
@@ -218,7 +246,8 @@ class AppModules(
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
-    val torManager = TorManager(torPrefs, TorService(appContext), applicationIOScope)
+    private val torService = TorService(appContext)
+    val torManager = TorManager(torPrefs, torService, applicationIOScope)
 
     // Network identity change (wifi↔cellular, regained from offline, captive portal
     // cleared) — the old network's guards/circuits are dead, and Arti's in-memory
@@ -273,6 +302,87 @@ class AppModules(
     // on Tor-enabled clients to transparently redirect to .onion addresses.
     val onionLocationCache = OnionLocationCache()
 
+    // ---- Resource-usage ledger (battery/data accounting) ----
+    // Passive on-device counters (bytes per subsystem x network x visibility,
+    // relay connection-time, wakelock time, worker runs). Never transmitted;
+    // the user can review them in Settings and explicitly DM a report to the
+    // developers. See amethyst/plans/2026-07-12-resource-usage-ledger.md.
+    val foregroundTracker = ForegroundTracker()
+
+    val resourceUsageStore = ResourceUsageStore(File(appContext.filesDir, ResourceUsageStore.FILE_NAME))
+
+    val resourceUsage = ResourceUsageAccountant(resourceUsageStore, applicationIOScope)
+
+    // Estimates radio wake-ups from HTTP burst patterns — bytes alone don't
+    // predict battery; scattered small requests each pay the radio ramp+tail.
+    private val radioBurstEstimator =
+        RadioBurstEstimator(
+            accountant = resourceUsage,
+            isMobile = { connManager.isMobileOrFalse.value },
+            isForeground = { foregroundTracker.isForeground.value },
+        )
+
+    // Single catch-all counter on the shared non-relay HTTP client: role
+    // wrappers only relabel via request tags, so no HTTP traffic (including
+    // direct getHttpClient users like the napplet broker) escapes the ledger.
+    private val httpUsageInterceptor =
+        UsageCountingInterceptor(
+            accountant = resourceUsage,
+            isMobile = { connManager.isMobileOrFalse.value },
+            isForeground = { foregroundTracker.isForeground.value },
+            bursts = radioBurstEstimator,
+        )
+
+    private val httpUsageMeter = HttpUsageMeter()
+
+    // Session-time counters for the app's long-running battery consumers.
+    // All timer-free segment integrators: services and status flows flip them
+    // on/off, so tracking costs one counter write per transition.
+    val alwaysOnSession = SessionTimeIntegrator(resourceUsage, UsageKeys.ALWAYS_ON_MS, UsageKeys.ALWAYS_ON_STARTS).also { it.registerFlushHook() }
+    val callSession = SessionTimeIntegrator(resourceUsage, UsageKeys.CALL_MS, UsageKeys.CALL_SESSIONS).also { it.registerFlushHook() }
+    val nestsSession = SessionTimeIntegrator(resourceUsage, UsageKeys.NESTS_MS, UsageKeys.NESTS_SESSIONS).also { it.registerFlushHook() }
+    private val powSession = SessionTimeIntegrator(resourceUsage, UsageKeys.POW_MS, UsageKeys.POW_SESSIONS).also { it.registerFlushHook() }
+    private val torSession = SessionTimeIntegrator(resourceUsage, UsageKeys.TOR_MS, UsageKeys.TOR_STARTS).also { it.registerFlushHook() }
+    private val locationSession = SessionTimeIntegrator(resourceUsage, UsageKeys.LOCATION_MS).also { it.registerFlushHook() }
+
+    // Time-per-screen (route base names only — arguments never reach the
+    // ledger). Fed by the navigation listener in AppNavigation; foreground
+    // gating means backgrounding on a screen closes its segment.
+    val screenTime = ScreenTimeIntegrator(resourceUsage)
+
+    init {
+        screenTime.start(applicationIOScope, foregroundTracker.isForeground)
+    }
+
+    // In-app (Arti) Tor uptime. Watches the raw TorService status — NOT
+    // TorManager.status, whose upstream is WhileSubscribed and calls
+    // service.start() when collected, so a permanent ledger subscription
+    // there would keep Tor's control flow alive on its own. External Tor
+    // (Orbot) is deliberately untracked: its battery belongs to Orbot.
+    init {
+        applicationIOScope.launch {
+            torService.status
+                .map { it is TorServiceStatus.Active }
+                .distinctUntilChanged()
+                .collect { torSession.setActive(it) }
+        }
+    }
+
+    // Measured battery drain (percent while discharging, fg/bg) — the ground
+    // truth the app counters get correlated against. One binder read per
+    // ledger flush, nothing while idle.
+    init {
+        val batteryManager = appContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        if (batteryManager != null) {
+            BatteryDrainSampler(
+                accountant = resourceUsage,
+                capacityPct = { batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).takeIf { it in 1..100 } },
+                isCharging = { batteryManager.isCharging },
+                isForeground = { foregroundTracker.isForeground.value },
+            ).register()
+        }
+    }
+
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
         DualHttpClientManager(
@@ -292,10 +402,11 @@ class AppModules(
                 master && !profileOnly && localBlossomCacheProbe.available.value
             },
             onionCache = onionLocationCache,
+            usageInterceptor = httpUsageInterceptor,
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
-    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
+    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value, httpUsageMeter)
 
     val electrumXClient by lazy {
         Log.d("AppModules", "ElectrumXClient Init")
@@ -599,6 +710,33 @@ class AppModules(
     // Captures statistics about relays
     val relayStats = RelayStats(client)
 
+    // Resource-usage ledger: relay traffic/reconnect + connection-time,
+    // foreground-time, process-CPU, and signature-verification collectors.
+    init {
+        client.addConnectionListener(
+            RelayUsageListener(
+                accountant = resourceUsage,
+                isMobile = { connManager.isMobileOrFalse.value },
+                isForeground = { foregroundTracker.isForeground.value },
+            ),
+        )
+        RelayConnectionTimeIntegrator(
+            connectedCount = client.connectedRelaysFlow().map { it.size },
+            isMobile = connManager.isMobileOrNull,
+            isForeground = foregroundTracker.isForeground,
+            accountant = resourceUsage,
+        ).start(applicationIOScope)
+        ForegroundTimeIntegrator(
+            isForeground = foregroundTracker.isForeground,
+            accountant = resourceUsage,
+        ).start(applicationIOScope)
+        ProcessCpuSampler(resourceUsage).register()
+        cache.verifyMeter = { elapsedNanos, _ ->
+            resourceUsage.add(UsageKeys.VERIFY_COUNT, 1)
+            resourceUsage.add(UsageKeys.VERIFY_US, elapsedNanos / 1_000)
+        }
+    }
+
     // Logs debug messages when needed
     val detailedLogger = if (isDebug) RelayLogger(client, debugSending = false, debugReceiving = false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
@@ -635,7 +773,18 @@ class AppModules(
             minerThreads = PoWPolicy.minerWorkers(Runtime.getRuntime().availableProcessors()),
             persistence = powJobStore,
             onQueueActive = { PowMiningForegroundService.start(appContext) },
-        )
+        ).also { queue ->
+            // Resource ledger: mining burns half the cores flat-out for as
+            // long as it runs — without this, PoW shows up in cpu.ms as an
+            // unattributed mystery. Wired inside the lazy so the ledger never
+            // forces the queue to initialize.
+            applicationIOScope.launch {
+                queue.jobs
+                    .map { jobs -> jobs.any { it.isMining } }
+                    .distinctUntilChanged()
+                    .collect { powSession.setActive(it) }
+            }
+        }
     }
 
     val powJobRestorer by lazy {
@@ -656,6 +805,7 @@ class AppModules(
             client = client,
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
+            meterSigner = { MeteringNostrSigner(it, resourceUsage) },
         )
 
     val sessionManager =
@@ -734,7 +884,11 @@ class AppModules(
     // Observes LocalCache for notification-relevant events and routes them to
     // EventNotificationConsumer. Sources: FCM, UnifiedPush, Pokey, active relay
     // subscriptions, and NotificationRelayService.
-    val notificationDispatcher = NotificationDispatcher(appContext, applicationIOScope)
+    val notificationDispatcher =
+        NotificationDispatcher(appContext, applicationIOScope) { heldMs ->
+            resourceUsage.add(UsageKeys.WAKELOCK_NOTIF_MS, heldMs)
+            resourceUsage.add(UsageKeys.WAKELOCK_NOTIF_COUNT, 1)
+        }
 
     // Local store for posts the user has scheduled to publish later. Backed by a
     // single JSON file under the app's private filesDir; read by ScheduledPostWorker.
@@ -807,7 +961,9 @@ class AppModules(
             diskCache = { diskCache },
             memoryCache = { memoryCache },
             blossomServerResolver = { blossomResolver },
-            callFactory = { okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(it)) },
+            // Through the role builder (not raw getHttpClient) so Coil's image
+            // traffic carries the "image" ledger tag. Same Tor decision inside.
+            callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
         )
@@ -817,6 +973,10 @@ class AppModules(
 
     fun initiate(appContext: Context) {
         Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
+
+        // Ledger: count process starts — high counts reveal WorkManager/restart
+        // churn that cold-starts the whole app graph repeatedly.
+        resourceUsage.add(UsageKeys.APP_STARTS, 1)
 
         // Restore the persisted DNS cache before any networking starts. Lookups that fire
         // before this completes fall through to the sync resolver path (existing behavior);
@@ -886,17 +1046,59 @@ class AppModules(
         // starts observing LocalCache for notification-worthy events
         notificationDispatcher.start()
 
-        // Schedule the scheduled-posts worker (periodic + one-time catch-up).
-        // Runs independently of the always-on notification setting so scheduled
-        // posts still fire when always-on notifications are disabled.
-        ScheduledPostWorker.schedule(appContext)
-        ScheduledPostWorker.scheduleCatchUp(appContext)
+        // Keep the scheduled-posts worker (15-min periodic + one-time catch-up)
+        // enqueued exactly while the store holds a PENDING post — see
+        // ScheduledPostWorkGate. Runs independently of the always-on
+        // notification setting so scheduled posts still fire when always-on
+        // notifications are disabled.
+        ScheduledPostWorkGate(
+            store = scheduledPostStore,
+            scope = applicationIOScope,
+            onPendingWork = {
+                ScheduledPostWorker.schedule(appContext)
+                ScheduledPostWorker.scheduleCatchUp(appContext)
+            },
+            onNoPendingWork = { ScheduledPostWorker.cancelPeriodic(appContext) },
+        ).start()
 
-        // Periodic scan that posts "starting soon" notifications for NIP-52 appointments the
-        // user has RSVP'd to as ACCEPTED. 15-minute cadence matches both the WorkManager
-        // periodic minimum and the lead-time window.
-        com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
-            .schedule(appContext)
+        // "Starting soon" reminders for NIP-52 appointments the user RSVP'd to as
+        // ACCEPTED. The 15-min periodic scanner is only scheduled while it can
+        // plausibly fire: this observer enqueues it when an accepted RSVP lands in
+        // LocalCache, and the worker cancels its own chain when the cache holds
+        // nothing that could still start. LocalCache is memory-only, so the
+        // unconditional schedule this replaces could never fire from a WorkManager
+        // cold start anyway — it only cost battery.
+        applicationIOScope.launch {
+            LocalCache
+                .observeNewEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
+                .collect { rsvp ->
+                    if (rsvp.status() == RSVPStatusTag.STATUS.ACCEPTED) {
+                        CalendarReminderWorker.schedule(appContext)
+                    }
+                }
+        }
+
+        // A rescheduled appointment must also re-arm the chain: the worker
+        // cancels itself when every known target is in the past, and a
+        // kind-31922/31923 update (the organizer moving the event) arrives
+        // WITHOUT any new RSVP — the user's existing RSVP still points at the
+        // same address, and observeNewEvents never re-fires for it. conflate +
+        // delay bounds the cache rescan to one per 30s while event feeds
+        // stream slot events; the scan only runs for users with reminders on.
+        applicationIOScope.launch {
+            LocalCache
+                .observeNewEvents<Event>(
+                    Filter(kinds = listOf(CalendarDateSlotEvent.KIND, CalendarTimeSlotEvent.KIND)),
+                ).conflate()
+                .collect {
+                    if (CalendarReminderPrefs(appContext).isEnabled() &&
+                        CalendarReminderWorker.couldStillFire(CalendarReminderWorker.acceptedRsvpsInCache(), TimeUtils.now())
+                    ) {
+                        CalendarReminderWorker.schedule(appContext)
+                    }
+                    delay(30_000)
+                }
+        }
 
         // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {
@@ -979,6 +1181,8 @@ class AppModules(
 
     fun trim(level: Int) {
         _trimLevelEvents.tryEmit(level)
+        // Backgrounding is a natural moment to flush the usage ledger too.
+        resourceUsage.flushAsync()
         applicationIOScope.launch {
             // Backgrounding is a natural moment to flush the DNS cache.
             dnsStore.save()
