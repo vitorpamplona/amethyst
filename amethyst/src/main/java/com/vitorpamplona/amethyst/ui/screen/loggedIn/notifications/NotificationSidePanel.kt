@@ -38,16 +38,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.ui.layouts.LocalFeedSidePadding
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.layouts.NotificationPanelWidth
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -126,18 +123,15 @@ fun NotificationSidePanel(
 
         HorizontalDivider(thickness = DividerThickness)
 
-        // The panel is its own narrow pane; never apply the center pane's reading-width cap here.
-        CompositionLocalProvider(LocalFeedSidePadding provides 0.dp) {
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                SingleNotificationsBody(
-                    notifFeedContentState = notifFeedContentState,
-                    notifPolls = accountViewModel.feedStates.notificationsOpenPolls,
-                    scrollToEventId = null,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    scrollStateKey = scrollStateKey,
-                )
-            }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            SingleNotificationsBody(
+                notifFeedContentState = notifFeedContentState,
+                notifPolls = accountViewModel.feedStates.notificationsOpenPolls,
+                scrollToEventId = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                scrollStateKey = scrollStateKey,
+            )
         }
     }
 }

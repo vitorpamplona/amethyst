@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,7 +34,6 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
@@ -46,12 +45,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.vitorpamplona.amethyst.commons.ui.layouts.LocalFeedSidePadding
-import com.vitorpamplona.amethyst.ui.layouts.FeedContentMaxWidth
 import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.layouts.NavigationStyle
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppNavigationRail
@@ -231,24 +226,17 @@ private fun PermanentDrawerShell(
     }
 }
 
-/** Step size for the feed side padding, so continuous window resizes republish the value
- * (and invalidate every feed reading it) at most once per step instead of once per pixel. */
-private val SidePaddingQuantum = 8.dp
-
 /**
- * Hosts the navigation content and publishes the side padding feeds need to cap their content
- * at [FeedContentMaxWidth] within this pane, via [LocalFeedSidePadding].
+ * Hosts the navigation content. Screen width capping happens per NavHost destination
+ * ([com.vitorpamplona.amethyst.ui.layouts.CappedScreenContent] via the NavigationEffects
+ * builders), so this pane just claims the leftover row width.
  */
 @Composable
 private fun CenterPane(
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
-    BoxWithConstraints(modifier.fillMaxHeight()) {
-        val rawPadding = ((maxWidth - FeedContentMaxWidth) / 2).coerceAtLeast(0.dp)
-        val sidePadding = Dp((rawPadding.value / SidePaddingQuantum.value).toInt() * SidePaddingQuantum.value)
-        CompositionLocalProvider(LocalFeedSidePadding provides sidePadding) {
-            content()
-        }
+    Box(modifier.fillMaxHeight()) {
+        content()
     }
 }

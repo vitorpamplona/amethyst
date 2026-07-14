@@ -380,9 +380,9 @@ fun BuildNavigation(
         enterTransition = { fadeIn(animationSpec = tween(200)) },
         exitTransition = { fadeOut(animationSpec = tween(200)) },
     ) {
-        composable<Route.Home> { HomeScreen(accountViewModel, nav) }
+        composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
-        composable<Route.Video> { VideoScreen(accountViewModel, nav) }
+        composableCapped<Route.Video> { VideoScreen(accountViewModel, nav) }
         composableArgs<Route.Discover> { DiscoverScreen(it.initialTab, accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
@@ -399,10 +399,10 @@ fun BuildNavigation(
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
-        composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Browser>(capWidth = false) { BrowserScreen(accountViewModel, nav) }
         composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
-        composableFromEndArgs<Route.WebApp> { WebAppScreen(it.url, accountViewModel, nav) }
-        composableFromEndArgs<Route.NostrApp> { NostrAppScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEndArgs<Route.WebApp>(capWidth = false) { WebAppScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.NostrApp>(capWidth = false) { NostrAppScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
@@ -441,7 +441,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.NewMusicPlaylist> { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
-        composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
+        composableCapped<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletSend> { WalletSendScreen(it.walletId, accountViewModel, nav) }
@@ -494,7 +494,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.TopUpMint> { TopUpMintScreen(it.mintUrl, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
-        composable<Route.Search> { SearchScreen(accountViewModel, nav) }
+        composableCapped<Route.Search> { SearchScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }

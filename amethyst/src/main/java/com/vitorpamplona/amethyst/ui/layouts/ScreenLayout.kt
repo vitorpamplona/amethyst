@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.layouts
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -27,6 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.components.getActivity
@@ -80,11 +87,37 @@ val PermanentDrawerWidth = 300.dp
 val NotificationPanelWidth = 360.dp
 
 /**
- * Maximum width of a feed's content column inside a wide center pane. Wider than this,
- * feeds center themselves via [com.vitorpamplona.amethyst.commons.ui.layouts.LocalFeedSidePadding];
- * the scroll surface itself stays full-pane so pull-to-refresh and scrolling work edge to edge.
+ * Maximum width of a screen's content column inside a wide center pane. Every NavHost
+ * destination is wrapped in [CappedScreenContent] (via the builders in NavigationEffects),
+ * so the whole screen — top bar, tabs, feed, settings rows — shares one centered reading
+ * column instead of stretching across the pane. Screens that genuinely need the full pane
+ * (Messages' two-pane split, the embedded browser surfaces) opt out at registration.
  */
 val FeedContentMaxWidth = 600.dp
+
+/**
+ * Centers a destination's content at [FeedContentMaxWidth]. The outer box paints the theme
+ * background so the gutters match the screens' own surfaces; on Compact windows the cap is
+ * wider than the pane and this is a visual no-op.
+ */
+@Composable
+fun CappedScreenContent(content: @Composable () -> Unit) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Box(
+            Modifier
+                .widthIn(max = FeedContentMaxWidth)
+                .fillMaxSize(),
+        ) {
+            content()
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable

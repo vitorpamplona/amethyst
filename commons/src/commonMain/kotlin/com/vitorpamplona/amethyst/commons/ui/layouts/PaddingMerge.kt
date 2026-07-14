@@ -49,15 +49,15 @@ val LocalDisappearingScaffoldPadding = compositionLocalOf { PaddingValues(0.dp) 
 val LocalDisappearingBarState = compositionLocalOf<DisappearingBarState?> { null }
 
 /**
- * Extra start/end padding wide layouts ask feeds to apply so their content column stays at a
- * readable width. The shell computes it as `(paneWidth - feedMaxWidth) / 2` and provides it
- * around the center pane; feeds pick it up through [rememberFeedContentPadding], so the
- * scroll surface stays full-pane-width (scrolling and pull-to-refresh keep working edge to
- * edge) while items center themselves. Defaults to 0 (phones, and any host that doesn't cap).
+ * Extra start/end padding a host can ask feeds to apply so their content column stays at a
+ * readable width while the scroll surface stays full-pane (scrolling and pull-to-refresh
+ * keep working edge to edge). Feeds pick it up through [rememberFeedContentPadding].
+ * Defaults to 0 everywhere.
  *
- * Panes that manage their own width — side panels, the panes of a two-pane split — must
- * override this back to 0 for their subtree: the shell's value was computed against the full
- * center pane and would over-pad a narrower list.
+ * The Android shell does NOT provide this — it caps each NavHost destination's width
+ * instead (CappedScreenContent), which also constrains top bars and non-feed screens.
+ * The local remains for hosts that prefer padding-based capping (e.g. a desktop-style
+ * reading column where gutters should still scroll).
  */
 val LocalFeedSidePadding = compositionLocalOf { 0.dp }
 

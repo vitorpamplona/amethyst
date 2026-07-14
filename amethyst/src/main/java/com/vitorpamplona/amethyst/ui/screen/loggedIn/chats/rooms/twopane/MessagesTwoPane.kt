@@ -27,19 +27,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
 import com.google.accompanist.adaptive.calculateDisplayFeatures
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.commons.ui.layouts.LocalFeedSidePadding
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -97,62 +94,58 @@ fun MessagesTwoPane(
             }
         },
     ) { padding ->
-        // Each pane manages its own width; the shell's center-pane reading cap must not
-        // re-pad the lists inside them.
-        CompositionLocalProvider(LocalFeedSidePadding provides 0.dp) {
-            TwoPane(
-                first = {
-                    Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
-                        RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
+        TwoPane(
+            first = {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.BottomEnd) {
+                    RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
 
-                        // Pre-warm NIP-11 for joined groups' host relays so the relay-signed check is a
-                        // cache hit when those groups surface in discovery or any gated surface.
-                        WarmJoinedRelayGroupNip11(accountViewModel)
+                    // Pre-warm NIP-11 for joined groups' host relays so the relay-signed check is a
+                    // cache hit when those groups surface in discovery or any gated surface.
+                    WarmJoinedRelayGroupNip11(accountViewModel)
 
-                        // The inline-vs-grouped NIP-29 preference lives in Settings › Messages; joined
-                        // groups (or per-relay rows in grouped mode) are woven into the list itself.
-                        ChatroomList(
-                            knownFeedContentState,
-                            newFeedContentState,
-                            accountViewModel,
-                            twoPaneNav,
-                        )
+                    // The inline-vs-grouped NIP-29 preference lives in Settings › Messages; joined
+                    // groups (or per-relay rows in grouped mode) are woven into the list itself.
+                    ChatroomList(
+                        knownFeedContentState,
+                        newFeedContentState,
+                        accountViewModel,
+                        twoPaneNav,
+                    )
 
-                        Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
-                            ChannelFabColumn(nav)
+                    Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
+                        ChannelFabColumn(nav)
+                    }
+                }
+            },
+            second = {
+                Box(Modifier.fillMaxSize().padding(padding)) {
+                    twoPaneNav.innerNav.value?.let {
+                        if (it is Route.Room) {
+                            ChatroomView(
+                                room = it.toKey(),
+                                accountViewModel = accountViewModel,
+                                draftMessage = it.message,
+                                replyToNote = it.replyId,
+                                editFromDraft = it.draftId,
+                                expiresDays = it.expiresDays,
+                                nav = nav,
+                            )
+                        }
+
+                        if (it is Route.PublicChatChannel) {
+                            PublicChatChannelView(
+                                channelId = it.id,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
                         }
                     }
-                },
-                second = {
-                    Box(Modifier.fillMaxSize().padding(padding)) {
-                        twoPaneNav.innerNav.value?.let {
-                            if (it is Route.Room) {
-                                ChatroomView(
-                                    room = it.toKey(),
-                                    accountViewModel = accountViewModel,
-                                    draftMessage = it.message,
-                                    replyToNote = it.replyId,
-                                    editFromDraft = it.draftId,
-                                    expiresDays = it.expiresDays,
-                                    nav = nav,
-                                )
-                            }
-
-                            if (it is Route.PublicChatChannel) {
-                                PublicChatChannelView(
-                                    channelId = it.id,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                )
-                            }
-                        }
-                    }
-                },
-                strategy = strategy,
-                displayFeatures = displayFeatures,
-                foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+                }
+            },
+            strategy = strategy,
+            displayFeatures = displayFeatures,
+            foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }

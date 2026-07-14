@@ -33,6 +33,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.vitorpamplona.amethyst.ui.layouts.CappedScreenContent
 
 // Per-entry hint stamped by Nav.navBottomBar marking that the entry was
 // reached via a bottom-nav tab. Used in two places:
@@ -44,41 +45,84 @@ const val BOTTOM_NAV_ROOT_KEY = "bottomNavRoot"
 
 fun NavBackStackEntry.isBottomNavRoot(): Boolean = savedStateHandle.get<Boolean>(BOTTOM_NAV_ROOT_KEY) == true
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
+/**
+ * Applies the wide-pane reading-column cap ([CappedScreenContent]) to a destination unless
+ * it opted out with `capWidth = false`. Every builder below routes through this, so all
+ * destinations — top bars included — share the centered column on large screens by default.
+ */
+@Composable
+fun MaybeCappedScreen(
+    capWidth: Boolean,
+    content: @Composable () -> Unit,
+) {
+    if (capWidth) {
+        CappedScreenContent(content)
+    } else {
+        content()
+    }
+}
+
+/** Stock fade-transition destination, capped to the reading-column width on wide panes. */
+inline fun <reified T : Any> NavGraphBuilder.composableCapped(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
+    composable<T> { entry ->
+        CappedScreenContent { content(entry) }
+    }
+}
+
+inline fun <reified T : Any> NavGraphBuilder.composableFromEnd(
+    capWidth: Boolean = true,
+    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
+) {
     composable<T>(
         enterTransition = { if (targetState.isBottomNavRoot()) null else slideInHorizontallyFromEnd },
         exitTransition = { if (targetState.isBottomNavRoot()) null else scaleOut },
         popEnterTransition = { if (initialState.isBottomNavRoot()) null else scaleIn },
         popExitTransition = { if (initialState.isBottomNavRoot()) null else slideOutHorizontallyToEnd },
-        content = content,
+        content = { entry ->
+            MaybeCappedScreen(capWidth) { content(entry) }
+        },
     )
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromEndArgs(noinline content: @Composable AnimatedContentScope.(T) -> Unit) {
-    composableFromEnd<T> {
+inline fun <reified T : Any> NavGraphBuilder.composableFromEndArgs(
+    capWidth: Boolean = true,
+    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
+) {
+    composableFromEnd<T>(capWidth) {
         content(it.toRoute<T>())
     }
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromBottom(noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit) {
+inline fun <reified T : Any> NavGraphBuilder.composableFromBottom(
+    capWidth: Boolean = true,
+    noinline content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit,
+) {
     composable<T>(
         enterTransition = { slideInVerticallyFromBottom },
         exitTransition = { scaleOut },
         popEnterTransition = { scaleIn },
         popExitTransition = { slideOutVerticallyToBottom },
-        content = content,
+        content = { entry ->
+            MaybeCappedScreen(capWidth) { content(entry) }
+        },
     )
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableFromBottomArgs(noinline content: @Composable AnimatedContentScope.(T) -> Unit) {
-    composableFromBottom<T> {
+inline fun <reified T : Any> NavGraphBuilder.composableFromBottomArgs(
+    capWidth: Boolean = true,
+    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
+) {
+    composableFromBottom<T>(capWidth) {
         content(it.toRoute())
     }
 }
 
-inline fun <reified T : Any> NavGraphBuilder.composableArgs(noinline content: @Composable AnimatedContentScope.(T) -> Unit) {
-    composable<T> {
-        content(it.toRoute())
+inline fun <reified T : Any> NavGraphBuilder.composableArgs(
+    capWidth: Boolean = true,
+    noinline content: @Composable AnimatedContentScope.(T) -> Unit,
+) {
+    composable<T> { entry ->
+        MaybeCappedScreen(capWidth) { content(entry.toRoute()) }
     }
 }
 
