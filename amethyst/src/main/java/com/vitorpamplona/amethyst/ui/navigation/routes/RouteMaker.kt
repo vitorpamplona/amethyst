@@ -344,6 +344,17 @@ fun routeReplyTo(
         return Route.MarmotGroupChat(marmotGroup.nostrGroupId, replyId = note.idHex)
     }
 
+    // Concord messages are end-to-end encrypted: a reply must go through the channel plane (a sealed
+    // kind-1111), never a public kind-1111 — which would leak the private rumor id onto public relays
+    // and wouldn't bind to the channel. Route the reply into the message's minichat, whose composer
+    // sends the wrapped reply. For a thread reply (kind-1111) reply into the same flat thread (its
+    // root); for a top-level message (kind-9) the message itself is the thread root.
+    val concord = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concord != null) {
+        val rootId = (note.event as? CommentEvent)?.rootEventIds()?.firstOrNull() ?: note.idHex
+        return Route.ChatMinichat(rootId, concord.channelId.communityId, concord.channelId.channelId)
+    }
+
     val noteEvent = note.event
     return when (noteEvent) {
         is ChannelMessageEvent -> {
