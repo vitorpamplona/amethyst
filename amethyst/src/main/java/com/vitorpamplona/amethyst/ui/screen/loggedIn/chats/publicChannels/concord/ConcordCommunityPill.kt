@@ -36,13 +36,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 /**
- * A tappable chip naming the Concord community a message belongs to. Unlike the muted note-header
- * markers (PoW/OTS/location), this is a first-class navigation entry point, so it keeps a strong
- * `secondaryContainer` highlight. Shared by the Messages row and the Notifications feed so a Concord
- * message reads the same wherever it surfaces. The name is hard-capped so a long title can't crowd
- * the row.
+ * A tappable chip naming the Concord community a message belongs to. Deliberately **muted** — the same
+ * faint wash the note-header markers use — because the community's logo is now the row avatar, so the
+ * name only needs to read as tappable metadata, not compete with it. (The NIP-29 relay-host chip stays
+ * highlighted; a relay group has no avatar of its own.) Shared by the Messages row and the Notifications
+ * feed so a Concord message reads the same wherever it surfaces; the name is hard-capped so a long title
+ * can't crowd the row.
  */
 @Composable
 fun ConcordCommunityPill(
@@ -52,7 +54,8 @@ fun ConcordCommunityPill(
 ) {
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
+        contentColor = MaterialTheme.colorScheme.placeholderText,
         modifier = Modifier.clickable(onClick = onClick),
     ) {
         Row(
@@ -63,13 +66,13 @@ fun ConcordCommunityPill(
             Icon(
                 symbol = MaterialSymbols.Group,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                tint = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.size(11.dp),
             )
             Text(
                 text = if (communityName.length > maxChars) communityName.take(maxChars).trimEnd() + "…" else communityName,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.placeholderText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
