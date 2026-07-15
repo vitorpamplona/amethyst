@@ -104,6 +104,7 @@
     <string name="security_filters">Security Filters</string>
     <string name="log_out">Logout</string>
     <string name="show_more">Show More</string>
+    <string name="show_less">Show Less</string>
     <string name="lightning_invoice">Lightning Invoice</string>
     <string name="invoice_expired">Expired</string>
     <string name="clink_lightning_offer">CLINK Offer</string>
@@ -2984,6 +2985,18 @@
 
     <string name="add_content_warning">Add content warning</string>
     <string name="remove_content_warning">Remove content warning</string>
+
+    <string name="chat_system_created_channel">%1$s created the channel %2$s</string>
+    <string name="chat_system_created_channel_unnamed">%1$s created the channel</string>
+    <string name="chat_system_updated_channel">%1$s updated the channel profile</string>
+
+    <string name="chat_delivery_details_title">Message Delivery</string>
+    <string name="close">Close</string>
+
+    <string name="chat_delivery_pending">Waiting for a relay to accept this message</string>
+    <string name="chat_delivery_no_relay_info">No relay information for this message</string>
+    <string name="chat_delivery_accepted">Accepted by at least one relay</string>
+    <string name="chat_delivery_delivered_all">Delivered to all recipients\' relays</string>
 
     <string name="add_expiration_date">Add expiration date</string>
     <string name="remove_expiration_date">Remove expiration date</string>

@@ -51,7 +51,7 @@ class ConcordCommunitySessionTest {
                 )
 
             val captured = mutableListOf<Triple<String, String, com.vitorpamplona.quartz.nip01Core.core.Event>>()
-            val session = ConcordCommunitySession(entry, owner.pubKey) { communityId, channelIdHex, rumor -> captured += Triple(communityId, channelIdHex, rumor) }
+            val session = ConcordCommunitySession(entry, owner.pubKey) { communityId, channelIdHex, rumor, _ -> captured += Triple(communityId, channelIdHex, rumor) }
             assertEquals(community.controlPlane.publicKeyHex, session.controlPlaneAddress)
 
             // Feed the genesis control wraps → state folds, channels + membership resolve. A fold is

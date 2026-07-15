@@ -193,6 +193,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -594,6 +595,17 @@ class AccountViewModel(
     fun reactToOrDelete(note: Note) {
         val reaction = reactionChoices().first()
         reactToOrDelete(note, reaction)
+    }
+
+    /**
+     * Retracts the user's own private rumor (e.g. a NIP-17 DM message) with a
+     * gift-wrapped NIP-09 deletion to the same participants. A public deletion
+     * would e-tag the private rumor id onto public relays.
+     */
+    fun deletePrivately(note: Note) {
+        launchSigner {
+            account.deletePrivately(listOf(note), note)
+        }
     }
 
     /** Ban the author of a Concord channel message (no-op unless this account may ban them). */
@@ -1036,6 +1048,27 @@ class AccountViewModel(
                 amount,
             )
         }
+    }
+
+    // Notes the user is currently zapping. A zap receipt only reaches relays a moment
+    // after the payment clears, so a surface (the chat bubble) can show an optimistic
+    // "zapping" indicator in that gap. Cleared when the receipt's amount shows, on error,
+    // when the payment hands off to an external wallet, or by a safety timeout.
+    private val zapsInFlight = MutableStateFlow<Set<HexKey>>(emptySet())
+    val zapsInFlightFlow: StateFlow<Set<HexKey>> get() = zapsInFlight
+
+    fun markZapInFlight(noteId: HexKey) {
+        zapsInFlight.value = zapsInFlight.value + noteId
+        viewModelScope.launch {
+            // Safety net: clear even if no receipt ever arrives (silent failure, or a
+            // receipt that never propagates back to us).
+            delay(45_000L)
+            endZapInFlight(noteId)
+        }
+    }
+
+    fun endZapInFlight(noteId: HexKey) {
+        zapsInFlight.value = zapsInFlight.value - noteId
     }
 
     fun zap(

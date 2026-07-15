@@ -746,6 +746,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         communityId: String,
         channelIdHex: String,
         rumor: Event,
+        seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
         // so the note already carries its ConcordChannel gatherer when it flows through
@@ -771,6 +772,16 @@ object LocalCache : ILocalCache, ICacheProvider {
         // binds rumor.pubKey == seal.pubKey, and checks rumor.verifyId()), exactly like a NIP-59
         // gift-wrapped DM rumor, so we consume it as pre-verified.
         justConsume(rumor, null, true)
+
+        // A Concord rumor is decrypted locally with the plane key, so it arrives with no
+        // per-relay attribution (relay = null above). Stamp the relays its carrying wrap was
+        // seen on — mirroring NIP-17's addRelayToNoteAndInners — so the chat UI can show where
+        // the message actually came from, not just the channel's configured relays.
+        if (seenOnRelays.isNotEmpty()) {
+            getNoteIfExists(rumor.id)?.takeIf { it.event != null }?.let { note ->
+                seenOnRelays.forEach { note.addRelay(it) }
+            }
+        }
 
         // justConsume bails without loading the event when the rumor has already been deleted
         // (a kind-5 delete referencing it was processed first — easy to hit in Concord because a

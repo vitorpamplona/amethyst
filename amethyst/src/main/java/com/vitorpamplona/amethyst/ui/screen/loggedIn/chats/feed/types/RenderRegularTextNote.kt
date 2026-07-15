@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
@@ -35,7 +37,13 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.note.types.appendMissingImetaUrls
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.jumboEmojiCount
 import com.vitorpamplona.amethyst.ui.stringRes
+
+// Jumbo sizes step down as the emoji count grows so up to three still fit a line.
+private val JumboEmojiSingle = 50.sp
+private val JumboEmojiPair = 40.sp
+private val JumboEmojiTriple = 32.sp
 
 @Composable
 fun RenderRegularTextNote(
@@ -52,28 +60,44 @@ fun RenderRegularTextNote(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
-                val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+                val jumboCount = remember(eventContent) { jumboEmojiCount(eventContent) }
 
-                // Some NIP-C7/Concord clients (e.g. Ditto/Soapbox Armada) attach an image purely as a
-                // NIP-92 `imeta` tag and leave the content empty. The shared renderer only shows media
-                // whose URL appears in the text, so append any imeta URL missing from the (decrypted)
-                // content — encrypted-blob key/nonce are already registered by URL, so the shared
-                // pipeline fetches and decrypts them transparently.
-                val displayContent = remember(note.event, eventContent) { appendMissingImetaUrls(eventContent, note.event) }
+                if (jumboCount > 0) {
+                    // Emoji-only messages render as jumbo emoji (the bubble behind
+                    // them is transparent — see NormalChatNote).
+                    Text(
+                        text = eventContent.trim(),
+                        fontSize =
+                            when (jumboCount) {
+                                1 -> JumboEmojiSingle
+                                2 -> JumboEmojiPair
+                                else -> JumboEmojiTriple
+                            },
+                    )
+                } else {
+                    val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
-                TranslatableRichTextViewer(
-                    content = displayContent,
-                    canPreview = canPreview,
-                    quotesLeft = if (innerQuote) 0 else 1,
-                    modifier = Modifier,
-                    tags = tags,
-                    backgroundColor = bgColor,
-                    id = note.idHex,
-                    callbackUri = note.toNostrUri(),
-                    authorPubKey = note.author?.pubkeyHex,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                    // Some NIP-C7/Concord clients (e.g. Ditto/Soapbox Armada) attach an image purely as a
+                    // NIP-92 `imeta` tag and leave the content empty. The shared renderer only shows media
+                    // whose URL appears in the text, so append any imeta URL missing from the (decrypted)
+                    // content — encrypted-blob key/nonce are already registered by URL, so the shared
+                    // pipeline fetches and decrypts them transparently.
+                    val displayContent = remember(note.event, eventContent) { appendMissingImetaUrls(eventContent, note.event) }
+
+                    TranslatableRichTextViewer(
+                        content = displayContent,
+                        canPreview = canPreview,
+                        quotesLeft = if (innerQuote) 0 else 1,
+                        modifier = Modifier,
+                        tags = tags,
+                        backgroundColor = bgColor,
+                        id = note.idHex,
+                        callbackUri = note.toNostrUri(),
+                        authorPubKey = note.author?.pubkeyHex,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
         } else {
             TranslatableRichTextViewer(
