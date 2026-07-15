@@ -41,10 +41,8 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
-import com.vitorpamplona.quartz.nip92IMeta.imetas
 
 @Composable
 fun RenderChat(
@@ -66,7 +64,7 @@ fun RenderChat(
     // from the content so those attachments render — symmetric to ChannelChat.imageMessage, which
     // appends the URL on send. Encrypted-blob key/nonce are already registered by URL, so the shared
     // pipeline fetches and decrypts them transparently.
-    val displayContent = remember(noteEvent) { appendMissingImetaUrls(noteEvent) }
+    val displayContent = remember(noteEvent) { appendMissingImetaUrls(noteEvent.content, noteEvent) }
 
     // A boosted note inside a zap/nutzap/onchain activity card is always shown as a
     // compact 2-line preview, even when the logged-in user is only a zap-split
@@ -128,17 +126,4 @@ fun RenderChat(
             DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
         }
     }
-}
-
-/**
- * Returns [event]'s content with every NIP-92 `imeta` URL that is not already present appended on its
- * own line, so an attachment carried only as an `imeta` tag (empty/incomplete content) still renders.
- * Returns the original content unchanged when every imeta URL is already inline (the common case), so
- * normal messages are untouched.
- */
-private fun appendMissingImetaUrls(event: Event): String {
-    val content = event.content
-    val missing = event.imetas().map { it.url }.filter { it.isNotBlank() && !content.contains(it) }
-    if (missing.isEmpty()) return content
-    return (listOf(content) + missing).filter { it.isNotBlank() }.joinToString("\n")
 }
