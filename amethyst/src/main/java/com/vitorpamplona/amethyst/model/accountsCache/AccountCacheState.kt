@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNip46ClientStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings

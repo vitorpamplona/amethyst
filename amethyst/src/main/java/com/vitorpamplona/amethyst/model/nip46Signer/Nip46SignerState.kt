@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.nip46Signer
 
-import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientInfo
-import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46PermissionAuthorizer
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId

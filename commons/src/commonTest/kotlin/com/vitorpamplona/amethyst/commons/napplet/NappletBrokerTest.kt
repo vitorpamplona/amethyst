@@ -20,17 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
-import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrConnectPrompt
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

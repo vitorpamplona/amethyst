@@ -34,6 +34,7 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
@@ -42,7 +43,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry

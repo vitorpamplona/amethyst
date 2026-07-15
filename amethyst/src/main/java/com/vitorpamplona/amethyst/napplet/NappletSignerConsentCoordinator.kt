@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
-import com.vitorpamplona.amethyst.commons.napplet.signers.SignerOpGrant
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap

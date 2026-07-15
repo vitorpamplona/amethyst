@@ -61,6 +61,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -69,10 +73,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel

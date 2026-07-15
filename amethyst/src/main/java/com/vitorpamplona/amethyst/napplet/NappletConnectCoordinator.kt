@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap

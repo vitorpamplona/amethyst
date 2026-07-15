@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.connectedApps.nip46
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -26,8 +26,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientInfo
-import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.security.MessageDigest

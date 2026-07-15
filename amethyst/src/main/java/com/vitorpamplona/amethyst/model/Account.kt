@@ -27,6 +27,11 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -54,11 +59,6 @@ import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDe
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
-import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNip46ClientStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientStore
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage

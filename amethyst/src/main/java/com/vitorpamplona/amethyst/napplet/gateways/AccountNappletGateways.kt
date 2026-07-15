@@ -27,6 +27,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
@@ -41,9 +44,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrConnectPrompt
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerConsentPrompt
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletConnectCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator

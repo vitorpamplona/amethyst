@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResol
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.connectedApps.DataStoreNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettings
@@ -51,8 +53,6 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
-import com.vitorpamplona.amethyst.napplet.DataStoreNip46ClientStore
-import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.cast.CastRegistry

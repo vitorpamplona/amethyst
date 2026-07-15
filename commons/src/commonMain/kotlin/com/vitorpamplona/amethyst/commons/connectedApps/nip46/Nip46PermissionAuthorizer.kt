@@ -18,8 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.napplet.signers
+package com.vitorpamplona.amethyst.commons.connectedApps.nip46
 
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

@@ -58,12 +58,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 class NappletConnectActivity : ComponentActivity() {

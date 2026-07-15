@@ -18,9 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.napplet.signers
-
-import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
+package com.vitorpamplona.amethyst.commons.connectedApps.signers
 
 /**
  * A Nostr-specific cryptographic operation that requires the internal signer.
@@ -57,15 +55,3 @@ sealed interface NostrSignerOp {
             }
     }
 }
-
-/**
- * Maps a [NappletRequest] to the [NostrSignerOp] it represents, or `null` if the request
- * does not involve signing or encryption.
- */
-fun NappletRequest.toSignerOp(): NostrSignerOp? =
-    when (this) {
-        is NappletRequest.Publish -> NostrSignerOp.SignKind(kind)
-        is NappletRequest.SignEvent -> NostrSignerOp.SignKind(kind)
-        is NappletRequest.PublishEncrypted -> NostrSignerOp.Encrypt
-        else -> null
-    }
