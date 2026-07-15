@@ -294,6 +294,9 @@
     <string name="already_have_an_account">¿Ya tienes una cuenta de Nostr?</string>
     <string name="loading_feed">Cargando feed</string>
     <string name="loading_account">Cargando cuenta</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">encriptado</string>
     <string name="chats_history_proto_nip04">legado</string>
     <string name="chats_reply_searching_history">Buscando el mensaje original…</string>

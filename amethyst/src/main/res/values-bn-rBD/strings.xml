@@ -291,6 +291,9 @@
     <string name="already_have_an_account">ইতিমধ্যে একটি Nostr অ্যাকাউন্ট আছে?</string>
     <string name="loading_feed">পাতাটি লোড করা হচ্ছে</string>
     <string name="loading_account">অ্যাকাউন্ট লোড হচ্ছে</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">এনক্রিপ্টেড</string>
     <string name="chats_history_proto_nip04">পুরানো</string>
     <string name="chats_reply_searching_history">মূল বার্তাটি খোঁজা হচ্ছে…</string>

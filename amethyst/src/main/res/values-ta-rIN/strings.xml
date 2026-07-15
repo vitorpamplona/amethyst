@@ -288,6 +288,9 @@
     <string name="already_have_an_account">ஏற்கனவே ஒரு Nostr கணக்கு உள்ளதா?</string>
     <string name="loading_feed">ஊட்டம் ஏற்றப்படுகிறது</string>
     <string name="loading_account">கணக்கு ஏற்றுகிறது</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">மறைகுறியாக்கப்பட்டது</string>
     <string name="chats_history_proto_nip04">பழைய முறை</string>
     <string name="chats_reply_searching_history">அசல் செய்தியை தேடுகிறது…</string>
