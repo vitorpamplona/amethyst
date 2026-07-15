@@ -280,6 +280,9 @@
     <string name="already_have_an_account">이미 Nostr 계정이 있으신가요?</string>
     <string name="loading_feed">피드 불러오는 중</string>
     <string name="loading_account">계정 불러오는 중</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">암호화됨</string>
     <string name="chats_history_proto_nip04">레거시</string>
     <string name="chats_reply_searching_history">원본 메시지를 찾는 중…</string>

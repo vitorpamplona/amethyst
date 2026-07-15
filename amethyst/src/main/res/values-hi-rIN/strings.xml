@@ -45,10 +45,11 @@
     <string name="timestamp_it">समयांकन करें</string>
     <string name="timestamp_pending">समयांकन : शेष पुष्टिकरण</string>
     <string name="timestamp_pending_short">ओ॰टी॰एस : शेष</string>
+    <string name="one_year_plus">एक वर्ष से अधिक</string>
     <string name="request_deletion">हटाने की याचना</string>
-    <string name="block_report">बाधित करें / सूचना दें</string>
+    <string name="block_report">बाधित करें अथवा सूचना दें</string>
     <string name="block_hide_user"><![CDATA[बाधित करें तथा उपयोगकर्ता को छिपाएँ]]></string>
-    <string name="report_spam_scam">कचरालेख / घोटाला की सूचना दें</string>
+    <string name="report_spam_scam">कचरालेख अथवा घोटाला की सूचना दें</string>
     <string name="report_impersonation">पररूपण की सूचना दें</string>
     <string name="report_illegal_behaviour">अवैध बरताव की सूचना दें</string>
     <string name="report_malware">दुष्क्रमक की सूचना दें</string>
@@ -86,7 +87,7 @@
     <string name="add">जोडें</string>
     <string name="replying_to">"उत्तर इनको "</string>
     <string name="and">" तथा "</string>
-    <string name="profile_banner">परिचय पृष्ठ चौडाचित्र</string>
+    <string name="profile_banner">परिचय ध्वजचित्र</string>
     <string name="error_parsing_error_message">अपक्रम संदेश परखने में अपक्रम</string>
     <string name="following">" का अनुचरण"</string>
     <string name="followers">" अनुचर"</string>
@@ -294,6 +295,84 @@
     <string name="already_have_an_account">क्या नोस्ट्र लेखा पहले से है?</string>
     <string name="loading_feed">सूचनावली प्राप्त की जा रही है</string>
     <string name="loading_account">लेखा जानकारी प्राप्त की जा रही है</string>
+    <string name="concord_redeeming_invite">आमन्त्रण चुकाव…</string>
+    <string name="concord_invite_failed">आमन्त्रण अप्राप्त। सम्भाव्यतः योजक निष्क्रिय है अथवा इसके पुनःप्रसारक अनभिगम्य।</string>
+    <string name="concord_home_title">कोंकोर्ड॰ प्रणाली</string>
+    <string name="concord_home_empty">आप किसी भी कोंकोर्ड प्रणाली से जुडे नहीं अब तक। एक बनाएँ अथवा आमन्त्रण योजक खोलें।</string>
+    <string name="concord_channels_empty">कोई प्रणाली नहीं अब तक।</string>
+    <string name="concord_show_all_channels">सभी प्रणालियाँ दिखाएँ</string>
+    <string name="concord_send_image_title">चित्र भेजें</string>
+    <string name="concord_open_channel">प्रणाली खोलें</string>
+    <string name="concord_edit_banner_hint">ध्वजचित्र जोडें</string>
+    <string name="concord_channel_create">नयी प्रणाली</string>
+    <string name="concord_channel_rename">प्रणाली पुनःनामकरण</string>
+    <string name="concord_channel_rename_save">पुनःनामकरण</string>
+    <string name="concord_channel_name_label">प्रणाली नाम</string>
+    <string name="concord_channel_delete">प्रणाली मिटाएँ</string>
+    <string name="concord_channel_delete_title">क्या प्रणाली मिटा दें।</string>
+    <string name="concord_channel_delete_message">क्या #%1$s को मिटा दें। इसको पूर्ववत नहीं किया जा सकता। तथा उसी विभेदक के साथ प्रणाली का पुनःउत्पादन नहीं किया जा सकता।</string>
+    <string name="concord_channel_delete_confirm">मिटाएँ</string>
+    <string name="concord_edit_relays_desc">जहाँ इस समुदाय के रहस्यीकृत पत्रों का प्रकाशन तथा पठन किया जाता है।</string>
+    <string name="concord_typing_one">%1$s टंकण मध्य…</string>
+    <string name="concord_typing_two">%1$s तथा %2$s टंकण मध्य…</string>
+    <string name="concord_typing_many">अनेक लोग टंकण मध्य…</string>
+    <string name="concord_create_title">नयी कोंकोर्ड प्रणाली</string>
+    <string name="concord_create_name">नाम</string>
+    <string name="concord_create_about">जानकारी (विकल्पात्मक)</string>
+    <string name="concord_create_relays">पुनःप्रसारक</string>
+    <string name="concord_create_icon">चिह्न जालपता (विकल्पात्मक)</string>
+    <plurals name="concord_channel_count">
+        <item quantity="one">%1$d प्रणाली</item>
+        <item quantity="other">%1$d प्रणालियाँ</item>
+    </plurals>
+    <plurals name="concord_member_count">
+        <item quantity="one">%1$d सदस्य</item>
+        <item quantity="other">%1$d सदस्य</item>
+    </plurals>
+    <string name="concord_create_action">बनाएँ</string>
+    <string name="concord_invite_action">लोगों को आमन्त्रण</string>
+    <string name="concord_invite_title">आमन्त्रण योजक</string>
+    <string name="concord_make_admin">प्रशासक बनाएँ</string>
+    <string name="concord_remove_admin">प्रशासक हटाएँ</string>
+    <string name="concord_ban_user">प्रतिबन्ध</string>
+    <string name="concord_ban_user_title">क्या इस समुदाय में प्रतिबन्धित करें।</string>
+    <string name="concord_ban_user_body">इस सदस्य को समुदाय प्रतिबन्धित सूची में जोडा जाएगा। उनके सन्देश छिपाए जाएँगे तथा उनके भविष्य पत्र छोड दिए जाएँगे सभी सदस्यें द्वारा। आप उन्हें अप्रतिबन्धित कर सकते हैं तत्पश्चात।</string>
+    <string name="concord_create_icon_hint">समुदाय चिह्न स्थापित करें</string>
+    <string name="concord_create_relays_desc">पुनःप्रसारक जो इस समुदाय के रहस्यीकृत सन्देशों को रखते हैं। रिक्त छोड दें अपने ही पुनःप्रसारकों का उपयोग करने के लिए।</string>
+    <string name="concord_edit_title">समुदाय सम्पादन</string>
+    <string name="concord_edit_save">अभिलेखन</string>
+    <string name="concord_members_title">सदस्य</string>
+    <string name="concord_members_empty">कोई स्वत्वधारी प्रशासक अथवा प्रतिबन्धित सदस्य नहीं दिखाने के लिए अब तक।</string>
+    <string name="concord_members_make_admin">प्रशासक बनाएँ</string>
+    <string name="concord_members_remove_admin">प्रशासक हटाएँ</string>
+    <string name="concord_members_ban">प्रतिबन्ध</string>
+    <string name="concord_members_unban">प्रतिबन्ध हटाएँ</string>
+    <string name="concord_members_remove">समुदाय से हटाएँ</string>
+    <string name="concord_members_remove_title">क्या सदस्य हटाएँ।</string>
+    <string name="concord_members_remove_message">इस से समुदाय की रहस्यीकरण कुंचिका का वर्तन किया जाएगा जिससे कि यह सदस्य आगे से कुछ भी प्रेषित वस्तु पढ नहीं सकेगा। अन्य सभी स्वचालिततः पुनःकुंचिकायुक्त किए जाएँगे। इसको पूर्ववत नहीं किया जा सकता।</string>
+    <string name="concord_members_remove_confirm">हटाएँ</string>
+    <string name="concord_role_owner">स्वत्वधारी</string>
+    <string name="concord_role_admin">प्रशासक</string>
+    <string name="concord_role_banned">प्रतिबन्धित</string>
+    <string name="concord_invite_card_join">समुदाय से जुडें</string>
+    <string name="concord_invite_card_subtitle">कोंकोर्ड समुदाय आमन्त्रण</string>
+    <string name="concord_invite_naddr_label">कोंकोर्ड आमन्त्रण (आमन्त्रण योजक खोलें जुडने के लिए)</string>
+    <string name="concord_server_label">कोंकोर्ड</string>
+    <string name="concord_view_mode_title">कोंकोर्ड समुदाय प्रदर्शन</string>
+    <string name="concord_view_inline">पंक्ति में</string>
+    <string name="concord_view_grouped">समुदाय अनुसार</string>
+    <string name="concord_view_inline_desc">प्रत्येक प्रणाली को अपने ही वार्तालाप के रूप में दर्शाएँ तथा आपके चर्चाओं में मिश्रित।</string>
+    <string name="concord_view_grouped_desc">प्रत्येक समुदाय के प्रणालियों को एक ही पंक्ति मे संकुचित करें तथा उसके नवीनतम सन्देश पर रखें।</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <string name="chat_reply_in_chat">चर्चा में</string>
+    <string name="chat_reply_in_thread">सूत्र में</string>
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <string name="chat_minichat_title">सूत्र</string>
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
+    <plurals name="chat_minichat_reply_count">
+        <item quantity="one">%1$d उत्तर</item>
+        <item quantity="other">%1$d उत्तर</item>
+    </plurals>
     <string name="chats_history_proto_nip17">रहस्यीकृत</string>
     <string name="chats_history_proto_nip04">पुराना</string>
     <string name="chats_reply_searching_history">मूल सन्देश की खोज…</string>
@@ -320,6 +399,7 @@
         वे उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों पर। इनमें से कुछ समुदाएँ अस्थायी हैं।
     तथा इसीलिए समय के साथ चर्चा सन्देश अदृश्य हो जाते हैं</string>
     <string name="public_chat">सार्वजनिक चर्चा</string>
+    <string name="new_public_chat">नयी सार्वजनिक चर्चा बनाएँ</string>
     <string name="marmot_group">एमएलएस॰ समूह</string>
     <string name="marmot_group_no_messages_yet">अभी तक कोई सन्देश नहीं</string>
     <string name="public_chat_title">सार्वजनिक चर्चा उपतथ्य</string>
@@ -348,9 +428,9 @@
     <string name="m"> मि॰</string>
     <string name="d"> दि॰</string>
     <string name="nudity">नग्नता</string>
-    <string name="profanity_hateful_speech">अपशब्द / द्वेषपूर्ण भाषण</string>
+    <string name="profanity_hateful_speech">अपशब्द अथवा द्वेषपूर्ण भाषण</string>
     <string name="report_hateful_speech">द्वेषपूर्ण भाषण की सूचना दें</string>
-    <string name="report_nudity_porn">नग्नता / अश्लील चित्र की सूचना दें</string>
+    <string name="report_nudity_porn">नग्नता अथवा अश्लील चित्र की सूचना दें</string>
     <string name="mark_all_known_as_read">सब ज्ञात को पढ लिया चिह्नित करें</string>
     <string name="mark_all_new_as_read">सब नये को पढ लिया चिह्नित करें</string>
     <string name="mark_all_as_read">सब को पढ लिया चिह्नित करें</string>
@@ -369,8 +449,8 @@
     <string name="copy_my_secret_key">मेरी गुप्त कुंचिका की अनुकृति करें</string>
     <string name="encrypt_and_copy_my_secret_key">मेरी गुप्त कुंचिका का रहस्यीकरण तथा अनुकृति करें</string>
     <string name="biometric_authentication_failed">प्रमाणीकरण असफल</string>
-    <string name="biometric_authentication_failed_explainer">जैविकमात्राएँ द्वारा इस संचारयन्त्र के अध्यक्ष का प्रमाणीकरण असफल</string>
-    <string name="biometric_authentication_failed_explainer_with_error">जैविकमात्राएँ द्वारा इस संचारयन्त्र के अध्यक्ष का प्रमाणीकरण असफल। अपक्रम : %1$s</string>
+    <string name="biometric_authentication_failed_explainer">जैविकमात्राएँ द्वारा इस संचारयन्त्र के स्वत्वधारी का प्रमाणीकरण असफल</string>
+    <string name="biometric_authentication_failed_explainer_with_error">जैविकमात्राएँ द्वारा इस संचारयन्त्र के स्वत्वधारी का प्रमाणीकरण असफल। अपक्रम : %1$s</string>
     <string name="badge_award_image_for">"पदक पुरस्कार चित्र %1$s के लिए"</string>
     <string name="badge_award_image">\"पदक पुरस्कार चित्र</string>
     <string name="new_badge_award_notif">आपको नया पदक पुरस्कार प्राप्त हुआ</string>
@@ -378,7 +458,7 @@
     <string name="copied_note_text_to_clipboard">टीका लेख की अनुकृति की गई टाँकाफलक में</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">लेखक के @npub की अनुकृति की गई टाँकाफलक में</string>
     <string name="copied_note_id_to_clipboard" tools:ignore="Typos">टीका विभेदक (@note1) की अनुकृति की गई टाँकाफलक में</string>
-    <string name="private_conversation_notification">"&lt;निजी संदेश का अरहस्यीकरण असफल&gt;\n\nआप का उल्लेख किया गया एक निजी / रहस्यीकृत संवाद में %1$s तथा %2$s के बीच।"</string>
+    <string name="private_conversation_notification">"&lt;निजी संदेश का अरहस्यीकरण असफल&gt;\n\nआप का उल्लेख किया गया एक निजी अथवा रहस्यीकृत संवाद में %1$s तथा %2$s के बीच।"</string>
     <string name="account_switch_add_account_dialog_title">नयी लेखा जोडें</string>
     <string name="drawer_accounts">लेखाएँ</string>
     <string name="drawer_section_navigate">मार्गदर्शन</string>
@@ -513,7 +593,7 @@
     <string name="new_community_moderators_hint">नियामक अनुमति दे सकते हैं पत्र प्रकाशन के लिए। आप सदैव नियामक हैं।</string>
     <string name="new_community_add_moderator">नियामक जोडें</string>
     <string name="new_community_add_moderator_placeholder">नाम एनपुब॰ अथवा निप॰०५</string>
-    <string name="new_community_owner">अधिपति</string>
+    <string name="new_community_owner">स्वत्वधारी</string>
     <string name="new_community_relays_section">पुनःप्रसारक</string>
     <string name="new_community_relays_hint">पुनःप्रसारक चुनें जो अनुरोध स्वीकृतियाँ अथवा समुदाय कर्ता के उपतथ्य रखेंगे।</string>
     <string name="new_community_relay_marker_none">कोई भी</string>
@@ -1177,7 +1257,7 @@
     <string name="interest_set_rename">पुनःनामकरण</string>
     <string name="interest_set_clone">अनुकृति</string>
     <string name="interest_set_add_hashtag">विषयसूचक जोडें</string>
-    <string name="interest_set_toggle_visibility">विकल्पान्तरण सार्वजनिक वा निजी</string>
+    <string name="interest_set_toggle_visibility">विकल्पान्तरण सार्वजनिक अथवा निजी</string>
     <string name="private_posts_label">निजी पत्र</string>
     <string name="private_posts_count">निजी पत्र (%1$s)</string>
     <string name="public_posts_label">सार्वजनिक पत्र</string>
@@ -1191,6 +1271,8 @@
     <string name="public_bookmark_presence_indicator">यहाँ सार्वजनिक स्मर्त्तव्य चिह्न है</string>
     <string name="private_bookmark_presence_indicator">यहाँ निजी स्मर्त्तव्य चिह्न है</string>
     <string name="private_rumor_mark">निजी। केवल चिह्नित सहभागियों को दृश्य</string>
+    <string name="private_rumor_info_title">निजी टीका</string>
+    <string name="private_rumor_info_description">इस टीका को निजी रूप से भेजा गया तथा हस्ताक्षरित नहीं। केवल चिह्नित सहभागी देख सकते हैं। तथा बाहर के व्यक्तियों को इसे किसने लिखा इसका प्रामाणीकरण कोई नहीं कर सकता।</string>
     <string name="private_note">निजी बनाएँ। टीका को उपहारकोषयुक्त करें केवल सूचित प्रयोक्ताओं के लिए</string>
     <string name="disable_private_note">सार्वजनिक बनाएँ</string>
     <string name="private_note_locked">निजी टीका के उत्तर सर्वदा निजी रहते हैं</string>
@@ -1198,6 +1280,8 @@
     <string name="private_note_no_receivers">कोई प्राप्तकर्ता नहीं अब तक। केवल आप इस टीका को देख सकेंगे। लोगों को जोडें इसे बाँटने के लिए।</string>
     <string name="notify_add_user">जोडें</string>
     <string name="notify_remove_user">प्रयोक्ता हटाएँ सूचनाओं से</string>
+    <string name="notify_mute_user">सूचित किया जा रहा है। दबाएँ सूचना को मौन करने के लिए इस प्रयोक्ता के लिए</string>
+    <string name="notify_unmute_user">मौनकृत। दबाएँ इस प्रयोक्ता को पुनःसूचित करने के लिए</string>
     <string name="notify_search_and_add_user">खोजें तथा जोडें प्रयोक्ता को जिसे सूचित करना है</string>
     <string name="bookmark_absence_indicator">स्मर्त्तव्य चिह्नित नहीं</string>
     <string name="bookmark_remove_action_desc">स्मर्त्तव्य सूची से हटाएँ</string>
@@ -1368,14 +1452,14 @@
     <string name="orbot_socks_port">ओर्बोट सोक्स॰ द्वार</string>
     <string name="use_internal_tor">सक्रिय टोर उपकरण</string>
     <string name="use_internal_tor_explainer">आन्तरीय संस्करण का प्रयोग करें अथवा ओर्बोट</string>
-    <string name="tor_preset">टोर/गोपनीयता पूर्वकृत स्थापना विकल्प</string>
+    <string name="tor_preset">टोर अथवा गोपनीयता पूर्वकृत स्थापना विकल्प</string>
     <string name="tor_preset_explainer">शीघ्र से नीचे के सभी स्थापना विकल्पों का परिवर्तन करें</string>
-    <string name="tor_use_onion_address">बहुरहस्यावृत संचार जालपता/पुनःप्रसारक</string>
+    <string name="tor_use_onion_address">बहुरहस्यावृत संचार जालपता अथवा पुनःप्रसारक</string>
     <string name="tor_use_onion_address_explainer">टोर का प्रयोग करें किसी भी .onion जालपता के लिए</string>
     <string name="tor_use_dm_relays">सीधा संदेश पुनःप्रसारक</string>
     <string name="tor_use_dm_relays_explainer">सीधे संदेश भेजने तथा प्राप्त करने के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_use_new_relays">अविश्वसनीय पुनःप्रसारक</string>
-    <string name="tor_use_new_relays_explainer">निर्गत/आगतपेटिका पुनःप्रसारकों के लिए टोर का प्रयोग अवश्य करें</string>
+    <string name="tor_use_new_relays_explainer">निर्गत अथवा आगतपेटिका पुनःप्रसारकों के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_use_trusted_relays">विश्वसनीय पुनःप्रसारक</string>
     <string name="tor_use_trusted_relays_explainer">आपके सूचियों में सभी पुनःप्रसारकों के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_use_profile_pictures">परिचय चित्र</string>
@@ -1474,7 +1558,7 @@
     <string name="call_settings_enable_calls_description">जब अक्षम तब आह्वान घुण्डियाँ अदृश्य किए जाएँगे चर्चा पटल से तथा सभी आगामी आह्वान मौनतः उपेक्षित होंगे।</string>
     <string name="call_settings_video_quality">दृश्य गुणवत्ता</string>
     <string name="call_settings_max_bitrate">अधिकतम दृश्य द्व्यंकगति</string>
-    <string name="call_settings_turn_servers">टर्ण॰ / स्टन॰ सेवासंगणक</string>
+    <string name="call_settings_turn_servers">टर्ण॰ अथवा स्टन॰ सेवासंगणक</string>
     <string name="call_settings_turn_description">मूलविकल्प स्टन॰ तथा टर्ण॰ सेवासंगणक सर्वदा समावेशित। विशिष्ट टर्ण॰ सेवासंगणक जोडें प्रतिबन्धनकारी संचारजालों के लिए।</string>
     <string name="call_settings_default_servers">मूलविकल्प सेवासंगणक (सर्वदा सक्रिय)</string>
     <string name="call_settings_custom_turn">विशिष्ट टर्ण॰ सेवासंगणक</string>
@@ -1545,7 +1629,7 @@
     <string name="write_to_relay_description">अष्टकों में मात्रा जो इस पुनःप्रसारक को भेजा गया था छलनियाँ तथा घटनाएँ समेत</string>
     <string name="read_from_relay_description">अष्टकों में मात्रा जो इस पुनःप्रसारक से प्राप्त हुआ था छलनियाँ तथा घटनाएँ समेत</string>
     <string name="relay_event_count">घटनाएँ रखे गए</string>
-    <string name="owner">अध्यक्ष</string>
+    <string name="owner">स्वत्वधारी</string>
     <string name="used_by">इनके द्वारा उपयुक्त</string>
     <string name="self">सेवा कुंजी</string>
     <string name="version">संस्करण</string>
@@ -1643,8 +1727,8 @@
     <string name="discover_community_v2">समुदाय</string>
     <string name="discover_chat">चर्चाएँ</string>
     <string name="community_approved_posts">अनुमति प्राप्त पत्र</string>
-    <string name="groups_no_descriptor">इस झुण्ड का कोई विवरण नहीं नियम नहीं। इसके अध्यक्ष से बात करें इन्हें जोडने के लिए</string>
-    <string name="community_no_descriptor">इस समुदाय का कोई विवरण नहीं। इसके अध्यक्ष से बात करें इसे जोडने के लिए</string>
+    <string name="groups_no_descriptor">इस झुण्ड का कोई विवरण नहीं नियम नहीं। इसके स्वत्वधारी से बात करें इन्हें जोडने के लिए</string>
+    <string name="community_no_descriptor">इस समुदाय का कोई विवरण नहीं। इसके स्वत्वधारी से बात करें इसे जोडने के लिए</string>
     <string name="add_sensitive_content_label">संवेदनशील विषयवस्तु</string>
     <string name="add_sensitive_content_description">इसे दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है</string>
     <string name="ui_preferences">प्रयोगमाध्यम आद्यताएँ</string>
@@ -1821,6 +1905,8 @@
     <string name="relay_group_threads_title">सूत्र</string>
     <string name="relay_group_open">समूह खोलें</string>
     <string name="relay_group_channels_empty">इस पुनःप्रसारक पर कोई समूह नहीं अब तक।</string>
+    <string name="relay_group_channels_not_nip29">यह पुनःप्रसारक समूहों का अवलम्बन करने का विज्ञापन नहीं करता (निप॰२९)। इसलिए सम्भावना है कि कोई समूह यहाँ उपलब्ध नहीं।</string>
+    <string name="relay_group_relay_not_nip29">सम्भावना है कि समूहों का अवलम्बन नहीं करता (निप॰२९)</string>
     <string name="relay_group_invite_preparing">आमन्त्रण उत्पादन…</string>
     <string name="relay_group_badge_private">निजी</string>
     <string name="relay_group_badge_invite_only">केवल आमन्त्रित</string>
@@ -1967,7 +2053,7 @@
     <string name="error_unable_to_fetch_invoice">ग्राहक के सेवा संगणक से चालान नहीं लाया जा सका</string>
     <string name="wallet_connect_pay_invoice_error_error">आपका धनकोष संयोजन प्रदाता ने यह अपक्रम लौटाया : %1$s</string>
     <string name="tor_connection_failed_title">टोर॰ संयोजन नहीं हो रहा</string>
-    <string name="tor_connection_failed_body">अमेथिस्ट द्वारा टोर॰ का उत्थापन सम्पन्न नहीं हुआ। क्या एक समान्य संयोजन (टोर॰ अतिरिक्त) का प्रयोग करें जिससे कि सूचनावली का आवहन हो सके। इस चयन का स्मरण रखा जाएगा अगले घण्टे तक तथा टोर॰ का पुनःप्रयास किया जाएगा तत्पश्चात।</string>
+    <string name="tor_connection_failed_body">अमेथिस्ट द्वारा टोर॰ का स्वयम उत्थापन सम्पन्न नहीं हुआ। क्या एक समान्य संयोजन (टोर॰ अतिरिक्त) का प्रयोग करें जिससे कि सूचनावली का आवहन हो सके। इस चयन का स्मरण रखा जाएगा अगले घण्टे तक तथा टोर॰ का पुनःप्रयास किया जाएगा तत्पश्चात।</string>
     <string name="tor_continue_without_for_session">सामान्य संयोजन का प्रयोग करें</string>
     <string name="tor_keep_waiting">प्रतीक्षा करते रहें</string>
     <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">लै॰जालपता नहीं बना पाए लै॰पता \"%1$s\" से। उपयोगकर्ता की स्थापना की जाँच करें</string>
@@ -2053,7 +2139,7 @@
     <string name="media_compression_quality_medium">मध्यम</string>
     <string name="media_compression_quality_high">उच्च</string>
     <string name="media_compression_quality_uncompressed">असंकुचित</string>
-    <string name="video_codec_h265_label">H.265/HEVC कोडेक उपयोग करें</string>
+    <string name="video_codec_h265_label">एच॰२६५ अथवा एचईवीसी॰ संकुचनविस्तारणविधि उपयोग करें</string>
     <string name="video_codec_h265_description">अधिक गुणवत्ता के साथ सूक्ष्मतर अभिलेख आकार परन्तु एच॰२६५ चालन सभी यन्त्रों द्वारा अवलम्बित नहीं।</string>
     <string name="convert_gif_to_mp4_label">जिफ॰ से एमपी४॰ में परिवर्तित करें</string>
     <string name="convert_gif_to_mp4_description">चलन्त जिफ॰ से एमपी४॰ में परिवर्तित करता है सूक्ष्मतर अभिलेख आकार तथा अधिक चालन अनुकूलता के लिए।</string>
@@ -2551,6 +2637,7 @@
     <string name="add_expiration_date">समापन दिनांक जोडें</string>
     <string name="remove_expiration_date">समापन दिनांक हटाएँ</string>
     <string name="expiration_date_label">समापन दिनांक</string>
+    <string name="expiration_info_description">लेखक ने पुनःप्रसारकों से अनुरोध किया कि इस टीका को मिटा दें %1$s पश्चात। यह सूचनावलियों में अदृश्य हो जाएगा जब यह समाप्त होगा।</string>
     <string name="expiration_date_explainer">पत्र इस दिनांक के पश्चात ग्राहकों द्वारा छिपाया जाएगा (निप॰४०)</string>
     <string name="expiration_date_select">समापन दिनांक तथा समय चुनें</string>
     <string name="expiration_expires_in">%1$s में समाप्त</string>
@@ -2583,7 +2670,7 @@
     <string name="inbox_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="relay_settings">पुनःप्रसारक स्थापना विकल्प</string>
     <string name="relay_reorder">पुनःक्रमबद्ध पुनःप्रसारक</string>
-    <string name="public_home_section">सार्वजनिक मुख्य पुनःप्रसारक</string>
+    <string name="public_home_section">सार्वजनिक निर्गतपेटिका अथवा मुख्य पुनःप्रसारक</string>
     <string name="public_home_section_explainer_profile">प्रयोक्ता अपने विषयवस्तुओं को इन पुनःप्रसारकों को भेज रहा है</string>
     <string name="public_home_section_explainer">यह पुनःप्रसारक प्रकार आपके सभी विषयवस्तु रखता है। अमेथिस्ट आपके पत्रों को प्रकाशित करने के लिए यहाँ भेजेगा तथा अन्य लोग आपके विषयवस्तु ढूँढने के लिए इनका प्रयोग करेंगे। १ - ३ पुनःप्रसारकों को जोडें। ये व्यक्तिगत अथवा सशुल्क अथवा सार्वजनिक पुनःप्रसारक हो सकते हैं।</string>
     <string name="public_notif_section">सार्वजनिक आगतपेटिका पुनःप्रसारक</string>
@@ -2732,6 +2819,7 @@
     <string name="nsite_open">खोलें</string>
     <string name="ots_info_title">समयांकन प्रमाण</string>
     <string name="ots_info_description">प्रमाण उपलब्ध है कि इस पत्र पर हस्ताक्षर किया गया %1$s के कुछ पहले। प्रमाण अंकित किया गया द्व्यंकरूप्य खण्डश्रृंखला में उस समय उस दिन पर।</string>
+    <string name="ots_info_pending_description">इस पत्र के लिए एक समयांकन प्रमाण का अनुरोध किया गया है तथा द्व्यंकरूप्य खण्डश्रृंखला में अंकन की प्रतीक्षा हो रही है। सामान्यतः कुछ घण्टों में सम्पन्न हो जाएगा।</string>
     <string name="edit_article">लेख सम्पादित करें</string>
     <string name="edit_post">पत्र का सम्पादन करें</string>
     <string name="proposal_to_edit">पत्र शोधन के लिए प्रस्ताव</string>
@@ -2748,6 +2836,8 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">एक टीका पाण्डुलिपि पर प्रतिक्रिया नहीं कर सकते</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">एक टीका पाण्डुलिपि को ज्साप नहीं कर सकते</string>
     <string name="draft_note">टीका पाण्डुलिपि</string>
+    <string name="draft">पाण्डुलिपि</string>
+    <string name="bounty_label">पुरस्कार</string>
     <string name="load_from_text">संदेश से</string>
     <string name="dvm_looking_for_app">क्रमक ढूँढना चालू</string>
     <string name="dvm_waiting_status">कार्य का अनुरोध किया गया। उत्तर की प्रतीक्षा में</string>
@@ -2870,6 +2960,101 @@
     <string name="crashreport_found">क्रमदोष सूचनापत्र प्राप्त</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">क्या आप निकटकालिक क्रमदोष सूचनापत्र एक सीधे सन्देश में अमेथिस्ट को भेजना चाहते हैं। कोई व्यक्तिगत जानकारी बाँटी नहीं जाएगी</string>
     <string name="crashreport_found_send">भेजें</string>
+    <string name="resource_usage_title">क्रमक संसाधन उपयोग</string>
+    <string name="resource_usage_search_keywords">विद्युत्कोष तथ्य उपयोग उपभोग ऊर्जा जाल निदान लेखापुस्तक</string>
+    <string name="resource_usage_today">आज</string>
+    <string name="resource_usage_week">पिछले सात दिन</string>
+    <string name="resource_usage_tile_cellular">चलनशील आज</string>
+    <string name="resource_usage_tile_wifi">वैफै॰ आज</string>
+    <string name="resource_usage_tile_relay">पुनःप्रसारक समय आज</string>
+    <string name="resource_usage_tile_in_app">क्रमकाभ्यन्तर आज</string>
+    <string name="resource_usage_trend_section">जानकारी प्रति दिन</string>
+    <string name="resource_usage_legend_cellular">चलनशील (दशलक्षाष्टक)</string>
+    <string name="resource_usage_legend_wifi">वैफै॰ (दशलक्षाष्टक)</string>
+    <string name="resource_usage_activity_section">गतिविधि (सात दिन)</string>
+    <string name="resource_usage_cellular_bg">चलनशील जानकारी (पृष्ठभूमि)</string>
+    <string name="resource_usage_cellular_fg">चलनशील जानकारी (क्रमकाभ्यन्तर)</string>
+    <string name="resource_usage_wifi">वैफै॰ जानकारी</string>
+    <string name="resource_usage_relay_time">पुनःप्रसारक संयोजन समय</string>
+    <string name="resource_usage_relay_time_bg_mobile">\u2026 चलनशील पर पृष्ठभूत</string>
+    <string name="resource_usage_wakelock">सूचना कार्य (क्रमवर्तक जागृत)</string>
+    <string name="resource_usage_worker_runs">पृष्ठभूत कार्य चलाए गए</string>
+    <string name="resource_usage_reconnects">पुनःप्रसारक पुनःसंयोजन (असफल)</string>
+    <string name="resource_usage_http_requests">जाल अनुरोध</string>
+    <string name="resource_usage_radio_bursts">विकिरणसंचार जाग उठना अवरोहणों के लिए (अनुमान)</string>
+    <string name="resource_usage_http_active">सक्रिय स्थानान्तरण समय</string>
+    <string name="resource_usage_media_play">ध्वनिदृश्याभिलेख चलन समय</string>
+    <string name="resource_usage_verifies">हस्ताक्षर सत्यापित</string>
+    <string name="resource_usage_cpu">क्रमवर्तक समय उपयुक्त</string>
+    <string name="resource_usage_fg_time">क्रमकाभ्यन्तर समय</string>
+    <string name="resource_usage_app_starts">क्रमक कार्य आरम्भ</string>
+    <string name="resource_usage_decrypts">सन्देश अरहस्यीकृत</string>
+    <string name="resource_usage_remote_signs">दूरस्थ हस्ताक्षर</string>
+    <string name="resource_usage_pow">श्रमप्रमाण खनन</string>
+    <string name="resource_usage_tor">टोर॰ उपलब्ध समय</string>
+    <string name="resource_usage_calls">आह्वानाभ्यन्तर समय</string>
+    <string name="resource_usage_nests">ध्वनिशालाभ्यन्तर समय</string>
+    <string name="resource_usage_location">स्थानान्वेषण</string>
+    <string name="resource_usage_battery_drain">विद्युतकोष उपयुक्त (क्रमकाभ्यन्तर अथवा पृष्ठभूत)</string>
+    <string name="resource_usage_alwayson_section">पृष्ठभूत सूचना सेवा</string>
+    <string name="resource_usage_alwayson_explanation">संयोजनों को खुला रखता है आपके पुनःप्रसारकों से जब क्रमक आवृत है जिससे सूचनाएँ आते हैं गूगिल के प्रेषण सेवासंगणकों के बिना। सक्षम अवस्था में सामान्यतः यही सब से बडा पृष्ठभूत विद्युतकोष परिव्यय है। यदि आपके लिए विद्युतकोष तुरन्त सूचनाओं से अधिक महत्वपूर्ण है तो आप प्रेषण विधि परिवर्तित अथवा निष्क्रिय कर सकते हैं।</string>
+    <string name="resource_usage_alwayson_uptime">धावन समय</string>
+    <plurals name="resource_usage_alwayson_starts">
+        <item quantity="one">%1$d आरम्भ</item>
+        <item quantity="other">%1$d आरम्भ</item>
+    </plurals>
+    <string name="resource_usage_alwayson_bg_relay">पुनःप्रसारक संयोजन जो रखे गए आवृत अवस्था में</string>
+    <string name="resource_usage_alwayson_battery">विद्युतकोश अपवहन कालान्तर (पूर्ण यन्त्र)</string>
+    <string name="resource_usage_alwayson_settings_button">सूचना स्थापना विकल्प परिवर्तन</string>
+    <string name="resource_usage_tor_settings_button">गोपनीयता विकल्प</string>
+    <string name="resource_usage_tile_battery_rate">विद्युतकोश प्रति घण्टा क्रमकाभ्यन्तर</string>
+    <string name="resource_usage_tile_data_rate">जानकारी प्रति घण्टा क्रमकाभ्यन्तर</string>
+    <string name="resource_usage_tile_avg_relays">मध्यमान पुनःप्रसारक संयोजन</string>
+    <string name="resource_usage_by_subsystem_cellular">चलनशील जानकारी सुविधा अनुसार (सात दिन)</string>
+    <string name="resource_usage_cell_of_total">%1$s। %2$s कुल</string>
+    <string name="resource_usage_screen_time_section">पटल अनुसार समय (सात दिन)</string>
+    <string name="resource_usage_tor_section">अन्तर्निमित टोर॰</string>
+    <string name="resource_usage_tor_explanation">क्रमक यातायात को टोर॰ जाल द्वारा भेजता है गोपनीयता के लिए। चलन्त अवस्था में यह अधिक विद्युतकोष का व्यय करता है रहस्यीकरण पर तथा संयोजन सक्रियत्व बनाए रखने के लिए। प्रत्येक आरम्भ स्वयम उत्थापन का भुगतान देता है। यदि आपका तर्जन प्रतिरूप अनुमति देता है तो टोर॰ का उपयोग अनुकूलित अथवा निष्क्रिय किया जा सकता है।</string>
+    <string name="resource_usage_by_subsystem">जानकारी सुविधा अनुसार (सात दिन)</string>
+    <string name="resource_usage_subsystem_relay">पुनःप्रसारक समचरणीकरण</string>
+    <string name="resource_usage_subsystem_image">चित्र</string>
+    <string name="resource_usage_subsystem_video">दृश्य तथा ध्वनि</string>
+    <string name="resource_usage_subsystem_uploads">आरोहण</string>
+    <string name="resource_usage_subsystem_money">धनकोष तथा ज्साप</string>
+    <string name="resource_usage_subsystem_nip05">नोस्टर पता सत्यापन</string>
+    <string name="resource_usage_subsystem_preview">योजक पूर्वीक्षण</string>
+    <string name="resource_usage_subsystem_push">प्रेषण पंजीकरण</string>
+    <string name="resource_usage_subsystem_other">अन्य</string>
+    <string name="resource_usage_empty">कोई उपयोग अभिलेखित नहीं अब तक।</string>
+    <string name="resource_usage_memory_section">स्मृति अभी इस समय</string>
+    <string name="resource_usage_memory_heap">क्रमक स्मृति (संचय)</string>
+    <string name="resource_usage_memory_native">यन्त्र स्मृति</string>
+    <string name="resource_usage_memory_image_cache">चित्र द्रुतस्मृति (अस्थायीस्मृति)</string>
+    <string name="resource_usage_memory_image_disk">चित्र द्रुतस्मृति (स्थायीस्मृति)</string>
+    <string name="resource_usage_memory_notes">स्मृति में टीकाएँ</string>
+    <string name="resource_usage_memory_users">लेखा परिचय स्मृति में</string>
+    <string name="resource_usage_memory_addressables">पताप्राप्त घटनाएँ स्मृति में</string>
+    <string name="resource_usage_memory_chatrooms">चर्चाशाला सूचियाँ स्मृति में</string>
+    <string name="resource_usage_memory_device_class">यन्त्र स्मृति वर्ग</string>
+    <string name="resource_usage_send_section">क्रमलेखकों के साथ बाँटें</string>
+    <string name="resource_usage_send_explanation">यदि अमेथिस्ट द्वारा विद्युतकोष अथवा जानकारी यातायात का व्यय हो रहा है तो आप इस वृत्तान्त को क्रमलेखकों को भेज सकते हैं एक रहस्यीकृत सीधासन्देश में। इसमें केवल इस पटल पर दृश्यमान संख्याएँ हैं तथा इनके पीछे के तन्त्रविषयक संकलन \u2014 कोई पत्र सम्पर्क अथवा वीक्षण विवरण नहीं। कुछ भी नहीं भेजा जाएगा आपके द्वारा सन्देश पटल पर भेजें दबाने के पूर्व।</string>
+    <string name="resource_usage_send_button">सीधासन्देश द्वारा वृत्तान्त भेजें</string>
+    <string name="resource_usage_alert_title">उच्च संसाधन उपयोग का बोध</string>
+    <string name="resource_usage_alert_message">अमेथिस्ट द्वारा अपेक्षित से अधिक उपभोग हुआ निकटकाल में : %1$s। क्या आप एक उपयोग वृत्तान्त भेजना चाहते क्रमलेखकों को एक रहस्यीकृत सीधासन्देश में। आप सम्पूर्ण वृत्तान्त देखेंगे कुछ भी भेजने के पूर्व।</string>
+    <string name="resource_usage_reason_bg_data">चलनशील जानकारी %1$s पृष्ठभूत एक दिन में</string>
+    <string name="resource_usage_reason_conn_time">पुनःप्रसारक संयोजन %1$s पृष्ठभूत चलनशील एक दिन में</string>
+    <string name="resource_usage_reason_wakelock">क्रमवर्तक को जागृत रखा गया %1$s के लिए सूचनाओं पर कार्य करते हुए एक दिन में</string>
+    <plurals name="resource_usage_reason_churn">
+        <item quantity="one">क्रमक का पुनःप्रारम्भ %1$d बार एक दिन में</item>
+        <item quantity="other">क्रमक का पुनःप्रारम्भ %1$d बार एक दिन में</item>
+    </plurals>
+    <plurals name="resource_usage_reason_reconnects">
+        <item quantity="one">क्रमक द्वारा पुनःप्रसारकों से पुनःसंयोजन %1$d बार एक दिन में</item>
+        <item quantity="other">क्रमक द्वारा पुनःप्रसारकों से पुनःसंयोजन %1$d बार एक दिन में</item>
+    </plurals>
+    <string name="resource_usage_alert_send">पुनरीक्षण तथा प्रेषण</string>
+    <string name="resource_usage_alert_not_now">अभी नहीं</string>
+    <string name="resource_usage_alert_opt_out">पुनः प्रश्न ना करें</string>
     <string name="this_message_will_disappear_in">यह सन्देश %1$s में अदृश्य हो जाएगा</string>
     <string name="select_signer">हस्ताक्षरकर्ता चुनें</string>
     <string name="in_the_list">पहले से ही सूची में</string>
@@ -2909,7 +3094,7 @@
     <string name="retrying">पुनःप्रयास चालू…</string>
     <string name="retry">पुनःप्रयास करें</string>
     <string name="dismiss">हटाएँ</string>
-    <string name="share_of">%1$d/%2$d</string>
+    <string name="share_of">%2$d में से %1$d</string>
     <string name="broadcasting">प्रसारण चालू</string>
     <string name="broadcasting_name">%1$s का प्रसारण चालू</string>
     <string name="broadcasting_number_events">%1$d घटनाओं का प्रसारण चालू</string>
@@ -3088,7 +3273,7 @@
     <string name="select_users_to_follow">प्रयोक्ता चुनें अनुचरण करने के लिए</string>
     <string name="profile_to_import_from">प्रयोक्ता परिचय जिससे आयात करना है</string>
     <string name="name_search_npub1_alice_example_com">खोज, एनपुब॰१…, alice@example.com</string>
-    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">एनपुब॰ एन॰परिचय निप॰०५ षोडशांक तथा नामरूप्य का आलम्बन करता है (.bit, d/, id/)</string>
+    <string name="supports_npub_nip_05_hex_and_namecoin_bit_d_id">एनपुब॰ एनप्रोफैल॰ निप॰०५ षोडशांक तथा नामरूप्य (.bit) का अवलम्बन करता है</string>
     <string name="tip">पारितोषिक</string>
     <string name="accounts_found">%1$d लेखाएँ प्राप्त</string>
     <string name="num_selected">%1$d चयनित</string>
@@ -3125,7 +3310,7 @@
     <string name="event_sync_start">समचरणीकरण आरम्भ करें</string>
     <string name="event_sync_start_anyway">आरम्भ करें (चलनशील संयोजन पर भी)</string>
     <string name="event_sync_cancel">निरस्त करें</string>
-    <string name="event_sync_relays_progress">पुनःप्रसारक : %1$d / %2$d</string>
+    <string name="event_sync_relays_progress">पुनःप्रसारक : %2$d में से %1$d</string>
     <string name="event_sync_events_sent">घटनाएँ पुनःवितरित : %1$d नए %2$d भेजे गए तथा %3$d प्राप्त</string>
     <string name="event_sync_done_title">समचरणीकरण समाप्त</string>
     <string name="event_sync_done_sent">अग्रतःप्रेषित %2$d प्राप्त में से %1$d घटनाएँ गन्तव्य पुनःप्रसारकों तक।</string>
@@ -3216,6 +3401,8 @@
     <string name="playback_actions_dialog_title">चालन</string>
     <string name="video_quality_auto">स्वचालित</string>
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
+    <string name="edit_nickname">उपनाम सम्पादन</string>
+    <string name="nickname_private">केवल आपको दिखाई देगा</string>
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">यन्त्र पर निक्षेपण</string>
     <string name="cast_stop_casting">निक्षेपण रोकें</string>
@@ -3231,7 +3418,7 @@
     <string name="hls_description_label">विवरण</string>
     <string name="hls_description_placeholder">यह दृश्याभिलेख किस विषय पर है।</string>
     <string name="hls_content_warning_reason_placeholder">कारण (विकल्पात्मक)</string>
-    <string name="hls_codec_label">संविस्तारक</string>
+    <string name="hls_codec_label">संकुचनविस्तारणविधि</string>
     <string name="hls_codec_h265">एच॰२६५ (अधिक संकुचन)</string>
     <string name="hls_codec_h264">एच॰२६४</string>
     <string name="hls_codec_fallback_notice">एच॰२६५ इस यन्त्र पर उपलब्ध नहीं। एच॰२६४ तक पुनःपतन।</string>
@@ -3441,6 +3628,7 @@
     <string name="compose_signature_setting_description">सन्देश के अन्त में जोडा जाएगा नए पत्र प्रत्युत्तर उद्धरण अथवा निबन्ध खोलते समय। रिक्त छोड दें अक्षम करने के लिए।</string>
     <string name="compose_signature_setting_hint">आपका हस्ताक्षर</string>
     <string name="pow_settings_title">श्रमप्रमाण</string>
+    <string name="pow_info_description">इस पत्र के लेखक ने संगणक बल का व्यय किया कठिनाई %1$s तक खनन करने के लिए। एक श्रमप्रमाण चिह्न जिससे कचरालेख प्रेषण परिव्ययवान हो जाता है।</string>
     <string name="pow_difficulty_title">कठिनाई</string>
     <string name="pow_difficulty_explainer">एक निप॰१३ श्रमप्रमाण का खनन करता है आपके पत्रों के लिए प्रकाशन पूर्व जिससे पुनःप्रसारक तथा पढनेवाले उसका तोलन कर सके कचरालेख के प्रति। उच्चतर मूल्यों के लिए घातांकीयतः अधिक समय लगेगा। पत्र प्रकाशित होंगे अदृश्यतः खनन पश्चात।</string>
     <string name="pow_difficulty_off">निष्क्रिय</string>
