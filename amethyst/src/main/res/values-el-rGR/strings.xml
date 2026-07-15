@@ -1495,6 +1495,8 @@
     <string name="messages_create_public_chat">Δημόσια</string>
     <string name="messages_create_group">Ομάδα</string>
     <string name="messages_create_public_private_chat_description">Νέα δημόσια ή ιδιωτική ομάδα</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Ιδιωτικό</string>
     <string name="messages_new_message_to">Προς</string>
     <string name="messages_new_message_subject">Θέμα</string>

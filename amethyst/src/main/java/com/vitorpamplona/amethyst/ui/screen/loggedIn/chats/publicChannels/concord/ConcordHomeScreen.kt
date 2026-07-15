@@ -222,11 +222,11 @@ fun ConcordHomeScreen(
                         ConcordChannelRow(
                             communityId = entry.id,
                             channelKey = ch.key,
-                            channelName = def?.name ?: ch.key,
+                            channelName = def.name.ifBlank { ch.key },
                             icon =
                                 when {
-                                    def?.voice == true -> MaterialSymbols.Mic
-                                    def?.private == true -> MaterialSymbols.Lock
+                                    def.voice == true -> MaterialSymbols.Mic
+                                    def.private == true -> MaterialSymbols.Lock
                                     else -> MaterialSymbols.Tag
                                 },
                             hideIfRead = mode == ChannelExpand.UNREAD,

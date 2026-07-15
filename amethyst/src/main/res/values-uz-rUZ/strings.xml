@@ -1506,6 +1506,8 @@
     <string name="messages_create_public_chat">Ommaviy</string>
     <string name="messages_create_group">Guruh</string>
     <string name="messages_create_public_private_chat_description">Yangi ommaviy yoki shaxsiy guruh</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Shaxsiy</string>
     <string name="messages_new_message_to">Kimga</string>
     <string name="messages_new_message_subject">Mavzu</string>

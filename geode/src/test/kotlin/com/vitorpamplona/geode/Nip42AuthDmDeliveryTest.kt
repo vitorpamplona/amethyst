@@ -108,7 +108,7 @@ class Nip42AuthDmDeliveryTest {
             // as the DM sender, though FullAuthPolicy would accept any authenticated pubkey).
             val authSigner = NostrSignerSync(senderKeys)
             val authenticator =
-                RelayAuthenticator(client = client, scope = scope) { _, template ->
+                RelayAuthenticator(client = client, scope = scope) { _, template, _ ->
                     listOf(authSigner.sign(template))
                 }
             try {

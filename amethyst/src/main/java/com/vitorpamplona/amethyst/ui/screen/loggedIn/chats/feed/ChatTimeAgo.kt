@@ -35,13 +35,21 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.IncognitoBadge
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 
 @Composable
@@ -51,7 +59,74 @@ fun ChatTimeAgo(baseNote: Note) {
         style = TimeAgoStyle.Short,
         color = MaterialTheme.colorScheme.placeholderText,
         fontSize = Font12SP,
+        // The chat time is wrapped in a tap target that opens the relay/delivery dialog,
+        // so it must not steal the tap to toggle relative/absolute. The absolute time is
+        // shown in that dialog instead.
+        toggleable = false,
     )
+}
+
+/**
+ * Whether the compact bubble footer would show anything besides the timestamp — a
+ * legacy-DM marker, an expiration, a geohash, or a proof-of-work badge. Lets the caller
+ * skip the footer entirely on the common no-metadata message (rather than emit an empty
+ * row) while still surfacing these per-message details that used to live in the
+ * tap-to-expand "complete UI" detail row.
+ */
+fun chatFooterHasMeta(note: Note): Boolean {
+    val event = note.event ?: return false
+    return event is PrivateDmEvent ||
+        event.expiration() != null ||
+        event.geoHashOrScope() != null ||
+        event.strongPoWOrNull() != null
+}
+
+/**
+ * The small row at the bottom of a chat bubble: inline status glyphs (legacy-DM,
+ * expiration, geohash, proof-of-work — each shown only when present) followed, on the
+ * last message of an author run ([showTime]), by the timestamp and its delivery affordance
+ * — relay-acceptance ticks for our own messages, a tappable "seen on relays" for received
+ * ones. Replaces the old tap-to-expand detail row.
+ */
+@Composable
+fun ChatMessageFooter(
+    note: Note,
+    isLoggedInUser: Boolean,
+    showTime: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = note.event
+    val geo = remember(event) { event?.geoHashOrScope() }
+    val pow = remember(event) { event?.strongPoWOrNull() }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // Each glyph self-gates and renders nothing when not applicable.
+        IncognitoBadge(note)
+        ChatExpiration(note)
+
+        if (geo != null) {
+            Spacer(StdHorzSpacer)
+            DisplayLocation(geo, accountViewModel, nav)
+        }
+        if (pow != null) {
+            Spacer(StdHorzSpacer)
+            DisplayPoW(pow, accountViewModel)
+        }
+
+        if (showTime) {
+            val hasGlyph = event is PrivateDmEvent || event?.expiration() != null || geo != null || pow != null
+            if (hasGlyph) Spacer(StdHorzSpacer)
+
+            // Drafts aren't published, so no relay/delivery detail; everything else gets
+            // the tappable timestamp that opens "where did this come from".
+            if (note.isDraft()) {
+                ChatTimeAgo(note)
+            } else {
+                ChatTimeWithDelivery(note, isLoggedInUser, accountViewModel, nav)
+            }
+        }
+    }
 }
 
 @Composable

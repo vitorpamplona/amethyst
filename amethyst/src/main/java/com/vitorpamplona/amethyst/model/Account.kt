@@ -141,6 +141,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
@@ -157,6 +158,8 @@ import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
+import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -491,6 +494,7 @@ class Account(
         communityId: String,
         channelIdHex: String,
         rumor: Event,
+        seenOnRelays: Set<NormalizedRelayUrl>,
     ) {
         val authority =
             concordSessions
@@ -500,7 +504,7 @@ class Account(
                 ?.authority
         if (authority?.isBanned(rumor.pubKey) == true) return
         registerConcordEncryptedImages(rumor)
-        cache.consumeConcordRumor(communityId, channelIdHex, rumor)
+        cache.consumeConcordRumor(communityId, channelIdHex, rumor, seenOnRelays)
     }
 
     /**
@@ -677,6 +681,10 @@ class Account(
             .MarmotGroupList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
+
+    // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
+    // own chat bubbles.
+    val chatDeliveryTracker = ChatDeliveryTracker(client)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
@@ -1075,6 +1083,10 @@ class Account(
         expirationDelta: Long?,
         difficulty: Int,
         existingRecord: PersistedPoWJob? = null,
+        // The inner rumor's id (the note the chat feed displays), so the mined
+        // wraps still register with the delivery-ticks tracker at publish time.
+        // Null for restart-restored jobs, whose rumor id wasn't persisted.
+        displayedNoteId: HexKey? = null,
     ): Boolean {
         val queue = powQueue() ?: return false
         if (seals.isEmpty()) return true
@@ -1109,7 +1121,7 @@ class Account(
                 }
                 seals.map { NIP17Factory().wrapSeal(it, expirationDelta, templateConversion = mineWrap) }
             },
-            publish = { wraps -> broadcastPrivately(wraps) },
+            publish = { wraps -> broadcastPrivately(wraps, displayedNoteId) },
         )
         return true
     }
@@ -2090,6 +2102,7 @@ class Account(
                 else ->
                     ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now(), emojiTags)
             }
+        trackConcordDelivery(entry, channelKey, wrap)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -2114,6 +2127,7 @@ class Account(
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
         val emojiTags = emoji.findEmojiTags(text).map { it.toTagArray() }.toTypedArray()
         val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now(), emojiTags)
+        trackConcordDelivery(entry, channelKey, wrap)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -2222,6 +2236,23 @@ class Account(
         concordSessions.ingest(wrap)
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
         if (relays.isNotEmpty()) client.publish(wrap, relays)
+    }
+
+    /**
+     * Registers an own Concord channel message with the delivery tracker so its chat
+     * bubble shows relay-acceptance ticks. Relays OK the encrypted [wrap], but the feed
+     * shows the inner rumor, so we re-open the wrap (we just built it, so this always
+     * succeeds) to key the tracker by the rumor id the bubble is drawn from. Reactions
+     * and typing wraps skip this — they never become a feed row.
+     */
+    private fun trackConcordDelivery(
+        entry: ConcordCommunityListEntry,
+        channelKey: GroupKey,
+        wrap: Event,
+    ) {
+        val rumorId = ConcordStreamEnvelope.openOrNull(wrap, channelKey)?.rumor?.id ?: return
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        chatDeliveryTracker.trackWrappedPublic(rumorId, wrap.id, relays)
     }
 
     // ── Concord roles & moderation (CORD-04) ─────────────────────────────────
@@ -3315,11 +3346,14 @@ class Account(
         val event = signer.sign(template)
         cache.justConsumeMyOwnEvent(event)
         val relays = relayList(event)
-        if (!relays.isNullOrEmpty()) {
-            client.publish(event, relays.toSet())
-        } else {
-            client.publish(event, computeRelayListToBroadcast(event))
-        }
+        val targets =
+            if (!relays.isNullOrEmpty()) {
+                relays.toSet()
+            } else {
+                computeRelayListToBroadcast(event)
+            }
+        chatDeliveryTracker.trackPublic(event.id, targets)
+        client.publish(event, targets)
         return event
     }
 
@@ -3720,7 +3754,7 @@ class Account(
             // process death mid-mine cannot lose the file announcement.
             val senderMessage = signer.sign(template)
             val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) {
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderMessage.id)) {
                 // The wraps publish only after mining, but the user has already
                 // replied — advance the read marker now.
                 markDmRoomAsRead(senderMessage)
@@ -3737,7 +3771,7 @@ class Account(
             // See sendNip17EncryptedFile: sign inline, queue only wrap mining.
             val senderMessage = signer.sign(template)
             val seals = NIP17Factory().createSeals(senderMessage, senderMessage.groupMembers(), signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) {
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderMessage.id)) {
                 // The wraps publish only after mining, but the user has already
                 // replied — advance the read marker now.
                 markDmRoomAsRead(senderMessage)
@@ -3770,7 +3804,7 @@ class Account(
             val senderNote = signer.sign(template)
             val recipients = senderNote.taggedUserIds().plus(signer.pubKey).toSet()
             val seals = NIP17Factory().createSeals(senderNote, recipients, signer)
-            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty)) return
+            if (mineWrapsInBackground(seals.seals, seals.expirationDelta, powDifficulty, displayedNoteId = senderNote.id)) return
         }
 
         broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
@@ -3784,11 +3818,20 @@ class Account(
     }
 
     suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
-        broadcastPrivately(signedEvents.wraps)
+        broadcastPrivately(signedEvents.wraps, signedEvents.msg.id)
         markDmRoomAsRead(signedEvents.msg)
     }
 
-    suspend fun broadcastPrivately(wraps: List<GiftWrapEvent>) {
+    /**
+     * [displayedNoteId] is the inner rumor's id (the note the chat feed shows).
+     * When present, each wrap registers with the delivery-ticks tracker — this is
+     * the only place the recipient -> wrap -> target-relays mapping exists, before
+     * the wraps are aliased onto a single note.
+     */
+    suspend fun broadcastPrivately(
+        wraps: List<GiftWrapEvent>,
+        displayedNoteId: HexKey? = null,
+    ) {
         val mine = wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
@@ -3805,6 +3848,19 @@ class Account(
             }
 
             val relayList = computeRelayListToBroadcast(wrap)
+
+            if (displayedNoteId != null) {
+                wrap.recipientPubKey()?.let { recipient ->
+                    chatDeliveryTracker.trackWrap(
+                        displayedNoteId = displayedNoteId,
+                        recipient = recipient,
+                        wrapId = wrap.id,
+                        targetRelays = relayList,
+                        isSelf = recipient == signer.pubKey,
+                    )
+                }
+            }
+
             client.publish(wrap, relayList)
         }
 

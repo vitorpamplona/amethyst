@@ -1689,6 +1689,8 @@
     <string name="messages_create_public_chat">Public</string>
     <string name="messages_create_group">Groupe</string>
     <string name="messages_create_public_private_chat_description">Nouveau Groupe Public ou Privé</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_group_create_confirm">Créer</string>
     <string name="relay_group_invite_title">Inviter des gens</string>
     <string name="relay_group_invite_description">Partager ce code pour que les gens puissent rejoindre ce groupe.</string>

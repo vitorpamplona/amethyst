@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -44,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.watchChatGroupPosition
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.coroutines.launch
@@ -187,30 +189,48 @@ fun ChatFeedLoaded(
         itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
-                ChatroomMessageCompose(
-                    baseNote = item,
-                    routeForLastRead = routeForLastRead,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    onWantsToReply = onWantsToReply,
-                    onWantsToEditDraft = onWantsToEditDraft,
-                    onScrollToNote = onScrollToNote,
-                    shouldHighlight = highlightedNoteId.value == item.idHex,
-                    onHighlightFinished = { highlightedNoteId.value = null },
-                )
+                // Reverse layout: index - 1 is the newer message (visually below),
+                // index + 1 the older one (visually above).
+                val newer = items.list.getOrNull(index - 1)
+                val older = items.list.getOrNull(index + 1)
 
-                NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
+                // Send/arrival motion: new items fade in and existing ones slide to
+                // make room, so a sent message enters instead of appearing.
+                val itemModifier =
+                    if (accountViewModel.settings.isPerformanceMode()) {
+                        Modifier
+                    } else {
+                        Modifier.animateItem()
+                    }
 
-                // Per-relay paging markers belonging in the gap toward the next-older message. With the
-                // reverse layout this draws just above the message (the older side), so a relay's marker
-                // appears right below the oldest message it has reached and slides down as it pages.
-                markersInGap?.invoke(
-                    item.event?.createdAt,
-                    items.list
-                        .getOrNull(index + 1)
-                        ?.event
-                        ?.createdAt,
-                )
+                Column(modifier = itemModifier) {
+                    ChatroomMessageCompose(
+                        baseNote = item,
+                        routeForLastRead = routeForLastRead,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onWantsToReply = onWantsToReply,
+                        onWantsToEditDraft = onWantsToEditDraft,
+                        onScrollToNote = onScrollToNote,
+                        shouldHighlight = highlightedNoteId.value == item.idHex,
+                        onHighlightFinished = { highlightedNoteId.value = null },
+                        groupPosition = watchChatGroupPosition(newer, item, older),
+                        previousNoteId = older?.idHex,
+                    )
+
+                    NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
+
+                    // Per-relay paging markers belonging in the gap toward the next-older message. With the
+                    // reverse layout this draws just above the message (the older side), so a relay's marker
+                    // appears right below the oldest message it has reached and slides down as it pages.
+                    markersInGap?.invoke(
+                        item.event?.createdAt,
+                        items.list
+                            .getOrNull(index + 1)
+                            ?.event
+                            ?.createdAt,
+                    )
+                }
             }
         }
 

@@ -1826,6 +1826,8 @@
     <string name="messages_create_public_chat">Publik</string>
     <string name="messages_create_group">Grupp</string>
     <string name="messages_create_public_private_chat_description">Ny offentlig eller privat grupp</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_groups_title">Relägrupper</string>
     <string name="relay_group_view_inline">Infogad</string>
     <string name="relay_group_view_grouped">Efter relä</string>

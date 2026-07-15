@@ -1859,6 +1859,8 @@
     <string name="messages_create_public_chat">सार्वजनिक</string>
     <string name="messages_create_group">समूह</string>
     <string name="messages_create_public_private_chat_description">नया निजी अथवा सार्वजनिक झुण्ड</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_groups_title">पुनःप्रसारक समूह</string>
     <string name="relay_group_view_inline">पंक्ति में</string>
     <string name="relay_group_view_grouped">पुनःप्रसारक अनुसार</string>

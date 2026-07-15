@@ -21,19 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -45,60 +39,37 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
-import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteMinichatReplyCount
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
-import com.vitorpamplona.amethyst.ui.note.RelayBadgesHorizontal
 import com.vitorpamplona.amethyst.ui.note.RenderZapRaiser
-import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChangeChannelMetadataNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatZap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderCreateChannelNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.IncognitoBadge
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
-import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -110,7 +81,6 @@ import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as MaterialSymbolIcon
 
 @Composable
 fun ChatroomMessageCompose(
@@ -125,6 +95,11 @@ fun ChatroomMessageCompose(
     onScrollToNote: ((Note) -> Unit)? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
+    groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
+    // The id of the message rendered directly above this one in the feed. A reply
+    // quote that targets it is redundant (the reader can see the parent right
+    // there), so the reply row is skipped.
+    previousNoteId: HexKey? = null,
     // Replaces the generic "post not found" blank while baseNote's event hasn't loaded. Used for
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
@@ -152,6 +127,8 @@ fun ChatroomMessageCompose(
                 RenderChatRaid(baseNote, accountViewModel, nav)
             } else if (event is LiveActivitiesClipEvent) {
                 RenderChatClip(baseNote, accountViewModel, nav)
+            } else if (event is ChannelCreateEvent || event is ChannelMetadataEvent) {
+                RenderChannelAdminSystemMessage(baseNote, accountViewModel, nav)
             } else {
                 NormalChatNote(
                     baseNote,
@@ -166,6 +143,8 @@ fun ChatroomMessageCompose(
                     onScrollToNote,
                     shouldHighlight,
                     onHighlightFinished,
+                    groupPosition,
+                    previousNoteId,
                 )
             }
         }
@@ -194,6 +173,8 @@ fun NormalChatNote(
     onScrollToNote: ((Note) -> Unit)? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
+    groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
+    previousNoteId: HexKey? = null,
 ) {
     val isLoggedInUser =
         remember(note.author) {
@@ -225,96 +206,110 @@ fun NormalChatNote(
             }
         }
 
+    // Emoji-only messages render as bare jumbo emoji, no bubble fill. Ciphertext
+    // never passes the emoji-only check, so the cheap synchronous read decides
+    // most cases; the decrypt callback updates the flag when an encrypted
+    // message's plaintext arrives after first composition, keeping the bubble
+    // transparency in agreement with the jumbo text rendering downstream.
+    var isJumboEmoji by
+        remember(note.event?.id) {
+            val noteEvent = note.event
+            val content =
+                if (noteEvent is DraftWrapEvent) {
+                    null
+                } else {
+                    accountViewModel.cachedDecrypt(note) ?: noteEvent?.content
+                }
+            mutableStateOf(content != null && jumboEmojiCount(content) > 0)
+        }
+
+    if (note.event !is DraftWrapEvent) {
+        LaunchedEffect(note.event?.id) {
+            accountViewModel.decrypt(note) { content ->
+                val jumbo = jumboEmojiCount(content) > 0
+                if (jumbo != isJumboEmoji) {
+                    isJumboEmoji = jumbo
+                }
+            }
+        }
+    }
+
+    // The footer shows on the last message of a run (for the time) and on any message
+    // carrying per-message metadata (expiration, geohash, PoW, legacy-DM marker).
+    val footerHasMeta = remember(note.event) { chatFooterHasMeta(note) }
+
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
         isDraft = note.event is DraftWrapEvent,
         innerQuote = innerQuote,
-        isComplete = accountViewModel.settings.isCompleteUIMode(),
-        hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
-        drawAuthorInfo = drawAuthorInfo,
+        drawAuthorInfo = drawAuthorInfo && groupPosition.isFirstOfGroup,
+        groupPosition = groupPosition,
+        transparentBubble = isJumboEmoji,
         parentBackgroundColor = parentBackgroundColor,
         shouldHighlight = shouldHighlight,
         onHighlightFinished = onHighlightFinished,
         onClick = {
-            if (note.event is ChannelCreateEvent) {
-                nav.nav(Route.PublicChatChannel(note.idHex))
-                true
-            } else if (innerQuote && onScrollToNote != null) {
+            if (innerQuote && onScrollToNote != null) {
                 onScrollToNote(note)
                 true
             } else {
                 false
             }
         },
+        onDoubleTap = {
+            // Double-tap to send the default reaction; only when it can actually
+            // sign one (reactToOrDelete assumes a non-empty choice list).
+            if (!note.isDraft() && accountViewModel.isWriteable() && accountViewModel.reactionChoices().isNotEmpty()) {
+                accountViewModel.reactToOrDelete(note)
+            }
+        },
+        onSwipeReply =
+            if (!innerQuote && !note.isDraft()) {
+                { onWantsToReply(note) }
+            } else {
+                null
+            },
         onAuthorClick = {
             note.author?.let {
                 nav.nav(routeFor(it))
             }
         },
         actionMenu = { onDismiss ->
-            NoteQuickActionMenu(
+            ChatMessageActionSheet(
                 note = note,
+                onWantsToReply = onWantsToReply,
+                onWantsToEditDraft = onWantsToEditDraft,
                 onDismiss = onDismiss,
-                onWantsToEditDraft = { onWantsToEditDraft(note) },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         },
+        reactionsRow =
+            if (!innerQuote) {
+                { ChatReactionChips(note, accountViewModel, nav) }
+            } else {
+                null
+            },
+        footerRow =
+            if (!innerQuote && (groupPosition.isLastOfGroup || footerHasMeta)) {
+                {
+                    ChatMessageFooter(
+                        note = note,
+                        isLoggedInUser = isLoggedInUser,
+                        showTime = groupPosition.isLastOfGroup,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+            } else {
+                null
+            },
         drawAuthorLine = {
             DrawAuthorInfo(
                 note,
                 accountViewModel,
                 nav,
             )
-        },
-        detailRow = {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = ReactionRowHeightChat,
-                ) {
-                    IncognitoBadge(note)
-                    ChatTimeAgo(note)
-                    ChatExpiration(note)
-                    RelayBadgesHorizontal(note, accountViewModel, nav = nav)
-
-                    Spacer(modifier = DoubleHorzSpacer)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
-                        if (!note.isDraft()) {
-                            ReplyReaction(
-                                baseNote = note,
-                                grayTint = MaterialTheme.colorScheme.placeholderText,
-                                accountViewModel = accountViewModel,
-                                showCounter = false,
-                                iconSizeModifier = Size18Modifier,
-                            ) {
-                                onWantsToReply(note)
-                            }
-                            Spacer(StdHorzSpacer)
-                            LikeReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-
-                            ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-
-                            MinichatReplyChip(note, accountViewModel, nav)
-
-                            val geo = remember(note) { note.event?.geoHashOrScope() }
-                            if (geo != null) {
-                                Spacer(StdHorzSpacer)
-                                DisplayLocation(geo, accountViewModel, nav)
-                            }
-
-                            val pow = remember(note) { note.event?.strongPoWOrNull() }
-                            if (pow != null) {
-                                Spacer(StdHorzSpacer)
-                                DisplayPoW(pow, accountViewModel)
-                            }
-                        } else {
-                            DisplayDraftChat()
-                        }
-                    }
-                }
-                LoadAndDisplayClickableZapraiser(note, accountViewModel)
-            }
         },
     ) { bgColor ->
         MessageBubbleLines(
@@ -327,6 +322,7 @@ fun NormalChatNote(
             accountViewModel,
             nav,
             onScrollToNote,
+            previousNoteId,
         )
     }
 }
@@ -363,6 +359,7 @@ private fun MessageBubbleLines(
     accountViewModel: AccountViewModel,
     nav: INav,
     onScrollToNote: ((Note) -> Unit)? = null,
+    previousNoteId: HexKey? = null,
 ) {
     if (baseNote.event !is DraftWrapEvent) {
         RenderReplyRow(
@@ -374,6 +371,7 @@ private fun MessageBubbleLines(
             onWantsToReply = onWantsToReply,
             onWantsToEditDraft = onWantsToEditDraft,
             onScrollToNote = onScrollToNote,
+            previousNoteId = previousNoteId,
         )
     }
 
@@ -398,56 +396,10 @@ private fun MessageBubbleLines(
                 Spacer(modifier = Modifier.height(2.dp))
             }
         }
-    }
-}
 
-/**
- * A chip on a chat message's action row showing how many kind-1111 thread ("minichat")
- * replies it has; tapping opens that thread. Shown only when there is at least one — an
- * inline reply is an ordinary message and isn't counted.
- *
- * Only shown where minichats are actually wired: the public chats (Concord, NIP-28, NIP-29).
- * NIP-17 DMs are deliberately excluded — most clients don't render kind-1111 replies in a DM
- * view, so a thread there would be a dead end.
- */
-@Composable
-private fun MinichatReplyChip(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val supportsMinichat =
-        remember(note) {
-            note.inGatherers?.any { it is ConcordChannel || it is PublicChatChannel || it is RelayGroupChannel } == true
-        }
-    if (!supportsMinichat) return
-
-    val count by observeNoteMinichatReplyCount(note, accountViewModel)
-    if (count > 0) {
-        Spacer(StdHorzSpacer)
-        Surface(
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.clickable { nav.nav(Route.ChatMinichat(note.idHex)) },
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-            ) {
-                MaterialSymbolIcon(
-                    symbol = MaterialSymbols.Forum,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(13.dp),
-                )
-                Text(
-                    text = pluralStringResource(R.plurals.chat_minichat_reply_count, count, count),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-        }
+        // Zapraiser goal bar (self-hides when the message has no zapraiser). Used to live
+        // in the tap-to-expand detail row; now always shown inline under the message.
+        LoadAndDisplayClickableZapraiser(baseNote, accountViewModel)
     }
 }
 
@@ -468,11 +420,21 @@ fun RenderReplyRow(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
+    previousNoteId: HexKey? = null,
 ) {
     val replyTo = note.replyTo?.lastOrNull()
+    // Suppress the reply-to preview when it would just repeat a parent the reader can already
+    // see: either the message rendered directly above this one in the feed (previousNoteId), or
+    // a parent that a thread view has pinned at the top (LocalSuppressReplyToNoteId — the
+    // minichat pins its root).
     val suppressId = LocalSuppressReplyToNoteId.current
-    if (!innerQuote && replyTo != null && replyTo.idHex != suppressId && !isCitedInContent(note, replyTo)) {
-        RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
+    if (!innerQuote &&
+        replyTo != null &&
+        replyTo.idHex != previousNoteId &&
+        replyTo.idHex != suppressId &&
+        !isCitedInContent(note, replyTo)
+    ) {
+        RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote, previousNoteId)
     }
 }
 
@@ -501,6 +463,7 @@ private fun RenderReply(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
+    previousNoteId: HexKey? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         @Suppress("ProduceStateDoesNotAssignValue")
@@ -511,7 +474,10 @@ private fun RenderReply(
                 }
             }
 
-        replyTo.value?.let { replyNote ->
+        // Unwrapping can map a gift-wrap id to its rumor, so the suppression checks
+        // (feed neighbour + thread-pinned root) have to be re-run on the resolved note.
+        val suppressId = LocalSuppressReplyToNoteId.current
+        replyTo.value?.takeIf { it.idHex != previousNoteId && it.idHex != suppressId }?.let { replyNote ->
             // For a DM, a reply target that hasn't arrived isn't lost — it's older than the loaded
             // window (and for gift wraps can't be fetched by id). Swap the generic blank for one that
             // walks history backward until it surfaces. Pick the pager by the PARENT's protocol; leave
@@ -555,8 +521,6 @@ fun NoteRow(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         when {
-            note.event is ChannelCreateEvent -> RenderCreateChannelNote(note, bgColor, accountViewModel, nav)
-            note.event is ChannelMetadataEvent -> RenderChangeChannelMetadataNote(note, bgColor, accountViewModel, nav)
             note.event is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)

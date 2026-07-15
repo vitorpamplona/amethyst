@@ -20,148 +20,41 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route.NewGroupDM
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
+/**
+ * The Messages "+" button. Instead of a speed-dial that fanned out several cryptic one-word FABs
+ * (Private / Public / Group / Find groups), a single button opens the full-screen
+ * [NewConversationScreen] chooser, which explains every conversation type and its trade-offs before
+ * the user commits to one.
+ */
 @Composable
 fun ChannelFabColumn(nav: INav) {
-    var isOpen by remember { mutableStateOf(false) }
-
-    Column {
-        AnimatedVisibility(
-            visible = isOpen,
-            enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
-        ) {
-            Column {
-                FloatingActionButton(
-                    onClick = {
-                        nav.nav(NewGroupDM())
-                        isOpen = false
-                    },
-                    modifier = Size55Modifier,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Text(
-                        text = stringRes(R.string.messages_new_message),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        fontSize = Font12SP,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                FloatingActionButton(
-                    onClick = {
-                        nav.nav(Route.ChannelMetadataEdit())
-                        isOpen = false
-                    },
-                    modifier = Size55Modifier,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Text(
-                        text = stringRes(R.string.messages_create_public_chat),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        fontSize = Font12SP,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                FloatingActionButton(
-                    onClick = {
-                        nav.nav(Route.CreateMarmotGroup)
-                        isOpen = false
-                    },
-                    modifier = Size55Modifier,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Text(
-                        text = stringRes(R.string.messages_create_group),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        fontSize = Font12SP,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                FloatingActionButton(
-                    onClick = {
-                        nav.nav(Route.RelayGroupBrowse)
-                        isOpen = false
-                    },
-                    modifier = Size55Modifier,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Text(
-                        text = stringRes(R.string.relay_group_browse_title),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        fontSize = Font12SP,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-        }
-
-        val rotationDegree by animateFloatAsState(
-            targetValue = if (isOpen) 45f else 0f,
+    FloatingActionButton(
+        onClick = { nav.nav(Route.NewConversation) },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Add,
+            contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
+            modifier = Modifier.size(26.dp),
+            tint = Color.White,
         )
-
-        FloatingActionButton(
-            onClick = { isOpen = !isOpen },
-            modifier = Size55Modifier,
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Add,
-                contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
-                modifier =
-                    Modifier.size(26.dp).graphicsLayer {
-                        rotationZ = rotationDegree
-                    },
-                tint = Color.White,
-            )
-        }
     }
 }

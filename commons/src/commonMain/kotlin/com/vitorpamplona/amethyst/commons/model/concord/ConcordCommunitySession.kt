@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +44,7 @@ import kotlinx.coroutines.flow.update
  * 5 delete, …). The sink lands it in a store keyed by rumor id so the normal
  * reaction/reply/delete/OTS/zap machinery wires up automatically.
  */
-typealias ConcordRumorSink = (communityId: HexKey, channelIdHex: HexKey, rumor: Event) -> Unit
+typealias ConcordRumorSink = (communityId: HexKey, channelIdHex: HexKey, rumor: Event, seenOnRelays: Set<NormalizedRelayUrl>) -> Unit
 
 /**
  * The result of feeding one wrap to a session's [ConcordCommunitySession.ingest]. It separates
@@ -86,7 +87,7 @@ enum class ConcordIngestOutcome {
 class ConcordCommunitySession(
     val entry: ConcordCommunityListEntry,
     val myPubKey: HexKey,
-    private val onRumor: ConcordRumorSink = { _, _, _ -> },
+    private val onRumor: ConcordRumorSink = { _, _, _, _ -> },
 ) {
     private val root = entry.root.hexToByteArray()
     private val communityIdBytes = entry.id.hexToByteArray()
@@ -242,7 +243,10 @@ class ConcordCommunitySession(
      * bumping on every message re-derives every plane's REQ per message and rate-limits
      * the relays (they close the plane subs mid-load, so channels appear empty).
      */
-    fun ingest(wrap: Event): ConcordIngestOutcome {
+    fun ingest(
+        wrap: Event,
+        seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
+    ): ConcordIngestOutcome {
         when (wrap.pubKey) {
             controlPlaneAddress -> {
                 lock.withLock {
@@ -285,7 +289,7 @@ class ConcordCommunitySession(
                 // would be O(history) per message (quadratic over a channel's lifetime). A duplicate
                 // re-delivery (isNew == false) is a no-op. A full-history sweep (member-roster harvest)
                 // relies on this staying O(1) per wrap.
-                if (isNew) emitChannelRumors(channelIdHex, key, listOf(wrap))
+                if (isNew) emitChannelRumors(channelIdHex, key, listOf(wrap), seenOnRelays)
                 // A chat message lands in the feed via [onRumor] → LocalCache, independent of the
                 // revision; it changes no plane address, so it must NOT bump (see the storm note above).
                 return ConcordIngestOutcome.NON_STRUCTURAL
@@ -368,11 +372,12 @@ class ConcordCommunitySession(
         channelIdHex: HexKey,
         key: GroupKey,
         wraps: List<Event>,
+        seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         val authors = HashSet<HexKey>()
         ConcordActions.channelRumors(wraps, key, channelIdHex, entry.rootEpoch).forEach { rumor ->
             authors.add(rumor.pubKey.lowercase())
-            onRumor(entry.id, channelIdHex, rumor)
+            onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }
         // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the
         // roster even if they never posted a Guestbook Join. Atomic so a concurrent add isn't lost.

@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -168,8 +169,11 @@ fun ConcordChannelListScreen(
                     Text(title, maxLines = 1)
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
+                    // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) {
+                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
+                        }
                     }
                 },
                 actions = {
@@ -207,6 +211,13 @@ fun ConcordChannelListScreen(
                 },
             )
         },
+        bottomBar = {
+            // Renders only when this is a bottom-nav root (AppBottomBar hides itself when canPop),
+            // so a pinned Concord community works both as a pushed detail and as a bottom-nav tab.
+            AppBottomBar(Route.ConcordServer(communityId), nav, accountViewModel) { route ->
+                if (route != Route.ConcordServer(communityId)) nav.navBottomBar(route)
+            }
+        },
         floatingActionButton = {
             if (canManageChannels) {
                 FloatingActionButton(
@@ -236,11 +247,11 @@ fun ConcordChannelListScreen(
             LazyColumn(Modifier.fillMaxSize().padding(padding)) {
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
-                    val name = def?.name ?: entry.key
+                    val name = def.name.ifBlank { entry.key }
                     val icon =
                         when {
-                            def?.voice == true -> MaterialSymbols.Mic
-                            def?.private == true -> MaterialSymbols.Lock
+                            def.voice == true -> MaterialSymbols.Mic
+                            def.private == true -> MaterialSymbols.Lock
                             else -> MaterialSymbols.Tag
                         }
                     Row(

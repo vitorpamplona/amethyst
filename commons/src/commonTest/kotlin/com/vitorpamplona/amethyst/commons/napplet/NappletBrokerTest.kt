@@ -439,7 +439,6 @@ class NappletBrokerTest {
                 broker(ScriptedPrompt(GrantState.ALLOW_ONCE))
                     .handle(applet, NappletRequest.PayInvoice("lnbc1..."), allDeclared)
             assertIs<NappletResponse.Unsupported>(response)
-            assertNull((response as? NappletResponse.Paid)?.preimage)
         }
 
     @Test

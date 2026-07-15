@@ -1153,6 +1153,31 @@ private data class OnchainZapRequest(
     val amountSats: Long?,
 )
 
+/**
+ * Pays a single payable via a wallet intent, or routes multiple payables (zap
+ * splits) to the manual payment screen. The shared tail of every zap flow.
+ */
+@OptIn(ExperimentalUuidApi::class)
+fun payViaIntentOrManualSplit(
+    payables: ImmutableList<ZapPaymentHandler.Payable>,
+    context: Context,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onPaymentError: () -> Unit = {},
+) {
+    if (payables.size == 1) {
+        val payable = payables.first()
+        payViaIntent(payable.invoice, context, { }) { error ->
+            onPaymentError()
+            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+        }
+    } else {
+        val uid = Uuid.random().toString()
+        accountViewModel.tempManualPaymentCache.put(uid, payables)
+        nav.nav(Route.ManualZapSplitPayment(uid))
+    }
+}
+
 @Composable
 @OptIn(ExperimentalFoundationApi::class, ExperimentalUuidApi::class)
 fun ZapReaction(
@@ -1204,17 +1229,7 @@ fun ZapReaction(
                                 }
                             },
                             onPayViaIntent = {
-                                if (it.size == 1) {
-                                    val payable = it.first()
-                                    payViaIntent(payable.invoice, context, { }) { error ->
-                                        zappingProgress = 0f
-                                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
-                                    }
-                                } else {
-                                    val uid = Uuid.random().toString()
-                                    accountViewModel.tempManualPaymentCache.put(uid, it)
-                                    nav.nav(Route.ManualZapSplitPayment(uid))
-                                }
+                                payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                             },
                             onCustomAmount = {
                                 wantsToSetCustomZap = true
@@ -1260,17 +1275,7 @@ fun ZapReaction(
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = {
-                    if (it.size == 1) {
-                        val payable = it.first()
-                        payViaIntent(payable.invoice, context, { }) { error ->
-                            zappingProgress = 0f
-                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
-                        }
-                    } else {
-                        val uid = Uuid.random().toString()
-                        accountViewModel.tempManualPaymentCache.put(uid, it)
-                        nav.nav(Route.ManualZapSplitPayment(uid))
-                    }
+                    payViaIntentOrManualSplit(it, context, accountViewModel, nav, onPaymentError = { zappingProgress = 0f })
                 },
                 onReloadNutzap = { amount ->
                     wantsToZap = false
@@ -2025,6 +2030,42 @@ fun ZapAmountChoicePopup(
     )
 }
 
+/**
+ * The recipient/sender rail availability (lightning, cashu, on-chain) for zapping
+ * [baseNote], recomputed as the async inputs (recipient kind:0 / kind:10019, the
+ * local cashu wallet) load. Each observe call also subscribes the relay fetch, so
+ * missing inputs are pulled in while the caller is on screen.
+ */
+@Composable
+fun observeZapRailCapability(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    onchainSupported: Boolean,
+): RailCapability {
+    val cashuState = accountViewModel.account.cashuWalletState
+    val author = baseNote.author
+    // These four are deliberately read only to drive the recompute below — do NOT
+    // delete them as "unused". Each observe* call ALSO subscribes the relay fetch
+    // (so a not-yet-seen kind:0 / kind:10019 gets pulled in while the popup is
+    // open), and each value is a remember() key so railCapability recomputes when
+    // it arrives. RailCapabilityResolver.peek re-reads everything itself; these
+    // just say *when* to re-run it.
+    val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
+    val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
+    val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
+    val nutzapInfo = author?.let { observeNoteEvent<NutzapInfoEvent>(it.nutzapInfoNote, accountViewModel).value }
+    // Honors the user's "show on-chain wallet" preference: off hides the on-chain
+    // rail from the zap chips too, matching the wallet screen, profile chips, and
+    // Send Payment screen.
+    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+        .collectAsStateWithLifecycle()
+
+    return remember(baseNote, onchainSupported, showOnchainWallet, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
+        val rc = RailCapabilityResolver.peek(baseNote, cashuState)
+        if (onchainSupported && showOnchainWallet) rc else rc.copy(hasOnchain = false)
+    }
+}
+
 @Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
@@ -2055,29 +2096,7 @@ fun ZapAmountChoicePopup(
     // also trigger the relay fetch, so a not-yet-seen lnAddress / kind:10019 is
     // pulled in while the popup is open. A caller that can't drive the on-chain
     // dialog (onchainSupported == false) masks that rail off here.
-    val cashuState = accountViewModel.account.cashuWalletState
-    val author = baseNote.author
-    // These four are deliberately read only to drive the recompute below — do NOT
-    // delete them as "unused". Each observe* call ALSO subscribes the relay fetch
-    // (so a not-yet-seen kind:0 / kind:10019 gets pulled in while the popup is
-    // open), and each value is a remember() key so railCapability recomputes when
-    // it arrives. RailCapabilityResolver.peek re-reads everything itself; these
-    // just say *when* to re-run it.
-    val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
-    val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
-    val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
-    val nutzapInfo = author?.let { observeNoteEvent<NutzapInfoEvent>(it.nutzapInfoNote, accountViewModel).value }
-    // Honors the user's "show on-chain wallet" preference: off hides the on-chain
-    // rail from the zap chips too, matching the wallet screen, profile chips, and
-    // Send Payment screen.
-    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
-        .collectAsStateWithLifecycle()
-
-    val railCapability =
-        remember(baseNote, onchainSupported, showOnchainWallet, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
-            val rc = RailCapabilityResolver.peek(baseNote, cashuState)
-            if (onchainSupported && showOnchainWallet) rc else rc.copy(hasOnchain = false)
-        }
+    val railCapability = observeZapRailCapability(baseNote, accountViewModel, onchainSupported)
     val amountChoices =
         remember(zapAmountChoices) {
             // Keep the user's saved order (already de-duped at the settings
@@ -2197,39 +2216,66 @@ fun ZapAmountChoicePopupContent(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            FlowRow(
-                modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalArrangement = Arrangement.Center,
-                itemVerticalAlignment = CenterVertically,
-            ) {
-                amountChoices.forEach { amountInSats ->
-                    UnifiedZapAmountChip(
-                        amountInSats = amountInSats,
-                        railCapability = railCapability,
-                        onLightningZap = onLightningZap,
-                        onNutzap = onNutzap,
-                        onOnchainAmount = onOnchainAmount,
-                        onReloadNutzap = onReloadNutzap,
-                        onChangeAmount = onChangeAmount,
-                    )
-                }
-                ClickableBox(
-                    modifier =
-                        Modifier
-                            .padding(horizontal = 4.dp, vertical = 6.dp)
-                            .size(32.dp)
-                            .padding(7.dp),
-                    onClick = onChangeAmount,
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.Tune,
-                        contentDescription = stringRes(R.string.quick_zap_amounts),
-                        modifier = Size18Modifier,
-                        tint = MaterialTheme.colorScheme.placeholderText,
-                    )
-                }
-            }
+            ZapAmountChoiceGrid(
+                amountChoices = amountChoices,
+                railCapability = railCapability,
+                onLightningZap = onLightningZap,
+                onNutzap = onNutzap,
+                onOnchainAmount = onOnchainAmount,
+                onChangeAmount = onChangeAmount,
+                onReloadNutzap = onReloadNutzap,
+            )
+        }
+    }
+}
+
+/**
+ * The bare zap-amount chip grid (one rail-aware pill per preset amount plus the
+ * preset editor button), without the popup card — embeddable in any surface, e.g.
+ * the chat long-press sheet.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ZapAmountChoiceGrid(
+    amountChoices: ImmutableList<Long>,
+    railCapability: RailCapability,
+    onLightningZap: (Long) -> Unit,
+    onNutzap: (Long) -> Unit,
+    onOnchainAmount: (Long?) -> Unit,
+    onChangeAmount: () -> Unit,
+    onReloadNutzap: (Long) -> Unit = {},
+) {
+    FlowRow(
+        modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center,
+        itemVerticalAlignment = CenterVertically,
+    ) {
+        amountChoices.forEach { amountInSats ->
+            UnifiedZapAmountChip(
+                amountInSats = amountInSats,
+                railCapability = railCapability,
+                onLightningZap = onLightningZap,
+                onNutzap = onNutzap,
+                onOnchainAmount = onOnchainAmount,
+                onReloadNutzap = onReloadNutzap,
+                onChangeAmount = onChangeAmount,
+            )
+        }
+        ClickableBox(
+            modifier =
+                Modifier
+                    .padding(horizontal = 4.dp, vertical = 6.dp)
+                    .size(32.dp)
+                    .padding(7.dp),
+            onClick = onChangeAmount,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Tune,
+                contentDescription = stringRes(R.string.quick_zap_amounts),
+                modifier = Size18Modifier,
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
         }
     }
 }

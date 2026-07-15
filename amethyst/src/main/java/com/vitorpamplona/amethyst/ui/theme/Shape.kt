@@ -78,8 +78,9 @@ val ButtonBorder = RoundedCornerShape(20.dp)
 val LeftHalfCircleButtonBorder = ButtonBorder.copy(topEnd = CornerSize(0f), bottomEnd = CornerSize(0f))
 val EditFieldBorder = RoundedCornerShape(25.dp)
 
-val ChatBubbleShapeMe = RoundedCornerShape(15.dp, 15.dp, 3.dp, 15.dp)
-val ChatBubbleShapeThem = RoundedCornerShape(3.dp, 15.dp, 15.dp, 15.dp)
+// Chat bubble shapes live in commons (ChatTheme.kt) so Android and Desktop share
+// one geometry: see ChatBubbleShapeMe/Them and their grouped Top/Middle/Bottom
+// variants there.
 
 val StdButtonSizeModifier = Modifier.size(19.dp)
 
@@ -255,6 +256,18 @@ val ChatPaddingModifier =
             start = 12.dp,
             end = 12.dp,
             top = 3.dp,
+            bottom = 3.dp,
+        )
+
+// Tighter top gap for a message visually connected to the previous message of the
+// same author run (grouped bubbles).
+val ChatPaddingGroupedModifier =
+    Modifier
+        .fillMaxWidth(1f)
+        .padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 1.dp,
             bottom = 3.dp,
         )
 

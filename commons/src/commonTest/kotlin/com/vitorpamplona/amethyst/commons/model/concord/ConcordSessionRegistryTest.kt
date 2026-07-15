@@ -57,7 +57,7 @@ class ConcordSessionRegistryTest {
             val beta = ConcordCommunityFactory.create(owner, "Beta", createdAt = 1L, relays = listOf("wss://r.example"))
 
             val captured = mutableListOf<Triple<String, String, com.vitorpamplona.quartz.nip01Core.core.Event>>()
-            val registry = ConcordSessionRegistry { communityId, channelIdHex, rumor -> captured += Triple(communityId, channelIdHex, rumor) }
+            val registry = ConcordSessionRegistry { communityId, channelIdHex, rumor, _ -> captured += Triple(communityId, channelIdHex, rumor) }
 
             // First sync creates a session for each joined community.
             val created = registry.sync(listOf(entryFor(alpha, "Alpha"), entryFor(beta, "Beta")), owner.pubKey)

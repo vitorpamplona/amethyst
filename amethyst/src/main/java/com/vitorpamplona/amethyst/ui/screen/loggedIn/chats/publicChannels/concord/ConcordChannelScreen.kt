@@ -566,5 +566,6 @@ private fun SuccessfulUploads.toConcordImeta(): IMetaTag? {
         blurhash = result.fileHeader.blurHash?.blurhash,
         cipher = cipher,
         originalHash = result.hashBeforeEncryption,
+        thumbhash = result.fileHeader.thumbHash?.thumbhash,
     )
 }
