@@ -24,7 +24,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -185,67 +184,64 @@ private fun RenderBottomMenu(
             containerColor = MaterialTheme.colorScheme.background,
             tonalElevation = Size0dp,
         ) {
-            // Render in the user's saved order, built-ins and favorites interleaved.
+            // Render in the user's saved order — built-ins, favorites and pinned groups interleaved.
+            // Each entry resolves to a shared BottomBarSlot (route + icon), the same one the rail uses.
             items.forEach { entry ->
-                when (entry) {
-                    is BottomBarEntry.BuiltIn -> {
-                        val def = NavBarCatalog[entry.item] ?: return@forEach
-                        val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
-                        HasNewItemsIcon(destination == selectedRoute, def, destination, accountViewModel, nav)
-                    }
-                    is BottomBarEntry.Favorite -> {
-                        val fav = favoritesById[entry.favoriteId] ?: return@forEach
-                        val destination =
-                            when (fav) {
-                                is FavoriteApp.WebApp -> Route.WebApp(fav.url)
-                                is FavoriteApp.NostrApp -> Route.NostrApp(fav.coordinate)
-                            }
-                        FavoriteNavItem(destination == selectedRoute, fav, rememberFavoriteIconModel(fav), destination, nav)
-                    }
-                }
+                val slot = rememberBottomBarSlot(entry, favoritesById, accountViewModel) ?: return@forEach
+                val selected = slot.route == selectedRoute
+                NavigationBarItem(
+                    alwaysShowLabel = false,
+                    icon = { slot.icon(selected) },
+                    selected = selected,
+                    onClick = { nav(slot.route) },
+                )
             }
         }
     }
 }
 
-@Composable
-private fun RowScope.FavoriteNavItem(
-    selected: Boolean,
-    fav: FavoriteApp,
-    iconModel: Any?,
-    destination: Route,
-    nav: (Route) -> Unit,
-) {
-    NavigationBarItem(
-        alwaysShowLabel = false,
-        icon = { FavoriteEntryIcon(fav, selected, iconModel) },
-        // No label — favorite tabs match the built-in items, which show icon only.
-        selected = selected,
-        onClick = { nav(destination) },
-    )
-}
+/**
+ * A resolved bottom-bar/rail slot: the [route] to navigate to and the [icon] to draw for a given
+ * selected state. Built from a [BottomBarEntry] by [rememberBottomBarSlot], so the phone bar and the
+ * large-screen rail render every entry kind (built-in, favorite, pinned group) through one code path.
+ */
+class BottomBarSlot(
+    val route: Route,
+    val icon: @Composable (selected: Boolean) -> Unit,
+)
 
+/** Resolves an entry to its live [BottomBarSlot], or null if it no longer resolves (deleted favorite, etc.). */
 @Composable
-private fun RowScope.HasNewItemsIcon(
-    selected: Boolean,
-    def: NavBarItemDef,
-    destination: Route,
+internal fun rememberBottomBarSlot(
+    entry: BottomBarEntry,
+    favoritesById: Map<String, FavoriteApp>,
     accountViewModel: AccountViewModel,
-    nav: (Route) -> Unit,
-) {
-    NavigationBarItem(
-        alwaysShowLabel = false,
-        icon = {
-            NotifiableIcon(
-                selected,
-                def,
-                destination,
-                accountViewModel,
-            )
-        },
-        selected = selected,
-        onClick = { nav(destination) },
-    )
+): BottomBarSlot? {
+    return when (entry) {
+        is BottomBarEntry.BuiltIn -> {
+            val def = NavBarCatalog[entry.item] ?: return null
+            val route = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
+            BottomBarSlot(route) { selected -> NotifiableIcon(selected, def, route, accountViewModel) }
+        }
+        is BottomBarEntry.Favorite -> {
+            val fav = favoritesById[entry.favoriteId] ?: return null
+            val route =
+                when (fav) {
+                    is FavoriteApp.WebApp -> Route.WebApp(fav.url)
+                    is FavoriteApp.NostrApp -> Route.NostrApp(fav.coordinate)
+                }
+            val iconModel = rememberFavoriteIconModel(fav)
+            BottomBarSlot(route) { selected -> FavoriteEntryIcon(fav, selected, iconModel) }
+        }
+        is BottomBarEntry.PublicChat,
+        is BottomBarEntry.RelayGroup,
+        is BottomBarEntry.Concord,
+        -> {
+            val display = rememberGroupEntryDisplay(entry, accountViewModel) ?: return null
+            // A pinned chat/group shows its avatar, like the favorite-app tabs — icon only.
+            BottomBarSlot(display.route) { Box(Size27Modifier, contentAlignment = Alignment.Center) { GroupEntryAvatar(display, 25.dp, accountViewModel) } }
+        }
+    }
 }
 
 /** The icon block for a built-in entry (catalog icon + new-items dot), shared by the bottom bar and the rail. */

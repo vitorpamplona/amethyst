@@ -243,6 +243,8 @@ fun RelayGroupTopBar(
                 }
             }
         },
+        // No back arrow when opened as a bottom-nav tab (nothing to pop); the bottom bar shows instead.
+        showBackButton = nav.canPop(),
         popBack = nav::popBack,
     )
 

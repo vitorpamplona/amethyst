@@ -45,12 +45,20 @@ fun TopBarExtensibleWithBackButton(
     title: @Composable RowScope.() -> Unit,
     extendableRow: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    // A back arrow is meaningless when there's nothing to pop (e.g. this screen is a bottom-nav
+    // root); callers pass nav.canPop() so the arrow hides and the bottom bar takes its place.
+    showBackButton: Boolean = true,
     popBack: () -> Unit,
 ) {
     MyExtensibleTopAppBar(
         title = title,
         extendableRow = extendableRow,
-        navigationIcon = { IconButton(onClick = popBack) { ArrowBackIcon() } },
+        navigationIcon =
+            if (showBackButton) {
+                { IconButton(onClick = popBack) { ArrowBackIcon() } }
+            } else {
+                null
+            },
         actions = actions,
     )
 }
