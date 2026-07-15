@@ -1341,6 +1341,25 @@ private fun AppInner(
                             val account = accountState as AccountState.LoggedIn
                             val nwcConnection by accountManager.nwcConnection.collectAsState()
 
+                            // Account state holders (relay lists, blossom servers, DMs, WoT).
+                            // Hoisted above MainContent so the top-level compose dialog can also
+                            // read the account's blossom server list from iAccount directly.
+                            val dmSendTracker = remember(relayManager) { DmSendTracker(relayManager.client) }
+                            // Created before iAccount so NIP-65 backup can be loaded.
+                            val accountRelays =
+                                remember(account, relayManager, scope) {
+                                    DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
+                                }
+                            val iAccount =
+                                remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
+                                    DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
+                                }
+                            // When iAccount is replaced (account switch), close the previous
+                            // WoTService so its writer coroutine + ops Channel don't leak.
+                            DisposableEffect(iAccount) {
+                                onDispose { iAccount.wotService.close() }
+                            }
+
                             // Lazy-load Namecoin services. The Core RPC HTTP
                             // client is sourced from the Tor-aware DesktopHttpClient
                             // singleton so .onion RPC URLs route through the
@@ -1414,6 +1433,9 @@ private fun AppInner(
                                             localCache = localCache,
                                             accountManager = accountManager,
                                             account = account,
+                                            iAccount = iAccount,
+                                            accountRelays = accountRelays,
+                                            dmSendTracker = dmSendTracker,
                                             nwcConnection = nwcConnection,
                                             subscriptionsCoordinator = subscriptionsCoordinator,
                                             indexRelaysStore = indexRelaysStore,
@@ -1456,6 +1478,7 @@ private fun AppInner(
                                     relayManager = relayManager,
                                     account = account,
                                     localCache = localCache,
+                                    blossomServers = iAccount.blossomServerList.flow,
                                     replyTo = replyToNote,
                                     draftDTag = composeEditDraftTag,
                                     draftInitialContent = composeEditContent,
@@ -1544,6 +1567,9 @@ fun MainContent(
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    iAccount: DesktopIAccount,
+    accountRelays: DesktopAccountRelays,
+    dmSendTracker: DmSendTracker,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     indexRelaysStore: com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays,
@@ -1562,31 +1588,6 @@ fun MainContent(
     val scope = rememberCoroutineScope()
     val signerConnectionState by accountManager.signerConnectionState.collectAsState()
     val lastPingTimeSec by accountManager.lastPingTimeSec.collectAsState()
-
-    // DM infrastructure — hoisted here so it survives screen navigation
-    val dmSendTracker =
-        remember(relayManager) {
-            DmSendTracker(relayManager.client)
-        }
-    // Centralized relay state for all categories (DM, search, blocked, NIP-65 persistence)
-    // Created before iAccount so NIP-65 backup can be loaded
-    val accountRelays =
-        remember(account, relayManager, scope) {
-            DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
-        }
-
-    val iAccount =
-        remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
-            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
-        }
-
-    // When iAccount is replaced (account switch), the previous WoTService's
-    // internal writer coroutine + ops Channel would otherwise leak — the
-    // outer `scope` lives for the whole session. Close the previous
-    // instance on dispose so account-switch is a clean teardown.
-    DisposableEffect(iAccount) {
-        onDispose { iAccount.wotService.close() }
-    }
 
     // Follow Packs state — single per-account holder for Discover + sidebar + naddr cards
     val followPacksState =

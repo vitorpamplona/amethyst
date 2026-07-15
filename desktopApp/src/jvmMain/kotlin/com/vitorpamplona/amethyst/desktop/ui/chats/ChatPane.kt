@@ -88,7 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
-import com.vitorpamplona.amethyst.desktop.model.preferredBlossomServer
+import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
@@ -101,6 +101,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.DnDConstants
@@ -135,6 +136,7 @@ fun ChatPane(
     cacheProvider: ICacheProvider,
     feedViewModel: ChatroomFeedViewModel,
     messageState: ChatNewMessageState,
+    blossomServers: StateFlow<List<String>>? = null,
     dmBroadcastStatus: DmBroadcastStatus = DmBroadcastStatus.Idle,
     onNavigateToProfile: (String) -> Unit = {},
     onBack: (() -> Unit)? = null,
@@ -379,6 +381,7 @@ fun ChatPane(
                                     roomKey = roomKey,
                                     account = account,
                                     cacheProvider = cacheProvider,
+                                    blossomServers = blossomServers,
                                 )
                                 attachedFiles.clear()
                             } catch (e: Exception) {
@@ -880,9 +883,10 @@ private suspend fun sendEncryptedFiles(
     roomKey: ChatroomKey,
     account: IAccount,
     cacheProvider: ICacheProvider,
+    blossomServers: StateFlow<List<String>>?,
 ) {
     val orchestrator = UploadOrchestrator()
-    val server = cacheProvider.preferredBlossomServer(account.pubKey)
+    val server = blossomServers?.value?.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
     val recipients = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) }.map { it.toPTag() }
 
     for (file in files) {

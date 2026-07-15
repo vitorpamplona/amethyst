@@ -271,6 +271,7 @@ private fun CompactMessagesContent(
                 cacheProvider = cacheProvider,
                 feedViewModel = feedViewModel,
                 messageState = messageState,
+                blossomServers = (account as? DesktopIAccount)?.blossomServerList?.flow,
                 dmBroadcastStatus = broadcastStatus,
                 onNavigateToProfile = onNavigateToProfile,
                 onBack = { listState.clearSelection() },
@@ -375,6 +376,7 @@ private fun SplitMessagesContent(
                     cacheProvider = cacheProvider,
                     feedViewModel = feedViewModel,
                     messageState = messageState,
+                    blossomServers = (account as? DesktopIAccount)?.blossomServerList?.flow,
                     dmBroadcastStatus = broadcastStatus,
                     onNavigateToProfile = onNavigateToProfile,
                 )

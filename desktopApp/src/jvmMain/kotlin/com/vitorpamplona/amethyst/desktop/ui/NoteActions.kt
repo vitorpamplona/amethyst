@@ -1376,6 +1376,8 @@ fun NoteActionsRow(
             relayManager = relayManager,
             account = account,
             localCache = localCache,
+            // Quote-compose from a feed row falls back to the default media server:
+            // the per-note card composables don't carry the account's blossom flow.
             quoteOf = quoteEvent,
         )
     }

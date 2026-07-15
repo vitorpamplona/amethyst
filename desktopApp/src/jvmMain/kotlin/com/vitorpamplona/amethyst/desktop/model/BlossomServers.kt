@@ -20,23 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.model
 
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
-
-/** Fallback media server used when the account has published no kind-10063 list yet. */
-const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"
-
 /**
- * The account's Blossom media servers (NIP-B7 / kind 10063), read straight from
- * the cache. This is the per-account source of truth — the same event the
- * account-config subscription loads and the mobile app uses — so upload sites
- * read it here instead of a process-global preference.
+ * Fallback media server used when the account has published no kind-10063
+ * Blossom server list yet. The list itself is read reactively from the account's
+ * [com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState]
+ * (`iAccount.blossomServerList.flow`); this is only the empty-list default.
  */
-fun ICacheProvider.blossomServers(pubKeyHex: HexKey): List<String> =
-    (getOrCreateAddressableNote(BlossomServersEvent.createAddress(pubKeyHex)).event as? BlossomServersEvent)
-        ?.servers()
-        .orEmpty()
-
-/** First declared Blossom server for [pubKeyHex], or [DEFAULT_BLOSSOM_SERVER] when none is set. */
-fun ICacheProvider.preferredBlossomServer(pubKeyHex: HexKey): String = blossomServers(pubKeyHex).firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
+const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"

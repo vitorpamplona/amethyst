@@ -122,6 +122,7 @@ fun UserProfileScreen(
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn?,
+    blossomServers: kotlinx.coroutines.flow.StateFlow<List<String>>? = null,
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onBack: () -> Unit,
@@ -1189,7 +1190,7 @@ fun UserProfileScreen(
         EditProfileDialog(
             account = account,
             relayManager = relayManager,
-            localCache = localCache,
+            blossomServers = blossomServers,
             latestMetadata = latestMetadataEvent,
             latestIdentities = latestIdentitiesEvent,
             onDismiss = { showEditProfile = false },
