@@ -2067,7 +2067,7 @@
     <string name="new_conversation_dm_cta">New message</string>
     <string name="new_conversation_dm_pro_1">1-on-1 &amp; small groups</string>
     <string name="new_conversation_dm_pro_2">End-to-end encrypted</string>
-    <string name="new_conversation_dm_con_1">Not for big groups</string>
+    <string name="new_conversation_dm_con_1">Can\'t add users later</string>
 
     <string name="new_conversation_marmot_title">Marmot Group</string>
     <string name="new_conversation_marmot_tagline">Bigger private groups</string>

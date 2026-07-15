@@ -46,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -55,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -75,10 +77,10 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 // dark ground (see [ConversationRow]); the solid tile keeps the saturated base either way.
 private val ColorPrivate = Color(0xFF7C3AED)
 private val ColorMarmot = Color(0xFF4F46E5)
-private val ColorConcord = Color(0xFF0D9488)
-private val ColorPublic = Color(0xFFD97706)
+private val ColorConcord = Color(0xFF0F766E)
+private val ColorPublic = Color(0xFFB45309)
 private val ColorRelay = Color(0xFF2563EB)
-private val ColorEphemeral = Color(0xFFEA580C)
+private val ColorEphemeral = Color(0xFFC2410C)
 
 /**
  * One selectable conversation type. Collapsed, a row shows only the icon, name, a short tagline, and
@@ -86,6 +88,7 @@ private val ColorEphemeral = Color(0xFFEA580C)
  * row expands it to reveal [bestFor] and the [pros]/[cons] before the [cta] button routes to that
  * type's existing creation (or browse) flow.
  */
+@Immutable
 private class ConversationType(
     val icon: MaterialSymbol,
     val color: Color,
@@ -99,6 +102,7 @@ private class ConversationType(
     val route: Route,
 )
 
+@Immutable
 private class ConversationSection(
     @StringRes val header: Int,
     val types: List<ConversationType>,
@@ -286,11 +290,15 @@ private fun ConversationRow(
                         text = stringRes(type.title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = stringRes(type.tagline),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.grayText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -355,6 +363,8 @@ private fun AxisChip(
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = accent,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
@@ -384,7 +394,7 @@ private fun ProConRow(
             symbol = if (isPro) MaterialSymbols.Check else MaterialSymbols.Close,
             contentDescription = null,
             tint = if (isPro) accent else MaterialTheme.colorScheme.grayText,
-            modifier = Modifier.size(15.dp).padding(top = 1.dp),
+            modifier = Modifier.padding(top = 1.dp).size(15.dp),
         )
         Spacer(Modifier.width(6.dp))
         Text(
