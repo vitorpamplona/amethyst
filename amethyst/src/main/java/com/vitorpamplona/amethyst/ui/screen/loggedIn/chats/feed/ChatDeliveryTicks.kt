@@ -94,6 +94,11 @@ fun ChatDeliveryTicks(
     val seenOnRelays = seenOnState.note.relays
     val seenSomewhere = seenOnRelays.isNotEmpty()
 
+    // Old messages sent in a previous session have no tracker entry, and often no
+    // seen-on relays either. We genuinely know nothing about their delivery, so show
+    // no tick at all rather than a misleading "pending" clock (and an empty dialog).
+    if (delivery == null && !seenSomewhere) return
+
     var showDetails by remember { mutableStateOf(false) }
 
     ClickableBox(onClick = { showDetails = true }) {
