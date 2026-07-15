@@ -449,14 +449,30 @@ class NotificationFeedFilter(
         // gatherer reference from every account/community that ever touched them, so require the
         // community to be one THIS account has currently joined (mirrors the Marmot check above) —
         // otherwise a note from a prior account or a left community would leak onto Notifications.
-        val isConcord =
-            it.inGatherers?.any { g ->
+        fun Note?.inJoinedConcordCommunity() =
+            this?.inGatherers?.any { g ->
                 g is ConcordChannel && account.concordSessions.sessionFor(g.channelId.communityId) != null
             } == true
 
-        // Concord is a messaging feature, so honor the same "Messages in notifications" toggle that
-        // silences DMs and Marmot groups above.
-        if (isConcord && !showMessages) return false
+        val isConcordMessage = it.inJoinedConcordCommunity()
+
+        // A like/repost is NOT itself attached to the channel gatherer — only chat messages/replies are
+        // (see LocalCache.consumeConcordRumor) — so `inGatherers` never flags it as Concord, and its
+        // author (a fellow member) usually isn't a follow, so it falls through the follow filter and is
+        // dropped. Recognize it through its TARGET: a reaction/repost pointing at a message in a
+        // community I've joined is a Concord reaction, and bypasses the follow filter like a reply does.
+        // Relevance (does it target ME) is still enforced below by the p-tag gate — a well-formed kind-7
+        // p-tags the reacted author (NIP-25), which is exactly what our own ChannelChat.reaction writes.
+        val isConcordReaction =
+            (noteEvent is ReactionEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent) &&
+                it.replyTo?.lastOrNull().inJoinedConcordCommunity()
+
+        val isConcord = isConcordMessage || isConcordReaction
+
+        // Concord CHAT (a message/reply) honors the "Messages in notifications" toggle that silences DMs
+        // and Marmot groups above. A reaction isn't a message — regular reactions ignore that toggle, so
+        // Concord reactions do too (only isConcordMessage is gated).
+        if (isConcordMessage && !showMessages) return false
 
         // Global keeps every event that p-tags the user; Selected (and the
         // follow/list modes) also applies the per-kind relevance heuristics.
