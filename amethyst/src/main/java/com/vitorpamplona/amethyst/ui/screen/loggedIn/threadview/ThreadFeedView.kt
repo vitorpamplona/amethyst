@@ -1042,6 +1042,7 @@ private fun FullBleedNoteCompose(
                         makeItShort = false,
                         canPreview = canPreview,
                         quotesLeft = 3,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor = backgroundColor,
                         accountViewModel = accountViewModel,
                         nav = nav,

@@ -1455,6 +1455,7 @@ private fun RenderNoteRow(
                 makeItShort,
                 canPreview,
                 quotesLeft,
+                unPackReply,
                 backgroundColor,
                 accountViewModel,
                 nav,
