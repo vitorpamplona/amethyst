@@ -748,6 +748,11 @@ sealed class Route {
         val attachment: String? = null,
     ) : Route()
 
+    // Full-screen chooser opened from the Messages FAB: explains each conversation type
+    // (DM, Marmot group, Concord, public chat, relay group, disappearing chat) with its
+    // pros/cons and routes to that type's creation flow.
+    @Serializable object NewConversation : Route()
+
     @Serializable data class ShareToDM(
         val message: String? = null,
         val attachment: String? = null,
