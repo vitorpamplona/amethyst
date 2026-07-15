@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 
@@ -76,8 +77,6 @@ class NostrConnectSignerService(
 
         val self = signer.pubKey
         val events = Channel<NostrConnectEvent>(UNLIMITED)
-        // Insertion-ordered so the oldest id can be evicted once the cap is hit.
-        val seen = LinkedHashSet<String>()
         val subId = newSubId()
         val listener =
             object : SubscriptionListener {
@@ -87,23 +86,31 @@ class NostrConnectSignerService(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (event is NostrConnectEvent && event.verifiedRecipientPubKey() == self && seen.add(event.id)) {
-                        if (seen.size > seenCap) {
-                            seen.iterator().let {
-                                it.next()
-                                it.remove()
-                            }
-                        }
+                    // onEvent is invoked CONCURRENTLY from each relay's socket thread, so it must
+                    // touch no shared mutable state here — the (thread-safe) channel send is all it
+                    // does; dedup happens in the single-threaded consumer below.
+                    if (event is NostrConnectEvent && event.verifiedRecipientPubKey() == self) {
                         events.trySend(event)
                     }
                 }
             }
 
+        // Insertion-ordered dedup, confined to this one consumer coroutine (never the relay threads);
+        // evicts the oldest id past the cap so a long-lived signer can't grow it without bound.
+        val seen = LinkedHashSet<String>()
         val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)))
         client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
         try {
             while (true) {
-                handle(events.receive())
+                val event = events.receive()
+                if (!seen.add(event.id)) continue // same request already handled (arrived on another relay)
+                if (seen.size > seenCap) {
+                    seen.iterator().let {
+                        it.next()
+                        it.remove()
+                    }
+                }
+                handle(event)
             }
         } finally {
             client.unsubscribe(subId)
@@ -116,6 +123,8 @@ class NostrConnectSignerService(
         val request =
             try {
                 event.decryptMessage(signer) as? BunkerRequest ?: return
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("NIP46Signer") { "could not decrypt request ${event.id.take(8)}: ${e.message}" }
                 return
@@ -128,6 +137,8 @@ class NostrConnectSignerService(
         try {
             val reply = NostrConnectEvent.create(response, client, signer)
             this.client.publish(reply, relays)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w("NIP46Signer") { "failed to send reply for ${request.method}: ${e.message}" }
         }

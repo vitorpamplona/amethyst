@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.signers
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
@@ -30,6 +32,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Bridges the NIP-46 signer core to Amethyst's shared "Connected Apps" trust
@@ -67,8 +70,29 @@ class Nip46PermissionAuthorizer(
     /** Invoked after a successful connect so the host can persist display metadata (name/url/image). */
     val onConnected: (suspend (clientPubKey: HexKey, request: BunkerRequestConnect) -> Unit)? = null,
 ) : Nip46RequestAuthorizer {
+    // A high-throughput client can authorize many signs per second; last-used is display-only,
+    // so coalesce the DataStore write to at most one per client per LAST_USED_THROTTLE_SECS
+    // instead of writing the whole per-client preferences file on every request.
+    private val lastUsedThrottle = mutableMapOf<String, Long>()
+    private val throttleLock = KmpLock()
+
     /** The ledger coordinate for [clientPubKey] under this account. */
     fun coordinateFor(clientPubKey: HexKey): String = coordinateFor(signerPubKey, clientPubKey)
+
+    private suspend fun touchLastUsed(coordinate: String) {
+        val now = TimeUtils.now()
+        val shouldWrite =
+            throttleLock.withLock {
+                val previous = lastUsedThrottle[coordinate] ?: 0L
+                if (now - previous >= LAST_USED_THROTTLE_SECS) {
+                    lastUsedThrottle[coordinate] = now
+                    true
+                } else {
+                    false
+                }
+            }
+        if (shouldWrite) ledger.updateLastUsed(coordinate, now)
+    }
 
     override suspend fun onConnect(
         clientPubKey: HexKey,
@@ -82,7 +106,7 @@ class Nip46PermissionAuthorizer(
         if (!ledger.hasPolicy(coordinate)) {
             ledger.setPolicy(coordinate, defaultPolicyOnConnect)
         }
-        ledger.updateLastUsed(coordinate)
+        touchLastUsed(coordinate)
         onConnected?.invoke(clientPubKey, request)
 
         // Echo the offered secret when present (the client validates it); otherwise ack.
@@ -100,7 +124,7 @@ class Nip46PermissionAuthorizer(
         val op = request.toSignerOp() ?: return true
         val coordinate = coordinateFor(clientPubKey)
         val allowed = ledger.decide(coordinate, op) == NostrOpDecision.ALLOW
-        if (allowed) ledger.updateLastUsed(coordinate)
+        if (allowed) touchLastUsed(coordinate)
         return allowed
     }
 
@@ -114,6 +138,9 @@ class Nip46PermissionAuthorizer(
         const val COORDINATE_PREFIX = "nip46"
 
         private const val ACK = "ack"
+
+        /** Minimum seconds between persisted last-used updates for one client (write-coalescing). */
+        private const val LAST_USED_THROTTLE_SECS = 60L
 
         /**
          * The Connected-Apps ledger coordinate for a NIP-46 client, namespaced by

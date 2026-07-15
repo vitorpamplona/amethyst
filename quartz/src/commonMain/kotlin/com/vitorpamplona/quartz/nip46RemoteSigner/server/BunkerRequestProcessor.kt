@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseGetRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.ReadWrite
+import kotlinx.coroutines.CancellationException
 
 /**
  * The signer/bunker side of NIP-46: turns a decrypted [BunkerRequest] from a
@@ -130,6 +131,8 @@ class BunkerRequestProcessor(
                         else -> BunkerResponseError(request.id, "unsupported method: ${request.method}")
                     }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             BunkerResponseError(request.id, "${e::class.simpleName}: ${e.message}")
         }

@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerService
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -121,6 +123,9 @@ class Nip46SignerState(
 
         scope.launch(Dispatchers.IO) {
             combine(settings.nip46SignerEnabled, listeningRelays) { enabled, relays -> enabled to relays }
+                // Inbox/relay StateFlows can re-emit an identical set; without this every duplicate
+                // would tear the subscription down and re-open it on every relay for no reason.
+                .distinctUntilChanged()
                 .collectLatest { (enabled, relays) ->
                     if (!enabled) return@collectLatest
                     if (!signer.isWriteable()) {
@@ -207,6 +212,8 @@ class Nip46SignerState(
 
             setEnabled(true)
             ConnectResult.Connected(offer.clientPubKey, offer.name)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w("NIP46Signer") { "nostrconnect pairing failed: ${e.message}" }
             ConnectResult.Failed(e.message ?: "unknown error")
