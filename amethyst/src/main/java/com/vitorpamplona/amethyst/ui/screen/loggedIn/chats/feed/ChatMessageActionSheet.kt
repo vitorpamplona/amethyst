@@ -519,10 +519,15 @@ private fun QuickZapAmountRow(
     val context = LocalContext.current
 
     val onError = { _: String, message: String, user: User? ->
+        // Payment failed — drop the optimistic "zapping" indicator on the bubble.
+        accountViewModel.endZapInFlight(note.idHex)
         accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
     }
 
     val onPayViaIntent = { payables: ImmutableList<ZapPaymentHandler.Payable> ->
+        // Handoff to an external wallet: we can't observe whether it completes, so clear
+        // the optimistic indicator rather than leave it spinning forever.
+        accountViewModel.endZapInFlight(note.idHex)
         payViaIntentOrManualSplit(payables, context, accountViewModel, nav)
     }
 
@@ -534,6 +539,9 @@ private fun QuickZapAmountRow(
             amountChoices = amountChoices,
             railCapability = railCapability,
             onLightningZap = { amountInSats ->
+                // Show a pending zap chip on the bubble immediately; it settles into the
+                // real sats chip once the receipt lands (or clears on error/timeout).
+                accountViewModel.markZapInFlight(note.idHex)
                 accountViewModel.zap(
                     note,
                     amountInSats * 1000,
@@ -548,6 +556,7 @@ private fun QuickZapAmountRow(
                 onDismiss()
             },
             onNutzap = { amountInSats ->
+                accountViewModel.markZapInFlight(note.idHex)
                 accountViewModel.sendNutzap(
                     baseNote = note,
                     amountSats = amountInSats,

@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,6 +50,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -137,11 +141,20 @@ fun ChatReactionChips(
         }
     val minichatCount by if (supportsMinichat) observeNoteMinichatReplyCount(baseNote, accountViewModel) else remember { mutableStateOf(0) }
 
+    // Optimistic feedback for a zap the user just fired from the drawer: the receipt (and
+    // its amount) only reach relays a moment later, so show a pending zap chip until then.
+    // The set changes only at zap start/end, so this rarely re-runs the row.
+    val zapsInFlight by accountViewModel.zapsInFlightFlow.collectAsStateWithLifecycle()
+    val isZapping = zapsInFlight.contains(baseNote.idHex)
+
     ObserveZapAmountText(baseNote, accountViewModel) { zapAmount ->
         RenderChatReactionChips(
             chips = chips,
             zapAmount = zapAmount,
             minichatCount = minichatCount,
+            // Once the receipt's amount arrives the real sats chip takes over, so the
+            // pending chip only shows while the amount is still blank.
+            isZapping = isZapping && zapAmount.isBlank(),
             onToggleReaction = { accountViewModel.reactToOrDelete(baseNote, it) },
             onOpenDetails = { showDetails = true },
             onOpenMinichat = { nav.nav(Route.ChatMinichat(baseNote.idHex)) },
@@ -155,11 +168,12 @@ private fun RenderChatReactionChips(
     chips: ImmutableList<ReactionChip>,
     zapAmount: String,
     minichatCount: Int,
+    isZapping: Boolean,
     onToggleReaction: (String) -> Unit,
     onOpenDetails: () -> Unit,
     onOpenMinichat: () -> Unit,
 ) {
-    if (chips.isEmpty() && zapAmount.isBlank() && minichatCount <= 0) return
+    if (chips.isEmpty() && zapAmount.isBlank() && minichatCount <= 0 && !isZapping) return
 
     FlowRow(
         // Inset from the bubble's edge so overlapping chips ride the border without
@@ -170,6 +184,8 @@ private fun RenderChatReactionChips(
     ) {
         if (zapAmount.isNotBlank()) {
             ZapChip(zapAmount, onClick = onOpenDetails)
+        } else if (isZapping) {
+            PendingZapChip()
         }
 
         chips.forEach { chip ->
@@ -196,10 +212,13 @@ private fun MinichatChip(
     onClick: () -> Unit,
 ) {
     Surface(
-        onClick = onClick,
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
+        // Plain clickable (not the Surface onClick overload) so the chip keeps its
+        // content height instead of being padded to the 48dp minimum touch target,
+        // which would drop it below the bubble border the reaction chips ride.
+        modifier = Modifier.clip(ButtonBorder).clickable(onClick = onClick),
     ) {
         ChipContentRow {
             Icon(
@@ -272,10 +291,13 @@ private fun ZapChip(
     onClick: () -> Unit,
 ) {
     Surface(
-        onClick = onClick,
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
+        // Plain clickable (not the Surface onClick overload) so the chip keeps its
+        // content height instead of being padded to the 48dp minimum touch target,
+        // which would drop it below the bubble border the reaction chips ride.
+        modifier = Modifier.clip(ButtonBorder).clickable(onClick = onClick),
     ) {
         ChipContentRow {
             ZappedIcon(Size14Modifier)
@@ -285,6 +307,29 @@ private fun ZapChip(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.grayText,
                 maxLines = 1,
+            )
+        }
+    }
+}
+
+/**
+ * Optimistic placeholder shown while a zap the user just fired is still being paid:
+ * the lightning glyph next to a small spinner. Replaced by the real sats [ZapChip]
+ * as soon as the receipt's amount arrives.
+ */
+@Composable
+private fun PendingZapChip() {
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
+    ) {
+        ChipContentRow {
+            ZappedIcon(Size14Modifier)
+            CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 1.5.dp,
+                color = MaterialTheme.colorScheme.grayText,
             )
         }
     }
