@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -42,6 +43,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Represents a conversation entry in the list pane.
@@ -100,6 +103,14 @@ class ChatroomListState(
 
     // Track pubkeys we've already requested metadata for
     private val fetchedMetadataKeys = mutableSetOf<String>()
+
+    // Track pubkeys whose NIP-17 DM relay list (kind 10050) we've already
+    // prewarmed, so the 2s refresh loop only kicks off one fetch per peer.
+    private val prewarmedDmRelayKeys = mutableSetOf<String>()
+
+    // Bound concurrent kind:10050 lookups so a large conversation list doesn't
+    // flood the curated indexer relays with a burst of parallel fan-outs.
+    private val dmRelayPrewarmLimiter = Semaphore(4)
 
     // Timestamp (createdAt) of the newest message seen by the user per room, set when a room is
     // opened. A room is unread when its newest incoming message is newer than this mark.
@@ -195,6 +206,41 @@ class ChatroomListState(
         }
     }
 
+    /**
+     * Proactively download every conversation peer's NIP-17 DM relay list
+     * (kind 10050) as soon as their room shows up in the list, rather than
+     * waiting until the user opens the room or hits send.
+     *
+     * NIP-17 gift wraps (both messages and reactions) MUST be delivered to the
+     * recipient's kind:10050 relays; the desktop send path resolves those via
+     * [DesktopIAccount.dmInboxResolver]. Warming the resolver here means the
+     * first send/reaction resolves from cache instead of paying an indexer
+     * round-trip, and the composer's "recipient has no DM relays" gate settles
+     * before the user has typed anything.
+     *
+     * The resolver already dedupes and caches, but we also keep our own
+     * [prewarmedDmRelayKeys] guard so the 2s refresh loop launches at most one
+     * fetch per peer, and cap concurrency via [dmRelayPrewarmLimiter] so a big
+     * conversation list doesn't fan out to the indexers all at once.
+     */
+    private fun prewarmDmRelayLists(pubkeys: Collection<String>) {
+        val resolver = (account as? DesktopIAccount)?.dmInboxResolver ?: return
+        val needed = pubkeys.filter { it.length == 64 && prewarmedDmRelayKeys.add(it) }
+        if (needed.isEmpty()) return
+
+        for (pubkey in needed) {
+            scope.launch(Dispatchers.IO) {
+                dmRelayPrewarmLimiter.withPermit {
+                    try {
+                        resolver.resolve(pubkey)
+                    } catch (_: Exception) {
+                        // Best-effort prefetch; the send path resolves again on demand.
+                    }
+                }
+            }
+        }
+    }
+
     private suspend fun refreshRooms() {
         val chatroomList = account.chatroomList
         val known = mutableListOf<ConversationItem>()
@@ -207,6 +253,10 @@ class ChatroomListState(
         // Collect pubkeys needing metadata across all rooms
         val pubkeysNeedingMetadata = mutableListOf<String>()
 
+        // Collect every peer pubkey so we can proactively download their NIP-17
+        // DM relay list (kind 10050) — see [prewarmDmRelayLists].
+        val dmPeerPubkeys = mutableSetOf<String>()
+
         for ((key, chatroom) in entries) {
             // Skip rooms with no messages
             if (chatroom.messages.isEmpty()) continue
@@ -214,6 +264,8 @@ class ChatroomListState(
             // Hide rooms whose latest message is from a muted/blocked author or otherwise filtered.
             val newestMessage = chatroom.newestMessage
             if (newestMessage != null && !account.isAcceptable(newestMessage)) continue
+
+            dmPeerPubkeys.addAll(key.users)
 
             val users = key.users.mapNotNull { cacheProvider.getUserIfExists(it) }
 
@@ -264,6 +316,10 @@ class ChatroomListState(
 
         // Batch-request metadata for all users who need it
         fetchMetadataIfNeeded(pubkeysNeedingMetadata)
+
+        // Proactively download each peer's DM relay list (kind 10050) so the
+        // NIP-17 send path resolves it from cache instead of on demand.
+        prewarmDmRelayLists(dmPeerPubkeys)
 
         // Sort by most recent message
         _knownRooms.value = known.sortedByDescending { it.lastMessageTimestamp }

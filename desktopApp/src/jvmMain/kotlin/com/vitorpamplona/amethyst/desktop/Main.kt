@@ -1702,9 +1702,12 @@ fun MainContent(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
-                        // because localCache.consume() doesn't handle addressable events
-                        if (event is AdvertisedRelayListEvent) {
+                        // NIP-65 (kind 10002) and the NIP-17 DM relay list
+                        // (kind 10050) are addressable; route them into
+                        // LocalCache so the user's own routing lists back the
+                        // User model (dmInboxRelaysStrict / self-copy resolution)
+                        // alongside accountRelays' persisted copy.
+                        if (event is AdvertisedRelayListEvent || event is ChatMessageRelayListEvent) {
                             scope.launch(Dispatchers.IO) {
                                 localCache.justConsumeMyOwnEvent(event)
                             }
