@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import kotlin.jvm.JvmInline
+
 /**
  * A member's Concord permission set (CORD-04): a `u64` bitfield of frozen bit
  * positions. On the wire it is encoded as a **decimal string** (not a JSON
