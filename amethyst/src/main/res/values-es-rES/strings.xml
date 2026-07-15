@@ -1544,6 +1544,8 @@
     <string name="messages_create_public_chat">Público</string>
     <string name="messages_create_group">Grupo</string>
     <string name="messages_create_public_private_chat_description">Nuevo grupo público o privado</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject">Asunto</string>

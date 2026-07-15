@@ -1510,6 +1510,8 @@
     <string name="messages_create_public_chat">সর্বজনীন</string>
     <string name="messages_create_group">গ্রুপ</string>
     <string name="messages_create_public_private_chat_description">নতুন পাবলিক বা প্রাইভেট গ্রুপ</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">ব্যক্তিগত</string>
     <string name="messages_new_message_to">প্রতি</string>
     <string name="messages_new_message_subject">বিষয়</string>

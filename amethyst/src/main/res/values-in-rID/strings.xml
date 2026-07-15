@@ -1463,6 +1463,8 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="messages_create_public_chat">Publik</string>
     <string name="messages_create_group">Grup</string>
     <string name="messages_create_public_private_chat_description">Grup Publik atau Privat Baru</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Privat</string>
     <string name="messages_new_message_to">Ke</string>
     <string name="messages_new_message_subject">Subjek</string>

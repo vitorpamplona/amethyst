@@ -1823,6 +1823,8 @@
     <string name="messages_create_public_chat">Öffentlich</string>
     <string name="messages_create_group">Gruppe</string>
     <string name="messages_create_public_private_chat_description">Neue öffentliche oder private Gruppe</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_groups_title">Relay-Gruppen</string>
     <string name="relay_group_view_grouped">Nach Relay</string>
     <string name="relay_group_view_inline_desc">Zeigt jede Gruppe als eigene Unterhaltung, gemischt mit deinen Chats.</string>

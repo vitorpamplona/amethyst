@@ -1537,6 +1537,8 @@
     <string name="messages_create_public_chat">Публічний</string>
     <string name="messages_create_group">Група</string>
     <string name="messages_create_public_private_chat_description">Нова публічна або приватна група</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Приватний</string>
     <string name="messages_new_message_to">Кому</string>
     <string name="messages_new_message_subject">Тема</string>

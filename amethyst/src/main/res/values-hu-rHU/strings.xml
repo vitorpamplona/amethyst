@@ -1860,6 +1860,8 @@
     <string name="messages_create_public_chat">Nyilvános</string>
     <string name="messages_create_group">Csoport</string>
     <string name="messages_create_public_private_chat_description">Új nyilvános vagy privát csoport</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_groups_title">Átjátszócsoportok</string>
     <string name="relay_group_view_inline">Beágyazott</string>
     <string name="relay_group_view_grouped">Átjátszó szerint</string>
