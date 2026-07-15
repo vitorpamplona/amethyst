@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayGroupThreadsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.NewConversationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
@@ -744,6 +745,7 @@ fun BuildNavigation(
 
         composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
         composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
+        composableFromBottom<Route.NewConversation> { NewConversationScreen(nav) }
         composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
         composableFromBottomArgs<Route.ShareToDM> { ShareToDMScreen(it.message, it.attachment, accountViewModel, nav) }
 
