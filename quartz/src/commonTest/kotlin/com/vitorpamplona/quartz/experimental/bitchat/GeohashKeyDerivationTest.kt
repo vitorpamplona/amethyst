@@ -67,4 +67,31 @@ class GeohashKeyDerivationTest {
         assertEquals(expectedPriv.toHexKey(), pair.privKey!!.toHexKey())
         assertEquals(32, pair.pubKey.size)
     }
+
+    @Test
+    fun accountSeedIsDeterministicAndAccountSpecific() {
+        val accountKey1 = ByteArray(32) { (it * 7 + 1).toByte() }
+        val accountKey2 = ByteArray(32) { (it * 7 + 2).toByte() }
+
+        assertEquals(GeohashKeyDerivation.accountSeed(accountKey1).toHexKey(), GeohashKeyDerivation.accountSeed(accountKey1).toHexKey())
+        assertNotEquals(GeohashKeyDerivation.accountSeed(accountKey1).toHexKey(), GeohashKeyDerivation.accountSeed(accountKey2).toHexKey())
+        assertEquals(32, GeohashKeyDerivation.accountSeed(accountKey1).size)
+    }
+
+    @Test
+    fun accountDerivedGeohashKeyIsUnlinkableAcrossCellsButStablePerCell() {
+        val accountKey = ByteArray(32) { (it + 3).toByte() }
+        val seed = GeohashKeyDerivation.accountSeed(accountKey)
+
+        val cellA1 = GeohashKeyDerivation.deriveKeyPair(seed, "u4pruyd")
+        val cellA2 = GeohashKeyDerivation.deriveKeyPair(seed, "u4pruyd")
+        val cellB = GeohashKeyDerivation.deriveKeyPair(seed, "gcpvj0")
+
+        // Same account + same cell → same identity (stable across devices).
+        assertEquals(cellA1.pubKey.toHexKey(), cellA2.pubKey.toHexKey())
+        // Same account, different cells → unrelated identities.
+        assertNotEquals(cellA1.pubKey.toHexKey(), cellB.pubKey.toHexKey())
+        // And none of them is the account key itself.
+        assertNotEquals(accountKey.toHexKey(), cellA1.privKey!!.toHexKey())
+    }
 }

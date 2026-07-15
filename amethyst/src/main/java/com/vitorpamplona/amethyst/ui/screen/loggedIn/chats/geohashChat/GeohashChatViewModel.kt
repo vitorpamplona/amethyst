@@ -25,7 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
 import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
-import com.vitorpamplona.amethyst.service.geohash.GeohashChatDeviceSeed
+import com.vitorpamplona.amethyst.service.geohash.GeohashChatIdentity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
@@ -54,8 +54,9 @@ import kotlinx.coroutines.withContext
  * routed to the geographically-nearest relays ([GeoRelayDirectory]); because the
  * events are ephemeral the relays broadcast but do not store them, so this holds
  * a live subscription for as long as the screen is open. Outgoing messages are
- * signed with the device's per-geohash throwaway identity and carry a small
- * NIP-13 proof of work so relays that rate-limit geohash chat let them through.
+ * signed with a per-geohash throwaway identity (unlinkable to the user's npub;
+ * see [GeohashChatIdentity]) and carry a small NIP-13 proof of work so relays
+ * that rate-limit geohash chat let them through.
  *
  * Follows the codebase convention of a no-arg ViewModel initialized once via
  * [init] from the composable.
@@ -155,7 +156,7 @@ class GeohashChatViewModel : ViewModel() {
         if (relays.isEmpty()) return
 
         viewModelScope.launch {
-            val keyPair = withContext(Dispatchers.IO) { GeohashChatDeviceSeed.keyPair(geohash) }
+            val keyPair = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(accountViewModel.account, geohash) }
             val signer = NostrSignerInternal(keyPair)
 
             var template = GeohashChatEvent.build(trimmed, geohash, nickname = nickname?.ifBlank { null }, teleported = teleported)
@@ -176,7 +177,7 @@ class GeohashChatViewModel : ViewModel() {
         val relays = _relays.value.toSet()
         if (relays.isEmpty()) return
         viewModelScope.launch {
-            val keyPair = withContext(Dispatchers.IO) { GeohashChatDeviceSeed.keyPair(geohash) }
+            val keyPair = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(accountViewModel.account, geohash) }
             val signer = NostrSignerInternal(keyPair)
             val template = GeohashPresenceEvent.build(geohash, nickname = nickname?.ifBlank { null })
             runCatching { accountViewModel.account.signWithAndSendPrivately(template, signer, relays) }

@@ -50,6 +50,32 @@ object GeohashKeyDerivation {
     const val MAX_ITERATIONS = 10
     const val SEED_SIZE = 32
 
+    /** Domain-separation label for [accountSeed], versioned so the scheme can evolve. */
+    const val ACCOUNT_SEED_LABEL = "amethyst-geohash-identity-v1"
+
+    /**
+     * Derives a per-account geohash master seed from the account's private key.
+     *
+     * Feeding this to [deriveKeyPair]/[derivePrivateKey] yields per-geohash
+     * identities that are:
+     * - **stable across the account's devices** (same private key everywhere) and
+     *   recoverable from the account alone — unlike a random per-device seed;
+     * - **publicly unlinkable** to the account's npub and to each other: the seed
+     *   is HMAC(privKey, label) and each geohash key is HMAC(seed, geohash), all
+     *   one-way, so an observer with only the geohash pubkeys can neither recover
+     *   the account key nor correlate two cells.
+     *
+     * Trade-off to be aware of: because it is a deterministic function of the
+     * account key, anyone who later obtains that key can retroactively recompute
+     * (and thus link) every geohash identity. Callers who need forward secrecy
+     * against key compromise should use a random seed instead.
+     */
+    fun accountSeed(accountPrivKey: ByteArray): ByteArray {
+        val mac = MacInstance(ALGORITHM, accountPrivKey)
+        mac.update(ACCOUNT_SEED_LABEL.encodeToByteArray())
+        return mac.doFinal()
+    }
+
     fun derivePrivateKey(
         seed: ByteArray,
         geohash: String,
