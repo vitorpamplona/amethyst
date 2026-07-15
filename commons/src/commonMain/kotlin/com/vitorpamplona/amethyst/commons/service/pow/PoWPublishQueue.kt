@@ -280,7 +280,7 @@ class PoWPublishQueue(
 
         val job = MiningJob(id, kind, difficulty, persisted = persistAs != null, dedupeKey = dedupeKey, owner = owner, work = work)
         persistAs?.let { persistence?.save(it) }
-        pending.update { it.put(job.id, job) }
+        pending.update { it.putting(job.id, job) }
         _jobs.update { (it + PoWJobState(job.id, job.kind, job.difficulty)).toImmutableList() }
         Log.d(TAG) {
             val durability = if (persistAs != null) "persisted" else "in-memory only, lost on process death"
@@ -409,7 +409,7 @@ class PoWPublishQueue(
         dropCheckpoint: Boolean,
         persisted: Boolean,
     ) {
-        pending.update { it.remove(jobId) }
+        pending.update { it.removing(jobId) }
         _jobs.update { list -> list.filter { it.id != jobId }.toImmutableList() }
         if (persisted && dropCheckpoint) persistence?.remove(jobId)
     }

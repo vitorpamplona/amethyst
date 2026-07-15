@@ -153,7 +153,7 @@ class PrivacyLockStateTest {
             state.onUnlockSuccess()
             advanceTimeBy(InactivityTimer.OneMin.millis!! - 1_000L)
             state.onUserInteraction()
-            advanceTimeBy(InactivityTimer.OneMin.millis!! - 1_000L)
+            advanceTimeBy(InactivityTimer.OneMin.millis - 1_000L)
             assertTrue(state.state.value is LockState.Unlocked)
             advanceTimeBy(2_000L)
             assertEquals(LockState.Locked, state.state.value)

@@ -114,7 +114,7 @@ fun MinichatScreen(
     // public-chat (NIP-28/NIP-29) replies come over a relay REQ for this message's kind-1111 children.
     if (isConcord) {
         ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
-        ConcordChannelHistorySubscription(communityId!!, channelId!!, accountViewModel.dataSources().concordChannelHistory, accountViewModel)
+        ConcordChannelHistorySubscription(communityId, channelId, accountViewModel.dataSources().concordChannelHistory, accountViewModel)
         ConcordMinichatBackfillUntilRoot(rootNote, accountViewModel.dataSources().concordChannelHistory.history)
     }
     EventFinderFilterAssemblerSubscription(rootNote, accountViewModel)
@@ -151,7 +151,7 @@ fun MinichatScreen(
                     // itself", where the whole timeline loads and (if you aren't a member yet) you can
                     // join. This is the way out when the pinned root is still backfilling or unavailable.
                     if (isConcord) {
-                        IconButton(onClick = { nav.nav(Route.Concord(communityId!!, channelId!!)) }) {
+                        IconButton(onClick = { nav.nav(Route.Concord(communityId, channelId)) }) {
                             SymbolIcon(symbol = MaterialSymbols.Forum, contentDescription = stringRes(R.string.concord_open_channel))
                         }
                     }
