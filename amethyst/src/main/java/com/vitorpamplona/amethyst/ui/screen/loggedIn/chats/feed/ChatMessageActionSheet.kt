@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoiceGrid
 import com.vitorpamplona.amethyst.ui.note.elements.AddHashtagLabelDialog
+import com.vitorpamplona.amethyst.ui.note.elements.ConcordBanConfirmationDialog
 import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
 import com.vitorpamplona.amethyst.ui.note.elements.NoteActionHandlers
 import com.vitorpamplona.amethyst.ui.note.elements.ShareOptionsBottomSheet
@@ -123,6 +124,7 @@ fun ChatMessageActionSheet(
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
+    var concordBanConfirming by remember { mutableStateOf(false) }
 
     // Own private rumors (NIP-17 DMs) must be retracted with a gift-wrapped
     // deletion — a public NIP-09 would e-tag the rumor id onto public relays.
@@ -206,6 +208,15 @@ fun ChatMessageActionSheet(
         )
     }
 
+    if (concordBanConfirming) {
+        ConcordBanConfirmationDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            onClose = { concordBanConfirming = false },
+            onBanned = onDismiss,
+        )
+    }
+
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
             isFollowingAuthor = false,
@@ -259,6 +270,7 @@ fun ChatMessageActionSheet(
                             deleteConfirmationShowing = true
                         }
                     },
+                    onConcordBan = { concordBanConfirming = true },
                     onDismiss = onDismiss,
                 )
 

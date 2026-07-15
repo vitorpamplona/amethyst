@@ -42,16 +42,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteMinichatReplyCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.ui.note.ObserveZapAmountText
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
@@ -119,12 +128,23 @@ fun ChatReactionChips(
         )
     }
 
+    // Kind-1111 thread ("minichat") replies. Only public chats wire them up (Concord,
+    // NIP-28, NIP-29); NIP-17 DMs deliberately don't, so most clients wouldn't render
+    // a thread there. An inline reply is an ordinary message and isn't counted.
+    val supportsMinichat =
+        remember(baseNote) {
+            baseNote.inGatherers?.any { it is ConcordChannel || it is PublicChatChannel || it is RelayGroupChannel } == true
+        }
+    val minichatCount by if (supportsMinichat) observeNoteMinichatReplyCount(baseNote, accountViewModel) else remember { mutableStateOf(0) }
+
     ObserveZapAmountText(baseNote, accountViewModel) { zapAmount ->
         RenderChatReactionChips(
             chips = chips,
             zapAmount = zapAmount,
+            minichatCount = minichatCount,
             onToggleReaction = { accountViewModel.reactToOrDelete(baseNote, it) },
             onOpenDetails = { showDetails = true },
+            onOpenMinichat = { nav.nav(Route.ChatMinichat(baseNote.idHex)) },
         )
     }
 }
@@ -134,10 +154,12 @@ fun ChatReactionChips(
 private fun RenderChatReactionChips(
     chips: ImmutableList<ReactionChip>,
     zapAmount: String,
+    minichatCount: Int,
     onToggleReaction: (String) -> Unit,
     onOpenDetails: () -> Unit,
+    onOpenMinichat: () -> Unit,
 ) {
-    if (chips.isEmpty() && zapAmount.isBlank()) return
+    if (chips.isEmpty() && zapAmount.isBlank() && minichatCount <= 0) return
 
     FlowRow(
         // Inset from the bubble's edge so overlapping chips ride the border without
@@ -155,6 +177,43 @@ private fun RenderChatReactionChips(
                 chip = chip,
                 onClick = { onToggleReaction(chip.type) },
                 onLongClick = onOpenDetails,
+            )
+        }
+
+        if (minichatCount > 0) {
+            MinichatChip(minichatCount, onClick = onOpenMinichat)
+        }
+    }
+}
+
+/**
+ * "N replies" thread entry, styled like the reaction/zap chips so the engagement row
+ * reads as one strip under the bubble. Tapping opens the message's minichat thread.
+ */
+@Composable
+private fun MinichatChip(
+    count: Int,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.subtleBorder),
+    ) {
+        ChipContentRow {
+            Icon(
+                symbol = MaterialSymbols.Forum,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.grayText,
+                modifier = Size14Modifier,
+            )
+            Text(
+                text = pluralStringResource(R.plurals.chat_minichat_reply_count, count, count),
+                fontSize = Font12SP,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
             )
         }
     }

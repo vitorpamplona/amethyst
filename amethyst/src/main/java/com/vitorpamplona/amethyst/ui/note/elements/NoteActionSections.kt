@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -32,8 +34,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -64,6 +68,10 @@ data class NoteActionHandlers(
     val onAddLabel: () -> Unit,
     val onReport: () -> Unit,
     val onDeleteRequest: () -> Unit,
+    // Banning a Concord member re-keys the community for everyone, so the surface
+    // owns a confirmation dialog (like delete). Null where a caller never renders
+    // Concord messages (they simply never see the Ban tile anyway).
+    val onConcordBan: (() -> Unit)? = null,
     val onDismiss: () -> Unit,
 )
 
@@ -339,7 +347,59 @@ fun noteActionSections(
             } else {
                 add(NoteAction(MaterialSymbols.Report, stringRes(R.string.block_report), isDestructive = true, onClick = handlers.onReport))
             }
+
+            // Concord channel moderation, gated by this account's authority over the
+            // message's author (both return null unless it's a Concord message this
+            // account may act on). Promote/demote is instant; a ban re-keys the
+            // community, so it defers to the surface's confirmation dialog.
+            val concordAdmin = accountViewModel.account.concordAdminTarget(note)
+            if (concordAdmin != null) {
+                val isAdmin = concordAdmin.third
+                add(
+                    NoteAction(
+                        MaterialSymbols.Shield,
+                        stringRes(if (isAdmin) R.string.concord_remove_admin else R.string.concord_make_admin),
+                    ) {
+                        accountViewModel.toggleConcordAdmin(note)
+                        handlers.onDismiss()
+                    },
+                )
+            }
+            if (handlers.onConcordBan != null && accountViewModel.account.concordBanTarget(note) != null) {
+                add(NoteAction(MaterialSymbols.Gavel, stringRes(R.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
+            }
         }
 
     return listOf(author, copyAndShare, editAndBroadcast, organize, moderation).filter { it.isNotEmpty() }
+}
+
+/**
+ * Confirmation for a Concord ban — banning re-keys the community for every remaining
+ * member (CORD-06 refounding), so it's a heavier action than a mute and gets its own
+ * dialog. Shared by both action surfaces (sheet + 3-dot menu). [onClose] dismisses the
+ * dialog; [onBanned] fires after the ban is issued (so the host can also close itself).
+ */
+@Composable
+fun ConcordBanConfirmationDialog(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
+    onBanned: () -> Unit,
+) {
+    QuickActionAlertDialogOneButton(
+        title = stringRes(R.string.concord_ban_user_title),
+        textContent = stringRes(R.string.concord_ban_user_body),
+        buttonIcon = MaterialSymbols.Gavel,
+        buttonText = stringRes(R.string.concord_ban_user),
+        buttonColors =
+            ButtonDefaults.buttonColors(
+                containerColor = LightRedColor,
+                contentColor = Color.White,
+            ),
+        onClickDoOnce = {
+            accountViewModel.banConcordMember(note)
+            onBanned()
+        },
+        onDismiss = onClose,
+    )
 }

@@ -105,6 +105,7 @@ fun NoteDropDownMenu(
     var addLabelDialogShowing by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
+    var concordBanConfirming by remember { mutableStateOf(false) }
 
     // Tapping "Share" hands the note's share options off to the shared Share
     // drawer (ShareOptionsBottomSheet). We render it INSTEAD of the menu dialog
@@ -187,6 +188,15 @@ fun NoteDropDownMenu(
         )
     }
 
+    if (concordBanConfirming) {
+        ConcordBanConfirmationDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            onClose = { concordBanConfirming = false },
+            onBanned = onDismiss,
+        )
+    }
+
     val handlers =
         NoteActionHandlers(
             onShare = { showShareSheet = true },
@@ -202,6 +212,7 @@ fun NoteDropDownMenu(
                     deleteConfirmationShowing = true
                 }
             },
+            onConcordBan = { concordBanConfirming = true },
             onDismiss = onDismiss,
         )
 
