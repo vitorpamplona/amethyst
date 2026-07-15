@@ -61,6 +61,13 @@ interface Nip46RequestAuthorizer {
         clientPubKey: HexKey,
         request: BunkerRequest,
     ): Boolean
+
+    /**
+     * Called when a client sends a `logout` request — the client is asking to be
+     * disconnected. Implementations typically revoke the app's stored grant so a
+     * later request has to pair again. The default is a no-op.
+     */
+    suspend fun onLogout(clientPubKey: HexKey) {}
 }
 
 /** The verdict for a NIP-46 `connect` request. */

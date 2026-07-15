@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEncrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
@@ -120,7 +121,14 @@ class BunkerRequestProcessor(
                         BunkerResponseDecrypt(request.id, signer.nip44Decrypt(request.ciphertext, request.pubKey))
                     }
 
-                else -> BunkerResponseError(request.id, "unsupported method: ${request.method}")
+                else ->
+                    when (request.method) {
+                        METHOD_LOGOUT -> {
+                            authorizer.onLogout(clientPubKey)
+                            BunkerResponseAck(request.id)
+                        }
+                        else -> BunkerResponseError(request.id, "unsupported method: ${request.method}")
+                    }
             }
         } catch (e: Exception) {
             BunkerResponseError(request.id, "${e::class.simpleName}: ${e.message}")
@@ -143,5 +151,8 @@ class BunkerRequestProcessor(
 
         /** Error result returned when [Nip46RequestAuthorizer.authorize] denies a request. */
         const val ERROR_UNAUTHORIZED: String = "unauthorized"
+
+        /** NIP-46 `logout` method name — the client asks to be disconnected. */
+        const val METHOD_LOGOUT: String = "logout"
     }
 }

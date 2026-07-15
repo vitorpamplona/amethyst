@@ -56,6 +56,12 @@ class NostrConnectSignerService(
     val relays: Set<NormalizedRelayUrl>,
     /** Optional hook, invoked with each serviced request's method + client, for logging/metrics. */
     val onServiced: ((method: String, clientPubKey: String, error: String?) -> Unit)? = null,
+    /**
+     * Upper bound on the request-id dedup set. A long-lived signer would otherwise
+     * accumulate every request id it ever saw; past this many, the oldest ids are
+     * evicted (they are far past any realistic same-request retry window).
+     */
+    val seenCap: Int = 4096,
 ) {
     /**
      * Subscribes and services requests until cancelled. Duplicate events (the
@@ -70,7 +76,8 @@ class NostrConnectSignerService(
 
         val self = signer.pubKey
         val events = Channel<NostrConnectEvent>(UNLIMITED)
-        val seen = mutableSetOf<String>()
+        // Insertion-ordered so the oldest id can be evicted once the cap is hit.
+        val seen = LinkedHashSet<String>()
         val subId = newSubId()
         val listener =
             object : SubscriptionListener {
@@ -81,6 +88,12 @@ class NostrConnectSignerService(
                     forFilters: List<Filter>?,
                 ) {
                     if (event is NostrConnectEvent && event.verifiedRecipientPubKey() == self && seen.add(event.id)) {
+                        if (seen.size > seenCap) {
+                            seen.iterator().let {
+                                it.next()
+                                it.remove()
+                            }
+                        }
                         events.trySend(event)
                     }
                 }
