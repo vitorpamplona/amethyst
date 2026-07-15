@@ -49,15 +49,32 @@ private val RELAY_GROUP_METADATA_KINDS =
 fun filterMetadataToRelayGroup(
     channel: RelayGroupChannel,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> =
-    channel.relays().toSet().map {
-        RelayBasedFilter(
-            relay = it,
-            filter =
-                Filter(
-                    kinds = RELAY_GROUP_METADATA_KINDS,
-                    tags = mapOf("d" to listOf(channel.groupId.id)),
-                    since = since?.get(it)?.time,
-                ),
-        )
-    }
+): List<RelayBasedFilter> {
+    val relays = channel.relays().toSet()
+    val directory =
+        relays.map {
+            RelayBasedFilter(
+                relay = it,
+                filter =
+                    Filter(
+                        kinds = RELAY_GROUP_METADATA_KINDS,
+                        tags = mapOf("d" to listOf(channel.groupId.id)),
+                        since = since?.get(it)?.time,
+                    ),
+            )
+        }
+
+    // Back-fill the bodies of pinned messages by id from the host relay. A pin can point at a
+    // message older than the 200-item timeline window, which the `h`-scoped timeline filter would
+    // never return — without this the pin bar shows a blank preview and can't jump to it. No `since`:
+    // pinned events are immutable, so we want them regardless of age.
+    val pinnedIds = channel.pinnedEventIds
+    val pins =
+        if (pinnedIds.isEmpty()) {
+            emptyList()
+        } else {
+            relays.map { RelayBasedFilter(relay = it, filter = Filter(ids = pinnedIds)) }
+        }
+
+    return directory + pins
+}

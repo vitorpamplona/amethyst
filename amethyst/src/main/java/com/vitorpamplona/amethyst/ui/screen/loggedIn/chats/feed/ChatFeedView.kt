@@ -194,18 +194,18 @@ fun ChatFeedLoaded(
         }
     }
 
-    // External jump request (pinned-message bar). Re-runs when the requested id changes or the loaded
-    // list shifts (so a pin that arrives after the tap still scrolls once loaded). Clears the request
-    // as soon as it lands, so a repeat tap on the same pin fires again.
+    // External jump request (pinned-message bar). Keyed on the id alone, so a message arriving mid-jump
+    // can't cancel the scroll animation or restart the effect. Always clears the request after one
+    // attempt — even when the target isn't loaded — so it never sticks and a repeat tap fires again.
     val jumpId = jumpToNoteId?.value
-    LaunchedEffect(jumpId, items.list) {
+    LaunchedEffect(jumpId) {
         if (jumpId != null) {
             val index = items.list.indexOfFirst { it.idHex == jumpId }
             if (index >= 0) {
                 listState.animateScrollToItem(index)
                 highlightedNoteId.value = jumpId
-                onJumpHandled()
             }
+            onJumpHandled()
         }
     }
 
