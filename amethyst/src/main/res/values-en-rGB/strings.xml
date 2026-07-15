@@ -29,6 +29,8 @@
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Onchain zap send dialog -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->

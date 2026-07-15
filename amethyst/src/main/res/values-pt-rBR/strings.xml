@@ -1827,6 +1827,8 @@
     <string name="messages_create_public_chat">Público</string>
     <string name="messages_create_group">Grupo</string>
     <string name="messages_create_public_private_chat_description">Novo Grupo Público ou Privado</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_groups_title">Grupos de relay</string>
     <string name="relay_group_view_inline">Em linha</string>
     <string name="relay_group_view_grouped">Por relay</string>

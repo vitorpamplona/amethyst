@@ -1824,6 +1824,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="messages_create_public_chat">Javno</string>
     <string name="messages_create_group">Skupina</string>
     <string name="messages_create_public_private_chat_description">Nova javna ali zasebna skupina</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_groups_title">Skupine relejev</string>
     <string name="relay_group_view_inline">V vrstici</string>
     <string name="relay_group_view_grouped">Po releju</string>

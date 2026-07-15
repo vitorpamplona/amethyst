@@ -1507,6 +1507,8 @@
     <string name="messages_create_public_chat">公开</string>
     <string name="messages_create_group">组</string>
     <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">私人</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject">主题</string>

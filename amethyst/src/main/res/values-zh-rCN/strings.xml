@@ -394,7 +394,7 @@
     因此聊天信息会随着时间的推移而消失。</string>
     <string name="public_chat">公共聊天</string>
     <string name="new_public_chat">创建新的公开聊天</string>
-    <string name="marmot_group">MLS 组</string>
+    <string name="marmot_group">Marmot 群</string>
     <string name="marmot_group_no_messages_yet">尚无消息</string>
     <string name="public_chat_title">公开聊天元数据</string>
     <string name="public_chat_explainer">公开聊天对所有 Nostr 用户都是可见的，任何人都可以：
@@ -1838,6 +1838,8 @@
     <string name="messages_create_public_chat">公开</string>
     <string name="messages_create_group">组</string>
     <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="relay_groups_title">中继组</string>
     <string name="relay_group_view_inline">行内</string>
     <string name="relay_group_view_grouped">根据中继</string>
@@ -3738,6 +3740,10 @@
     <string name="marmot_group_name_placeholder">输入群名称</string>
     <string name="marmot_group_description_placeholder">输入群描述(可选)</string>
     <string name="marmot_edit_info_footer">更改将通过 MLS 提交到该群，并传播给所有成员。</string>
+    <string name="marmot_group_icon">群组图标</string>
+    <string name="marmot_add_photo">添加照片</string>
+    <string name="marmot_change_photo">更改照片</string>
+    <string name="marmot_remove_photo">删除照片</string>
     <string name="marmot_group_info_updated">群信息已更新</string>
     <string name="marmot_failed_to_update">更新失败: %1$s</string>
     <string name="marmot_failed_to_create_group">创建群失败: %1$s</string>

@@ -1506,6 +1506,8 @@
     <string name="messages_create_public_chat">Herkese Açık</string>
     <string name="messages_create_group">Grup</string>
     <string name="messages_create_public_private_chat_description">Yeni Herkese Açık veya Gizli Grup</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Özel</string>
     <string name="messages_new_message_to">Kime</string>
     <string name="messages_new_message_subject">Konu</string>

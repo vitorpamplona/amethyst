@@ -1507,6 +1507,8 @@
     <string name="messages_create_public_chat">Javno</string>
     <string name="messages_create_group">Grupa</string>
     <string name="messages_create_public_private_chat_description">Nova javna ili privatna grupa</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Privatno</string>
     <string name="messages_new_message_to">Za</string>
     <string name="messages_new_message_subject">Tema</string>

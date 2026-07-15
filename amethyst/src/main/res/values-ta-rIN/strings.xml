@@ -1504,6 +1504,8 @@
     <string name="messages_create_public_chat">பொது</string>
     <string name="messages_create_group">குழு</string>
     <string name="messages_create_public_private_chat_description">புதிய பொது அல்லது தனியார் குழு</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">தனியார்</string>
     <string name="messages_new_message_to">பெறுநர்</string>
     <string name="messages_new_message_subject">பொருள்</string>

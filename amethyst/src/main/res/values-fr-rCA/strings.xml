@@ -1461,6 +1461,8 @@
     <string name="add_sensitive_content_description_placeholder">Raison (optionnel)</string>
     <string name="messages_create_group">Groupe</string>
     <string name="messages_create_public_private_chat_description">Nouveau Groupe Public ou Privé</string>
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="messages_new_message">Privé</string>
     <string name="messages_new_message_to">À</string>
     <string name="messages_new_message_subject">Sujet</string>
