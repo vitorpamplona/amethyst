@@ -46,8 +46,10 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * [NostrOpDecision]) and surfaced on the same management screen.
  *
  * A NIP-46 client is identified by its transport pubkey, mapped to the ledger
- * coordinate `nip46:<clientPubKey>` (see [coordinateFor]) so it lives in its
- * own namespace next to `browser:<origin>` and napplet `<author>:<id>` keys.
+ * coordinate `nip46:<signerPubKey>:<clientPubKey>` (see [coordinateFor]) so it
+ * lives in its own namespace next to `browser:<origin>` and napplet
+ * `<author>:<id>` keys, and so the same client paired with two accounts on one
+ * device gets independent grants.
  *
  * Authorization mirrors the napplet path:
  *  - each signing/encryption/decryption request maps to a [NostrSignerOp]

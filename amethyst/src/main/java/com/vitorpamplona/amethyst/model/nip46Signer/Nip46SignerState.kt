@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
  *
  * Every request is gated by [Nip46PermissionAuthorizer], i.e. the same
  * "Connected Apps" trust ledger that governs napplets and web origins: a remote
- * client is a connected app under the coordinate `nip46:<clientPubKey>`.
+ * client is a connected app under the coordinate `nip46:<signerPubKey>:<clientPubKey>`.
  *
  * The listener restarts whenever the enabled flag or the relay set changes
  * ([collectLatest] cancels the previous run), so editing inbox relays or toggling
