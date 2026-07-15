@@ -155,7 +155,7 @@ fun ConcordChannelListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state?.metadata?.name ?: stringRes(com.vitorpamplona.amethyst.R.string.app_name), fontWeight = FontWeight.Bold, maxLines = 1) },
+                title = { Text(state?.metadata?.name ?: stringRes(com.vitorpamplona.amethyst.R.string.app_name), maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))

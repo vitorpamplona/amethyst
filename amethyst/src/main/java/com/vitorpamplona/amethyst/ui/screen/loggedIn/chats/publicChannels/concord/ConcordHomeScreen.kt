@@ -119,7 +119,7 @@ fun ConcordHomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.concord_home_title), fontWeight = FontWeight.Bold) },
+                title = { Text(stringRes(R.string.concord_home_title)) },
                 navigationIcon = {
                     // Back arrow only when this is a pushed screen (from the drawer / a deep link);
                     // as a bottom-nav root there is nothing to pop and the bar takes its place.

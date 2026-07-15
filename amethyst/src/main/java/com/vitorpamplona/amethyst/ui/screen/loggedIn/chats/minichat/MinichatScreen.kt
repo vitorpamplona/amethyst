@@ -48,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -141,7 +140,7 @@ fun MinichatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.chat_minichat_title), fontWeight = FontWeight.Bold, maxLines = 1) },
+                title = { Text(stringRes(R.string.chat_minichat_title), maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))

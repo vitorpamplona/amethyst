@@ -79,7 +79,7 @@ fun ConcordCreateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_title), fontWeight = FontWeight.Bold) },
+                title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))

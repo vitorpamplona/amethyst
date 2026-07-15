@@ -131,7 +131,7 @@ fun ConcordMembersScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(stringRes(R.string.concord_members_title), fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(stringRes(R.string.concord_members_title), maxLines = 1)
                         state?.metadata?.name?.takeIf { it.isNotBlank() }?.let {
                             Text(it, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
