@@ -34,8 +34,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class Nip46PermissionAuthorizerTest {
+    private val signer = "a".repeat(64)
     private val client = "c".repeat(64)
-    private val coordinate = Nip46PermissionAuthorizer.coordinateFor(client)
+    private val coordinate = Nip46PermissionAuthorizer.coordinateFor(signer, client)
 
     private fun ledger() = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
 
@@ -45,7 +46,7 @@ class Nip46PermissionAuthorizerTest {
     fun connectWithValidSecretRegistersReasonablePolicyAndEchoesSecret() =
         runTest {
             val ledger = ledger()
-            val authorizer = Nip46PermissionAuthorizer(ledger, validateSecret = { _, s -> s == "good" })
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, s -> s == "good" })
 
             val decision = authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "good"))
 
@@ -58,7 +59,7 @@ class Nip46PermissionAuthorizerTest {
     fun connectWithBadSecretRejectsAndDoesNotRegister() =
         runTest {
             val ledger = ledger()
-            val authorizer = Nip46PermissionAuthorizer(ledger, validateSecret = { _, s -> s == "good" })
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, s -> s == "good" })
 
             val decision = authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "bad"))
 
@@ -71,7 +72,7 @@ class Nip46PermissionAuthorizerTest {
         runTest {
             val ledger = ledger()
             ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
-            val authorizer = Nip46PermissionAuthorizer(ledger, validateSecret = { _, _ -> true })
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
 
             authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "x"))
 
@@ -83,7 +84,7 @@ class Nip46PermissionAuthorizerTest {
         runTest {
             val ledger = ledger()
             ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
-            val authorizer = Nip46PermissionAuthorizer(ledger, validateSecret = { _, _ -> true })
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
 
             assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
             assertFalse(authorizer.authorize(client, BunkerRequestNip44Decrypt("2", client, "ct")))
@@ -94,7 +95,7 @@ class Nip46PermissionAuthorizerTest {
         runTest {
             val ledger = ledger()
             ledger.setPolicy(coordinate, AppSignerPolicy.PARANOID)
-            val authorizer = Nip46PermissionAuthorizer(ledger, validateSecret = { _, _ -> true })
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
 
             assertFalse(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
 
@@ -107,4 +108,26 @@ class Nip46PermissionAuthorizerTest {
         assertEquals(client, Nip46PermissionAuthorizer.clientPubKeyOf(coordinate))
         assertEquals(null, Nip46PermissionAuthorizer.clientPubKeyOf("browser:https://x.com"))
     }
+
+    @Test
+    fun sameClientOnTwoAccountsGetsIndependentCoordinates() {
+        val otherSigner = "d".repeat(64)
+        val a = Nip46PermissionAuthorizer.coordinateFor(signer, client)
+        val b = Nip46PermissionAuthorizer.coordinateFor(otherSigner, client)
+        assertTrue(a != b)
+        assertTrue(Nip46PermissionAuthorizer.belongsTo(a, signer))
+        assertFalse(Nip46PermissionAuthorizer.belongsTo(a, otherSigner))
+    }
+
+    @Test
+    fun logoutRevokesTheClientsGrant() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
+
+            authorizer.onLogout(client)
+
+            assertEquals(null, ledger.store.loadPolicy(coordinate))
+        }
 }

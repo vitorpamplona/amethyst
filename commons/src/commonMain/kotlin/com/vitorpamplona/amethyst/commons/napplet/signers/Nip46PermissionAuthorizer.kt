@@ -58,6 +58,8 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
  */
 class Nip46PermissionAuthorizer(
     val ledger: NostrSignerPermissionLedger,
+    /** The user's own signer pubkey — namespaces this account's grants in the app-global store. */
+    val signerPubKey: HexKey,
     /** Validates the connect secret for a client (bunker secret, or the offer secret in the nostrconnect flow). */
     val validateSecret: suspend (clientPubKey: HexKey, offeredSecret: String?) -> Boolean,
     /** Trust level assigned to a freshly paired app that has no policy yet. */
@@ -65,6 +67,9 @@ class Nip46PermissionAuthorizer(
     /** Invoked after a successful connect so the host can persist display metadata (name/url/image). */
     val onConnected: (suspend (clientPubKey: HexKey, request: BunkerRequestConnect) -> Unit)? = null,
 ) : Nip46RequestAuthorizer {
+    /** The ledger coordinate for [clientPubKey] under this account. */
+    fun coordinateFor(clientPubKey: HexKey): String = coordinateFor(signerPubKey, clientPubKey)
+
     override suspend fun onConnect(
         clientPubKey: HexKey,
         request: BunkerRequestConnect,
@@ -99,17 +104,35 @@ class Nip46PermissionAuthorizer(
         return allowed
     }
 
+    override suspend fun onLogout(clientPubKey: HexKey) {
+        // The client asked to disconnect — drop its standing grant so it must pair again.
+        ledger.revokeAll(coordinateFor(clientPubKey))
+    }
+
     companion object {
         /** Ledger coordinate namespace for NIP-46 remote-signer clients. */
         const val COORDINATE_PREFIX = "nip46"
 
         private const val ACK = "ack"
 
-        /** The Connected-Apps ledger coordinate for a NIP-46 client, e.g. `nip46:<pubkey>`. */
-        fun coordinateFor(clientPubKey: HexKey): String = "$COORDINATE_PREFIX:$clientPubKey"
+        /**
+         * The Connected-Apps ledger coordinate for a NIP-46 client, namespaced by
+         * the user's signer so the same client paired with two accounts on one
+         * device gets independent grants: `nip46:<signerPubKey>:<clientPubKey>`.
+         */
+        fun coordinateFor(
+            signerPubKey: HexKey,
+            clientPubKey: HexKey,
+        ): String = "$COORDINATE_PREFIX:$signerPubKey:$clientPubKey"
 
-        /** The client pubkey of a `nip46:` coordinate, or `null` if it is not one. */
-        fun clientPubKeyOf(coordinate: String): HexKey? = if (coordinate.startsWith("$COORDINATE_PREFIX:")) coordinate.substringAfter(':') else null
+        /** True when [coordinate] is a NIP-46 grant belonging to [signerPubKey]. */
+        fun belongsTo(
+            coordinate: String,
+            signerPubKey: HexKey,
+        ): Boolean = coordinate.startsWith("$COORDINATE_PREFIX:$signerPubKey:")
+
+        /** The client pubkey of a `nip46:<signer>:<client>` coordinate, or `null` if it is not one. */
+        fun clientPubKeyOf(coordinate: String): HexKey? = if (coordinate.startsWith("$COORDINATE_PREFIX:")) coordinate.substringAfterLast(':') else null
 
         /** Maps a signing/encryption/decryption [BunkerRequest] to the [NostrSignerOp] it needs. */
         fun BunkerRequest.toSignerOp(): NostrSignerOp? =

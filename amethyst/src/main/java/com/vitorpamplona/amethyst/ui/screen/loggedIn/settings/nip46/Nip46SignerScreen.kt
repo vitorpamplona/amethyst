@@ -125,7 +125,7 @@ fun Nip46SignerScreen(
             account.signerPermissionLedger.store
                 .allPolicies()
                 .keys
-                .count { it.startsWith("${Nip46PermissionAuthorizer.COORDINATE_PREFIX}:") }
+                .count { Nip46PermissionAuthorizer.belongsTo(it, account.signer.pubKey) }
     }
 
     fun onConnect(uri: String) {

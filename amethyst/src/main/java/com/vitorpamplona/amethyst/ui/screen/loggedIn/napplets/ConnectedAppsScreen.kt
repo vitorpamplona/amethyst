@@ -105,7 +105,7 @@ fun ConnectedAppsScreen(
     LaunchedEffect(Unit) {
         val initial =
             withContext(Dispatchers.Default) {
-                loadConnectedApps(capabilityLedger, signerLedger)
+                loadConnectedApps(capabilityLedger, signerLedger, accountViewModel.account.signer.pubKey)
             }
         items = initial
         // Only include real napplet authors in the manifest subscription — skip the "browser"
@@ -442,12 +442,18 @@ private fun AppSignerPolicy.shortLabel(): String =
 private suspend fun loadConnectedApps(
     capabilityLedger: NappletPermissionLedger,
     signerLedger: NostrSignerPermissionLedger,
+    signerPubKey: HexKey,
 ): List<ConnectedAppEntry> {
     val capGrants = capabilityLedger.allPersistedGrants()
     val signerPolicies = signerLedger.store.allPolicies()
     val allCoordinates = (capGrants.keys + signerPolicies.keys).toSet()
     return allCoordinates
-        .map { coordinate ->
+        // NIP-46 grants are namespaced by signer, so only surface this account's remote clients;
+        // napplet/browser grants stay app-global and are shown for every account as before.
+        .filter { coordinate ->
+            coordinate.substringBefore(':') != Nip46PermissionAuthorizer.COORDINATE_PREFIX ||
+                Nip46PermissionAuthorizer.belongsTo(coordinate, signerPubKey)
+        }.map { coordinate ->
             ConnectedAppEntry(
                 coordinate = coordinate,
                 signerPolicy = signerPolicies[coordinate],

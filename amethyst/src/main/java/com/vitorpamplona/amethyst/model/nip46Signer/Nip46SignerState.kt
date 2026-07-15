@@ -79,12 +79,13 @@ class Nip46SignerState(
     private val authorizer =
         Nip46PermissionAuthorizer(
             ledger = ledger,
+            signerPubKey = signer.pubKey,
             validateSecret = { clientPubKey, offered ->
                 // A new app pairs with the current bunker secret; an already-connected app
                 // re-authenticates by identity (it already holds a trust level in the ledger).
                 val secret = settings.nip46BunkerSecret.value
                 (secret.isNotEmpty() && offered == secret) ||
-                    ledger.hasPolicy(Nip46PermissionAuthorizer.coordinateFor(clientPubKey))
+                    ledger.hasPolicy(Nip46PermissionAuthorizer.coordinateFor(signer.pubKey, clientPubKey))
             },
         )
 
@@ -163,7 +164,7 @@ class Nip46SignerState(
             client.publish(reply, offer.relays)
 
             // Register the app (the paste is the user's consent) and listen on its relays.
-            val coordinate = Nip46PermissionAuthorizer.coordinateFor(offer.clientPubKey)
+            val coordinate = authorizer.coordinateFor(offer.clientPubKey)
             if (!ledger.hasPolicy(coordinate)) {
                 ledger.setPolicy(coordinate, authorizer.defaultPolicyOnConnect)
             }
