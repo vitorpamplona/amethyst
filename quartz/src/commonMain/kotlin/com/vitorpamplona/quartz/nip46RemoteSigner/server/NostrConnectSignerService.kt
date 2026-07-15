@@ -31,9 +31,10 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 
 /**
  * Runs a NIP-46 remote signer ("bunker") for one account: subscribes to the
@@ -63,7 +64,57 @@ class NostrConnectSignerService(
      * evicted (they are far past any realistic same-request retry window).
      */
     val seenCap: Int = 4096,
+    /**
+     * Bound on events buffered between the relay threads and the single consumer.
+     * Under a flood (a looping client, or a hostile peer p-tagging us) the newest
+     * events past this many are dropped instead of growing memory without limit —
+     * the transport [signer] can be an external NIP-55 app where each decrypt is an
+     * IPC round-trip, so the queue must not run away.
+     */
+    val maxQueue: Int = 256,
+    /** Max requests decrypted per author within [rateWindowSeconds] before further ones are dropped. */
+    val maxRequestsPerWindow: Int = 40,
+    val rateWindowSeconds: Long = 10,
+    /** Cap on distinct authors tracked for rate-limiting (evicts oldest) so key-rotation can't grow it. */
+    val maxTrackedAuthors: Int = 512,
 ) {
+    /**
+     * Fixed-window per-author rate limit. Touched only by the single consumer
+     * coroutine (never the relay threads), so a plain map needs no synchronization.
+     */
+    private class RateLimiter(
+        val maxPerWindow: Int,
+        val windowSeconds: Long,
+        val maxAuthors: Int,
+    ) {
+        private class Window(
+            var start: Long,
+            var count: Int,
+        )
+
+        private val windows = LinkedHashMap<String, Window>()
+
+        fun allow(
+            author: String,
+            now: Long,
+        ): Boolean {
+            val window = windows.getOrPut(author) { Window(now, 0) }
+            if (now - window.start >= windowSeconds) {
+                window.start = now
+                window.count = 0
+            }
+            if (windows.size > maxAuthors) {
+                windows.iterator().let {
+                    it.next()
+                    it.remove()
+                }
+            }
+            if (window.count >= maxPerWindow) return false
+            window.count++
+            return true
+        }
+    }
+
     /**
      * Subscribes and services requests until cancelled. Duplicate events (the
      * same request seen on more than one relay) are handled once. Never returns
@@ -76,7 +127,9 @@ class NostrConnectSignerService(
         }
 
         val self = signer.pubKey
-        val events = Channel<NostrConnectEvent>(UNLIMITED)
+        // Bounded + DROP_LATEST so a flood bounds memory instead of growing an unlimited queue.
+        val events = Channel<NostrConnectEvent>(capacity = maxQueue, onBufferOverflow = BufferOverflow.DROP_LATEST)
+        val rateLimiter = RateLimiter(maxRequestsPerWindow, rateWindowSeconds, maxTrackedAuthors)
         val subId = newSubId()
         val listener =
             object : SubscriptionListener {
@@ -109,6 +162,12 @@ class NostrConnectSignerService(
                         it.next()
                         it.remove()
                     }
+                }
+                // Rate-limit per author BEFORE decrypting — decryption can be an external-signer
+                // round-trip, so a flooding client must not force one per event.
+                if (!rateLimiter.allow(event.pubKey, TimeUtils.now())) {
+                    Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…" }
+                    continue
                 }
                 handle(event)
             }

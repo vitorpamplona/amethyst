@@ -104,6 +104,7 @@ class Nip46SignerState(
                     )
                 }
             },
+            clientStore = clientStore,
         )
 
     init {

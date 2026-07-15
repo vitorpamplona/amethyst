@@ -69,6 +69,8 @@ class Nip46PermissionAuthorizer(
     val defaultPolicyOnConnect: AppSignerPolicy = AppSignerPolicy.REASONABLE,
     /** Invoked after a successful connect so the host can persist display metadata (name/url/image). */
     val onConnected: (suspend (clientPubKey: HexKey, request: BunkerRequestConnect) -> Unit)? = null,
+    /** Persisted client metadata/relays; cleared on logout so a disconnected app leaves nothing behind. */
+    val clientStore: Nip46ClientStore? = null,
 ) : Nip46RequestAuthorizer {
     // A high-throughput client can authorize many signs per second; last-used is display-only,
     // so coalesce the DataStore write to at most one per client per LAST_USED_THROTTLE_SECS
@@ -129,8 +131,11 @@ class Nip46PermissionAuthorizer(
     }
 
     override suspend fun onLogout(clientPubKey: HexKey) {
-        // The client asked to disconnect — drop its standing grant so it must pair again.
-        ledger.revokeAll(coordinateFor(clientPubKey))
+        // The client asked to disconnect — drop its standing grant (so it must pair again) and its
+        // persisted metadata/relays (so we stop listening on its relays after the next restart).
+        val coordinate = coordinateFor(clientPubKey)
+        ledger.revokeAll(coordinate)
+        clientStore?.remove(coordinate)
     }
 
     companion object {

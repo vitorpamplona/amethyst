@@ -221,6 +221,32 @@ class NostrConnectSignerServiceTest {
         }
 
     @Test
+    fun floodingClientIsRateLimited() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val service =
+                NostrConnectSignerService(
+                    client,
+                    signer,
+                    processor,
+                    setOf(relay),
+                    maxRequestsPerWindow = 2,
+                    rateWindowSeconds = 3600,
+                )
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            // Five distinct requests from the same author within one window → only 2 are serviced.
+            repeat(5) { i ->
+                client.deliver(request(BunkerRequestConnect(id = "req$i", remoteKey = serverKey, secret = "s")))
+            }
+
+            assertEquals(2, client.published.size)
+        }
+
+    @Test
     fun requestNotAddressedToUsIsIgnored() =
         runTest {
             val client = LoopbackClient()
