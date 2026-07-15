@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -55,6 +56,20 @@ fun ChannelFilterAssemblerSubscription(
             .collectAsStateWithLifecycle()
         val goalId = channel.info?.goalEventId()
         LaunchedEffect(goalId, metadataState) {
+            dataSource.invalidateFilters()
+        }
+    }
+
+    // Relay groups: when the kind-39005 pin list changes, re-invalidate so the id-based back-fill
+    // for pinned message bodies (see filterMetadataToRelayGroup) picks up the new ids. Keyed on the
+    // pin list alone, so unrelated roster/metadata churn doesn't force a re-subscribe.
+    if (channel is RelayGroupChannel) {
+        val metadataState by channel
+            .flow()
+            .metadata.stateFlow
+            .collectAsStateWithLifecycle()
+        val pinnedIds = (metadataState.channel as? RelayGroupChannel)?.pinnedEventIds ?: channel.pinnedEventIds
+        LaunchedEffect(pinnedIds) {
             dataSource.invalidateFilters()
         }
     }

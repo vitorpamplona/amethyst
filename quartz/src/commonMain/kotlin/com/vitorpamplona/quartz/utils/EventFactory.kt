@@ -103,6 +103,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
@@ -111,6 +112,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -401,6 +403,8 @@ class EventFactory {
                 GroupMembersEvent.KIND -> GroupMembersEvent(id, pubKey, createdAt, tags, content, sig)
                 SupportedRolesEvent.KIND -> SupportedRolesEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupParticipantsEvent.KIND -> GroupParticipantsEvent(id, pubKey, createdAt, tags, content, sig)
+                GroupPinnedEvent.KIND -> GroupPinnedEvent(id, pubKey, createdAt, tags, content, sig)
+                UpdatePinListEvent.KIND -> UpdatePinListEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
                 CodeSnippetEvent.KIND -> CodeSnippetEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayFeedsListEvent.KIND -> RelayFeedsListEvent(id, pubKey, createdAt, tags, content, sig)

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -77,6 +78,70 @@ class RelayGroupChannelTest {
     ): GroupAdminsEvent {
         val tags = (listOf(arrayOf("d", gid)) + entries.map { (pk, roles) -> arrayOf("p", pk, *roles.toTypedArray()) }).toTypedArray()
         return EventFactory.create("00".repeat(32), relaySelf, createdAt, GroupAdminsEvent.KIND, tags, "", "22".repeat(64)) as GroupAdminsEvent
+    }
+
+    private val msg1 = "11".repeat(32)
+    private val msg2 = "22".repeat(32)
+    private val msg3 = "33".repeat(32)
+
+    private fun pinned(
+        createdAt: Long,
+        vararg eventIds: String,
+    ): GroupPinnedEvent {
+        val tags = (listOf(arrayOf("d", gid)) + eventIds.map { arrayOf("e", it) }).toTypedArray()
+        return EventFactory.create("00".repeat(32), relaySelf, createdAt, GroupPinnedEvent.KIND, tags, "", "22".repeat(64)) as GroupPinnedEvent
+    }
+
+    @Test
+    fun pinnedListFoldsInOrderAndReportsMembership() {
+        val c = channel()
+        assertTrue(c.pinnedEventIds.isEmpty())
+        assertFalse(c.isPinned(msg1))
+
+        c.updatePinned(pinned(100, msg1, msg2))
+
+        assertEquals(listOf(msg1, msg2), c.pinnedEventIds)
+        assertTrue(c.isPinned(msg1))
+        assertTrue(c.isPinned(msg2))
+        assertFalse(c.isPinned(msg3))
+    }
+
+    @Test
+    fun pinListIsFullyReplacedByNewerEvent() {
+        val c = channel()
+        c.updatePinned(pinned(100, msg1, msg2))
+        // A newer list drops msg1, keeps msg2, adds msg3 — the whole set is replaced.
+        c.updatePinned(pinned(200, msg2, msg3))
+
+        assertEquals(listOf(msg2, msg3), c.pinnedEventIds)
+        assertFalse(c.isPinned(msg1))
+        assertTrue(c.isPinned(msg3))
+    }
+
+    @Test
+    fun clearingPinsWithEmptyNewerList() {
+        val c = channel()
+        c.updatePinned(pinned(100, msg1))
+        c.updatePinned(pinned(200))
+        assertTrue(c.pinnedEventIds.isEmpty())
+        assertFalse(c.isPinned(msg1))
+    }
+
+    @Test
+    fun stalePinEventDoesNotSupersede() {
+        val c = channel()
+        c.updatePinned(pinned(200, msg1, msg2))
+        // An OLDER pin list arrives late — ignore it.
+        c.updatePinned(pinned(100, msg3))
+        assertEquals(listOf(msg1, msg2), c.pinnedEventIds)
+    }
+
+    @Test
+    fun equalCreatedAtPinDoesNotResupersede() {
+        val c = channel()
+        c.updatePinned(pinned(100, msg1, msg2))
+        c.updatePinned(pinned(100, msg3))
+        assertEquals(listOf(msg1, msg2), c.pinnedEventIds)
     }
 
     @Test

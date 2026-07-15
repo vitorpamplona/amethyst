@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +75,11 @@ fun RefreshingChatroomFeedView(
     // LazyColumn), so a caller (private DMs) can drive demand-driven paging off viewport visibility
     // rather than per-row composition. No-op for callers that don't paginate.
     sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
+    // Optional external jump request (e.g. a "pinned message" bar): when it holds a note id, the feed
+    // scrolls to that message and highlights it, then calls [onJumpHandled] to clear it. Null for
+    // callers with no external jump affordance.
+    jumpToNoteId: State<String?>? = null,
+    onJumpHandled: () -> Unit = {},
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -89,6 +95,8 @@ fun RefreshingChatroomFeedView(
             olderBoundary,
             markersInGap,
             sentinels,
+            jumpToNoteId,
+            onJumpHandled,
         )
     }
 }
@@ -106,6 +114,8 @@ fun RenderChatFeedView(
     olderBoundary: (@Composable () -> Unit)? = null,
     markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
     sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
+    jumpToNoteId: State<String?>? = null,
+    onJumpHandled: () -> Unit = {},
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -136,6 +146,8 @@ fun RenderChatFeedView(
                     olderBoundary,
                     markersInGap,
                     sentinels,
+                    jumpToNoteId,
+                    onJumpHandled,
                 )
             }
         }
@@ -155,6 +167,8 @@ fun ChatFeedLoaded(
     olderBoundary: (@Composable () -> Unit)? = null,
     markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
     sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
+    jumpToNoteId: State<String?>? = null,
+    onJumpHandled: () -> Unit = {},
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -177,6 +191,21 @@ fun ChatFeedLoaded(
                 listState.animateScrollToItem(index)
                 highlightedNoteId.value = note.idHex
             }
+        }
+    }
+
+    // External jump request (pinned-message bar). Keyed on the id alone, so a message arriving mid-jump
+    // can't cancel the scroll animation or restart the effect. Always clears the request after one
+    // attempt — even when the target isn't loaded — so it never sticks and a repeat tap fires again.
+    val jumpId = jumpToNoteId?.value
+    LaunchedEffect(jumpId) {
+        if (jumpId != null) {
+            val index = items.list.indexOfFirst { it.idHex == jumpId }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+                highlightedNoteId.value = jumpId
+            }
+            onJumpHandled()
         }
     }
 

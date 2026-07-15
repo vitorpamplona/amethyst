@@ -2166,6 +2166,10 @@
     <string name="relay_group_menu_members">Members</string>
     <string name="relay_group_menu_edit">Edit group</string>
     <string name="relay_group_threads_title">Threads</string>
+    <string name="relay_group_pin_message">Pin message</string>
+    <string name="relay_group_unpin_message">Unpin message</string>
+    <string name="relay_group_pinned_label">Pinned</string>
+    <string name="relay_group_pinned_content_description">Pinned messages</string>
     <string name="relay_group_open">Open group</string>
     <string name="relay_group_channels_empty">No groups on this relay yet.</string>
     <string name="relay_group_channels_not_nip29">This relay does not advertise support for groups (NIP-29), so it may not host any.</string>

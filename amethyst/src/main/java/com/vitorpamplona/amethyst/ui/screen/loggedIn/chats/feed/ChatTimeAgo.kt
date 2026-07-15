@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
@@ -78,8 +79,12 @@ fun chatFooterHasMeta(note: Note): Boolean {
     return event is PrivateDmEvent ||
         event.expiration() != null ||
         event.geoHashOrScope() != null ||
-        event.strongPoWOrNull() != null
+        event.strongPoWOrNull() != null ||
+        note.isPinnedInRelayGroup()
 }
+
+/** True when this note's NIP-29 group has it in its pinned list (kind 39005). */
+fun Note.isPinnedInRelayGroup(): Boolean = inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }?.isPinned(idHex) == true
 
 /**
  * The small row at the bottom of a chat bubble: inline status glyphs (legacy-DM,
@@ -102,6 +107,7 @@ fun ChatMessageFooter(
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         // Each glyph self-gates and renders nothing when not applicable.
+        ChatPinnedBadge(note)
         IncognitoBadge(note)
         ChatExpiration(note)
 
@@ -115,7 +121,7 @@ fun ChatMessageFooter(
         }
 
         if (showTime) {
-            val hasGlyph = event is PrivateDmEvent || event?.expiration() != null || geo != null || pow != null
+            val hasGlyph = note.isPinnedInRelayGroup() || event is PrivateDmEvent || event?.expiration() != null || geo != null || pow != null
             if (hasGlyph) Spacer(StdHorzSpacer)
 
             // Drafts aren't published, so no relay/delivery detail; everything else gets
@@ -127,6 +133,19 @@ fun ChatMessageFooter(
             }
         }
     }
+}
+
+/** A small pin glyph on a bubble whose message is pinned in its NIP-29 group. */
+@Composable
+fun ChatPinnedBadge(note: Note) {
+    if (!note.isPinnedInRelayGroup()) return
+    Icon(
+        symbol = MaterialSymbols.PushPin,
+        contentDescription = stringRes(R.string.relay_group_pinned_content_description),
+        modifier = Modifier.size(12.dp),
+        tint = MaterialTheme.colorScheme.primary,
+    )
+    Spacer(StdHorzSpacer)
 }
 
 @Composable

@@ -37,4 +37,6 @@ fun TagArray.userPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
 
 fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it }
 
+fun TagArray.pinnedEventIds(): List<HexKey> = mapValueTagged("e") { it }
+
 fun TagArray.inviteCode() = firstNotNullOfOrNull(CodeTag::parse)

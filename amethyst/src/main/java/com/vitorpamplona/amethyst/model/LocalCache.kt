@@ -162,6 +162,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
@@ -170,6 +171,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -1899,6 +1901,20 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (relay != null) {
             val latest = getOrCreateAddressableNote(event.address()).event as? GroupAdminsEvent
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateAdmins(it) }
+        }
+        return new
+    }
+
+    /** NIP-29 relay-signed pinned-message list (kind 39005) → the group's pins. */
+    fun consume(
+        event: GroupPinnedEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? GroupPinnedEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updatePinned(it) }
         }
         return new
     }
@@ -3856,6 +3872,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consume(event, relay, wasVerified)
                 }
 
+                is GroupPinnedEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
                 // Remaining NIP-29 relay-group kinds. The two relay-signed addressables (39003
                 // roles, 39004 AV participants) are durable group state alongside 39000/39001/39002,
                 // so they're stored replaceably. The 9xxx moderation actions and join/leave requests
@@ -3883,6 +3903,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is DeleteEventEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is UpdatePinListEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
