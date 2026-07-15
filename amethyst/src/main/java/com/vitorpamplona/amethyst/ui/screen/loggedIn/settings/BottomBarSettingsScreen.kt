@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -43,13 +42,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -57,6 +54,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -285,52 +283,57 @@ private fun EditableBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         pinned.forEachIndexed { index, entry ->
-            val dragging = draggedIndex == index
-            PreviewTab(
-                entry = entry,
-                // The first tab is where the bar lands on open, so preview it as selected.
-                selected = index == 0,
-                dragging = dragging,
-                dragOffsetX = if (dragging) dragOffsetX else 0f,
-                accountViewModel = accountViewModel,
-                onRemove = { state.togglePin(entry) },
-                onMeasured = { widths[index] = it },
-                onDragStart = {
-                    draggedIndex = index
-                    dragOffsetX = 0f
-                },
-                onDrag = { dx ->
-                    dragOffsetX += dx
-                    val current = draggedIndex
-                    if (current < 0) return@PreviewTab
+            // Key by identity so a swap MOVES the dragged tab (and its live gesture) instead of
+            // recomposing a different entry into this slot — which would restart its pointerInput
+            // (keyed on entry) and cancel the drag mid-swap.
+            key(entry.stableKey) {
+                val dragging = draggedIndex == index
+                PreviewTab(
+                    entry = entry,
+                    // The first tab is where the bar lands on open, so preview it as selected.
+                    selected = index == 0,
+                    dragging = dragging,
+                    dragOffsetX = if (dragging) dragOffsetX else 0f,
+                    accountViewModel = accountViewModel,
+                    onRemove = { state.togglePin(entry) },
+                    onMeasured = { widths[index] = it },
+                    onDragStart = {
+                        draggedIndex = index
+                        dragOffsetX = 0f
+                    },
+                    onDrag = { dx ->
+                        dragOffsetX += dx
+                        val current = draggedIndex
+                        if (current < 0) return@PreviewTab
 
-                    if (dragOffsetX < 0 && current > 0) {
-                        val leftW = widths[current - 1] ?: 0f
-                        if (-dragOffsetX > leftW / 2f) {
-                            state.moveTransient(current, current - 1)
-                            dragOffsetX += leftW
-                            draggedIndex = current - 1
+                        if (dragOffsetX < 0 && current > 0) {
+                            val leftW = widths[current - 1] ?: 0f
+                            if (-dragOffsetX > leftW / 2f) {
+                                state.moveTransient(current, current - 1)
+                                dragOffsetX += leftW
+                                draggedIndex = current - 1
+                            }
                         }
-                    }
-                    if (dragOffsetX > 0 && current < pinned.lastIndex) {
-                        val rightW = widths[current + 1] ?: 0f
-                        if (dragOffsetX > rightW / 2f) {
-                            state.moveTransient(current, current + 1)
-                            dragOffsetX -= rightW
-                            draggedIndex = current + 1
+                        if (dragOffsetX > 0 && current < pinned.lastIndex) {
+                            val rightW = widths[current + 1] ?: 0f
+                            if (dragOffsetX > rightW / 2f) {
+                                state.moveTransient(current, current + 1)
+                                dragOffsetX -= rightW
+                                draggedIndex = current + 1
+                            }
                         }
-                    }
-                },
-                onDragEnd = {
-                    draggedIndex = -1
-                    dragOffsetX = 0f
-                    state.commit()
-                },
-                onDragCancel = {
-                    draggedIndex = -1
-                    dragOffsetX = 0f
-                },
-            )
+                    },
+                    onDragEnd = {
+                        draggedIndex = -1
+                        dragOffsetX = 0f
+                        state.commit()
+                    },
+                    onDragCancel = {
+                        draggedIndex = -1
+                        dragOffsetX = 0f
+                    },
+                )
+            }
         }
     }
 }
@@ -686,38 +689,39 @@ private fun ExpandableAvailableRow(
     }
 }
 
-/** Outlined "Add" that fills to "Added" once pinned — states the action and its result. */
+/**
+ * Outlined "Add" that fills to "Added" once pinned — states the action and its result. Both states
+ * share one Row body (only color/border/tint differ) so the pill keeps a constant height and the rows
+ * stay aligned whether an item is added or not.
+ */
 @Composable
 private fun AddPill(
     added: Boolean,
     onClick: () -> Unit,
 ) {
     val accent = MaterialTheme.colorScheme.primary
-    if (added) {
-        Surface(shape = CircleShape, color = accent) {
-            Row(
-                modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(15.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-                Text(stringRes(R.string.bottom_bar_settings_added), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary)
-            }
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            border = BorderStroke(1.dp, accent),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+    val content = if (added) MaterialTheme.colorScheme.onPrimary else accent
+    Surface(
+        shape = CircleShape,
+        color = if (added) accent else Color.Transparent,
+        border = if (added) null else BorderStroke(1.dp, accent),
+    ) {
+        Row(
+            modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(15.dp), tint = accent)
-            Spacer(Modifier.width(4.dp))
-            Text(stringRes(R.string.bottom_bar_settings_add), style = MaterialTheme.typography.labelLarge, color = accent)
+            Icon(
+                symbol = if (added) MaterialSymbols.Check else MaterialSymbols.Add,
+                contentDescription = null,
+                modifier = Modifier.size(15.dp),
+                tint = content,
+            )
+            Text(
+                text = stringRes(if (added) R.string.bottom_bar_settings_added else R.string.bottom_bar_settings_add),
+                style = MaterialTheme.typography.labelLarge,
+                color = content,
+            )
         }
     }
 }
