@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.blurhash
 
 import android.graphics.Bitmap
+import androidx.core.graphics.scale
 
 actual class PlatformImage(
     val bitmap: Bitmap,
@@ -43,7 +44,7 @@ actual class PlatformImage(
     actual fun scale(
         width: Int,
         height: Int,
-    ): PlatformImage = PlatformImage(Bitmap.createScaledBitmap(bitmap, width, height, false))
+    ): PlatformImage = PlatformImage(bitmap.scale(width, height, false))
 
     actual companion object {
         actual fun create(

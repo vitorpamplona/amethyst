@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +45,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -160,8 +160,7 @@ private fun Ps1SaveIconImage(icon: Ps1SaveIcon) {
     val frames =
         remember(icon) {
             icon.frames.map { pixels ->
-                Bitmap
-                    .createBitmap(Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE, Bitmap.Config.ARGB_8888)
+                createBitmap(Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE)
                     .apply { setPixels(pixels, 0, Ps1SaveIcon.SIZE, 0, 0, Ps1SaveIcon.SIZE, Ps1SaveIcon.SIZE) }
                     .asImageBitmap()
             }

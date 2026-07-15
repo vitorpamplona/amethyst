@@ -274,6 +274,31 @@ fun CardBody(
     val isOwnNote = accountViewModel.isLoggedUser(note.author)
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
+    // Concord moderation: only present when this account may actually act.
+    val canConcordBan = remember(note) { accountViewModel.account.concordBanTarget(note) != null }
+    val concordAdmin = remember(note) { accountViewModel.account.concordAdminTarget(note) }
+    val showConcordBanDialog = remember { mutableStateOf(false) }
+
+    if (showConcordBanDialog.value) {
+        QuickActionAlertDialogOneButton(
+            title = stringRes(R.string.concord_ban_user_title),
+            textContent = stringRes(R.string.concord_ban_user_body),
+            buttonIcon = MaterialSymbols.Gavel,
+            buttonText = stringRes(R.string.concord_ban_user),
+            buttonColors =
+                ButtonDefaults.buttonColors(
+                    containerColor = LightRedColor,
+                    contentColor = Color.White,
+                ),
+            onClickDoOnce = {
+                accountViewModel.banConcordMember(note)
+                showConcordBanDialog.value = false
+                onDismiss()
+            },
+            onDismiss = { showConcordBanDialog.value = false },
+        )
+    }
+
     Column(modifier = Modifier.width(IntrinsicSize.Min)) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             NoteQuickActionItem(
@@ -447,6 +472,30 @@ fun CardBody(
                     stringRes(R.string.quick_action_report),
                 ) {
                     showReportDialog.value = true
+                }
+            }
+
+            if (concordAdmin != null) {
+                VerticalDivider(color = primaryLight)
+
+                val isAdmin = concordAdmin.third
+                NoteQuickActionItem(
+                    MaterialSymbols.Shield,
+                    stringRes(if (isAdmin) R.string.concord_remove_admin else R.string.concord_make_admin),
+                ) {
+                    accountViewModel.toggleConcordAdmin(note)
+                    onDismiss()
+                }
+            }
+
+            if (canConcordBan) {
+                VerticalDivider(color = primaryLight)
+
+                NoteQuickActionItem(
+                    MaterialSymbols.Gavel,
+                    stringRes(R.string.concord_ban_user),
+                ) {
+                    showConcordBanDialog.value = true
                 }
             }
         }

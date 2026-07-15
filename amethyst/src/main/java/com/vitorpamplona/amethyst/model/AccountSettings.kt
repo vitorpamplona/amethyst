@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepository
@@ -36,6 +38,7 @@ import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -248,6 +251,7 @@ class AccountSettings(
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupRelayGroupList: SimpleGroupListEvent? = null,
+    var backupConcordList: ConcordCommunityListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
     var backupCashuWallet: CashuWalletEvent? = null,
     var backupNutzapInfo: NutzapInfoEvent? = null,
@@ -276,6 +280,7 @@ class AccountSettings(
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.CUSTOM),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
+    val concordViewMode: MutableStateFlow<ConcordViewMode> = MutableStateFlow(ConcordViewMode.DEFAULT),
     // The per-situation toggles applied under RelayAuthPolicy.CUSTOM.
     val relayAuthTrustMyRelaysAndVenues: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val relayAuthTrustReadFollows: MutableStateFlow<Boolean> = MutableStateFlow(true),
@@ -283,6 +288,7 @@ class AccountSettings(
     val relayAuthTrustMessageStrangers: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) : EphemeralChatRepository,
     RelayGroupRepository,
+    ConcordListRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
     val syncedSettings: AccountSyncedSettings = AccountSyncedSettings(AccountSyncedSettingsInternal())
@@ -300,6 +306,13 @@ class AccountSettings(
     fun updateRelayGroupViewMode(mode: RelayGroupViewMode) {
         if (relayGroupViewMode.value != mode) {
             relayGroupViewMode.tryEmit(mode)
+            saveAccountSettings()
+        }
+    }
+
+    fun updateConcordViewMode(mode: ConcordViewMode) {
+        if (concordViewMode.value != mode) {
+            concordViewMode.tryEmit(mode)
             saveAccountSettings()
         }
     }
@@ -1273,6 +1286,19 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupRelayGroupList?.id != newRelayGroupList.id) {
             backupRelayGroupList = newRelayGroupList
+            saveAccountSettings()
+        }
+    }
+
+    override fun concordList() = backupConcordList
+
+    override fun updateConcordListTo(newConcordList: ConcordCommunityListEvent?) {
+        // The joined list lives entirely in NIP-44-encrypted content (secrets),
+        // so an empty `tags` is NOT an empty list — guard only on null.
+        if (newConcordList == null) return
+
+        if (backupConcordList?.id != newConcordList.id) {
+            backupConcordList = newConcordList
             saveAccountSettings()
         }
     }

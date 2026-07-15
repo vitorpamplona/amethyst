@@ -47,11 +47,12 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayA
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.resourceusage.innermostSigner
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
-import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -88,6 +89,11 @@ fun LoggedInPage(
 
     // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)
+
+    // Preloads every joined Concord community's Control planes app-wide (their wraps are addressed to
+    // derived stream keys, so the always-on DM tail can't pick them up) — so communities fold, and
+    // their channels/metadata/icon appear, without waiting for a Concord screen to be opened.
+    ConcordChannelPreload(accountViewModel)
 
     // Foreground-only loaders: follows-outbox finder + random-relay notifications.
     // Pauses on ON_STOP, resumes on ON_START.
@@ -172,20 +178,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
 
 @Composable
 private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
-    val externalSignerLauncher =
-        when (val signer = accountViewModel.account.signer) {
-            is IActivityLauncher -> {
-                signer
-            }
-
-            is NostrSignerWithClientTag if signer.inner is IActivityLauncher -> {
-                signer.inner as IActivityLauncher
-            }
-
-            else -> {
-                null
-            }
-        }
+    val externalSignerLauncher = accountViewModel.account.signer.innermostSigner() as? IActivityLauncher
 
     if (externalSignerLauncher != null) {
         val launcher =

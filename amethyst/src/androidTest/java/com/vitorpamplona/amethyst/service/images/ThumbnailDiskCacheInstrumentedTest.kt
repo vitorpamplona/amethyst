@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.images
 
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
@@ -44,7 +45,7 @@ class ThumbnailDiskCacheInstrumentedTest {
         cacheDir = File(appContext.cacheDir, "thumbnail-test-${UUID.randomUUID()}")
         cache = ThumbnailDiskCache(cacheDir)
         sourceFile = File(appContext.cacheDir, "source-${UUID.randomUUID()}.jpg")
-        val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(64, 64)
         sourceFile.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         bitmap.recycle()
     }

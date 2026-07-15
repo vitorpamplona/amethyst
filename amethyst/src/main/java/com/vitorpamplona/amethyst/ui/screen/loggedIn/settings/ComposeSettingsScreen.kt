@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.model.AccountPoWPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -195,7 +196,7 @@ private fun PowTimeEstimate(difficulty: Int) {
     val context = LocalContext.current
     val estimate by
         produceState<String?>(initialValue = null, difficulty) {
-            val rate = PoWEstimator.hashesPerSecond()
+            val rate = deviceHashesPerSecond()
             value = formatApproxDuration(context, PoWEstimator.estimateSeconds(difficulty, rate))
         }
 

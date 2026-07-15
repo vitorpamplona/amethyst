@@ -28,17 +28,36 @@ import kotlin.concurrent.Volatile
 
 class RelayAuthStatus {
     // Keeps track of auth responses to update the relay with all filters
-    // after the authentication happen
-    private val authResponseWatcher: LruCache<HexKey, AuthEventReceiptStatus> = LruCache(10)
+    // after the authentication happen.
+    // Sized generously: one connection may authenticate as many identities at once — the
+    // user plus every Concord plane stream key hosted on that relay (control + channels) —
+    // and if older entries roll off, OK-tracking / hasFinishedAllAuths() accounting degrades.
+    private val authResponseWatcher: LruCache<HexKey, AuthEventReceiptStatus> = LruCache(200)
 
     // Avoids sending multiple replies for each auth.
-    private val uniqueAuthChallengesSent: LruCache<ChallengePair, ChallengePair> = LruCache(10)
+    private val uniqueAuthChallengesSent: LruCache<ChallengePair, ChallengePair> = LruCache(200)
 
     // Latest epoch-second at which a tracked AUTH event received a successful OK.
     // Read by RelayAuthSnapshot consumers for staleness checks (e.g. proactive
     // re-AUTH on window focus).
     @Volatile
     private var lastAuthSuccessAt: Long? = null
+
+    // The most recent challenge the relay sent on this connection. NIP-42: the challenge
+    // "is valid for the duration of the connection or until another challenge is sent",
+    // and a client "must have a stored challenge associated with that relay so it can act
+    // upon that in response to the auth-required CLOSED message". We keep it so a REQ that
+    // is refused with `auth-required:` AFTER the initial AUTH (e.g. a Concord channel-plane
+    // REQ mounted once the control plane folds and reveals new stream keys) can be
+    // re-authenticated with the folded-in keys without waiting for the relay to re-challenge.
+    @Volatile
+    private var lastChallenge: String? = null
+
+    fun rememberChallenge(challenge: String) {
+        lastChallenge = challenge
+    }
+
+    fun lastChallenge(): String? = lastChallenge
 
     enum class AuthEventReceiptStatus {
         AUTHENTICATING,

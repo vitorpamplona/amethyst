@@ -80,7 +80,7 @@ fun DisplayCrashMessages(
                     onClick = {
                         nav.nav {
                             routeToMessage(
-                                user = LocalCache.getOrCreateUser("aa9047325603dacd4f8142093567973566de3b1e20a89557b728c3be4c6a844b"),
+                                user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
                                 draftMessage = stack,
                                 accountViewModel = accountViewModel,
                                 expiresDays = 30,

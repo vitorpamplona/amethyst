@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.Nickname
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.NoteState
@@ -43,6 +44,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -59,18 +61,29 @@ fun observeUserName(
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
-    val flow =
-        remember(user) {
-            user
-                .metadata()
-                .flow
-                .map {
-                    it?.info?.bestName() ?: user.pubkeyDisplayHex()
-                }.distinctUntilChanged()
-        }
+    val contactCards = accountViewModel.account.contactCards
+    val flow = remember(user) { contactCards.displayNameFlow(user) }
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(user.toBestDisplayName())
+    return flow.collectAsStateWithLifecycle(remember(user) { contactCards.cachedDisplayName(user) })
+}
+
+/**
+ * The nickname (NIP-85 petname + private summary) the logged-in account gave
+ * this user through its own contact card, decrypted from the card's content,
+ * with the card's tags so `:shortcode:` custom emojis resolve. Null when the
+ * account never nicknamed this user. Per the spec, the petname should be
+ * rendered instead of the user's display name.
+ */
+@Composable
+fun observeUserNickname(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Nickname?> {
+    val contactCards = accountViewModel.account.contactCards
+    val flow = remember(user) { contactCards.nicknameFlow(user) }
+
+    return flow.collectAsStateWithLifecycle(remember(user) { contactCards.cachedNickname(user) })
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -296,7 +309,7 @@ fun observeUserBookmarkCount(
 
     val combined =
         remember(user) {
-            kotlinx.coroutines.flow.combine(newFlow, oldFlow) { newCount, oldCount ->
+            combine(newFlow, oldFlow) { newCount, oldCount ->
                 newCount + oldCount
             }
         }

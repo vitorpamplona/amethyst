@@ -25,31 +25,20 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEndTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
+import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PostCountTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReactionsCountTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReplyCountTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountReceivedTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ReportsCountSentTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.SummaryTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.TopicTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountReceivedTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAmountSentTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDayReceivedTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapAvgAmountDaySentTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountReceivedTag
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountSentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -68,43 +57,43 @@ class ContactCardEvent(
 
     fun aboutUser() = tags.dTag()
 
-    fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
+    fun rank() = tags.rank()
 
-    fun followerCount() = tags.firstNotNullOfOrNull(FollowerCountTag::parse)
+    fun followerCount() = tags.followerCount()
 
-    fun firstCreatedAt() = tags.firstNotNullOfOrNull(FirstCreatedAtTag::parse)
+    fun firstCreatedAt() = tags.firstCreatedAt()
 
-    fun postCount() = tags.firstNotNullOfOrNull(PostCountTag::parse)
+    fun postCount() = tags.postCount()
 
-    fun replyCount() = tags.firstNotNullOfOrNull(ReplyCountTag::parse)
+    fun replyCount() = tags.replyCount()
 
-    fun reactionsCount() = tags.firstNotNullOfOrNull(ReactionsCountTag::parse)
+    fun reactionsCount() = tags.reactionsCount()
 
-    fun zapAmountReceived() = tags.firstNotNullOfOrNull(ZapAmountReceivedTag::parse)
+    fun zapAmountReceived() = tags.zapAmountReceived()
 
-    fun zapAmountSent() = tags.firstNotNullOfOrNull(ZapAmountSentTag::parse)
+    fun zapAmountSent() = tags.zapAmountSent()
 
-    fun zapCountReceived() = tags.firstNotNullOfOrNull(ZapCountReceivedTag::parse)
+    fun zapCountReceived() = tags.zapCountReceived()
 
-    fun zapCountSent() = tags.firstNotNullOfOrNull(ZapCountSentTag::parse)
+    fun zapCountSent() = tags.zapCountSent()
 
-    fun zapAvgAmountDayReceived() = tags.firstNotNullOfOrNull(ZapAvgAmountDayReceivedTag::parse)
+    fun zapAvgAmountDayReceived() = tags.zapAvgAmountDayReceived()
 
-    fun zapAvgAmountDaySent() = tags.firstNotNullOfOrNull(ZapAvgAmountDaySentTag::parse)
+    fun zapAvgAmountDaySent() = tags.zapAvgAmountDaySent()
 
-    fun reportsCountReceived() = tags.firstNotNullOfOrNull(ReportsCountReceivedTag::parse)
+    fun reportsCountReceived() = tags.reportsCountReceived()
 
-    fun reportsCountSent() = tags.firstNotNullOfOrNull(ReportsCountSentTag::parse)
+    fun reportsCountSent() = tags.reportsCountSent()
 
-    fun topics() = tags.mapNotNull(TopicTag::parse)
+    fun topics() = tags.topics()
 
-    fun activeHoursStart() = tags.firstNotNullOfOrNull(ActiveHoursStartTag::parse)
+    fun activeHoursStart() = tags.activeHoursStart()
 
-    fun activeHoursEnd() = tags.firstNotNullOfOrNull(ActiveHoursEndTag::parse)
+    fun activeHoursEnd() = tags.activeHoursEnd()
 
-    fun petName() = tags.firstNotNullOfOrNull(PetNameTag::parse)
+    fun petName() = tags.petName()
 
-    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+    fun summary() = tags.summary()
 
     companion object {
         const val KIND = 30382
@@ -123,26 +112,90 @@ class ContactCardEvent(
             targetUser: HexKey,
             petName: String? = null,
             summary: String? = null,
+            emojis: List<EmojiUrlTag> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             publicInitializer: TagArrayBuilder<ContactCardEvent>.() -> Unit = {},
             privateInitializer: TagArrayBuilder<ContactCardEvent>.() -> Unit = {},
-        ): ContactCardEvent {
-            val publicTags =
-                tagArray {
-                    dTag(targetUser)
-                    publicInitializer()
-                }
+        ): ContactCardEvent = signer.sign(build(targetUser, petName, summary, emojis, signer, createdAt, publicInitializer, privateInitializer))
 
+        /**
+         * Unsigned template for a new card about [targetUser]. The petname, summary
+         * and the NIP-30 emoji mappings their shortcodes use always go in the NIP-44
+         * encrypted content ([signer] only encrypts here; the caller signs).
+         */
+        suspend fun build(
+            targetUser: HexKey,
+            petName: String? = null,
+            summary: String? = null,
+            emojis: List<EmojiUrlTag> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            publicInitializer: TagArrayBuilder<ContactCardEvent>.() -> Unit = {},
+            privateInitializer: TagArrayBuilder<ContactCardEvent>.() -> Unit = {},
+        ): EventTemplate<ContactCardEvent> {
             val privateTags =
                 tagArray {
                     petName?.let { petName(it) }
                     summary?.let { summary(it) }
+                    emojis(emojis)
                     privateInitializer()
                 }
 
-            val encryptedContent = PrivateTagsInContent.encryptNip44(privateTags, signer)
-            return signer.sign(createdAt, KIND, publicTags, encryptedContent)
+            return eventTemplate(
+                kind = KIND,
+                description = PrivateTagsInContent.encryptNip44(privateTags, signer),
+                createdAt = createdAt,
+            ) {
+                dTag(targetUser)
+                publicInitializer()
+            }
+        }
+
+        /**
+         * Unsigned template that replaces the petname, summary and their NIP-30
+         * custom emoji mappings on an existing card, keeping every other public and
+         * private tag intact. All of them always live in the NIP-44 encrypted
+         * content — any stray public petname/summary copy is stripped. A `null`
+         * value removes the field; the private `emoji` tag set is replaced
+         * wholesale since it only exists to render the petname/summary shortcodes.
+         * [signer] only decrypts/encrypts here; the caller signs the template.
+         */
+        suspend fun updatePetNameAndSummary(
+            earlierVersion: ContactCardEvent,
+            petName: String? = null,
+            summary: String? = null,
+            emojis: List<EmojiUrlTag> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): EventTemplate<ContactCardEvent> {
+            val privateTags =
+                earlierVersion.privateTags(signer)
+                    ?: throw SignerExceptions.UnauthorizedDecryptionException()
+
+            var newPrivateTags =
+                privateTags
+                    .remove(arrayOf(PetNameTag.TAG_NAME))
+                    .remove(arrayOf(SummaryTag.TAG_NAME))
+                    .remove(arrayOf(EmojiUrlTag.TAG_NAME))
+
+            petName?.let { newPrivateTags = newPrivateTags.plus(PetNameTag.assemble(it)) }
+            summary?.let { newPrivateTags = newPrivateTags.plus(SummaryTag.assemble(it)) }
+            if (emojis.isNotEmpty()) {
+                newPrivateTags = newPrivateTags.plus(emojis.map { it.toTagArray() })
+            }
+
+            val newPublicTags =
+                earlierVersion.tags
+                    .remove(arrayOf(PetNameTag.TAG_NAME))
+                    .remove(arrayOf(SummaryTag.TAG_NAME))
+
+            return EventTemplate(
+                createdAt = createdAt,
+                kind = KIND,
+                tags = newPublicTags,
+                content = PrivateTagsInContent.encryptNip44(newPrivateTags, signer),
+            )
         }
     }
 }

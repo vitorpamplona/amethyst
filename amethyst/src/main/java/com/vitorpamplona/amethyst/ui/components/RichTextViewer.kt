@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
+import com.vitorpamplona.amethyst.commons.richtext.ConcordInviteLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
@@ -105,6 +106,7 @@ import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
@@ -533,6 +535,7 @@ private fun RenderWordWithoutPreview(
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
 
         is RelayGroupLinkSegment -> ClickableRelayGroupLink(word.segmentText, nav)
+        is ConcordInviteLinkSegment -> ClickableConcordInviteLink(word.segmentText, nav)
 
         is BlossomUriSegment -> BlossomUriRendererNoPreview(word.segmentText, accountViewModel)
 
@@ -573,6 +576,7 @@ private fun RenderWordWithPreview(
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
         is RelayGroupLinkSegment -> RelayGroupCard(word.segmentText, accountViewModel, nav)
+        is ConcordInviteLinkSegment -> ConcordInviteCard(word.segmentText, accountViewModel, nav)
         is BlossomUriSegment -> BlossomUriRenderer(word.segmentText, state, callbackUri, accountViewModel)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
@@ -1010,15 +1014,17 @@ private fun DisplayUserFromTag(
     nav: INav,
 ) {
     val meta by observeUserInfo(baseUser, accountViewModel)
+    val nickname by observeUserNickname(baseUser, accountViewModel)
+    val petName = nickname?.petName
 
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
         Row {
             CreateClickableTextWithEmoji(
-                clickablePart = remember(meta) { it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
+                clickablePart = remember(meta, petName) { petName ?: it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
                 maxLines = 1,
                 route = remember(baseUser) { routeFor(baseUser) },
                 nav = nav,
-                tags = it?.tags,
+                tags = if (petName != null) nickname?.tags else it?.tags,
             )
         }
     }

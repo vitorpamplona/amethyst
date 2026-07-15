@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
@@ -294,6 +295,22 @@ class GiftWrapEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
+        // Concord plane wraps are kind-1059 too, but their `p` tag is ephemeral and
+        // the payload opens with a derived plane key, not our identity — so route
+        // them to the Concord read-path first. A recognized wrap is fully handled
+        // there (folded / re-projected) and must not fall through to the DM path.
+        if (account.concordSessions.ingest(event)) {
+            // Concord typing heartbeats ride kind-21059 ephemeral wraps that arrive
+            // continuously while anyone in any joined community is composing. NIP-01
+            // ephemeral events (20000–29999) must never be persisted; the session has
+            // already folded the state they carried, so drop the durable wrap note now
+            // to keep LocalCache from growing without bound.
+            if (event is EphemeralGiftWrapEvent) {
+                cache.unlinkAndRemove(listOf(eventNote))
+            }
+            return
+        }
+
         if (event.recipientPubKey() != account.signer.pubKey) return
 
         val innerGiftId = event.innerEventId

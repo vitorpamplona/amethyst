@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 
 /**
@@ -39,7 +40,13 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 val FABPaddingFromBottom = 30.dp
 
 @Composable
-fun Modifier.fabBottomBarPadding(nav: INav): Modifier = if (nav.canPop()) padding(bottom = FABPaddingFromBottom) else this
+fun Modifier.fabBottomBarPadding(nav: INav): Modifier =
+    if (nav.canPop() || LocalScreenLayout.current.isLargeScreen) {
+        // canPop entries hide the bar on phones; large screens never render it at all.
+        padding(bottom = FABPaddingFromBottom)
+    } else {
+        this
+    }
 
 /**
  * Convenience wrapper that places [content] in a [Box] with [fabBottomBarPadding] applied.

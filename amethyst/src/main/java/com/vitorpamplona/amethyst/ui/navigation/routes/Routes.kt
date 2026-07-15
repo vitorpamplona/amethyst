@@ -422,6 +422,8 @@ sealed class Route {
 
     @Serializable object CalendarReminderSettings : Route()
 
+    @Serializable object ResourceUsage : Route()
+
     @Serializable object Lists : Route()
 
     @Serializable data class MyPeopleListView(
@@ -675,6 +677,49 @@ sealed class Route {
     @Serializable object RelayGroups : Route()
 
     @Serializable object RelayGroupBrowse : Route()
+
+    // Concord Channels (encrypted communities). Addressed by community id + channel id
+    // (both lowercase hex), never a host relay — a channel plane may be mirrored on all
+    // of the community's relays.
+    @Serializable data class Concord(
+        val communityId: String,
+        val channelId: String,
+        val draftId: HexKey? = null,
+        val replyTo: HexKey? = null,
+    ) : Route()
+
+    @Serializable data class ConcordServer(
+        val communityId: String,
+    ) : Route()
+
+    @Serializable data class ConcordMembers(
+        val communityId: String,
+    ) : Route()
+
+    @Serializable data class ConcordEdit(
+        val communityId: String,
+    ) : Route()
+
+    @Serializable object ConcordCreate : Route()
+
+    // Deep-link target for a Concord invite link (naddr#fragment). Opens the join flow.
+    @Serializable data class ConcordInvite(
+        val link: String,
+    ) : Route()
+
+    @Serializable object Concords : Route()
+
+    // The "minichat" of a chat message: its kind-1111 thread replies, opened from the message and
+    // rendered as a chat-within-a-chat. Keyed by the root message id; the screen resolves the chat
+    // context (Concord channel, public chat, relay group) from the note's gatherer. When opened from
+    // a Concord reply whose parent message may not be cached, [concordCommunityId]/[concordChannelId]
+    // carry the plane context (taken from the reply's channel), so the screen can still subscribe the
+    // plane and backfill the parent — without them, a reply to an unloaded parent can't pick the relay.
+    @Serializable data class ChatMinichat(
+        val rootId: HexKey,
+        val concordCommunityId: String? = null,
+        val concordChannelId: String? = null,
+    ) : Route()
 
     @Serializable data class ChannelMetadataEdit(
         val id: String? = null,

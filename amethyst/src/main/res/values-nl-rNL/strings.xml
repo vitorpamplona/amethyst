@@ -2566,7 +2566,6 @@
     <string name="nsite_source">Bron:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Openen</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Bewijs van tijdstempel</string>
     <string name="ots_info_description">Er is cryptografisch bewijs dat dit bericht vóór %1$s is ondertekend. Dit bewijs is vastgelegd in de Bitcoin-blockchain.</string>
     <string name="edit_article">Artikel bewerken</string>
@@ -3052,6 +3051,7 @@
     <string name="media_actions_dialog_title">Media-acties</string>
     <string name="playback_actions_dialog_title">Afspelen</string>
     <string name="video_quality_auto">Auto</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Casten naar apparaat</string>
     <string name="cast_stop_casting">Casten stoppen</string>

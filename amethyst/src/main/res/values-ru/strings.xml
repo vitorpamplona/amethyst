@@ -2596,8 +2596,6 @@
     
     <string name="nsite_open">Открыть</string>
     
-    <string name="existed_since">OTS: %1$s</string>
-    
     <string name="ots_info_title">Доказательство временно́й метки</string>
     
     <string name="ots_info_description">Есть доказательство того, что эта публикация была подписана до %1$s. Доказательство зафиксировано в блокчейне Bitcoin в указанную дату и время.</string>

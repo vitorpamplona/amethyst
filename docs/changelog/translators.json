@@ -141,15 +141,15 @@
         ]
       },
       {
-        "user": "hypnotichemionus4",
+        "user": "summoner001",
         "languages": [
-          "Chinese Simplified"
+          "Hungarian"
         ]
       },
       {
-        "user": "crowdin.pretended462",
+        "user": "hypnotichemionus4",
         "languages": [
-          "German"
+          "Chinese Simplified"
         ]
       },
       {
@@ -159,9 +159,9 @@
         ]
       },
       {
-        "user": "summoner001",
+        "user": "crowdin.pretended462",
         "languages": [
-          "Hungarian"
+          "German"
         ]
       },
       {
@@ -176,6 +176,12 @@
           "Spanish",
           "Spanish, Mexico",
           "Spanish, United States"
+        ]
+      },
+      {
+        "user": "davotoula",
+        "languages": [
+          "Czech"
         ]
       },
       {
@@ -240,10 +246,6 @@
       },
       {
         "user": "adhrasreoshiathoi",
-        "languages": []
-      },
-      {
-        "user": "davotoula",
         "languages": []
       },
       {

@@ -24,10 +24,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -80,10 +83,14 @@ fun DisappearingScaffold(
 ) {
     val state = rememberDisappearingBarState()
 
+    // Large screens (rail / permanent drawer) pin the chrome: bars never slide away on
+    // scroll, and the immersive status-bar hiding stays off.
+    val canHideBars = allowBarHide && !LocalScreenLayout.current.isLargeScreen
+
     // Hold the latest values in state so the NSC's captured lambda stays fresh across
     // recompositions without rebuilding the NSC itself.
     val latestIsActive by rememberUpdatedState(isActive)
-    val latestAllowBarHide by rememberUpdatedState(allowBarHide)
+    val latestAllowBarHide by rememberUpdatedState(canHideBars)
     val latestAccountViewModel by rememberUpdatedState(accountViewModel)
 
     val connection =
@@ -100,9 +107,17 @@ fun DisappearingScaffold(
         }
 
     // Only wire the lifecycle observer + system-bar control when the scaffold actually moves its bars.
-    if (allowBarHide) {
+    if (canHideBars) {
         ResetBarsOnResume(state)
         ImmersiveStatusBarEffect(state)
+    }
+
+    // If the bars were scrolled away when hiding got disabled (e.g. the window grew to a
+    // large tier mid-scroll), nothing above can bring them back — the nested-scroll
+    // connection and the resume reset are gone. Snap them visible here instead of
+    // leaving the chrome stranded off-screen.
+    LaunchedEffect(canHideBars, state) {
+        if (!canHideBars) state.resetToVisible()
     }
 
     // When bars are pinned, skip attaching the nested-scroll connection entirely.
@@ -110,14 +125,15 @@ fun DisappearingScaffold(
     // LocalContentColor, matching M3 Scaffold's behaviour (without it, default text
     // color falls back to Color.Black and is invisible on the dark theme).
     val baseModifier =
-        if (allowBarHide) {
+        if (canHideBars) {
             Modifier.imePadding().nestedScroll(connection)
         } else {
             Modifier.imePadding()
         }
     val rootModifier =
         baseModifier
-            .let { if (topBar == null) it.statusBarsPadding() else it }
+            // systemBars (not just statusBars) so a desktop window's caption bar is respected too.
+            .let { if (topBar == null) it.windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)) else it }
             .let { if (bottomBar == null) it.navigationBarsPadding() else it }
 
     Surface(

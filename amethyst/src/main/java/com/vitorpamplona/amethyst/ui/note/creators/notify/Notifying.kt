@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -49,7 +50,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -58,8 +62,9 @@ fun Notifying(
     accountViewModel: AccountViewModel,
     label: String? = null,
     showWhenEmpty: Boolean = false,
+    mutedNotifies: ImmutableSet<HexKey> = persistentSetOf(),
     onAddUser: (() -> Unit)? = null,
-    onClick: (User) -> Unit,
+    onToggleNotify: (User) -> Unit,
 ) {
     val mentions = baseMentions?.toSet()
 
@@ -83,7 +88,7 @@ fun Notifying(
             // spacing matches the horizontal spacing between chips.
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                 mentions?.forEach { user ->
-                    NotifyUserChip(user, accountViewModel) { onClick(user) }
+                    NotifyUserChip(user, user.pubkeyHex in mutedNotifies, accountViewModel) { onToggleNotify(user) }
                 }
 
                 if (onAddUser != null) {
@@ -97,12 +102,16 @@ fun Notifying(
 @Composable
 private fun NotifyUserChip(
     user: User,
+    isMuted: Boolean,
     accountViewModel: AccountViewModel,
-    onRemove: () -> Unit,
+    onToggleNotify: () -> Unit,
 ) {
     InputChip(
         selected = false,
-        onClick = onRemove,
+        onClick = onToggleNotify,
+        // The bell-off icon alone is easy to miss at chip size, so a muted member
+        // also fades as a second cue while staying in the list for easy re-adding.
+        modifier = if (isMuted) Modifier.alpha(0.4f) else Modifier,
         label = {
             UsernameDisplay(
                 user,
@@ -119,8 +128,8 @@ private fun NotifyUserChip(
         },
         trailingIcon = {
             Icon(
-                symbol = MaterialSymbols.Close,
-                contentDescription = stringRes(R.string.notify_remove_user),
+                symbol = if (isMuted) MaterialSymbols.NotificationsOff else MaterialSymbols.Notifications,
+                contentDescription = stringRes(if (isMuted) R.string.notify_unmute_user else R.string.notify_mute_user),
                 modifier = Modifier.size(InputChipDefaults.IconSize),
             )
         },

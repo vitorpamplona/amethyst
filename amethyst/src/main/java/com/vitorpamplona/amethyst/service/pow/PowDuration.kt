@@ -22,9 +22,20 @@ package com.vitorpamplona.amethyst.service.pow
 
 import android.content.Context
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlin.math.roundToLong
+
+/**
+ * This device's effective mining rate: the [PoWEstimator] benchmark run with
+ * the same worker count the mining queue uses (half the cores, see
+ * [PoWPolicy.minerWorkers] and AppModules.powPublishQueue). Every UI estimate
+ * must use this rate, or it would describe a single-threaded miner that no
+ * longer exists. Cached after the first call (~250 ms).
+ */
+suspend fun deviceHashesPerSecond(): Double = PoWEstimator.hashesPerSecond(PoWPolicy.minerWorkers(Runtime.getRuntime().availableProcessors()))
 
 /**
  * "45 seconds" / "10 minutes" / "3 hours" — the one human-readable rendering

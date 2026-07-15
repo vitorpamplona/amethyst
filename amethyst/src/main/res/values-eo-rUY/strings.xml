@@ -2704,6 +2704,7 @@
     <string name="media_actions_dialog_title">Mediaj Agoj</string>
     <string name="playback_actions_dialog_title">Reproduktado</string>
     <string name="video_quality_auto">Aŭtomata</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Transigi al aparato</string>
     <string name="cast_stop_casting">Ĉesi transiĝon</string>

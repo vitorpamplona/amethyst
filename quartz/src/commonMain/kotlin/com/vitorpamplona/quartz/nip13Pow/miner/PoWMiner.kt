@@ -25,19 +25,30 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256Into
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 class PoWMiner(
     val buffer: MiningBuffer,
     val desiredPoW: Int,
     val isActive: () -> Boolean = { true },
+    // first nonce byte the search is allowed to change; bytes between
+    // nonceStarts and this index stay fixed (a parallel worker's prefix).
+    val searchFrom: Int = buffer.nonceStarts,
 ) {
     val emptyBytesForDesiredPoW = desiredPoW / 8
 
-    fun reachedDesiredPoW(byteArray: ByteArray) = PoWRankEvaluator.atLeastPowRank(sha256(byteArray), desiredPoW, emptyBytesForDesiredPoW)
+    // sha256Into writes every attempt's hash here instead of allocating a fresh
+    // 32-byte array per hash, keeping the hot loop allocation-free.
+    private val hashOut = ByteArray(32)
 
-    fun run() = runDigit(buffer.nonceStarts)
+    fun reachedDesiredPoW(byteArray: ByteArray) = PoWRankEvaluator.atLeastPowRank(sha256Into(hashOut, byteArray, byteArray.size), desiredPoW, emptyBytesForDesiredPoW)
+
+    fun run() = runDigit(searchFrom)
 
     private fun runDigit(index: Int): Boolean {
         // checks once every VALID_BYTES.size^2 hashes: cheap enough to not slow
@@ -74,6 +85,10 @@ class PoWMiner(
          * The miner creates a stringified json template and changes the nonce directly in the UTF-8 ByteArray representation
          * to avoid having to recompute the json objects and stringify it.
          *
+         * The search enumerates the nonce space deterministically ([VALID_BYTES]
+         * in order at every position), so for a given template and pubkey every
+         * call hashes the same sequence of candidates.
+         *
          * [isActive] is polled while mining; returning false aborts the search with a
          * [CancellationException] so callers can cancel long-running jobs cooperatively.
          */
@@ -82,6 +97,19 @@ class PoWMiner(
             pubKey: HexKey,
             desiredPoW: Int,
             isActive: () -> Boolean = { true },
+        ): EventTemplate<T> = search(template, pubKey, desiredPoW, isActive, "")
+
+        /**
+         * [noncePrefix] is kept verbatim at the front of the nonce while only the
+         * bytes after it are enumerated — parallel workers get distinct prefixes
+         * so their search spaces never overlap.
+         */
+        private fun <T : Event> search(
+            template: EventTemplate<T>,
+            pubKey: HexKey,
+            desiredPoW: Int,
+            isActive: () -> Boolean,
+            noncePrefix: String,
         ): EventTemplate<T> {
             // sha256 ids have 256 bits; anything outside would index past the
             // hash (or never terminate) deep inside the hot loop.
@@ -90,7 +118,7 @@ class PoWMiner(
             var nextSize = STARTING_NONCE_SIZE
 
             do {
-                val initialNonce = randomBase(nextSize)
+                val initialNonce = noncePrefix + randomBase(nextSize)
 
                 val bytes =
                     EventHasherSerializer
@@ -104,9 +132,9 @@ class PoWMiner(
 
                 val startIndex = bytes.indexOf(initialNonce.encodeToByteArray())
 
-                val buffer = MiningBuffer(bytes, startIndex, startIndex + nextSize)
+                val buffer = MiningBuffer(bytes, startIndex, startIndex + initialNonce.length)
 
-                if (PoWMiner(buffer, desiredPoW, isActive).run()) {
+                if (PoWMiner(buffer, desiredPoW, isActive, startIndex + noncePrefix.length).run()) {
                     return EventTemplate(
                         template.createdAt,
                         template.kind,
@@ -119,6 +147,80 @@ class PoWMiner(
             } while (nextSize < 50)
 
             throw RuntimeException("Could not find PoW")
+        }
+
+        /**
+         * Distinct fixed nonce prefix for each racing worker, encoding the worker
+         * index in base-[VALID_CHARS].size at the smallest width that fits
+         * [workers] — one char up to 73 workers.
+         */
+        private fun workerPrefix(
+            worker: Int,
+            workers: Int,
+        ): String {
+            var width = 1
+            var capacity = VALID_CHARS.size
+            while (capacity < workers) {
+                width++
+                capacity *= VALID_CHARS.size
+            }
+
+            var remaining = worker
+            val prefix = CharArray(width)
+            for (i in width - 1 downTo 0) {
+                prefix[i] = VALID_CHARS[remaining % VALID_CHARS.size]
+                remaining /= VALID_CHARS.size
+            }
+            return prefix.concatToString()
+        }
+
+        /**
+         * Multi-core variant of [run]: races [workers] searches over disjoint
+         * slices of the nonce space (each worker's nonce carries a distinct fixed
+         * prefix) and returns the first template to reach [desiredPoW]. Workers
+         * share nothing but the finish flag, so the hash rate scales roughly
+         * linearly with cores.
+         *
+         * Throws the same [CancellationException] as [run] when [isActive] flips
+         * false before a nonce is found.
+         */
+        suspend fun <T : Event> mine(
+            template: EventTemplate<T>,
+            pubKey: HexKey,
+            desiredPoW: Int,
+            workers: Int = 1,
+            isActive: () -> Boolean = { true },
+        ): EventTemplate<T> {
+            require(workers >= 1) { "workers must be >= 1, was $workers" }
+            if (workers == 1) return run(template, pubKey, desiredPoW, isActive)
+
+            return coroutineScope {
+                val winner = CompletableDeferred<EventTemplate<T>>()
+                val race =
+                    launch {
+                        repeat(workers) { worker ->
+                            launch(Dispatchers.Default) {
+                                winner.complete(
+                                    search(template, pubKey, desiredPoW, {
+                                        isActive() && !winner.isCompleted
+                                    }, workerPrefix(worker, workers)),
+                                )
+                            }
+                        }
+                    }
+                // every worker aborting without a win means the caller's isActive
+                // flipped: rethrow the CancellationException the workers swallowed
+                // (a losing worker's complete() is a no-op, so this can't clobber
+                // a real result).
+                race.invokeOnCompletion {
+                    winner.completeExceptionally(CancellationException("PoW mining was cancelled"))
+                }
+                try {
+                    winner.await()
+                } finally {
+                    race.cancel()
+                }
+            }
         }
     }
 }

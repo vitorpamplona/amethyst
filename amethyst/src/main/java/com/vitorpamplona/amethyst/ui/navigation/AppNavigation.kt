@@ -29,8 +29,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,12 +44,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
+import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
+import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsScreen
@@ -55,6 +61,10 @@ import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
+import com.vitorpamplona.amethyst.ui.layouts.rememberScreenLayoutSpec
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.LocalTabReselectCoordinator
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.TabReselectCoordinator
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
@@ -97,9 +107,17 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.minichat.MinichatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCreateScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordEditScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordHomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
@@ -228,6 +246,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NotificationSettin
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.OtsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ProfileUiSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ReactionsSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ResourceUsageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SpammingUsersScreen
@@ -277,38 +296,56 @@ fun AppNavigation(
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
-        Box(Modifier.fillMaxSize()) {
-            BuildNavigation(accountViewModel, nav)
-            // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
-            // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
-            // preloader below and the full-screen launcher both need. Not API-gated: every device's
-            // launcher benefits, and it's the only preload step that runs below API 30.
-            FavoriteAppManifestPreloader(accountViewModel)
-            // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
-            // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
-            // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
-                    .collectAsStateWithLifecycle()
-                EmbeddedTabLayer(bottomBarItems.favoriteIds())
-                // Warm every pinned tab at startup so the first tap is instant (content already local).
-                EmbeddedTabPreloader(accountViewModel)
-                // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
-                // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
-                EmbeddedTabThemeWatcher()
+    // One layout decision per window size for the whole shell: bottom bar vs rail vs
+    // permanent drawer, plus the docked notification panel. Every screen, bar and panel
+    // below reads the same spec through LocalScreenLayout. The provider wraps this whole
+    // function body so anything added to AppNavigation later is inside it by construction.
+    val screenLayout = rememberScreenLayoutSpec()
+    val tabReselectCoordinator = remember { TabReselectCoordinator() }
+
+    // Mirror the tier for the nav-transition specs, which run outside composition and so
+    // can't read LocalScreenLayout (see NavTransitionTier).
+    SideEffect { NavTransitionTier.isLargeScreen = screenLayout.isLargeScreen }
+
+    CompositionLocalProvider(
+        LocalScreenLayout provides screenLayout,
+        LocalTabReselectCoordinator provides tabReselectCoordinator,
+    ) {
+        AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
+            Box(Modifier.fillMaxSize()) {
+                BuildNavigation(accountViewModel, nav)
+                // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
+                // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
+                // preloader below and the full-screen launcher both need. Not API-gated: every device's
+                // launcher benefits, and it's the only preload step that runs below API 30.
+                FavoriteAppManifestPreloader(accountViewModel)
+                // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
+                // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
+                // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+                        .collectAsStateWithLifecycle()
+                    EmbeddedTabLayer(bottomBarItems.favoriteIds())
+                    // Warm every pinned tab at startup so the first tap is instant (content already local).
+                    EmbeddedTabPreloader(accountViewModel)
+                    // Rebuild the warm surfaces in the new theme when the app's DARK/LIGHT preference flips
+                    // (an embed WebView's theme is fixed at construction, so it can't follow a live switch).
+                    EmbeddedTabThemeWatcher()
+                }
             }
         }
+
+        TrackScreenTime(nav)
+        NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
+
+        DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
+        DisplayNotifyMessages(accountViewModel, nav)
+        DisplayCrashMessages(accountViewModel, nav)
+        DisplayResourceUsageAlert(accountViewModel, nav)
+        DisplayBroadcastProgress(accountViewModel)
+
+        ObserveIncomingCalls(accountViewModel)
     }
-
-    NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
-
-    DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
-    DisplayNotifyMessages(accountViewModel, nav)
-    DisplayCrashMessages(accountViewModel, nav)
-    DisplayBroadcastProgress(accountViewModel)
-
-    ObserveIncomingCalls(accountViewModel)
 }
 
 @Composable
@@ -324,6 +361,27 @@ private fun ObserveIncomingCalls(accountViewModel: AccountViewModel) {
     }
 }
 
+/**
+ * Feeds the resource-usage ledger with time-per-screen. Only the route's
+ * base name crosses this boundary — [ScreenTimeIntegrator.screenNameOf]
+ * strips every navigation argument first, so the ledger can say "Profile"
+ * but never which profile.
+ */
+@Composable
+private fun TrackScreenTime(nav: Nav) {
+    DisposableEffect(nav.controller) {
+        val listener =
+            NavController.OnDestinationChangedListener { _, destination, _ ->
+                Amethyst.instance.screenTime.onScreen(ScreenTimeIntegrator.screenNameOf(destination.route))
+            }
+        nav.controller.addOnDestinationChangedListener(listener)
+        onDispose {
+            nav.controller.removeOnDestinationChangedListener(listener)
+            Amethyst.instance.screenTime.onScreen(null)
+        }
+    }
+}
+
 @Composable
 fun BuildNavigation(
     accountViewModel: AccountViewModel,
@@ -335,9 +393,9 @@ fun BuildNavigation(
         enterTransition = { fadeIn(animationSpec = tween(200)) },
         exitTransition = { fadeOut(animationSpec = tween(200)) },
     ) {
-        composable<Route.Home> { HomeScreen(accountViewModel, nav) }
+        composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
-        composable<Route.Video> { VideoScreen(accountViewModel, nav) }
+        composableCapped<Route.Video> { VideoScreen(accountViewModel, nav) }
         composableArgs<Route.Discover> { DiscoverScreen(it.initialTab, accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
@@ -354,10 +412,10 @@ fun BuildNavigation(
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
-        composableFromEnd<Route.Browser> { BrowserScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Browser>(capWidth = false) { BrowserScreen(accountViewModel, nav) }
         composableFromEnd<Route.FavoriteApps> { FavoriteAppsScreen(accountViewModel, nav) }
-        composableFromEndArgs<Route.WebApp> { WebAppScreen(it.url, accountViewModel, nav) }
-        composableFromEndArgs<Route.NostrApp> { NostrAppScreen(it.coordinate, accountViewModel, nav) }
+        composableFromEndArgs<Route.WebApp>(capWidth = false) { WebAppScreen(it.url, accountViewModel, nav) }
+        composableFromEndArgs<Route.NostrApp>(capWidth = false) { NostrAppScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
@@ -396,7 +454,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.NewMusicPlaylist> { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
-        composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
+        composableCapped<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletSend> { WalletSendScreen(it.walletId, accountViewModel, nav) }
@@ -449,7 +507,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.TopUpMint> { TopUpMintScreen(it.mintUrl, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
-        composable<Route.Search> { SearchScreen(accountViewModel, nav) }
+        composableCapped<Route.Search> { SearchScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
@@ -481,6 +539,7 @@ fun BuildNavigation(
         composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CallSettings> { CallSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.NotificationSettings> { NotificationSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ResourceUsage> { ResourceUsageScreen(accountViewModel, nav) }
         composableFromEnd<Route.ImportFollowsSelectUser> { ImportFollowListSelectUserScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ImportFollowsPickFollows> {
             ImportFollowListPickFollowsScreen(it.userHex, accountViewModel, nav)
@@ -585,6 +644,61 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
+
+        composableFromEndArgs<Route.Concord> {
+            ConcordChannelScreen(
+                communityId = it.communityId,
+                channelId = it.channelId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ChatMinichat> {
+            MinichatScreen(
+                rootId = it.rootId,
+                concordCommunityId = it.concordCommunityId,
+                concordChannelId = it.concordChannelId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordServer> {
+            ConcordChannelListScreen(
+                communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordMembers> {
+            ConcordMembersScreen(
+                communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordEdit> {
+            ConcordEditScreen(
+                communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordInvite> {
+            ConcordInviteScreen(
+                link = it.link,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEnd<Route.Concords> { ConcordHomeScreen(accountViewModel, nav) }
+
+        composableFromEnd<Route.ConcordCreate> { ConcordCreateScreen(accountViewModel, nav) }
 
         composableFromEndArgs<Route.RelayGroupMembers> {
             RelayGroupMembersScreen(

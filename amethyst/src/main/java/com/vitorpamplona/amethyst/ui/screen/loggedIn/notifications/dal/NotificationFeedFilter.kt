@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -64,6 +65,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -79,6 +81,8 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,33 +123,57 @@ class NotificationFeedFilter(
             )
 
         val NOTIFICATION_KINDS =
-            // The core subscription kinds are shared with Desktop through
-            // `commons/.../moderation/notifications/NotificationKinds.SUBSCRIPTION_KINDS`
-            // so a change on either platform automatically propagates.
-            // Android-only extras (badge awards, git issues/patches/PRs,
-            // highlights, polls, videos, voice, public messages,
-            // live-activities chat) stay here because Desktop has no
-            // rendering for those kinds today.
-            com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationKinds
-                .SUBSCRIPTION_KINDS
-                .toSet() +
-                setOf(
-                    BadgeAwardEvent.KIND,
-                    GitIssueEvent.KIND,
-                    GitPatchEvent.KIND,
-                    GitPullRequestEvent.KIND,
-                    GitPullRequestUpdateEvent.KIND,
-                    HighlightEvent.KIND,
-                    LiveActivitiesChatMessageEvent.KIND,
-                    PictureEvent.KIND,
-                    PollEvent.KIND,
-                    ZapPollEvent.KIND,
-                    PublicMessageEvent.KIND,
-                    VideoNormalEvent.KIND,
-                    VideoShortEvent.KIND,
-                    VoiceEvent.KIND,
-                    VoiceReplyEvent.KIND,
-                ) + ADDRESSABLE_KINDS
+            // Kinds that RENDER as a row on the Notifications tab. This is a
+            // display gate over whatever is already in LocalCache — it plays no
+            // part in relay subscriptions (those live in
+            // FilterNotificationsToPubkey, the chat datasources, and the wallet
+            // assembler). It deliberately does NOT share Desktop's
+            // `NotificationKinds.SUBSCRIPTION_KINDS`: that list answers "what to
+            // ask relays for / toast on" and includes envelope kinds like
+            // GiftWrap (1059), whose created_at is randomized up to 2 days back
+            // (NIP-59). Envelopes never render here — the unwrapped inner event
+            // (kind 14/15/…) is the feed row, same rule NotificationDispatcher
+            // applies to push. NotificationKindsContractTest pins the
+            // relationship between the two lists.
+            setOf(
+                BadgeAwardEvent.KIND,
+                ChannelMessageEvent.KIND,
+                // kind-9 chat message, shared by two features:
+                //  • NIP-29 group chat: a reply to my group message is a kind-9 that p-tags me
+                //    (see ChannelNewMessageViewModel), fetched at startup by
+                //    filterGroupNotificationsToPubkey.
+                //  • NIP-C7 / Concord: an inline reply (Concord's default reply mode) or an @-mention
+                //    p-tags me; a minichat reply is a kind-1111 CommentEvent below.
+                // Either way it notifies only when it p-tags me — a plain channel message tags no one
+                // and never reaches here. Without kind 9 the acceptableEvent kind gate would drop these
+                // replies before the p-tag check, so they'd never render on the Notifications tab.
+                ChatEvent.KIND,
+                ChatMessageEvent.KIND,
+                ChatMessageEncryptedFileHeaderEvent.KIND,
+                CommentEvent.KIND,
+                GenericRepostEvent.KIND,
+                GitIssueEvent.KIND,
+                GitPatchEvent.KIND,
+                GitPullRequestEvent.KIND,
+                GitPullRequestUpdateEvent.KIND,
+                HighlightEvent.KIND,
+                TextNoteEvent.KIND,
+                ReactionEvent.KIND,
+                RepostEvent.KIND,
+                LnZapEvent.KIND,
+                NutzapEvent.KIND,
+                OnchainZapEvent.KIND,
+                LiveActivitiesChatMessageEvent.KIND,
+                PictureEvent.KIND,
+                PollEvent.KIND,
+                ZapPollEvent.KIND,
+                PrivateDmEvent.KIND,
+                PublicMessageEvent.KIND,
+                VideoNormalEvent.KIND,
+                VideoShortEvent.KIND,
+                VoiceEvent.KIND,
+                VoiceReplyEvent.KIND,
+            ) + ADDRESSABLE_KINDS
 
         // How deep to walk a public chat reply chain looking for one of the
         // user's own messages. Bounds the cost on very long threads; the
@@ -418,6 +446,40 @@ class NotificationFeedFilter(
         // Chess events bypass the follow filter — opponents may not be followed
         val isChessEvent = noteEvent is LiveChessGameAcceptEvent || noteEvent is LiveChessMoveEvent
 
+        // Concord community messages bypass the follow filter too: a reply/reaction that p-tags me
+        // in a community I've joined is relevant whether or not I follow that member (fellow members
+        // usually aren't follows). The p-tag gate below still applies, so only genuine replies /
+        // reactions / mentions notify — general channel chatter that doesn't tag me never does.
+        //
+        // A ConcordChannel gatherer alone isn't enough: notes live in the global LocalCache and keep a
+        // gatherer reference from every account/community that ever touched them, so require the
+        // community to be one THIS account has currently joined (mirrors the Marmot check above) —
+        // otherwise a note from a prior account or a left community would leak onto Notifications.
+        fun Note?.inJoinedConcordCommunity() =
+            this?.inGatherers?.any { g ->
+                g is ConcordChannel && account.concordSessions.sessionFor(g.channelId.communityId) != null
+            } == true
+
+        val isConcordMessage = it.inJoinedConcordCommunity()
+
+        // A like/repost is NOT itself attached to the channel gatherer — only chat messages/replies are
+        // (see LocalCache.consumeConcordRumor) — so `inGatherers` never flags it as Concord, and its
+        // author (a fellow member) usually isn't a follow, so it falls through the follow filter and is
+        // dropped. Recognize it through its TARGET: a reaction/repost pointing at a message in a
+        // community I've joined is a Concord reaction, and bypasses the follow filter like a reply does.
+        // Relevance (does it target ME) is still enforced below by the p-tag gate — a well-formed kind-7
+        // p-tags the reacted author (NIP-25), which is exactly what our own ChannelChat.reaction writes.
+        val isConcordReaction =
+            (noteEvent is ReactionEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent) &&
+                it.replyTo?.lastOrNull().inJoinedConcordCommunity()
+
+        val isConcord = isConcordMessage || isConcordReaction
+
+        // Concord CHAT (a message/reply) honors the "Messages in notifications" toggle that silences DMs
+        // and Marmot groups above. A reaction isn't a message — regular reactions ignore that toggle, so
+        // Concord reactions do too (only isConcordMessage is gated).
+        if (isConcordMessage && !showMessages) return false
+
         // Global keeps every event that p-tags the user; Selected (and the
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
@@ -431,11 +493,14 @@ class NotificationFeedFilter(
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            (isChessEvent || isConcord || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex)) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
-            (isRawGlobal || tagsAnEventByUser(it, loggedInUserHex))
+            // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/
+            // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
+            // otherwise need my target message already loaded to resolve replyTo.
+            (isRawGlobal || isConcord || tagsAnEventByUser(it, loggedInUserHex))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

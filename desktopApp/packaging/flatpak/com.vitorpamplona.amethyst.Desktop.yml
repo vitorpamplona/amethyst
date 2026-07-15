@@ -8,8 +8,6 @@ app-id: com.vitorpamplona.amethyst.Desktop
 runtime: org.freedesktop.Platform
 runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.openjdk21
 command: amethyst-desktop
 
 add-extensions:
@@ -26,8 +24,11 @@ cleanup-commands:
 finish-args:
   - --share=network
   - --share=ipc
-  - --socket=fallback-x11
-  - --socket=wayland
+  # Compose Desktop renders through AWT/skiko, which is X11-only on Linux
+  # (runs under XWayland on Wayland sessions). fallback-x11 + wayland would
+  # leave the app without a usable display socket on Wayland sessions, so
+  # grant x11 unconditionally.
+  - --socket=x11
   - --socket=pulseaudio
   - --device=dri
   - --filesystem=xdg-download
@@ -37,12 +38,10 @@ finish-args:
   # GStreamer plugin/cache paths (org.freedesktop.Platform exposes them by default).
   - --env=GST_PLUGIN_SYSTEM_PATH=/usr/lib/x86_64-linux-gnu/gstreamer-1.0
 
+# No openjdk module / sdk-extension: the jpackage tree copied below already
+# bundles its own trimmed JRE under Amethyst/lib/runtime/, so installing a
+# second JRE at /app/jre would only bloat the bundle.
 modules:
-  - name: openjdk
-    buildsystem: simple
-    build-commands:
-      - /usr/lib/sdk/openjdk21/install.sh
-
   - name: amethyst-desktop
     buildsystem: simple
     build-commands:
@@ -53,7 +52,7 @@ modules:
       - install -Dm755 amethyst-desktop.sh /app/bin/amethyst-desktop
       - install -Dm644 com.vitorpamplona.amethyst.Desktop.metainfo.xml -t /app/share/metainfo/
       - install -Dm644 com.vitorpamplona.amethyst.Desktop.desktop -t /app/share/applications/
-      - install -Dm644 icons/256/com.vitorpamplona.amethyst.Desktop.png -t /app/share/icons/hicolor/256x256/apps/
+      - install -Dm644 icons/512/com.vitorpamplona.amethyst.Desktop.png -t /app/share/icons/hicolor/512x512/apps/
     sources:
       # Built artifact from `./gradlew :desktopApp:createReleaseDistributable`.
       # Path matches Compose Multiplatform 1.11's output layout.
@@ -73,5 +72,6 @@ modules:
       - type: file
         path: com.vitorpamplona.amethyst.Desktop.desktop
 
-      - type: file
-        path: icons/256/com.vitorpamplona.amethyst.Desktop.png
+      - type: dir
+        path: icons
+        dest: icons

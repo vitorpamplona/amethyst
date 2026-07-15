@@ -105,11 +105,14 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                     onCheckedChange = {
                         enabled = it
                         prefs.setEnabled(it)
-                        // Toggling off doesn't cancel the worker — the worker itself short-
-                        // circuits when isEnabled() returns false. Keeping the schedule alive
-                        // means flipping it back on takes effect immediately without needing a
-                        // re-launch via AppModules.
-                        if (it) CalendarReminderWorker.schedule(context)
+                        // Cancel eagerly on disable so the periodic worker stops waking the
+                        // process; re-enabling re-schedules immediately, and the ACCEPTED-RSVP
+                        // observer in AppModules re-schedules on the next relevant RSVP too.
+                        if (it) {
+                            CalendarReminderWorker.schedule(context)
+                        } else {
+                            CalendarReminderWorker.cancel(context)
+                        }
                     },
                 )
             }

@@ -2726,8 +2726,6 @@
     
     <string name="nsite_open">Buka</string>
     
-    <string name="existed_since">OTS: %1$s</string>
-    
     <string name="ots_info_title">Bukti Stempel Waktu</string>
     
     <string name="ots_info_description">Ada bukti bahwa postingan ini ditandatangani sebelum %1$s. Bukti ini dicap dalam blockchain Bitcoin pada tanggal dan waktu tersebut.</string>

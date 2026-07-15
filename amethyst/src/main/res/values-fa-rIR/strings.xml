@@ -2253,7 +2253,6 @@
     <string name="nsite_source">منبع:</string>
     <string name="nsite_servers">سرورها:</string>
     <string name="nsite_open">باز کردن</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">اثبات مهر زمان</string>
     <string name="ots_info_description">مدرکی وجود دارد که ثابت کند این پست پیش از %1$s امضا شده است. این مدرک در بلاکچین بیتکوین در آن تاریخ و زمان ثبت شده است.</string>
     <string name="edit_article">ویرایش مقاله</string>
@@ -2718,6 +2717,7 @@
     <string name="media_actions_dialog_title">اقدامات رسانه</string>
     <string name="playback_actions_dialog_title">پخش</string>
     <string name="video_quality_auto">خودکار</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">پخش روی دستگاه</string>
     <string name="cast_stop_casting">توقف پخش</string>

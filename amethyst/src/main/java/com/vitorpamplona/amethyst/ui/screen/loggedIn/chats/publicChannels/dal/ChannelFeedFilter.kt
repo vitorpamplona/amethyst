@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
 class ChannelFeedFilter(
     val channel: Channel,
@@ -36,12 +37,16 @@ class ChannelFeedFilter(
 
     override fun changesFlow() = channel.changesFlow()
 
-    // returns the last Note of each user.
-    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { _, it -> account.isAcceptable(it) })
+    // A kind-1111 comment is a *minichat* reply — it lives in the thread opened from its
+    // root message, not as a flat sibling in the main timeline (an inline reply is a normal
+    // kind-9/42 message and stays). Everything else the channel gathered is a timeline message.
+    private fun isTimelineMessage(note: Note): Boolean = note.event !is CommentEvent && account.isAcceptable(note)
+
+    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { _, it -> isTimelineMessage(it) })
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> =
         newItems
-            .filter { channel.notes.containsKey(it.idHex) && account.isAcceptable(it) }
+            .filter { channel.notes.containsKey(it.idHex) && isTimelineMessage(it) }
             .toSet()
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

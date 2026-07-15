@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.FollowingIcon
@@ -79,6 +80,8 @@ private fun WatchAndDisplayUser(
     nav: INav,
 ) {
     val userState by observeUserInfo(author, accountViewModel)
+    val nickname by observeUserNickname(author, accountViewModel)
+    val petName = nickname?.petName
 
     val isLightTheme = MaterialTheme.colorScheme.isLight
     val nameColor =
@@ -91,7 +94,7 @@ private fun WatchAndDisplayUser(
             InnerUserPicture(
                 userHex = author.pubkeyHex,
                 userPicture = userState?.info?.picture,
-                userName = userState?.info?.bestName(),
+                userName = petName ?: userState?.info?.bestName(),
                 size = Size20dp,
                 modifier = Modifier,
                 accountViewModel = accountViewModel,
@@ -108,8 +111,8 @@ private fun WatchAndDisplayUser(
         name = {
             if (userState != null) {
                 CreateTextWithEmoji(
-                    text = userState?.info?.bestName() ?: author.pubkeyDisplayHex(),
-                    tags = userState?.tags ?: EmptyTagList,
+                    text = petName ?: userState?.info?.bestName() ?: author.pubkeyDisplayHex(),
+                    tags = (if (petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
                     color = nameColor,
                     maxLines = 1,
                     fontWeight = FontWeight.Bold,

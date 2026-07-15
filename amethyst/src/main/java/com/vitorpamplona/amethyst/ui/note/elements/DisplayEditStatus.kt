@@ -20,38 +20,33 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.clickable
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
+/**
+ * Pencil marking an edited note; tapping cycles through the versions. The
+ * bare pencil is the latest edit — a suffix appears only while browsing
+ * older versions.
+ */
 @Composable
 fun DisplayEditStatus(editState: EditState) {
-    Text(
-        text =
-            buildAnnotatedString {
-                if (editState.showingVersion.value == editState.originalVersionId()) {
-                    append(stringRes(id = R.string.original))
-                } else if (editState.showingVersion.value == editState.lastVersionId()) {
-                    append(stringRes(id = R.string.edited))
-                } else {
-                    append(stringRes(id = R.string.edited_number, editState.versionId()))
-                }
-            },
-        style =
-            LocalTextStyle.current.copy(
-                color = MaterialTheme.colorScheme.placeholderText,
-                fontWeight = FontWeight.Bold,
-            ),
-        maxLines = 1,
-        modifier = HalfStartPadding.clickable { editState.nextModification() },
+    val label =
+        if (editState.showingVersion.value == editState.lastVersionId()) {
+            null
+        } else if (editState.showingVersion.value == editState.originalVersionId()) {
+            stringRes(id = R.string.original)
+        } else {
+            "#${editState.versionId()}"
+        }
+
+    QuietMark(
+        symbol = MaterialSymbols.Edit,
+        text = label,
+        contentDescription = stringRes(id = R.string.edited),
+        onClick = { editState.nextModification() },
     )
 }

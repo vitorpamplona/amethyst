@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.commands.AdminCommand
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
 import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
+import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
 import com.vitorpamplona.amethyst.cli.commands.CreateCommand
 import com.vitorpamplona.amethyst.cli.commands.DebitCommands
@@ -35,6 +36,7 @@ import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
 import com.vitorpamplona.amethyst.cli.commands.EventCommand
 import com.vitorpamplona.amethyst.cli.commands.FetchCommand
 import com.vitorpamplona.amethyst.cli.commands.FilterCommand
+import com.vitorpamplona.amethyst.cli.commands.FofCommand
 import com.vitorpamplona.amethyst.cli.commands.FollowCommand
 import com.vitorpamplona.amethyst.cli.commands.GiftCommands
 import com.vitorpamplona.amethyst.cli.commands.GitCommands
@@ -70,7 +72,6 @@ import com.vitorpamplona.amethyst.cli.commands.SubscribeCommand
 import com.vitorpamplona.amethyst.cli.commands.SyncCommand
 import com.vitorpamplona.amethyst.cli.commands.UseCommand
 import com.vitorpamplona.amethyst.cli.commands.VerifyCommand
-import com.vitorpamplona.amethyst.cli.commands.WotCommand
 import com.vitorpamplona.amethyst.cli.commands.ZapCommand
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
@@ -292,7 +293,15 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "podcast" -> PodcastCommands.dispatch(dataDir, tail)
         "podcast20" -> Podcast20Commands.dispatch(dataDir, tail)
         "bunker" -> BunkerCommand.run(dataDir, tail)
-        "wot" -> WotCommand.dispatch(dataDir, tail)
+        "fof" -> FofCommand.dispatch(dataDir, tail)
+        // `wot` overclaimed the whole web-of-trust concept for a cheap
+        // single-hop follower count; renamed to `fof` (follows-of-follows).
+        // Kept as a warning alias — the real WoT engine is `graperank`.
+        "wot" -> {
+            System.err.println("[amy] `wot` is deprecated — use `fof` (follows-of-follows). The computed web of trust is `graperank`.")
+            FofCommand.dispatch(dataDir, tail)
+        }
+        "concord" -> ConcordCommands.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -484,6 +493,12 @@ private fun printUsage() {
         |  relay list                    print every configured relay bucket
         |  relay publish-lists           broadcast every configured relay list
         |  relay info URL                fetch + print a relay's NIP-11 info document
+        |  relay probe [--timeout SECS]  relay census: mass-connect every relay the store
+        |    [--concurrency N]            knows and record live/dead + measured rtt-open
+        |                                 into the reachability cache (NIP-66 kind:30166),
+        |                                 so reachability-aware commands (graperank crawl/
+        |                                 refresh) skip dead relays and wait once
+        |                                 (--timeout: per wave, default 15s)
         |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
         |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)
         |
@@ -606,48 +621,46 @@ private fun printUsage() {
         |                                              (USER: npub|nprofile|hex|name@domain)
         |
         |Web of Trust (GrapeRank):
-        |  graperank [OBSERVER]                       compute subjective trust scores (0..1) for every
-        |    [--limit N] [--min-score X]               user reachable in the follow/mute/report graph.
-        |    [--rigor X] [--attenuation X]             Exhaustively crawls each user's kind:10002 outbox
-        |    [--max-rounds N] [--max-hops N]           for their latest kind:3/10000/1984 until every
-        |    [--offline] [--timeout SECS]              discovered user has been checked (no user cap;
-        |    [--diagnose]                              --max-hops bounds follow distance, e.g. 8;
-        |                                              --diagnose dumps per-relay telemetry: outcome
-        |                                              mix, yield, latency, and a LIVE/DEAD + limits
-        |                                              classification table of every relay contacted).
-        |    [--publish] [--min-rank N]                OBSERVER: npub|nprofile|hex|name@domain (default:
-        |    [--publish-limit N] [--publish-relay URL] active account). --offline scores from the local
-        |                                              store only. --publish reconciles NIP-85 kind:30382
-        |                                              cards signed by a per-observer service key: sends
-        |                                              new/changed ranks >= --min-rank (default 2), skips
-        |                                              unchanged, and retracts (kind:5) any card whose
-        |                                              target left the graph or fell below the cutoff.
-        |  graperank crawl [OBSERVER]                 network only: crawl the WoT graph (kind 3/10000/
-        |    [--max-hops N] [--preconnect-cap N]      1984/10002) into the local store without scoring.
-        |    [--no-preconnect]                        Pre-connects every known-live relay in one parallel
-        |                                              storm (seeded from the reachability cache).
-        |  graperank probe [--timeout SECS]           relay census: mass-connect every relay the store
-        |    [--concurrency N]                        knows and record live/dead + measured rtt-open into
-        |                                              the reachability cache (NIP-66 kind:30166), so the
-        |                                              next crawl skips dead relays and waits once.
-        |  graperank update [--down] [--up]           refresh every locally-known author's WoT record kinds
-        |    [--no-sync-deletions] [--timeout SECS]     (0/3/10002/1984) from their own outbox: reads all
-        |    [--relay-concurrency N] [--author-chunk N] kind:10002 in the store, groups authors by write
-        |    [--min-authors N] [--report-limit N]       relay, and runs one NIP-77 negentropy reconcile per
-        |                                              relay scoped to its authors. Bidirectional by default;
-        |                                              the deletion settle downloads the relay's kind:5 when
-        |                                              an uploaded record was rejected (author retracted it).
-        |                                              Falls back to a full paged download when a relay
-        |                                              can't reconcile via negentropy.
-        |  graperank operator [status|relay <url>…    manage the machine's operator keys (~/.amy/operator/,
-        |    |providers]                               independent of accounts): relay sets where cards +
-        |                                              retractions publish; status shows master + relays;
-        |                                              providers lists observer -> service-pubkey.
-        |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040 so
-        |    [--service KIND:TAG] [--relay URL]        clients can discover it (default: self as the
-        |    [--private]                               30382:rank provider at your first outbox relay).
-        |  graperank providers [USER] [--refresh]     list a user's declared NIP-85 trusted providers
-        |    [--timeout SECS]                          (default: active account).
+        |  graperank [OBSERVER]                       crawl + score: subjective trust (0..1) over the
+        |    [--min-rank N] [--offline]                follow/mute/report graph, then persist the result
+        |    [--limit N] [--min-score X]               as local NIP-85 kind:30382 cards (ranks >=
+        |    [--rigor X] [--attenuation X]             --min-rank, default 2). --offline skips the crawl.
+        |    [--max-hops N] [--diagnose]               OBSERVER: npub|nprofile|hex|name@domain (self).
+        |  graperank crawl [OBSERVER]                 network only: crawl the graph (kind 3/10000/1984/
+        |    [--max-hops N] [--max-rounds N]           10002) into the local store, no scoring.
+        |    [--no-preconnect] [--preconnect-cap N]    Idempotent — run a few times to load everything.
+        |  graperank score [OBSERVER]                 local only: score from the store + persist cards
+        |                                              (= bare --offline; same flags). No network.
+        |  graperank publish [OBSERVER]               push local cards to the operator relay(s) via a
+        |    [--relay URL[,URL…]] [--timeout SECS]     NIP-77 up-sync (nothing re-scored), and refresh
+        |    [--relay-concurrency N]                   the observer's kind:10040 when we hold their key.
+        |  graperank rank USER [--provider PUBKEY]    read the kind:30382 cards about USER, one rank per
+        |    [--refresh] [--timeout SECS]              provider; --refresh drains relays on a miss.
+        |  graperank status                           read-only local inventory: record counts, cache
+        |                                              freshness, operator state, cards per observer.
+        |  graperank refresh [--down] [--up]          re-sync known authors' records (kind 0/3/10002/
+        |    [--relay-concurrency N] [--author-chunk N] 1984) from their outboxes via NIP-77, so score
+        |    [--min-authors N] [--report-limit N]       runs on current data. (`update` is the alias.)
+        |    [--no-sync-deletions] [--timeout SECS]
+        |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040
+        |    [--service KIND:TAG] [--relay URL]        (default: self as 30382:rank at your 1st outbox).
+        |    [--private]
+        |  graperank unregister PROVIDER              remove matching entries from your kind:10040;
+        |    [--service KIND:TAG] [--relay URL]        --service/--relay narrow, else all for that key.
+        |  graperank providers [USER] [--refresh]     list a user's declared NIP-85 providers.
+        |    [--timeout SECS]
+        |  graperank operator                         operator keys (~/.amy/operator/): `relay URL…`
+        |    [status | relay URL… | keys]              sets the publish target; `keys` maps observer
+        |                                              -> service-key. (default: status)
+        |  graperank probe                            alias for `relay probe` (the relay census).
+        |
+        |Follows-of-follows (social proof — the cheap counterpart to graperank):
+        |  fof get USER                               USER's score: how many accounts you follow also
+        |                                              follow them (single-hop social proof, not trust).
+        |  fof list [--threshold N] [--limit N]       accounts ranked by that score — who's most
+        |                                              followed inside your network (default N: 1 / 50).
+        |  fof sync [--timeout SECS]                  refresh your follows' kind:3 from the index relays
+        |                                              so the next get/list is current (`wot` = alias).
         |
         |Zaps (NIP-57):
         |  zap user USER SATS               build a profile zap-request, fetch a BOLT11
@@ -739,6 +752,15 @@ private fun printUsage() {
         |  marmot await epoch GID --min N
         |
         |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
+        |
+        |  concord create --name NAME [--about T] [--relays wss://a,wss://b]
+        |                                             create an encrypted Concord Channel community
+        |  concord list                               list joined Concord communities
+        |  concord channels COMMUNITY                 list a community's channels
+        |  concord send COMMUNITY CHANNEL TEXT        post a message (CHANNEL = general|name|id)
+        |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages
+        |  concord invite COMMUNITY [--base URL]      mint + publish a shareable invite link
+        |  concord join URL                           redeem an invite link and save the community
         |
         |Local event store (shared, under `<data-dir>/shared/`):
         |  Backend selected by AMY_STORE: sqlite (default; `shared/events.db`)

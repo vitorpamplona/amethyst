@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
@@ -212,6 +213,38 @@ fun observeNoteReplyCount(
         }
 
     return flow.collectAsStateWithLifecycle(note.replies.size)
+}
+
+/**
+ * Count of a chat message's **minichat** replies — its kind-1111 [CommentEvent]
+ * children only (inline quote-replies are ordinary kind-9/42 messages and are not
+ * counted here). Drives the "N replies" chip that opens the minichat.
+ *
+ * Mounting this registers the message with [EventFinderFilterAssemblerSubscription], which
+ * batches the visible messages' ids into shared REQs for their replies (kind-1111 among
+ * them) — so for public chats (NIP-28/NIP-29) the thread replies load, and the chip appears,
+ * just by rendering the rows. Concord's kind-1111 replies instead arrive over the channel
+ * plane, so that REQ finds nothing there and is a harmless no-op.
+ */
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeNoteMinichatReplyCount(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<Int> {
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
+
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .replies.stateFlow
+                .sample(200)
+                .mapLatest { it.note.replies.count { reply -> reply.event is CommentEvent } }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(note.replies.count { it.event is CommentEvent })
 }
 
 @Composable

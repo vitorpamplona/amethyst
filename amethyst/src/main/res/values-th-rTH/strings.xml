@@ -2171,7 +2171,6 @@
     <string name="nsite_source">แหล่งที่มา:</string>
     <string name="nsite_servers">เซิร์ฟเวอร์:</string>
     <string name="nsite_open">เปิด</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">Timestamp ถูกยืนยัน</string>
     <string name="ots_info_description">มีหลักฐานว่าโพสต์นี้มีการลงนามก่อน %1$s หลักฐานถูกประทับตราใน Bitcoin blockchain ณ วันและเวลาดังกล่าว</string>
     <string name="edit_article">แก้ไขบทความ</string>
@@ -2512,6 +2511,7 @@
     <string name="media_actions_dialog_title">การดำเนินการกับสื่อ</string>
     <string name="playback_actions_dialog_title">การเล่น</string>
     <string name="video_quality_auto">อัตโนมัติ</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">แคสต์ไปยังอุปกรณ์</string>
     <string name="cast_stop_casting">หยุดการแคสต์</string>

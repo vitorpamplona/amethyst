@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.browser
 
-import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
@@ -44,6 +43,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -193,14 +193,14 @@ private fun EmbeddedWebAppTab(
 }
 
 /** The host of [url] for the tab title, falling back to the raw string. */
-internal fun hostLabel(url: String): String = runCatching { Uri.parse(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+internal fun hostLabel(url: String): String = runCatching { url.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
 
 /**
  * The `scheme://host[:port]` origin of [url] — the exact form the sandbox reports for NIP-07 consent, so
  * it matches the `browser:<origin>` permission-ledger key. Null when [url] has no usable scheme/host.
  */
 internal fun browserOrigin(url: String): String? {
-    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return null
+    val uri = runCatching { url.toUri() }.getOrNull() ?: return null
     val scheme = uri.scheme?.takeIf { it.isNotBlank() } ?: return null
     val host = uri.host?.takeIf { it.isNotBlank() } ?: return null
     return "$scheme://$host" + if (uri.port > 0) ":${uri.port}" else ""

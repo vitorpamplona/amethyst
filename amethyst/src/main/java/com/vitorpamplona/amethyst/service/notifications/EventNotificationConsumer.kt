@@ -24,6 +24,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import android.os.PowerManager
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import coil3.ImageLoader
 import coil3.asDrawable
@@ -108,6 +109,8 @@ private const val SCROLL_TO_QUERY_PARAM = "&scrollTo="
 
 class EventNotificationConsumer(
     private val applicationContext: Context,
+    /** Reports how long each notification-processing wakelock was held (resource-usage ledger). */
+    private val onWakeLockHeld: ((heldMs: Long) -> Unit)? = null,
 ) {
     companion object {
         private const val WAKELOCK_TIMEOUT_MS = 10 * 60 * 1000L // 10 minutes
@@ -126,6 +129,7 @@ class EventNotificationConsumer(
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "amethyst:notification_processing",
             )
+        val heldSince = SystemClock.elapsedRealtime()
         wakeLock.acquire(WAKELOCK_TIMEOUT_MS)
         try {
             return block()
@@ -133,6 +137,7 @@ class EventNotificationConsumer(
             if (wakeLock.isHeld) {
                 wakeLock.release()
             }
+            onWakeLockHeld?.invoke(SystemClock.elapsedRealtime() - heldSince)
         }
     }
 

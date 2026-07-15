@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.calendar
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Device-wide preferences for the calendar reminder worker.
@@ -40,13 +41,13 @@ class CalendarReminderPrefs(
     fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, DEFAULT_ENABLED)
 
     fun setEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_ENABLED, enabled).apply()
+        prefs.edit { putBoolean(KEY_ENABLED, enabled) }
     }
 
     fun leadMinutes(): Int = prefs.getInt(KEY_LEAD_MINUTES, DEFAULT_LEAD_MINUTES)
 
     fun setLeadMinutes(minutes: Int) {
-        prefs.edit().putInt(KEY_LEAD_MINUTES, minutes).apply()
+        prefs.edit { putInt(KEY_LEAD_MINUTES, minutes) }
     }
 
     companion object {

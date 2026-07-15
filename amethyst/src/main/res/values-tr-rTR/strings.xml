@@ -2685,6 +2685,7 @@
     <string name="media_actions_dialog_title">Medya İşlemleri</string>
     <string name="playback_actions_dialog_title">Oynatma</string>
     <string name="video_quality_auto">Otomatik</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Cihaza yayınla</string>
     <string name="cast_stop_casting">Yayını durdur</string>

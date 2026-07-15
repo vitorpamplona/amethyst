@@ -27,6 +27,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
@@ -223,6 +224,7 @@ fun uriToRoute(
     }
 
     relayGroupInviteRoute(uri)?.let { return it }
+    concordInviteRoute(uri)?.let { return it }
 
     val nip19 = Nip19Parser.uriToRoute(uri)?.entity
     if (nip19 != null) {
@@ -355,3 +357,15 @@ private fun relayGroupInviteRoute(uri: String): Route? {
     val link = GroupInviteLink.parse(uri.removePrefix(NOSTR_URI_PREFIX)) ?: return null
     return Route.RelayGroup(link.groupId, link.relayUrl.url, inviteCode = link.code)
 }
+
+/**
+ * A shared Concord invite URL (`…/invite/<naddr>#<fragment>`). Cheap substring gates
+ * keep the parse off the hot path; the whole URL (fragment included) is carried into
+ * the route so the redeem flow still has the unlock token.
+ */
+private fun concordInviteRoute(uri: String): Route? =
+    if (uri.contains("/invite/") && uri.contains('#') && ConcordActions.parseInviteLink(uri) != null) {
+        Route.ConcordInvite(uri)
+    } else {
+        null
+    }

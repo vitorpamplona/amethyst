@@ -50,7 +50,9 @@ interface RelayAuthPermissionStore {
     suspend fun recordUse(
         relayUrl: String,
         additions: Map<AuthPurposeKind, Set<String>>,
-    ) {}
+    ) {
+        // no-op by default: stores that don't track rationale ignore recorded uses.
+    }
 
     /** The accumulated grant rationale for [relayUrl] (purpose → counterparty pubkeys). */
     suspend fun loadRationale(relayUrl: String): Map<AuthPurposeKind, Set<String>> = emptyMap()
@@ -59,7 +61,9 @@ interface RelayAuthPermissionStore {
     suspend fun allRationales(): Map<String, Map<AuthPurposeKind, Set<String>>> = emptyMap()
 
     /** Forgets the accumulated grant rationale for [relayUrl] (does not touch the ALLOW/DENY override). */
-    suspend fun clearRationale(relayUrl: String) {}
+    suspend fun clearRationale(relayUrl: String) {
+        // no-op by default: stores that don't track rationale have nothing to clear.
+    }
 
     /** Epoch-second timestamp of the last time each relay was authenticated with (for display). */
     suspend fun allLastUsed(): Map<String, Long> = emptyMap()

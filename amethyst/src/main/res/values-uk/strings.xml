@@ -2786,8 +2786,6 @@
     
     <string name="nsite_open">Відкрити</string>
     
-    <string name="existed_since">OTS: %1$s</string>
-    
     <string name="ots_info_title">Доказ часової позначки</string>
     
     <string name="ots_info_description">Є доказ того, що ця публікація була підписана до %1$s. Доказ засвідчено в блокчейні Bitcoin на ту дату та час.</string>

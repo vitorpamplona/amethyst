@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -28,6 +30,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -128,7 +131,36 @@ class ChatroomListKnownFeedFilter(
                         }
             }
 
-        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups + relayGroups).toSet())
+        // Concord Channels the user joined (kind 13302 list → folded Control Plane). In INLINE view
+        // mode each channel is its own Messages row (newest decrypted message — a real Note in
+        // LocalCache attached to the ConcordChannel — or a placeholder for a just-joined empty
+        // channel). In GROUPED mode all of a community's channels collapse into one community row
+        // positioned by that community's newest message. Concord groups by community exactly as
+        // NIP-29 groups by host relay above; both interleave with the rest of Messages by recency.
+        val concordChannels =
+            when (account.settings.concordViewMode.value) {
+                ConcordViewMode.INLINE ->
+                    account.concordSessions.sessions().flatMap { session ->
+                        val state = session.state.value ?: return@flatMap emptyList<Note>()
+                        state.channels.keys.map { channelIdHex ->
+                            val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
+                            channel.newestConcordNote(account) ?: channel.placeholderNote()
+                        }
+                    }
+
+                ConcordViewMode.GROUPED ->
+                    // One row per joined community, carrying the newest message across ALL its channels.
+                    account.concordSessions.sessions().mapNotNull { session ->
+                        val state = session.state.value ?: return@mapNotNull null
+                        val newest =
+                            state.channels.keys
+                                .mapNotNull { LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, it)).newestConcordNote(account) }
+                                .maxByOrNull { it.createdAt() ?: 0L }
+                        ConcordServerRoomNote(session.entry.id, newest)
+                    }
+            }
+
+        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups + relayGroups + concordChannels).toSet())
     }
 
     override fun updateListWith(
@@ -144,11 +176,13 @@ class ChatroomListKnownFeedFilter(
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
         val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
+        val newRelevantConcord = filterRelevantConcordMessages(newItems, account)
 
         if (newRelevantPrivateMessages.isEmpty() &&
             newRelevantPublicMessages.isEmpty() &&
             newRelevantEphemeralChats.isEmpty() &&
-            newRelevantRelayGroups.isEmpty()
+            newRelevantRelayGroups.isEmpty() &&
+            newRelevantConcord.isEmpty()
         ) {
             return oldList
         }
@@ -219,6 +253,21 @@ class ChatroomListKnownFeedFilter(
             }
         }
 
+        newRelevantConcord.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                if (newNotePair.key == oldNote.concordRowKey()) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
+                        myNewList = myNewList.replace(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
         return sort(myNewList.toSet()).take(1000)
     }
 
@@ -230,11 +279,13 @@ class ChatroomListKnownFeedFilter(
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
         val newRelevantRelayGroups = filterRelevantRelayGroupMessages(newItems, account)
+        val newRelevantConcord = filterRelevantConcordMessages(newItems, account)
 
         return if (newRelevantPrivateMessages.isEmpty() &&
             newRelevantPublicMessages.isEmpty() &&
             newRelevantEphemeralChats.isEmpty() &&
-            newRelevantRelayGroups.isEmpty()
+            newRelevantRelayGroups.isEmpty() &&
+            newRelevantConcord.isEmpty()
         ) {
             emptySet()
         } else {
@@ -242,9 +293,55 @@ class ChatroomListKnownFeedFilter(
                 newRelevantPrivateMessages.values +
                     newRelevantPublicMessages.values +
                     newRelevantEphemeralChats.values +
-                    newRelevantRelayGroups.values
+                    newRelevantRelayGroups.values +
+                    newRelevantConcord.values
             ).toSet()
         }
+    }
+
+    /**
+     * The row a Concord note belongs to, so [updateListWith] can find and replace it: a per-community
+     * [ConcordServerRoomNote] (GROUPED), else the note's ConcordChannel gatherer keyed by channel
+     * (INLINE) or by community (GROUPED), depending on the current view mode.
+     */
+    private fun Note.concordRowKey(): String? =
+        when (this) {
+            is ConcordServerRoomNote -> communityId
+            else ->
+                inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }?.let { ch ->
+                    when (account.settings.concordViewMode.value) {
+                        ConcordViewMode.INLINE -> ch.channelId.toKey()
+                        ConcordViewMode.GROUPED -> ch.channelId.communityId
+                    }
+                }
+        }
+
+    /**
+     * Latest Concord rows from the new items, keyed the same way as [concordRowKey]: by channel in
+     * INLINE mode (one row per channel) and by community in GROUPED mode (one row per community,
+     * carried as a [ConcordServerRoomNote]). A Concord message note carries its ConcordChannel as a
+     * gatherer (attached on decrypt); only message-like rumors are attached as rows — reactions/
+     * deletes wire to their target note and never become a room's last message.
+     */
+    private fun filterRelevantConcordMessages(
+        newItems: Set<Note>,
+        account: Account,
+    ): MutableMap<String, Note> {
+        // Newest new message per channel (INLINE) or per community (GROUPED).
+        val grouped = account.settings.concordViewMode.value == ConcordViewMode.GROUPED
+        val newestPerKey = mutableMapOf<String, Note>()
+        newItems.forEach { newNote ->
+            val channel = newNote.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return@forEach
+            if (newNote.event == null || !account.isAcceptable(newNote)) return@forEach
+            val key = if (grouped) channel.channelId.communityId else channel.channelId.toKey()
+            val last = newestPerKey[key]
+            if (last == null || (newNote.createdAt() ?: 0L) > (last.createdAt() ?: 0L)) newestPerKey[key] = newNote
+        }
+        if (!grouped) return newestPerKey
+        // Wrap each community's newest into its collapsed server row.
+        val result = mutableMapOf<String, Note>()
+        newestPerKey.forEach { (communityId, note) -> result[communityId] = ConcordServerRoomNote(communityId, note) }
+        return result
     }
 
     private fun filterRelevantPublicMessages(
@@ -300,6 +397,13 @@ class ChatroomListKnownFeedFilter(
     private fun RelayGroupChannel.newestChatNote(account: Account): Note? =
         notes
             .filter { _, it -> account.isAcceptable(it) && it.event?.isGroupChatContent() == true }
+            .sortedByDefaultFeedOrder()
+            .firstOrNull()
+
+    /** The newest decrypted message loaded in this Concord channel, or null if none yet. */
+    private fun ConcordChannel.newestConcordNote(account: Account): Note? =
+        notes
+            .filter { _, it -> account.isAcceptable(it) && it.event != null }
             .sortedByDefaultFeedOrder()
             .firstOrNull()
 

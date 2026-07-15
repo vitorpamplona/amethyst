@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
@@ -50,6 +52,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -58,13 +61,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
@@ -92,6 +98,7 @@ import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.lang.management.ManagementFactory
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
@@ -248,22 +255,61 @@ class Context(
         ).also { client.addConnectionListener(it) }
 
     /**
+     * Concord plane stream-key AUTH (CORD-01 §4b). Concord relays gate a plane's
+     * kind-1059 wraps behind NIP-42 and serve them only to a connection authenticated
+     * AS the plane's derived *stream key* — the member is neither the wrap's author
+     * (the stream key) nor its recipient (a throwaway ephemeral key), so an account
+     * AUTH is refused. `amy concord` verbs register their control + channel stream
+     * secrets here (scoped to the community's relays, the same scope the plane REQ
+     * uses) before draining, and [relayAuth] answers a challenge from one of those
+     * relays with one kind-22242 per stream key — signed locally from the raw derived
+     * key, never the account, so no user identity is exposed.
+     */
+    private val concordStreamSecrets = ConcurrentHashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
+    private val concordStreamSigners = ConcurrentHashMap<HexKey, NostrSignerSync>()
+
+    /** Registers raw 32-byte Concord stream [secrets] to answer NIP-42 challenges from [relays]. */
+    fun registerConcordStreamKeys(
+        relays: Set<NormalizedRelayUrl>,
+        secrets: List<ByteArray>,
+    ) {
+        if (relays.isEmpty() || secrets.isEmpty()) return
+        val hexes = secrets.map { it.toHexKey() }
+        for (relay in relays) concordStreamSecrets.getOrPut(relay) { ConcurrentHashMap.newKeySet() }.addAll(hexes)
+    }
+
+    /** Signs one kind-22242 per Concord stream key registered for [relay] (empty if none). */
+    private fun signConcordStreamAuths(
+        relay: NormalizedRelayUrl,
+        template: EventTemplate<RelayAuthEvent>,
+    ): List<RelayAuthEvent> =
+        concordStreamSecrets[relay].orEmpty().mapNotNull { hex ->
+            runCatching {
+                concordStreamSigners.getOrPut(hex) { NostrSignerSync(KeyPair(privKey = hex.hexToByteArray())) }.sign(template)
+            }.getOrNull()
+        }
+
+    /**
      * NIP-42 responder: answers a relay's AUTH challenge by signing with the
      * account key, so auth-gated relays serve our reads instead of CLOSing the
      * subscription. Constructing it registers its own listener on [client].
      * Only a local key auto-signs — a remote bunker signer is skipped, since a
      * per-relay remote round-trip during a crawl would stall it (and signing an
      * auth event with any key still unlocks relays that just want *some* auth).
+     * Any Concord stream keys registered via [registerConcordStreamKeys] for the
+     * challenging relay are signed alongside the account AUTH.
      */
     private val relayAuth: RelayAuthenticator =
         RelayAuthenticator(
             client = client,
-            signWithAllLoggedInUsers = { _, template ->
-                if (signer is NostrSignerInternal) {
-                    runCatching { listOf(signer.sign(template)) }.getOrElse { emptyList() }
-                } else {
-                    emptyList()
-                }
+            signWithAllLoggedInUsers = { relay, template, _ ->
+                val accountAuth =
+                    if (signer is NostrSignerInternal) {
+                        runCatching { listOf(signer.sign(template)) }.getOrElse { emptyList() }
+                    } else {
+                        emptyList()
+                    }
+                accountAuth + signConcordStreamAuths(relay, template)
             },
         )
 
@@ -470,11 +516,22 @@ class Context(
      * accept the exact same identifier formats. Throws on unrecognised input —
      * command handlers catch [IllegalArgumentException] at the top level and
      * translate to `{"error": "bad_args"}`.
+     *
+     * A pubkey is always 32 bytes, so we require exactly 64 hex chars: the shared
+     * resolver's fallback runs a lenient `Hex.decode` that turns a short
+     * bech32/hex-ish word (e.g. a mistyped verb like `sync`) into a bogus few-byte
+     * "pubkey" instead of failing — this rejects that so a bad OBSERVER/USER errors
+     * cleanly rather than silently scoring/fetching garbage.
      */
-    suspend fun requireUserHex(input: String): com.vitorpamplona.quartz.nip01Core.core.HexKey =
-        com.vitorpamplona.quartz.nip05DnsIdentifiers
-            .resolveUserHexOrNull(input, nip05Client)
-            ?: throw IllegalArgumentException("Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)")
+    suspend fun requireUserHex(input: String): com.vitorpamplona.quartz.nip01Core.core.HexKey {
+        val notResolved = "Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)"
+        val hex =
+            com.vitorpamplona.quartz.nip05DnsIdentifiers
+                .resolveUserHexOrNull(input, nip05Client)
+                ?: throw IllegalArgumentException(notResolved)
+        require(hex.length == 64) { notResolved }
+        return hex
+    }
 
     /**
      * Outbox / NIP-65 write relays for this account. Read from the
@@ -585,12 +642,21 @@ class Context(
      * proven-dead relays from future routing instead of paying the full
      * [timeoutMs] on them again. Slow-but-connected relays are NOT reported —
      * only hard connect failures, so a temporarily-busy relay isn't discarded.
+     *
+     * With [pendingOnAuthRequired], a relay that refuses the REQ with an
+     * `auth-required` CLOSED is kept pending rather than treated as terminal: the
+     * NIP-42 responder answers the challenge and the client re-fires this same
+     * subscription (`syncFilters`), so the post-auth events are collected instead of
+     * returning empty. If auth never satisfies it, the relay simply falls through to
+     * the [timeoutMs]. Needed for Concord planes, whose kind-1059 wraps are served
+     * only to a connection authenticated as the derived stream key.
      */
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long = 8_000,
         diagnoseSlow: Boolean = false,
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
+        pendingOnAuthRequired: Boolean = false,
     ): List<Pair<NormalizedRelayUrl, Event>> {
         if (filters.isEmpty()) return emptyList()
         val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
@@ -623,6 +689,9 @@ class Context(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
+                    // Keep the relay pending on an auth-required refusal: the authenticator answers the
+                    // challenge and re-fires this subscription, so the post-auth events still arrive.
+                    if (pendingOnAuthRequired && MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) return
                     doneChannel.trySend(relay to "closed:$message")
                 }
 

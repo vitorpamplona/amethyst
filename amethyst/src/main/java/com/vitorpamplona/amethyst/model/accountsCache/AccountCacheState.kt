@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.marmot.AndroidMarmotMessageStore
 import com.vitorpamplona.amethyst.model.marmot.AndroidMlsGroupStateStore
 import com.vitorpamplona.amethyst.model.marmot.InMemoryMlsGroupStateStore
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -63,6 +64,8 @@ class AccountCacheState(
     val client: INostrClient,
     val rootFilesDir: () -> File = { File("") },
     val powQueue: () -> PoWPublishQueue? = { null },
+    /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
+    val meterSigner: (NostrSigner) -> NostrSigner = { it },
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -178,7 +181,7 @@ class AccountCacheState(
 
         val signerWithClientTag =
             NostrSignerWithClientTag(
-                inner = signer,
+                inner = meterSigner(signer),
                 clientName = CLIENT_TAG_NAME,
                 disabled = { !accountSettings.syncedSettings.security.addClientTag.value },
             )
@@ -227,6 +230,10 @@ class AccountCacheState(
                 null
             }
 
+        // Per-account NIP-42 ALLOW/DENY overrides live in this account's own dir, so a DENY for one
+        // account never leaks into another (the store used to be a single app-wide file).
+        val relayAuthPermissionStore = DataStoreRelayAuthPermissionStore(accountDir)
+
         return Account(
             settings = accountSettings,
             signer = signerWithClientTag,
@@ -250,6 +257,7 @@ class AccountCacheState(
             marmotMessageStore = marmotMessageStore,
             marmotKeyPackageStore = marmotKeyPackageStore,
             powQueue = powQueue,
+            relayAuthPermissionStore = relayAuthPermissionStore,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

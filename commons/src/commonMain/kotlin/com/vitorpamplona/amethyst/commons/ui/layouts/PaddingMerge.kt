@@ -49,6 +49,19 @@ val LocalDisappearingScaffoldPadding = compositionLocalOf { PaddingValues(0.dp) 
 val LocalDisappearingBarState = compositionLocalOf<DisappearingBarState?> { null }
 
 /**
+ * Extra start/end padding a host can ask feeds to apply so their content column stays at a
+ * readable width while the scroll surface stays full-pane (scrolling and pull-to-refresh
+ * keep working edge to edge). Feeds pick it up through [rememberFeedContentPadding].
+ * Defaults to 0 everywhere.
+ *
+ * The Android shell does NOT provide this — it caps each NavHost destination's width
+ * instead (CappedScreenContent), which also constrains top bars and non-feed screens.
+ * The local remains for hosts that prefer padding-based capping (e.g. a desktop-style
+ * reading column where gutters should still scroll).
+ */
+val LocalFeedSidePadding = compositionLocalOf { 0.dp }
+
+/**
  * Merges two [PaddingValues] component-wise, resolving start/end against the current
  * [LocalLayoutDirection].
  */
@@ -70,7 +83,21 @@ fun rememberMergedPadding(
 
 /**
  * Convenience for inner LazyColumns/LazyVerticalGrids inside a [DisappearingScaffold]:
- * merges the scaffold's reserved space with the list's own baseline padding.
+ * merges the scaffold's reserved space with the list's own baseline padding, plus the
+ * [LocalFeedSidePadding] width cap requested by wide layouts — all folded into a single
+ * remember slot, since this runs in every feed on every recomposition.
  */
 @Composable
-fun rememberFeedContentPadding(inner: PaddingValues): PaddingValues = rememberMergedPadding(LocalDisappearingScaffoldPadding.current, inner)
+fun rememberFeedContentPadding(inner: PaddingValues): PaddingValues {
+    val outer = LocalDisappearingScaffoldPadding.current
+    val sidePadding = LocalFeedSidePadding.current
+    val layoutDirection = LocalLayoutDirection.current
+    return remember(outer, inner, sidePadding, layoutDirection) {
+        PaddingValues(
+            start = outer.calculateStartPadding(layoutDirection) + inner.calculateStartPadding(layoutDirection) + sidePadding,
+            top = outer.calculateTopPadding() + inner.calculateTopPadding(),
+            end = outer.calculateEndPadding(layoutDirection) + inner.calculateEndPadding(layoutDirection) + sidePadding,
+            bottom = outer.calculateBottomPadding() + inner.calculateBottomPadding(),
+        )
+    }
+}

@@ -90,4 +90,15 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
+
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Use direct URL</string>
+
+    <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">Nickname</string>
+    <string name="nickname_dialog_explainer">Shown to you instead of this user\'s name, everywhere in the app. It\'s saved encrypted in your contact card: only you can read it. Type : to use your custom emojis.</string>
+    <string name="nickname_label">Nickname</string>
+    <string name="nickname_summary_label">Private note about this user</string>
+    <string name="nickname_save">Save</string>
+    <string name="nickname_cancel">Cancel</string>
 </resources>

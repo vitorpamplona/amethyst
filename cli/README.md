@@ -216,8 +216,8 @@ Army-knife verbs that operate purely on their arguments. They never touch
 | `amy encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]` | Encode an addressable-event (`a` tag) pointer. |
 | `amy verify [EVENT-JSON]` | Check an event's id hash and signature. Reads stdin when the argument is omitted or `-`. Reports `id_ok` + `signature_ok` separately. |
 | `amy pow check EVENT-JSON\|-` | NIP-13 difficulty of a signed event: `actual_bits`, `committed_target`, `has_commitment`, and `effective_pow` (capped at the commitment so lucky low-target spam doesn't over-count), plus `valid` (id + signature). |
-| `amy pow mine --target N [--pubkey HEX] [--timeout SECS] TEMPLATE-JSON\|-` | Mine an **unsigned** template to N leading zero bits and print it back with the nonce tag. Ids don't commit to signatures, so amy can mine on behalf of any pubkey (NIP-13 delegated PoW); defaults to the active account. Exit 124 on timeout. |
-| `amy pow bench` | Benchmark this machine's hash rate and print expected mining time at 16/20/24/28 bits. |
+| `amy pow mine --target N [--pubkey HEX] [--timeout SECS] [--threads N] TEMPLATE-JSON\|-` | Mine an **unsigned** template to N leading zero bits and print it back with the nonce tag. Ids don't commit to signatures, so amy can mine on behalf of any pubkey (NIP-13 delegated PoW); defaults to the active account. Mines on all cores by default (`--threads` to override). Exit 124 on timeout. |
+| `amy pow bench` | Benchmark this machine's hash rate — `hashes_per_second` is the all-cores rate `pow mine` uses by default, `hashes_per_second_single_core` the one-thread rate — and print expected mining time at 16/20/24/28 bits. |
 | `amy key generate` | Mint a fresh keypair (`nsec` + `npub` + hex). Does not persist — use `init`/`login` for that. |
 | `amy key public NSEC\|HEX` | Derive the public key from a secret key. |
 | `amy key encrypt NSEC\|HEX --password X` | NIP-49 encrypt a secret key to an `ncryptsec1…`. |
@@ -384,19 +384,29 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 
 | Command | What it does |
 |---|---|
-| `amy notes post TEXT [--relay URL] [--pow BITS [--pow-timeout SECS]]` | Publish a kind:1 short text note; `--pow` mines a NIP-13 proof of work into it first (blocks while mining, exit 124 on timeout with nothing published; `--json` adds `pow`, `pow_target`, `pow_millis`). |
+| `amy notes post TEXT [--relay URL] [--pow BITS [--pow-timeout SECS]]` | Publish a kind:1 short text note; `--pow` mines a NIP-13 proof of work into it first, using all cores (blocks while mining, exit 124 on timeout with nothing published; `--json` adds `pow`, `pow_target`, `pow_millis`). |
 | `amy notes feed [--author USER \| --following] [--limit N]` | Read recent kind:1 notes (yours, one user's, or your follow set). |
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
 | `amy follow USER` / `amy unfollow USER` | Add/remove USER from your kind:3 contact list (fetches the freshest list first). |
-| `amy graperank [OBSERVER] [--offline] [--publish] [--min-rank N] [--publish-relay URL]` | Compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph. Exhaustively crawls each user's kind:10002 outbox for their latest kind:3/10000/1984 until every discovered user is checked (no user cap), dropping reports the author retracted via NIP-09. With `--publish`, reconciles NIP-85 kind:30382 cards signed by a per-observer **service key**: publishes changed/new ranks (cutoff `--min-rank`, default 2), skips unchanged, and **retracts** (kind:5) any card whose target left the graph or fell below the cutoff. |
-| `amy graperank operator [status \| relay <url>… \| providers]` | Manage the machine's operator keys (independent of any account, under `~/.amy/operator/`). `relay` sets where cards + retractions publish; `status` shows the master pubkey and relays; `providers` lists the observer → service-pubkey map. |
+| `amy graperank [OBSERVER] [--offline] [--min-rank N]` | Crawl + score: compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph, then persist the result. Exhaustively crawls each user's kind:10002 outbox for their latest kind:3/10000/1984 until every discovered user is checked (no user cap), dropping reports the author retracted via NIP-09. **Every score run persists its result locally**: the ranks (cutoff `--min-rank`, default 2) are reconciled into the shared store as NIP-85 kind:30382 cards signed by a per-observer **service key** — changed ranks re-signed, unchanged skipped (no event-id churn), dropped targets retracted (kind:5). `--offline` skips the crawl. |
+| `amy graperank crawl [OBSERVER] [--max-hops N] [--no-preconnect]` | Pipeline stage 1 — network only: crawl the follow/mute/report graph (kind 3/10000/1984/10002) into the local store, no scoring. Idempotent and cumulative: run it a few times to load everything, then `score`. |
+| `amy graperank score [OBSERVER]` | Pipeline stage 2 — local only: score from the store and persist the cards (identical to bare `--offline`; same scoring flags). No network, so re-run with different `--rigor`/`--attenuation`/`--min-rank` without re-crawling. |
+| `amy graperank publish [OBSERVER] [--relay URL[,URL…]]` | Pipeline stage 3 — transport only: make the operator relay(s) converge to the locally persisted card set — one NIP-77 up-only reconcile per relay over the service key's kind:30382 + kind:5 (nothing is re-scored or re-signed; a relay that can't reconcile gets the full set published instead). Also refreshes the observer's kind:10040 pointer when we hold their key. |
+| `amy graperank rank USER [--provider PUBKEY] [--refresh]` | The consumer side: read the kind:30382 cards about USER — one rank per provider, newest card each. Local store first; `--refresh` (or a miss) drains the operator relays, the relays your kind:10040 declares, and the bootstrap set. |
+| `amy graperank refresh [--down] [--up]` | Refresh every locally-known author's WoT record kinds (0/3/10002/1984) from their own outbox: one NIP-77 negentropy reconcile per write relay scoped to its authors, so the next `score` runs on current data without a full re-crawl. (`update` is the pre-rename alias.) |
+| `amy graperank status` | Read-only local inventory, no network, no signing: WoT record counts in the store (the "do I need to crawl again?" answer), reachability-cache size + age, operator/service-key state, and the persisted card + retraction counts per observer. |
+| `amy graperank operator [status \| relay <url>… \| keys]` | Manage the machine's operator keys (independent of any account, under `~/.amy/operator/`). `relay` sets where `publish` sends cards + retractions; `status` shows the master pubkey and relays; `keys` lists the observer → service-pubkey map (`providers` is the pre-rename alias). |
 | `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL]` | Declare a NIP-85 provider in your kind:10040 so clients can discover it (default: self as the `30382:rank` provider). |
+| `amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL]` | The inverse of `register`: remove matching entries (public + private) from your kind:10040 and re-publish it. `--service`/`--relay` narrow the match; without them every entry for that provider key is dropped. |
 | `amy graperank providers [USER]` | List a user's declared NIP-85 trusted providers (public + your own private entries). |
+| `amy fof get USER` | Follows-of-follows social proof: how many accounts you follow also follow USER. Single-hop, cheap — **not** the computed web of trust (that's `graperank`). Read from the local store; run `fof sync` first to freshen it. |
+| `amy fof list [--threshold N] [--limit N]` | Rank accounts by that social-proof score — who's most-followed inside your network (discovery). Defaults: `--threshold 1`, `--limit 50`. |
+| `amy fof sync [--timeout SECS]` | Pull your follows' latest kind:3 from the index relays so the next `get`/`list` is current. (`amy wot …` remains as a deprecation alias for all three.) |
 
-#### Publishing GrapeRank scores (NIP-85)
+#### GrapeRank scores are persisted locally, then published (NIP-85)
 
-Ranks are published as kind:30382 cards, but **not** under your account key. A
+Ranks are signed as kind:30382 cards, but **not** under your account key. A
 machine holds one **operator master** seed (`~/.amy/operator/`, stored via the
 same `--secret-backend` as accounts, independent of any account). From it a
 distinct, deterministic **service key** is derived per observer:
@@ -406,23 +416,32 @@ serviceKey(observer) = sha256(masterPriv ‖ "graperank-provider:" ‖ observerH
 ```
 
 Because kind:30382 is addressable (`pubkey + d-tag`), the stable per-observer key
-means re-publishing **replaces** a target's card instead of orphaning it — and
-losing everything but the master seed still re-derives every key. Set up once and
-publish:
+means re-signing **replaces** a target's card instead of orphaning it — and
+losing everything but the master seed still re-derives every key.
+
+**Every score run persists its cards.** After scoring, Amy reconciles the result
+into the local store: new or changed ranks (≥ `--min-rank`, default 2) are
+signed; unchanged ranks are skipped (no new event id); and any card whose target
+dropped out of the graph or fell below the cutoff is **retracted** with a kind:5
+(the store applies it; the tombstone is kept). The local store is the source of
+truth — `graperank rank USER` reads it offline, and `graperank publish` mirrors
+it out:
 
 ```bash
 amy graperank operator relay wss://relay.example.com   # where all cards live
-amy graperank <observer> --publish                     # sign with the observer's service key
+amy graperank <observer>                               # crawl + score + persist cards locally
+amy graperank publish <observer>                       # make the operator relay match the local set
 ```
 
-Each publish **reconciles** against what the service key already published: new or
-changed ranks (≥ `--min-rank`, default 2) are signed and sent; unchanged ranks are
-skipped (no new event id); and any card whose target dropped out of the graph or
-fell below the cutoff is **retracted** with a kind:5. When the observer is your
-own account (we hold the key), Amy also writes their kind:10040 pointing
-`30382:rank → serviceKey @ operator relay` to their outbox, so clients can find
-the cards. For a third-party observer, `graperank operator providers` prints the
-`observer → service-pubkey` mapping to wire their kind:10040 out-of-band.
+`publish` never re-scores or re-signs: it runs one NIP-77 up-only reconcile per
+relay over the service key's kind:30382 + kind:5, so the relay converges to the
+local card set (deletions included, lost cards restored); a relay that can't
+negentropy-reconcile gets the full set published event-by-event instead. When
+the observer is your own account (we hold the key), `publish` also writes their
+kind:10040 pointing `30382:rank → serviceKey @ operator relay` to their outbox,
+so clients can find the cards. For a third-party observer, `graperank operator
+keys` prints the `observer → service-pubkey` mapping to wire their
+kind:10040 out-of-band.
 
 ### Direct messages (NIP-17)
 
@@ -542,6 +561,7 @@ the last facet removes R entirely.
 | `amy relay add URL` / `remove URL` | Fan-out to the transport lists (nip65 `both` + `dm` + `key-package`). |
 | `amy relay list` | Print every configured relay bucket. |
 | `amy relay publish-lists` | Broadcast every configured relay list to the union of your relays. |
+| `amy relay probe [--timeout SECS] [--concurrency N]` | The relay census: mass-connect every relay the local store knows (all stored kind:10002 relays + the reachability cache) in parallel waves and record live/dead + measured `rtt-open` into the NIP-66 reachability cache (kind:30166). Reachability-aware commands (`graperank crawl`/`refresh`) read it to skip dead relays and pre-connect live ones. (`amy graperank probe` remains as an alias.) |
 
 ### Local store maintenance
 

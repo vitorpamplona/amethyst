@@ -59,6 +59,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -582,11 +583,11 @@ private fun LocationRow(location: String) {
                         val trimmed = location.trim()
                         val intent =
                             if (isUrl) {
-                                Intent(Intent.ACTION_VIEW, Uri.parse(trimmed))
+                                Intent(Intent.ACTION_VIEW, trimmed.toUri())
                             } else {
                                 // `geo:0,0?q=<location>` is the Android geo intent; the user's
                                 // installed maps app handles it.
-                                Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(trimmed)}"))
+                                Intent(Intent.ACTION_VIEW, "geo:0,0?q=${Uri.encode(trimmed)}".toUri())
                             }
                         // runCatching swallows ActivityNotFoundException when no handler is
                         // installed — we don't have anywhere useful to fall back to.

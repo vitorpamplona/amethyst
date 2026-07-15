@@ -26,6 +26,7 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
@@ -162,6 +163,7 @@ private object PrefKeys {
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val DEFAULT_RELAY_AUTH_POLICY = "default_relay_auth_policy"
     const val RELAY_GROUP_VIEW_MODE = "relay_group_view_mode"
+    const val CONCORD_VIEW_MODE = "concord_view_mode"
     const val RELAY_AUTH_TRUST_MY_RELAYS = "relay_auth_trust_my_relays_and_venues"
     const val RELAY_AUTH_TRUST_READ_FOLLOWS = "relay_auth_trust_read_follows"
     const val RELAY_AUTH_TRUST_MESSAGE_FOLLOWS = "relay_auth_trust_message_follows"
@@ -521,6 +523,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
                     putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
+                    putString(PrefKeys.CONCORD_VIEW_MODE, settings.concordViewMode.value.name)
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, settings.relayAuthTrustMyRelaysAndVenues.value)
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, settings.relayAuthTrustReadFollows.value)
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, settings.relayAuthTrustMessageFollows.value)
@@ -646,6 +649,7 @@ object LocalPreferences {
                             ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
                             ?: RelayAuthPolicy.CUSTOM
                     val relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null))
+                    val concordViewMode = ConcordViewMode.fromName(getString(PrefKeys.CONCORD_VIEW_MODE, null))
                     val relayAuthTrustMyRelays = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, true)
                     val relayAuthTrustReadFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, true)
                     val relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true)
@@ -859,6 +863,7 @@ object LocalPreferences {
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
                         defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
                         relayGroupViewMode = MutableStateFlow(relayGroupViewMode),
+                        concordViewMode = MutableStateFlow(concordViewMode),
                         relayAuthTrustMyRelaysAndVenues = MutableStateFlow(relayAuthTrustMyRelays),
                         relayAuthTrustReadFollows = MutableStateFlow(relayAuthTrustReadFollows),
                         relayAuthTrustMessageFollows = MutableStateFlow(relayAuthTrustMessageFollows),

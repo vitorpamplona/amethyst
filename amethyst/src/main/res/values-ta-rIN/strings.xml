@@ -2673,6 +2673,7 @@
     <string name="media_actions_dialog_title">ஊடக செயல்கள்</string>
     <string name="playback_actions_dialog_title">இயக்கம்</string>
     <string name="video_quality_auto">தானியங்கி</string>
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">சாதனத்திற்கு அனுப்பவும்</string>
     <string name="cast_stop_casting">அனுப்புவதை நிறுத்தவும்</string>

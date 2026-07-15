@@ -665,7 +665,6 @@
     <string name="forked_from">انشعاب شده از</string>
     <string name="git_web_address">وب:</string>
     <string name="git_clone_address">نسخه برداری:</string>
-    <string name="existed_since">OTS: %1$s</string>
     <string name="ots_info_title">اثبات مهر زمان</string>
     <string name="ots_info_description">مدرکی وجود دارد که ثابت کند این پست پیش از %1$s امضا شده است. این مدرک در بلاکچین بیتکوین در آن تاریخ و زمان ثبت شده است.</string>
     <string name="edit_post">ویرایش نوشته</string>

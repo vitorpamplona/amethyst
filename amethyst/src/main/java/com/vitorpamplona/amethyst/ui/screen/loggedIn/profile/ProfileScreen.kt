@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.pager.HorizontalPager
@@ -335,7 +336,10 @@ fun ProfileScreen(
         topBar = {
             ProfileTopBar(baseUser, accountViewModel, nav)
         },
-        contentWindowInsets = WindowInsets(0),
+        // Status-bar handling is done inside RenderSurface, but the bottom inset must stay:
+        // when AppBottomBar renders nothing (pushed entries on phones, all large-screen
+        // tiers) this inset is the only thing keeping content clear of the system nav bar.
+        contentWindowInsets = WindowInsets.navigationBars,
         bottomBar = {
             AppBottomBar(
                 Route.Profile(accountViewModel.userProfile().pubkeyHex),

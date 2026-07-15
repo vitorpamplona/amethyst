@@ -97,7 +97,7 @@ class EventSyncTest {
                             RelayAuthenticator(
                                 newClient,
                                 appScope,
-                                signWithAllLoggedInUsers = { authTemplate ->
+                                signWithAllLoggedInUsers = { _, authTemplate, _ ->
                                     listOf(signer.sign(authTemplate))
                                 },
                             )

@@ -45,6 +45,7 @@
     <string name="timestamp_it">Timestamp it</string>
     <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
     <string name="timestamp_pending_short">OTS: Pending</string>
+    <string name="one_year_plus">1y+</string>
     <string name="request_deletion">Request Deletion</string>
     <string name="block_report">Block / Report</string>
     <string name="block_hide_user"><![CDATA[Block & Hide User]]></string>
@@ -305,6 +306,84 @@
     <string name="already_have_an_account">Already have a Nostr account?</string>
     <string name="loading_feed">Loading feed</string>
     <string name="loading_account">Loading account</string>
+    <string name="concord_redeeming_invite">Redeeming invite…</string>
+    <string name="concord_invite_failed">Could not fetch this invite. The link may be expired or its relays unreachable.</string>
+    <string name="concord_home_title">Concord Channels</string>
+    <string name="concord_home_empty">You haven\'t joined any Concord Channels yet. Create one, or open an invite link.</string>
+    <string name="concord_channels_empty">No channels yet.</string>
+    <string name="concord_show_all_channels">Show all channels</string>
+    <string name="concord_send_image_title">Send image</string>
+    <string name="concord_open_channel">Open channel</string>
+    <string name="concord_edit_banner_hint">Add a banner</string>
+    <string name="concord_channel_create">New channel</string>
+    <string name="concord_channel_rename">Rename channel</string>
+    <string name="concord_channel_rename_save">Rename</string>
+    <string name="concord_channel_name_label">Channel name</string>
+    <string name="concord_channel_delete">Delete channel</string>
+    <string name="concord_channel_delete_title">Delete channel?</string>
+    <string name="concord_channel_delete_message">Delete #%1$s? This can\'t be undone and the channel can\'t be recreated with the same id.</string>
+    <string name="concord_channel_delete_confirm">Delete</string>
+    <string name="concord_edit_relays_desc">Where this community\'s encrypted planes are published and read.</string>
+    <string name="concord_typing_one">%1$s is typing…</string>
+    <string name="concord_typing_two">%1$s and %2$s are typing…</string>
+    <string name="concord_typing_many">Several people are typing…</string>
+    <string name="concord_create_title">New Concord Channel</string>
+    <string name="concord_create_name">Name</string>
+    <string name="concord_create_about">About (optional)</string>
+    <string name="concord_create_relays">Relays</string>
+    <string name="concord_create_icon">Icon URL (optional)</string>
+    <plurals name="concord_channel_count">
+        <item quantity="one">%1$d channel</item>
+        <item quantity="other">%1$d channels</item>
+    </plurals>
+    <plurals name="concord_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
+    <string name="concord_create_action">Create</string>
+    <string name="concord_invite_action">Invite people</string>
+    <string name="concord_invite_title">Invite link</string>
+    <string name="concord_make_admin">Make admin</string>
+    <string name="concord_remove_admin">Remove admin</string>
+    <string name="concord_ban_user">Ban</string>
+    <string name="concord_ban_user_title">Ban from this community?</string>
+    <string name="concord_ban_user_body">This member will be added to the community banlist. Their messages will be hidden and their future posts dropped by every member. You can unban them later.</string>
+    <string name="concord_create_icon_hint">Set a community icon</string>
+    <string name="concord_create_relays_desc">Relays that store this community\'s encrypted messages. Leave empty to use your own.</string>
+    <string name="concord_edit_title">Edit community</string>
+    <string name="concord_edit_save">Save</string>
+    <string name="concord_members_title">Members</string>
+    <string name="concord_members_empty">No owner, admins, or banned members to show yet.</string>
+    <string name="concord_members_make_admin">Make admin</string>
+    <string name="concord_members_remove_admin">Remove admin</string>
+    <string name="concord_members_ban">Ban</string>
+    <string name="concord_members_unban">Unban</string>
+    <string name="concord_members_remove">Remove from community</string>
+    <string name="concord_members_remove_title">Remove member?</string>
+    <string name="concord_members_remove_message">This rotates the community\'s encryption key so this member can no longer read anything sent afterwards. Everyone else is re-keyed automatically. This can\'t be undone.</string>
+    <string name="concord_members_remove_confirm">Remove</string>
+    <string name="concord_role_owner">Owner</string>
+    <string name="concord_role_admin">Admin</string>
+    <string name="concord_role_banned">Banned</string>
+    <string name="concord_invite_card_join">Join community</string>
+    <string name="concord_invite_card_subtitle">Concord community invite</string>
+    <string name="concord_invite_naddr_label">Concord invite (open the full invite link to join)</string>
+    <string name="concord_server_label">Concord</string>
+    <string name="concord_view_mode_title">Concord community display</string>
+    <string name="concord_view_inline">Inline</string>
+    <string name="concord_view_grouped">By community</string>
+    <string name="concord_view_inline_desc">Show each channel as its own conversation, mixed in with your chats.</string>
+    <string name="concord_view_grouped_desc">Collapse each community\'s channels into a single row, placed at its newest message.</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <string name="chat_reply_in_chat">In chat</string>
+    <string name="chat_reply_in_thread">In thread</string>
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <string name="chat_minichat_title">Thread</string>
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
+    <plurals name="chat_minichat_reply_count">
+        <item quantity="one">%1$d reply</item>
+        <item quantity="other">%1$d replies</item>
+    </plurals>
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_reply_searching_history">Looking for the original message…</string>
@@ -333,6 +412,7 @@
     and thus chat messages disappear over time</string>
 
     <string name="public_chat">Public Chat</string>
+    <string name="new_public_chat">Create a new public chat</string>
     <string name="marmot_group">MLS Group</string>
     <string name="marmot_group_no_messages_yet">No messages yet</string>
     <string name="public_chat_title">Public Chat Metadata</string>
@@ -829,7 +909,7 @@
     <string name="relay_auth_toggle_my_relays">My relays and venues</string>
     <string name="relay_auth_toggle_my_relays_desc">Log in to your own relays and to public chats, communities and live streams you\'ve joined or favorited.</string>
     <string name="relay_auth_toggle_read_follows">Read posts from people I follow</string>
-    <string name="relay_auth_toggle_read_follows_desc">Log in to a follow\'s relays to download their posts.</string>
+    <string name="relay_auth_toggle_read_follows_desc">Log in to a follow\'s relays to download their profile information, posts and post engagement.</string>
     <string name="relay_auth_toggle_message_follows">Message people I follow</string>
     <string name="relay_auth_toggle_message_follows_desc">Log in to a follow\'s relays to send DMs, replies and notifications.</string>
     <string name="relay_auth_toggle_message_strangers">Message anyone</string>
@@ -839,19 +919,19 @@
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <string name="relay_auth_title_send_dm">Send your message to %1$s?</string>
     <string name="relay_auth_title_notify">Notify %1$s?</string>
-    <string name="relay_auth_title_read">Load posts from %1$s?</string>
+    <string name="relay_auth_title_read">Load profile, posts and engagement from %1$s?</string>
     <string name="relay_auth_title_post_venue">Post to %1$s?</string>
     <string name="relay_auth_title_read_venue">Open %1$s?</string>
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
     <string name="relay_auth_consequence_send_dm">If you don\'t, your message to %1$s won\'t be delivered.</string>
     <string name="relay_auth_consequence_notify">If you don\'t, %1$s won\'t be notified about this.</string>
-    <string name="relay_auth_consequence_read">If you don\'t, you won\'t see posts from %1$s here.</string>
+    <string name="relay_auth_consequence_read">If you don\'t, you won\'t see the profile, posts or engagement from %1$s here.</string>
     <string name="relay_auth_consequence_post_venue">If you don\'t, your message to %1$s won\'t be posted.</string>
     <string name="relay_auth_consequence_read_venue">If you don\'t, you won\'t see %1$s here.</string>
     <string name="relay_auth_name_and_others">%1$s and others</string>
     <string name="relay_auth_reason_send_dm">Send your private message to:</string>
     <string name="relay_auth_reason_notify_inbox">Notify:</string>
-    <string name="relay_auth_reason_read_outbox">Download posts from:</string>
+    <string name="relay_auth_reason_read_outbox">Download profile information, posts and engagement from:</string>
     <string name="relay_auth_reason_post_venue">Post to this room</string>
     <string name="relay_auth_reason_read_venue">Open this room</string>
     <string name="relay_auth_reason_other">Use this relay</string>
@@ -1233,6 +1313,8 @@
     <string name="public_bookmark_presence_indicator">is a public bookmark here</string>
     <string name="private_bookmark_presence_indicator">is a private bookmark here</string>
     <string name="private_rumor_mark">Private — only visible to tagged participants</string>
+    <string name="private_rumor_info_title">Private Note</string>
+    <string name="private_rumor_info_description">This note was delivered privately and is not signed. Only the tagged participants can see it, and nobody can prove to outsiders who wrote it.</string>
     <string name="private_note">Make private: gift-wrap the note to the notified users only</string>
     <string name="disable_private_note">Make public</string>
     <string name="private_note_locked">Replies to a private note always stay private</string>
@@ -1240,6 +1322,8 @@
     <string name="private_note_no_receivers">No receivers yet: only you will be able to see this note. Add people to share it with.</string>
     <string name="notify_add_user">Add</string>
     <string name="notify_remove_user">Remove user from notifications</string>
+    <string name="notify_mute_user">Notifying. Tap to mute the notification for this user</string>
+    <string name="notify_unmute_user">Muted. Tap to notify this user again</string>
     <string name="notify_search_and_add_user">Search and add a user to notify</string>
     <string name="bookmark_absence_indicator">is not a bookmark here</string>
     <string name="bookmark_remove_action_desc">Remove bookmark from list</string>
@@ -2012,6 +2096,8 @@
     <string name="relay_group_threads_title">Threads</string>
     <string name="relay_group_open">Open group</string>
     <string name="relay_group_channels_empty">No groups on this relay yet.</string>
+    <string name="relay_group_channels_not_nip29">This relay does not advertise support for groups (NIP-29), so it may not host any.</string>
+    <string name="relay_group_relay_not_nip29">May not support groups (NIP-29)</string>
     <string name="relay_group_invite_preparing">Preparing invite…</string>
     <string name="relay_group_badge_private">Private</string>
     <string name="relay_group_badge_invite_only">Invite-only</string>
@@ -2832,6 +2918,7 @@
     <string name="add_expiration_date">Add expiration date</string>
     <string name="remove_expiration_date">Remove expiration date</string>
     <string name="expiration_date_label">Expiration Date</string>
+    <string name="expiration_info_description">The author asked relays to delete this note after %1$s. It will disappear from feeds once it expires.</string>
     <string name="expiration_date_explainer">Post will be hidden by clients after this date (NIP-40)</string>
     <string name="expiration_date_select">Select expiration date and time</string>
     <string name="expiration_expires_in">Expires in %1$s</string>
@@ -3028,10 +3115,10 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
-<string name="existed_since">OTS: %1$s</string>
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>
+    <string name="ots_info_pending_description">A timestamp proof for this post has been requested and is waiting to be stamped in the Bitcoin blockchain. It usually completes within a few hours.</string>
 
     <string name="edit_article">Edit Article</string>
     <string name="edit_post">Edit Post</string>
@@ -3052,6 +3139,8 @@
     <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">It\'s not possible to zap a draft note</string>
     <string name="draft_note">Draft Note</string>
+    <string name="draft">Draft</string>
+    <string name="bounty_label">Bounty</string>
 
     <string name="load_from_text">From Msg</string>
 
@@ -3191,6 +3280,102 @@
     <string name="crashreport_found">Crash Report found</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Would you like to send the recent crash report to Amethyst in a DM? No personal information will be shared</string>
     <string name="crashreport_found_send">Send it</string>
+
+    <string name="resource_usage_title">App resource usage</string>
+    <string name="resource_usage_search_keywords">battery data usage consumption power network diagnostics ledger</string>
+    <string name="resource_usage_today">Today</string>
+    <string name="resource_usage_week">Last 7 days</string>
+    <string name="resource_usage_tile_cellular">Cellular today</string>
+    <string name="resource_usage_tile_wifi">Wi-Fi today</string>
+    <string name="resource_usage_tile_relay">Relay time today</string>
+    <string name="resource_usage_tile_in_app">In app today</string>
+    <string name="resource_usage_trend_section">Data per day</string>
+    <string name="resource_usage_legend_cellular">Cellular (MB)</string>
+    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
+    <string name="resource_usage_activity_section">Activity (7 days)</string>
+    <string name="resource_usage_cellular_bg">Cellular data (background)</string>
+    <string name="resource_usage_cellular_fg">Cellular data (in app)</string>
+    <string name="resource_usage_wifi">Wi-Fi data</string>
+    <string name="resource_usage_relay_time">Relay connection time</string>
+    <string name="resource_usage_relay_time_bg_mobile">\u2026 backgrounded on cellular</string>
+    <string name="resource_usage_wakelock">Notification processing (CPU awake)</string>
+    <string name="resource_usage_worker_runs">Background jobs run</string>
+    <string name="resource_usage_reconnects">Relay reconnections (failed)</string>
+    <string name="resource_usage_http_requests">Web requests</string>
+    <string name="resource_usage_radio_bursts">Radio wake-ups for downloads (est.)</string>
+    <string name="resource_usage_http_active">Active transfer time</string>
+    <string name="resource_usage_media_play">Media playback time</string>
+    <string name="resource_usage_verifies">Signatures verified</string>
+    <string name="resource_usage_cpu">Processor time used</string>
+    <string name="resource_usage_fg_time">Time in app</string>
+    <string name="resource_usage_app_starts">App process starts</string>
+    <string name="resource_usage_decrypts">Messages decrypted</string>
+    <string name="resource_usage_remote_signs">Remote signatures</string>
+    <string name="resource_usage_pow">Proof-of-work mining</string>
+    <string name="resource_usage_tor">Tor uptime</string>
+    <string name="resource_usage_calls">Time in calls</string>
+    <string name="resource_usage_nests">Time in audio rooms</string>
+    <string name="resource_usage_location">Location listening</string>
+    <string name="resource_usage_battery_drain">Battery used (in app / background)</string>
+    <string name="resource_usage_alwayson_section">Background notification service</string>
+    <string name="resource_usage_alwayson_explanation">Keeps connections to your relays open while the app is closed, so notifications arrive without Google’s push servers. While enabled, this is usually the largest background battery cost. If battery matters more to you than instant notifications, you can change the delivery method or turn it off.</string>
+    <string name="resource_usage_alwayson_uptime">Running time</string>
+    <plurals name="resource_usage_alwayson_starts">
+        <item quantity="one">%1$d start</item>
+        <item quantity="other">%1$d starts</item>
+    </plurals>
+    <string name="resource_usage_alwayson_bg_relay">Relay connections held while closed</string>
+    <string name="resource_usage_alwayson_battery">Battery drained meanwhile (whole device)</string>
+    <string name="resource_usage_alwayson_settings_button">Change notification settings</string>
+    <string name="resource_usage_tor_settings_button">Privacy options</string>
+    <string name="resource_usage_tile_battery_rate">Battery / hour in app</string>
+    <string name="resource_usage_tile_data_rate">Data / hour in app</string>
+    <string name="resource_usage_tile_avg_relays">Avg. relay connections</string>
+    <string name="resource_usage_by_subsystem_cellular">Cellular data by feature (7 days)</string>
+    <string name="resource_usage_cell_of_total">%1$s · %2$s total</string>
+    <string name="resource_usage_screen_time_section">Time by screen (7 days)</string>
+    <string name="resource_usage_tor_section">Built-in Tor</string>
+    <string name="resource_usage_tor_explanation">Routes the app’s traffic through the Tor network for privacy. While running it spends extra battery on encryption and keep-alive traffic, and every start pays a bootstrap. If your threat model allows, Tor use can be adjusted or turned off.</string>
+    <string name="resource_usage_by_subsystem">Data by feature (7 days)</string>
+    <string name="resource_usage_subsystem_relay">Relay sync</string>
+    <string name="resource_usage_subsystem_image">Images</string>
+    <string name="resource_usage_subsystem_video">Video &amp; audio</string>
+    <string name="resource_usage_subsystem_uploads">Uploads</string>
+    <string name="resource_usage_subsystem_money">Wallet &amp; zaps</string>
+    <string name="resource_usage_subsystem_nip05">Address verification</string>
+    <string name="resource_usage_subsystem_preview">Link previews</string>
+    <string name="resource_usage_subsystem_push">Push registration</string>
+    <string name="resource_usage_subsystem_other">Other</string>
+    <string name="resource_usage_empty">No usage recorded yet.</string>
+    <string name="resource_usage_memory_section">Memory right now</string>
+    <string name="resource_usage_memory_heap">App memory (heap)</string>
+    <string name="resource_usage_memory_native">Native memory</string>
+    <string name="resource_usage_memory_image_cache">Image cache (RAM)</string>
+    <string name="resource_usage_memory_image_disk">Image cache (disk)</string>
+    <string name="resource_usage_memory_notes">Notes in memory</string>
+    <string name="resource_usage_memory_users">Profiles in memory</string>
+    <string name="resource_usage_memory_addressables">Addressable events in memory</string>
+    <string name="resource_usage_memory_chatrooms">Chatroom lists in memory</string>
+    <string name="resource_usage_memory_device_class">Device memory class</string>
+    <string name="resource_usage_send_section">Share with the developers</string>
+    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, or browsing details. Nothing is sent until you tap Send in the message screen.</string>
+    <string name="resource_usage_send_button">Send report via DM</string>
+    <string name="resource_usage_alert_title">High resource usage detected</string>
+    <string name="resource_usage_alert_message">Amethyst consumed more than expected recently: %1$s. Would you like to send a usage report to the developers in an encrypted DM? You will see the full report before anything is sent.</string>
+    <string name="resource_usage_reason_bg_data">%1$s of cellular data in the background in one day</string>
+    <string name="resource_usage_reason_conn_time">%1$s of relay connections while backgrounded on cellular in one day</string>
+    <string name="resource_usage_reason_wakelock">the CPU was held awake for %1$s processing notifications in one day</string>
+    <plurals name="resource_usage_reason_churn">
+        <item quantity="one">the app process restarted %1$d time in one day</item>
+        <item quantity="other">the app process restarted %1$d times in one day</item>
+    </plurals>
+    <plurals name="resource_usage_reason_reconnects">
+        <item quantity="one">the app reconnected to relays %1$d time in one day</item>
+        <item quantity="other">the app reconnected to relays %1$d times in one day</item>
+    </plurals>
+    <string name="resource_usage_alert_send">Review &amp; send</string>
+    <string name="resource_usage_alert_not_now">Not now</string>
+    <string name="resource_usage_alert_opt_out">Don\u2019t ask again</string>
     <string name="this_message_will_disappear_in">This message will disappear in %1$s</string>
     <string name="select_signer">Select Signer</string>
 
@@ -3554,6 +3739,10 @@
     <string name="playback_actions_dialog_title">Playback</string>
     <string name="video_quality_auto">Auto</string>
 
+    <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
+    <string name="edit_nickname">Edit nickname</string>
+    <string name="nickname_private">Only visible to you</string>
+
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Cast to device</string>
     <string name="cast_stop_casting">Stop casting</string>
@@ -3784,6 +3973,7 @@
     <string name="compose_signature_setting_description">Added at the end of the message when opening a new post, reply, quote, or article. Leave empty to disable.</string>
     <string name="compose_signature_setting_hint">Your signature</string>
     <string name="pow_settings_title">Proof of Work</string>
+    <string name="pow_info_description">The author spent computing power to mine this note to difficulty %1$s — a proof-of-work stamp that makes spamming expensive.</string>
     <string name="pow_difficulty_title">Difficulty</string>
     <string name="pow_difficulty_explainer">Mines a NIP-13 proof of work into your posts before publishing so relays and readers can weigh them against spam. Higher values take exponentially longer to mine. Posts publish in the background once mined.</string>
     <string name="pow_difficulty_off">Off</string>

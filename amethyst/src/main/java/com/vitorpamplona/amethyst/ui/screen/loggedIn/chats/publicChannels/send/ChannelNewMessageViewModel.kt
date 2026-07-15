@@ -38,12 +38,14 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -56,7 +58,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
@@ -85,11 +86,10 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -142,6 +142,10 @@ open class ChannelNewMessageViewModel :
     var channel: Channel? = null
 
     val replyTo = mutableStateOf<Note?>(null)
+
+    // INLINE keeps the reply in the timeline (native reply); MINICHAT sends a kind-1111
+    // thread comment that opens as a minichat. Only meaningful while replyTo is set.
+    val replyMode = mutableStateOf(ReplyMode.INLINE)
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
 
@@ -212,7 +216,7 @@ open class ChannelNewMessageViewModel :
             )
 
         this.emojiSuggestions?.reset()
-        this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
 
         this.uploadState = ChatFileUploadState(account.settings.defaultFileServer, account.settings.stripLocationOnUpload)
     }
@@ -223,11 +227,17 @@ open class ChannelNewMessageViewModel :
 
     open fun reply(replyNote: Note) {
         replyTo.value = replyNote
+        replyMode.value = ReplyMode.INLINE
         draftTag.newVersion()
+    }
+
+    fun toggleReplyMode() {
+        replyMode.value = if (replyMode.value == ReplyMode.INLINE) ReplyMode.MINICHAT else ReplyMode.INLINE
     }
 
     fun clearReply() {
         replyTo.value = null
+        replyMode.value = ReplyMode.INLINE
         draftTag.newVersion()
     }
 
@@ -421,6 +431,7 @@ open class ChannelNewMessageViewModel :
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
+
         val messageText = message.text.toString()
         val tagger =
             NewMessageTagger(
@@ -433,13 +444,32 @@ open class ChannelNewMessageViewModel :
 
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-        val emojis = findEmoji(messageText, accountViewModel.account.emoji.myEmojis.value)
+        val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
 
         val channelRelays = channel.relays()
         val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
+
+        // A minichat reply is a kind-1111 thread comment rooted at the parent, independent of the
+        // channel type (NIP-29 groups additionally carry the `h` tag). It carries the same mention/
+        // hashtag/quote/emoji/attachment enrichment an inline message does — built from tagger.message,
+        // not the raw text — so replying in a thread never silently drops any of them.
+        val minichatParent = replyTo.value?.takeIf { replyMode.value == ReplyMode.MINICHAT }?.event
+        if (minichatParent != null) {
+            return CommentEvent.replyBuilder(tagger.message, EventHintBundle(minichatParent, channelRelays.firstOrNull())) {
+                if (channel is RelayGroupChannel) hTag(channel.groupId.id)
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
+                contentWarningReason?.let { contentWarning(it) }
+                localExpirationDate?.let { expiration(it) }
+                geoHash?.let { geohash(it) }
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
+        }
 
         return when {
             channel is PublicChatChannel -> {
@@ -597,16 +627,6 @@ open class ChannelNewMessageViewModel :
         }
     }
 
-    fun findEmoji(
-        message: String,
-        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
-    ): List<EmojiUrlTag> {
-        if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
-        }
-    }
-
     open fun cancel() {
         draftTag.rotate()
 
@@ -690,10 +710,7 @@ open class ChannelNewMessageViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
-        val wordToInsert = ":${item.code}:"
-        message.replaceCurrentWord(wordToInsert)
-
-        emojiSuggestions?.reset()
+        emojiSuggestions?.autocompleteInto(message, item)
 
         draftTag.newVersion()
     }

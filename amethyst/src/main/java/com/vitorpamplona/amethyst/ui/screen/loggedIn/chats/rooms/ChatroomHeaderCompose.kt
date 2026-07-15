@@ -54,10 +54,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -83,7 +85,10 @@ import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
@@ -118,9 +123,10 @@ fun ChatroomHeaderCompose(
     // would blank the row.
     val rendersWithoutEvent =
         baseNote is RelayGroupServerRoomNote ||
+            baseNote is ConcordServerRoomNote ||
             (
                 baseNote.event == null &&
-                    baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel } == true
+                    baseNote.inGatherers?.any { it is MarmotGroupChatroom || it is RelayGroupChannel || it is ConcordChannel } == true
             )
 
     if (baseNote.event != null || rendersWithoutEvent) {
@@ -164,6 +170,11 @@ private fun ChatroomEntry(
         return
     }
 
+    if (lastMessage is ConcordServerRoomNote) {
+        ConcordServerRoomCompose(lastMessage, accountViewModel, nav)
+        return
+    }
+
     val marmotGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
         MarmotGroupRoomCompose(lastMessage, marmotGroup, accountViewModel, nav)
@@ -173,6 +184,12 @@ private fun ChatroomEntry(
     val relayGroup = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
     if (relayGroup != null) {
         RelayGroupRoomCompose(lastMessage, relayGroup, accountViewModel, nav)
+        return
+    }
+
+    val concordChannel = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concordChannel != null) {
+        ConcordRoomCompose(lastMessage, concordChannel, accountViewModel, nav)
         return
     }
 
@@ -377,9 +394,20 @@ private fun RelayGroupRoomCompose(
             stringRes(R.string.relay_group_no_messages_yet)
         }
 
+    val groupPicture = channel.profilePicture()?.ifBlank { null }
+    val channelPicture =
+        if (groupPicture != null) {
+            groupPicture
+        } else {
+            // Missing/blank group picture: fall back to the host relay's NIP-11 icon
+            // (loadRelayInfo fetches the doc on a cache miss).
+            val relayInfo by loadRelayInfo(channel.groupId.relayUrl)
+            relayInfo.icon?.ifBlank { null }
+        }
+
     ChannelName(
         channelIdHex = channel.groupId.id,
-        channelPicture = channel.profilePicture(),
+        channelPicture = channelPicture,
         channelTitle = { modifier ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
                 Text(
@@ -406,6 +434,63 @@ private fun RelayGroupRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url)) },
+    )
+}
+
+@Composable
+private fun ConcordRoomCompose(
+    lastMessage: Note,
+    baseChannel: ConcordChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val channelState by observeChannel(baseChannel, accountViewModel)
+    val channel = channelState?.channel as? ConcordChannel ?: baseChannel
+
+    val author = lastMessage.author
+    val noteEvent = lastMessage.event
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            // Event-less placeholder row for a just-joined channel with no messages yet.
+            channel.communityName ?: stringRes(R.string.relay_group_no_messages_yet)
+        }
+
+    ChannelName(
+        channelIdHex = channel.channelId.channelId,
+        channelPicture = rememberConcordImageModel(channel.communityIcon, accountViewModel),
+        channelTitle = { modifier ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+                Text(
+                    text = channel.toBestDisplayName(),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                channel.communityName?.let { communityName ->
+                    Spacer(Modifier.width(6.dp))
+                    // The chip names the parent community and, when tapped, opens that community's
+                    // channel list — the "chip that opens the Concord Channel" entry point.
+                    ConcordCommunityPill(
+                        communityName = communityName,
+                        onClick = { nav.nav(Route.ConcordServer(channel.channelId.communityId)) },
+                    )
+                }
+            }
+        },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = false,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.Concord(channel.channelId.communityId, channel.channelId.channelId)) },
     )
 }
 
@@ -447,7 +532,57 @@ private fun RelayGroupServerRoomCompose(
     )
 }
 
-/** A small tappable chip naming the relay a channel is hosted on. */
+@Composable
+private fun ConcordServerRoomCompose(
+    row: ConcordServerRoomNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Community name/icon from the folded Control Plane (bumped via the session revision).
+    val revision by accountViewModel.account.concordSessions.revision
+        .collectAsStateWithLifecycle()
+    val metadata =
+        remember(row.communityId, revision) {
+            accountViewModel.account.concordSessions
+                .sessionFor(row.communityId)
+                ?.state
+                ?.value
+                ?.metadata
+        }
+    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: stringRes(R.string.concord_home_title)
+
+    val author = row.newestMessage?.author
+    val noteEvent = row.newestMessage?.event
+    val lastContent =
+        if (author != null && noteEvent != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            "$authorName: ${noteEvent.content.take(200)}"
+        } else {
+            stringRes(R.string.relay_group_no_messages_yet)
+        }
+
+    ChannelName(
+        channelIdHex = row.communityId,
+        channelPicture = rememberConcordImageModel(metadata?.icon, accountViewModel),
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, R.string.concord_server_label, modifier) },
+        channelLastTime = row.newestMessage?.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = false,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.ConcordServer(row.communityId)) },
+    )
+}
+
+/**
+ * A tappable chip naming the server/community a Messages row belongs to. Unlike the muted
+ * note-header [HeaderPill] (PoW/OTS/location markers), this one is a first-class navigation entry
+ * point, so it keeps the stronger `secondaryContainer` highlight.
+ */
 @Composable
 private fun RelayNameChip(
     label: String,

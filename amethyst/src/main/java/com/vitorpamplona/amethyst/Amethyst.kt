@@ -110,6 +110,10 @@ class Amethyst : Application() {
         // kdoc for the threshold rationale.
         registerActivityLifecycleCallbacks(AppForegroundRecycleHook())
 
+        // Foreground signal for the resource-usage ledger (fg/bg attribution
+        // of bytes and connection-time). Main process only.
+        registerActivityLifecycleCallbacks(instance.foregroundTracker)
+
         if (isDebug) {
             Logging.setup()
             // Auto-enable the Nests session-trace recorder in debug

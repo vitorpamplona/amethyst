@@ -54,6 +54,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
+import androidx.core.graphics.scale
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptReplyProxy
@@ -456,7 +458,7 @@ class NappletBrowserActivity : ComponentActivity() {
             runCatching {
                 val scaled =
                     if (icon.width > ICON_MAX_PX || icon.height > ICON_MAX_PX) {
-                        Bitmap.createScaledBitmap(icon, ICON_MAX_PX, ICON_MAX_PX, true)
+                        icon.scale(ICON_MAX_PX, ICON_MAX_PX)
                     } else {
                         icon
                     }
@@ -597,7 +599,7 @@ class NappletBrowserActivity : ComponentActivity() {
         // Key the persisted choice on the host actually displayed (which may differ from startUrl after
         // in-page navigation), so the preference sticks to the right site.
         val liveUrl = if (this::webView.isInitialized) webView.url ?: startUrl else startUrl
-        val host = runCatching { Uri.parse(liveUrl).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+        val host = runCatching { liveUrl.toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
         val msg =
             Message.obtain(null, NappletIpc.MSG_SET_WEB_TOR).apply {
                 data =
@@ -613,7 +615,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     private var title: String = ""
 
-    private fun barTitle(): String = title.ifBlank { runCatching { Uri.parse(startUrl).host }.getOrNull() ?: getString(CommonsR.string.napplet_untitled) }
+    private fun barTitle(): String = title.ifBlank { runCatching { startUrl.toUri().host }.getOrNull() ?: getString(CommonsR.string.napplet_untitled) }
 
     /**
      * The top pull-down sheet: a small grabber at the top edge (out of the corner where a site shows its
@@ -644,7 +646,7 @@ class NappletBrowserActivity : ComponentActivity() {
      */
     private fun openPermissions() {
         val liveUrl = if (this::webView.isInitialized) webView.url ?: startUrl else startUrl
-        val uri = runCatching { Uri.parse(liveUrl) }.getOrNull() ?: return
+        val uri = runCatching { liveUrl.toUri() }.getOrNull() ?: return
         val scheme = uri.scheme?.takeIf { it.isNotBlank() } ?: return
         val host = uri.host?.takeIf { it.isNotBlank() } ?: return
         val origin = "$scheme://$host" + if (uri.port > 0) ":${uri.port}" else ""
@@ -774,6 +776,6 @@ class NappletBrowserActivity : ComponentActivity() {
                 .putExtra(EXTRA_THEME, theme)
                 .putExtra(EXTRA_IS_FAVORITE, isFavorite)
                 // Distinct task identity per URL for documentLaunchMode=intoExisting.
-                .setData(Uri.parse(url))
+                .setData(url.toUri())
     }
 }

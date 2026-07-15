@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
 
@@ -36,3 +37,10 @@ val ColorScheme.isLight: Boolean
  */
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = ColorFilter.tint(onBackground)
+
+/**
+ * De-emphasized text/icon color for secondary markers and hints. Matches the
+ * Android app's placeholderText, which is the palette's onSurface at 42%.
+ */
+val ColorScheme.placeholderText: Color
+    get() = onSurface.copy(alpha = 0.42f)

@@ -190,6 +190,15 @@ class AccountFeedContentStates(
                 }
         }
 
+        // Same for the Concord view mode (inline channels vs one row per community).
+        scope.launch(Dispatchers.IO) {
+            account.settings.concordViewMode
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
+        }
+
         // Pinning/unpinning a room only changes sort order, not membership, so no
         // chat event flows through LocalCache. Force a rebuild to re-sort. This
         // also fires when pins arrive via the synced AppSpecificData event.

@@ -54,17 +54,21 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -217,6 +221,18 @@ private fun DisplayAddress(
         return
     }
 
+    // A Concord invite bundle (kind 33301) is addressed by a bare naddr, but redeeming it
+    // needs the 16-byte unlock token that only lives in the full invite link's #fragment —
+    // a naddr alone can't be joined. Show an informative label instead of the generic
+    // (and here always-empty) addressable-note card.
+    if (nip19.kind == ConcordInviteBundleEvent.KIND) {
+        Text(
+            text = stringRes(R.string.concord_invite_naddr_label) + (additionalChars ?: ""),
+            color = MaterialTheme.colorScheme.primary,
+        )
+        return
+    }
+
     var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.aTag())) }
 
     if (noteBase == null) {
@@ -298,14 +314,16 @@ fun RenderUserAsClickableText(
     nav: INav,
 ) {
     val userState by observeUserInfo(baseUser, accountViewModel)
+    val nickname by observeUserNickname(baseUser, accountViewModel)
+    val petName = nickname?.petName
 
     CreateClickableTextWithEmoji(
-        clickablePart = "@" + (userState?.info?.bestName() ?: baseUser.pubkeyDisplayHex()),
+        clickablePart = "@" + (petName ?: userState?.info?.bestName() ?: baseUser.pubkeyDisplayHex()),
         suffix = additionalChars?.ifBlank { null },
         maxLines = 1,
         route = remember(baseUser) { routeFor(baseUser) },
         nav = nav,
-        tags = userState?.tags ?: EmptyTagList,
+        tags = (if (petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
     )
 }
 

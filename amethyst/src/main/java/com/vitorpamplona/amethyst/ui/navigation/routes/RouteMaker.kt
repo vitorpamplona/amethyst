@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.routes
 
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -65,10 +66,42 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
+/**
+ * A minichat reply — a kind-1111 [CommentEvent] posted into a chat message's thread — should open
+ * that message's minichat ([Route.ChatMinichat]), not the whole channel it lives in. Regular chat
+ * messages are kind 9 / 42, so a [CommentEvent] in a *chat context* is always a thread reply. We
+ * gate on the chat context (the reply is attached to a Concord / relay-group / public-chat gatherer,
+ * or its root message is) precisely so a generic NIP-22 comment on an article or note keeps its own
+ * thread route and isn't mistaken for a minichat. Returns null when it isn't a chat-context comment.
+ */
+fun minichatRouteFor(note: Note): Route? {
+    val comment = note.event as? CommentEvent ?: return null
+    val rootId = comment.rootEventIds().firstOrNull() ?: return null
+
+    // Prefer the reply's own Concord channel (the reply arrived over that plane, so its gatherer
+    // always carries the community/channel), else the root note's if it happens to be loaded. Passing
+    // these lets the minichat screen resolve the plane + relays even when the parent isn't cached.
+    val concord =
+        note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+            ?: LocalCache.getNoteIfExists(rootId)?.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concord != null) {
+        return Route.ChatMinichat(rootId, concord.channelId.communityId, concord.channelId.channelId)
+    }
+
+    val inChatContext = note.isInChatGatherer() || LocalCache.getNoteIfExists(rootId)?.isInChatGatherer() == true
+    return if (inChatContext) Route.ChatMinichat(rootId) else null
+}
+
+private fun Note.isInChatGatherer(): Boolean = inGatherers?.any { it is ConcordChannel || it is RelayGroupChannel || it is PublicChatChannel } == true
+
 fun routeFor(
     note: Note,
     loggedIn: Account,
 ): Route? {
+    // A minichat reply opens the message's thread, not the whole channel it belongs to. Must run
+    // before the channel-gatherer shortcuts below, which would otherwise swallow it into the channel.
+    minichatRouteFor(note)?.let { return it }
+
     // Marmot group messages should navigate to the group chat
     val marmotGroup = note.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
@@ -82,6 +115,15 @@ fun routeFor(
     val relayGroup = note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
     if (relayGroup != null) {
         return routeFor(relayGroup)
+    }
+
+    // Concord channel content (kind 9 chat, 1111 reply, 7 reaction) lands in LocalCache as a real
+    // Note attached to its ConcordChannel gatherer. Route to the Concord chat instead of the generic
+    // thread view it would otherwise fall through to: a minichat reply (kind-1111) opens its thread
+    // ([minichatRouteFor]); a top-level message / reaction opens the channel.
+    val concordChannel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concordChannel != null) {
+        return minichatRouteFor(note) ?: routeFor(concordChannel)
     }
 
     val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
@@ -282,6 +324,8 @@ fun routeFor(note: RelayGroupChannel): Route = Route.RelayGroup(note.groupId.id,
 
 fun routeFor(groupId: GroupId): Route = Route.RelayGroup(groupId.id, groupId.relayUrl.url)
 
+fun routeFor(channel: ConcordChannel): Route = Route.Concord(channel.channelId.communityId, channel.channelId.channelId)
+
 fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
 
 fun routeForUser(userHex: HexKey): Route.Profile = Route.Profile(userHex)
@@ -299,6 +343,17 @@ fun routeReplyTo(
     val marmotGroup = note.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
     if (marmotGroup != null) {
         return Route.MarmotGroupChat(marmotGroup.nostrGroupId, replyId = note.idHex)
+    }
+
+    // Concord messages are end-to-end encrypted: a reply must go through the channel plane (a sealed
+    // kind-1111), never a public kind-1111 — which would leak the private rumor id onto public relays
+    // and wouldn't bind to the channel. Route the reply into the message's minichat, whose composer
+    // sends the wrapped reply. For a thread reply (kind-1111) reply into the same flat thread (its
+    // root); for a top-level message (kind-9) the message itself is the thread root.
+    val concord = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
+    if (concord != null) {
+        val rootId = (note.event as? CommentEvent)?.rootEventIds()?.firstOrNull() ?: note.idHex
+        return Route.ChatMinichat(rootId, concord.channelId.communityId, concord.channelId.channelId)
     }
 
     val noteEvent = note.event

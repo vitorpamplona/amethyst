@@ -36,30 +36,28 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceType
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
-import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -80,29 +78,40 @@ import kotlin.math.roundToInt
  * unreachable outbox is retried a few times), then runs the scoring engine in
  * `commons/wot`.
  *
- * Prints a ranked list (text, or one JSON object under `--json`). With
- * `--publish`, results are also published as NIP-85 kind:30382 `ContactCardEvent`
- * trusted assertions (one per scored user, `rank = round(score*100)`).
- *
- * The crawl and the computation are separable, because the crawl persists every
- * event it fetches to the store and the score is a pure function over it:
+ * The pipeline is three separable stages, each with its own verb, and the local
+ * store is the source of truth between them (the crawl persists every event it
+ * fetches; the score is a pure function over the store; every score run persists
+ * its result as locally-signed NIP-85 kind:30382 cards):
  *  - `amy graperank crawl [OBSERVER]` — network only: crawl the reachable graph's
- *    kind 3/10000/1984/10002 into the local store (aliased as the former `sync`).
- *    Idempotent and cumulative, so run it a few times to make sure everything is
- *    loaded. Scores nothing.
- *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store
- *    and score (same as bare `--offline`). Instant and param-tunable; repeat with
- *    different `--rigor`/`--attenuation`/cutoffs without re-crawling.
- *  - `amy graperank probe` — the relay census: mass-connect every relay the store
+ *    kind 3/10000/1984/10002 into the local store. Idempotent and cumulative, so
+ *    run it a few times to make sure everything is loaded. Scores nothing.
+ *  - `amy graperank status` — read-only inventory of all of the above: WoT record
+ *    counts, reachability-cache freshness, operator state, persisted card sets.
+ *    Answers "do I need to crawl again?" with no network and no signing.
+ *  - `amy graperank score [OBSERVER]` — local only: build the graph from the store,
+ *    score (same as bare `--offline`), and ALWAYS reconcile the result into the
+ *    store as kind:30382 [ContactCardEvent] cards signed by the observer's
+ *    per-observer service key (`rank = round(score*100)`, cutoff `--min-rank`):
+ *    changed ranks are re-signed, unchanged ones skipped, dropped targets
+ *    retracted with a kind:5. That persisted card set is what `publish` and
+ *    `rank` reuse — scores are never ephemeral.
+ *  - `amy graperank publish [OBSERVER]` — transport only: make the operator
+ *    relay(s) converge to the local card set via a NIP-77 up-only reconcile
+ *    (nothing is re-signed or re-scored), and refresh the observer's kind:10040
+ *    pointer when we hold their key.
+ *  - `amy relay probe` — the relay census: mass-connect every relay the store
  *    knows and record live/dead + measured RTT into the reachability cache, so the
  *    next crawl skips the dead and pre-connects the living in one parallel storm.
+ *    Lives in [RelayCommands] (`graperank probe` is kept as an alias).
  *  - bare `amy graperank [OBSERVER]` — the convenience combo: crawl then score.
  *
- * Sub-verbs complete the NIP-85 provider experience — the discovery layer that
- * lets clients find and consume those assertions:
+ * Sub-verbs complete the NIP-85 experience — discovery and consumption:
+ *  - `amy graperank rank USER` — read the kind:30382 cards about USER (local
+ *    store first, `--refresh` to drain providers' relays): the consumer side.
  *  - `amy graperank register` — advertise a `30382:rank` provider in the
  *    account's kind:10040 [TrustProviderListEvent] (defaults to self, so a
- *    provider publishing ranks announces where to find them).
+ *    provider publishing ranks announces where to find them);
+ *    `amy graperank unregister PROVIDER` removes entries again.
  *  - `amy graperank providers [USER]` — list a user's trusted providers.
  */
 object GrapeRankCommand {
@@ -136,6 +145,10 @@ object GrapeRankCommand {
             ).mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
 
     private const val PROBE_TIMEOUT_MS = 2000
+
+    // args.bool on a mistyped flag silently returns false, so the one flag read from
+    // three different functions goes through a compile-time-checked name.
+    private const val NO_REACHABILITY_CACHE_FLAG = "no-reachability-cache"
 
     // The probe does BLOCKING DNS + TCP connect, and dead-domain DNS lookups can hang
     // far past the connect timeout. On the shared Dispatchers.IO those hanging lookups
@@ -192,14 +205,21 @@ object GrapeRankCommand {
         // NIP-05, or nothing) is the OBSERVER positional for a score computation.
         when (tail.firstOrNull()) {
             "register" -> register(dataDir, tail.drop(1).toTypedArray())
+            "unregister" -> unregister(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
-            // `sync` is the pre-rename name kept as a back-compat alias; `crawl` is
-            // canonical (disambiguates from negentropy `amy sync` / `graperank update`).
-            "crawl", "sync" -> crawl(dataDir, tail.drop(1).toTypedArray())
-            "probe" -> probe(dataDir, tail.drop(1).toTypedArray())
-            "update" -> update(dataDir, tail.drop(1).toTypedArray())
+            "crawl" -> crawl(dataDir, tail.drop(1).toTypedArray())
+            "status" -> status(dataDir)
+            // The relay census outgrew graperank (it feeds the shared NIP-66
+            // reachability cache every command reads) and moved to `amy relay
+            // probe`; this alias keeps the old spelling working.
+            "probe" -> RelayCommands.probe(dataDir, tail.drop(1).toTypedArray())
+            // `refresh` is canonical (it refreshes the WoT record kinds from each
+            // author's outbox); `update` is the pre-rename back-compat alias.
+            "refresh", "update" -> refresh(dataDir, tail.drop(1).toTypedArray())
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
+            "publish" -> publish(dataDir, tail.drop(1).toTypedArray())
+            "rank" -> rank(dataDir, tail.drop(1).toTypedArray())
             else -> run(dataDir, tail)
         }
 
@@ -223,17 +243,11 @@ object GrapeRankCommand {
         // the result JSON, so keep local copies for that.
         val parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000
         val insertBatch = args.intFlag("insert-batch", 500)
-        val doPublish = args.bool("publish")
-        // Publish cutoff: only cards with rank >= this are published; existing
-        // cards for targets below it (or gone from the graph) are retracted. Rank
-        // is round(score*100), so 2 drops the ~0.015-and-below barely-trusted tail.
+        // Card cutoff: only scores with rank >= this get a local kind:30382 card;
+        // existing cards for targets below it (or gone from the graph) are
+        // retracted. Rank is round(score*100), so 2 drops the ~0.015-and-below
+        // barely-trusted tail.
         val minRank = args.intFlag("min-rank", 2)
-        val publishLimit = args.intFlag("publish-limit", 500)
-        val publishRelaysArg = args.flag("publish-relay")
-        // Benchmark: build + sign one kind:30382 card per scored user (rank >=
-        // --min-rank) with a throwaway key and time it, WITHOUT publishing.
-        // Measures the id-hash + Schnorr-sign cost of emitting the full card set.
-        val benchSign = args.bool("bench-sign")
 
         val params =
             GrapeRankParams(
@@ -344,84 +358,43 @@ object GrapeRankCommand {
                         },
                 )
 
-            if (doPublish) {
-                // The cards for THIS observer are signed by a dedicated, stable
-                // per-observer service key derived from the machine's operator
-                // master (see OperatorKeys) — not the account key. Same key across
-                // runs means re-signing a card replaces the addressable prior one.
-                val opKeys = ctx.dataDir.operatorKeys()
-                val serviceKey = opKeys.serviceKey(observer)
-                val serviceSigner = NostrSignerInternal(serviceKey)
-                val providerPubkey = serviceKey.pubKey.toHexKey()
-                result["provider_pubkey"] = providerPubkey
+            // Every score run persists its result: the desired card set (every user
+            // at or above the rank cutoff) is reconciled into the LOCAL store as
+            // kind:30382 cards — signed by a dedicated, stable per-observer service
+            // key derived from the machine's operator master (see OperatorKeys),
+            // not the account key. Changed ranks are re-signed (the addressable
+            // card is replaced), unchanged ones skipped, dropped targets retracted
+            // with a kind:5. `graperank publish` and `graperank rank` reuse this
+            // set; no relay is touched here.
+            val opKeys = ctx.dataDir.operatorKeys()
+            val serviceKey = opKeys.serviceKey(observer)
+            val providerPubkey = serviceKey.pubKey.toHexKey()
+            val desiredCards =
+                rankedIds
+                    .filter { rankOf(scores[it]) >= minRank }
+                    .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
 
-                // Cards go to the operator's own relay(s), where the whole
-                // trusted-assertion set lives; --publish-relay overrides.
-                val relays =
-                    publishRelaysArg
-                        ?.split(",")
-                        ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-                        ?.toSet()
-                        ?.takeIf { it.isNotEmpty() }
-                        ?: opKeys.operatorRelays()
+            val cardsStart = System.nanoTime()
+            val local =
+                GrapeRankPublisher(ctx.store) { System.err.println(it) }
+                    .reconcileLocal(
+                        providerSigner = NostrSignerInternal(serviceKey),
+                        providerPubkey = providerPubkey,
+                        scored = desiredCards,
+                    )
+            val cardsMs = (System.nanoTime() - cardsStart) / 1_000_000
+            System.err.println(
+                "[graperank] local cards: ${local.signed} signed, ${local.unchanged} unchanged, " +
+                    "${local.retracted} retracted in $cardsMs ms — `amy graperank publish` pushes them to the operator relay",
+            )
 
-                if (relays.isEmpty()) {
-                    result["published"] = 0
-                    result["publish_error"] = "no operator relay configured — run `amy graperank operator relay <url>` or pass --publish-relay"
-                } else {
-                    // The scorer's desired card set: every user at or above the rank
-                    // cutoff, as (target, rank). GrapeRankPublisher reconciles this
-                    // against what this provider key already published and upserts /
-                    // retracts the difference.
-                    val publishable =
-                        rankedIds
-                            .filter { rankOf(scores[it]) >= minRank }
-                            .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
-
-                    val publisher = GrapeRankPublisher(ctx.store) { event, to -> ctx.publish(event, to) }
-                    val pub =
-                        publisher.reconcileAndPublish(
-                            providerSigner = serviceSigner,
-                            providerPubkey = providerPubkey,
-                            scored = publishable,
-                            relays = relays,
-                            publishLimit = publishLimit,
-                        )
-
-                    result["skipped_unchanged"] = pub.skippedUnchanged
-                    if (pub.truncated > 0) result["publish_truncated"] = pub.truncated
-                    result["published"] = pub.published
-                    result["publish_rejected"] = pub.publishRejected
-                    result["deleted"] = pub.deleted
-                    result["delete_rejected"] = pub.deleteRejected
-                    result["published_kind"] = ContactCardEvent.KIND
-                    result["published_to"] = relays.map { it.url }
-
-                    // Help the observer point clients at this provider: publish their
-                    // kind:10040 (30382:rank -> providerPubkey @ operator relay) to
-                    // their outbox — but only when we actually hold their key.
-                    maybePublishObserverProviderList(ctx, observer, providerPubkey, relays.first())?.let {
-                        result["observer_10040"] = it
-                    }
-                }
-            }
-
-            if (benchSign) {
-                // Throwaway key — these cards are for timing only and never leave
-                // the process, so no real identity signs them.
-                val tempSigner = NostrSignerInternal(KeyPair())
-                val cards =
-                    rankedIds
-                        .filter { rankOf(scores[it]) >= minRank }
-                        .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
-                val signStart = System.nanoTime()
-                val signed = signCards(cards, tempSigner)
-                val signMs = (System.nanoTime() - signStart) / 1_000_000
-                val perSec = if (signMs > 0) signed * 1000L / signMs else 0
-                System.err.println("[graperank] signed $signed kind:30382 cards in $signMs ms ($perSec/s, temp key, not published)")
-                result["bench_signed"] = signed
-                result["bench_sign_ms"] = signMs
-            }
+            result["provider_pubkey"] = providerPubkey
+            result["min_rank"] = minRank
+            result["cards_total"] = desiredCards.size
+            result["cards_signed"] = local.signed
+            result["cards_unchanged"] = local.unchanged
+            result["cards_retracted"] = local.retracted
+            result["cards_ms"] = cardsMs
 
             Output.emit(result)
             return 0
@@ -452,7 +425,7 @@ object GrapeRankCommand {
         // parallel storm at crawl start so the connect wait is paid once, up front.
         // The crawl's own final live/dead set is flushed back by the caller.
         val reachability =
-            if (args.bool("no-reachability-cache")) null else ctx.reachability.snapshot()
+            if (args.bool(NO_REACHABILITY_CACHE_FLAG)) null else ctx.reachability.snapshot()
         val knownDead = reachability?.dead ?: emptySet()
         // Mass pre-connect sizing: every warm socket is one FD, so the default is
         // derived from the process's ulimit (--preconnect-cap to override,
@@ -529,7 +502,7 @@ object GrapeRankCommand {
         args: Args,
         stats: GrapeRankCrawler.Stats,
     ) {
-        if (args.bool("no-reachability-cache")) return
+        if (args.bool(NO_REACHABILITY_CACHE_FLAG)) return
         runCatching {
             ctx.reachability.record(reachable = stats.liveRelays, dead = stats.deadRelays)
             System.err.println(
@@ -539,9 +512,9 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank crawl [OBSERVER]` — network-only WoT data crawl (aliased as the
-     * former `sync`). Crawls the reachable follow/mute/report graph into the local
-     * store (kind 3/10000/1984/10002) and reports what it loaded, WITHOUT scoring.
+     * `amy graperank crawl [OBSERVER]` — network-only WoT data crawl. Crawls the
+     * reachable follow/mute/report graph into the local store (kind
+     * 3/10000/1984/10002) and reports what it loaded, WITHOUT scoring.
      * Idempotent + cumulative: run it a few times to make sure everything is loaded,
      * then `graperank score`.
      */
@@ -582,79 +555,73 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank probe [--timeout SECS] [--concurrency N]` —
-     * the relay census. Mass-connects the ENTIRE relay universe the local store knows
-     * (every relay advertised in any stored kind:10002, deduped per host, plus
-     * everything already in the reachability cache) in parallel waves with a no-op
-     * REQ, so the "is this relay alive, and how slow?" wait is paid once, up front,
-     * concurrently — then records per-relay verdicts with real measured `rtt-open`
-     * into the NIP-66 reachability cache (kind:30166).
-     *
-     * The next `graperank crawl` reads that cache to (a) skip the dead set without
-     * dialing it and (b) pre-connect the live set in one storm — separating "working
-     * but slow" (kept; the crawler's patient park path waits for them) from "not
-     * working" (skipped entirely). Typical flow the first time:
-     * `graperank crawl --max-hops 2` (cheap, saves the relay lists) → `graperank
-     * probe` → full `graperank crawl`.
+     * `amy graperank status` — read-only inventory of everything a GrapeRank run
+     * depends on, straight from the local store: WoT record counts (the "do I
+     * need to crawl again?" answer), reachability-cache size + freshness,
+     * operator/service-key state, and the persisted card set per observer.
+     * No network, no signing, no side effects.
      */
-    private suspend fun probe(
-        dataDir: DataDir,
-        rest: Array<String>,
-    ): Int {
-        val args = Args(rest)
-        val timeoutMs = args.longFlag("timeout", 15L) * 1000
-        val waveSize = args.intFlag("concurrency", Context.defaultPreconnectCap)
-
+    private suspend fun status(dataDir: DataDir): Int {
         Context.openOrAnonymous(dataDir).use { ctx ->
-            ctx.prepare()
-            val cached = ctx.reachability.snapshot()
-            val universe = RelayProber.knownRelayUniverse(ctx.store) + cached.live + cached.dead
-            if (universe.isEmpty()) {
-                Output.emit(
+            // Deliberately no ctx.prepare(): status must stay offline (nothing here
+            // needs a relay connection or marmot state).
+            suspend fun countKind(kind: Int) = ctx.store.count(Filter(kinds = listOf(kind)))
+
+            // The store keeps only the newest replaceable event per author, so the
+            // kind:3 count is "users whose follow list we hold" — the graph size a
+            // `score` would see.
+            val contactLists = countKind(ContactListEvent.KIND)
+
+            // Read-only reachability view: ctx.reachability would lazily derive the
+            // monitor key and thereby CREATE the operator master on a fresh machine;
+            // a throwaway signer reads the same kind:30166 records without that
+            // side effect (the signer is only used for writes).
+            val reach = RelayReachabilityStore(store = ctx.store, signer = NostrSignerInternal(KeyPair())).snapshot()
+            val newestReachRecord =
+                ctx.store
+                    .query<Event>(Filter(kinds = listOf(RelayDiscoveryEvent.KIND), limit = 1))
+                    .firstOrNull()
+                    ?.createdAt
+
+            val opKeys = ctx.dataDir.operatorKeys()
+            val cards =
+                opKeys.providers().map { (observer, rec) ->
                     linkedMapOf<String, Any?>(
-                        "probed" to 0,
-                        "note" to "no relays known locally — run `amy graperank crawl` first to gather kind:10002 relay lists",
-                    ),
-                )
-                return 0
-            }
-
-            System.err.println(
-                "[relay-probe] probing ${universe.size} relays in waves of $waveSize " +
-                    "(${timeoutMs / 1000}s per wave; open-files limit ${Context.maxFileDescriptors})",
-            )
-            val result =
-                RelayProber(ctx.client) { System.err.println(it) }
-                    .probe(universe, timeoutMs, waveSize)
-
-            ctx.reachability.recordProbed(result.reachableRttMs(), result.deadRelays())
-
-            val rtts =
-                result.reachable
-                    .map { it.rttOpenMs }
-                    .filter { it >= 0 }
-                    .sorted()
-
-            fun pct(p: Int): Long? = if (rtts.isEmpty()) null else rtts[(rtts.size - 1) * p / 100]
-            val slowest =
-                result.reachable
-                    .filter { it.rttOpenMs >= 0 }
-                    .sortedByDescending { it.rttOpenMs }
-                    .take(10)
-                    .map { mapOf("relay" to it.relay.url, "rtt_open_ms" to it.rttOpenMs) }
-            val authWalled = result.reachable.count { it.error?.startsWith("closed:") == true }
+                        "observer" to observer,
+                        "provider_pubkey" to rec.providerPubKey,
+                        "cards" to ctx.store.count(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(rec.providerPubKey))),
+                        "retractions" to ctx.store.count(Filter(kinds = listOf(DeletionEvent.KIND), authors = listOf(rec.providerPubKey))),
+                    )
+                }
 
             Output.emit(
                 linkedMapOf<String, Any?>(
-                    "probed" to result.verdicts.size,
-                    "reachable" to result.reachable.size,
-                    "dead" to result.dead.size,
-                    "closed_by_policy" to authWalled,
-                    "elapsed_ms" to result.elapsedMs,
-                    "rtt_open_p50_ms" to pct(50),
-                    "rtt_open_p90_ms" to pct(90),
-                    "rtt_open_p99_ms" to pct(99),
-                    "slowest" to slowest,
+                    "store" to
+                        linkedMapOf<String, Any?>(
+                            "profiles" to countKind(MetadataEvent.KIND),
+                            "contact_lists" to contactLists,
+                            "mute_lists" to countKind(MuteListEvent.KIND),
+                            "reports" to countKind(ReportEvent.KIND),
+                            "relay_lists" to countKind(AdvertisedRelayListEvent.KIND),
+                        ),
+                    "reachability" to
+                        linkedMapOf<String, Any?>(
+                            "live" to reach.live.size,
+                            "dead" to reach.dead.size,
+                            "newest_record_age_s" to newestReachRecord?.let { (TimeUtils.now() - it).coerceAtLeast(0) },
+                        ),
+                    "operator" to
+                        if (opKeys.exists()) {
+                            linkedMapOf<String, Any?>(
+                                "initialized" to true,
+                                "master_pubkey" to opKeys.masterPubKey(),
+                                "relays" to opKeys.operatorRelays().map { it.url },
+                            )
+                        } else {
+                            linkedMapOf<String, Any?>("initialized" to false)
+                        },
+                    "cards" to cards,
+                    "note" to if (contactLists == 0) "no contact lists in the local store — run `amy graperank crawl` first" else null,
                 ),
             )
         }
@@ -662,7 +629,7 @@ object GrapeRankCommand {
     }
 
     /**
-     * `amy graperank update [flags]` — refresh every locally-known author's WoT
+     * `amy graperank refresh [flags]` (alias: `update`) — refresh every locally-known author's WoT
      * record kinds (0 / 3 / 10002 / 1984) straight from their own outbox, so the
      * next `graperank score` runs on current data without a full follow-graph crawl.
      *
@@ -681,7 +648,7 @@ object GrapeRankCommand {
      * `--report-limit N` (per-relay rows in the JSON, default 50),
      * `--down` / `--up` / `--no-sync-deletions`.
      */
-    private suspend fun update(
+    private suspend fun refresh(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
@@ -699,7 +666,7 @@ object GrapeRankCommand {
             // Live author-advertised relays are always synced (--no-reachability-cache
             // to reconcile every relay regardless).
             val knownDead =
-                if (args.bool("no-reachability-cache")) emptySet() else ctx.reachability.snapshot().dead
+                if (args.bool(NO_REACHABILITY_CACHE_FLAG)) emptySet() else ctx.reachability.snapshot().dead
 
             val updater =
                 GrapeRankUpdater(
@@ -710,7 +677,7 @@ object GrapeRankCommand {
                             down = downFlag || !upFlag,
                             up = upFlag || !downFlag,
                             syncDeletions = !args.bool("no-sync-deletions"),
-                            relayConcurrency = args.intFlag("relay-concurrency", 4),
+                            relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 4)),
                             authorChunk = args.intFlag("author-chunk", 500),
                             minAuthors = args.intFlag("min-authors", 1),
                             idleTimeoutMs = args.longFlag("timeout", 30L) * 1000,
@@ -776,45 +743,214 @@ object GrapeRankCommand {
     }
 
     /**
-     * Build + sign one kind:30382 [ContactCardEvent] per (target, rank), fanned
-     * out across CPU cores (id-hash + Schnorr sign is CPU-bound). The signed
-     * events are discarded — this only exists to time card generation. Returns
-     * the number signed.
+     * `amy graperank publish [OBSERVER] [--relay URL[,URL…]] [--relay-concurrency N] [--timeout SECS]`
+     *
+     * Transport only: make the operator relay(s) converge to the local card set
+     * that `graperank score` persisted for OBSERVER (default: the active account).
+     * One NIP-77 up-only reconcile per relay over the provider service key's
+     * kind:30382 cards + kind:5 retractions — nothing is re-scored or re-signed,
+     * and a card the relay lost is restored. A relay that can't reconcile gets the
+     * full local set blast-published instead. Also refreshes the observer's
+     * kind:10040 provider pointer when we hold their key.
      */
-    private suspend fun signCards(
-        cards: List<Pair<HexKey, Int>>,
-        signer: NostrSigner,
+    private suspend fun publish(
+        dataDir: DataDir,
+        rest: Array<String>,
     ): Int {
-        if (cards.isEmpty()) return 0
-        val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
-        val chunkSize = ((cards.size + cores - 1) / cores).coerceAtLeast(1)
-        return coroutineScope {
-            cards
-                .chunked(chunkSize)
-                .map { chunk ->
-                    async(Dispatchers.Default) {
-                        for ((target, rank) in chunk) {
-                            ContactCardEvent.create(
-                                targetUser = target,
-                                signer = signer,
-                                publicInitializer = { add(RankTag.assemble(rank)) },
+        val args = Args(rest)
+        val observerArg = args.positionalOrNull(0)
+        val relayArg = args.flag("relay")
+        // --relay-concurrency is canonical for "relays worked at once" across the
+        // graperank verbs; --concurrency is accepted everywhere as its alias.
+        val relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 4))
+        // Idle watchdog per relay reconcile (not a total budget), like `refresh`.
+        val idleTimeoutMs = args.longFlag("timeout", 30L) * 1000
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
+            val opKeys = ctx.dataDir.operatorKeys()
+            val providerPubkey = opKeys.serviceKey(observer).pubKey.toHexKey()
+
+            // Cards live on the operator's own relay(s); --relay overrides.
+            val relays =
+                relayArg
+                    ?.split(",")
+                    ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+                    ?.toSet()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: opKeys.operatorRelays()
+            if (relays.isEmpty()) {
+                return Output.error("no_relays", "no operator relay configured — run `amy graperank operator relay <url>` or pass --relay")
+            }
+
+            val publisher = GrapeRankPublisher(ctx.store) { System.err.println(it) }
+            val sync =
+                publisher.syncToRelays(
+                    client = ctx.client,
+                    providerPubkey = providerPubkey,
+                    relays = relays,
+                    relayConcurrency = relayConcurrency,
+                    idleTimeoutMs = idleTimeoutMs,
+                )
+
+            if (sync.cards == 0 && sync.deletions == 0) {
+                Output.emit(
+                    linkedMapOf<String, Any?>(
+                        "observer" to observer,
+                        "provider_pubkey" to providerPubkey,
+                        "cards" to 0,
+                        "note" to "no local cards for this observer — run `amy graperank score` first",
+                    ),
+                )
+                return 0
+            }
+
+            // Help the observer point clients at this provider: publish their
+            // kind:10040 (30382:rank -> providerPubkey @ operator relay) to
+            // their outbox — but only when we actually hold their key.
+            val observer10040 = maybePublishObserverProviderList(ctx, observer, providerPubkey, relays.first())
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "observer" to observer,
+                    "provider_pubkey" to providerPubkey,
+                    "cards" to sync.cards,
+                    "deletions" to sync.deletions,
+                    "relays" to sync.perRelay.size,
+                    "relays_ok" to sync.perRelay.count { it.ok },
+                    "relays_failed" to sync.perRelay.count { !it.ok },
+                    "uploaded" to sync.perRelay.sumOf { it.uploaded },
+                    "fallback_published" to sync.perRelay.sumOf { it.fallbackPublished },
+                    "per_relay" to
+                        sync.perRelay.map {
+                            linkedMapOf<String, Any?>(
+                                "relay" to it.relay.url,
+                                "uploaded" to it.uploaded,
+                                "fallback_published" to it.fallbackPublished,
+                                "fallback_rejected" to it.fallbackRejected,
+                                "error" to it.error,
                             )
-                        }
-                        chunk.size
-                    }
-                }.awaitAll()
-                .sum()
+                        },
+                    "observer_10040" to observer10040,
+                ),
+            )
+            return 0
         }
     }
 
     /**
-     * `amy graperank operator [status | relay <url>… | providers]`
+     * `amy graperank rank USER [--provider PUBKEY] [--refresh] [--timeout SECS]`
+     *
+     * The consumer side of NIP-85: read the kind:30382 cards about USER and print
+     * one rank per provider (newest card each). Cache-first — a `graperank score`
+     * run on this machine already left its cards in the store — falling back to a
+     * relay drain on a miss or with `--refresh` (sources: the operator relays, the
+     * relays declared in the account's kind:10040, and the bootstrap set).
+     * `--provider` narrows to one provider key.
+     */
+    private suspend fun rank(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val userArg =
+            args.positionalOrNull(0)
+                ?: return Output.error("bad_args", "usage: amy graperank rank USER [--provider PUBKEY] [--refresh] [--timeout SECS]")
+        val providerArg = args.flag("provider")
+        val refresh = args.bool("refresh")
+        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+            val user = ctx.requireUserHex(userArg)
+            val provider = providerArg?.let { ctx.requireUserHex(it) }
+            val cardFilter =
+                Filter(
+                    kinds = listOf(ContactCardEvent.KIND),
+                    tags = mapOf("d" to listOf(user)),
+                    authors = provider?.let { listOf(it) },
+                )
+
+            suspend fun localCards(): List<ContactCardEvent> = ctx.store.query<Event>(cardFilter).filterIsInstance<ContactCardEvent>()
+
+            var cards = localCards()
+            if (refresh || cards.isEmpty()) {
+                val relays = rankSourceRelays(ctx, provider)
+                if (relays.isNotEmpty()) {
+                    ctx.drain(relays.associateWith { listOf(cardFilter.copy(limit = 50)) }, timeoutMs)
+                    cards = localCards()
+                }
+            }
+
+            // Newest card per provider key, strongest assertion first.
+            val newest =
+                cards
+                    .groupBy { it.pubKey }
+                    .mapNotNull { (_, list) -> list.maxByOrNull { it.createdAt } }
+                    .sortedWith(compareByDescending<ContactCardEvent> { it.rank() ?: -1 }.thenByDescending { it.createdAt })
+
+            // A provider key this machine's operator master derived maps back to
+            // the observer whose subjective view the rank expresses.
+            val providerToObserver =
+                ctx.dataDir
+                    .operatorKeys()
+                    .providers()
+                    .entries
+                    .associate { (observer, rec) -> rec.providerPubKey to observer }
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "user" to user,
+                    "found" to newest.isNotEmpty(),
+                    "cards" to
+                        newest.map { card ->
+                            linkedMapOf<String, Any?>(
+                                "provider" to card.pubKey,
+                                "rank" to card.rank(),
+                                "observer" to providerToObserver[card.pubKey],
+                                "created_at" to card.createdAt,
+                                "event_id" to card.id,
+                            )
+                        },
+                ),
+            )
+            return 0
+        }
+    }
+
+    /**
+     * Relays worth draining for someone's kind:30382 cards: the machine's own
+     * operator relay(s), every relay the account's kind:10040 declares for a
+     * 30382 service (narrowed to [provider] when given), and the bootstrap set.
+     */
+    private suspend fun rankSourceRelays(
+        ctx: Context,
+        provider: HexKey?,
+    ): Set<NormalizedRelayUrl> {
+        val declared =
+            if (!ctx.anonymous) {
+                providerListOf(ctx, ctx.identity.pubKeyHex)
+                    ?.serviceProviders()
+                    ?.filter { it.service.kind == ContactCardEvent.KIND && (provider == null || it.pubkey == provider) }
+                    ?.map { it.relayUrl }
+                    .orEmpty()
+            } else {
+                emptyList()
+            }
+        return ctx.dataDir.operatorKeys().operatorRelays() + declared + ctx.bootstrapRelays() + Constants.eventFinderRelays
+    }
+
+    /**
+     * `amy graperank operator [status | relay <url>… | keys]`
      *
      * Manage the machine's operator keys used to sign trusted-assertion cards.
-     *  - `status` (default): master pubkey, configured relay(s), provider count.
+     *  - `status` (default): master pubkey, configured relay(s), service-key count.
      *  - `relay <url>…`: set the operator relay(s) the cards + retractions publish
      *    to; creates the operator master on first use.
-     *  - `providers`: the observer -> provider-pubkey mapping learned so far.
+     *  - `keys` (alias: the pre-rename `providers`, which collided with
+     *    `graperank providers`): the observer -> service-key mapping derived so
+     *    far — what a third-party observer wires into their kind:10040.
      */
     private fun operator(
         dataDir: DataDir,
@@ -831,11 +967,11 @@ object GrapeRankCommand {
                 0
             }
 
-            "providers" -> {
+            "keys", "providers" -> {
                 Output.emit(
                     mapOf(
                         "master_pubkey" to if (opKeys.exists()) opKeys.masterPubKey() else null,
-                        "providers" to opKeys.providers().map { (observer, rec) -> mapOf("observer" to observer, "provider_pubkey" to rec.providerPubKey) },
+                        "keys" to opKeys.providers().map { (observer, rec) -> mapOf("observer" to observer, "provider_pubkey" to rec.providerPubKey) },
                     ),
                 )
                 0
@@ -850,14 +986,14 @@ object GrapeRankCommand {
                             "initialized" to true,
                             "master_pubkey" to opKeys.masterPubKey(),
                             "relays" to opKeys.operatorRelays().map { it.url },
-                            "providers" to opKeys.providers().size,
+                            "keys" to opKeys.providers().size,
                         ),
                     )
                 }
                 0
             }
 
-            else -> Output.error("bad_args", "unknown operator subcommand '${rest.first()}' (status | relay | providers)")
+            else -> Output.error("bad_args", "unknown operator subcommand '${rest.first()}' (status | relay | keys)")
         }
     }
 
@@ -936,6 +1072,96 @@ object GrapeRankCommand {
                     "changed" to true,
                     "event_id" to event.id,
                     "based_on" to latest?.id,
+                    "published_to" to ack.filterValues { it }.keys.map { it.url },
+                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
+                ),
+            )
+            return 0
+        }
+    }
+
+    /**
+     * `amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL] [--timeout SECS]`
+     *
+     * The inverse of [register]: drop matching provider entries — public AND
+     * private — from the account's kind:10040 [TrustProviderListEvent] and
+     * re-publish it. PROVIDER is required; `--service` / `--relay` narrow the
+     * match when the same key is listed for several services or relays — without
+     * them, every entry for that provider key is removed. Fetches the freshest
+     * list first so the removal applies to the current provider set.
+     */
+    private suspend fun unregister(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val providerArg =
+            args.positionalOrNull(0)
+                ?: args.flag("provider")
+                ?: return Output.error("bad_args", "usage: amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL]")
+        val serviceArg = args.flag("service")
+        val relayArg = args.flag("relay")
+        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+
+        val service =
+            serviceArg?.let {
+                ServiceType.parse(it) ?: return Output.error("bad_args", "--service must be KIND:TAG, e.g. 30382:rank")
+            }
+        val relay =
+            relayArg?.let {
+                RelayUrlNormalizer.normalizeOrNull(it) ?: return Output.error("bad_args", "--relay is not a valid relay URL")
+            }
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val provider = ctx.requireUserHex(providerArg)
+            val outbox = ctx.outboxRelays()
+
+            val latest =
+                fetchLatestProviderList(ctx, ctx.identity.pubKeyHex, outbox, timeoutMs)
+                    ?: return Output.error("not_found", "no kind:10040 provider list found for this account")
+
+            fun matches(tag: ServiceProviderTag) =
+                tag.pubkey == provider &&
+                    (service == null || tag.service == service) &&
+                    (relay == null || tag.relayUrl == relay)
+
+            val publicMatches = latest.serviceProviders().filter(::matches)
+            val privateMatches =
+                latest
+                    .privateTags(ctx.signer)
+                    ?.serviceProviders()
+                    .orEmpty()
+                    .filter(::matches)
+            val toRemove = (publicMatches + privateMatches).distinct()
+
+            if (toRemove.isEmpty()) {
+                Output.emit(
+                    mapOf(
+                        "provider" to provider,
+                        "changed" to false,
+                        "removed" to emptyList<Any>(),
+                        "based_on" to latest.id,
+                    ),
+                )
+                return 0
+            }
+
+            // remove() strips the tag from both the public and the private set,
+            // re-signing each round; only the final version is published.
+            var event = latest
+            for (tag in toRemove) {
+                event = TrustProviderListEvent.remove(event, tag, ctx.signer)
+            }
+
+            val ack = ctx.publish(event, outbox)
+            Output.emit(
+                mapOf(
+                    "provider" to provider,
+                    "changed" to true,
+                    "removed" to toRemove.map { mapOf("service" to it.service.toValue(), "relay" to it.relayUrl.url) },
+                    "event_id" to event.id,
+                    "based_on" to latest.id,
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
                 ),

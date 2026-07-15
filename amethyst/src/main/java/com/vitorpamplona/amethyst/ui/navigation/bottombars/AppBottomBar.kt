@@ -36,8 +36,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -49,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel
+import com.vitorpamplona.amethyst.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -73,6 +76,22 @@ fun AppBottomBar(
     accountViewModel: AccountViewModel,
     onClick: (Route) -> Unit,
 ) {
+    // Publish this screen's re-tap behavior even when the bar renders nothing: on large
+    // screens the navigation rail routes reselect taps back through the coordinator so the
+    // same per-screen scroll-to-top/refresh logic runs.
+    val coordinator = LocalTabReselectCoordinator.current
+    val latestRoute by rememberUpdatedState(selectedRoute)
+    val latestOnClick by rememberUpdatedState(onClick)
+    DisposableEffect(coordinator) {
+        val handler: (Route) -> Unit = { latestOnClick(it) }
+        coordinator.register({ latestRoute }, handler)
+        onDispose { coordinator.unregister(handler) }
+    }
+
+    // Large screens replace the bottom bar with the navigation rail (Medium) or the
+    // permanently docked drawer (Expanded).
+    if (LocalScreenLayout.current.isLargeScreen) return
+
     // Hide the bar on entries that aren't a tab root (drawer or in-app
     // pushes). Mirrors the back-arrow rule in canPop().
     if (nav.canPop()) return
@@ -101,6 +120,43 @@ fun AppBottomBar(
     }
 }
 
+/**
+ * Resolves the icon model for a pinned favorite: a web favorite's captured favicon (else the
+ * generic globe), an nsite/napplet's verified manifest icon bundled in its own content (the
+ * iframe sandbox rules out live capture; else the grid glyph). Shared by the bottom bar and
+ * the navigation rail.
+ */
+@Composable
+internal fun rememberFavoriteIconModel(fav: FavoriteApp): Any? =
+    when (fav) {
+        is FavoriteApp.WebApp -> {
+            // Captured favicons, keyed so the icon appears once the site's capture lands.
+            val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
+            remember(fav, iconKeys) {
+                OmniboxInput.hostOf(fav.url)?.let(BrowserIconRegistry::iconModelFor)
+            }
+        }
+
+        is FavoriteApp.NostrApp -> rememberNappletIconModel(fav.coordinate)
+    }
+
+/** The icon block for a pinned favorite entry, shared by the bottom bar and the rail. */
+@Composable
+internal fun FavoriteEntryIcon(
+    fav: FavoriteApp,
+    selected: Boolean,
+    iconModel: Any?,
+) {
+    Box(Size27Modifier, contentAlignment = Alignment.Center) {
+        FavoriteAppIcon(
+            app = fav,
+            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
+            modifier = Size25Modifier,
+            iconModel = iconModel,
+        )
+    }
+}
+
 @Composable
 private fun RenderBottomMenu(
     items: List<BottomBarEntry>,
@@ -111,9 +167,6 @@ private fun RenderBottomMenu(
 ) {
     // Index favorites by id so resolving each Favorite entry is a map lookup, not a per-entry scan.
     val favoritesById = remember(favorites) { favorites.associateBy { it.id } }
-
-    // Captured favicons, so a pinned web favorite shows the site's icon instead of the generic globe.
-    val iconKeys by BrowserIconRegistry.keys.collectAsStateWithLifecycle()
 
     Column(
         modifier =
@@ -147,17 +200,7 @@ private fun RenderBottomMenu(
                                 is FavoriteApp.WebApp -> Route.WebApp(fav.url)
                                 is FavoriteApp.NostrApp -> Route.NostrApp(fav.coordinate)
                             }
-                        // A web favorite uses its captured favicon; an nsite/napplet uses the verified
-                        // icon blob bundled in its own content (the iframe sandbox rules out live capture).
-                        val iconModel =
-                            when (fav) {
-                                is FavoriteApp.WebApp ->
-                                    remember(fav, iconKeys) {
-                                        OmniboxInput.hostOf(fav.url)?.let(BrowserIconRegistry::iconModelFor)
-                                    }
-                                is FavoriteApp.NostrApp -> rememberNappletIconModel(fav.coordinate)
-                            }
-                        FavoriteNavItem(destination == selectedRoute, fav, iconModel, destination, nav)
+                        FavoriteNavItem(destination == selectedRoute, fav, rememberFavoriteIconModel(fav), destination, nav)
                     }
                 }
             }
@@ -175,18 +218,7 @@ private fun RowScope.FavoriteNavItem(
 ) {
     NavigationBarItem(
         alwaysShowLabel = false,
-        icon = {
-            Box(Size27Modifier, contentAlignment = Alignment.Center) {
-                // A web favorite's captured favicon (else the globe); an nsite/napplet's manifest icon (else
-                // the grid glyph).
-                FavoriteAppIcon(
-                    app = fav,
-                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
-                    modifier = Size25Modifier,
-                    iconModel = iconModel,
-                )
-            }
-        },
+        icon = { FavoriteEntryIcon(fav, selected, iconModel) },
         // No label — favorite tabs match the built-in items, which show icon only.
         selected = selected,
         onClick = { nav(destination) },
@@ -216,8 +248,9 @@ private fun RowScope.HasNewItemsIcon(
     )
 }
 
+/** The icon block for a built-in entry (catalog icon + new-items dot), shared by the bottom bar and the rail. */
 @Composable
-private fun NotifiableIcon(
+internal fun NotifiableIcon(
     selected: Boolean,
     def: NavBarItemDef,
     destination: Route,

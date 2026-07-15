@@ -63,8 +63,11 @@ fun MessagesTwoPane(
     val scope = rememberCoroutineScope()
     val twoPaneNav = remember { TwoPaneNav(nav, scope) }
 
+    // Keyed on the size class: the pane can cross the Medium/Expanded boundary while this
+    // screen stays composed (window resize, the notification panel docking/undocking), and
+    // an unkeyed remember would keep serving the stale split fraction.
     val strategy =
-        remember {
+        remember(widthSizeClass) {
             if (widthSizeClass == WindowWidthSizeClass.Expanded) {
                 HorizontalTwoPaneStrategy(splitFraction = 1f / 3f)
             } else {

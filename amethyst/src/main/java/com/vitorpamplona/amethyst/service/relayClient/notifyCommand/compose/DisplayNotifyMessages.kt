@@ -21,22 +21,19 @@
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import kotlinx.coroutines.flow.map
 
 @Composable
 fun DisplayNotifyMessages(
     accountViewModel: AccountViewModel,
     nav: INav,
-) = DisplayNotifyMessages(Amethyst.instance.notifyCoordinator.requests, accountViewModel, nav)
+) = DisplayNotifyMessages(accountViewModel.account.relayNotifications, accountViewModel, nav)
 
 @Composable
 fun DisplayNotifyMessages(
@@ -44,17 +41,10 @@ fun DisplayNotifyMessages(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val flow =
-        remember(accountViewModel) {
-            requests.transientPaymentRequests.map {
-                it.filter { notifyMsg ->
-                    notifyMsg.relayUrl in accountViewModel.account.dmRelayList.flow.value ||
-                        notifyMsg.relayUrl in accountViewModel.account.nip65RelayList.allFlowNoDefaults.value
-                }
-            }
-        }
-
-    val openDialogMsg = flow.collectAsStateWithLifecycle(emptySet())
+    // [requests] is THIS account's own cache. NotifyCoordinator only files a NOTIFY under the account
+    // whose AUTH the relay rejected, so there is no cross-account leak to filter out here — a prompt
+    // in this cache genuinely belongs to this account.
+    val openDialogMsg = requests.transientPaymentRequests.collectAsStateWithLifecycle()
 
     openDialogMsg.value.firstOrNull()?.let { request ->
         NotifyRequestDialog(

@@ -32,6 +32,14 @@ interface INav {
     val navigationScope: CoroutineScope
     val drawerState: DrawerState
 
+    /**
+     * True while the shell renders the drawer permanently docked (Expanded windows). In that
+     * mode [drawerState] never transitions — it stays [androidx.compose.material3.DrawerValue.Closed]
+     * while the drawer is visibly on screen — so drawer consumers (edge swipes, open buttons,
+     * close-driven effects) should consult this instead of inferring from [drawerState].
+     */
+    val isDrawerDocked: Boolean get() = false
+
     fun closeDrawer()
 
     fun openDrawer()
