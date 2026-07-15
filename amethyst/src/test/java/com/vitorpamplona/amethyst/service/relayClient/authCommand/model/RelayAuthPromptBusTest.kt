@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runCurrent
@@ -70,6 +71,7 @@ class RelayAuthPromptBusTest {
             assertEquals(UserAuthChoice.DISMISS, bus.requestDecision(relay, emptyList()))
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun retainsPromptForALateSubscriberSoItIsNotLost() =
         runTest {
