@@ -26,7 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.PublicChatTopBar
@@ -44,12 +46,20 @@ fun PublicChatChannelScreen(
 
     val draft = remember(draftId) { draftId?.let { accountViewModel.getNoteIfExists(it) } }
     val replyTo = remember(replyToId) { replyToId?.let { accountViewModel.checkGetOrCreateNote(it) } }
+    val selfRoute = remember(channelId) { Route.PublicChatChannel(channelId) }
 
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
             LoadPublicChatChannel(channelId, accountViewModel) {
                 PublicChatTopBar(it, accountViewModel, nav)
+            }
+        },
+        // Renders only when this is a bottom-nav root (AppBottomBar hides itself when canPop),
+        // so a pinned public chat works both as a pushed detail and as a bottom-nav tab.
+        bottomBar = {
+            AppBottomBar(selfRoute, nav, accountViewModel) { route ->
+                if (route != selfRoute) nav.navBottomBar(route)
             }
         },
         accountViewModel = accountViewModel,

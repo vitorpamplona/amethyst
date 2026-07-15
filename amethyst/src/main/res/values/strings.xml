@@ -2889,10 +2889,25 @@
     <string name="change_reaction">Change Quick Reactions</string>
 
     <string name="bottom_bar_settings">Bottom Navigation Bar</string>
-    <string name="bottom_bar_settings_description">Drag to reorder. Toggle to add or remove an item from the bottom bar. With zero items the bottom bar is hidden.</string>
+    <string name="bottom_bar_settings_description">Drag the pinned items to reorder. Open a category below and toggle an item to add or remove it. Open Browser or a chat type to pin a favorite or a specific group. With zero items the bottom bar is hidden.</string>
     <string name="bottom_bar_settings_available">Available</string>
+    <string name="bottom_bar_settings_pinned">Your bottom bar</string>
+    <string name="bottom_bar_settings_pinned_empty">No items pinned. The bottom bar is hidden until you add at least one.</string>
     <string name="bottom_bar_settings_reorder">Reorder</string>
+    <string name="bottom_bar_settings_expand">Show options</string>
+    <string name="bottom_bar_settings_no_favorites">No favorites yet. Star an app in the Browser to add it here.</string>
+    <string name="bottom_bar_settings_no_groups">No joined groups yet.</string>
+    <string name="bottom_bar_settings_reorder_hint">Drag to reorder · tap ✕ to remove</string>
+    <string name="bottom_bar_settings_add">Add</string>
+    <string name="bottom_bar_settings_added">Added</string>
+    <string name="bottom_bar_settings_remove">Remove</string>
     <string name="bottom_bar_settings_restore_default">Restore Default</string>
+    <string name="bottom_bar_category_main">Main</string>
+    <string name="bottom_bar_category_chats">Chats &amp; Groups</string>
+    <string name="bottom_bar_category_you">You</string>
+    <string name="bottom_bar_category_feeds">Feeds</string>
+    <string name="bottom_bar_category_apps">Apps &amp; Web</string>
+    <string name="bottom_bar_category_other">Other</string>
     <string name="home_tabs_settings">Home Tabs</string>
     <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
     <string name="home_tab_everything">Everything</string>

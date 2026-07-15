@@ -32,9 +32,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -75,56 +76,42 @@ fun AppNavigationRail(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Same entry list + resolution as the phone bottom bar; only the item chrome and the
+            // selection source (live back stack vs the bar's passed-in route) differ per surface.
             items.forEach { entry ->
-                when (entry) {
-                    is BottomBarEntry.BuiltIn -> {
-                        val def = NavBarCatalog[entry.item] ?: return@forEach
-                        val destination = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
-                        val selected = currentDestination?.hasRoute(destination::class) == true
-                        NavigationRailItem(
-                            selected = selected,
-                            onClick = {
-                                if (selected) {
-                                    reselectCoordinator.reselect(destination)
-                                } else {
-                                    nav.navBottomBar(destination)
-                                }
-                            },
-                            icon = { NotifiableIcon(selected, def, destination, accountViewModel) },
-                        )
-                    }
-
-                    is BottomBarEntry.Favorite -> {
-                        val fav = favoritesById[entry.favoriteId] ?: return@forEach
-                        val destination =
-                            when (fav) {
-                                is FavoriteApp.WebApp -> Route.WebApp(fav.url)
-                                is FavoriteApp.NostrApp -> Route.NostrApp(fav.coordinate)
-                            }
-                        // Favorites carry arguments (url / coordinate), so class matching alone
-                        // would light up every pinned app of the same kind; compare the full route.
-                        val selected =
-                            remember(navBackStackEntry, destination) {
-                                when (destination) {
-                                    is Route.WebApp -> getRouteWithArguments(Route.WebApp::class, nav.controller) == destination
-                                    is Route.NostrApp -> getRouteWithArguments(Route.NostrApp::class, nav.controller) == destination
-                                    else -> false
-                                }
-                            }
-                        NavigationRailItem(
-                            selected = selected,
-                            onClick = {
-                                if (selected) {
-                                    reselectCoordinator.reselect(destination)
-                                } else {
-                                    nav.navBottomBar(destination)
-                                }
-                            },
-                            icon = { FavoriteEntryIcon(fav, selected, rememberFavoriteIconModel(fav)) },
-                        )
-                    }
-                }
+                val slot = rememberBottomBarSlot(entry, favoritesById, accountViewModel) ?: return@forEach
+                val selected = remember(navBackStackEntry, slot.route) { railSelected(slot.route, nav.controller, currentDestination) }
+                NavigationRailItem(
+                    selected = selected,
+                    onClick = {
+                        if (selected) {
+                            reselectCoordinator.reselect(slot.route)
+                        } else {
+                            nav.navBottomBar(slot.route)
+                        }
+                    },
+                    icon = { slot.icon(selected) },
+                )
             }
         }
     }
 }
+
+/**
+ * Whether [route] is the rail's currently-selected destination. Parameterized routes (favorites and
+ * pinned groups carry a url / coordinate / id) must match the full route — class matching alone would
+ * light up every pinned app or group of the same kind; parameterless object routes match on class.
+ */
+private fun railSelected(
+    route: Route,
+    controller: NavHostController,
+    currentDestination: NavDestination?,
+): Boolean =
+    when (route) {
+        is Route.WebApp -> getRouteWithArguments(Route.WebApp::class, controller) == route
+        is Route.NostrApp -> getRouteWithArguments(Route.NostrApp::class, controller) == route
+        is Route.PublicChatChannel -> getRouteWithArguments(Route.PublicChatChannel::class, controller) == route
+        is Route.RelayGroup -> getRouteWithArguments(Route.RelayGroup::class, controller) == route
+        is Route.ConcordServer -> getRouteWithArguments(Route.ConcordServer::class, controller) == route
+        else -> currentDestination?.hasRoute(route::class) == true
+    }
