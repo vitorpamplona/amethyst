@@ -59,6 +59,10 @@ fun ChatTimeAgo(baseNote: Note) {
         style = TimeAgoStyle.Short,
         color = MaterialTheme.colorScheme.placeholderText,
         fontSize = Font12SP,
+        // The chat time is wrapped in a tap target that opens the relay/delivery dialog,
+        // so it must not steal the tap to toggle relative/absolute. The absolute time is
+        // shown in that dialog instead.
+        toggleable = false,
     )
 }
 

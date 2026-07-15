@@ -89,6 +89,9 @@ fun ToggleableTimeAgoText(
     fontSize: TextUnit = TextUnit.Unspecified,
     maxLines: Int = 1,
     overflow: TextOverflow = TextOverflow.Clip,
+    // When false, the text is not itself clickable, so an enclosing tap target (e.g. the
+    // chat timestamp opening the relay/delivery dialog) receives the tap instead.
+    toggleable: Boolean = true,
 ) {
     val context = LocalContext.current
     val nowState = LocalNowSeconds.current
@@ -125,10 +128,14 @@ fun ToggleableTimeAgoText(
         maxLines = maxLines,
         overflow = overflow,
         modifier =
-            modifier.clickable(
-                interactionSource = interactionSource,
-                indication = null,
-            ) { showAbsolute = !showAbsolute },
+            if (toggleable) {
+                modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                ) { showAbsolute = !showAbsolute }
+            } else {
+                modifier
+            },
     )
 }
 

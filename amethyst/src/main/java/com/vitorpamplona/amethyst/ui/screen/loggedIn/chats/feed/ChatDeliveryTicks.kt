@@ -41,12 +41,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDelivery
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.RecipientDelivery
@@ -54,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.timeAbsolute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -175,6 +178,23 @@ private fun ChatDeliveryDetailDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // Absolute timestamp header (the chat time no longer toggles to absolute
+                // on tap — it opens this dialog instead).
+                val context = LocalContext.current
+                Text(
+                    text = timeAbsolute(baseNote.createdAt(), context, prefix = "").trim(),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    fontSize = Font12SP,
+                )
+
+                // Encrypted-channel messages (Concord/Armada) are decrypted locally with no
+                // per-relay attribution, so seen-on is empty — fall back to the channel's own
+                // relays as "where this message lives".
+                val channelRelays =
+                    remember(baseNote) {
+                        baseNote.inGatherers?.firstNotNullOfOrNull { (it as? Channel)?.relays()?.takeIf { r -> r.isNotEmpty() } } ?: emptySet()
+                    }
+
                 val recipients = delivery?.recipients
                 when {
                     !recipients.isNullOrEmpty() ->
@@ -193,6 +213,11 @@ private fun ChatDeliveryDetailDialog(
                     seenOnRelays.isNotEmpty() ->
                         // Untracked (sent before a restart): only the seen-on set is known.
                         seenOnRelays.sortedBy { it.url }.forEach { relay ->
+                            RelayDeliveryRow(relay = relay, accepted = true)
+                        }
+
+                    channelRelays.isNotEmpty() ->
+                        channelRelays.sortedBy { it.url }.forEach { relay ->
                             RelayDeliveryRow(relay = relay, accepted = true)
                         }
 

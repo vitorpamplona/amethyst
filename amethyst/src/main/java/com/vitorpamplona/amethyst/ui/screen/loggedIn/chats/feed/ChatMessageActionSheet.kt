@@ -261,7 +261,7 @@ fun ChatMessageActionSheet(
             }
 
             // Stage one: the primary chat action (reply / edit draft) is always shown.
-            ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, { showDeliveryDialog = true }, onDismiss)
+            ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
 
             val handlers =
                 NoteActionHandlers(
@@ -312,6 +312,17 @@ fun ChatMessageActionSheet(
                             }
                         }
                     }
+
+                    // Chat-specific: which relays carry this message (and, for our own,
+                    // their acceptance). A secondary action, so it lives under Show More.
+                    if (!note.isDraft()) {
+                        SectionDivider()
+                        TileRow {
+                            ActionTile(MaterialSymbols.DoneAll, stringRes(R.string.chat_delivery_details_title)) {
+                                showDeliveryDialog = true
+                            }
+                        }
+                    }
                 }
             }
 
@@ -357,7 +368,7 @@ private fun MoreActionsToggle(
 
 // ---------- Action tile sections ----------
 
-/** Chat-specific tiles (reply, message delivery, edit draft) that have no 3-dot menu equivalent. */
+/** Chat-specific tiles (reply, edit draft) that have no 3-dot menu equivalent. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChatOnlyRow(
@@ -365,7 +376,6 @@ private fun ChatOnlyRow(
     state: DropDownParams,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
-    onShowDelivery: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (note.isDraft() && !state.isLoggedUser) return
@@ -383,11 +393,6 @@ private fun ChatOnlyRow(
         ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(R.string.reply_description)) {
             onWantsToReply(note)
             onDismiss()
-        }
-        // Which relays carry this message (and, for our own, their acceptance) — the
-        // reliable way to reach the relay list now that the detail row is gone.
-        ActionTile(MaterialSymbols.DoneAll, stringRes(R.string.chat_delivery_details_title)) {
-            onShowDelivery()
         }
     }
 }
