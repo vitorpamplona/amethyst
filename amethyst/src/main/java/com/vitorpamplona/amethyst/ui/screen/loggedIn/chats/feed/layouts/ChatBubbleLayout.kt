@@ -85,8 +85,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-private const val RELAYS_AND_ACTIONS_TEXT = "Relays and Actions"
-
 // Half the height of a reaction chip, so the chip row overlaps the bubble by
 // exactly its own vertical center.
 private val ChatChipOverlapArrangement = Arrangement.spacedBy((-12).dp)
@@ -102,8 +100,6 @@ fun ChatBubbleLayout(
     isLoggedInUser: Boolean,
     isDraft: Boolean,
     innerQuote: Boolean,
-    isComplete: Boolean,
-    hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     // Jumbo-emoji messages render without a bubble fill.
@@ -119,10 +115,9 @@ fun ChatBubbleLayout(
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     reactionsRow: (@Composable () -> Unit)? = null,
-    // Small always-visible timestamp in the bubble's bottom-end corner; skipped
-    // while the tap-to-expand detail row (which includes the time) is open.
-    timeRow: (@Composable () -> Unit)? = null,
-    detailRow: @Composable () -> Unit,
+    // Small footer in the bubble's bottom corner (timestamp, delivery, per-message
+    // status glyphs). Null skips it entirely.
+    footerRow: (@Composable () -> Unit)? = null,
     drawAuthorLine: @Composable () -> Unit,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
@@ -256,8 +251,6 @@ fun ChatBubbleLayout(
             InnerChatBubble(
                 isLoggedInUser = isLoggedInUser,
                 innerQuote = innerQuote,
-                isComplete = isComplete,
-                hasDetailsToShow = hasDetailsToShow,
                 drawAuthorInfo = drawAuthorInfo,
                 groupPosition = groupPosition,
                 transparentBubble = transparentBubble,
@@ -269,8 +262,7 @@ fun ChatBubbleLayout(
                 onAuthorClick = onAuthorClick,
                 actionMenu = actionMenu,
                 reactionsRow = reactionsRow,
-                timeRow = timeRow,
-                detailRow = detailRow,
+                footerRow = footerRow,
                 drawAuthorLine = drawAuthorLine,
                 inner = inner,
             )
@@ -283,8 +275,6 @@ fun ChatBubbleLayout(
 private fun InnerChatBubble(
     isLoggedInUser: Boolean,
     innerQuote: Boolean,
-    isComplete: Boolean,
-    hasDetailsToShow: Boolean,
     drawAuthorInfo: Boolean,
     groupPosition: ChatGroupPosition,
     transparentBubble: Boolean,
@@ -296,24 +286,12 @@ private fun InnerChatBubble(
     onAuthorClick: () -> Unit,
     actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
     reactionsRow: (@Composable () -> Unit)?,
-    timeRow: (@Composable () -> Unit)?,
-    detailRow: @Composable () -> Unit,
+    footerRow: (@Composable () -> Unit)?,
     drawAuthorLine: @Composable () -> Unit,
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
     val popupExpanded = remember { mutableStateOf(false) }
-
-    val showDetails =
-        remember {
-            mutableStateOf(
-                if (isComplete) {
-                    true
-                } else {
-                    hasDetailsToShow
-                },
-            )
-        }
 
     val pressInteractionSource = remember { MutableInteractionSource() }
     val isPressed by pressInteractionSource.collectIsPressedAsState()
@@ -326,9 +304,9 @@ private fun InnerChatBubble(
                 interactionSource = pressInteractionSource,
                 indication = indication,
                 onClick = {
-                    if (!onClick() && !isComplete) {
-                        showDetails.value = !showDetails.value
-                    }
+                    // Only inner-quote bubbles do anything on tap (scroll to the quoted
+                    // message); a normal bubble tap is a no-op.
+                    onClick()
                 },
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -374,14 +352,12 @@ private fun InnerChatBubble(
 
                 inner(bgColor)
 
-                if (showDetails.value) {
-                    detailRow()
-                } else if (timeRow != null) {
-                    // Mirror the timestamp with the bubble so it sits on the same
+                if (footerRow != null) {
+                    // Mirror the footer with the bubble so it sits on the same
                     // center-facing edge for both sides: the left for the logged-in user's
                     // own (right-aligned) bubbles, the right for everyone else's.
                     Box(modifier = Modifier.align(if (isLoggedInUser) Alignment.Start else Alignment.End)) {
-                        timeRow()
+                        footerRow()
                     }
                 }
             }
@@ -410,8 +386,6 @@ private fun BubblePreview() {
             isLoggedInUser = false,
             isDraft = false,
             innerQuote = false,
-            isComplete = true,
-            hasDetailsToShow = true,
             drawAuthorInfo = true,
             parentBackgroundColor = bgColor,
             onClick = { false },
@@ -436,7 +410,6 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { _ ->
             Text("This is my note")
         }
@@ -445,8 +418,6 @@ private fun BubblePreview() {
             isLoggedInUser = true,
             isDraft = false,
             innerQuote = false,
-            isComplete = true,
-            hasDetailsToShow = true,
             drawAuthorInfo = true,
             groupPosition = ChatGroupPosition.TOP,
             parentBackgroundColor = bgColor,
@@ -471,7 +442,6 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { _ ->
             Text("This is a very long long loong note")
         }
@@ -480,8 +450,6 @@ private fun BubblePreview() {
             isLoggedInUser = true,
             isDraft = true,
             innerQuote = false,
-            isComplete = true,
-            hasDetailsToShow = true,
             drawAuthorInfo = true,
             groupPosition = ChatGroupPosition.MIDDLE,
             parentBackgroundColor = bgColor,
@@ -506,7 +474,6 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { _ ->
             Text("This is a draft note")
         }
@@ -515,8 +482,6 @@ private fun BubblePreview() {
             isLoggedInUser = true,
             isDraft = false,
             innerQuote = false,
-            isComplete = false,
-            hasDetailsToShow = false,
             drawAuthorInfo = false,
             groupPosition = ChatGroupPosition.BOTTOM,
             parentBackgroundColor = bgColor,
@@ -541,7 +506,6 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { _ ->
             Text("Short note")
         }

@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -50,17 +49,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
-import com.vitorpamplona.amethyst.ui.note.LikeReaction
-import com.vitorpamplona.amethyst.ui.note.RelayBadgesHorizontal
 import com.vitorpamplona.amethyst.ui.note.RenderZapRaiser
-import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
-import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
@@ -73,20 +65,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.IncognitoBadge
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
-import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -251,14 +234,14 @@ fun NormalChatNote(
         }
     }
 
+    // The footer shows on the last message of a run (for the time) and on any message
+    // carrying per-message metadata (expiration, geohash, PoW, legacy-DM marker).
+    val footerHasMeta = remember(note.event) { chatFooterHasMeta(note) }
+
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
         isDraft = note.event is DraftWrapEvent,
         innerQuote = innerQuote,
-        isComplete = accountViewModel.settings.isCompleteUIMode(),
-        // Received reactions and zaps render as chips under the bubble, so the
-        // detail row no longer needs to auto-expand for them.
-        hasDetailsToShow = false,
         drawAuthorInfo = drawAuthorInfo && groupPosition.isFirstOfGroup,
         groupPosition = groupPosition,
         transparentBubble = isJumboEmoji,
@@ -307,18 +290,16 @@ fun NormalChatNote(
             } else {
                 null
             },
-        timeRow =
-            if (!innerQuote && groupPosition.isLastOfGroup) {
+        footerRow =
+            if (!innerQuote && (groupPosition.isLastOfGroup || footerHasMeta)) {
                 {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = RowColSpacing,
-                    ) {
-                        ChatTimeAgo(note)
-                        if (isLoggedInUser && !note.isDraft()) {
-                            ChatDeliveryTicks(note, accountViewModel, nav)
-                        }
-                    }
+                    ChatMessageFooter(
+                        note = note,
+                        isLoggedInUser = isLoggedInUser,
+                        showTime = groupPosition.isLastOfGroup,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             } else {
                 null
@@ -329,53 +310,6 @@ fun NormalChatNote(
                 accountViewModel,
                 nav,
             )
-        },
-        detailRow = {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = ReactionRowHeightChat,
-                ) {
-                    IncognitoBadge(note)
-                    ChatTimeAgo(note)
-                    ChatExpiration(note)
-                    RelayBadgesHorizontal(note, accountViewModel, nav = nav)
-
-                    Spacer(modifier = DoubleHorzSpacer)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
-                        if (!note.isDraft()) {
-                            ReplyReaction(
-                                baseNote = note,
-                                grayTint = MaterialTheme.colorScheme.placeholderText,
-                                accountViewModel = accountViewModel,
-                                showCounter = false,
-                                iconSizeModifier = Size18Modifier,
-                            ) {
-                                onWantsToReply(note)
-                            }
-                            Spacer(StdHorzSpacer)
-                            LikeReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-
-                            ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-
-                            val geo = remember(note) { note.event?.geoHashOrScope() }
-                            if (geo != null) {
-                                Spacer(StdHorzSpacer)
-                                DisplayLocation(geo, accountViewModel, nav)
-                            }
-
-                            val pow = remember(note) { note.event?.strongPoWOrNull() }
-                            if (pow != null) {
-                                Spacer(StdHorzSpacer)
-                                DisplayPoW(pow, accountViewModel)
-                            }
-                        } else {
-                            DisplayDraftChat()
-                        }
-                    }
-                }
-                LoadAndDisplayClickableZapraiser(note, accountViewModel)
-            }
         },
     ) { bgColor ->
         MessageBubbleLines(
@@ -462,6 +396,10 @@ private fun MessageBubbleLines(
                 Spacer(modifier = Modifier.height(2.dp))
             }
         }
+
+        // Zapraiser goal bar (self-hides when the message has no zapraiser). Used to live
+        // in the tap-to-expand detail row; now always shown inline under the message.
+        LoadAndDisplayClickableZapraiser(baseNote, accountViewModel)
     }
 }
 

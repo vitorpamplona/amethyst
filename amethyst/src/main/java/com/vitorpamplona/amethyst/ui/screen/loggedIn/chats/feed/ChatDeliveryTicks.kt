@@ -113,6 +113,45 @@ fun ChatDeliveryTicks(
 }
 
 /**
+ * A received message's timestamp, made tappable to reveal which relays it was seen on
+ * (and the exact time in the dialog) — the read-only counterpart to [ChatDeliveryTicks],
+ * which reports OUR own outgoing acceptance. Falls back to a plain, non-tappable time
+ * when the message carries no seen-on relays yet.
+ */
+@Composable
+fun ChatReceivedTimeInfo(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val seenOnState by
+        remember(baseNote) { baseNote.flow().relays.stateFlow }
+            .collectAsStateWithLifecycle()
+    val seenOnRelays = seenOnState.note.relays
+
+    var showDetails by remember { mutableStateOf(false) }
+
+    if (seenOnRelays.isEmpty()) {
+        ChatTimeAgo(baseNote)
+    } else {
+        ClickableBox(onClick = { showDetails = true }) {
+            ChatTimeAgo(baseNote)
+        }
+    }
+
+    if (showDetails) {
+        ChatDeliveryDetailDialog(
+            baseNote = baseNote,
+            delivery = null,
+            seenOnRelays = seenOnRelays,
+            onDismiss = { showDetails = false },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+/**
  * Per-recipient (DMs) or per-relay (rooms) acceptance detail behind the tick,
  * with a re-broadcast escape hatch for messages stuck on pending relays.
  */
