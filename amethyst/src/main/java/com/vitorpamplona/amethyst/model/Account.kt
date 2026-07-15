@@ -494,6 +494,7 @@ class Account(
         communityId: String,
         channelIdHex: String,
         rumor: Event,
+        seenOnRelays: Set<NormalizedRelayUrl>,
     ) {
         val authority =
             concordSessions
@@ -503,7 +504,7 @@ class Account(
                 ?.authority
         if (authority?.isBanned(rumor.pubKey) == true) return
         registerConcordEncryptedImages(rumor)
-        cache.consumeConcordRumor(communityId, channelIdHex, rumor)
+        cache.consumeConcordRumor(communityId, channelIdHex, rumor, seenOnRelays)
     }
 
     /**

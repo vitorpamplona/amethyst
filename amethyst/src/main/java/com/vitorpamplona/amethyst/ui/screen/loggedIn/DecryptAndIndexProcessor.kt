@@ -299,7 +299,9 @@ class GiftWrapEventHandler(
         // the payload opens with a derived plane key, not our identity — so route
         // them to the Concord read-path first. A recognized wrap is fully handled
         // there (folded / re-projected) and must not fall through to the DM path.
-        if (account.concordSessions.ingest(event)) {
+        // Pass the wrap note's seen-on relays so the Concord read-path can stamp them onto the
+        // decrypted inner rumor (the rumor otherwise arrives with no per-relay attribution).
+        if (account.concordSessions.ingest(event, eventNote.relays.toSet())) {
             // Concord typing heartbeats ride kind-21059 ephemeral wraps that arrive
             // continuously while anyone in any joined community is composing. NIP-01
             // ephemeral events (20000–29999) must never be persisted; the session has

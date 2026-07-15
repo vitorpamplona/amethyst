@@ -60,7 +60,7 @@ class ConcordSessionManager(
     private val communities: StateFlow<List<ConcordCommunityListEntry>>,
     private val myPubKey: HexKey,
     private val scope: CoroutineScope,
-    private val onRumor: ConcordRumorSink = { _, _, _ -> },
+    private val onRumor: ConcordRumorSink = { _, _, _, _ -> },
 ) {
     val registry = ConcordSessionRegistry(onRumor)
 
@@ -145,8 +145,11 @@ class ConcordSessionManager(
      * gets the client rate-limited off the relays (which then close the plane subs mid-load). Chat
      * messages still reach the feed via the rumor sink → LocalCache, independent of the revision.
      */
-    fun ingest(wrap: Event): Boolean {
-        val outcome = registry.ingest(wrap)
+    fun ingest(
+        wrap: Event,
+        seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
+    ): Boolean {
+        val outcome = registry.ingest(wrap, seenOnRelays)
         if (outcome == ConcordIngestOutcome.STRUCTURAL) bumpRevision()
         return outcome.claimed
     }

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * The account-wide coordinator for every joined Concord community: it holds one
@@ -45,7 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * for kind-1059 wraps. Thread-safe: the ingest path and UI share one instance.
  */
 class ConcordSessionRegistry(
-    private val onRumor: ConcordRumorSink = { _, _, _ -> },
+    private val onRumor: ConcordRumorSink = { _, _, _, _ -> },
 ) {
     private val lock = KmpLock()
 
@@ -102,10 +103,13 @@ class ConcordSessionRegistry(
      * [ConcordIngestOutcome] (or [ConcordIngestOutcome.NOT_MINE] if none claim it). A wrap belongs to
      * at most one plane, so the first accepting session wins.
      */
-    fun ingest(wrap: Event): ConcordIngestOutcome {
+    fun ingest(
+        wrap: Event,
+        seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
+    ): ConcordIngestOutcome {
         val snapshot = lock.withLock { sessions.values.toList() }
         for (session in snapshot) {
-            val outcome = session.ingest(wrap)
+            val outcome = session.ingest(wrap, seenOnRelays)
             if (outcome != ConcordIngestOutcome.NOT_MINE) return outcome
         }
         return ConcordIngestOutcome.NOT_MINE
