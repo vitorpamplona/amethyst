@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,11 +38,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -50,14 +57,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -71,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryAvatar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryDisplay
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCategory
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberGroupEntryDisplay
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.stableKey
@@ -82,6 +94,18 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+
+/** The chat catalog items whose picker row expands to a per-item picker (favorites / joined groups). */
+private val ExpandableItems =
+    setOf(
+        NavBarItem.BROWSER,
+        NavBarItem.PUBLIC_CHATS,
+        NavBarItem.RELAY_GROUPS,
+        NavBarItem.CONCORD,
+    )
+
+/** Soft guidance, not a hard cap: a Material bottom bar reads best at ~5 tabs. */
+private const val RECOMMENDED_SLOTS = 5
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")
@@ -110,34 +134,18 @@ fun BottomBarSettingsScreen(
     }
 }
 
-/** The chat catalog items whose picker row expands to a per-item picker (favorites / joined groups). */
-private val ExpandableItems =
-    setOf(
-        NavBarItem.BROWSER,
-        NavBarItem.PUBLIC_CHATS,
-        NavBarItem.RELAY_GROUPS,
-        NavBarItem.CONCORD,
-    )
-
 @Composable
 fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     val bottomBarItemsFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     val savedItems by bottomBarItemsFlow.collectAsStateWithLifecycle()
 
     // All pin/unpin/reorder logic lives in the holder (unit-tested); the composable only renders and
-    // forwards events. syncFrom re-seeds when the saved list changes elsewhere (a picker toggle, an
-    // external device edit, Restore Default) without clobbering an in-progress drag.
+    // forwards events. syncFrom re-seeds when the saved list changes elsewhere without clobbering a drag.
     val state = remember { BottomBarSettingsState(savedItems) { bottomBarItemsFlow.tryEmit(it) } }
     LaunchedEffect(savedItems) { state.syncFrom(savedItems) }
 
     val pinned = state.pinned
     val pinnedKeys = remember(pinned) { state.pinnedKeys() }
-
-    var draggedItemIndex by remember { mutableIntStateOf(-1) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
-    val itemHeights = remember { mutableStateMapOf<Int, Float>() }
-    val isDragging = draggedItemIndex >= 0
-    val scrollState = remember { ScrollState(0) }
 
     val expandedCategories = remember { mutableStateMapOf<Int, Boolean>() }
     val expandedItems = remember { mutableStateMapOf<NavBarItem, Boolean>() }
@@ -146,165 +154,402 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
         modifier =
             Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState, enabled = !isDragging),
+                .verticalScroll(rememberScrollState()),
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
-        Text(
-            text = stringRes(R.string.bottom_bar_settings_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 8.dp, start = Size20dp, end = Size20dp),
+        // --- WYSIWYG preview: the bar you're actually building, updating live. ---
+        BottomBarPreview(pinned, accountViewModel)
+
+        // --- Your tabs: a horizontal, drag-reorderable strip mirroring the bar's own shape. ---
+        SectionHeader(
+            title = stringRes(R.string.bottom_bar_settings_pinned),
+            trailing = "${pinned.size} / $RECOMMENDED_SLOTS",
+            over = pinned.size > RECOMMENDED_SLOTS,
         )
+        PinnedTabsStrip(state, pinned, accountViewModel)
 
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp, start = Size20dp, end = Size20dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Size20dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            TextButton(
-                onClick = {
-                    draggedItemIndex = -1
-                    dragOffset = 0f
-                    state.restoreDefault()
-                },
-            ) {
+            TextButton(onClick = { state.restoreDefault() }) {
                 Text(stringRes(R.string.bottom_bar_settings_restore_default))
             }
         }
 
-        // --- Pinned section: the current bottom bar, drag-reorderable. ---
-        SectionDivider(R.string.bottom_bar_settings_pinned)
+        Spacer(Modifier.height(4.dp))
 
-        pinned.forEachIndexed { index, entry ->
-            val rowIsDragging = draggedItemIndex == index
-            val targetElevation = if (rowIsDragging) 8f else 0f
-            val animatedElevation by animateFloatAsState(
-                targetValue = targetElevation,
-                label = "dragElevation",
-            )
+        // --- Available catalogue, grouped into collapsible category cards. ---
+        SectionHeader(title = stringRes(R.string.bottom_bar_settings_available))
 
-            PinnedEntryCard(
-                entry = entry,
+        BottomBarCategories.forEach { category ->
+            CategoryCard(
+                category = category,
+                pinnedKeys = pinnedKeys,
+                expanded = expandedCategories[category.titleRes] ?: false,
+                onToggleExpand = { expandedCategories[category.titleRes] = !(expandedCategories[category.titleRes] ?: false) },
+                expandedItems = expandedItems,
                 accountViewModel = accountViewModel,
-                isDragging = rowIsDragging,
-                dragOffsetY = if (rowIsDragging) dragOffset else 0f,
-                elevation = animatedElevation,
-                onUnpin = { state.togglePin(entry) },
-                onMeasured = { height -> itemHeights[index] = height },
-                onDragStart = {
-                    draggedItemIndex = index
-                    dragOffset = 0f
-                },
-                onDrag = { dragAmount ->
-                    dragOffset += dragAmount
+                onTogglePin = state::togglePin,
+            )
+        }
 
-                    val currentIndex = draggedItemIndex
-                    if (currentIndex < 0) return@PinnedEntryCard
+        Spacer(Modifier.height(24.dp))
+    }
+}
 
-                    if (dragOffset < 0 && currentIndex > 0) {
-                        val aboveHeight = itemHeights[currentIndex - 1] ?: 0f
-                        if (-dragOffset > aboveHeight / 2f) {
-                            // Swap with the row above (transient — persisted on drag end).
-                            state.moveTransient(currentIndex, currentIndex - 1)
+// ------------------------------------------------------------------------------------------------
+// Live preview
+// ------------------------------------------------------------------------------------------------
 
-                            val h1 = itemHeights[currentIndex]
-                            val h2 = itemHeights[currentIndex - 1]
-                            if (h1 != null) itemHeights[currentIndex - 1] = h1
-                            if (h2 != null) itemHeights[currentIndex] = h2
+@Composable
+private fun BottomBarPreview(
+    pinned: List<BottomBarEntry>,
+    accountViewModel: AccountViewModel,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = accent.copy(alpha = 0.07f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f)),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Size20dp, vertical = 4.dp),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringRes(R.string.bottom_bar_settings_preview),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accent,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringRes(R.string.bottom_bar_settings_live),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
-                            dragOffset += aboveHeight
-                            draggedItemIndex = currentIndex - 1
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.background,
+                shadowElevation = 3.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (pinned.isEmpty()) {
+                    Box(Modifier.fillMaxWidth().height(58.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            stringRes(R.string.bottom_bar_settings_pinned_empty),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(58.dp).padding(horizontal = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Highlight the first tab as the landing destination, like the real bar on open.
+                        pinned.forEachIndexed { index, entry ->
+                            PreviewTab(entry, selected = index == 0, accountViewModel)
                         }
                     }
+                }
+            }
+        }
+    }
+}
 
-                    if (dragOffset > 0 && currentIndex < pinned.lastIndex) {
-                        val belowHeight = itemHeights[currentIndex + 1] ?: 0f
-                        if (dragOffset > belowHeight / 2f) {
-                            // Swap with the row below (transient — persisted on drag end).
-                            state.moveTransient(currentIndex, currentIndex + 1)
+@Composable
+private fun PreviewTab(
+    entry: BottomBarEntry,
+    selected: Boolean,
+    accountViewModel: AccountViewModel,
+) {
+    val visual = rememberPinnedVisual(entry, accountViewModel)
+    val accent = MaterialTheme.colorScheme.primary
+    Column(
+        modifier = Modifier.width(58.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(width = 44.dp, height = 30.dp)
+                    .clip(CircleShape)
+                    .background(if (selected) accent.copy(alpha = 0.16f) else Color.Transparent),
+            contentAlignment = Alignment.Center,
+        ) {
+            when (visual) {
+                is PinnedVisual.Glyph ->
+                    Icon(
+                        symbol = visual.icon,
+                        contentDescription = visual.label,
+                        modifier = Modifier.size(21.dp),
+                        tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                is PinnedVisual.Avatar -> GroupEntryAvatar(visual.display, 22.dp, accountViewModel)
+            }
+        }
+        if (selected) {
+            Text(
+                text = visual.label,
+                style = MaterialTheme.typography.labelSmall,
+                color = accent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
 
-                            val h1 = itemHeights[currentIndex]
-                            val h2 = itemHeights[currentIndex + 1]
-                            if (h1 != null) itemHeights[currentIndex + 1] = h1
-                            if (h2 != null) itemHeights[currentIndex] = h2
+// ------------------------------------------------------------------------------------------------
+// Pinned tabs — horizontal, drag-to-reorder chip strip
+// ------------------------------------------------------------------------------------------------
 
-                            dragOffset -= belowHeight
-                            draggedItemIndex = currentIndex + 1
+@Composable
+private fun PinnedTabsStrip(
+    state: BottomBarSettingsState,
+    pinned: List<BottomBarEntry>,
+    accountViewModel: AccountViewModel,
+) {
+    if (pinned.isEmpty()) {
+        Text(
+            text = stringRes(R.string.bottom_bar_settings_pinned_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Size20dp, vertical = 6.dp),
+        )
+        return
+    }
+
+    var draggedIndex by remember { mutableIntStateOf(-1) }
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    val widths = remember { mutableStateMapOf<Int, Float>() }
+    val scroll = rememberScrollState()
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scroll, enabled = draggedIndex < 0)
+                .padding(horizontal = Size20dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        pinned.forEachIndexed { index, entry ->
+            val dragging = draggedIndex == index
+            PinnedChip(
+                entry = entry,
+                accountViewModel = accountViewModel,
+                dragging = dragging,
+                dragOffsetX = if (dragging) dragOffsetX else 0f,
+                onRemove = { state.togglePin(entry) },
+                onMeasured = { widths[index] = it },
+                onDragStart = {
+                    draggedIndex = index
+                    dragOffsetX = 0f
+                },
+                onDrag = { dx ->
+                    dragOffsetX += dx
+                    val current = draggedIndex
+                    if (current < 0) return@PinnedChip
+
+                    if (dragOffsetX < 0 && current > 0) {
+                        val leftW = widths[current - 1] ?: 0f
+                        if (-dragOffsetX > leftW / 2f) {
+                            state.moveTransient(current, current - 1)
+                            dragOffsetX += leftW
+                            draggedIndex = current - 1
+                        }
+                    }
+                    if (dragOffsetX > 0 && current < pinned.lastIndex) {
+                        val rightW = widths[current + 1] ?: 0f
+                        if (dragOffsetX > rightW / 2f) {
+                            state.moveTransient(current, current + 1)
+                            dragOffsetX -= rightW
+                            draggedIndex = current + 1
                         }
                     }
                 },
                 onDragEnd = {
-                    draggedItemIndex = -1
-                    dragOffset = 0f
+                    draggedIndex = -1
+                    dragOffsetX = 0f
                     state.commit()
                 },
                 onDragCancel = {
-                    draggedItemIndex = -1
-                    dragOffset = 0f
+                    draggedIndex = -1
+                    dragOffsetX = 0f
                 },
             )
+        }
+    }
+}
 
-            if (index < pinned.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
+@Composable
+private fun PinnedChip(
+    entry: BottomBarEntry,
+    accountViewModel: AccountViewModel,
+    dragging: Boolean,
+    dragOffsetX: Float,
+    onRemove: () -> Unit,
+    onMeasured: (Float) -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+) {
+    val visual = rememberPinnedVisual(entry, accountViewModel)
+    val elevation by animateFloatAsState(if (dragging) 8f else 0f, label = "chipElevation")
+
+    Surface(
+        shape = CircleShape,
+        color = if (dragging) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier =
+            Modifier
+                .onGloballyPositioned { onMeasured(it.size.width.toFloat()) }
+                .graphicsLayer {
+                    translationX = dragOffsetX
+                    shadowElevation = elevation
+                    if (dragging) {
+                        scaleX = 1.03f
+                        scaleY = 1.03f
+                    }
+                }.pointerInput(entry.stableKey) {
+                    detectDragGestures(
+                        onDragStart = { onDragStart() },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            onDrag(amount.x)
+                        },
+                        onDragEnd = { onDragEnd() },
+                        onDragCancel = { onDragCancel() },
+                    )
+                },
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 6.dp, end = 4.dp, top = 5.dp, bottom = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            LeadingVisual(visual, accountViewModel, size = 24.dp)
+            Text(
+                text = visual.label,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Box(
+                modifier = Modifier.size(24.dp).clip(CircleShape).clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = stringRes(R.string.bottom_bar_settings_remove),
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
+    }
+}
 
-        if (pinned.isEmpty()) {
-            Text(
-                text = stringRes(R.string.bottom_bar_settings_pinned_empty),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp, horizontal = Size20dp),
-            )
-        }
+// ------------------------------------------------------------------------------------------------
+// Available catalogue — category cards
+// ------------------------------------------------------------------------------------------------
 
-        // --- Available section: the full catalog, grouped into collapsible categories. ---
-        Spacer(modifier = Modifier.height(8.dp))
+@Composable
+private fun CategoryCard(
+    category: NavBarCategory,
+    pinnedKeys: Set<String>,
+    expanded: Boolean,
+    onToggleExpand: () -> Unit,
+    expandedItems: SnapshotStateMap<NavBarItem, Boolean>,
+    accountViewModel: AccountViewModel,
+    onTogglePin: (BottomBarEntry) -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Size20dp, vertical = 5.dp),
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleExpand).padding(13.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        symbol = categoryIcon(category.titleRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = stringRes(category.titleRes),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
-        BottomBarCategories.forEach { category ->
-            val expanded = expandedCategories[category.titleRes] ?: false
-            CategoryHeader(
-                titleRes = category.titleRes,
-                expanded = expanded,
-                onToggle = { expandedCategories[category.titleRes] = !expanded },
-            )
             AnimatedVisibility(visible = expanded) {
-                Column {
+                Column(Modifier.padding(bottom = 6.dp)) {
                     category.items.forEach { item ->
                         val def = NavBarCatalog[item] ?: return@forEach
                         val entry = BottomBarEntry.BuiltIn(item)
                         if (item in ExpandableItems) {
-                            ExpandablePickerRow(
+                            ExpandableAvailableRow(
                                 icon = def.icon,
                                 label = stringRes(def.labelRes),
                                 pinned = entry.stableKey in pinnedKeys,
                                 expanded = expandedItems[item] ?: false,
-                                onTogglePin = { state.togglePin(entry) },
+                                onTogglePin = { onTogglePin(entry) },
                                 onToggleExpand = { expandedItems[item] = !(expandedItems[item] ?: false) },
                             ) {
-                                PickerChildren(item, pinnedKeys, accountViewModel, state::togglePin)
+                                PickerChildren(item, pinnedKeys, accountViewModel, onTogglePin)
                             }
                         } else {
-                            SimpleAvailableRow(
-                                icon = def.icon,
+                            AvailableRow(
+                                leading = { LeadingGlyph(def.icon, tinted = true) },
                                 label = stringRes(def.labelRes),
+                                subtitle = null,
                                 pinned = entry.stableKey in pinnedKeys,
-                                onToggle = { state.togglePin(entry) },
+                                onToggle = { onTogglePin(entry) },
                             )
                         }
                     }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-/** The joined-groups (or favorites) child rows revealed when an expandable picker row opens. */
+/** Child rows (favorites / joined groups) revealed when an expandable picker row opens. */
 @Composable
 private fun PickerChildren(
     item: NavBarItem,
@@ -320,11 +565,14 @@ private fun PickerChildren(
             } else {
                 favorites.forEach { fav ->
                     val entry = BottomBarEntry.Favorite(fav.id)
-                    ChildRow(
-                        leading = { FavoriteChildIcon(fav) },
+                    val icon = if (fav is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
+                    AvailableRow(
+                        leading = { LeadingGlyph(icon, tinted = true) },
                         label = fav.label,
+                        subtitle = null,
                         pinned = entry.stableKey in pinnedKeys,
                         onToggle = { onTogglePin(entry) },
+                        indent = true,
                     )
                 }
             }
@@ -333,39 +581,27 @@ private fun PickerChildren(
         NavBarItem.PUBLIC_CHATS -> {
             val channels by accountViewModel.account.publicChatList.flow
                 .collectAsStateWithLifecycle()
-            val sorted = remember(channels) { channels.map { BottomBarEntry.PublicChat(it.eventId) } }
-            if (sorted.isEmpty()) {
-                EmptyChildHint(R.string.bottom_bar_settings_no_groups)
-            } else {
-                sorted.forEach { entry -> GroupChildRow(entry, pinnedKeys, accountViewModel, onTogglePin) }
-            }
+            val entries = remember(channels) { channels.map { BottomBarEntry.PublicChat(it.eventId) } }
+            GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
         }
 
         NavBarItem.RELAY_GROUPS -> {
             val groups by accountViewModel.account.relayGroupList.liveRelayGroupList
                 .collectAsStateWithLifecycle()
-            val sorted =
+            val entries =
                 remember(groups) {
                     groups
                         .sortedBy { (it.name ?: it.groupId).lowercase() }
                         .map { BottomBarEntry.RelayGroup(it.groupId, it.relayUrl) }
                 }
-            if (sorted.isEmpty()) {
-                EmptyChildHint(R.string.bottom_bar_settings_no_groups)
-            } else {
-                sorted.forEach { entry -> GroupChildRow(entry, pinnedKeys, accountViewModel, onTogglePin) }
-            }
+            GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
         }
 
         NavBarItem.CONCORD -> {
             val communities by accountViewModel.account.concordChannelList.liveCommunities
                 .collectAsStateWithLifecycle()
-            val sorted = remember(communities) { communities.map { BottomBarEntry.Concord(it.id) } }
-            if (sorted.isEmpty()) {
-                EmptyChildHint(R.string.bottom_bar_settings_no_groups)
-            } else {
-                sorted.forEach { entry -> GroupChildRow(entry, pinnedKeys, accountViewModel, onTogglePin) }
-            }
+            val entries = remember(communities) { communities.map { BottomBarEntry.Concord(it.id) } }
+            GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
         }
 
         else -> {}
@@ -373,88 +609,76 @@ private fun PickerChildren(
 }
 
 @Composable
-private fun GroupChildRow(
-    entry: BottomBarEntry,
+private fun GroupChildList(
+    entries: List<BottomBarEntry>,
     pinnedKeys: Set<String>,
     accountViewModel: AccountViewModel,
     onTogglePin: (BottomBarEntry) -> Unit,
 ) {
-    // Read-only: the picker resolves names/avatars from cache, it must not open a REQ per row.
-    val display = rememberGroupEntryDisplay(entry, accountViewModel, subscribe = false) ?: return
-    ChildRow(
-        leading = { GroupEntryAvatar(display, 28.dp, accountViewModel) },
-        label = display.label,
-        pinned = entry.stableKey in pinnedKeys,
-        onToggle = { onTogglePin(entry) },
-    )
-}
-
-@Composable
-private fun FavoriteChildIcon(app: FavoriteApp) {
-    val icon = if (app is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
-    NavBarIconBox(icon, app.label)
-}
-
-@Composable
-private fun CategoryHeader(
-    titleRes: Int,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle)
-                .padding(top = 16.dp, bottom = 6.dp, start = Size20dp, end = Size20dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringRes(titleRes),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    if (entries.isEmpty()) {
+        EmptyChildHint(R.string.bottom_bar_settings_no_groups)
+        return
+    }
+    entries.forEach { entry ->
+        // Read-only: the picker resolves names/avatars from cache, it must not open a REQ per row.
+        val display = rememberGroupEntryDisplay(entry, accountViewModel, subscribe = false) ?: return@forEach
+        AvailableRow(
+            leading = { GroupEntryAvatar(display, 30.dp, accountViewModel) },
+            label = display.label,
+            subtitle = null,
+            pinned = entry.stableKey in pinnedKeys,
+            onToggle = { onTogglePin(entry) },
+            indent = true,
         )
     }
-    HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
 }
 
+// ------------------------------------------------------------------------------------------------
+// Rows & shared bits
+// ------------------------------------------------------------------------------------------------
+
 @Composable
-private fun SimpleAvailableRow(
-    icon: MaterialSymbol,
+private fun AvailableRow(
+    leading: @Composable () -> Unit,
     label: String,
+    subtitle: String?,
     pinned: Boolean,
     onToggle: () -> Unit,
+    indent: Boolean = false,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onToggle)
-                .padding(vertical = 8.dp, horizontal = Size20dp),
+                .padding(start = if (indent) 24.dp else 13.dp, end = 13.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        NavBarIconBox(icon, label)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        Switch(checked = pinned, onCheckedChange = { onToggle() })
+        leading()
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        AddPill(added = pinned, onClick = onToggle)
     }
 }
 
 @Composable
-private fun ExpandablePickerRow(
+private fun ExpandableAvailableRow(
     icon: MaterialSymbol,
     label: String,
     pinned: Boolean,
@@ -468,11 +692,11 @@ private fun ExpandablePickerRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onToggleExpand)
-                .padding(vertical = 8.dp, horizontal = Size20dp),
+                .padding(start = 13.dp, end = 13.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        NavBarIconBox(icon, label)
+        LeadingGlyph(icon, tinted = true)
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
@@ -483,41 +707,132 @@ private fun ExpandablePickerRow(
         Icon(
             symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
             contentDescription = stringRes(R.string.bottom_bar_settings_expand),
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(22.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Switch(checked = pinned, onCheckedChange = { onTogglePin() })
+        AddPill(added = pinned, onClick = onTogglePin)
     }
     AnimatedVisibility(visible = expanded) {
         Column { children() }
     }
 }
 
+/** Outlined "Add" that fills to "Added" once pinned — states the action and its result. */
 @Composable
-private fun ChildRow(
-    leading: @Composable () -> Unit,
-    label: String,
-    pinned: Boolean,
-    onToggle: () -> Unit,
+private fun AddPill(
+    added: Boolean,
+    onClick: () -> Unit,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    if (added) {
+        Surface(
+            shape = CircleShape,
+            color = accent,
+        ) {
+            Row(
+                modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                )
+                Text(
+                    stringRes(R.string.bottom_bar_settings_added),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            border = BorderStroke(1.dp, accent),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Add,
+                contentDescription = null,
+                modifier = Modifier.size(15.dp),
+                tint = accent,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(stringRes(R.string.bottom_bar_settings_add), style = MaterialTheme.typography.labelLarge, color = accent)
+        }
+    }
+}
+
+/** A category glyph in a soft accent-tinted circle. */
+@Composable
+private fun LeadingGlyph(
+    icon: MaterialSymbol,
+    tinted: Boolean,
+) {
+    val bg = if (tinted) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
+    Box(
+        modifier = Modifier.size(34.dp).clip(CircleShape).background(bg),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = icon,
+            contentDescription = null,
+            modifier = Modifier.size(19.dp),
+            tint = if (tinted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun LeadingVisual(
+    visual: PinnedVisual,
+    accountViewModel: AccountViewModel,
+    size: Dp,
+) {
+    when (visual) {
+        is PinnedVisual.Glyph ->
+            Box(
+                modifier = Modifier.size(size + 6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    symbol = visual.icon,
+                    contentDescription = visual.label,
+                    modifier = Modifier.size(size * 0.7f),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        is PinnedVisual.Avatar -> GroupEntryAvatar(visual.display, size, accountViewModel)
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    title: String,
+    trailing: String? = null,
+    over: Boolean = false,
 ) {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle)
-                .padding(start = 44.dp, top = 6.dp, end = Size20dp, bottom = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = Size20dp, end = Size20dp, top = 18.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        leading()
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
-        Switch(checked = pinned, onCheckedChange = { onToggle() })
+        if (trailing != null) {
+            Text(
+                text = trailing,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
@@ -527,103 +842,25 @@ private fun EmptyChildHint(textRes: Int) {
         text = stringRes(textRes),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 44.dp, top = 6.dp, end = Size20dp, bottom = 6.dp),
+        modifier = Modifier.padding(start = 24.dp, end = 13.dp, top = 6.dp, bottom = 6.dp),
     )
 }
 
-@Composable
-private fun SectionDivider(titleRes: Int) {
-    Text(
-        text = stringRes(titleRes),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 20.dp, bottom = 4.dp, start = Size20dp, end = Size20dp),
-    )
-    HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-}
-
-@Composable
-private fun PinnedEntryCard(
-    entry: BottomBarEntry,
-    accountViewModel: AccountViewModel,
-    isDragging: Boolean,
-    dragOffsetY: Float,
-    elevation: Float,
-    onUnpin: () -> Unit,
-    onMeasured: (Float) -> Unit,
-    onDragStart: () -> Unit,
-    onDrag: (Float) -> Unit,
-    onDragEnd: () -> Unit,
-    onDragCancel: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    translationY = dragOffsetY
-                    shadowElevation = elevation
-                    if (isDragging) {
-                        scaleX = 1.02f
-                        scaleY = 1.02f
-                    }
-                }.onGloballyPositioned { coordinates ->
-                    onMeasured(coordinates.size.height.toFloat())
-                }.padding(vertical = 8.dp, horizontal = Size20dp)
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { onDragStart() },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            onDrag(dragAmount.y)
-                        },
-                        onDragEnd = { onDragEnd() },
-                        onDragCancel = { onDragCancel() },
-                    )
-                },
-    ) {
-        val visual = rememberPinnedVisual(entry, accountViewModel)
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            when (visual) {
-                is PinnedVisual.Glyph -> NavBarIconBox(visual.icon, visual.label)
-                is PinnedVisual.Avatar -> GroupEntryAvatar(visual.display, 28.dp, accountViewModel)
-            }
-
-            Text(
-                text = visual.label,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-
-            Switch(
-                checked = true,
-                onCheckedChange = { onUnpin() },
-            )
-
-            Box(
-                modifier = Modifier.size(28.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    MaterialSymbols.DragIndicator,
-                    contentDescription = stringRes(R.string.bottom_bar_settings_reorder),
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+private fun categoryIcon(titleRes: Int): MaterialSymbol =
+    when (titleRes) {
+        R.string.bottom_bar_category_main -> MaterialSymbols.Home
+        R.string.bottom_bar_category_chats -> MaterialSymbols.Group
+        R.string.bottom_bar_category_you -> MaterialSymbols.AccountCircle
+        R.string.bottom_bar_category_feeds -> MaterialSymbols.Subscriptions
+        R.string.bottom_bar_category_apps -> MaterialSymbols.Apps
+        else -> MaterialSymbols.Settings
     }
-}
 
-/** Resolved leading + label for a pinned entry, computed once so a group's channel is subscribed once. */
+// ------------------------------------------------------------------------------------------------
+// Leading/label resolution for a pinned entry (built-in glyph, favorite glyph, or group avatar).
+// Computed once so a group's channel is subscribed at most once per row.
+// ------------------------------------------------------------------------------------------------
+
 private sealed interface PinnedVisual {
     val label: String
 
@@ -664,21 +901,3 @@ private fun rememberPinnedVisual(
             if (display != null) PinnedVisual.Avatar(display) else PinnedVisual.Glyph(MaterialSymbols.Group, "")
         }
     }
-
-@Composable
-private fun NavBarIconBox(
-    icon: MaterialSymbol,
-    label: String,
-) {
-    Box(
-        modifier = Modifier.size(28.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            symbol = icon,
-            contentDescription = label,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onBackground,
-        )
-    }
-}

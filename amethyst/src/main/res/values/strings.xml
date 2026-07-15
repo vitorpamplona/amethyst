@@ -2830,6 +2830,11 @@
     <string name="bottom_bar_settings_expand">Show options</string>
     <string name="bottom_bar_settings_no_favorites">No favorites yet. Star an app in the Browser to add it here.</string>
     <string name="bottom_bar_settings_no_groups">No joined groups yet.</string>
+    <string name="bottom_bar_settings_preview">Preview</string>
+    <string name="bottom_bar_settings_live">Live</string>
+    <string name="bottom_bar_settings_add">Add</string>
+    <string name="bottom_bar_settings_added">Added</string>
+    <string name="bottom_bar_settings_remove">Remove</string>
     <string name="bottom_bar_settings_restore_default">Restore Default</string>
     <string name="bottom_bar_category_main">Main</string>
     <string name="bottom_bar_category_chats">Chats &amp; Groups</string>
