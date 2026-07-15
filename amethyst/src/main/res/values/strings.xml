@@ -2050,64 +2050,71 @@
     <string name="messages_create_group">Group</string>
     <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
 
-    <!-- New conversation chooser (full-screen picker opened from the Messages FAB) -->
+    <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
+         Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <string name="new_conversation_title">Start a conversation</string>
-    <string name="new_conversation_intro">Pick the kind of conversation that fits what you need. They differ in who can join, how private they are, and where the messages live.</string>
     <string name="new_conversation_best_for">Best for</string>
-    <string name="new_conversation_section_direct">Direct &amp; private</string>
+    <string name="new_conversation_pros">Good</string>
+    <string name="new_conversation_cons">Trade-offs</string>
+    <string name="new_conversation_section_direct">Private</string>
     <string name="new_conversation_section_encrypted">Encrypted groups</string>
-    <string name="new_conversation_section_public">Public &amp; open</string>
+    <string name="new_conversation_section_relay">Relay-aware</string>
 
     <string name="new_conversation_dm_title">Private Message</string>
-    <string name="new_conversation_dm_tagline">Encrypted direct messages with one person or a small group.</string>
-    <string name="new_conversation_dm_best">Talking privately with people you already know.</string>
-    <string name="new_conversation_dm_pro_1">End-to-end encrypted</string>
-    <string name="new_conversation_dm_pro_2">Hides who you\'re talking to</string>
-    <string name="new_conversation_dm_pro_3">Works across all your relays</string>
-    <string name="new_conversation_dm_con_1">Best for small groups</string>
-    <string name="new_conversation_dm_con_2">No shared admins or moderation</string>
+    <string name="new_conversation_dm_tagline">Direct messages, end-to-end encrypted</string>
+    <string name="new_conversation_dm_chip">1:1–5 rooms</string>
+    <string name="new_conversation_dm_best">One-on-one and small group chats with people you know.</string>
+    <string name="new_conversation_dm_cta">New message</string>
+    <string name="new_conversation_dm_pro_1">1-on-1 &amp; small groups</string>
+    <string name="new_conversation_dm_pro_2">End-to-end encrypted</string>
+    <string name="new_conversation_dm_con_1">Not for big groups</string>
 
     <string name="new_conversation_marmot_title">Marmot Group</string>
-    <string name="new_conversation_marmot_tagline">Strongly encrypted group chat built on the MLS standard.</string>
-    <string name="new_conversation_marmot_best">A private team or friend group that needs the strongest encryption.</string>
-    <string name="new_conversation_marmot_pro_1">Forward-secret group encryption</string>
-    <string name="new_conversation_marmot_pro_2">Relays can\'t read the messages</string>
-    <string name="new_conversation_marmot_pro_3">Controlled membership</string>
-    <string name="new_conversation_marmot_con_1">Newer, still maturing</string>
-    <string name="new_conversation_marmot_con_2">Everyone needs a Marmot-capable app</string>
+    <string name="new_conversation_marmot_tagline">Bigger private groups</string>
+    <string name="new_conversation_marmot_chip">Device-bound</string>
+    <string name="new_conversation_marmot_best">Larger private groups that outgrow small-group DMs.</string>
+    <string name="new_conversation_marmot_cta">Create group</string>
+    <string name="new_conversation_marmot_pro_1">Scales past small DMs</string>
+    <string name="new_conversation_marmot_pro_2">Encrypted group chat</string>
+    <string name="new_conversation_marmot_con_1">Device-bound — won\'t appear if you sign in elsewhere</string>
 
     <string name="new_conversation_concord_title">Concord Community</string>
-    <string name="new_conversation_concord_tagline">An encrypted community with multiple channels, like a private server.</string>
-    <string name="new_conversation_concord_best">Running a community or team with topic channels and roles.</string>
-    <string name="new_conversation_concord_pro_1">Many channels and roles</string>
-    <string name="new_conversation_concord_pro_2">Encrypted, with invite links</string>
-    <string name="new_conversation_concord_pro_3">Scales to larger groups</string>
+    <string name="new_conversation_concord_tagline">Communities split by channel</string>
+    <string name="new_conversation_concord_chip">Workspaces</string>
+    <string name="new_conversation_concord_best">Massive communities, organized by channels or workstreams.</string>
+    <string name="new_conversation_concord_cta">Create community</string>
+    <string name="new_conversation_concord_pro_1">Scales to huge communities</string>
+    <string name="new_conversation_concord_pro_2">Split by channel / workstream</string>
     <string name="new_conversation_concord_con_1">More to set up</string>
-    <string name="new_conversation_concord_con_2">Members need a Concord-capable app</string>
 
     <string name="new_conversation_public_chat_title">Public Chat</string>
-    <string name="new_conversation_public_chat_tagline">An open channel anyone can find, read, and join.</string>
-    <string name="new_conversation_public_chat_best">A public topic room open to everyone.</string>
+    <string name="new_conversation_public_chat_tagline">Public messages on a relay</string>
+    <string name="new_conversation_public_chat_chip">Unmoderated</string>
+    <string name="new_conversation_public_chat_best">Open public rooms where anyone can post.</string>
+    <string name="new_conversation_public_chat_cta">Create public chat</string>
     <string name="new_conversation_public_chat_pro_1">Anyone can join</string>
-    <string name="new_conversation_public_chat_pro_2">Discoverable and simple</string>
-    <string name="new_conversation_public_chat_con_1">Not private — messages are public</string>
-    <string name="new_conversation_public_chat_con_2">Limited moderation</string>
+    <string name="new_conversation_public_chat_pro_2">Simple &amp; discoverable</string>
+    <string name="new_conversation_public_chat_con_1">Public only</string>
+    <string name="new_conversation_public_chat_con_2">No moderation</string>
 
     <string name="new_conversation_relay_group_title">Relay Group</string>
-    <string name="new_conversation_relay_group_tagline">A group hosted and moderated by a specific relay.</string>
-    <string name="new_conversation_relay_group_best">A managed group with admins, roles, and moderation.</string>
-    <string name="new_conversation_relay_group_pro_1">Real moderation and roles</string>
-    <string name="new_conversation_relay_group_pro_2">Can be open or invite-only</string>
-    <string name="new_conversation_relay_group_con_1">Lives on a single relay</string>
-    <string name="new_conversation_relay_group_con_2">That relay can see the group</string>
+    <string name="new_conversation_relay_group_tagline">Relay-run, public or private</string>
+    <string name="new_conversation_relay_group_chip">Moderated</string>
+    <string name="new_conversation_relay_group_best">Groups moderated by the relay that hosts them.</string>
+    <string name="new_conversation_relay_group_cta">Browse relay groups</string>
+    <string name="new_conversation_relay_group_pro_1">Moderated by the relay</string>
+    <string name="new_conversation_relay_group_pro_2">Public or private</string>
+    <string name="new_conversation_relay_group_con_1">Tied to that one relay</string>
 
     <string name="new_conversation_ephemeral_title">Disappearing Chat</string>
-    <string name="new_conversation_ephemeral_tagline">A temporary room tied to a relay — messages aren\'t stored.</string>
-    <string name="new_conversation_ephemeral_best">Quick, in-the-moment chats you don\'t want kept.</string>
-    <string name="new_conversation_ephemeral_pro_1">Nothing is saved</string>
-    <string name="new_conversation_ephemeral_pro_2">Lightweight and instant</string>
-    <string name="new_conversation_ephemeral_con_1">History disappears</string>
-    <string name="new_conversation_ephemeral_con_2">Only people on that relay see it</string>
+    <string name="new_conversation_ephemeral_tagline">Whoever\'s online, right now</string>
+    <string name="new_conversation_ephemeral_chip">Live now</string>
+    <string name="new_conversation_ephemeral_best">In-the-moment chat with whoever is online right now.</string>
+    <string name="new_conversation_ephemeral_cta">Start chat</string>
+    <string name="new_conversation_ephemeral_pro_1">Talk to who\'s online now</string>
+    <string name="new_conversation_ephemeral_pro_2">Nothing is saved</string>
+    <string name="new_conversation_ephemeral_con_1">No history</string>
+    <string name="new_conversation_ephemeral_con_2">Relay-scoped</string>
     <string name="relay_groups_title">Relay Groups</string>
     <string name="relay_group_view_inline">Inline</string>
     <string name="relay_group_view_grouped">By relay</string>
