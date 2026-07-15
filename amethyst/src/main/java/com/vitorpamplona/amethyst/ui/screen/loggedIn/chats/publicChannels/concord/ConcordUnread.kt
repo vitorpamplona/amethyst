@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -51,12 +54,48 @@ fun concordChannelUnreadCountFlow(
         account.loadLastReadFlow(concordChannelLastReadRoute(communityId, channelKey)),
         channel.flow().notes.stateFlow,
     ) { lastRead, _ ->
-        channel.newMessagesSince(lastRead)
+        channel.newMessagesSince(account, lastRead)
     }
 }
 
-/** The number of this channel's messages created strictly after [sinceSecs] (0 if none). */
-private fun ConcordChannel.newMessagesSince(sinceSecs: Long): Int = notes.count { _, note -> (note.createdAt() ?: 0L) > sinceSecs }
+/**
+ * True for a note the Concord channel *timeline* actually renders — the same predicate as
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedFilter]'s
+ * `isTimelineMessage`: a loaded, acceptable message that is **not** a kind-1111 [CommentEvent].
+ *
+ * A [CommentEvent] is a *minichat thread reply* that lives inside its parent's thread, not on the
+ * flat timeline, so it never composes on the channel screen and never advances the last-read
+ * marker. Every list-row surface that summarizes a channel — the unread badge
+ * ([newMessagesSince]), the last-message preview + timestamp ([newestTimelineNote]), and the
+ * Messages hub row — reuses this so none of them can disagree with the open channel's feed:
+ * a trailing comment can't stick the badge at a count the user can never clear, nor show up as a
+ * "last message" that isn't in the timeline. Unacceptable (muted/blocked) authors are hidden for
+ * the same reason.
+ */
+fun isConcordTimelineMessage(
+    note: Note,
+    account: Account,
+): Boolean = note.event.let { it != null && it !is CommentEvent } && account.isAcceptable(note)
+
+/**
+ * The newest timeline message in this channel (see [isConcordTimelineMessage]), or null if none —
+ * the note the list/hub rows show as the channel's "last message". Unlike [ConcordChannel.lastNote]
+ * (the raw newest note of any kind), this skips thread replies and hidden authors so the preview
+ * matches what the channel feed renders and the unread badge counts.
+ */
+fun ConcordChannel.newestTimelineNote(account: Account): Note? =
+    notes
+        .filter { _, note -> isConcordTimelineMessage(note, account) }
+        .minWithOrNull(Channel.DefaultFeedOrder)
+
+/** The number of this channel's timeline messages created strictly after [sinceSecs] (0 if none). */
+private fun ConcordChannel.newMessagesSince(
+    account: Account,
+    sinceSecs: Long,
+): Int =
+    notes.count { _, note ->
+        (note.createdAt() ?: 0L) > sinceSecs && isConcordTimelineMessage(note, account)
+    }
 
 /**
  * The pubkeys of the [limit] most-recent distinct posters in this channel, newest first — the

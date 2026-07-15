@@ -402,7 +402,9 @@ private fun ConcordChannelRow(
         .flow()
         .notes.stateFlow
         .collectAsStateWithLifecycle()
-    val lastNote = channelState.channel.lastNote
+    // The newest *timeline* message (not the raw lastNote): skips kind-1111 thread replies and
+    // hidden authors so the preview + time match the channel feed and the unread badge below.
+    val lastNote = remember(channelState) { channel.newestTimelineNote(account) }
     val unreadCount by
         remember(communityId, channelKey) { concordChannelUnreadCountFlow(account, communityId, channelKey) }
             .collectAsStateWithLifecycle(0)
