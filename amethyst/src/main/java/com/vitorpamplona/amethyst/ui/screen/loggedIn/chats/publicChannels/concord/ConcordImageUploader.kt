@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Authors a CORD-02 §6 encrypted community image and returns the [ImagePointer] to seal in the
@@ -49,47 +51,55 @@ import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 class ConcordImageUploader(
     private val account: Account,
 ) {
-    /** Compresses, strips, AES-256-GCM-encrypts and uploads the picked [uri], returning its pointer. */
+    /**
+     * Compresses, strips, AES-256-GCM-encrypts and uploads the picked [uri], returning its pointer.
+     *
+     * Runs on [Dispatchers.IO]: the compression/upload pipeline asserts it is off the main thread
+     * ([MediaCompressor] calls `checkNotInMainThread`), and callers launch this from a Compose
+     * `rememberCoroutineScope()`, which is Main-dispatched — so without this switch the first step
+     * throws before any bytes leave the device.
+     */
     suspend fun uploadEncrypted(
         uri: Uri,
         context: Context,
-    ): ImagePointer {
-        // Fresh random key + nonce per image; we hold onto them to build the pointer below since the
-        // orchestrator only surfaces the ciphertext URL, not the cipher it was handed.
-        val cipher = AESGCM()
+    ): ImagePointer =
+        withContext(Dispatchers.IO) {
+            // Fresh random key + nonce per image; we hold onto them to build the pointer below since the
+            // orchestrator only surfaces the ciphertext URL, not the cipher it was handed.
+            val cipher = AESGCM()
 
-        val finalState =
-            UploadOrchestrator().uploadEncrypted(
-                uri = uri,
-                mimeType = context.contentResolver.getType(uri),
-                alt = null,
-                contentWarningReason = null,
-                compressionQuality = CompressorQuality.MEDIUM,
-                encrypt = cipher,
-                server = resolveBlossomServer(),
-                account = account,
-                context = context,
+            val finalState =
+                UploadOrchestrator().uploadEncrypted(
+                    uri = uri,
+                    mimeType = context.contentResolver.getType(uri),
+                    alt = null,
+                    contentWarningReason = null,
+                    compressionQuality = CompressorQuality.MEDIUM,
+                    encrypt = cipher,
+                    server = resolveBlossomServer(),
+                    account = account,
+                    context = context,
+                )
+
+            val result =
+                when (finalState) {
+                    is UploadingState.Finished -> finalState.result
+                    is UploadingState.Error -> throw IllegalStateException(stringRes(context, finalState.errorResource, *finalState.params))
+                }
+
+            val server =
+                result as? UploadOrchestrator.OrchestratorResult.ServerResult
+                    ?: throw IllegalStateException("Encrypted community image upload did not return a server URL")
+
+            ImagePointer(
+                url = server.url,
+                key = cipher.keyBytes.toHexKey(),
+                nonce = cipher.nonce.toHexKey(),
+                // hash is over the *plaintext* (post-compression/strip) bytes — the read path verifies it
+                // after decrypting, so it must match what was actually encrypted, not the original file.
+                hash = server.hashBeforeEncryption ?: throw IllegalStateException("Upload pipeline did not report the plaintext hash"),
             )
-
-        val result =
-            when (finalState) {
-                is UploadingState.Finished -> finalState.result
-                is UploadingState.Error -> throw IllegalStateException(stringRes(context, finalState.errorResource, *finalState.params))
-            }
-
-        val server =
-            result as? UploadOrchestrator.OrchestratorResult.ServerResult
-                ?: throw IllegalStateException("Encrypted community image upload did not return a server URL")
-
-        return ImagePointer(
-            url = server.url,
-            key = cipher.keyBytes.toHexKey(),
-            nonce = cipher.nonce.toHexKey(),
-            // hash is over the *plaintext* (post-compression/strip) bytes — the read path verifies it
-            // after decrypting, so it must match what was actually encrypted, not the original file.
-            hash = server.hashBeforeEncryption ?: throw IllegalStateException("Upload pipeline did not report the plaintext hash"),
-        )
-    }
+        }
 
     /** The account's first configured Blossom server, wrapped as a [ServerName], else the default. */
     private fun resolveBlossomServer(): ServerName {
