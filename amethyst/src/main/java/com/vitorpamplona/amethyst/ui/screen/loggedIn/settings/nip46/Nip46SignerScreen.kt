@@ -198,6 +198,12 @@ fun Nip46SignerScreen(
                 count = connectedCount,
                 onClick = { nav.nav(Route.ConnectedApps) },
             )
+
+            Text(
+                stringResource(R.string.nip46_signer_background_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

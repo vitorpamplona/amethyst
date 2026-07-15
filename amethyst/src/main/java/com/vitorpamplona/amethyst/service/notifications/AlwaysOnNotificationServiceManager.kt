@@ -53,8 +53,10 @@ import kotlinx.coroutines.launch
  *   this is the battery-saver "airplane mode". Persisted, so an explicit off survives
  *   restarts and crashes.
  * - The **per-account participation** flag ([com.vitorpamplona.amethyst.model.AccountSettings.alwaysOnNotificationService],
- *   "Keep this account active in the background"). While the master is on, the service
- *   runs as long as **at least one** writable account participates.
+ *   "Keep this account active in the background") **or** its NIP-46 signer toggle
+ *   ([com.vitorpamplona.amethyst.model.AccountSettings.nip46SignerEnabled]). While the master is
+ *   on, the service runs as long as **at least one** writable account has either flag on — the
+ *   background signer relies on the same foreground service to keep answering requests.
  *
  * While the master is on, every saved writable account is kept loaded in
  * [AccountCacheState] so (a) its participation flag is observable and (b) GiftWraps
@@ -83,6 +85,11 @@ class AlwaysOnNotificationServiceManager(
      * loaded writable account. The service layers run while the master is on AND at
      * least one account participates; the master overrides everything when off.
      *
+     * An account "participates" when either its always-on setting **or** its NIP-46
+     * signer toggle is on: the foreground service (and its restart layers) keep the
+     * process + shared relay client alive, which is exactly what the background signer
+     * needs to keep answering requests, so the signer toggle keeps the layers up too.
+     *
      * Idempotent: safe to call again on account switch/login — it restarts the watch.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -105,11 +112,17 @@ class AlwaysOnNotificationServiceManager(
 
                     // Master on: keep every writable account loaded so its participation
                     // flag is observable and its gift wraps can decrypt, then run the
-                    // service only while at least one account is participating.
+                    // service only while at least one account is participating. An account
+                    // participates when its always-on setting OR its NIP-46 signer toggle is
+                    // on — the background signer needs the same foreground service alive.
                     startMultiAccountPreload()
                     accountsCache.accounts
                         .flatMapLatest { accounts ->
-                            val flags = accounts.values.map { it.settings.alwaysOnNotificationService }
+                            val flags =
+                                accounts.values.map { account ->
+                                    account.settings.alwaysOnNotificationService
+                                        .combine(account.settings.nip46SignerEnabled) { alwaysOn, signer -> alwaysOn || signer }
+                                }
                             if (flags.isEmpty()) {
                                 flowOf(false)
                             } else {
