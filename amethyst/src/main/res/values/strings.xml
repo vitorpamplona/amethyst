@@ -334,6 +334,7 @@
     and thus chat messages disappear over time</string>
 
     <string name="public_chat">Public Chat</string>
+    <string name="new_public_chat">Create a new public chat</string>
     <string name="marmot_group">MLS Group</string>
     <string name="marmot_group_no_messages_yet">No messages yet</string>
     <string name="public_chat_title">Public Chat Metadata</string>
