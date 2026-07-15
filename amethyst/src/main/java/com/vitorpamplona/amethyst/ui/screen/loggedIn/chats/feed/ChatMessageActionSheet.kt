@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -229,6 +228,8 @@ fun ChatMessageActionSheet(
         ),
     )
 
+    var showAllActions by remember { mutableStateOf(false) }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -248,8 +249,7 @@ fun ChatMessageActionSheet(
                 SectionDivider()
             }
 
-            // Chat-only affordances first, then the shared note-action inventory
-            // (the same one behind the 3-dot menu, so the two surfaces never drift).
+            // Stage one: the primary chat action (reply / edit draft) is always shown.
             ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
 
             val handlers =
@@ -274,24 +274,73 @@ fun ChatMessageActionSheet(
                     onDismiss = onDismiss,
                 )
 
-            noteActionSections(
-                note = note,
-                noteVersionToCopy = note,
-                state = state,
-                handlers = handlers,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            ).forEach { section ->
+            // Stage two: the full shared note-action inventory (the same one behind the
+            // 3-dot menu, so the two surfaces never drift). Tucked behind a toggle so the
+            // sheet opens compact — react, zap, reply — and only grows to full height
+            // when the user asks for the rest.
+            val sections =
+                noteActionSections(
+                    note = note,
+                    noteVersionToCopy = note,
+                    state = state,
+                    handlers = handlers,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+
+            if (sections.isNotEmpty()) {
                 SectionDivider()
-                TileRow {
-                    section.forEach { action ->
-                        ActionTile(action.symbol, action.label, action.isDestructive, action.onClick)
+                MoreActionsToggle(expanded = showAllActions, onToggle = { showAllActions = !showAllActions })
+
+                if (showAllActions) {
+                    sections.forEach { section ->
+                        SectionDivider()
+                        TileRow {
+                            section.forEach { action ->
+                                ActionTile(action.symbol, action.label, action.isDestructive, action.onClick)
+                            }
+                        }
                     }
                 }
             }
 
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+/**
+ * The expand/collapse control between the always-visible quick actions and the full
+ * action inventory. Keeps the sheet short on open (the common case is a reaction, a
+ * zap, or a reply) and reveals everything else on demand.
+ */
+@Composable
+private fun MoreActionsToggle(
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(SmallishBorder)
+                .clickable(onClick = onToggle)
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringRes(if (expanded) R.string.show_less else R.string.more_options),
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -391,6 +440,7 @@ private fun SectionDivider() {
 
 // ---------- Quick reaction + zap rows ----------
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickReactionRow(
     note: Note,
@@ -404,13 +454,13 @@ private fun QuickReactionRow(
             note.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet()
         }
 
-    Row(
+    // Wrap onto as many rows as needed (like the zap grid) rather than a single
+    // horizontally-scrolling strip, so long custom-reaction sets stay reachable.
+    FlowRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         reactions.forEach { reactionType ->
             ClickableBox(
