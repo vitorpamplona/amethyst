@@ -749,7 +749,6 @@ class MarmotManager(
                         hash = metadata.imageHash!!,
                         key = metadata.imageKey!!,
                         nonce = metadata.imageNonce!!,
-                        mediaType = metadata.imageMediaType,
                     )
                 } else {
                     null

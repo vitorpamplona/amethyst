@@ -25,48 +25,47 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
 /**
- * [NostrCipher] for a Marmot group avatar, implementing the canonical
- * `marmot-group-image-v1` scheme (see [MarmotGroupImageEncryption]).
+ * [NostrCipher] for a Marmot group avatar, implementing the MIP-01 v2 scheme (see
+ * [MarmotGroupImageEncryption]) — byte-for-byte interoperable with mdk/whitenoise.
  *
  * The same instance serves two paths:
  * - **Upload** — the file-upload pipeline calls [encrypt] over the (compressed)
  *   image bytes; the resulting blob is stored on Blossom and addressed by
- *   `SHA-256(ciphertext)`. The [imageKey]/[imageNonce] are generated up front so
- *   the caller can persist them into the group's [MarmotGroupData].
+ *   `SHA-256(ciphertext)`. The [imageKey] seed / [imageNonce] are generated up front
+ *   so the caller can persist them into the group's [MarmotGroupData].
  * - **Display** — registered in the encrypted-blob HTTP cache keyed by the blob
  *   URL, so a fetched avatar is transparently decrypted via [decryptOrNull]
- *   (which also opens blobs from the deprecated MIP-01 scheme).
+ *   (v2 first, then the v1 raw-key fallback).
  */
 class MarmotGroupImageCipher(
-    /** Raw 32-byte ChaCha20-Poly1305 key (canonical) or HKDF seed (legacy fallback). */
+    /** 32-byte HKDF seed stored as `image_key` (the AEAD key is derived from it). */
     val imageKey: ByteArray,
     /** 12-byte nonce. */
     val imageNonce: ByteArray,
-    /** Canonical MIME type of the plaintext image; null only for legacy blobs on decrypt. */
-    val mediaType: String?,
 ) : NostrCipher {
-    override fun name(): String = MarmotGroupImageEncryption.AAD_LABEL
+    override fun name(): String = "mip01-image-encryption-v2"
 
     override fun encrypt(bytesToEncrypt: ByteArray): ByteArray {
-        val type = requireNotNull(mediaType) { "media type is required to encrypt a group image" }
-        return ChaCha20Poly1305.encrypt(bytesToEncrypt, MarmotGroupImageEncryption.buildAad(type), imageNonce, imageKey)
+        val aeadKey = Mip01ImageCrypto.deriveImageEncryptionKey(imageKey)
+        return ChaCha20Poly1305.encrypt(bytesToEncrypt, EMPTY_AAD, imageNonce, aeadKey)
     }
 
     override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = decryptOrNull(bytesToDecrypt) ?: throw IllegalStateException("Failed to decrypt Marmot group image")
 
-    override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = MarmotGroupImageEncryption.decryptAny(bytesToDecrypt, imageKey, imageNonce, mediaType)
+    override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? = MarmotGroupImageEncryption.decryptAny(bytesToDecrypt, imageKey, imageNonce)
 
     companion object {
+        private val EMPTY_AAD = ByteArray(0)
+
         /**
-         * Build a cipher with a freshly-generated key + nonce, ready to encrypt a new
+         * Build a cipher with a freshly-generated seed + nonce, ready to encrypt a new
          * avatar. The generated [imageKey]/[imageNonce] are exposed on the returned
          * instance so the caller can persist them into [MarmotGroupData].
          */
-        fun forNewImage(mediaType: String): MarmotGroupImageCipher =
+        fun forNewImage(): MarmotGroupImageCipher =
             MarmotGroupImageCipher(
                 imageKey = RandomInstance.bytes(MarmotGroupImageEncryption.KEY_LENGTH),
                 imageNonce = RandomInstance.bytes(MarmotGroupImageEncryption.NONCE_LENGTH),
-                mediaType = mediaType,
             )
     }
 }

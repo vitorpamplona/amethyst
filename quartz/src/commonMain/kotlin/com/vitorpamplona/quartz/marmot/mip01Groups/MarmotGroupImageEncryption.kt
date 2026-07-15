@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.marmot.mip01Groups
 
-import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
@@ -28,61 +27,41 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
- * Marmot group image (avatar) encryption.
+ * Marmot group image (avatar) encryption — MIP-01 v2.
  *
- * Implements the canonical `marmot.group.blossom.image.v1` app component scheme
- * (the successor to the deprecated MIP-01 image scheme). The plaintext avatar is
- * encrypted with ChaCha20-Poly1305 and the ciphertext is uploaded as an opaque
- * blob to a Blossom server, addressed by the SHA-256 of the *ciphertext*.
+ * This is byte-for-byte interoperable with the reference implementation
+ * (`mdk-core`'s `extension/group_image.rs`, used by whitenoise): a group avatar
+ * is encrypted with ChaCha20-Poly1305 and the ciphertext is uploaded to Blossom,
+ * addressed by the SHA-256 of the *ciphertext*.
  *
- * The encryption parameters live inside the group's [MarmotGroupData] extension:
- * - `image_key`         — the raw 32-byte ChaCha20-Poly1305 key (NOT an HKDF seed).
- * - `image_nonce`       — the 12-byte nonce.
- * - `image_hash`        — SHA-256 of the encrypted blob (= the Blossom hash).
- * - `image_upload_key`  — the raw 32-byte secret key of a fresh Nostr keypair used
- *                         to authorize Blossom writes (see [MarmotGroupData.imageUploadKey]).
- * - `media_type`        — the canonical MIME type of the plaintext image.
+ * The parameters live inside the group's [MarmotGroupData] extension:
+ * - `image_key`        — a 32-byte HKDF **seed**. The AEAD key is
+ *   `HKDF-SHA256(salt=∅, ikm=image_key, info="mip01-image-encryption-v2", 32)`
+ *   (see [Mip01ImageCrypto.deriveImageEncryptionKey]).
+ * - `image_nonce`      — the 12-byte ChaCha20-Poly1305 nonce (used verbatim).
+ * - `image_hash`       — SHA-256 of the encrypted blob (= the Blossom hash).
+ * - `image_upload_key` — a 32-byte HKDF **seed**. The Blossom-auth secp256k1
+ *   secret is `HKDF-SHA256(salt=∅, ikm=image_upload_key, info="mip01-blossom-upload-v2", 32)`
+ *   (see [Mip01ImageCrypto.deriveBlossomUploadSeed]).
  *
- * ```
- * aad            = "marmot-group-image-v1" || 0x00 || media_type
- * encrypted_blob = ChaCha20-Poly1305.encrypt(image_key, image_nonce, plaintext, aad)
- * image_hash     = SHA-256(encrypted_blob)
- * ```
+ * The AEAD uses **no associated data** (empty AAD), matching MIP-01. The plaintext
+ * MIME type is descriptive metadata only — it is deliberately NOT bound into the
+ * crypto and NOT stored on the wire, because mdk's `NostrGroupDataExtension` parser
+ * rejects any trailing bytes at a known version and has no media_type field, so
+ * storing it would break group parsing for whitenoise/mdk members.
  *
- * A fetching client MUST verify that the fetched bytes hash to `image_hash`
- * before decrypting.
+ * A fetching client MUST verify that the fetched bytes hash to `image_hash` before
+ * decrypting.
  *
- * ### Backward compatibility (parse-both)
- * Amethyst never shipped the deprecated MIP-01 image scheme (no client code ever
- * populated the image fields), but other clients might have. For robustness,
- * [decryptAny] first tries the canonical raw-key scheme and, on authentication
- * failure, falls back to the deprecated scheme where `image_key` is an HKDF seed
- * ([Mip01ImageCrypto.deriveImageEncryptionKey]) and the AEAD carries no AAD.
+ * ### Version fallback (parse both), mirroring mdk
+ * [decryptAny] first tries v2 (HKDF-derived key); on failure it falls back to v1,
+ * where `image_key` is used directly as the AEAD key. New images are always v2.
  */
 object MarmotGroupImageEncryption {
-    /** ASCII label mixed into the AEAD associated data. */
-    const val AAD_LABEL = "marmot-group-image-v1"
-
     const val KEY_LENGTH = 32
     const val NONCE_LENGTH = 12
 
-    private val NULL_SEPARATOR = byteArrayOf(0x00)
     private val EMPTY_AAD = ByteArray(0)
-
-    /**
-     * Build the AEAD associated data: `"marmot-group-image-v1" || 0x00 || media_type`.
-     * The media type is canonicalized the same way MIP-04 canonicalizes it
-     * (lowercased, trimmed, parameters stripped) so both peers derive identical bytes.
-     */
-    fun buildAad(mediaType: String): ByteArray {
-        val label = AAD_LABEL.encodeToByteArray()
-        val mime = Mip04MediaEncryption.canonicalizeMimeType(mediaType).encodeToByteArray()
-        val out = ByteArray(label.size + 1 + mime.size)
-        label.copyInto(out, 0)
-        NULL_SEPARATOR.copyInto(out, label.size)
-        mime.copyInto(out, label.size + 1)
-        return out
-    }
 
     /**
      * Result of encrypting a group image, ready to be uploaded to Blossom and
@@ -91,7 +70,7 @@ object MarmotGroupImageEncryption {
     class Encrypted(
         /** The encrypted blob to upload to Blossom (ciphertext || 16-byte tag). */
         val ciphertext: ByteArray,
-        /** Random 32-byte ChaCha20-Poly1305 key — store as `image_key`. */
+        /** Random 32-byte HKDF seed — store as `image_key`. */
         val imageKey: ByteArray,
         /** Random 12-byte nonce — store as `image_nonce`. */
         val imageNonce: ByteArray,
@@ -100,27 +79,25 @@ object MarmotGroupImageEncryption {
     )
 
     /**
-     * Encrypt a plaintext image with a freshly-generated key + nonce, per the
-     * canonical scheme. Returns the ciphertext to upload plus the parameters to
-     * persist in [MarmotGroupData].
+     * Encrypt a plaintext image with a freshly-generated seed + nonce (MIP-01 v2).
+     * Returns the ciphertext to upload plus the parameters to persist in
+     * [MarmotGroupData].
      */
-    fun encrypt(
-        plaintext: ByteArray,
-        mediaType: String,
-    ): Encrypted {
-        val imageKey = RandomInstance.bytes(KEY_LENGTH)
+    fun encrypt(plaintext: ByteArray): Encrypted {
+        val imageKeySeed = RandomInstance.bytes(KEY_LENGTH)
         val imageNonce = RandomInstance.bytes(NONCE_LENGTH)
-        val ciphertext = ChaCha20Poly1305.encrypt(plaintext, buildAad(mediaType), imageNonce, imageKey)
+        val aeadKey = Mip01ImageCrypto.deriveImageEncryptionKey(imageKeySeed)
+        val ciphertext = ChaCha20Poly1305.encrypt(plaintext, EMPTY_AAD, imageNonce, aeadKey)
         return Encrypted(
             ciphertext = ciphertext,
-            imageKey = imageKey,
+            imageKey = imageKeySeed,
             imageNonce = imageNonce,
             imageHash = sha256(ciphertext).toHexKey(),
         )
     }
 
     /**
-     * Decrypt a group image blob using the canonical raw-key scheme.
+     * Decrypt a group image blob (MIP-01 v2): `image_key` is an HKDF seed.
      *
      * @throws IllegalStateException on authentication failure.
      */
@@ -128,61 +105,48 @@ object MarmotGroupImageEncryption {
         ciphertext: ByteArray,
         imageKey: ByteArray,
         imageNonce: ByteArray,
-        mediaType: String,
-    ): ByteArray = ChaCha20Poly1305.decrypt(ciphertext, buildAad(mediaType), imageNonce, imageKey)
+    ): ByteArray {
+        val aeadKey = Mip01ImageCrypto.deriveImageEncryptionKey(imageKey)
+        return ChaCha20Poly1305.decrypt(ciphertext, EMPTY_AAD, imageNonce, aeadKey)
+    }
 
     /**
-     * Decrypt a group image blob, trying the canonical raw-key scheme first and
-     * falling back to the deprecated MIP-01 HKDF-seed scheme.
-     *
-     * Returns null if neither scheme authenticates (wrong key, corrupt blob, or an
-     * unknown future scheme).
-     *
-     * @param mediaType canonical MIME type from [MarmotGroupData.imageMediaType];
-     *   may be null for legacy groups that predate the `media_type` field, in which
-     *   case only the legacy fallback is attempted.
+     * Decrypt a group image blob, trying v2 (HKDF-derived key) first and falling
+     * back to v1 (raw `image_key`), exactly like mdk. Returns null if neither
+     * authenticates.
      */
     fun decryptAny(
         ciphertext: ByteArray,
         imageKey: ByteArray,
         imageNonce: ByteArray,
-        mediaType: String?,
     ): ByteArray? {
-        if (imageKey.size == KEY_LENGTH && imageNonce.size == NONCE_LENGTH && mediaType != null) {
-            try {
-                return decrypt(ciphertext, imageKey, imageNonce, mediaType)
-            } catch (_: Exception) {
-                // fall through to the deprecated scheme
-            }
-        }
-        return decryptLegacyOrNull(ciphertext, imageKey, imageNonce)
-    }
+        if (imageKey.size != KEY_LENGTH || imageNonce.size != NONCE_LENGTH) return null
 
-    /**
-     * Deprecated MIP-01 image scheme: `image_key` is an HKDF seed rather than the
-     * raw AEAD key, and the AEAD carries no associated data. Kept only so we can
-     * still open avatars produced by pre-canonical clients.
-     */
-    private fun decryptLegacyOrNull(
-        ciphertext: ByteArray,
-        imageKeySeed: ByteArray,
-        imageNonce: ByteArray,
-    ): ByteArray? =
+        // v2: image_key is an HKDF seed.
         try {
-            if (imageKeySeed.size != Mip01ImageCrypto.OUTPUT_LENGTH || imageNonce.size != NONCE_LENGTH) {
-                null
-            } else {
-                val key = Mip01ImageCrypto.deriveImageEncryptionKey(imageKeySeed)
-                ChaCha20Poly1305.decrypt(ciphertext, EMPTY_AAD, imageNonce, key)
-            }
+            return decrypt(ciphertext, imageKey, imageNonce)
+        } catch (_: Exception) {
+            // fall through to v1
+        }
+
+        // v1: image_key is the AEAD key directly.
+        return try {
+            ChaCha20Poly1305.decrypt(ciphertext, EMPTY_AAD, imageNonce, imageKey)
         } catch (_: Exception) {
             null
         }
+    }
 
     /**
-     * Generate the raw 32-byte secret key of a fresh Nostr keypair to authorize
-     * Blossom writes — store as [MarmotGroupData.imageUploadKey]. Any admin that
-     * later holds this value can re-sign uploads/deletions for the blob.
+     * Generate the 32-byte HKDF **seed** stored as [MarmotGroupData.imageUploadKey].
+     * The actual Blossom-auth secp256k1 secret is derived from it via
+     * [deriveUploadKeypairSecret].
      */
     fun generateUploadKey(): ByteArray = RandomInstance.bytes(KEY_LENGTH)
+
+    /**
+     * Derive the 32-byte secp256k1 secret used to authorize Blossom writes for the
+     * avatar from the stored `image_upload_key` seed (MIP-01 v2).
+     */
+    fun deriveUploadKeypairSecret(imageUploadKey: ByteArray): ByteArray = Mip01ImageCrypto.deriveBlossomUploadSeed(imageUploadKey)
 }

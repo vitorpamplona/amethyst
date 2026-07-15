@@ -28,34 +28,31 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  *
  * Extracted from the group's [com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData]
  * so front ends can render the icon: the encrypted blob is content-addressed on Blossom by
- * [hash], and decrypted with [key]/[nonce] (and [mediaType] for the AEAD associated data)
- * via [com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption].
+ * [hash], and decrypted with [key]/[nonce] via
+ * [com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption] (MIP-01 v2:
+ * [key] is an HKDF seed).
  */
 @Immutable
 class MarmotGroupImage(
     /** SHA-256 (hex) of the encrypted blob — the Blossom content hash. */
     val hash: HexKey,
-    /** Raw ChaCha20-Poly1305 key (canonical scheme) or HKDF seed (legacy). */
+    /** 32-byte HKDF seed for the image AEAD key (MIP-01 v2). */
     val key: ByteArray,
     /** 12-byte ChaCha20-Poly1305 nonce. */
     val nonce: ByteArray,
-    /** Canonical plaintext MIME type; null for legacy groups predating the field. */
-    val mediaType: String?,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is MarmotGroupImage) return false
         return hash == other.hash &&
             key.contentEquals(other.key) &&
-            nonce.contentEquals(other.nonce) &&
-            mediaType == other.mediaType
+            nonce.contentEquals(other.nonce)
     }
 
     override fun hashCode(): Int {
         var result = hash.hashCode()
         result = 31 * result + key.contentHashCode()
         result = 31 * result + nonce.contentHashCode()
-        result = 31 * result + (mediaType?.hashCode() ?: 0)
         return result
     }
 }

@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.marmot.mip01Groups.Mip01ImageCrypto
+import com.vitorpamplona.quartz.marmot.mls.codec.TlsReader
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
@@ -41,62 +42,64 @@ class MarmotGroupImageTest {
     private val nostrGroupId = "aa".repeat(32)
     private val plaintext = "PNGDATA-a-fake-avatar-image-payload".encodeToByteArray()
 
-    // ------------------------------------------------------------ encryption
+    private val emptyAad = ByteArray(0)
+
+    // ------------------------------------------------------------ encryption (MIP-01 v2)
 
     @Test
     fun encrypt_thenDecrypt_roundTrips() {
-        val enc = MarmotGroupImageEncryption.encrypt(plaintext, "image/png")
+        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
 
         assertEquals(MarmotGroupImageEncryption.KEY_LENGTH, enc.imageKey.size)
         assertEquals(MarmotGroupImageEncryption.NONCE_LENGTH, enc.imageNonce.size)
 
-        val decrypted =
-            MarmotGroupImageEncryption.decrypt(enc.ciphertext, enc.imageKey, enc.imageNonce, "image/png")
+        val decrypted = MarmotGroupImageEncryption.decrypt(enc.ciphertext, enc.imageKey, enc.imageNonce)
         assertContentEquals(plaintext, decrypted)
     }
 
     @Test
     fun imageHash_isSha256OfCiphertext() {
-        val enc = MarmotGroupImageEncryption.encrypt(plaintext, "image/jpeg")
+        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
         assertEquals(sha256(enc.ciphertext).toHexKey(), enc.imageHash)
     }
 
+    /**
+     * Byte-for-byte interop guard: the AEAD key MUST be
+     * HKDF(image_key, "mip01-image-encryption-v2") with empty AAD — exactly what mdk's
+     * group_image.rs does. If this drifts, Amethyst and whitenoise stop interoperating.
+     */
     @Test
-    fun mediaType_isCanonicalizedInAad() {
-        // "IMAGE/PNG; charset=binary" canonicalizes to "image/png" — must still decrypt with "image/png".
-        val enc = MarmotGroupImageEncryption.encrypt(plaintext, "IMAGE/PNG; charset=binary")
-        val decrypted =
-            MarmotGroupImageEncryption.decrypt(enc.ciphertext, enc.imageKey, enc.imageNonce, "image/png")
-        assertContentEquals(plaintext, decrypted)
+    fun scheme_matchesMdk_hkdfSeedAndEmptyAad() {
+        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
+        val derivedKey = Mip01ImageCrypto.deriveImageEncryptionKey(enc.imageKey)
+        val manual = ChaCha20Poly1305.decrypt(enc.ciphertext, emptyAad, enc.imageNonce, derivedKey)
+        assertContentEquals(plaintext, manual)
     }
 
     @Test
-    fun decrypt_wrongMediaType_fails() {
-        val enc = MarmotGroupImageEncryption.encrypt(plaintext, "image/png")
+    fun decrypt_wrongSeed_fails() {
+        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
         assertFailsWith<IllegalStateException> {
-            MarmotGroupImageEncryption.decrypt(enc.ciphertext, enc.imageKey, enc.imageNonce, "image/jpeg")
+            MarmotGroupImageEncryption.decrypt(enc.ciphertext, RandomInstance.bytes(32), enc.imageNonce)
         }
     }
 
     @Test
-    fun decryptAny_canonical_succeeds() {
-        val enc = MarmotGroupImageEncryption.encrypt(plaintext, "image/webp")
-        val out =
-            MarmotGroupImageEncryption.decryptAny(enc.ciphertext, enc.imageKey, enc.imageNonce, "image/webp")
+    fun decryptAny_v2_succeeds() {
+        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
+        val out = MarmotGroupImageEncryption.decryptAny(enc.ciphertext, enc.imageKey, enc.imageNonce)
         assertNotNull(out)
         assertContentEquals(plaintext, out)
     }
 
     @Test
-    fun decryptAny_fallsBackToDeprecatedHkdfScheme() {
-        // Produce a blob with the DEPRECATED scheme: image_key is an HKDF seed, no AAD.
-        val seed = RandomInstance.bytes(32)
+    fun decryptAny_fallsBackToV1RawKey() {
+        // v1: image_key is used directly as the AEAD key (no HKDF), empty AAD — mdk's fallback.
+        val rawKey = RandomInstance.bytes(32)
         val nonce = RandomInstance.bytes(12)
-        val legacyKey = Mip01ImageCrypto.deriveImageEncryptionKey(seed)
-        val legacyBlob = ChaCha20Poly1305.encrypt(plaintext, ByteArray(0), nonce, legacyKey)
+        val v1Blob = ChaCha20Poly1305.encrypt(plaintext, emptyAad, nonce, rawKey)
 
-        // decryptAny tries canonical first (seed-as-raw-key + media AAD → fails), then legacy.
-        val out = MarmotGroupImageEncryption.decryptAny(legacyBlob, seed, nonce, "image/png")
+        val out = MarmotGroupImageEncryption.decryptAny(v1Blob, rawKey, nonce)
         assertNotNull(out)
         assertContentEquals(plaintext, out)
     }
@@ -108,35 +111,42 @@ class MarmotGroupImageTest {
                 RandomInstance.bytes(64),
                 RandomInstance.bytes(32),
                 RandomInstance.bytes(12),
-                "image/png",
             )
         assertNull(out)
     }
 
     @Test
+    fun uploadKeypairSecret_isDeterministicAndDistinctFromSeed() {
+        val seed = RandomInstance.bytes(32)
+        val s1 = MarmotGroupImageEncryption.deriveUploadKeypairSecret(seed)
+        val s2 = MarmotGroupImageEncryption.deriveUploadKeypairSecret(seed)
+        assertEquals(32, s1.size)
+        assertContentEquals(s1, s2)
+        assertTrue(!s1.contentEquals(seed), "upload secret must be derived, not the raw seed")
+    }
+
+    @Test
     fun cipher_encryptDecrypt_roundTrips_asUsedByUploadAndDisplay() {
-        // The upload path builds a fresh cipher, encrypts, and stores its key/nonce;
-        // the display path rebuilds the same cipher from those fields and decrypts.
-        val uploadCipher = MarmotGroupImageCipher.forNewImage("image/png")
+        val uploadCipher = MarmotGroupImageCipher.forNewImage()
         val blob = uploadCipher.encrypt(plaintext)
 
-        val displayCipher = MarmotGroupImageCipher(uploadCipher.imageKey, uploadCipher.imageNonce, "image/png")
+        val displayCipher = MarmotGroupImageCipher(uploadCipher.imageKey, uploadCipher.imageNonce)
         assertContentEquals(plaintext, displayCipher.decrypt(blob))
         assertContentEquals(plaintext, displayCipher.decryptOrNull(blob))
     }
 
     @Test
-    fun cipher_decryptOrNull_wrongKey_returnsNull() {
-        val uploadCipher = MarmotGroupImageCipher.forNewImage("image/png")
+    fun cipher_decryptOrNull_wrongSeed_returnsNull() {
+        val uploadCipher = MarmotGroupImageCipher.forNewImage()
         val blob = uploadCipher.encrypt(plaintext)
-        val wrong = MarmotGroupImageCipher(RandomInstance.bytes(32), uploadCipher.imageNonce, "image/png")
+        val wrong = MarmotGroupImageCipher(RandomInstance.bytes(32), uploadCipher.imageNonce)
         assertNull(wrong.decryptOrNull(blob))
     }
 
     // ------------------------------------------------------------ wire format
 
     @Test
-    fun wire_roundTrips_withImageAndMediaType() {
+    fun wire_roundTrips_withImage() {
         val original =
             MarmotGroupData(
                 version = 2,
@@ -149,17 +159,14 @@ class MarmotGroupImageTest {
                 imageKey = "dd".repeat(32).hexToByteArray(),
                 imageNonce = "ee".repeat(12).hexToByteArray(),
                 imageUploadKey = "ff".repeat(32).hexToByteArray(),
-                imageMediaType = "image/png",
             )
 
         val decoded = assertNotNull(MarmotGroupData.decodeTls(original.encodeTls()))
         assertEquals("Otters", decoded.name)
-        assertEquals("river friends", decoded.description)
         assertEquals("cc".repeat(32), decoded.imageHash)
         assertContentEquals("dd".repeat(32).hexToByteArray(), decoded.imageKey)
         assertContentEquals("ee".repeat(12).hexToByteArray(), decoded.imageNonce)
         assertContentEquals("ff".repeat(32).hexToByteArray(), decoded.imageUploadKey)
-        assertEquals("image/png", decoded.imageMediaType)
         assertNull(decoded.disappearingMessageSecs)
         assertTrue(decoded.hasImage())
     }
@@ -176,9 +183,49 @@ class MarmotGroupImageTest {
             )
         val decoded = assertNotNull(MarmotGroupData.decodeTls(original.encodeTls()))
         assertEquals("Plain", decoded.name)
-        assertNull(decoded.imageMediaType)
         assertNull(decoded.imageHash)
         assertTrue(!decoded.hasImage())
+    }
+
+    /**
+     * INTEROP GUARD: at version 2, a group WITH an image must serialize with the image
+     * fields as the LAST fields and ZERO trailing bytes — exactly what mdk-core's
+     * `TlsNostrGroupDataExtensionV1V2` parser consumes. mdk rejects any trailing bytes at a
+     * known version, so a stray byte here silently breaks the group for whitenoise/mdk
+     * members. This test reproduces mdk's v1/v2 field consumption and asserts nothing is
+     * left over.
+     */
+    @Test
+    fun wire_v2WithImage_hasNoTrailingBytesForMdk() {
+        val withImage =
+            MarmotGroupData(
+                version = 2,
+                nostrGroupId = nostrGroupId,
+                name = "Compat",
+                description = "d",
+                adminPubkeys = listOf("bb".repeat(32)),
+                relays = listOf("wss://relay.example/"),
+                imageHash = "cc".repeat(32),
+                imageKey = "dd".repeat(32).hexToByteArray(),
+                imageNonce = "ee".repeat(12).hexToByteArray(),
+                imageUploadKey = "ff".repeat(32).hexToByteArray(),
+            )
+
+        val reader = TlsReader(withImage.encodeTls())
+        reader.readUint16() // version
+        reader.readBytes(32) // nostr_group_id
+        reader.readOpaqueVarInt() // name
+        reader.readOpaqueVarInt() // description
+        reader.readOpaqueVarInt() // admin_pubkeys
+        reader.readOpaqueVarInt() // relays
+        reader.readOpaqueVarInt() // image_hash
+        reader.readOpaqueVarInt() // image_key
+        reader.readOpaqueVarInt() // image_nonce
+        reader.readOpaqueVarInt() // image_upload_key
+        assertTrue(
+            !reader.hasRemaining,
+            "v2 image extension has trailing bytes past image_upload_key → mdk would reject it",
+        )
     }
 
     @Test
@@ -194,36 +241,11 @@ class MarmotGroupImageTest {
                 imageKey = "dd".repeat(32).hexToByteArray(),
                 imageNonce = "ee".repeat(12).hexToByteArray(),
                 imageUploadKey = "ff".repeat(32).hexToByteArray(),
-                imageMediaType = "image/jpeg",
                 disappearingMessageSecs = 3600UL,
             )
         val decoded = assertNotNull(MarmotGroupData.decodeTls(original.encodeTls()))
         assertEquals(3600UL, decoded.disappearingMessageSecs)
-        assertEquals("image/jpeg", decoded.imageMediaType)
         assertTrue(decoded.hasImage())
-    }
-
-    @Test
-    fun wire_v2WithMediaType_readByLegacyDecoderIgnoresTrailing() {
-        // Emitting media_type at v2 forces an empty disappearing field to keep alignment.
-        // A reader that stops at disappearing (older logic) must still parse cleanly and
-        // see no disappearing timer.
-        val withImage =
-            MarmotGroupData(
-                version = 2,
-                nostrGroupId = nostrGroupId,
-                name = "Compat",
-                adminPubkeys = listOf("bb".repeat(32)),
-                relays = emptyList(),
-                imageHash = "cc".repeat(32),
-                imageKey = "dd".repeat(32).hexToByteArray(),
-                imageNonce = "ee".repeat(12).hexToByteArray(),
-                imageUploadKey = "ff".repeat(32).hexToByteArray(),
-                imageMediaType = "image/png",
-            )
-        val decoded = assertNotNull(MarmotGroupData.decodeTls(withImage.encodeTls()))
-        assertNull(decoded.disappearingMessageSecs)
-        assertEquals("image/png", decoded.imageMediaType)
     }
 
     @Test
@@ -234,15 +256,12 @@ class MarmotGroupImageTest {
                 name = "Base",
                 adminPubkeys = listOf("bb".repeat(32)),
             )
-        val enc = MarmotGroupImageEncryption.encrypt(plaintext, "image/png")
-        val withImg =
-            base.withImage(enc.imageHash, enc.imageKey, enc.imageNonce, RandomInstance.bytes(32), "image/png")
+        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
+        val withImg = base.withImage(enc.imageHash, enc.imageKey, enc.imageNonce, RandomInstance.bytes(32))
         assertTrue(withImg.hasImage())
-        assertEquals("image/png", withImg.imageMediaType)
 
         val cleared = withImg.withoutImage()
         assertTrue(!cleared.hasImage())
-        assertNull(cleared.imageMediaType)
         assertNull(cleared.imageUploadKey)
     }
 }

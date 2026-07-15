@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
-import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -46,14 +45,12 @@ import java.io.File
 class MarmotGroupIconUpload(
     /** SHA-256 (hex) of the encrypted blob = its Blossom content hash. */
     val imageHash: HexKey,
-    /** Raw 32-byte ChaCha20-Poly1305 key. */
+    /** 32-byte HKDF seed for the image AEAD key (MIP-01 v2). */
     val imageKey: ByteArray,
     /** 12-byte nonce. */
     val imageNonce: ByteArray,
-    /** Raw 32-byte Blossom-auth secret key. */
+    /** 32-byte HKDF seed for the Blossom-auth keypair (MIP-01 v2). */
     val imageUploadKey: ByteArray,
-    /** Canonical MIME type of the plaintext image. */
-    val mediaType: String,
 )
 
 /**
@@ -73,9 +70,10 @@ sealed class MarmotGroupIconChange {
 }
 
 /**
- * Encrypts a picked image with the canonical `marmot-group-image-v1` scheme and
- * uploads the ciphertext to Blossom, signing the upload authorization with a fresh
- * keypair (so any admin holding `image_upload_key` can later replace/delete it).
+ * Encrypts a picked image with the MIP-01 v2 scheme (see [MarmotGroupImageEncryption])
+ * and uploads the ciphertext to Blossom, signing the upload authorization with the
+ * keypair derived from `image_upload_key` (so any admin holding that seed can later
+ * replace/delete the blob).
  *
  * Reuses [UploadOrchestrator.uploadEncrypted] for compression, metadata stripping,
  * upload, and re-download verification — the same pipeline as MIP-04 message media.
@@ -89,21 +87,21 @@ class MarmotGroupIconUploader(
         server: ServerName,
         context: Context,
     ): MarmotGroupIconUpload {
-        // Compress/downscale up front (avatars don't need full resolution) so the stored
-        // media_type reflects the ACTUAL post-compression bytes. The AEAD binds media_type,
-        // and MediaCompressor transcodes images to JPEG — so we must know the final type
-        // before building the cipher, then upload the already-compressed bytes uncompressed.
+        // Compress/downscale up front — avatars don't need full resolution, and a smaller
+        // blob is cheaper for every member to fetch. The MIP-01 crypto uses no AAD and does
+        // not bind the MIME type, so the (possibly transcoded) output type is irrelevant to
+        // decryption; we just hand the compressed bytes to the encrypting uploader.
         val compressed = MediaCompressor().compress(uri, mimeType, CompressorQuality.MEDIUM, context.applicationContext)
-        val mediaType = Mip04MediaEncryption.canonicalizeMimeType(compressed.contentType ?: mimeType ?: DEFAULT_MIME)
-        val cipher = MarmotGroupImageCipher.forNewImage(mediaType)
-        val uploadKey = MarmotGroupImageEncryption.generateUploadKey()
-        val uploadSigner = NostrSignerInternal(KeyPair(privKey = uploadKey))
+        val uploadMime = compressed.contentType ?: mimeType ?: DEFAULT_MIME
+        val cipher = MarmotGroupImageCipher.forNewImage()
+        val uploadKeySeed = MarmotGroupImageEncryption.generateUploadKey()
+        val uploadSigner = NostrSignerInternal(KeyPair(privKey = MarmotGroupImageEncryption.deriveUploadKeypairSecret(uploadKeySeed)))
 
         try {
             val state =
                 UploadOrchestrator().uploadEncrypted(
                     uri = compressed.uri,
-                    mimeType = mediaType,
+                    mimeType = uploadMime,
                     alt = null,
                     contentWarningReason = null,
                     compressionQuality = CompressorQuality.UNCOMPRESSED,
@@ -124,8 +122,7 @@ class MarmotGroupIconUploader(
                     imageHash = hash,
                     imageKey = cipher.imageKey,
                     imageNonce = cipher.imageNonce,
-                    imageUploadKey = uploadKey,
-                    mediaType = mediaType,
+                    imageUploadKey = uploadKeySeed,
                 )
             }
 

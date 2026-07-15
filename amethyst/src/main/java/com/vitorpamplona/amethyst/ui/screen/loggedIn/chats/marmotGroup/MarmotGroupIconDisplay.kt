@@ -80,11 +80,12 @@ fun rememberMarmotGroupIconUrl(
         value = resolver.findServers(blossomUri)?.serverUrl ?: fallbackUrl
     }
 
-    val cipher = remember(image) { MarmotGroupImageCipher(image.key, image.nonce, image.mediaType) }
+    val cipher = remember(image) { MarmotGroupImageCipher(image.key, image.nonce) }
     // Register the cipher only when the URL or cipher changes (not on every recomposition),
     // and synchronously during composition so the interceptor can decrypt before Coil fetches.
+    // The plaintext MIME isn't stored (MIP-01 v2), so Coil sniffs the format from the bytes.
     remember(url, cipher) {
-        Amethyst.instance.keyCache.add(url, cipher, image.mediaType)
+        Amethyst.instance.keyCache.add(url, cipher, null)
         url
     }
 

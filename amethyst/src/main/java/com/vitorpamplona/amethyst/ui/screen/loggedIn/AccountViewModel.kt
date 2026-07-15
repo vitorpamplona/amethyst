@@ -2183,7 +2183,6 @@ class AccountViewModel(
                         imageKey = icon.upload.imageKey,
                         imageNonce = icon.upload.imageNonce,
                         imageUploadKey = icon.upload.imageUploadKey,
-                        imageMediaType = icon.upload.mediaType,
                     )
             }
         val relays = account.marmotGroupRelays(nostrGroupId)

@@ -49,21 +49,22 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  *     opaque admin_pubkeys<0..2^16-1>;      // Concatenated raw 32-byte x-only pubkeys
  *     RelayUrl relays<0..2^16-1>;
  *     opaque image_hash<0..32>;
- *     opaque image_key<0..32>;              // canonical: raw ChaCha20-Poly1305 key
+ *     opaque image_key<0..32>;              // MIP-01 v2: HKDF seed for the AEAD key
  *     opaque image_nonce<0..12>;
- *     opaque image_upload_key<0..32>;       // canonical: raw Blossom-auth secret key
+ *     opaque image_upload_key<0..32>;       // MIP-01 v2: HKDF seed for the Blossom-auth key
  *     opaque disappearing_message_secs<0..8>; // v3+: 0 bytes = persist forever,
  *                                             // 8 bytes big-endian uint64 = expiration secs
  *                                             // (value 0 is rejected)
- *     opaque image_media_type<0..128>;      // trailing: canonical MIME of the plaintext image
  * } NostrGroupData;
  * ```
  *
- * The image fields carry the canonical `marmot.group.blossom.image.v1` app-component
- * data (see [MarmotGroupImageEncryption]). `image_key`/`image_upload_key` are RAW keys,
- * not HKDF seeds; `image_hash` is the SHA-256 of the encrypted blob. `image_media_type`
- * is appended after `disappearing_message_secs` so older readers ignore it (forward
- * compatibility); it feeds the AEAD associated data on decrypt.
+ * The image fields carry the group avatar under the MIP-01 v2 scheme (see
+ * [MarmotGroupImageEncryption]). `image_key`/`image_upload_key` are HKDF **seeds**;
+ * `image_hash` is the SHA-256 of the encrypted blob. This is the exact field layout
+ * mdk-core's v1/v2 `NostrGroupDataExtension` parser expects — the image fields are the
+ * last ones it reads — so populating an avatar stays byte-compatible with
+ * whitenoise/mdk (no trailing bytes). The plaintext MIME type is intentionally NOT
+ * stored here: mdk rejects any trailing bytes at a known version and has no such field.
  */
 @Immutable
 data class MarmotGroupData(
@@ -89,11 +90,11 @@ data class MarmotGroupData(
     val relays: List<String> = emptyList(),
     /** SHA-256 hash (hex) of the ENCRYPTED group image blob (= its Blossom hash). Null if no image. */
     val imageHash: HexKey? = null,
-    /** Raw 32-byte ChaCha20-Poly1305 key for the image blob (canonical scheme). Null if no image. */
+    /** 32-byte HKDF seed for the image AEAD key (MIP-01 v2). Null if no image. */
     val imageKey: ByteArray? = null,
     /** 12-byte ChaCha20-Poly1305 nonce for image encryption. Null if no image. */
     val imageNonce: ByteArray? = null,
-    /** Raw 32-byte secret key of the fresh Nostr keypair that authorizes Blossom writes. Null if no image. */
+    /** 32-byte HKDF seed for the Blossom-auth keypair (MIP-01 v2). Null if no image. */
     val imageUploadKey: ByteArray? = null,
     /**
      * Disappearing-message duration in seconds (v3+).
@@ -102,12 +103,6 @@ data class MarmotGroupData(
      * Per MIP-01, a value of `0` MUST be rejected.
      */
     val disappearingMessageSecs: ULong? = null,
-    /**
-     * Canonical MIME type of the plaintext image (e.g. `image/jpeg`), fed into the
-     * `marmot-group-image-v1` AEAD associated data. `null` for legacy groups that
-     * predate the field; the decryptor then falls back to the deprecated scheme.
-     */
-    val imageMediaType: String? = null,
 ) {
     init {
         require(version > 0) { "MarmotGroupData version 0 is reserved/invalid" }
@@ -134,14 +129,12 @@ data class MarmotGroupData(
         imageKey: ByteArray,
         imageNonce: ByteArray,
         imageUploadKey: ByteArray,
-        imageMediaType: String,
     ): MarmotGroupData =
         copy(
             imageHash = imageHash,
             imageKey = imageKey,
             imageNonce = imageNonce,
             imageUploadKey = imageUploadKey,
-            imageMediaType = imageMediaType,
         )
 
     /** Return a copy with the group image cleared. */
@@ -151,7 +144,6 @@ data class MarmotGroupData(
             imageKey = null,
             imageNonce = null,
             imageUploadKey = null,
-            imageMediaType = null,
         )
 
     /**
@@ -208,13 +200,11 @@ data class MarmotGroupData(
         writer.putOpaqueVarInt(imageNonce ?: ByteArray(0))
         writer.putOpaqueVarInt(imageUploadKey ?: ByteArray(0))
 
-        // disappearing_message_secs (0 bytes = none, 8 bytes big-endian uint64 = secs).
-        // Emitted for version ≥ 3; v1/v2 have no such field, so omitting it keeps the wire
-        // format byte-for-byte compatible with older implementations (MDK v2). It is ALSO
-        // emitted (as an empty 0-byte field) whenever image_media_type follows, so the
-        // trailing field stays positionally unambiguous on decode.
-        val emitDisappearing = version >= 3 || imageMediaType != null
-        if (emitDisappearing) {
+        // v3+: disappearing_message_secs (0 bytes = none, 8 bytes big-endian uint64 = secs).
+        // Only emitted for version ≥ 3; v1/v2 have no such field, so omitting it keeps the
+        // wire format byte-for-byte compatible with mdk's v1/v2 NostrGroupDataExtension
+        // parser (which ends at image_upload_key and rejects any trailing bytes).
+        if (version >= 3) {
             val disappearingBytes =
                 disappearingMessageSecs?.let { secs ->
                     val out = ByteArray(8)
@@ -226,12 +216,6 @@ data class MarmotGroupData(
                     out
                 } ?: ByteArray(0)
             writer.putOpaqueVarInt(disappearingBytes)
-        }
-
-        // Trailing image_media_type (canonical marmot-group-image-v1). Only emitted when
-        // set; older readers ignore trailing bytes (MIP-01 forward compatibility).
-        if (imageMediaType != null) {
-            writer.putOpaqueVarInt(imageMediaType.encodeToByteArray())
         }
 
         return writer.toByteArray()
@@ -319,7 +303,6 @@ data class MarmotGroupData(
          * opaque image_nonce<V>
          * opaque image_upload_key<V>
          * opaque disappearing_message_secs<V> // v3+: 0 bytes or 8-byte uint64 (reject 0)
-         * opaque image_media_type<V>          // trailing: canonical image MIME (empty = none)
          * ```
          *
          * Unknown trailing bytes from future versions are silently ignored for
@@ -388,15 +371,6 @@ data class MarmotGroupData(
                         }
                     }
 
-                // Trailing image_media_type (canonical marmot-group-image-v1). Absent for
-                // legacy groups; an empty value decodes to null.
-                val imageMediaType =
-                    if (reader.hasRemaining) {
-                        reader.readOpaqueVarInt().takeIf { it.isNotEmpty() }?.decodeToString()
-                    } else {
-                        null
-                    }
-
                 MarmotGroupData(
                     version = version,
                     nostrGroupId = nostrGroupId,
@@ -409,7 +383,6 @@ data class MarmotGroupData(
                     imageNonce = imageNonce,
                     imageUploadKey = imageUploadKey,
                     disappearingMessageSecs = disappearingMessageSecs,
-                    imageMediaType = imageMediaType,
                 )
             } catch (_: Exception) {
                 null
