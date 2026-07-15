@@ -43,7 +43,14 @@ class Logging {
                     .detectLeakedClosableObjects()
                     .detectLeakedRegistrationObjects()
                     .detectFileUriExposure()
-                    .detectCleartextNetwork()
+                    // detectCleartextNetwork() is intentionally NOT enabled. netd enforces it
+                    // per-UID at the packet level (it flags a socket whose first bytes aren't a
+                    // TLS handshake) and there is no per-host exemption. Every relay WebSocket
+                    // tunneled over the embedded Arti Tor SOCKS proxy on 127.0.0.1:17392 opens
+                    // with a cleartext SOCKS5 greeting, so this detector fires constantly on
+                    // legitimate loopback traffic. The Network-Security-Config localhost
+                    // allowlist does NOT silence it — that flag only governs the voluntary
+                    // NetworkSecurityPolicy.isCleartextTrafficPermitted() check, not netd.
                     .detectContentUriWithoutPermission()
                     .apply {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
