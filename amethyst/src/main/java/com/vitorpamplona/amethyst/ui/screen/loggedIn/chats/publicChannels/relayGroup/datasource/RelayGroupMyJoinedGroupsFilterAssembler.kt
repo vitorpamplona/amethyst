@@ -31,6 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /** One screen's request to keep the roster of the user's joined groups fresh. */
 class RelayGroupMyJoinedGroupsQueryState(
@@ -50,14 +53,35 @@ private val RELAY_GROUP_ROSTER_KINDS =
     )
 
 /**
+ * Timeline kinds shown in a group's chat — chat messages and polls. Kept in sync with the
+ * in-group feed ([com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource
+ * .subassemblies.filterMessagesToRelayGroup]) so the preview and the opened chat agree.
+ */
+private val RELAY_GROUP_PREVIEW_CONTENT_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
+
+/**
+ * How many recent chat events to prefetch per joined group. Enough for the Messages-list
+ * preview to reflect the true newest message and for opening the group to land on a populated
+ * first screen. Matches [RELAY_GROUP_WARMUP_LIMIT].
+ */
+private const val RELAY_GROUP_JOINED_PREVIEW_LIMIT = 50
+
+/**
  * Keeps the relay-signed roster (metadata/admins/members) of every group the user
  * has joined live while a groups-bearing screen is on top, so membership,
  * pending→member transitions and member counts stay accurate in list views
  * without having to open each chat. This matters most for closed/private groups,
  * where the only way to confirm a join was admitted is a fresh 39002.
  *
- * One subscription per host relay, scoped by `#d` to just that relay's joined
- * group ids — so we don't pull a relay's whole directory, only what we're in.
+ * On top of the roster it prefetches a bounded slice of each group's most recent chat
+ * (kind 9 + polls), so the Messages-list preview shows the true newest message instead of
+ * whatever kind-9 events happened to already be cached, and opening a group lands on
+ * populated content. Without this the list would only ever surface "scattered" messages
+ * that arrived through unrelated subscriptions until the group was actually opened.
+ *
+ * Roster is one `#d`-scoped filter per host relay (only what we're in, not the relay's whole
+ * directory); content is one `#h`-scoped, limited filter per group (a per-filter limit can't be
+ * shared across groups, and `#d`/`#h` can't be merged into a single filter).
  */
 class RelayGroupMyJoinedGroupsFilterAssembler(
     client: INostrClient,
@@ -85,21 +109,43 @@ class RelayGroupMyJoinedGroupsSubAssembler(
         val joined = key.account.relayGroupList.liveRelayGroupList.value
         if (joined.isEmpty()) return null
 
-        // Group the joined group ids by their host relay: one #d-scoped filter each.
+        // Group the joined group ids by their host relay: one #d-scoped roster filter each.
         val idsByRelay = joined.groupBy({ it.relayUrl }, { it.groupId })
 
-        return idsByRelay.mapNotNull { (relayUrl, groupIds) ->
-            val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = RELAY_GROUP_ROSTER_KINDS,
-                        tags = mapOf("d" to groupIds.distinct()),
-                        since = since?.get(relay)?.time,
-                    ),
-            )
-        }
+        val rosterFilters =
+            idsByRelay.mapNotNull { (relayUrl, groupIds) ->
+                val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = RELAY_GROUP_ROSTER_KINDS,
+                            tags = mapOf("d" to groupIds.distinct()),
+                            since = since?.get(relay)?.time,
+                        ),
+                )
+            }
+
+        // One #h-scoped, limited content slice per joined group so list previews show the true
+        // newest chat and opening the group lands on cached messages. A group's #d roster id and
+        // its #h message id are the same string, but #d and #h can't be merged into one filter and
+        // a limit is per-filter, so this stays one bounded filter per group.
+        val contentFilters =
+            joined.mapNotNull { group ->
+                val relay = RelayUrlNormalizer.normalizeOrNull(group.relayUrl) ?: return@mapNotNull null
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = RELAY_GROUP_PREVIEW_CONTENT_KINDS,
+                            tags = mapOf(GroupIdTag.TAG_NAME to listOf(group.groupId)),
+                            limit = RELAY_GROUP_JOINED_PREVIEW_LIMIT,
+                            since = since?.get(relay)?.time,
+                        ),
+                )
+            }
+
+        return rosterFilters + contentFilters
     }
 
     override fun id(key: RelayGroupMyJoinedGroupsQueryState) = key.account
