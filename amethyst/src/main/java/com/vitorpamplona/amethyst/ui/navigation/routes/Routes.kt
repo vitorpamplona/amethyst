@@ -107,6 +107,8 @@ sealed class Route {
 
     @Serializable object ConnectedApps : Route()
 
+    @Serializable object Nip46Signer : Route()
+
     @Serializable object RelayAuthSettings : Route()
 
     @Serializable data class ConnectedAppDetail(

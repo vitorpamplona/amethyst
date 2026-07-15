@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
@@ -107,11 +108,12 @@ fun ConnectedAppsScreen(
                 loadConnectedApps(capabilityLedger, signerLedger)
             }
         items = initial
-        // Only include real pubkeys (not the "browser" sentinel) in the relay subscription.
+        // Only include real napplet authors in the manifest subscription — skip the "browser"
+        // sentinel and NIP-46 remote-signer clients (whose author segment is the "nip46" prefix).
         nappletAuthors =
             initial
                 .map { it.coordinate.substringBefore(':') }
-                .filter { it != BROWSER_AUTHOR }
+                .filter { it != BROWSER_AUTHOR && it != Nip46PermissionAuthorizer.COORDINATE_PREFIX }
                 .toSet()
     }
 
@@ -201,11 +203,77 @@ private fun ConnectedAppCard(
     onClick: () -> Unit,
 ) {
     val author = remember(entry.coordinate) { entry.coordinate.substringBefore(':') }
-    if (author == BROWSER_AUTHOR) {
-        val url = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
-        BrowserAppCard(url = url, entry = entry, onClick = onClick)
-    } else {
-        NappletAppCard(author = author, entry = entry, untitled = untitled, onClick = onClick)
+    val nip46Client = remember(entry.coordinate) { Nip46PermissionAuthorizer.clientPubKeyOf(entry.coordinate) }
+    when {
+        author == BROWSER_AUTHOR -> {
+            val url = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
+            BrowserAppCard(url = url, entry = entry, onClick = onClick)
+        }
+        nip46Client != null -> RemoteSignerAppCard(clientPubKey = nip46Client, entry = entry, onClick = onClick)
+        else -> NappletAppCard(author = author, entry = entry, untitled = untitled, onClick = onClick)
+    }
+}
+
+/** Card for a NIP-46 remote-signer client — an app that signs through Amethyst over relays. */
+@Composable
+private fun RemoteSignerAppCard(
+    clientPubKey: HexKey,
+    entry: ConnectedAppEntry,
+    onClick: () -> Unit,
+) {
+    val npub = remember(clientPubKey) { runCatching { NPub.create(clientPubKey) }.getOrDefault(clientPubKey.take(12) + "…") }
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                MaterialSymbols.Key,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    stringResource(R.string.nip46_signer_remote_app),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    npub,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (entry.signerPolicy != null) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(entry.signerPolicy.shortLabel(), style = MaterialTheme.typography.labelSmall) },
+                    )
+                }
+                Icon(
+                    MaterialSymbols.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
     }
 }
 

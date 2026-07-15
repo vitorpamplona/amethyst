@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -66,6 +68,8 @@ class AccountCacheState(
     val powQueue: () -> PoWPublishQueue? = { null },
     /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
     val meterSigner: (NostrSigner) -> NostrSigner = { it },
+    /** App-global Connected-Apps signer permission store (shared with napplets), gating the NIP-46 bunker. */
+    val signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -258,6 +262,7 @@ class AccountCacheState(
             marmotKeyPackageStore = marmotKeyPackageStore,
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,
+            signerPermissionStore = signerPermissionStore,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

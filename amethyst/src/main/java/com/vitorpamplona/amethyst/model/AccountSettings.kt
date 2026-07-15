@@ -186,6 +186,19 @@ class AccountSettings(
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
     /**
+     * NIP-46: when true, this account acts as a remote signer (a "bunker") for
+     * other apps, listening on the user's inbox relays for kind:24133 requests.
+     * See [com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState].
+     */
+    val nip46SignerEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    /**
+     * The active pairing secret advertised in this account's `bunker://` URI. An
+     * app that connects with this secret is accepted and registered as a
+     * connected app; regenerating it revokes the ability of not-yet-connected
+     * apps to pair with an old string.
+     */
+    val nip46BunkerSecret: MutableStateFlow<String> = MutableStateFlow(""),
+    /**
      * NIP-9B opt-in: when true, community feeds drop events whose latest cached
      * `kind:34551` rules document fails [com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator].
      * Default false preserves pre-9A behaviour.
@@ -578,6 +591,20 @@ class AccountSettings(
     fun changeHideCommunityRulesViolations(enabled: Boolean) {
         if (hideCommunityRulesViolations.value != enabled) {
             hideCommunityRulesViolations.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeNip46SignerEnabled(enabled: Boolean) {
+        if (nip46SignerEnabled.value != enabled) {
+            nip46SignerEnabled.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeNip46BunkerSecret(secret: String) {
+        if (nip46BunkerSecret.value != secret) {
+            nip46BunkerSecret.tryEmit(secret)
             saveAccountSettings()
         }
     }

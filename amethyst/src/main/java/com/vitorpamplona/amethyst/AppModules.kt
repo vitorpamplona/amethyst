@@ -810,6 +810,7 @@ class AppModules(
             rootFilesDir = { appContext.filesDir },
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
+            signerPermissionStore = signerPermissionStore,
         )
 
     val sessionManager =
