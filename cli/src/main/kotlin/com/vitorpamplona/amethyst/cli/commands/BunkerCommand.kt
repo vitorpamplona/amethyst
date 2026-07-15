@@ -24,36 +24,20 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetRelays
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Encrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEncrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseGetRelays
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
-import com.vitorpamplona.quartz.nip46RemoteSigner.ReadWrite
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerService
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -69,11 +53,37 @@ import kotlinx.coroutines.withTimeoutOrNull
  * remotely through this bunker. Long-running — stops at `--timeout` SECS or on
  * interrupt.
  *
- * Thin assembly only: every request/response type + the encrypted wrapper
- * live in quartz (`BunkerRequest*`, `BunkerResponse*`, `NostrConnectEvent`);
- * this file dispatches to `ctx.signer`.
+ * Thin assembly only: the request dispatch, the encrypted wrapper and the
+ * subscribe/serve loop all live in quartz (`BunkerRequestProcessor`,
+ * `NostrConnectSignerService`, `NostrConnectEvent`); this file just wires the
+ * CLI account's `ctx.signer` into them and auto-approves every request (a
+ * headless bunker for the operator's own local key).
  */
 object BunkerCommand {
+    /**
+     * A headless bunker authorizer: validate the connect [secret] and then
+     * approve every operation. The CLI bunker hosts the operator's OWN key, so
+     * there is no separate user to prompt — the pairing secret is the gate.
+     */
+    private class CliAuthorizer(
+        val secret: String,
+    ) : Nip46RequestAuthorizer {
+        override suspend fun onConnect(
+            clientPubKey: HexKey,
+            request: BunkerRequestConnect,
+        ): Nip46ConnectDecision =
+            if (request.secret == secret) {
+                Nip46ConnectDecision.Accept(BunkerRequestProcessor.ACK)
+            } else {
+                Nip46ConnectDecision.Reject("invalid secret")
+            }
+
+        override suspend fun authorize(
+            clientPubKey: HexKey,
+            request: BunkerRequest,
+        ): Boolean = true
+    }
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
@@ -105,14 +115,8 @@ object BunkerCommand {
             val secret = args.flag("secret") ?: KeyPair().privKey!!.toHexKey().take(32)
             val self = ctx.identity.pubKeyHex
 
-            // Percent-encode params (spec/nak convention: relay=wss%3A%2F%2F…).
-            val enc = { s: String -> java.net.URLEncoder.encode(s, "UTF-8") }
-            val uri =
-                buildString {
-                    append("bunker://").append(self)
-                    append("?").append(relays.joinToString("&") { "relay=${enc(it.url)}" })
-                    append("&secret=").append(enc(secret))
-                }
+            // Percent-encoded per the spec/nak convention (relay=wss%3A%2F%2F…).
+            val uri = NostrConnectURI.buildBunker(self, relays, secret)
             Output.emit(
                 mapOf(
                     "bunker_uri" to uri,
@@ -185,84 +189,24 @@ object BunkerCommand {
         secret: String,
         timeoutMs: Long?,
     ) {
-        val self = ctx.identity.pubKeyHex
-        val events = Channel<NostrConnectEvent>(UNLIMITED)
-        val seen = mutableSetOf<String>()
-        val subId = newSubId()
-        val listener =
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (event is NostrConnectEvent && seen.add(event.id)) events.trySend(event)
-                }
-            }
+        val processor =
+            BunkerRequestProcessor(
+                signer = ctx.signer,
+                relays = { relays },
+                authorizer = CliAuthorizer(secret),
+            )
+        val service =
+            NostrConnectSignerService(
+                client = ctx.client,
+                signer = ctx.signer,
+                processor = processor,
+                relays = relays,
+                onServiced = { method, client, error ->
+                    val outcome = if (error != null) "error: $error" else "ok"
+                    System.err.println("[bunker] $method from ${client.take(8)}… → $outcome")
+                },
+            )
 
-        val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)))
-        ctx.client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
-        try {
-            val loop: suspend () -> Unit = {
-                while (true) handle(ctx, events.receive(), secret, relays)
-            }
-            if (timeoutMs != null) withTimeoutOrNull(timeoutMs) { loop() } else loop()
-        } finally {
-            ctx.client.unsubscribe(subId)
-            events.close()
-        }
-    }
-
-    private suspend fun handle(
-        ctx: Context,
-        event: NostrConnectEvent,
-        secret: String,
-        relays: Set<NormalizedRelayUrl>,
-    ) {
-        val signer = ctx.signer
-        val client = event.talkingWith(signer.pubKey)
-        val request =
-            try {
-                event.decryptMessage(signer) as? BunkerRequest ?: return
-            } catch (e: Exception) {
-                System.err.println("[bunker] could not decrypt request ${event.id.take(8)}: ${e.message}")
-                return
-            }
-
-        val response: BunkerResponse =
-            try {
-                when (request) {
-                    is BunkerRequestConnect ->
-                        if (request.secret == secret) {
-                            BunkerResponseAck(request.id)
-                        } else {
-                            BunkerResponseError(request.id, "invalid secret")
-                        }
-                    is BunkerRequestGetPublicKey -> BunkerResponsePublicKey(request.id, signer.pubKey)
-                    is BunkerRequestGetRelays -> BunkerResponseGetRelays(request.id, relays.associate { it.url to ReadWrite(read = true, write = true) })
-                    is BunkerRequestPing -> BunkerResponsePong(request.id)
-                    is BunkerRequestSign -> {
-                        val signed = signer.sign<Event>(request.event.createdAt, request.event.kind, request.event.tags, request.event.content)
-                        BunkerResponseEvent(request.id, signed)
-                    }
-                    is BunkerRequestNip04Encrypt -> BunkerResponseEncrypt(request.id, signer.nip04Encrypt(request.message, request.pubKey))
-                    is BunkerRequestNip04Decrypt -> BunkerResponseDecrypt(request.id, signer.nip04Decrypt(request.ciphertext, request.pubKey))
-                    is BunkerRequestNip44Encrypt -> BunkerResponseEncrypt(request.id, signer.nip44Encrypt(request.message, request.pubKey))
-                    is BunkerRequestNip44Decrypt -> BunkerResponseDecrypt(request.id, signer.nip44Decrypt(request.ciphertext, request.pubKey))
-                    else -> BunkerResponseError(request.id, "unsupported method: ${request.method}")
-                }
-            } catch (e: Exception) {
-                BunkerResponseError(request.id, "${e::class.simpleName}: ${e.message}")
-            }
-
-        System.err.println("[bunker] ${request.method} from ${client.take(8)}… → ${if (response is BunkerResponseError) "error: ${response.error}" else "ok"}")
-
-        try {
-            val reply = NostrConnectEvent.create(response, client, signer)
-            ctx.client.publish(reply, relays)
-        } catch (e: Exception) {
-            System.err.println("[bunker] failed to send reply for ${request.method}: ${e.message}")
-        }
+        if (timeoutMs != null) withTimeoutOrNull(timeoutMs) { service.run() } else service.run()
     }
 }
