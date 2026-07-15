@@ -76,6 +76,10 @@ class GeohashChatViewModel : ViewModel() {
     private val _participants = MutableStateFlow(0)
     val participants: StateFlow<Int> = _participants.asStateFlow()
 
+    /** Our own per-geohash identity pubkey, so the UI can right-align our messages. */
+    private val _myPubKey = MutableStateFlow<String?>(null)
+    val myPubKey: StateFlow<String?> = _myPubKey.asStateFlow()
+
     private val seen = HashSet<String>()
     private val present = HashSet<String>()
     private val subId = newSubId()
@@ -94,6 +98,8 @@ class GeohashChatViewModel : ViewModel() {
     }
 
     private suspend fun start() {
+        _myPubKey.value = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(accountViewModel.account, geohash).pubKey.toHexKey() }
+
         val relays = resolveRelays()
         _relays.value = relays
         if (relays.isEmpty()) return
