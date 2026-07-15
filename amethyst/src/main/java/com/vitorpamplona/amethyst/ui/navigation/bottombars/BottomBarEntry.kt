@@ -25,8 +25,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * One slot in the bottom navigation bar. A single ordered list of these (persisted in
- * [com.vitorpamplona.amethyst.model.UiSettings.bottomBarItems]) holds **both** built-in destinations
- * and favorite apps, so the user can pin and drag-reorder them together in one list.
+ * [com.vitorpamplona.amethyst.model.UiSettings.bottomBarItems]) holds built-in destinations,
+ * favorite apps, and individual joined chats/groups, so the user can pin and drag-reorder them
+ * together in one list.
  *
  * - [BuiltIn] resolves its [Route][com.vitorpamplona.amethyst.ui.navigation.routes.Route] (and its
  *   icon/label/notification badge) through [NavBarCatalog], like before.
@@ -34,6 +35,9 @@ import kotlinx.serialization.Serializable
  *   its stable id (which already encodes the route's parameters — the `url` or addressable
  *   `coordinate`); the bar resolves it to a live favorite for its icon/label and to
  *   `Route.WebApp` / `Route.NostrApp` for navigation.
+ * - [PublicChat], [RelayGroup] and [Concord] each pin one specific joined chat the user picked from
+ *   their joined list (NIP-28 channel, NIP-29 relay group, or a Concord community). The bar resolves
+ *   each to the chat's avatar + name from the local cache and to its chat/home route for navigation.
  */
 @Serializable
 sealed interface BottomBarEntry {
@@ -50,7 +54,43 @@ sealed interface BottomBarEntry {
     data class Favorite(
         val favoriteId: String,
     ) : BottomBarEntry
+
+    /** A pinned NIP-28 public chat channel, keyed by its channel event id (hex). */
+    @Serializable
+    @SerialName("publicChat")
+    data class PublicChat(
+        val channelId: String,
+    ) : BottomBarEntry
+
+    /** A pinned NIP-29 relay group, keyed by the (group id, host relay) pair — the group's real key. */
+    @Serializable
+    @SerialName("relayGroup")
+    data class RelayGroup(
+        val groupId: String,
+        val relayUrl: String,
+    ) : BottomBarEntry
+
+    /** A pinned Concord community, keyed by its community id; opens the community's channel list. */
+    @Serializable
+    @SerialName("concord")
+    data class Concord(
+        val communityId: String,
+    ) : BottomBarEntry
 }
+
+/**
+ * Stable, type-discriminated identity for an entry — used as a Compose list key and for membership
+ * checks / de-duplication in the settings picker.
+ */
+val BottomBarEntry.stableKey: String
+    get() =
+        when (this) {
+            is BottomBarEntry.BuiltIn -> "builtIn:${item.name}"
+            is BottomBarEntry.Favorite -> "favorite:$favoriteId"
+            is BottomBarEntry.PublicChat -> "publicChat:$channelId"
+            is BottomBarEntry.RelayGroup -> "relayGroup:$relayUrl|$groupId"
+            is BottomBarEntry.Concord -> "concord:$communityId"
+        }
 
 /** The favorite-app ids in this bottom-bar config — the apps that should be kept warm as bottom-row tabs. */
 fun List<BottomBarEntry>.favoriteIds(): List<String> = mapNotNull { (it as? BottomBarEntry.Favorite)?.favoriteId }

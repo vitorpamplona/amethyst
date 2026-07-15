@@ -437,6 +437,100 @@ val DrawerYouItems: List<NavBarItem> =
         NavBarItem.WALLET,
     )
 
+/**
+ * A titled, collapsible group of selectable destinations in the bottom-bar settings picker. The
+ * catalog's [linkedMapOf] insertion order is hand-maintained and reads as scattered in the flat
+ * picker; these curated categories give the "Available" list a deliberate, grouped order instead.
+ * Every [NavBarItem] in [NavBarCatalog] appears in exactly one category (see [BottomBarCategories]).
+ */
+data class NavBarCategory(
+    val titleRes: Int,
+    val items: List<NavBarItem>,
+)
+
+/**
+ * The ordered, grouped catalog for the settings picker. Kept in sync with [NavBarCatalog]: every
+ * catalog id must appear here exactly once (asserted by BottomBarCategoriesTest), so a newly added
+ * screen surfaces in the picker under a deliberate heading rather than vanishing.
+ */
+val BottomBarCategories: List<NavBarCategory> =
+    listOf(
+        NavBarCategory(
+            R.string.bottom_bar_category_main,
+            listOf(
+                NavBarItem.HOME,
+                NavBarItem.MESSAGES,
+                NavBarItem.VIDEO,
+                NavBarItem.DISCOVER,
+                NavBarItem.NOTIFICATIONS,
+            ),
+        ),
+        NavBarCategory(
+            R.string.bottom_bar_category_chats,
+            listOf(
+                NavBarItem.PUBLIC_CHATS,
+                NavBarItem.RELAY_GROUPS,
+                NavBarItem.CONCORD,
+            ),
+        ),
+        NavBarCategory(
+            R.string.bottom_bar_category_you,
+            listOf(
+                NavBarItem.PROFILE,
+                NavBarItem.MY_LISTS,
+                NavBarItem.BOOKMARKS,
+                NavBarItem.WEB_BOOKMARKS,
+                NavBarItem.DRAFTS,
+                NavBarItem.SCHEDULED_POSTS,
+                NavBarItem.INTEREST_SETS,
+                NavBarItem.FAVORITE_ALGO_FEEDS,
+                NavBarItem.EMOJI_PACKS,
+                NavBarItem.WALLET,
+            ),
+        ),
+        NavBarCategory(
+            R.string.bottom_bar_category_feeds,
+            listOf(
+                NavBarItem.ARTICLES,
+                NavBarItem.LONGS,
+                NavBarItem.PICTURES,
+                NavBarItem.SHORTS,
+                NavBarItem.LIVE_STREAMS,
+                NavBarItem.NESTS,
+                NavBarItem.PODCASTS,
+                NavBarItem.PODCAST_EPISODES,
+                NavBarItem.MUSIC_TRACKS,
+                NavBarItem.MUSIC_PLAYLISTS,
+                NavBarItem.POLLS,
+                NavBarItem.PRODUCTS,
+                NavBarItem.WORKOUTS,
+                NavBarItem.GIT_REPOSITORIES,
+                NavBarItem.COMMUNITIES,
+                NavBarItem.FOLLOW_PACKS,
+                NavBarItem.CALENDARS,
+                NavBarItem.CALENDAR_COLLECTIONS,
+                NavBarItem.BADGES,
+                NavBarItem.EMOJI_SETS,
+            ),
+        ),
+        NavBarCategory(
+            R.string.bottom_bar_category_apps,
+            listOf(
+                NavBarItem.BROWSER,
+                NavBarItem.FAVORITE_APPS,
+                NavBarItem.SOFTWARE_APPS,
+                NavBarItem.NAPPLETS,
+                NavBarItem.NSITES,
+            ),
+        ),
+        NavBarCategory(
+            R.string.bottom_bar_category_other,
+            listOf(
+                NavBarItem.SETTINGS,
+            ),
+        ),
+    )
+
 val DrawerFeedsItems: List<NavBarItem> =
     listOfNotNull(
         NavBarItem.ARTICLES,

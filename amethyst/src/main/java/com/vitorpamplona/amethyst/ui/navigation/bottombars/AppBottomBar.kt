@@ -202,6 +202,13 @@ private fun RenderBottomMenu(
                             }
                         FavoriteNavItem(destination == selectedRoute, fav, rememberFavoriteIconModel(fav), destination, nav)
                     }
+                    is BottomBarEntry.PublicChat,
+                    is BottomBarEntry.RelayGroup,
+                    is BottomBarEntry.Concord,
+                    -> {
+                        val display = rememberGroupEntryDisplay(entry, accountViewModel) ?: return@forEach
+                        GroupNavItem(display.route == selectedRoute, display, accountViewModel, display.route, nav)
+                    }
                 }
             }
         }
@@ -220,6 +227,23 @@ private fun RowScope.FavoriteNavItem(
         alwaysShowLabel = false,
         icon = { FavoriteEntryIcon(fav, selected, iconModel) },
         // No label — favorite tabs match the built-in items, which show icon only.
+        selected = selected,
+        onClick = { nav(destination) },
+    )
+}
+
+@Composable
+private fun RowScope.GroupNavItem(
+    selected: Boolean,
+    display: GroupEntryDisplay,
+    accountViewModel: AccountViewModel,
+    destination: Route,
+    nav: (Route) -> Unit,
+) {
+    NavigationBarItem(
+        alwaysShowLabel = false,
+        // A pinned chat/group shows its avatar, like the favorite-app tabs — icon only.
+        icon = { Box(Size27Modifier, contentAlignment = Alignment.Center) { GroupEntryAvatar(display, 25.dp, accountViewModel) } },
         selected = selected,
         onClick = { nav(destination) },
     )

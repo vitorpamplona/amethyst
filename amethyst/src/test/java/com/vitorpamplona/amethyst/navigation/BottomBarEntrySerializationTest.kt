@@ -38,6 +38,9 @@ class BottomBarEntrySerializationTest {
         listOf(
             BottomBarEntry.BuiltIn(NavBarItem.HOME),
             BottomBarEntry.Favorite("url:https://example.com"),
+            BottomBarEntry.PublicChat("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb"),
+            BottomBarEntry.RelayGroup("abcd1234", "wss://groups.example.com"),
+            BottomBarEntry.Concord("f".repeat(64)),
         )
 
     @Test
@@ -45,6 +48,10 @@ class BottomBarEntrySerializationTest {
         val json = JsonMapper.toJson(sample)
         // Stable short names, NOT the fragile fully-qualified class name.
         assertTrue("expected stable discriminators, got: $json", json.contains("\"builtIn\"") && json.contains("\"favorite\""))
+        assertTrue(
+            "expected group discriminators, got: $json",
+            json.contains("\"publicChat\"") && json.contains("\"relayGroup\"") && json.contains("\"concord\""),
+        )
         assertEquals(sample, JsonMapper.fromJson<List<BottomBarEntry>>(json))
     }
 
@@ -63,11 +70,17 @@ class BottomBarEntrySerializationTest {
         runCatching { JsonMapper.fromJson<List<BottomBarEntry>>(legacy) }
             .onSuccess { error("legacy discriminator unexpectedly decoded directly: $it") }
 
-        // ...but the migration (rewrite FQN -> short name) recovers the exact same config.
+        // ...but the migration (rewrite FQN -> short name) recovers the exact same config. The legacy
+        // format predates the group entries, so the recovered config is just the built-in + favorite.
+        val expected =
+            listOf(
+                BottomBarEntry.BuiltIn(NavBarItem.HOME),
+                BottomBarEntry.Favorite("url:https://example.com"),
+            )
         val migrated =
             legacy
                 .replace("com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn", "builtIn")
                 .replace("com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite", "favorite")
-        assertEquals(sample, JsonMapper.fromJson<List<BottomBarEntry>>(migrated))
+        assertEquals(expected, JsonMapper.fromJson<List<BottomBarEntry>>(migrated))
     }
 }

@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -121,6 +122,35 @@ fun AppNavigationRail(
                                 }
                             },
                             icon = { FavoriteEntryIcon(fav, selected, rememberFavoriteIconModel(fav)) },
+                        )
+                    }
+
+                    is BottomBarEntry.PublicChat,
+                    is BottomBarEntry.RelayGroup,
+                    is BottomBarEntry.Concord,
+                    -> {
+                        val display = rememberGroupEntryDisplay(entry, accountViewModel) ?: return@forEach
+                        val destination = display.route
+                        // Group routes carry ids, so match the full route (not just its class).
+                        val selected =
+                            remember(navBackStackEntry, destination) {
+                                when (destination) {
+                                    is Route.PublicChatChannel -> getRouteWithArguments(Route.PublicChatChannel::class, nav.controller) == destination
+                                    is Route.RelayGroup -> getRouteWithArguments(Route.RelayGroup::class, nav.controller) == destination
+                                    is Route.ConcordServer -> getRouteWithArguments(Route.ConcordServer::class, nav.controller) == destination
+                                    else -> false
+                                }
+                            }
+                        NavigationRailItem(
+                            selected = selected,
+                            onClick = {
+                                if (selected) {
+                                    reselectCoordinator.reselect(destination)
+                                } else {
+                                    nav.navBottomBar(destination)
+                                }
+                            },
+                            icon = { GroupEntryAvatar(display, 25.dp, accountViewModel) },
                         )
                     }
                 }
