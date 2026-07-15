@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
@@ -222,6 +223,11 @@ private fun RemoteSignerAppCard(
     onClick: () -> Unit,
 ) {
     val npub = remember(clientPubKey) { runCatching { NPub.create(clientPubKey) }.getOrDefault(clientPubKey.take(12) + "…") }
+    var info by remember(entry.coordinate) { mutableStateOf<Nip46ClientInfo?>(null) }
+    LaunchedEffect(entry.coordinate) {
+        info = withContext(Dispatchers.Default) { Amethyst.instance.nip46ClientStore.load(entry.coordinate) }
+    }
+    val title = info?.name?.ifBlank { null } ?: stringResource(R.string.nip46_signer_remote_app)
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -242,7 +248,7 @@ private fun RemoteSignerAppCard(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    stringResource(R.string.nip46_signer_remote_app),
+                    title,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
+import com.vitorpamplona.amethyst.napplet.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.napplet.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
@@ -694,6 +695,9 @@ class AppModules(
     val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext) }
     val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appContext) }
 
+    // Display + relay info for connected NIP-46 remote-signer clients.
+    val nip46ClientStore by lazy { DataStoreNip46ClientStore(appContext) }
+
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)
 
@@ -811,6 +815,7 @@ class AppModules(
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
             signerPermissionStore = signerPermissionStore,
+            nip46ClientStore = nip46ClientStore,
         )
 
     val sessionManager =

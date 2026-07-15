@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.model.nip46Signer
 
+import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientInfo
+import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
@@ -64,6 +67,7 @@ class Nip46SignerState(
     val signer: NostrSigner,
     val client: INostrClient,
     val ledger: NostrSignerPermissionLedger,
+    val clientStore: Nip46ClientStore,
     val inboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val scope: CoroutineScope,
     val settings: AccountSettings,
@@ -87,9 +91,34 @@ class Nip46SignerState(
                 (secret.isNotEmpty() && offered == secret) ||
                     ledger.hasPolicy(Nip46PermissionAuthorizer.coordinateFor(signer.pubKey, clientPubKey))
             },
+            onConnected = { clientPubKey, request ->
+                // A bunker-flow client talks to us on the inbox relays we always listen on, so we
+                // only persist its self-declared display metadata (never as authorization — just a label).
+                val meta = request.clientMetadata
+                if (meta != null && !meta.isEmpty()) {
+                    clientStore.store(
+                        Nip46PermissionAuthorizer.coordinateFor(signer.pubKey, clientPubKey),
+                        Nip46ClientInfo(name = meta.name, url = meta.url, image = meta.image),
+                    )
+                }
+            },
         )
 
     init {
+        // Recover the relays of `nostrconnect://`-paired apps so they stay reachable across restarts
+        // (bunker-flow apps use the inbox relays, which are already in the listen set).
+        scope.launch(Dispatchers.IO) {
+            val recovered =
+                clientStore
+                    .all()
+                    .filterKeys { Nip46PermissionAuthorizer.belongsTo(it, signer.pubKey) }
+                    .values
+                    .flatMap { it.relays }
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+            if (recovered.isNotEmpty()) extraRelays.value = extraRelays.value + recovered
+        }
+
         scope.launch(Dispatchers.IO) {
             combine(settings.nip46SignerEnabled, listeningRelays) { enabled, relays -> enabled to relays }
                 .collectLatest { (enabled, relays) ->
@@ -169,6 +198,11 @@ class Nip46SignerState(
                 ledger.setPolicy(coordinate, authorizer.defaultPolicyOnConnect)
             }
             ledger.updateLastUsed(coordinate)
+            // Persist the app's label + its relays so it survives a restart, then start listening now.
+            clientStore.store(
+                coordinate,
+                Nip46ClientInfo(name = offer.name, url = offer.url, image = offer.image, relays = offer.relays.map { it.url }.toSet()),
+            )
             extraRelays.value = extraRelays.value + offer.relays
 
             setEnabled(true)

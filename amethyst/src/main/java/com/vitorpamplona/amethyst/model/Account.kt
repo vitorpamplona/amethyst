@@ -54,7 +54,9 @@ import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDe
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.napplet.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.napplet.signers.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
@@ -389,6 +391,7 @@ class Account(
     val powQueue: () -> PoWPublishQueue? = { null },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
+    nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -456,6 +459,7 @@ class Account(
             signer = signer,
             client = client,
             ledger = signerPermissionLedger,
+            clientStore = nip46ClientStore,
             inboxRelays = nip65RelayList.inboxFlow,
             scope = scope,
             settings = settings,
