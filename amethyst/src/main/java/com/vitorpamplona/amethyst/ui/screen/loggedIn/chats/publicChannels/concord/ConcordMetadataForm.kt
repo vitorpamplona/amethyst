@@ -24,16 +24,20 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,18 +56,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -265,6 +280,80 @@ private fun ConcordBannerHero(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
+        }
+    }
+}
+
+/**
+ * The community's bootstrap-relay list editor, shared by the create and edit screens. Each relay is
+ * shown the same way the Relay Settings screens show them — the relay's NIP-11 favicon, its
+ * advertised name, and its host — and tapping the row opens the full relay-info page ([Route.RelayInfo]),
+ * so a community relay is a first-class, inspectable relay rather than a bare URL string. A trailing
+ * ✕ removes it; the [RelayUrlEditField] below adds one. State is owned by the caller.
+ */
+@Composable
+fun ConcordRelayListEditor(
+    relays: List<NormalizedRelayUrl>,
+    onRemove: (NormalizedRelayUrl) -> Unit,
+    onAdd: (NormalizedRelayUrl) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    relays.forEach { relay ->
+        ConcordRelayRow(relay, { onRemove(relay) }, accountViewModel, nav)
+    }
+    RelayUrlEditField(
+        onNewRelay = onAdd,
+        modifier = Modifier.fillMaxWidth(),
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ConcordRelayRow(
+    relay: NormalizedRelayUrl,
+    onRemove: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // The NIP-11 relay-info doc (icon + display name), fetched + cached exactly like the settings rows.
+    val relayInfo by loadRelayInfo(relay)
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        RenderRelayIcon(
+            displayUrl = relayInfo.id ?: relay.displayUrl(),
+            iconUrl = relayInfo.icon,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            pingInMs = 0,
+            iconModifier = MediumRelayIconModifier,
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(
+            Modifier
+                .weight(1f)
+                .combinedClickable(
+                    onClick = { nav.nav(Route.RelayInfo(relay.url)) },
+                    onLongClick = { scope.launch { clipboard.setText(relay.url) } },
+                ),
+        ) {
+            relayInfo.name?.takeIf { it.isNotBlank() }?.let { name ->
+                Text(name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text(
+                text = relay.displayUrl(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.MiddleEllipsis,
+            )
+        }
+        IconButton(onClick = onRemove) {
+            SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.remove))
         }
     }
 }
