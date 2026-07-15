@@ -3174,6 +3174,8 @@
     <string name="playback_actions_dialog_title">播放</string>
     <string name="video_quality_auto">自动</string>
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
+    <string name="edit_nickname">编辑昵称</string>
+    <string name="nickname_private">仅对您可见</string>
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">投射到设备</string>
     <string name="cast_stop_casting">停止投影</string>

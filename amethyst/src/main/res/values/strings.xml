@@ -412,6 +412,7 @@
     and thus chat messages disappear over time</string>
 
     <string name="public_chat">Public Chat</string>
+    <string name="new_public_chat">Create a new public chat</string>
     <string name="marmot_group">MLS Group</string>
     <string name="marmot_group_no_messages_yet">No messages yet</string>
     <string name="public_chat_title">Public Chat Metadata</string>
@@ -2095,6 +2096,8 @@
     <string name="relay_group_threads_title">Threads</string>
     <string name="relay_group_open">Open group</string>
     <string name="relay_group_channels_empty">No groups on this relay yet.</string>
+    <string name="relay_group_channels_not_nip29">This relay does not advertise support for groups (NIP-29), so it may not host any.</string>
+    <string name="relay_group_relay_not_nip29">May not support groups (NIP-29)</string>
     <string name="relay_group_invite_preparing">Preparing invite…</string>
     <string name="relay_group_badge_private">Private</string>
     <string name="relay_group_badge_invite_only">Invite-only</string>

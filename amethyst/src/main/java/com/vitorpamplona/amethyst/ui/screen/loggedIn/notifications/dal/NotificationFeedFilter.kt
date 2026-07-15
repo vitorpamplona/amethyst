@@ -138,9 +138,15 @@ class NotificationFeedFilter(
             setOf(
                 BadgeAwardEvent.KIND,
                 ChannelMessageEvent.KIND,
-                // kind-9 chat message (NIP-C7 / Concord): notifies only when it p-tags me — an inline
-                // reply (Concord's default reply mode) or an @-mention. A minichat reply is a kind-1111
-                // CommentEvent below; a plain channel message tags no one and never reaches here.
+                // kind-9 chat message, shared by two features:
+                //  • NIP-29 group chat: a reply to my group message is a kind-9 that p-tags me
+                //    (see ChannelNewMessageViewModel), fetched at startup by
+                //    filterGroupNotificationsToPubkey.
+                //  • NIP-C7 / Concord: an inline reply (Concord's default reply mode) or an @-mention
+                //    p-tags me; a minichat reply is a kind-1111 CommentEvent below.
+                // Either way it notifies only when it p-tags me — a plain channel message tags no one
+                // and never reaches here. Without kind 9 the acceptableEvent kind gate would drop these
+                // replies before the p-tag check, so they'd never render on the Notifications tab.
                 ChatEvent.KIND,
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,

@@ -516,11 +516,22 @@ class Context(
      * accept the exact same identifier formats. Throws on unrecognised input —
      * command handlers catch [IllegalArgumentException] at the top level and
      * translate to `{"error": "bad_args"}`.
+     *
+     * A pubkey is always 32 bytes, so we require exactly 64 hex chars: the shared
+     * resolver's fallback runs a lenient `Hex.decode` that turns a short
+     * bech32/hex-ish word (e.g. a mistyped verb like `sync`) into a bogus few-byte
+     * "pubkey" instead of failing — this rejects that so a bad OBSERVER/USER errors
+     * cleanly rather than silently scoring/fetching garbage.
      */
-    suspend fun requireUserHex(input: String): com.vitorpamplona.quartz.nip01Core.core.HexKey =
-        com.vitorpamplona.quartz.nip05DnsIdentifiers
-            .resolveUserHexOrNull(input, nip05Client)
-            ?: throw IllegalArgumentException("Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)")
+    suspend fun requireUserHex(input: String): com.vitorpamplona.quartz.nip01Core.core.HexKey {
+        val notResolved = "Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)"
+        val hex =
+            com.vitorpamplona.quartz.nip05DnsIdentifiers
+                .resolveUserHexOrNull(input, nip05Client)
+                ?: throw IllegalArgumentException(notResolved)
+        require(hex.length == 64) { notResolved }
+        return hex
+    }
 
     /**
      * Outbox / NIP-65 write relays for this account. Read from the
