@@ -26,12 +26,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,11 +69,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -84,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryDisplay
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCategory
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberFavoriteIconModel
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberGroupEntryDisplay
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.stableKey
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -158,16 +161,8 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     ) {
         Spacer(Modifier.height(12.dp))
 
-        // --- WYSIWYG preview: the bar you're actually building, updating live. ---
-        BottomBarPreview(pinned, accountViewModel)
-
-        // --- Your tabs: a horizontal, drag-reorderable strip mirroring the bar's own shape. ---
-        SectionHeader(
-            title = stringRes(R.string.bottom_bar_settings_pinned),
-            trailing = "${pinned.size} / $RECOMMENDED_SLOTS",
-            over = pinned.size > RECOMMENDED_SLOTS,
-        )
-        PinnedTabsStrip(state, pinned, accountViewModel)
+        // --- The editable bar: a real preview you drag to reorder and tap ✕ to remove from. ---
+        EditableBarCard(state, pinned, accountViewModel)
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Size20dp),
@@ -200,11 +195,12 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Live preview
+// The editable preview bar — WYSIWYG: this IS the reorder & remove surface.
 // ------------------------------------------------------------------------------------------------
 
 @Composable
-private fun BottomBarPreview(
+private fun EditableBarCard(
+    state: BottomBarSettingsState,
     pinned: List<BottomBarEntry>,
     accountViewModel: AccountViewModel,
 ) {
@@ -222,15 +218,16 @@ private fun BottomBarPreview(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringRes(R.string.bottom_bar_settings_preview),
+                    text = stringRes(R.string.bottom_bar_settings_pinned),
                     style = MaterialTheme.typography.labelMedium,
                     color = accent,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = stringRes(R.string.bottom_bar_settings_live),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "${pinned.size} / $RECOMMENDED_SLOTS",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (pinned.size > RECOMMENDED_SLOTS) MaterialTheme.colorScheme.error else accent,
+                    fontWeight = FontWeight.Bold,
                 )
             }
 
@@ -241,7 +238,7 @@ private fun BottomBarPreview(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (pinned.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().height(58.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
                         Text(
                             stringRes(R.string.bottom_bar_settings_pinned_empty),
                             style = MaterialTheme.typography.bodySmall,
@@ -250,108 +247,43 @@ private fun BottomBarPreview(
                         )
                     }
                 } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().height(58.dp).padding(horizontal = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Highlight the first tab as the landing destination, like the real bar on open.
-                        pinned.forEachIndexed { index, entry ->
-                            PreviewTab(entry, selected = index == 0, accountViewModel)
-                        }
-                    }
+                    EditableBar(state, pinned, accountViewModel)
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun PreviewTab(
-    entry: BottomBarEntry,
-    selected: Boolean,
-    accountViewModel: AccountViewModel,
-) {
-    val visual = rememberPinnedVisual(entry, accountViewModel)
-    val accent = MaterialTheme.colorScheme.primary
-    Column(
-        modifier = Modifier.width(58.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(width = 44.dp, height = 30.dp)
-                    .clip(CircleShape)
-                    .background(if (selected) accent.copy(alpha = 0.16f) else Color.Transparent),
-            contentAlignment = Alignment.Center,
-        ) {
-            when (visual) {
-                is PinnedVisual.Glyph ->
-                    Icon(
-                        symbol = visual.icon,
-                        contentDescription = visual.label,
-                        modifier = Modifier.size(21.dp),
-                        tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                is PinnedVisual.Avatar -> GroupEntryAvatar(visual.display, 22.dp, accountViewModel)
-            }
-        }
-        if (selected) {
             Text(
-                text = visual.label,
+                text = stringRes(R.string.bottom_bar_settings_reorder_hint),
                 style = MaterialTheme.typography.labelSmall,
-                color = accent,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
     }
 }
 
-// ------------------------------------------------------------------------------------------------
-// Pinned tabs — horizontal, drag-to-reorder chip strip
-// ------------------------------------------------------------------------------------------------
-
 @Composable
-private fun PinnedTabsStrip(
+private fun EditableBar(
     state: BottomBarSettingsState,
     pinned: List<BottomBarEntry>,
     accountViewModel: AccountViewModel,
 ) {
-    if (pinned.isEmpty()) {
-        Text(
-            text = stringRes(R.string.bottom_bar_settings_pinned_empty),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = Size20dp, vertical = 6.dp),
-        )
-        return
-    }
-
     var draggedIndex by remember { mutableIntStateOf(-1) }
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
     val widths = remember { mutableStateMapOf<Int, Float>() }
-    val scroll = rememberScrollState()
 
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(scroll, enabled = draggedIndex < 0)
-                .padding(horizontal = Size20dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         pinned.forEachIndexed { index, entry ->
             val dragging = draggedIndex == index
-            PinnedChip(
+            PreviewTab(
                 entry = entry,
-                accountViewModel = accountViewModel,
+                // The first tab is where the bar lands on open, so preview it as selected.
+                selected = index == 0,
                 dragging = dragging,
                 dragOffsetX = if (dragging) dragOffsetX else 0f,
+                accountViewModel = accountViewModel,
                 onRemove = { state.togglePin(entry) },
                 onMeasured = { widths[index] = it },
                 onDragStart = {
@@ -361,7 +293,7 @@ private fun PinnedTabsStrip(
                 onDrag = { dx ->
                     dragOffsetX += dx
                     val current = draggedIndex
-                    if (current < 0) return@PinnedChip
+                    if (current < 0) return@PreviewTab
 
                     if (dragOffsetX < 0 && current > 0) {
                         val leftW = widths[current - 1] ?: 0f
@@ -395,11 +327,12 @@ private fun PinnedTabsStrip(
 }
 
 @Composable
-private fun PinnedChip(
+private fun RowScope.PreviewTab(
     entry: BottomBarEntry,
-    accountViewModel: AccountViewModel,
+    selected: Boolean,
     dragging: Boolean,
     dragOffsetX: Float,
+    accountViewModel: AccountViewModel,
     onRemove: () -> Unit,
     onMeasured: (Float) -> Unit,
     onDragStart: () -> Unit,
@@ -408,22 +341,19 @@ private fun PinnedChip(
     onDragCancel: () -> Unit,
 ) {
     val visual = rememberPinnedVisual(entry, accountViewModel)
-    val elevation by animateFloatAsState(if (dragging) 8f else 0f, label = "chipElevation")
+    val lift by animateFloatAsState(if (dragging) 1.12f else 1f, label = "tabLift")
 
-    Surface(
-        shape = CircleShape,
-        color = if (dragging) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    Box(
         modifier =
             Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .zIndex(if (dragging) 1f else 0f)
                 .onGloballyPositioned { onMeasured(it.size.width.toFloat()) }
                 .graphicsLayer {
                     translationX = dragOffsetX
-                    shadowElevation = elevation
-                    if (dragging) {
-                        scaleX = 1.03f
-                        scaleY = 1.03f
-                    }
+                    scaleX = lift
+                    scaleY = lift
                 }.pointerInput(entry.stableKey) {
                     detectDragGestures(
                         onDragStart = { onDragStart() },
@@ -435,30 +365,75 @@ private fun PinnedChip(
                         onDragCancel = { onDragCancel() },
                     )
                 },
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
-            modifier = Modifier.padding(start = 6.dp, end = 4.dp, top = 5.dp, bottom = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier.padding(top = 6.dp),
         ) {
-            LeadingVisual(visual, accountViewModel, size = 24.dp)
-            Text(
-                text = visual.label,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Box(
-                modifier = Modifier.size(24.dp).clip(CircleShape).clickable(onClick = onRemove),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.bottom_bar_settings_remove),
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            PreviewTabIcon(visual, selected, accountViewModel)
+            if (selected) {
+                Text(
+                    text = visual.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
+        }
+
+        // Editing affordance: a small ✕ removes this tab. This is why the preview isn't just a mirror.
+        RemoveBadge(onRemove, Modifier.align(Alignment.TopEnd))
+    }
+}
+
+@Composable
+private fun BoxScope.RemoveBadge(
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(18.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(onClick = onRemove),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Close,
+            contentDescription = stringRes(R.string.bottom_bar_settings_remove),
+            modifier = Modifier.size(12.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** The icon block of a preview tab: catalog glyph, the favorite's real favicon, or the group's avatar. */
+@Composable
+private fun PreviewTabIcon(
+    visual: PinnedVisual,
+    selected: Boolean,
+    accountViewModel: AccountViewModel,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    val tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        modifier =
+            Modifier
+                .size(width = 42.dp, height = 28.dp)
+                .clip(CircleShape)
+                .background(if (selected) accent.copy(alpha = 0.16f) else Color.Transparent),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (visual) {
+            is PinnedVisual.Glyph -> Icon(symbol = visual.icon, contentDescription = visual.label, modifier = Modifier.size(21.dp), tint = tint)
+            is PinnedVisual.Favorite -> FavoriteAppIcon(app = visual.app, tint = tint, modifier = Modifier.size(21.dp), iconModel = rememberFavoriteIconModel(visual.app))
+            is PinnedVisual.Avatar -> GroupEntryAvatar(visual.display, 22.dp, accountViewModel)
         }
     }
 }
@@ -535,9 +510,8 @@ private fun CategoryCard(
                             }
                         } else {
                             AvailableRow(
-                                leading = { LeadingGlyph(def.icon, tinted = true) },
+                                leading = { LeadingGlyph(def.icon) },
                                 label = stringRes(def.labelRes),
-                                subtitle = null,
                                 pinned = entry.stableKey in pinnedKeys,
                                 onToggle = { onTogglePin(entry) },
                             )
@@ -565,11 +539,9 @@ private fun PickerChildren(
             } else {
                 favorites.forEach { fav ->
                     val entry = BottomBarEntry.Favorite(fav.id)
-                    val icon = if (fav is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
                     AvailableRow(
-                        leading = { LeadingGlyph(icon, tinted = true) },
+                        leading = { FavoriteLeading(fav) },
                         label = fav.label,
-                        subtitle = null,
                         pinned = entry.stableKey in pinnedKeys,
                         onToggle = { onTogglePin(entry) },
                         indent = true,
@@ -623,9 +595,8 @@ private fun GroupChildList(
         // Read-only: the picker resolves names/avatars from cache, it must not open a REQ per row.
         val display = rememberGroupEntryDisplay(entry, accountViewModel, subscribe = false) ?: return@forEach
         AvailableRow(
-            leading = { GroupEntryAvatar(display, 30.dp, accountViewModel) },
+            leading = { GroupEntryAvatar(display, 34.dp, accountViewModel) },
             label = display.label,
-            subtitle = null,
             pinned = entry.stableKey in pinnedKeys,
             onToggle = { onTogglePin(entry) },
             indent = true,
@@ -641,7 +612,6 @@ private fun GroupChildList(
 private fun AvailableRow(
     leading: @Composable () -> Unit,
     label: String,
-    subtitle: String?,
     pinned: Boolean,
     onToggle: () -> Unit,
     indent: Boolean = false,
@@ -656,23 +626,13 @@ private fun AvailableRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         leading()
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
         AddPill(added = pinned, onClick = onToggle)
     }
 }
@@ -696,7 +656,7 @@ private fun ExpandableAvailableRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        LeadingGlyph(icon, tinted = true)
+        LeadingGlyph(icon)
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
@@ -725,10 +685,7 @@ private fun AddPill(
 ) {
     val accent = MaterialTheme.colorScheme.primary
     if (added) {
-        Surface(
-            shape = CircleShape,
-            color = accent,
-        ) {
+        Surface(shape = CircleShape, color = accent) {
             Row(
                 modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -740,11 +697,7 @@ private fun AddPill(
                     modifier = Modifier.size(15.dp),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
-                Text(
-                    stringRes(R.string.bottom_bar_settings_added),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
+                Text(stringRes(R.string.bottom_bar_settings_added), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     } else {
@@ -753,87 +706,49 @@ private fun AddPill(
             border = BorderStroke(1.dp, accent),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
         ) {
-            Icon(
-                symbol = MaterialSymbols.Add,
-                contentDescription = null,
-                modifier = Modifier.size(15.dp),
-                tint = accent,
-            )
+            Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(15.dp), tint = accent)
             Spacer(Modifier.width(4.dp))
             Text(stringRes(R.string.bottom_bar_settings_add), style = MaterialTheme.typography.labelLarge, color = accent)
         }
     }
 }
 
-/** A category glyph in a soft accent-tinted circle. */
+/** A category/destination glyph in a soft accent-tinted circle. */
 @Composable
-private fun LeadingGlyph(
-    icon: MaterialSymbol,
-    tinted: Boolean,
-) {
-    val bg = if (tinted) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
+private fun LeadingGlyph(icon: MaterialSymbol) {
     Box(
-        modifier = Modifier.size(34.dp).clip(CircleShape).background(bg),
+        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            symbol = icon,
-            contentDescription = null,
-            modifier = Modifier.size(19.dp),
-            tint = if (tinted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Icon(symbol = icon, contentDescription = null, modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.primary)
     }
 }
 
+/** A favorite web-app / nsite / napplet's real favicon in a tinted circle (glyph fallback). */
 @Composable
-private fun LeadingVisual(
-    visual: PinnedVisual,
-    accountViewModel: AccountViewModel,
-    size: Dp,
-) {
-    when (visual) {
-        is PinnedVisual.Glyph ->
-            Box(
-                modifier = Modifier.size(size + 6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    symbol = visual.icon,
-                    contentDescription = visual.label,
-                    modifier = Modifier.size(size * 0.7f),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        is PinnedVisual.Avatar -> GroupEntryAvatar(visual.display, size, accountViewModel)
-    }
-}
-
-@Composable
-private fun SectionHeader(
-    title: String,
-    trailing: String? = null,
-    over: Boolean = false,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = Size20dp, end = Size20dp, top = 18.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun FavoriteLeading(app: FavoriteApp) {
+    Box(
+        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f),
+        FavoriteAppIcon(
+            app = app,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp),
+            iconModel = rememberFavoriteIconModel(app),
         )
-        if (trailing != null) {
-            Text(
-                text = trailing,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-            )
-        }
     }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = Size20dp, end = Size20dp, top = 18.dp, bottom = 6.dp),
+    )
 }
 
 @Composable
@@ -857,7 +772,7 @@ private fun categoryIcon(titleRes: Int): MaterialSymbol =
     }
 
 // ------------------------------------------------------------------------------------------------
-// Leading/label resolution for a pinned entry (built-in glyph, favorite glyph, or group avatar).
+// Leading/label resolution for a pinned entry (built-in glyph, favorite icon, or group avatar).
 // Computed once so a group's channel is subscribed at most once per row.
 // ------------------------------------------------------------------------------------------------
 
@@ -868,6 +783,12 @@ private sealed interface PinnedVisual {
         val icon: MaterialSymbol,
         override val label: String,
     ) : PinnedVisual
+
+    data class Favorite(
+        val app: FavoriteApp,
+    ) : PinnedVisual {
+        override val label: String get() = app.label
+    }
 
     data class Avatar(
         val display: GroupEntryDisplay,
@@ -889,8 +810,7 @@ private fun rememberPinnedVisual(
         is BottomBarEntry.Favorite -> {
             val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
             val app = favorites.firstOrNull { it.id == entry.favoriteId }
-            val icon = if (app is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
-            PinnedVisual.Glyph(icon, app?.label ?: "")
+            if (app != null) PinnedVisual.Favorite(app) else PinnedVisual.Glyph(MaterialSymbols.Public, "")
         }
         is BottomBarEntry.PublicChat,
         is BottomBarEntry.RelayGroup,
