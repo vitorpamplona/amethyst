@@ -26,7 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -46,12 +48,20 @@ fun RelayGroupChatScreen(
     val channelId = remember(id, relay) { GroupId(id, relay) }
     val draft = remember(draftId) { draftId?.let { accountViewModel.getNoteIfExists(it) } }
     val replyTo = remember(replyToId) { replyToId?.let { accountViewModel.checkGetOrCreateNote(it) } }
+    val selfRoute = remember(id, relayUrl) { Route.RelayGroup(id, relayUrl) }
 
     DisappearingScaffold(
         isInvertedLayout = true,
         topBar = {
             LoadRelayGroupChannel(channelId, accountViewModel) {
                 RelayGroupTopBar(it, inviteCode, accountViewModel, nav)
+            }
+        },
+        // Renders only when this is a bottom-nav root (AppBottomBar hides itself when canPop),
+        // so a pinned relay group works both as a pushed detail and as a bottom-nav tab.
+        bottomBar = {
+            AppBottomBar(selfRoute, nav, accountViewModel) { route ->
+                if (route != selfRoute) nav.navBottomBar(route)
             }
         },
         accountViewModel = accountViewModel,

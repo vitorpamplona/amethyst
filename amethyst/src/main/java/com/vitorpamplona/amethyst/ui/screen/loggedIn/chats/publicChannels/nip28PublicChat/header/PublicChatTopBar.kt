@@ -43,6 +43,8 @@ fun PublicChatTopBar(
         extendableRow = {
             LongPublicChatChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
         },
+        // No back arrow when opened as a bottom-nav tab (nothing to pop); the bottom bar shows instead.
+        showBackButton = nav.canPop(),
         popBack = nav::popBack,
     )
 }
