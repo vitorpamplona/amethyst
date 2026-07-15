@@ -174,12 +174,12 @@ private fun ChatDeliveryDetailDialog(
             ) {
                 val recipients = delivery?.recipients
                 when {
-                    recipients != null ->
+                    !recipients.isNullOrEmpty() ->
                         recipients.forEach { recipient ->
                             RecipientDeliveryRow(recipient, accountViewModel, nav)
                         }
 
-                    delivery != null ->
+                    delivery != null && delivery.targetRelays.isNotEmpty() ->
                         delivery.targetRelays.sortedBy { it.url }.forEach { relay ->
                             RelayDeliveryRow(
                                 relay = relay,
@@ -187,11 +187,19 @@ private fun ChatDeliveryDetailDialog(
                             )
                         }
 
-                    else ->
+                    seenOnRelays.isNotEmpty() ->
                         // Untracked (sent before a restart): only the seen-on set is known.
                         seenOnRelays.sortedBy { it.url }.forEach { relay ->
                             RelayDeliveryRow(relay = relay, accepted = true)
                         }
+
+                    else ->
+                        // Nothing to list yet — a just-sent message no relay has acknowledged.
+                        // Show the pending status so the dialog is never an empty title.
+                        Text(
+                            text = stringRes(R.string.chat_delivery_pending),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
                 }
             }
         },
