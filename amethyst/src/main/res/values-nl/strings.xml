@@ -990,7 +990,7 @@
     
 <string name="relay_chat_explainer">Relay-chats zijn groepen die beheerd worden door een relay. Ze zijn zichtbaar voor iedereen op Nostr en iedereen kan deelnemen. Geschikt voor open communities rond een onderwerp. Sommige groepen zijn tijdelijk, waardoor berichten na verloop van tijd verdwijnen.</string>
     
-<string name="marmot_group">MLS Group</string>
+<string name="marmot_group">Marmot Group</string>
     
 <string name="marmot_group_no_messages_yet">Nog geen berichten</string>
     
