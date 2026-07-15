@@ -24,24 +24,23 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 
 /**
- * Returns [content] with every NIP-92 `imeta` URL on [event] that is not already present appended on
- * its own line, so an attachment carried only as an `imeta` tag (empty/incomplete content) still
- * renders. The shared media renderer only shows media whose URL appears in the text, but some
- * NIP-C7/Concord clients (e.g. Ditto/Soapbox Armada) attach an image purely as an `imeta` tag and
- * leave the content empty — symmetric to
+ * When [content] is blank, returns [event]'s NIP-92 `imeta` URLs joined one per line so an attachment
+ * carried only as an `imeta` tag (empty content) still renders. The shared media renderer only shows
+ * media whose URL appears in the text, but some NIP-C7/Concord clients (e.g. Ditto/Soapbox Armada)
+ * attach an image purely as an `imeta` tag and leave the content empty — symmetric to
  * [com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat.imageMessage], which appends the URL
  * on send. Encrypted-blob key/nonce are already registered by URL, so the shared pipeline fetches and
  * decrypts them transparently.
  *
- * Returns [content] unchanged when [event] is null or every imeta URL is already inline (the common
- * case), so normal messages are untouched.
+ * Returns [content] unchanged whenever it is non-blank (the common case) or [event] is null / carries
+ * no imeta URLs, so any message that already has text is untouched.
  */
 fun appendMissingImetaUrls(
     content: String,
     event: Event?,
 ): String {
-    if (event == null) return content
-    val missing = event.imetas().map { it.url }.filter { it.isNotBlank() && !content.contains(it) }
-    if (missing.isEmpty()) return content
-    return (listOf(content) + missing).filter { it.isNotBlank() }.joinToString("\n")
+    if (event == null || content.isNotBlank()) return content
+    val urls = event.imetas().map { it.url }.filter { it.isNotBlank() }
+    if (urls.isEmpty()) return content
+    return urls.joinToString("\n")
 }
