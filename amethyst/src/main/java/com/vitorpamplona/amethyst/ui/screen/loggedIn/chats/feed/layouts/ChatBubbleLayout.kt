@@ -377,7 +377,10 @@ private fun InnerChatBubble(
                 if (showDetails.value) {
                     detailRow()
                 } else if (timeRow != null) {
-                    Box(modifier = Modifier.align(Alignment.End)) {
+                    // Mirror the timestamp with the bubble so it sits on the same
+                    // center-facing edge for both sides: the left for the logged-in user's
+                    // own (right-aligned) bubbles, the right for everyone else's.
+                    Box(modifier = Modifier.align(if (isLoggedInUser) Alignment.Start else Alignment.End)) {
                         timeRow()
                     }
                 }
