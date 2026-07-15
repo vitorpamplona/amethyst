@@ -149,6 +149,28 @@ class ChatDeliveryTracker(
         }
     }
 
+    /**
+     * Registers a group message that was broadcast as a single encrypted [wrapId] to
+     * the group's [targetRelays] (Concord channels: the whole channel shares one
+     * plane wrap, not a per-recipient gift wrap). Relays OK the wrap, but the feed
+     * shows the decrypted inner rumor, so [displayedNoteId] (the rumor id) is mapped
+     * through [wrapId] — like [trackPublic] (relay ticks, no per-recipient breakdown)
+     * but keyed by the wrap the relay actually acknowledges.
+     */
+    fun trackWrappedPublic(
+        displayedNoteId: HexKey,
+        wrapId: HexKey,
+        targetRelays: Set<NormalizedRelayUrl>,
+    ) {
+        if (targetRelays.isEmpty()) return
+        synchronized(lock) {
+            flowForLocked(displayedNoteId).value = ChatDelivery(targetRelays)
+            // recipient is unused for a relay-only delivery (recipients stays null, so
+            // onAccepted never matches on it); reuse the note id as a harmless value.
+            wrapIndex = wrapIndex + (wrapId to (displayedNoteId to displayedNoteId))
+        }
+    }
+
     fun deliveryFlow(noteId: HexKey): StateFlow<ChatDelivery?> =
         synchronized(lock) {
             flowForLocked(noteId)

@@ -158,6 +158,8 @@ import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
+import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -2099,6 +2101,7 @@ class Account(
                 else ->
                     ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now(), emojiTags)
             }
+        trackConcordDelivery(entry, channelKey, wrap)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -2123,6 +2126,7 @@ class Account(
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
         val emojiTags = emoji.findEmojiTags(text).map { it.toTagArray() }.toTypedArray()
         val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now(), emojiTags)
+        trackConcordDelivery(entry, channelKey, wrap)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -2231,6 +2235,23 @@ class Account(
         concordSessions.ingest(wrap)
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
         if (relays.isNotEmpty()) client.publish(wrap, relays)
+    }
+
+    /**
+     * Registers an own Concord channel message with the delivery tracker so its chat
+     * bubble shows relay-acceptance ticks. Relays OK the encrypted [wrap], but the feed
+     * shows the inner rumor, so we re-open the wrap (we just built it, so this always
+     * succeeds) to key the tracker by the rumor id the bubble is drawn from. Reactions
+     * and typing wraps skip this — they never become a feed row.
+     */
+    private fun trackConcordDelivery(
+        entry: ConcordCommunityListEntry,
+        channelKey: GroupKey,
+        wrap: Event,
+    ) {
+        val rumorId = ConcordStreamEnvelope.openOrNull(wrap, channelKey)?.rumor?.id ?: return
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        chatDeliveryTracker.trackWrappedPublic(rumorId, wrap.id, relays)
     }
 
     // ── Concord roles & moderation (CORD-04) ─────────────────────────────────
