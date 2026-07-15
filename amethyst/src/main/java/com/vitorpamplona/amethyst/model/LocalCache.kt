@@ -790,7 +790,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         // permanent "Event is loading…" ghost. Drop it; the reverse order (delete after the message)
         // is already handled by the normal deletion cascade unlinking the note from its gatherers.
         messageRow?.let { (ch, note) ->
-            if (note.event == null) ch.removeNote(note)
+            if (note.event == null) {
+                ch.removeNote(note)
+            } else {
+                // The row was attached (addNote) BEFORE justConsume set the event, so addNote saw a
+                // null createdAt and could not pick lastNote or order the feed. The event is loaded
+                // now — refresh so the channel's last-message preview, unread count, and ordering are
+                // correct (otherwise lastNote stays null forever and every row reads "No messages yet").
+                ch.refreshAfterEventLoad(note)
+            }
         }
     }
 
