@@ -190,15 +190,20 @@ test_11_leave_group() {
   fi
 }
 
-# Regression guard for the Marmot group-icon feature: setting a group image
-# writes the MIP-01 image fields into the NostrGroupData extension. mdk-core (the
-# library whitenoise uses) rejects ANY trailing bytes in that extension at a known
-# version, so a mis-encoded image commit would make the whole group unprocessable
-# for wn. We verify end-to-end that an amy-authored image commit stays parseable:
-# A sets an image, then renames — the rename is a LATER epoch, so wn can only
-# observe the new name if it first applied the image-bearing GCE commit. If the
-# image extension were rejected, wn would stall at the pre-image epoch and never
-# see the rename.
+# Regression guard for the Marmot group-icon feature: setting a group image writes
+# the MIP-01 v2 image fields into the NostrGroupData extension. mdk-core (the library
+# whitenoise uses) rejects ANY trailing bytes in that extension at a known version, so
+# a mis-encoded image commit would make the whole group unprocessable for wn and stall
+# it a full epoch behind A.
+#
+# We prove wn applied the image commit the hard way: A sets an image, then sends an
+# application message at the POST-image epoch. wn can only decrypt that message if it
+# advanced past the image-bearing GCE commit — so wn receiving it is direct evidence
+# the image extension parsed. (Once it parses, whitenoise even tries to fetch the
+# avatar from Blossom via background_sync_group_image_cache_if_needed.)
+#
+# A single application message is used rather than a second commit on purpose: two
+# commits fired 3s apart race wn's per-epoch processing and give a flaky signal.
 test_17_group_image_commit() {
   banner "Test 17 — Group image commit stays parseable on whitenoise (MIP-01 v2)"
   local id="17 group image"
@@ -210,6 +215,14 @@ test_17_group_image_commit() {
     record_result "$id" skip "no GROUP_02"; return
   fi
 
+  # Skip cleanly if A is no longer a member of GROUP_02 (a later test may have removed
+  # A) — this test only makes sense while A can still commit to the group.
+  if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
+        | jq -e --arg p "$A_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' \
+        >/dev/null 2>&1; then
+    record_result "$id" skip "A not in GROUP_02"; return
+  fi
+
   # Contents are irrelevant — amy encrypts whatever bytes it's given; the interop
   # question is purely whether the resulting image extension parses on wn.
   local img="$STATE_DIR/marmot-icon.bin"
@@ -218,20 +231,16 @@ test_17_group_image_commit() {
   if ! amy_json marmot group set-image "$gid" "$img" >/dev/null; then
     record_result "$id" fail "amy set-image failed"; return
   fi
+
   sleep 3
-  if ! amy_json marmot group rename "$gid" "Interop-02-iconecho" >/dev/null; then
-    record_result "$id" fail "amy rename after set-image failed"; return
+  local tag="post-image-ping-from-amethyst"
+  if ! amy_json marmot message send "$gid" "$tag" >/dev/null; then
+    record_result "$id" fail "amy post-image send failed"; return
   fi
 
-  local deadline=$(( $(date +%s) + 120 )) seen=""
-  while [[ $(date +%s) -lt $deadline ]]; do
-    seen=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | (.group // .) | .name // empty')
-    [[ "$seen" == "Interop-02-iconecho" ]] && break
-    sleep 3
-  done
-  if [[ "$seen" == "Interop-02-iconecho" ]]; then
+  if wait_for_message B "$mls_gid" "$tag" 120; then
     record_result "$id" pass
   else
-    record_result "$id" fail "wn did not advance past the image commit (name=\"$seen\")"
+    record_result "$id" fail "wn could not decrypt A's post-image message — image commit not applied"
   fi
 }
