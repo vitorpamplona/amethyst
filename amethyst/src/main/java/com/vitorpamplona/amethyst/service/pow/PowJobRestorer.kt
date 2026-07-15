@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.pow
 
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate

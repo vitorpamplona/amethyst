@@ -100,7 +100,7 @@ sealed class DeckColumnType {
             Wallet -> "Wallet"
             is Article -> "Article"
             is Editor -> "New Article"
-            Drafts -> "Drafts"
+            Drafts -> "Scheduled"
             MyHighlights -> "Highlights"
             is Profile -> "Profile"
             is Thread -> "Thread"

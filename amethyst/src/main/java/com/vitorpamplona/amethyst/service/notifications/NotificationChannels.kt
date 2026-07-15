@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostNotifier
+import com.vitorpamplona.amethyst.service.scheduledposts.AndroidScheduledPostNotifier
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 
@@ -104,7 +104,7 @@ object NotificationChannels {
                 nameRes = R.string.app_notification_scheduled_posts_channel_name,
                 icon = MaterialSymbols.Schedule,
                 channelId = { stringRes(it, R.string.app_notification_scheduled_posts_channel_id) },
-                ensure = { ScheduledPostNotifier.ensureChannel(it) },
+                ensure = { AndroidScheduledPostNotifier.ensureChannel(it) },
             ),
             Entry(
                 nameRes = R.string.app_notification_calls_channel_name,

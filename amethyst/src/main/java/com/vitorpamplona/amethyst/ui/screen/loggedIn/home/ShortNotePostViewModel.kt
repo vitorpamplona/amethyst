@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -57,7 +58,6 @@ import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
 import com.vitorpamplona.amethyst.service.ai.WritingResult
 import com.vitorpamplona.amethyst.service.ai.WritingTone
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator

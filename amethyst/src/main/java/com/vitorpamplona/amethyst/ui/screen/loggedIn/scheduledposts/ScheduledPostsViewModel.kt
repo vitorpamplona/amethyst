@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

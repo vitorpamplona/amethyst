@@ -31,13 +31,14 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostPublisher
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 
 /**
@@ -68,8 +69,6 @@ class ScheduledPostWorker(
         private const val TAG = "ScheduledPostWorker"
         private const val WORK_NAME = "scheduled_post_worker"
         private const val WORK_NAME_CATCH_UP = "scheduled_post_worker_catch_up"
-        private const val OK_TIMEOUT_SEC = 30L
-        private const val OK_POLL_MS = 500L
 
         fun schedule(context: Context) {
             val constraints =
@@ -138,6 +137,7 @@ class ScheduledPostWorker(
         return try {
             val appModules = Amethyst.instance
             val store = appModules.scheduledPostStore
+            val notifier = AndroidScheduledPostNotifier(applicationContext)
 
             val all = store.list()
             val pending = all.count { it.status == ScheduledPostStatus.PENDING }
@@ -169,26 +169,35 @@ class ScheduledPostWorker(
                     val extras = post.extraEventsJson.map { Event.fromJson(it) }
 
                     Log.d(TAG) { "client.publish(${post.id}) starting on ${relays.size} relay(s)" }
-                    account.client.publish(event, relays)
-                    account.consumePostEvent(event, relays, extras)
 
-                    val acks = waitForOk(account.client, event.id, relays.size)
+                    val results = account.client.publishAndConfirmDetailed(event, relays)
+                    val acks = results.count { it.value }
                     if (acks > 0) {
+                        // Only feed the event into the local cache once at least one relay
+                        // acked — a failed publish must not appear in the user's timeline.
+                        account.consumePostEvent(event, relays, extras)
                         store.markSent(post.id)
-                        ScheduledPostNotifier.notifySent(applicationContext, post)
+                        notifier.notifySent(post)
                         Log.d(TAG) { "client.publish(${post.id}) acked by $acks/${relays.size}; marked SENT" }
                     } else {
-                        val msg = "no relay acknowledged within ${OK_TIMEOUT_SEC}s"
-                        store.markFailed(post.id, msg)
-                        ScheduledPostNotifier.notifyFailed(applicationContext, post, msg)
-                        Log.w(TAG) { "client.publish(${post.id}) failed: $msg" }
+                        // Transient no-ack: release the claim for a later retry rather than
+                        // stranding the post as FAILED, until MAX_PUBLISH_ATTEMPTS is hit.
+                        val msg = "no relay acknowledged"
+                        if (post.attemptCount < ScheduledPostPublisher.MAX_PUBLISH_ATTEMPTS) {
+                            store.releaseClaim(post.id)
+                            Log.w(TAG) { "client.publish(${post.id}) got no ack (attempt ${post.attemptCount}); released for retry" }
+                        } else {
+                            store.markFailed(post.id, msg)
+                            notifier.notifyFailed(post, msg)
+                            Log.w(TAG) { "client.publish(${post.id}) failed after max attempts: $msg" }
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to publish scheduled post ${post.id}", e)
                     store.markFailed(post.id, e.message)
-                    ScheduledPostNotifier.notifyFailed(applicationContext, post, e.message)
+                    notifier.notifyFailed(post, e.message)
                 }
             }
 
@@ -200,29 +209,5 @@ class ScheduledPostWorker(
             Log.e(TAG, "doWork() unexpected failure", e)
             Result.retry()
         }
-    }
-
-    /**
-     * Polls [INostrClient.pendingPublishRelaysFor] until at least one relay sends
-     * an OK ack or [OK_TIMEOUT_SEC] elapses. Returns the number of relays that
-     * acked. The publish call itself is fire-and-forget; without this wait the
-     * worker can be torn down before the websocket finishes delivery.
-     */
-    private suspend fun waitForOk(
-        client: INostrClient,
-        eventId: String,
-        totalRelays: Int,
-    ): Int {
-        val deadline = System.currentTimeMillis() + OK_TIMEOUT_SEC * 1000
-        while (System.currentTimeMillis() < deadline) {
-            // null means the outbox dropped the entry — every relay either OK'd
-            // or hit the discard cap (replaced/pow/deleted/invalid). Treat as full ack.
-            val pending = client.pendingPublishRelaysFor(eventId) ?: return totalRelays
-            val acked = totalRelays - pending.size
-            if (acked > 0) return acked
-            delay(OK_POLL_MS)
-        }
-        val pending = client.pendingPublishRelaysFor(eventId) ?: return totalRelays
-        return totalRelays - pending.size
     }
 }

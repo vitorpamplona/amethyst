@@ -72,7 +72,6 @@ import com.vitorpamplona.amethyst.desktop.ui.ArticleEditorScreen
 import com.vitorpamplona.amethyst.desktop.ui.ArticleReaderScreen
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.desktop.ui.CustomFeedScreen
-import com.vitorpamplona.amethyst.desktop.ui.DraftsScreen
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
 import com.vitorpamplona.amethyst.desktop.ui.ReadsScreen
@@ -82,6 +81,7 @@ import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayDashboardScreen
+import com.vitorpamplona.amethyst.desktop.ui.scheduledposts.DraftsAndScheduledScreen
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
@@ -139,6 +139,7 @@ fun DeckColumnContainer(
     appScope: CoroutineScope,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onEditInComposer: (content: String, draftDTag: String?, scheduledForSec: Long?) -> Unit = { _, _, _ -> },
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToRelays: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
@@ -236,6 +237,7 @@ fun DeckColumnContainer(
                 compactMode = true,
                 onShowComposeDialog = onShowComposeDialog,
                 onShowReplyDialog = onShowReplyDialog,
+                onEditInComposer = onEditInComposer,
                 onZapFeedback = onZapFeedback,
                 onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
                 onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
@@ -341,6 +343,7 @@ internal fun RootContent(
     compactMode: Boolean = false,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onEditInComposer: (content: String, draftDTag: String?, scheduledForSec: Long?) -> Unit = { _, _, _ -> },
     onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
@@ -586,9 +589,13 @@ internal fun RootContent(
         }
 
         DeckColumnType.Drafts -> {
-            DraftsScreen(
+            DraftsAndScheduledScreen(
                 draftStore = draftStore ?: remember { DesktopDraftStore(scope) },
+                accountPubkeyHex = account.pubKeyHex,
+                relayManager = relayManager,
+                account = account,
                 onOpenEditor = { slug -> onNavigateToEditor(slug) },
+                onEditInComposer = onEditInComposer,
             )
         }
 
