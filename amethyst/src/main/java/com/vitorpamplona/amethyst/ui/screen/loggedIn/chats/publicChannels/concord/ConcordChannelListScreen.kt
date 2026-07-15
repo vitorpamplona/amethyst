@@ -60,15 +60,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
@@ -254,33 +260,133 @@ fun ConcordChannelListScreen(
                             def.private == true -> MaterialSymbols.Lock
                             else -> MaterialSymbols.Tag
                         }
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { nav.nav(Route.Concord(communityId, entry.key)) }
-                            .padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = if (canManageChannels) 4.dp else 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        SymbolIcon(
-                            symbol = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1)
-                        if (canManageChannels) {
-                            ConcordChannelRowMenu(
-                                onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
-                                onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
-                            )
-                        }
-                    }
+                    ConcordChannelListRow(
+                        communityId = communityId,
+                        channelKey = entry.key,
+                        channelName = name,
+                        icon = icon,
+                        isVoice = def.voice == true,
+                        canManageChannels = canManageChannels,
+                        accountViewModel = accountViewModel,
+                        onClick = { nav.nav(Route.Concord(communityId, entry.key)) },
+                        onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                        onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                    )
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
     }
+}
+
+/**
+ * One channel row in the community's server view: its icon, name, a preview of the last message
+ * (author + snippet), the relative time of that message, and an unread-message count badge — plus
+ * the manager-only overflow menu. Name/icon come from the folded Control Plane definition; the
+ * preview, time, and unread count are read reactively from the channel's own message store so they
+ * fill in the moment messages fold in and clear as soon as the channel is opened (last-read advances).
+ */
+@Composable
+private fun ConcordChannelListRow(
+    communityId: String,
+    channelKey: String,
+    channelName: String,
+    icon: MaterialSymbol,
+    isVoice: Boolean,
+    canManageChannels: Boolean,
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val account = accountViewModel.account
+    // getOrCreate (not getIfExists): a channel folded on the Control Plane may have no message note
+    // yet; its notes flow then makes the preview/time/unread reactive as the first message arrives.
+    val channel = remember(communityId, channelKey) { LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelKey)) }
+    val channelState by channel
+        .flow()
+        .notes.stateFlow
+        .collectAsStateWithLifecycle()
+    val lastNote = channelState.channel.lastNote
+    val unread by
+        remember(communityId, channelKey) { concordChannelUnreadCountFlow(account, communityId, channelKey) }
+            .collectAsStateWithLifecycle(0)
+    val hasUnread = unread > 0
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = if (canManageChannels) 4.dp else 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SymbolIcon(
+            symbol = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = if (hasUnread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                channelName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            ConcordChannelPreviewLine(lastNote, isVoice, accountViewModel)
+        }
+        lastNote?.createdAt()?.let { ts ->
+            Text(
+                timeAgo(ts, LocalContext.current, prefix = ""),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+        ConcordUnreadBadge(unread)
+        if (canManageChannels) {
+            ConcordChannelRowMenu(
+                onRename = onRename,
+                onDelete = onDelete,
+            )
+        }
+    }
+}
+
+/**
+ * The one-line message preview under a channel name: the last message's author and a snippet of its
+ * content ("author: hello"), or a muted "No messages yet" placeholder before anything has folded in.
+ * The author name resolves reactively, so it upgrades from a hex fallback to the profile name.
+ */
+@Composable
+private fun ConcordChannelPreviewLine(
+    lastNote: Note?,
+    isVoice: Boolean,
+    accountViewModel: AccountViewModel,
+) {
+    val event = lastNote?.event
+    val author = lastNote?.author
+    val preview: String =
+        if (event != null && author != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            val body = event.content.take(80).ifBlank { "" }
+            if (body.isBlank()) authorName ?: "" else "${authorName ?: ""}: $body"
+        } else if (event != null) {
+            event.content.take(80)
+        } else {
+            // Voice channels never carry chat notes, so "No messages yet" would read oddly — leave blank.
+            if (isVoice) return
+            stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_no_messages)
+        }
+    Text(
+        preview,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 /** A pending channel create ([channelIdHex] null) or rename target. */
