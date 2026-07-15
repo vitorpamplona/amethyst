@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
@@ -95,6 +96,9 @@ import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -106,6 +110,7 @@ import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -2194,10 +2199,24 @@ class AccountViewModel(
         account.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
+    /**
+     * Encrypt + upload a picked image as a group avatar (canonical
+     * `marmot-group-image-v1` scheme). The returned handle is later passed to
+     * [updateMarmotGroupMetadata] as [MarmotGroupIconChange.Set] to commit it into
+     * the group's metadata. Uploading is separated from the metadata commit so the
+     * (slow) Blossom upload can show its own progress before the commit is signed.
+     */
+    suspend fun uploadMarmotGroupIcon(
+        uri: Uri,
+        mimeType: String?,
+        context: Context,
+    ): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(uri, mimeType, account.settings.defaultFileServer, context)
+
     suspend fun updateMarmotGroupMetadata(
         nostrGroupId: String,
         name: String,
         description: String,
+        icon: MarmotGroupIconChange = MarmotGroupIconChange.Keep,
     ) {
         // Stamp the inviter's outbox relays into the group metadata so that
         // every member ends up with a single canonical relay set for kind:445
@@ -2210,18 +2229,29 @@ class AccountViewModel(
             account.outboxRelays.flow.value
                 .map { it.url }
         val currentMetadata = account.marmotManager?.groupMetadata(nostrGroupId)
-        val updatedMetadata =
+        val baseMetadata =
             currentMetadata
                 ?.copy(name = name, description = description)
                 ?.withMergedRelays(outboxRelayStrings)
-                ?: com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-                    .bootstrap(
-                        nostrGroupId = nostrGroupId,
-                        creatorPubKey = account.signer.pubKey,
-                        outboxRelays = outboxRelayStrings,
-                        name = name,
-                        description = description,
+                ?: MarmotGroupData.bootstrap(
+                    nostrGroupId = nostrGroupId,
+                    creatorPubKey = account.signer.pubKey,
+                    outboxRelays = outboxRelayStrings,
+                    name = name,
+                    description = description,
+                )
+        val updatedMetadata =
+            when (icon) {
+                is MarmotGroupIconChange.Keep -> baseMetadata
+                is MarmotGroupIconChange.Clear -> baseMetadata.withoutImage()
+                is MarmotGroupIconChange.Set ->
+                    baseMetadata.withImage(
+                        imageHash = icon.upload.imageHash,
+                        imageKey = icon.upload.imageKey,
+                        imageNonce = icon.upload.imageNonce,
+                        imageUploadKey = icon.upload.imageUploadKey,
                     )
+            }
         val relays = account.marmotGroupRelays(nostrGroupId)
         account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }

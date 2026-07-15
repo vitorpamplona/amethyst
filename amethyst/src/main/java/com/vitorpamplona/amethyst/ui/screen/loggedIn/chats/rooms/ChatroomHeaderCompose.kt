@@ -83,7 +83,9 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
@@ -340,10 +342,22 @@ private fun MarmotGroupRoomCompose(
     nav: INav,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
+    val image by chatroom.image.collectAsStateWithLifecycle()
+    val relays by chatroom.relays.collectAsStateWithLifecycle()
+    val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
     val author = lastMessage.author
     val noteEvent = lastMessage.event
     val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
+
+    // Prefer the group's own (encrypted) avatar; when it has none, fall back to the
+    // NIP-11 icon of one of the group's relays (fetched on a cache miss).
+    val channelPicture =
+        if (image != null) {
+            rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)
+        } else {
+            loadMarmotRelayIcon(relays)
+        }
 
     val lastContent =
         if (author != null && noteEvent != null) {
@@ -357,7 +371,7 @@ private fun MarmotGroupRoomCompose(
 
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
-        channelPicture = null,
+        channelPicture = channelPicture,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,

@@ -49,14 +49,22 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  *     opaque admin_pubkeys<0..2^16-1>;      // Concatenated raw 32-byte x-only pubkeys
  *     RelayUrl relays<0..2^16-1>;
  *     opaque image_hash<0..32>;
- *     opaque image_key<0..32>;              // HKDF seed for encryption key derivation
+ *     opaque image_key<0..32>;              // MIP-01 v2: HKDF seed for the AEAD key
  *     opaque image_nonce<0..12>;
- *     opaque image_upload_key<0..32>;       // HKDF seed for upload keypair derivation
+ *     opaque image_upload_key<0..32>;       // MIP-01 v2: HKDF seed for the Blossom-auth key
  *     opaque disappearing_message_secs<0..8>; // v3+: 0 bytes = persist forever,
  *                                             // 8 bytes big-endian uint64 = expiration secs
  *                                             // (value 0 is rejected)
  * } NostrGroupData;
  * ```
+ *
+ * The image fields carry the group avatar under the MIP-01 v2 scheme (see
+ * [MarmotGroupImageEncryption]). `image_key`/`image_upload_key` are HKDF **seeds**;
+ * `image_hash` is the SHA-256 of the encrypted blob. This is the exact field layout
+ * mdk-core's v1/v2 `NostrGroupDataExtension` parser expects — the image fields are the
+ * last ones it reads — so populating an avatar stays byte-compatible with
+ * whitenoise/mdk (no trailing bytes). The plaintext MIME type is intentionally NOT
+ * stored here: mdk rejects any trailing bytes at a known version and has no such field.
  */
 @Immutable
 data class MarmotGroupData(
@@ -80,13 +88,13 @@ data class MarmotGroupData(
     val adminPubkeys: List<HexKey> = emptyList(),
     /** Relay URLs for group message distribution. SHOULD contain at least one. */
     val relays: List<String> = emptyList(),
-    /** SHA-256 hash of the encrypted group image (hex). Empty if no image. */
+    /** SHA-256 hash (hex) of the ENCRYPTED group image blob (= its Blossom hash). Null if no image. */
     val imageHash: HexKey? = null,
-    /** HKDF seed for deriving the image encryption key. Empty if no image. */
+    /** 32-byte HKDF seed for the image AEAD key (MIP-01 v2). Null if no image. */
     val imageKey: ByteArray? = null,
-    /** ChaCha20-Poly1305 nonce for image encryption. Empty if no image. */
+    /** 12-byte ChaCha20-Poly1305 nonce for image encryption. Null if no image. */
     val imageNonce: ByteArray? = null,
-    /** HKDF seed for deriving the Blossom upload keypair. Empty if no image. */
+    /** 32-byte HKDF seed for the Blossom-auth keypair (MIP-01 v2). Null if no image. */
     val imageUploadKey: ByteArray? = null,
     /**
      * Disappearing-message duration in seconds (v3+).
@@ -111,6 +119,32 @@ data class MarmotGroupData(
 
     /** Whether this group has an encrypted image set */
     fun hasImage(): Boolean = imageHash != null && imageKey != null && imageNonce != null
+
+    /**
+     * Return a copy carrying the given (already-encrypted-and-uploaded) group image.
+     * Keeps all image-field knowledge in one place so the UI and the CLI stay in sync.
+     */
+    fun withImage(
+        imageHash: HexKey,
+        imageKey: ByteArray,
+        imageNonce: ByteArray,
+        imageUploadKey: ByteArray,
+    ): MarmotGroupData =
+        copy(
+            imageHash = imageHash,
+            imageKey = imageKey,
+            imageNonce = imageNonce,
+            imageUploadKey = imageUploadKey,
+        )
+
+    /** Return a copy with the group image cleared. */
+    fun withoutImage(): MarmotGroupData =
+        copy(
+            imageHash = null,
+            imageKey = null,
+            imageNonce = null,
+            imageUploadKey = null,
+        )
 
     /**
      * Return a copy with [newRelays] unioned into [relays], de-duplicated and order-preserving.
@@ -167,8 +201,9 @@ data class MarmotGroupData(
         writer.putOpaqueVarInt(imageUploadKey ?: ByteArray(0))
 
         // v3+: disappearing_message_secs (0 bytes = none, 8 bytes big-endian uint64 = secs).
-        // Only emitted for version ≥ 3; v1/v2 have no such field, so omitting it keeps
-        // the wire format byte-for-byte compatible with older implementations (MDK v2).
+        // Only emitted for version ≥ 3; v1/v2 have no such field, so omitting it keeps the
+        // wire format byte-for-byte compatible with mdk's v1/v2 NostrGroupDataExtension
+        // parser (which ends at image_upload_key and rejects any trailing bytes).
         if (version >= 3) {
             val disappearingBytes =
                 disappearingMessageSecs?.let { secs ->

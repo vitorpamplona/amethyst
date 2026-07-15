@@ -4138,6 +4138,10 @@
     <string name="marmot_group_name_placeholder">Enter group name</string>
     <string name="marmot_group_description_placeholder">Enter group description (optional)</string>
     <string name="marmot_edit_info_footer">Changes will be committed to the group via MLS and propagated to all members.</string>
+    <string name="marmot_group_icon">Group icon</string>
+    <string name="marmot_add_photo">Add photo</string>
+    <string name="marmot_change_photo">Change photo</string>
+    <string name="marmot_remove_photo">Remove photo</string>
     <string name="marmot_group_info_updated">Group info updated</string>
     <string name="marmot_failed_to_update">Failed to update: %1$s</string>
     <string name="marmot_failed_to_create_group">Failed to create group: %1$s</string>

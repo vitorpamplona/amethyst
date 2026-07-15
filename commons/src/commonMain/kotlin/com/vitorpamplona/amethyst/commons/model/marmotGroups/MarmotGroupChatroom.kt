@@ -48,6 +48,13 @@ class MarmotGroupChatroom(
     var messages: Set<Note> = setOf()
     var displayName = MutableStateFlow<String?>(null)
     var description = MutableStateFlow<String?>(null)
+
+    /**
+     * The group's encrypted avatar image parameters (Blossom hash + decryption key/nonce),
+     * or null when the group has no image set. Front ends fetch the blob by hash and decrypt
+     * it; when null they fall back to the host relay's NIP-11 icon.
+     */
+    var image = MutableStateFlow<MarmotGroupImage?>(null)
     var adminPubkeys = MutableStateFlow<List<HexKey>>(emptyList())
     var relays = MutableStateFlow<List<String>>(emptyList())
     var memberCount = MutableStateFlow(0)
