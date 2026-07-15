@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -258,6 +259,13 @@ fun ConversationListPane(
                 modifier = Modifier.weight(1f),
             ) {
                 items(currentList, key = { it.roomKey.hashCode() }) { item ->
+                    // Viewport-driven prewarm: a LazyColumn only composes the
+                    // rows that are visible (plus a small buffer), so this warms
+                    // each peer's NIP-17 DM relay list exactly when their row
+                    // scrolls into view — and no earlier.
+                    LaunchedEffect(item.roomKey) {
+                        state.prewarmPeerRelays(item.roomKey.users)
+                    }
                     val index = currentList.indexOf(item)
                     val isFocused = index == focusedIndex
                     ConversationCard(

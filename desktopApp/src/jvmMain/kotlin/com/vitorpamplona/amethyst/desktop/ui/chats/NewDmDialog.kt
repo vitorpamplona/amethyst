@@ -75,6 +75,7 @@ fun NewDmDialog(
     localCache: DesktopLocalCache,
     onUserSelected: (ChatroomKey) -> Unit,
     onDismiss: () -> Unit,
+    onPrewarmDmRelays: (Collection<String>) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     // Recipients selected so far. One → 1:1 chat, more than one → group chat.
@@ -82,7 +83,15 @@ fun NewDmDialog(
 
     fun toggle(user: User) {
         val existing = selected.firstOrNull { it.pubkeyHex == user.pubkeyHex }
-        if (existing != null) selected.remove(existing) else selected.add(user)
+        if (existing != null) {
+            selected.remove(existing)
+        } else {
+            selected.add(user)
+            // Selecting a recipient is a strong signal we're about to DM them —
+            // download their kind:10050 now so the relay list is ready by the
+            // time the composer opens.
+            onPrewarmDmRelays(listOf(user.pubkeyHex))
+        }
     }
 
     fun isSelected(user: User) = selected.any { it.pubkeyHex == user.pubkeyHex }
