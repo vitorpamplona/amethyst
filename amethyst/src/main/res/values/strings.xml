@@ -4198,4 +4198,5 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Unable to create a lightning invoice from %1$s: Element pr not found in the resulting JSON.</string>
     <string name="app_name_debug" translatable="false">Amy Debug</string>
     <string name="app_name_benchmark" translatable="false">Amy Benchmark</string>
+    <string name="geohash_chat_open">Open location chat</string>
 </resources>

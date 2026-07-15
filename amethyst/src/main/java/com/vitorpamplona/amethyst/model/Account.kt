@@ -3291,6 +3291,23 @@ class Account(
         client.publish(event, relayList)
     }
 
+    /**
+     * Sign [template] with an arbitrary [signer] (e.g. a per-geohash ephemeral
+     * identity that is deliberately NOT this account's key) and publish to exactly
+     * [relayList]. Used by geohash location chat, where authorship inside a cell
+     * must not be linkable to the user's npub.
+     */
+    suspend fun <T : Event> signWithAndSendPrivately(
+        template: EventTemplate<T>,
+        signer: NostrSigner,
+        relayList: Set<NormalizedRelayUrl>,
+    ): T {
+        val event = signer.sign(template)
+        cache.justConsumeMyOwnEvent(event)
+        if (relayList.isNotEmpty()) client.publish(event, relayList)
+        return event
+    }
+
     suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
         template: EventTemplate<T>,
         relayList: (T) -> List<NormalizedRelayUrl>?,
