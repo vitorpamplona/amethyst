@@ -79,8 +79,9 @@ import com.vitorpamplona.amethyst.commons.profile.EditProfileFields
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
 import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
-import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.preferredBlossomServer
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -124,6 +125,7 @@ sealed class Nip05Status {
 fun EditProfileDialog(
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     latestMetadata: MetadataEvent?,
     latestIdentities: ExternalIdentitiesEvent?,
     onDismiss: () -> Unit,
@@ -171,7 +173,7 @@ fun EditProfileDialog(
     }
 
     val orchestrator = remember { UploadOrchestrator() }
-    val serverBaseUrl = DesktopPreferences.preferredBlossomServer
+    val serverBaseUrl = localCache.preferredBlossomServer(account.pubKeyHex)
 
     fun uploadFile(
         file: File,

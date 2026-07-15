@@ -74,10 +74,11 @@ import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
-import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
+import com.vitorpamplona.amethyst.desktop.model.blossomServers
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.drafts.LocalNoteDraftStore
 import com.vitorpamplona.amethyst.desktop.service.drafts.NoteDraft
@@ -205,7 +206,13 @@ fun ComposeNoteDialog(
     val uploadTracker = remember { DesktopUploadTracker() }
     val uploadState by uploadTracker.state.collectAsState()
     val orchestrator = remember { UploadOrchestrator() }
-    var selectedServer by remember { mutableStateOf(DesktopPreferences.preferredBlossomServer) }
+    // Media servers come from the account's kind-10063 list (per-account, loaded
+    // by the account-config subscription), not a process-global preference.
+    val blossomServers =
+        remember(localCache, account) {
+            localCache?.blossomServers(account.pubKeyHex).orEmpty().ifEmpty { listOf(DEFAULT_BLOSSOM_SERVER) }
+        }
+    var selectedServer by remember { mutableStateOf(blossomServers.first()) }
     var postAsPicture by remember { mutableStateOf(false) }
 
     // Scheduling — when non-null the note is stored for later publication instead of
@@ -576,6 +583,7 @@ fun ComposeNoteDialog(
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     ) {
                         ServerSelector(
+                            servers = blossomServers,
                             selectedServer = selectedServer,
                             onServerSelected = { selectedServer = it },
                         )
@@ -826,10 +834,10 @@ private fun buildIMetaTags(results: List<UploadResult>): List<IMetaTag> =
 
 @Composable
 private fun ServerSelector(
+    servers: List<String>,
     selectedServer: String,
     onServerSelected: (String) -> Unit,
 ) {
-    val servers = DesktopPreferences.blossomServers
     if (servers.size <= 1) {
         // Only one server — just show label, no dropdown
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

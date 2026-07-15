@@ -1189,6 +1189,7 @@ fun UserProfileScreen(
         EditProfileDialog(
             account = account,
             relayManager = relayManager,
+            localCache = localCache,
             latestMetadata = latestMetadataEvent,
             latestIdentities = latestIdentitiesEvent,
             onDismiss = { showEditProfile = false },

@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.auth.DesktopAuthCoordinator
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
@@ -1721,19 +1722,6 @@ fun MainContent(
         onDispose { relayManager.unsubscribe(bootstrapSubId) }
     }
 
-    // Mirror the network Blossom server list (kind 10063) into local prefs so
-    // the upload path (ComposeNoteDialog) and cold start reflect the list the
-    // user configured on any Amethyst client. Only overwrite with a non-empty
-    // network list — an empty flow value means the event hasn't loaded yet, and
-    // clobbering prefs then would wipe the user's offline fallback.
-    LaunchedEffect(iAccount) {
-        iAccount.blossomServerList.flow.collect { servers ->
-            if (servers.isNotEmpty() && servers != DesktopPreferences.blossomServers) {
-                DesktopPreferences.blossomServers = servers
-            }
-        }
-    }
-
     // Subscribe to incoming DMs and process into chatroomList
     LaunchedEffect(account) {
         relayManager.connectedRelays.first { it.isNotEmpty() }
@@ -2237,7 +2225,7 @@ fun RelaySettingsScreen(
     onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit = {},
     namecoinPreferences: DesktopNamecoinPreferences? = null,
     blossomServers: kotlinx.coroutines.flow.StateFlow<List<String>>? = null,
-    onBlossomServersChanged: (List<String>) -> Unit = { DesktopPreferences.blossomServers = it },
+    onBlossomServersChanged: (List<String>) -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -2363,9 +2351,9 @@ fun RelaySettingsScreen(
 
             // Media Server Settings (Blossom, kind 10063 — synced with mobile)
             val networkBlossomServers by (blossomServers?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
-            // The kind-10063 list is authoritative when present; before it loads
-            // (or when the user has none) fall back to the local prefs mirror.
-            val effectiveBlossomServers = networkBlossomServers.ifEmpty { DesktopPreferences.blossomServers }
+            // The kind-10063 list is authoritative; before it loads (or when the
+            // user has published none) show the default server.
+            val effectiveBlossomServers = networkBlossomServers.ifEmpty { listOf(DEFAULT_BLOSSOM_SERVER) }
             key(effectiveBlossomServers) {
                 MediaServerSettings(
                     initialServers = effectiveBlossomServers,

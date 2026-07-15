@@ -88,7 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
-import com.vitorpamplona.amethyst.desktop.DesktopPreferences
+import com.vitorpamplona.amethyst.desktop.model.preferredBlossomServer
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
@@ -882,7 +882,7 @@ private suspend fun sendEncryptedFiles(
     cacheProvider: ICacheProvider,
 ) {
     val orchestrator = UploadOrchestrator()
-    val server = DesktopPreferences.preferredBlossomServer
+    val server = cacheProvider.preferredBlossomServer(account.pubKey)
     val recipients = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) }.map { it.toPTag() }
 
     for (file in files) {

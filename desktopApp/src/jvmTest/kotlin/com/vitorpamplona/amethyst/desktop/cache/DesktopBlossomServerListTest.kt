@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.desktop.cache
 
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
+import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
+import com.vitorpamplona.amethyst.desktop.model.preferredBlossomServer
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -96,4 +98,23 @@ class DesktopBlossomServerListTest {
             assertEquals(servers, state.getBlossomServersList()?.servers())
             assertEquals(servers, state.flow.first { it.isNotEmpty() })
         }
+
+    @Test
+    fun `preferredBlossomServer reads the account's first server from cache`() =
+        runTest {
+            val cache = DesktopLocalCache()
+            val signer = NostrSignerInternal(KeyPair())
+            val servers = listOf("https://first.example.com", "https://second.example.com")
+            cache.consume(signedServerList(servers, signer), relayUrl)
+
+            assertEquals("https://first.example.com", cache.preferredBlossomServer(signer.pubKey))
+        }
+
+    @Test
+    fun `preferredBlossomServer falls back to the default when the account has no list`() {
+        val cache = DesktopLocalCache()
+        val signer = NostrSignerInternal(KeyPair())
+
+        assertEquals(DEFAULT_BLOSSOM_SERVER, cache.preferredBlossomServer(signer.pubKey))
+    }
 }

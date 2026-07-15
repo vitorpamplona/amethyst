@@ -504,12 +504,10 @@ internal fun RootContent(
                 namecoinPreferences = LocalNamecoinPreferences.current,
                 blossomServers = iAccount.blossomServerList.flow,
                 onBlossomServersChanged = { servers ->
-                    // Local mirror for the upload path + cold start.
-                    com.vitorpamplona.amethyst.desktop.DesktopPreferences.blossomServers = servers
                     // Publish a kind-10063 event so the list syncs to every
                     // Amethyst client, then consume it locally so state updates
                     // immediately (mirrors the NIP-65 save flow above). Read-only
-                    // accounts can't sign, so keep the change local-only there.
+                    // accounts can't sign, so this is a no-op there.
                     if (iAccount.isWriteable()) {
                         appScope.launch {
                             val event = iAccount.blossomServerList.saveBlossomServersList(servers)
