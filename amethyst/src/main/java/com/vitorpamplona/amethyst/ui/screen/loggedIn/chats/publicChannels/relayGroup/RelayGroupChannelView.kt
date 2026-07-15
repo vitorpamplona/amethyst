@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -128,7 +129,26 @@ private fun ChannelView(
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChannelFilterAssemblerSubscription(channel, accountViewModel.dataSources().channel, accountViewModel)
 
+    // Collect the metadata flow once for the whole screen: it drives both the pinned-message
+    // bar (kind-39005 pins) and the composer gating (roster membership), and updates the moment
+    // a pin lands or my join is accepted.
+    val channelState by channel
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val liveChannel = channelState.channel as? RelayGroupChannel ?: channel
+
+    // A pinned-bar tap requests an in-feed jump; the feed consumes it, scrolls + highlights,
+    // then clears it back to null so the same pin can be tapped again later.
+    val jumpToNoteId = remember { mutableStateOf<String?>(null) }
+
     Column(Modifier.fillMaxHeight()) {
+        RelayGroupPinnedBar(
+            channel = liveChannel,
+            accountViewModel = accountViewModel,
+            onJumpToNote = { jumpToNoteId.value = it.idHex },
+        )
+
         Column(
             modifier =
                 remember {
@@ -146,19 +166,15 @@ private fun ChannelView(
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
+                jumpToNoteId = jumpToNoteId,
+                onJumpHandled = { jumpToNoteId.value = null },
             )
         }
 
         Spacer(modifier = DoubleVertSpacer)
 
         // NIP-29 relays reject writes from non-members, so only show the composer when the
-        // relay-signed roster (39001/39002) lists me as a member/mod/admin. Collect the metadata
-        // flow so the composer appears the moment my join is accepted. Otherwise, explain why.
-        val channelState by channel
-            .flow()
-            .metadata.stateFlow
-            .collectAsStateWithLifecycle()
-        val liveChannel = channelState.channel as? RelayGroupChannel ?: channel
+        // relay-signed roster (39001/39002) lists me as a member/mod/admin. Otherwise, explain why.
         val canPost = liveChannel.membershipOf(accountViewModel.userProfile().pubkeyHex).isMember()
 
         if (canPost) {

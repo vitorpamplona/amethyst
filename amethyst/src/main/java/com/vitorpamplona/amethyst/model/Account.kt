@@ -255,6 +255,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -2755,6 +2756,37 @@ class Account(
     ) {
         val template = CreateInviteEvent.build(channel.groupId.id, code)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Replace the group's pinned-message list with a kind 9010 update-pin-list event
+     * (admin/moderator only). NIP-29 carries the FULL list, so the relay applies it and
+     * republishes the kind-39005 [com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent].
+     */
+    suspend fun updateRelayGroupPins(
+        channel: RelayGroupChannel,
+        pinnedEventIds: List<HexKey>,
+    ) {
+        val template = UpdatePinListEvent.build(channel.groupId.id, pinnedEventIds)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Pin [eventId] by appending it to the current list (no-op if already pinned). */
+    suspend fun pinRelayGroupMessage(
+        channel: RelayGroupChannel,
+        eventId: HexKey,
+    ) {
+        if (channel.isPinned(eventId)) return
+        updateRelayGroupPins(channel, channel.pinnedEventIds + eventId)
+    }
+
+    /** Unpin [eventId] by removing it from the current list (no-op if not pinned). */
+    suspend fun unpinRelayGroupMessage(
+        channel: RelayGroupChannel,
+        eventId: HexKey,
+    ) {
+        if (!channel.isPinned(eventId)) return
+        updateRelayGroupPins(channel, channel.pinnedEventIds - eventId)
     }
 
     /** Kick [pubkey] out of the group with a kind 9001 remove-user event (moderator only). */

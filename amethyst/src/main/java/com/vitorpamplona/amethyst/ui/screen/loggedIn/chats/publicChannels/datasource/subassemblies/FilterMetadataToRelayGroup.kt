@@ -27,15 +27,17 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 
-/** Relay-signed group directory kinds: metadata + admins + members + roles. */
+/** Relay-signed group directory kinds: metadata + admins + members + roles + pins. */
 private val RELAY_GROUP_METADATA_KINDS =
     listOf(
         GroupMetadataEvent.KIND,
         GroupAdminsEvent.KIND,
         GroupMembersEvent.KIND,
         SupportedRolesEvent.KIND,
+        GroupPinnedEvent.KIND,
     )
 
 /**
