@@ -148,6 +148,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.collections.immutable.toPersistentMap
@@ -1687,9 +1688,10 @@ fun MainContent(
                         ChatMessageRelayListEvent.KIND,
                         SearchRelayListEvent.KIND,
                         BlockedRelayListEvent.KIND,
+                        BlossomServersEvent.KIND,
                     ),
                 authors = listOf(account.pubKeyHex),
-                limit = 4,
+                limit = 5,
             )
         relayManager.subscribe(
             subId = bootstrapSubId,
@@ -1702,9 +1704,11 @@ fun MainContent(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
-                        // because localCache.consume() doesn't handle addressable events
-                        if (event is AdvertisedRelayListEvent) {
+                        // NIP-65 (kind 10002) and the Blossom server list
+                        // (kind 10063) are addressable/replaceable events, so
+                        // they must go through justConsumeMyOwnEvent to land in
+                        // the addressable-note cache their state holders observe.
+                        if (event is AdvertisedRelayListEvent || event is BlossomServersEvent) {
                             scope.launch(Dispatchers.IO) {
                                 localCache.justConsumeMyOwnEvent(event)
                             }
@@ -1715,6 +1719,19 @@ fun MainContent(
                 },
         )
         onDispose { relayManager.unsubscribe(bootstrapSubId) }
+    }
+
+    // Mirror the network Blossom server list (kind 10063) into local prefs so
+    // the upload path (ComposeNoteDialog) and cold start reflect the list the
+    // user configured on any Amethyst client. Only overwrite with a non-empty
+    // network list — an empty flow value means the event hasn't loaded yet, and
+    // clobbering prefs then would wipe the user's offline fallback.
+    LaunchedEffect(iAccount) {
+        iAccount.blossomServerList.flow.collect { servers ->
+            if (servers.isNotEmpty() && servers != DesktopPreferences.blossomServers) {
+                DesktopPreferences.blossomServers = servers
+            }
+        }
     }
 
     // Subscribe to incoming DMs and process into chatroomList
@@ -2219,6 +2236,8 @@ fun RelaySettingsScreen(
             .TorSettings(torType = com.vitorpamplona.amethyst.commons.tor.TorType.OFF),
     onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit = {},
     namecoinPreferences: DesktopNamecoinPreferences? = null,
+    blossomServers: kotlinx.coroutines.flow.StateFlow<List<String>>? = null,
+    onBlossomServersChanged: (List<String>) -> Unit = { DesktopPreferences.blossomServers = it },
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -2342,11 +2361,17 @@ fun RelaySettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
 
-            // Media Server Settings
-            MediaServerSettings(
-                initialServers = DesktopPreferences.blossomServers,
-                onServersChanged = { DesktopPreferences.blossomServers = it },
-            )
+            // Media Server Settings (Blossom, kind 10063 — synced with mobile)
+            val networkBlossomServers by (blossomServers?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
+            // The kind-10063 list is authoritative when present; before it loads
+            // (or when the user has none) fall back to the local prefs mirror.
+            val effectiveBlossomServers = networkBlossomServers.ifEmpty { DesktopPreferences.blossomServers }
+            key(effectiveBlossomServers) {
+                MediaServerSettings(
+                    initialServers = effectiveBlossomServers,
+                    onServersChanged = onBlossomServersChanged,
+                )
+            }
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
