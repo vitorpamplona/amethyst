@@ -135,6 +135,7 @@ class ChannelChatEndToEndTest {
                 blurhash = "LKO2",
                 cipher = cipher,
                 originalHash = ox,
+                thumbhash = "abc123",
             )
         val msg = ChannelChat.imageMessage(author, channelIdHex, 0L, "look", listOf(imeta), createdAt = 5L)
 
@@ -148,6 +149,9 @@ class ChannelChatEndToEndTest {
         assertTrue(imetaTag.contains("url $url"))
         assertTrue(imetaTag.contains("m image/jpeg"))
         assertTrue(imetaTag.contains("dim 800x600"))
+        assertTrue(imetaTag.contains("blurhash LKO2"))
+        // Thumbhash rides as an additive imeta field so receivers can paint a placeholder.
+        assertTrue(imetaTag.contains("thumbhash abc123"))
         assertTrue(imetaTag.contains("encryption-algorithm aes-gcm"))
         assertTrue(imetaTag.contains("decryption-key ${ByteArray(32) { 0x11 }.toHexKey()}"))
         assertTrue(imetaTag.contains("decryption-nonce ${ByteArray(16) { 0x22 }.toHexKey()}"))

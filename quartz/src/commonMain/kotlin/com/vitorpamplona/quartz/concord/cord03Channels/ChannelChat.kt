@@ -35,7 +35,9 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.OriginalHashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
@@ -198,7 +200,9 @@ object ChannelChat {
      * Builds the encrypted-image `imeta` tag Armada's `ChatComposer` emits with `encryptAttachments`:
      * `url` (ciphertext blob), `m` (plaintext mime), `dim`, `blurhash`, plus `encryption-algorithm`
      * (`aes-gcm`), `decryption-key`, `decryption-nonce` (hex), and `ox` (the *plaintext* SHA-256 for
-     * integrity). Deliberately omits `x` (a ciphertext hash) to match Armada exactly.
+     * integrity). Deliberately omits `x` (a ciphertext hash) to match Armada exactly. When a
+     * [thumbhash] is available it is added as an extra (additive, ignored by clients that don't read
+     * it) so receivers can paint a placeholder while the blob decrypts.
      */
     fun encryptedImageImeta(
         url: String,
@@ -207,12 +211,14 @@ object ChannelChat {
         blurhash: String?,
         cipher: AESGCM,
         originalHash: String?,
+        thumbhash: String? = null,
     ): IMetaTag =
         IMetaTagBuilder(url)
             .apply {
                 mimeType?.let { add("m", it) }
                 dim?.let { add("dim", it) }
-                blurhash?.let { add("blurhash", it) }
+                blurhash?.let { add(BlurhashTag.TAG_NAME, it) }
+                thumbhash?.let { add(ThumbhashTag.TAG_NAME, it) }
                 add(EncryptionAlgo.TAG_NAME, cipher.name())
                 add(EncryptionKey.TAG_NAME, cipher.keyBytes.toHexKey())
                 add(EncryptionNonce.TAG_NAME, cipher.nonce.toHexKey())
