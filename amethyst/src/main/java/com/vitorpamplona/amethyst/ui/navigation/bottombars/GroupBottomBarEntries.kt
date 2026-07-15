@@ -24,17 +24,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.ChannelState
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -56,13 +60,35 @@ data class GroupEntryDisplay(
     val route: Route,
 )
 
+/**
+ * Observes a channel's metadata for a display row. [subscribe] gates the relay REQ:
+ *  - the live bottom bar / rail passes true — a pinned group keeps a REQ open so its name/avatar
+ *    refresh even if the group is never opened (bounded by the handful of pinned slots);
+ *  - the settings picker passes false — it reads whatever metadata is already cached (filled by the
+ *    chats/group screens) so expanding a category with many joined groups doesn't fan out into one
+ *    subscription per row.
+ */
+@Composable
+private fun observeChannelMetadata(
+    channel: Channel,
+    accountViewModel: AccountViewModel,
+    subscribe: Boolean,
+): State<ChannelState?> {
+    if (subscribe) ChannelFinderFilterAssemblerSubscription(channel, accountViewModel)
+    return channel
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
 @Composable
 fun rememberPublicChatEntryDisplay(
     entry: BottomBarEntry.PublicChat,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
 ): GroupEntryDisplay {
     val channel = remember(entry.channelId) { LocalCache.getOrCreatePublicChatChannel(entry.channelId) }
-    val state by observeChannel(channel, accountViewModel)
+    val state by observeChannelMetadata(channel, accountViewModel, subscribe)
     val current = (state?.channel as? PublicChatChannel) ?: channel
     return GroupEntryDisplay(
         label = current.toBestDisplayName(),
@@ -76,23 +102,31 @@ fun rememberPublicChatEntryDisplay(
 fun rememberRelayGroupEntryDisplay(
     entry: BottomBarEntry.RelayGroup,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
 ): GroupEntryDisplay {
     val relay = remember(entry.relayUrl) { RelayUrlNormalizer.normalizeOrNull(entry.relayUrl) }
-    val route = Route.RelayGroup(entry.groupId, entry.relayUrl)
-
-    if (relay == null) {
-        return GroupEntryDisplay(entry.groupId, entry.groupId, null, route)
-    }
-
-    val channel = remember(entry.groupId, relay) { LocalCache.getOrCreateRelayGroupChannel(GroupId(entry.groupId, relay)) }
-    val state by observeChannel(channel, accountViewModel)
+    val channel = remember(entry.groupId, relay) { relay?.let { LocalCache.getOrCreateRelayGroupChannel(GroupId(entry.groupId, it)) } }
+    // Always call the observer (with a null channel when the relay won't normalize) so the composable
+    // call structure is unconditional; a null channel just yields a null state and the id fallback.
+    val state by observeChannelMetadataOrNull(channel, accountViewModel, subscribe)
     val current = (state?.channel as? RelayGroupChannel) ?: channel
     return GroupEntryDisplay(
-        label = current.toBestDisplayName(),
+        label = current?.toBestDisplayName() ?: entry.groupId,
         robotSeed = entry.groupId,
-        model = current.profilePicture(),
-        route = route,
+        model = current?.profilePicture(),
+        route = Route.RelayGroup(entry.groupId, entry.relayUrl),
     )
+}
+
+/** [observeChannelMetadata] tolerant of a null channel (unresolvable relay), so callers avoid an early return. */
+@Composable
+private fun observeChannelMetadataOrNull(
+    channel: Channel?,
+    accountViewModel: AccountViewModel,
+    subscribe: Boolean,
+): State<ChannelState?> {
+    if (channel == null) return remember { mutableStateOf<ChannelState?>(null) }
+    return observeChannelMetadata(channel, accountViewModel, subscribe)
 }
 
 @Composable
@@ -125,15 +159,20 @@ fun rememberConcordEntryDisplay(
     )
 }
 
-/** Resolves any chat/group entry to its live display, or null for a non-group entry. */
+/**
+ * Resolves any chat/group entry to its live display, or null for a non-group entry. [subscribe] is
+ * forwarded to the channel observers: true (the default) keeps a relay REQ open — used by the live
+ * bar/rail; false reads only cached metadata — used by the settings picker (see [observeChannelMetadata]).
+ */
 @Composable
 fun rememberGroupEntryDisplay(
     entry: BottomBarEntry,
     accountViewModel: AccountViewModel,
+    subscribe: Boolean = true,
 ): GroupEntryDisplay? =
     when (entry) {
-        is BottomBarEntry.PublicChat -> rememberPublicChatEntryDisplay(entry, accountViewModel)
-        is BottomBarEntry.RelayGroup -> rememberRelayGroupEntryDisplay(entry, accountViewModel)
+        is BottomBarEntry.PublicChat -> rememberPublicChatEntryDisplay(entry, accountViewModel, subscribe)
+        is BottomBarEntry.RelayGroup -> rememberRelayGroupEntryDisplay(entry, accountViewModel, subscribe)
         is BottomBarEntry.Concord -> rememberConcordEntryDisplay(entry, accountViewModel)
         is BottomBarEntry.BuiltIn -> null
         is BottomBarEntry.Favorite -> null

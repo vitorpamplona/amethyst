@@ -43,11 +43,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarCategories
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryAvatar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.GroupEntryDisplay
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
@@ -125,24 +124,14 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     val bottomBarItemsFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
     val savedItems by bottomBarItemsFlow.collectAsStateWithLifecycle()
 
-    // A local, drag-mutable copy of the pinned list. Re-seeded whenever the saved list changes from
-    // elsewhere (e.g. a favorite/group got pinned from its picker row, or Restore Default ran).
-    var pinned by remember(savedItems) { mutableStateOf(savedItems) }
+    // All pin/unpin/reorder logic lives in the holder (unit-tested); the composable only renders and
+    // forwards events. syncFrom re-seeds when the saved list changes elsewhere (a picker toggle, an
+    // external device edit, Restore Default) without clobbering an in-progress drag.
+    val state = remember { BottomBarSettingsState(savedItems) { bottomBarItemsFlow.tryEmit(it) } }
+    LaunchedEffect(savedItems) { state.syncFrom(savedItems) }
 
-    fun save(newItems: List<BottomBarEntry>) {
-        pinned = newItems
-        bottomBarItemsFlow.tryEmit(newItems)
-    }
-
-    val pinnedKeys = remember(pinned) { pinned.map { it.stableKey }.toSet() }
-
-    fun togglePin(entry: BottomBarEntry) {
-        if (entry.stableKey in pinnedKeys) {
-            save(pinned.filter { it.stableKey != entry.stableKey })
-        } else {
-            save(pinned + entry)
-        }
-    }
+    val pinned = state.pinned
+    val pinnedKeys = remember(pinned) { state.pinnedKeys() }
 
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
@@ -179,7 +168,7 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
                 onClick = {
                     draggedItemIndex = -1
                     dragOffset = 0f
-                    save(DefaultBottomBarEntries)
+                    state.restoreDefault()
                 },
             ) {
                 Text(stringRes(R.string.bottom_bar_settings_restore_default))
@@ -203,7 +192,7 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
                 isDragging = rowIsDragging,
                 dragOffsetY = if (rowIsDragging) dragOffset else 0f,
                 elevation = animatedElevation,
-                onUnpin = { togglePin(entry) },
+                onUnpin = { state.togglePin(entry) },
                 onMeasured = { height -> itemHeights[index] = height },
                 onDragStart = {
                     draggedItemIndex = index
@@ -218,11 +207,8 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
                     if (dragOffset < 0 && currentIndex > 0) {
                         val aboveHeight = itemHeights[currentIndex - 1] ?: 0f
                         if (-dragOffset > aboveHeight / 2f) {
-                            val newItems = pinned.toMutableList()
-                            val temp = newItems[currentIndex - 1]
-                            newItems[currentIndex - 1] = newItems[currentIndex]
-                            newItems[currentIndex] = temp
-                            pinned = newItems
+                            // Swap with the row above (transient — persisted on drag end).
+                            state.moveTransient(currentIndex, currentIndex - 1)
 
                             val h1 = itemHeights[currentIndex]
                             val h2 = itemHeights[currentIndex - 1]
@@ -237,11 +223,8 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
                     if (dragOffset > 0 && currentIndex < pinned.lastIndex) {
                         val belowHeight = itemHeights[currentIndex + 1] ?: 0f
                         if (dragOffset > belowHeight / 2f) {
-                            val newItems = pinned.toMutableList()
-                            val temp = newItems[currentIndex + 1]
-                            newItems[currentIndex + 1] = newItems[currentIndex]
-                            newItems[currentIndex] = temp
-                            pinned = newItems
+                            // Swap with the row below (transient — persisted on drag end).
+                            state.moveTransient(currentIndex, currentIndex + 1)
 
                             val h1 = itemHeights[currentIndex]
                             val h2 = itemHeights[currentIndex + 1]
@@ -256,7 +239,7 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
                 onDragEnd = {
                     draggedItemIndex = -1
                     dragOffset = 0f
-                    save(pinned)
+                    state.commit()
                 },
                 onDragCancel = {
                     draggedItemIndex = -1
@@ -299,17 +282,17 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
                                 label = stringRes(def.labelRes),
                                 pinned = entry.stableKey in pinnedKeys,
                                 expanded = expandedItems[item] ?: false,
-                                onTogglePin = { togglePin(entry) },
+                                onTogglePin = { state.togglePin(entry) },
                                 onToggleExpand = { expandedItems[item] = !(expandedItems[item] ?: false) },
                             ) {
-                                PickerChildren(item, pinnedKeys, accountViewModel, ::togglePin)
+                                PickerChildren(item, pinnedKeys, accountViewModel, state::togglePin)
                             }
                         } else {
                             SimpleAvailableRow(
                                 icon = def.icon,
                                 label = stringRes(def.labelRes),
                                 pinned = entry.stableKey in pinnedKeys,
-                                onToggle = { togglePin(entry) },
+                                onToggle = { state.togglePin(entry) },
                             )
                         }
                     }
@@ -396,7 +379,8 @@ private fun GroupChildRow(
     accountViewModel: AccountViewModel,
     onTogglePin: (BottomBarEntry) -> Unit,
 ) {
-    val display = rememberGroupEntryDisplay(entry, accountViewModel) ?: return
+    // Read-only: the picker resolves names/avatars from cache, it must not open a REQ per row.
+    val display = rememberGroupEntryDisplay(entry, accountViewModel, subscribe = false) ?: return
     ChildRow(
         leading = { GroupEntryAvatar(display, 28.dp, accountViewModel) },
         label = display.label,
@@ -675,7 +659,8 @@ private fun rememberPinnedVisual(
         is BottomBarEntry.RelayGroup,
         is BottomBarEntry.Concord,
         -> {
-            val display = rememberGroupEntryDisplay(entry, accountViewModel)
+            // Read-only: the settings list resolves from cache; the live bar owns the subscription.
+            val display = rememberGroupEntryDisplay(entry, accountViewModel, subscribe = false)
             if (display != null) PinnedVisual.Avatar(display) else PinnedVisual.Glyph(MaterialSymbols.Group, "")
         }
     }
