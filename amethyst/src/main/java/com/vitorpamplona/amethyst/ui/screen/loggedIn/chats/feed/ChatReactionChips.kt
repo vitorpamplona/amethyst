@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCorner
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteMinichatReplyCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -88,6 +89,43 @@ private data class ReactionChip(
 )
 
 private val ChipGlyphFontSize = 13.sp
+
+/**
+ * Whether [ChatReactionChips] would render anything for this message — a reaction, a
+ * zap, a pending zap, or a minichat-reply count. Mirrors the early-return gate in
+ * [RenderChatReactionChips] and keeps the same live subscriptions, so a message that
+ * gains its first reaction still flips this on. The bubble uses it to decide whether to
+ * even mount the chip row (and reserve overlap space beneath the text) instead of always
+ * paying for an empty row on every message.
+ */
+@Composable
+fun hasChatEngagement(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+): Boolean {
+    val reactionsState by observeNoteReactions(baseNote, accountViewModel)
+    val hasReactions by
+        remember(reactionsState) {
+            derivedStateOf { (reactionsState?.note ?: baseNote).reactions.isNotEmpty() }
+        }
+
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
+    val hasZaps by
+        remember(zapsState) {
+            derivedStateOf { (zapsState?.note ?: baseNote).zaps.isNotEmpty() }
+        }
+
+    val supportsMinichat =
+        remember(baseNote) {
+            baseNote.inGatherers?.any { it is ConcordChannel || it is PublicChatChannel || it is RelayGroupChannel } == true
+        }
+    val minichatCount by if (supportsMinichat) observeNoteMinichatReplyCount(baseNote, accountViewModel) else remember { mutableStateOf(0) }
+
+    val zapsInFlight by accountViewModel.zapsInFlightFlow.collectAsStateWithLifecycle()
+    val isZapping = zapsInFlight.contains(baseNote.idHex)
+
+    return hasReactions || hasZaps || minichatCount > 0 || isZapping
+}
 
 /**
  * Messenger-style pills under a chat bubble summarizing who engaged with the message:
