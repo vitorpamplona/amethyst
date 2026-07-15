@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -58,6 +59,9 @@ fun ConcordUnreadBadge(
         modifier =
             modifier
                 .semantics { contentDescription = description }
+                // Smoothly grows/shrinks as the count changes digits (1 → 2 → … → 99+) instead of
+                // snapping — a small touch that makes new activity feel noticed.
+                .animateContentSize()
                 .sizeIn(minWidth = 20.dp, minHeight = 20.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary)
