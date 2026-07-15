@@ -96,7 +96,7 @@ class RelayAuthenticator(
     private fun publishSnapshot(relayUrl: NormalizedRelayUrl) {
         val status = authStatus.get(relayUrl)
         _authStateFlow.update { current ->
-            if (status == null) current.remove(relayUrl) else current.put(relayUrl, status.snapshot())
+            if (status == null) current.removing(relayUrl) else current.putting(relayUrl, status.snapshot())
         }
     }
 
