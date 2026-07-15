@@ -110,8 +110,21 @@ fun rememberRelayGroupEntryDisplay(
     // call structure is unconditional; a null channel just yields a null state and the id fallback.
     val state by observeChannelMetadataOrNull(channel, accountViewModel, subscribe)
     val current = (state?.channel as? RelayGroupChannel) ?: channel
+
+    // The name from the group's own kind-39000 metadata, once it has loaded.
+    val metaName = current?.event?.name()?.ifBlank { null }
+    // Otherwise the name the user's joined-groups list stored for this group (the NIP-51
+    // ["group", id, relay, name] tag) — so the row reads as a name even before 39000 is fetched,
+    // which the read-only settings picker never does.
+    val joined by accountViewModel.account.relayGroupList.liveRelayGroupList
+        .collectAsStateWithLifecycle()
+    val tagName =
+        remember(joined, entry) {
+            joined.firstOrNull { it.groupId == entry.groupId && it.relayUrl == entry.relayUrl }?.name?.ifBlank { null }
+        }
+
     return GroupEntryDisplay(
-        label = current?.toBestDisplayName() ?: entry.groupId,
+        label = metaName ?: tagName ?: entry.groupId,
         robotSeed = entry.groupId,
         model = current?.profilePicture(),
         route = Route.RelayGroup(entry.groupId, entry.relayUrl),
