@@ -36,10 +36,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -64,6 +67,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
@@ -74,6 +79,9 @@ import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.drafts.LocalNoteDraftStore
+import com.vitorpamplona.amethyst.desktop.service.drafts.NoteDraft
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.LocalScheduledPostStore
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
 import com.vitorpamplona.amethyst.desktop.ui.compose.ComposeRelayPicker
 import com.vitorpamplona.amethyst.desktop.ui.compose.RelayPickerState
@@ -85,6 +93,10 @@ import com.vitorpamplona.amethyst.desktop.ui.media.PreviewItem
 import com.vitorpamplona.amethyst.desktop.ui.media.QualitySelectorChip
 import com.vitorpamplona.amethyst.desktop.ui.media.buildPreview
 import com.vitorpamplona.amethyst.desktop.ui.media.cleanupPreviewTemps
+import com.vitorpamplona.amethyst.desktop.ui.scheduling.DesktopScheduleAtButton
+import com.vitorpamplona.amethyst.desktop.ui.scheduling.DesktopScheduleAtPicker
+import com.vitorpamplona.amethyst.desktop.ui.scheduling.presetInOneHour
+import com.vitorpamplona.amethyst.desktop.ui.scheduling.sanitizeScheduleTime
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -101,8 +113,10 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -110,6 +124,7 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.DnDConstants
 import java.awt.dnd.DropTargetDropEvent
 import java.io.File
+import java.util.UUID
 
 private val MEDIA_EXTENSIONS =
     setOf("jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "mp4", "webm", "mov", "mp3", "ogg", "wav", "flac")
@@ -126,10 +141,20 @@ fun ComposeNoteDialog(
     localCache: com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache? = null,
     replyTo: Event? = null,
     quoteOf: Event? = null,
+    draftDTag: String? = null,
+    draftInitialContent: String? = null,
+    initialScheduledForSec: Long? = null,
 ) {
+    val noteDraftStore = LocalNoteDraftStore.current
+
+    // Stable dTag for this composer session: reuse the edited draft's tag, else mint one.
+    val draftTag = remember(draftDTag) { draftDTag ?: UUID.randomUUID().toString() }
+
     val initialContent =
-        remember(quoteOf) {
-            if (quoteOf != null) {
+        remember(quoteOf, draftInitialContent) {
+            if (draftInitialContent != null) {
+                draftInitialContent
+            } else if (quoteOf != null) {
                 val relays = relayManager.connectedRelays.value.take(3)
                 val nevent = NEvent.create(quoteOf.id, quoteOf.pubKey, quoteOf.kind, relays)
                 "\nnostr:$nevent"
@@ -182,6 +207,16 @@ fun ComposeNoteDialog(
     val orchestrator = remember { UploadOrchestrator() }
     var selectedServer by remember { mutableStateOf(DesktopPreferences.preferredBlossomServer) }
     var postAsPicture by remember { mutableStateOf(false) }
+
+    // Scheduling — when non-null the note is stored for later publication instead of
+    // being sent immediately. Picture posts are not schedulable (out of scope for v1).
+    val scheduledPostStore = LocalScheduledPostStore.current
+    var scheduledForSec by remember { mutableStateOf(initialScheduledForSec) }
+
+    // NIP-37 draft sync — opt-in, default OFF. When ON, "Save as draft" additionally
+    // publishes an encrypted kind-31234 event so the draft appears on other devices.
+    var syncDraft by remember { mutableStateOf(false) }
+    var isSavingDraft by remember { mutableStateOf(false) }
 
     // Image compression: global default + optional per-post override.
     // Override resets after every successful send so the next post
@@ -331,6 +366,7 @@ fun ComposeNoteDialog(
                         }
                     }
 
+                val scheduleAt = scheduledForSec
                 if (postAsPicture) {
                     val pictureMetas = buildPictureMetas(uploadResults)
                     publishPicture(
@@ -339,6 +375,23 @@ fun ComposeNoteDialog(
                         account = account,
                         relayManager = relayManager,
                         relays = selectedRelays,
+                    )
+                } else if (scheduleAt != null) {
+                    // Scheduled note: pre-sign with a re-stamped createdAt and store
+                    // for later publication instead of sending now. Image URLs and
+                    // imeta are already folded into finalContent / imetaTags, so
+                    // image notes are schedulable too.
+                    val imetaTags = buildIMetaTags(uploadResults)
+                    scheduleNote(
+                        content = finalContent,
+                        account = account,
+                        relayManager = relayManager,
+                        replyTo = replyTo,
+                        quoteOf = quoteOf,
+                        imetaTags = imetaTags,
+                        relays = selectedRelays,
+                        scheduledForSec = scheduleAt,
+                        store = scheduledPostStore,
                     )
                 } else {
                     val imetaTags = buildIMetaTags(uploadResults)
@@ -363,13 +416,17 @@ fun ComposeNoteDialog(
     }
 
     Dialog(
-        onDismissRequest = { if (!isPosting) onDismiss() },
+        onDismissRequest = { if (!isPosting && !isSavingDraft) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Card(
             modifier =
                 Modifier
                     .width(780.dp)
+                    // Cap the dialog height so a tall composer (e.g. the schedule
+                    // picker expanded) can't push the Cancel/Schedule buttons off
+                    // screen — the body scrolls instead (see the content Column).
+                    .heightIn(max = 760.dp)
                     .padding(16.dp)
                     .dragAndDropTarget(shouldStartDragAndDrop = { true }, target = dropTarget)
                     .then(
@@ -380,7 +437,7 @@ fun ComposeNoteDialog(
                         },
                     ),
         ) {
-            Column(modifier = Modifier.padding(24.dp)) {
+            Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
                 Text(
                     when {
                         replyTo != null -> "Reply"
@@ -463,19 +520,52 @@ fun ComposeNoteDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                MediaAttachmentRow(
-                    attachedFiles = attachedFiles,
-                    isUploading = uploadState.isUploading,
-                    onAttach = {
-                        val files = DesktopFilePicker.pickMediaFiles()
-                        attachedFiles.addAll(files)
-                    },
-                    onPaste = {
-                        val files = ClipboardPasteHandler.getClipboardFiles()
-                        attachedFiles.addAll(files)
-                    },
-                    onRemove = { attachedFiles.remove(it) },
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // MediaAttachmentRow fills its width, so give it a weighted slot;
+                    // otherwise it consumes the whole Row and pushes the schedule
+                    // button off the right edge (making it invisible).
+                    Box(Modifier.weight(1f)) {
+                        MediaAttachmentRow(
+                            attachedFiles = attachedFiles,
+                            isUploading = uploadState.isUploading,
+                            onAttach = {
+                                val files = DesktopFilePicker.pickMediaFiles()
+                                attachedFiles.addAll(files)
+                            },
+                            onPaste = {
+                                val files = ClipboardPasteHandler.getClipboardFiles()
+                                attachedFiles.addAll(files)
+                            },
+                            onRemove = { attachedFiles.remove(it) },
+                        )
+                    }
+
+                    // Picture posts aren't schedulable in v1 — hide the toggle then.
+                    if (!postAsPicture) {
+                        DesktopScheduleAtButton(
+                            isActive = scheduledForSec != null,
+                            onClick = {
+                                scheduledForSec =
+                                    if (scheduledForSec != null) {
+                                        null
+                                    } else {
+                                        sanitizeScheduleTime(presetInOneHour())
+                                    }
+                            },
+                        )
+                    }
+                }
+
+                if (scheduledForSec != null && !postAsPicture) {
+                    Spacer(Modifier.height(8.dp))
+                    DesktopScheduleAtPicker(
+                        scheduledForSec = scheduledForSec ?: 0L,
+                        onChanged = { scheduledForSec = it },
+                    )
+                }
 
                 // Server selector + per-post quality + post type — shown when files are attached
                 if (attachedFiles.isNotEmpty()) {
@@ -559,15 +649,99 @@ fun ComposeNoteDialog(
 
                 Spacer(Modifier.height(8.dp))
 
+                // NIP-37 draft-sync opt-in — only meaningful for plain notes.
+                if (!postAsPicture) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = syncDraft,
+                            onCheckedChange = { syncDraft = it },
+                            enabled = !isPosting && !isSavingDraft,
+                        )
+                        Column {
+                            Text(
+                                "Sync draft across devices (encrypted)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "Content stays encrypted to you, but the relay learns a " +
+                                    "draft exists at this time for your account.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        enabled = !isPosting,
+                        enabled = !isPosting && !isSavingDraft,
                     ) {
                         Text("Cancel")
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Save-as-draft: always writes a local row; optionally publishes a
+                    // NIP-37 encrypted event. Local save still succeeds if sync fails.
+                    OutlinedButton(
+                        onClick = {
+                            if (content.isBlank()) {
+                                errorMessage = "Draft cannot be empty"
+                                return@OutlinedButton
+                            }
+                            scope.launch {
+                                isSavingDraft = true
+                                errorMessage = null
+                                var syncError: String? = null
+                                try {
+                                    if (syncDraft) {
+                                        syncError =
+                                            syncDraftToRelays(
+                                                content = content,
+                                                dTag = draftTag,
+                                                account = account,
+                                                relayManager = relayManager,
+                                                replyTo = replyTo,
+                                                quoteOf = quoteOf,
+                                                relays = selectedRelays,
+                                            )
+                                    }
+
+                                    noteDraftStore.save(
+                                        NoteDraft(
+                                            dTag = draftTag,
+                                            content = content,
+                                            updatedAt = TimeUtils.now(),
+                                            synced = syncDraft && syncError == null,
+                                            accountPubkey = account.pubKeyHex,
+                                        ),
+                                    )
+
+                                    if (syncError != null) {
+                                        errorMessage = "Draft saved locally, but sync failed: $syncError"
+                                    } else {
+                                        onDismiss()
+                                    }
+                                } catch (e: Exception) {
+                                    errorMessage = "Failed to save draft: ${e.message}"
+                                } finally {
+                                    isSavingDraft = false
+                                }
+                            }
+                        },
+                        enabled = !isPosting && !isSavingDraft && content.isNotBlank(),
+                    ) {
+                        Text(if (isSavingDraft) "Saving..." else "Save as draft")
                     }
 
                     Spacer(Modifier.width(8.dp))
@@ -601,12 +775,14 @@ fun ComposeNoteDialog(
                             }
                             runPublish(null, emptySet())
                         },
-                        enabled = !isPosting && (content.isNotBlank() || attachedFiles.isNotEmpty()),
+                        enabled = !isPosting && !isSavingDraft && (content.isNotBlank() || attachedFiles.isNotEmpty()),
                     ) {
                         Text(
                             when {
+                                isPosting && scheduledForSec != null -> "Scheduling…"
                                 isPosting -> if (pendingPreview == null && hasImages) "Compressing…" else "Publishing…"
                                 hasImages && pendingPreview == null -> "Preview"
+                                scheduledForSec != null -> "Schedule"
                                 else -> "Publish"
                             },
                         )
@@ -849,6 +1025,143 @@ private suspend fun publishNote(
         relayManager.publish(signedEvent, relays)
     }
 }
+
+/**
+ * Build the same text-note template [publishNote] would, but stamped with
+ * [scheduledForSec] as createdAt so it surfaces at the intended time, sign it now,
+ * and persist it to [store] for the in-app drain timer to publish later.
+ *
+ * Signing happens up-front (not at fire time) so the note can go out even if a remote
+ * NIP-46 bunker signer is offline when the schedule fires. Because signing is a suspend
+ * call that can time out/fail for a remote signer, failures are surfaced to the caller
+ * (which shows the error and does NOT store the post).
+ */
+private suspend fun scheduleNote(
+    content: String,
+    account: AccountState.LoggedIn,
+    relayManager: DesktopRelayConnectionManager,
+    replyTo: Event?,
+    quoteOf: Event?,
+    imetaTags: List<IMetaTag>,
+    relays: Set<NormalizedRelayUrl>,
+    scheduledForSec: Long,
+    store: ScheduledPostStore,
+) {
+    withContext(Dispatchers.IO) {
+        if (account.isReadOnly) {
+            throw IllegalStateException("Cannot post in read-only mode")
+        }
+
+        val template =
+            TextNoteEvent.build(content, createdAt = scheduledForSec) {
+                if (replyTo != null) {
+                    val etag = ETag(replyTo.id)
+                    etag.relay = null
+                    etag.author = replyTo.pubKey
+                    eTag(etag)
+                    pTag(PTag(replyTo.pubKey, relayHint = null))
+                }
+                if (quoteOf != null) {
+                    quote(QEventTag(quoteOf.id, relayHint = null, authorPubKeyHex = quoteOf.pubKey))
+                    pTag(PTag(quoteOf.pubKey, relayHint = null))
+                }
+                hashtags(findHashtags(content))
+                references(findURLs(content))
+                for (imeta in imetaTags) {
+                    add(imeta.toTagArray())
+                }
+            }
+
+        // account.signer.sign is suspend and throws (SignerExceptions) on failure —
+        // e.g. a remote bunker being offline. Convert to a clear user-facing message.
+        val signedEvent =
+            try {
+                account.signer.sign(template)
+            } catch (e: Exception) {
+                throw IllegalStateException("Signer must be online to schedule a post", e)
+            }
+
+        // Snapshot the relays the post should go to: the account's outbox if we have it,
+        // else whatever is currently connected. Stored so the drain uses them if the
+        // account's live relay flow is empty at fire time.
+        val targetRelays = relays.ifEmpty { relayManager.connectedRelays.value }
+
+        store.add(
+            ScheduledPost(
+                id = UUID.randomUUID().toString(),
+                accountPubkey = signedEvent.pubKey,
+                signedEventJson = signedEvent.toJson(),
+                relayUrls = targetRelays.map { it.url },
+                extraEventsJson = emptyList(),
+                publishAtSec = scheduledForSec,
+                createdAtSec = TimeUtils.now(),
+            ),
+        )
+    }
+}
+
+/**
+ * Publish the current note as a NIP-37 encrypted draft (kind 31234).
+ *
+ * The inner text note is built the same way [publishNote] builds it, signed, then
+ * wrapped by [DraftWrapEvent.create] which NIP-44-encrypts it *to the account's own
+ * pubkey* ([account] `.signer`, so `signer.pubKey == draftWrap.pubKey`) — never
+ * plaintext. Uses [dTag] as the replaceable identifier so re-saving the same draft
+ * replaces the prior sync event, and so a synced row dedups with its local twin.
+ *
+ * Signing is a suspend call that can fail when a remote NIP-46 signer is offline; the
+ * failure is returned as a message (not thrown) so the caller can still save locally.
+ *
+ * @return null on success, else a short human-readable failure reason.
+ */
+private suspend fun syncDraftToRelays(
+    content: String,
+    dTag: String,
+    account: AccountState.LoggedIn,
+    relayManager: DesktopRelayConnectionManager,
+    replyTo: Event?,
+    quoteOf: Event?,
+    relays: Set<NormalizedRelayUrl>,
+): String? =
+    withContext(Dispatchers.IO) {
+        if (account.isReadOnly) {
+            return@withContext "Cannot sync in read-only mode"
+        }
+
+        try {
+            val innerTemplate =
+                TextNoteEvent.build(content) {
+                    if (replyTo != null) {
+                        val etag = ETag(replyTo.id)
+                        etag.relay = null
+                        etag.author = replyTo.pubKey
+                        eTag(etag)
+                        pTag(PTag(replyTo.pubKey, relayHint = null))
+                    }
+                    if (quoteOf != null) {
+                        quote(QEventTag(quoteOf.id, relayHint = null, authorPubKeyHex = quoteOf.pubKey))
+                        pTag(PTag(quoteOf.pubKey, relayHint = null))
+                    }
+                    hashtags(findHashtags(content))
+                    references(findURLs(content))
+                }
+
+            val signedInner = account.signer.sign(innerTemplate)
+            val draftWrap =
+                DraftWrapEvent.create(
+                    dTag = dTag,
+                    draft = signedInner,
+                    signer = account.signer,
+                    createdAt = TimeUtils.now(),
+                )
+
+            val targetRelays = relays.ifEmpty { relayManager.connectedRelays.value }
+            relayManager.publish(draftWrap, targetRelays)
+            null
+        } catch (e: Exception) {
+            e.message ?: "signer unavailable"
+        }
+    }
 
 @Composable
 private fun MentionSuggestionRow(

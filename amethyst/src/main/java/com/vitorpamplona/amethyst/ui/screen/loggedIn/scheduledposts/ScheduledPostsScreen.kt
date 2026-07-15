@@ -94,8 +94,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
 import com.vitorpamplona.amethyst.ui.components.util.setText

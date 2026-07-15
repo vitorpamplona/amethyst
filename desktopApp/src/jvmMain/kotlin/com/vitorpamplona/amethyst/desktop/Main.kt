@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSetti
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -101,6 +102,11 @@ import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameSe
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.LocalScheduledPostStore
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
+import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
@@ -152,6 +158,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 private val isMacOS = com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
 
@@ -215,7 +222,16 @@ sealed class DesktopScreen {
 @Volatile
 private var activeTorManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager? = null
 
-fun main() {
+fun main(args: Array<String>) {
+    // Headless publish mode: launched by the OS scheduler (~every 5 min) while the
+    // desktop app is closed. Drains due, pre-signed scheduled posts and exits
+    // WITHOUT touching Compose/AWT, the signer, or the keychain. Must run before any
+    // window/AWT init so it stays a lightweight, GUI-free process.
+    if (args.contains("--publish-scheduled")) {
+        val code = runHeadlessPublish()
+        kotlin.system.exitProcess(code)
+    }
+
     // macOS: route the app's MenuBar to the system menu bar at the top of the
     // screen and set the application name shown in the apple-menu. Both must be
     // set before AWT initializes (i.e. before any Swing/AWT class loads).
@@ -266,6 +282,11 @@ fun main() {
         var appRestartKey by remember { mutableStateOf(0) }
         var showComposeDialog by remember { mutableStateOf(false) }
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
+        // Prefill state for opening the composer to edit an existing draft / scheduled post.
+        // Cleared on dismiss so the plain "New Note" path never inherits a stale prefill.
+        var composeEditContent by remember { mutableStateOf<String?>(null) }
+        var composeEditDraftTag by remember { mutableStateOf<String?>(null) }
+        var composeEditScheduledForSec by remember { mutableStateOf<Long?>(null) }
         val deckScope = rememberCoroutineScope()
         val deckState = remember { DeckState(deckScope).also { it.load() } }
         val workspaceManager = remember { WorkspaceManager(deckScope).also { it.load() } }
@@ -597,7 +618,7 @@ fun main() {
                             Item("Messages", onClick = { deckState.addColumn(DeckColumnType.Messages) })
                             Item("Search", onClick = { deckState.addColumn(DeckColumnType.Search) })
                             Item("Reads", onClick = { deckState.addColumn(DeckColumnType.Reads) })
-                            Item("Drafts", onClick = { deckState.addColumn(DeckColumnType.Drafts) })
+                            Item("Scheduled & Drafts", onClick = { deckState.addColumn(DeckColumnType.Drafts) })
                             Item("Highlights", onClick = { deckState.addColumn(DeckColumnType.MyHighlights) })
                             Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
                             Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
@@ -643,10 +664,22 @@ fun main() {
                                 replyToNote = event
                                 showComposeDialog = true
                             },
+                            onEditInComposer = { content, draftDTag, scheduledForSec ->
+                                composeEditContent = content
+                                composeEditDraftTag = draftDTag
+                                composeEditScheduledForSec = scheduledForSec
+                                showComposeDialog = true
+                            },
                             onDismissComposeDialog = {
                                 showComposeDialog = false
                                 replyToNote = null
+                                composeEditContent = null
+                                composeEditDraftTag = null
+                                composeEditScheduledForSec = null
                             },
+                            composeEditContent = composeEditContent,
+                            composeEditDraftTag = composeEditDraftTag,
+                            composeEditScheduledForSec = composeEditScheduledForSec,
                             onDismissAppDrawer = { showAppDrawer = false },
                             onShowAppDrawer = { showAppDrawer = true },
                             replyToNote = replyToNote,
@@ -678,10 +711,14 @@ fun App(
     showAppDrawer: Boolean,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onEditInComposer: (content: String, draftDTag: String?, scheduledForSec: Long?) -> Unit = { _, _, _ -> },
     onDismissComposeDialog: () -> Unit,
     onDismissAppDrawer: () -> Unit,
     onShowAppDrawer: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    composeEditContent: String? = null,
+    composeEditDraftTag: String? = null,
+    composeEditScheduledForSec: Long? = null,
     showImportFollowListDialog: Boolean = false,
     onShowImportFollowListDialog: () -> Unit = {},
     onDismissImportFollowListDialog: () -> Unit = {},
@@ -730,10 +767,14 @@ fun App(
             showAppDrawer = showAppDrawer,
             onShowComposeDialog = onShowComposeDialog,
             onShowReplyDialog = onShowReplyDialog,
+            onEditInComposer = onEditInComposer,
             onDismissComposeDialog = onDismissComposeDialog,
             onDismissAppDrawer = onDismissAppDrawer,
             onShowAppDrawer = onShowAppDrawer,
             replyToNote = replyToNote,
+            composeEditContent = composeEditContent,
+            composeEditDraftTag = composeEditDraftTag,
+            composeEditScheduledForSec = composeEditScheduledForSec,
             showImportFollowListDialog = showImportFollowListDialog,
             onShowImportFollowListDialog = onShowImportFollowListDialog,
             onDismissImportFollowListDialog = onDismissImportFollowListDialog,
@@ -761,10 +802,14 @@ private fun AppInner(
     showAppDrawer: Boolean,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onEditInComposer: (content: String, draftDTag: String?, scheduledForSec: Long?) -> Unit,
     onDismissComposeDialog: () -> Unit,
     onDismissAppDrawer: () -> Unit,
     onShowAppDrawer: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
+    composeEditContent: String?,
+    composeEditDraftTag: String?,
+    composeEditScheduledForSec: Long?,
     showImportFollowListDialog: Boolean,
     onShowImportFollowListDialog: () -> Unit,
     onDismissImportFollowListDialog: () -> Unit,
@@ -847,6 +892,20 @@ private fun AppInner(
     val localCache = remember { testOverrides?.localCache ?: DesktopLocalCache() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
+
+    // Shared scheduled-post store — single writer per app, reached by the composer
+    // and the in-app drain timer.
+    val scheduledPostStore =
+        remember {
+            DesktopScheduledPostStore.create()
+        }
+
+    // Shared short-note draft store — written by the composer, read by the Drafts tab.
+    val noteDraftStore =
+        remember {
+            com.vitorpamplona.amethyst.desktop.service.drafts
+                .DesktopNoteDraftStore(scope)
+        }
 
     // Hashtag-spam filter settings, persisted in the shared java.util.prefs
     // node so the `amy` CLI binary observes the same toggle.
@@ -1211,6 +1270,8 @@ private fun AppInner(
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore provides localRelayStore,
+                    LocalScheduledPostStore provides scheduledPostStore,
+                    com.vitorpamplona.amethyst.desktop.service.drafts.LocalNoteDraftStore provides noteDraftStore,
                     LocalHashtagSpamSettings provides hashtagSpamSettings,
                     com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationDispatcher provides notifDispatcher,
                 ) {
@@ -1360,6 +1421,7 @@ private fun AppInner(
                                             torStatus = currentTorStatus,
                                             onShowComposeDialog = onShowComposeDialog,
                                             onShowReplyDialog = onShowReplyDialog,
+                                            onEditInComposer = onEditInComposer,
                                             onShowAppDrawer = onShowAppDrawer,
                                             onOpenFeedsDrawer = {
                                                 appDrawerInitialTab =
@@ -1393,6 +1455,9 @@ private fun AppInner(
                                     account = account,
                                     localCache = localCache,
                                     replyTo = replyToNote,
+                                    draftDTag = composeEditDraftTag,
+                                    draftInitialContent = composeEditContent,
+                                    initialScheduledForSec = composeEditScheduledForSec,
                                 )
                             }
 
@@ -1486,6 +1551,7 @@ fun MainContent(
     torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onEditInComposer: (content: String, draftDTag: String?, scheduledForSec: Long?) -> Unit,
     onShowAppDrawer: () -> Unit,
     onOpenFeedsDrawer: () -> Unit = onShowAppDrawer,
     onShowImportFollowListDialog: () -> Unit = {},
@@ -1550,6 +1616,55 @@ fun MainContent(
             com.vitorpamplona.amethyst.desktop.service.drafts
                 .DesktopDraftStore(appScope)
         }
+
+    // In-app scheduled-post drain: catch-up on start, then tick every ~45s while the
+    // app runs. Restarts on account switch so each account only publishes its own rows,
+    // resolving relays from its NIP-65 outbox (falling back to connected relays).
+    val scheduledPostStore = LocalScheduledPostStore.current
+    val scheduledPostScheduler =
+        remember(scheduledPostStore, appScope) {
+            DesktopScheduledPostScheduler(scheduledPostStore, appScope)
+        }
+    DisposableEffect(scheduledPostScheduler, iAccount, relayManager) {
+        scheduledPostScheduler.start(
+            client = relayManager.client,
+            accountPubkey = account.pubKeyHex,
+            resolveRelays = {
+                iAccount.nip65RelayList.outboxFlow.value
+                    .ifEmpty { relayManager.connectedRelays.value }
+            },
+        )
+        onDispose { scheduledPostScheduler.stop() }
+    }
+
+    // OS-level scheduler: keep a native timer job registered only while pending posts
+    // exist, so scheduled posts fire even when the app is fully closed. The job
+    // relaunches the app binary in headless `--publish-scheduled` mode. In dev
+    // (`./gradlew run`) resolveAppLaunchCommand() is null → the scheduler no-ops.
+    val osScheduler =
+        remember {
+            OsScheduler(
+                OsScheduler.resolveAppLaunchCommand() ?: emptyList(),
+            )
+        }
+    LaunchedEffect(osScheduler, scheduledPostStore) {
+        // Level-triggered reconcile once on startup, then edge-triggered on the
+        // pending-count crossing 0. Idempotent register/unregister make this safe.
+        var lastHadPending: Boolean? = null
+        scheduledPostStore.flow.collect { posts ->
+            val hasPending =
+                posts.any {
+                    it.status == ScheduledPostStatus.PENDING ||
+                        it.status == ScheduledPostStatus.PUBLISHING
+                }
+            if (hasPending != lastHadPending) {
+                lastHadPending = hasPending
+                withContext(Dispatchers.IO) {
+                    if (hasPending) osScheduler.ensureRegistered() else osScheduler.unregister()
+                }
+            }
+        }
+    }
 
     // Bootstrap subscription: fetch relay config events (kinds 10002, 10050, 10007, 10006).
     // Subscribes immediately — `NostrClient` / `RelayPool` queue REQs that arrive before a
@@ -1985,6 +2100,7 @@ fun MainContent(
                                 onOpenFeedsDrawer = onOpenFeedsDrawer,
                                 onShowComposeDialog = onShowComposeDialog,
                                 onShowReplyDialog = onShowReplyDialog,
+                                onEditInComposer = onEditInComposer,
                                 onShowImportFollowListDialog = onShowImportFollowListDialog,
                                 onZapFeedback = onZapFeedback,
                                 signerConnectionState = signerConnectionState,
@@ -2010,6 +2126,7 @@ fun MainContent(
                                 appScope = appScope,
                                 onShowComposeDialog = onShowComposeDialog,
                                 onShowReplyDialog = onShowReplyDialog,
+                                onEditInComposer = onEditInComposer,
                                 onZapFeedback = onZapFeedback,
                                 onNavigateToRelays = {
                                     if (deckState.hasColumnOfType(DeckColumnType.Relays)) {

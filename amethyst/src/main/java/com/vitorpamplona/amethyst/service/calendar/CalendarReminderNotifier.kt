@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Posts user-visible "starting soon" notifications for NIP-52 appointments the user has RSVP'd
- * to as ACCEPTED. Mirrors the shape of [com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostNotifier]
+ * to as ACCEPTED. Mirrors the shape of [com.vitorpamplona.amethyst.service.scheduledposts.AndroidScheduledPostNotifier]
  * so the two notification surfaces stay consistent.
  */
 object CalendarReminderNotifier {
