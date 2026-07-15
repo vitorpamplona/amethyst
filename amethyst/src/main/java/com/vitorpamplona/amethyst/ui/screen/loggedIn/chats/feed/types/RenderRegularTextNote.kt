@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
+import com.vitorpamplona.amethyst.ui.note.types.appendMissingImetaUrls
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -53,8 +54,15 @@ fun RenderRegularTextNote(
             ) {
                 val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
+                // Some NIP-C7/Concord clients (e.g. Ditto/Soapbox Armada) attach an image purely as a
+                // NIP-92 `imeta` tag and leave the content empty. The shared renderer only shows media
+                // whose URL appears in the text, so append any imeta URL missing from the (decrypted)
+                // content — encrypted-blob key/nonce are already registered by URL, so the shared
+                // pipeline fetches and decrypts them transparently.
+                val displayContent = remember(note.event, eventContent) { appendMissingImetaUrls(eventContent, note.event) }
+
                 TranslatableRichTextViewer(
-                    content = eventContent,
+                    content = displayContent,
                     canPreview = canPreview,
                     quotesLeft = if (innerQuote) 0 else 1,
                     modifier = Modifier,
