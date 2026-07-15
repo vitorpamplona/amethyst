@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -155,7 +156,17 @@ fun ConcordChannelListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state?.metadata?.name ?: stringRes(com.vitorpamplona.amethyst.R.string.app_name), maxLines = 1) },
+                title = {
+                    // Prefer the folded metadata name, then the stored community name from the list
+                    // entry (always present from the join/create — this is what shows everywhere else).
+                    // Fall back to the app name only if neither exists (should be unreachable), never as
+                    // the normal "metadata hasn't folded yet" placeholder — that showed "Amy Debug".
+                    val title =
+                        state?.metadata?.name
+                            ?: session?.entry?.name?.ifBlank { null }
+                            ?: stringRes(com.vitorpamplona.amethyst.R.string.app_name)
+                    Text(title, maxLines = 1)
+                },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
@@ -198,7 +209,10 @@ fun ConcordChannelListScreen(
         },
         floatingActionButton = {
             if (canManageChannels) {
-                FloatingActionButton(onClick = { channelEditor = ConcordChannelEditor(channelIdHex = null, initialName = "") }) {
+                FloatingActionButton(
+                    onClick = { channelEditor = ConcordChannelEditor(channelIdHex = null, initialName = "") },
+                    shape = CircleShape,
+                ) {
                     SymbolIcon(symbol = MaterialSymbols.Add, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_create))
                 }
             }
