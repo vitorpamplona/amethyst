@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
+import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -305,7 +306,8 @@ private fun ZapChip(
                 text = amount,
                 fontSize = Font12SP,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.grayText,
+                // Match the lightning glyph's bitcoin orange (theme-aware for contrast).
+                color = MaterialTheme.colorScheme.bitcoinColor,
                 maxLines = 1,
             )
         }
