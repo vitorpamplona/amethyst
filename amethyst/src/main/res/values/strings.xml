@@ -926,6 +926,16 @@
     <string name="nip46_signer_connect_failed">Could not connect: %1$s</string>
     <string name="nip46_signer_readonly">This is a read-only account and cannot sign.</string>
     <string name="nip46_signer_remote_app">Remote signer app</string>
+    <string name="nip46_signer_hero_title">Sign for other apps</string>
+    <string name="nip46_signer_turn_on">Turn on signer</string>
+    <string name="nip46_signer_live">Live</string>
+    <string name="nip46_signer_scan_caption">Scan to connect an app to your key</string>
+    <string name="nip46_signer_scan_connect">Scan a code</string>
+    <string name="nip46_signer_paste_link">Paste a link instead</string>
+    <plurals name="nip46_signer_connected_count">
+        <item quantity="one">%1$d connected app</item>
+        <item quantity="other">%1$d connected apps</item>
+    </plurals>
     <string name="napplet_connected_app_trust_level">Signing trust level</string>
     <string name="napplet_connected_app_capabilities">Capabilities</string>
     <string name="napplet_connected_app_forget">Forget this app</string>
