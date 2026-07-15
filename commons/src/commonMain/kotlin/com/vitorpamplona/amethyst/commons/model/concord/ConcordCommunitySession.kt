@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * A validated inner chat rumor emitted by a session: its parent [communityId] and
@@ -258,10 +259,15 @@ class ConcordCommunitySession(
                     ingestTyping(wrap, channelIdHex, key)
                     return ConcordIngestOutcome.NON_STRUCTURAL
                 }
-                lock.withLock {
-                    channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap)
-                }
-                reprojectChannel(channelIdHex)
+                val isNew =
+                    lock.withLock {
+                        channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap) == null
+                    }
+                // Project only the newly-arrived wrap — the buffer's earlier wraps were already
+                // emitted when they landed, so re-decrypting the whole history on every message
+                // would be O(history) per message (quadratic over a channel's lifetime). A duplicate
+                // re-delivery (isNew == false) is a no-op.
+                if (isNew) emitChannelRumors(channelIdHex, key, listOf(wrap))
                 // A chat message lands in the feed via [onRumor] → LocalCache, independent of the
                 // revision; it changes no plane address, so it must NOT bump (see the storm note above).
                 return ConcordIngestOutcome.NON_STRUCTURAL
@@ -279,54 +285,77 @@ class ConcordCommunitySession(
         val who = rumor.pubKey.lowercase()
         if (who == myPubKey.lowercase()) return // never show my own typing back to me
         val now = TimeUtils.now()
-        val snapshot =
-            lock.withLock {
-                val perChannel = typingByChannel.getOrPut(channelIdHex) { HashMap() }
-                val prev = perChannel[who]
-                if (prev == null || rumor.createdAt > prev) perChannel[who] = rumor.createdAt
-                perChannel.entries.retainAll { now - it.value <= TYPING_STALE_SECS }
-                if (perChannel.isEmpty()) typingByChannel.remove(channelIdHex)
-                typingByChannel.mapValues { it.value.toMap() }
-            }
-        _typing.value = snapshot
+        // Update the map and publish inside the lock so a concurrent heartbeat on another
+        // channel can't publish an older snapshot last and drop this channel's typers.
+        lock.withLock {
+            val perChannel = typingByChannel.getOrPut(channelIdHex) { HashMap() }
+            val prev = perChannel[who]
+            // Clamp a peer's heartbeat to our clock: a wildly future-dated createdAt would never
+            // fall out of the freshness window below and would block later real heartbeats.
+            val stamp = minOf(rumor.createdAt, now)
+            if (prev == null || stamp > prev) perChannel[who] = stamp
+            perChannel.entries.retainAll { now - it.value <= TYPING_STALE_SECS }
+            if (perChannel.isEmpty()) typingByChannel.remove(channelIdHex)
+            _typing.value = typingByChannel.mapValues { it.value.toMap() }
+        }
     }
 
     private fun refold() {
-        val wraps = lock.withLock { controlWraps.values.toList() }
-        val folded = ConcordActions.foldCommunity(wraps, controlPlaneKey, entry.owner)
-        _state.value = folded
+        // Read the buffer, fold, re-derive channel keys, and publish state atomically under the
+        // lock so a concurrent control wrap can't publish a smaller fold last. Control editions
+        // are rare (not per-message), so serializing the fold is cheap.
+        val newChannels =
+            lock.withLock {
+                val wraps = controlWraps.values.toList()
+                val folded = ConcordActions.foldCommunity(wraps, controlPlaneKey, entry.owner)
 
-        // Re-derive channel plane addresses from the fresh fold.
-        val next = HashMap<HexKey, Pair<HexKey, GroupKey>>()
-        for (channelIdHex in folded.channels.keys) {
-            val key = ConcordActions.publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
-            next[key.publicKeyHex] = channelIdHex to key
-        }
-        lock.withLock { channelKeysByAddress = next }
+                val prevChannels = channelKeysByAddress.values.mapTo(HashSet()) { it.first }
+                val next = HashMap<HexKey, Pair<HexKey, GroupKey>>()
+                for (channelIdHex in folded.channels.keys) {
+                    val key = ConcordActions.publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
+                    next[key.publicKeyHex] = channelIdHex to key
+                }
+                channelKeysByAddress = next
+                _state.value = folded
+                folded.channels.keys.filterNot { it in prevChannels }
+            }
 
-        // Any channel wraps already buffered can now project.
-        for (channelIdHex in folded.channels.keys) reprojectChannel(channelIdHex)
+        // Project only channels appearing for the first time. Existing channels' wraps were already
+        // emitted incrementally as they arrived (a channel plane is only subscribed after it folds, so
+        // a channel's buffer never pre-dates its first fold) — re-projecting all channels on every
+        // control edition would be O(channels × history) of redundant decryption.
+        for (channelIdHex in newChannels) reprojectChannel(channelIdHex)
     }
 
     private fun refoldGuestbook() {
-        val wraps = lock.withLock { guestbookWraps.values.toList() }
-        _members.value = ConcordActions.guestbookMembers(wraps, guestbookKey)
+        lock.withLock {
+            val wraps = guestbookWraps.values.toList()
+            _members.value = ConcordActions.guestbookMembers(wraps, guestbookKey)
+        }
     }
 
     private fun reprojectChannel(channelIdHex: HexKey) {
         val key = lock.withLock { channelKeysByAddress.values.firstOrNull { it.first == channelIdHex }?.second } ?: return
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
-        // Decrypt + validate every bound rumor and hand it to the sink. The sink dedups
-        // by rumor id, so re-emitting the whole buffer on each fold is idempotent.
+        emitChannelRumors(channelIdHex, key, wraps)
+    }
+
+    /** Decrypt + validate the given [wraps], hand each bound rumor to the sink, and fold its author into
+     *  the observed roster. The sink dedups by rumor id, so re-emitting a wrap is idempotent. */
+    private fun emitChannelRumors(
+        channelIdHex: HexKey,
+        key: GroupKey,
+        wraps: List<Event>,
+    ) {
         val authors = HashSet<HexKey>()
         ConcordActions.channelRumors(wraps, key, channelIdHex, entry.rootEpoch).forEach { rumor ->
             authors.add(rumor.pubKey.lowercase())
             onRumor(entry.id, channelIdHex, rumor)
         }
         // Every author we just decrypted is observably present (CORD-02 §5), so fold them into the
-        // roster even if they never posted a Guestbook Join. Only publish when the set actually grew.
-        if (authors.isNotEmpty() && !_observedAuthors.value.containsAll(authors)) {
-            _observedAuthors.value = _observedAuthors.value + authors
+        // roster even if they never posted a Guestbook Join. Atomic so a concurrent add isn't lost.
+        if (authors.isNotEmpty()) {
+            _observedAuthors.update { if (it.containsAll(authors)) it else it + authors }
         }
     }
 

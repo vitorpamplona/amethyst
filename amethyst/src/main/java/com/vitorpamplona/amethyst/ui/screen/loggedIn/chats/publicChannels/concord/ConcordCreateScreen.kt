@@ -130,13 +130,17 @@ fun ConcordCreateScreen(
                     working = true
                     scope.launch {
                         val communityId =
-                            accountViewModel.account.createConcordCommunity(
-                                name = name.value.trim(),
-                                description = about.value.trim().ifBlank { null },
-                                relays = relays.map { it.url },
-                                icon = icon.value,
-                            )
-                        working = false
+                            try {
+                                accountViewModel.account.createConcordCommunity(
+                                    name = name.value.trim(),
+                                    description = about.value.trim().ifBlank { null },
+                                    relays = relays.map { it.url },
+                                    icon = icon.value,
+                                )
+                            } finally {
+                                // Always re-enable — a thrown create would otherwise strand the button.
+                                working = false
+                            }
                         if (communityId != null) nav.newStack(Route.ConcordServer(communityId))
                     }
                 },

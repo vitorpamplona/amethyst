@@ -181,8 +181,13 @@ fun ConcordChannelListScreen(
                         onClick = {
                             minting = true
                             scope.launch {
-                                inviteLink = account.mintConcordInvite(communityId)
-                                minting = false
+                                try {
+                                    inviteLink = account.mintConcordInvite(communityId)
+                                } finally {
+                                    // Always clear the flag — a thrown mint would otherwise leave the
+                                    // button disabled until the screen is recreated.
+                                    minting = false
+                                }
                             }
                         },
                     ) {

@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -230,7 +229,6 @@ fun ConcordHomeScreen(
                                     def?.private == true -> MaterialSymbols.Lock
                                     else -> MaterialSymbols.Tag
                                 },
-                            revision = revision,
                             hideIfRead = mode == ChannelExpand.UNREAD,
                             accountViewModel = accountViewModel,
                             onClick = { nav.nav(Route.Concord(entry.id, ch.key)) },
@@ -270,15 +268,22 @@ private fun communityUnreadCount(
     account: Account,
     communityId: String,
     channelKeys: Set<String>,
-    revision: Int,
 ): Int {
     if (channelKeys.isEmpty()) return 0
+    // Keyed only on the channel set (not the global revision): each per-channel flow reacts to both
+    // its last-read marker AND the channel's own notes flow, so a folded message flips the badge
+    // without tearing down and restarting every flow on every unrelated fold (which reset the badge
+    // to 0 and made it flicker).
     val flow =
-        remember(communityId, channelKeys, revision) {
+        remember(communityId, channelKeys) {
             combine(
                 channelKeys.map { key ->
-                    account.loadLastReadFlow(concordChannelLastReadRoute(communityId, key)).map { lastRead ->
-                        val last = LocalCache.getConcordChannelIfExists(ConcordChannelId(communityId, key))?.lastNote?.createdAt() ?: 0L
+                    val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, key))
+                    combine(
+                        account.loadLastReadFlow(concordChannelLastReadRoute(communityId, key)),
+                        channel.flow().notes.stateFlow,
+                    ) { lastRead, state ->
+                        val last = state.channel.lastNote?.createdAt() ?: 0L
                         if (last > lastRead) 1 else 0
                     }
                 },
@@ -301,7 +306,7 @@ private fun CommunityHeader(
 ) {
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
     val iconModel = rememberConcordImageModel(iconPointer, accountViewModel)
-    val unread = communityUnreadCount(accountViewModel.account, communityId, channelKeys, revision)
+    val unread = communityUnreadCount(accountViewModel.account, communityId, channelKeys)
     // Tap cycles CLOSED → UNREAD → OPEN → CLOSED, skipping the UNREAD peek when nothing is unread
     // (so a quiet community never lands on an empty middle state).
     val next =
@@ -412,14 +417,22 @@ private fun ConcordChannelRow(
     channelKey: String,
     channelName: String,
     icon: MaterialSymbol,
-    revision: Int,
     hideIfRead: Boolean,
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
     val account = accountViewModel.account
-    val channel = remember(communityId, channelKey) { LocalCache.getConcordChannelIfExists(ConcordChannelId(communityId, channelKey)) }
-    val lastNote = remember(revision, channel) { channel?.lastNote }
+    // getOrCreate (not getIfExists): a channel folded in the control plane may have no message-buffer
+    // note yet, and caching that null for the row's lifetime would leave it perpetually blank. The
+    // channel's own notes flow then makes lastNote reactive, so the preview/unread dot appears the
+    // moment its first message folds in — without keying on the global revision (which flickered the
+    // whole row on every unrelated fold).
+    val channel = remember(communityId, channelKey) { LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelKey)) }
+    val channelState by channel
+        .flow()
+        .notes.stateFlow
+        .collectAsStateWithLifecycle()
+    val lastNote = channelState.channel.lastNote
     val lastReadTime by account.loadLastReadFlow(concordChannelLastReadRoute(communityId, channelKey)).collectAsStateWithLifecycle()
     val unread = (lastNote?.createdAt() ?: Long.MIN_VALUE) > lastReadTime
 

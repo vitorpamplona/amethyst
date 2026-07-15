@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+
 /**
  * Resolves the owner-rooted authority state of a Concord community from its
  * folded Control Plane (CORD-04).
@@ -201,18 +203,53 @@ class AuthorityResolver private constructor(
                 return acc
             }
 
-            // Banlist: honored only from a signer holding BAN (or the owner), then healed to the head.
-            val banHead =
-                EditionFold.foldEntity(
-                    editions.filter {
-                        it.entityKind == ControlEntityKind.BANLIST &&
-                            (it.author.lowercase() == ownerLower || effectivePermissionsOf(it.author.lowercase()).has(ConcordPermissions.BAN))
-                    },
-                )
+            // Banlist: honored only from a signer holding BAN (or the owner). The banlist is a single
+            // replaced doc, so fold its chain to the head first — that honors a legitimate unban, which
+            // is a *chained* edition replacing the previous set (e.g. ban→unban). Then heal concurrent
+            // forks: two moderators who ban different abusers at the same chain version fork the doc, and
+            // folding to one head would silently drop the other's ban. Union in every authorized edition
+            // that is NOT an ancestor of the head — those are the parallel bans the chain never absorbed.
+            // Ancestors (superseded by the chain, including an unban's now-cleared target) are already
+            // reflected by the head and must not be resurrected. This is CORD-06's "down-only healing":
+            // a concurrent ban is never lost, while an on-chain unban still takes effect.
+            val authorizedBanlist =
+                editions.filter {
+                    it.entityKind == ControlEntityKind.BANLIST &&
+                        (it.author.lowercase() == ownerLower || effectivePermissionsOf(it.author.lowercase()).has(ConcordPermissions.BAN))
+                }
             val banned = HashSet<String>()
-            banHead?.let { ConcordJson.decodeBanlist(it.content) }?.forEach { banned.add(it.lowercase()) }
+            val banHead = EditionFold.foldEntity(authorizedBanlist)
+            if (banHead != null) {
+                ConcordJson.decodeBanlist(banHead.content)?.forEach { banned.add(it.lowercase()) }
+                val ancestry = banlistAncestry(banHead, authorizedBanlist)
+                for (edition in authorizedBanlist) {
+                    if (edition.hashHex !in ancestry) {
+                        ConcordJson.decodeBanlist(edition.content)?.forEach { banned.add(it.lowercase()) }
+                    }
+                }
+            }
 
             return AuthorityResolver(ownerLower, roles, memberRoles.toMap(), banned)
+        }
+
+        /**
+         * The set of edition hashes on [head]'s back-chain (head itself plus every edition it chains
+         * from via `prevHash`), among [pool]. Used to tell a superseded ancestor (already reflected by
+         * the head) from a concurrent fork (a parallel ban to heal). The `add`-guarded walk also
+         * terminates on any cycle.
+         */
+        private fun banlistAncestry(
+            head: ControlEdition,
+            pool: List<ControlEdition>,
+        ): Set<String> {
+            val byHash = pool.associateBy { it.hashHex }
+            val acc = HashSet<String>()
+            var cur: ControlEdition? = head
+            while (cur != null && acc.add(cur.hashHex)) {
+                val prev = cur.prevHash?.toHexKey()
+                cur = if (prev != null) byHash[prev] else null
+            }
+            return acc
         }
     }
 }

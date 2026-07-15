@@ -121,11 +121,13 @@ object ChannelChat {
         text: String,
         parent: Event,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event =
         RumorAssembler.assembleRumor(
             authorPubKey,
             CommentEvent.replyBuilder(text, EventHintBundle(parent), createdAt) {
                 channelBinding(channelId, epoch)
+                extraTags.forEach { add(it) }
             },
         )
 
@@ -146,6 +148,7 @@ object ChannelChat {
         targetKind: Int,
         content: String,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event =
         RumorAssembler.assembleRumor<ReactionEvent>(
             pubKey = authorPubKey,
@@ -158,7 +161,7 @@ object ChannelChat {
                     arrayOf("e", targetId),
                     arrayOf("p", targetAuthor),
                     arrayOf("k", targetKind.toString()),
-                ),
+                ) + extraTags,
             content = content,
         )
 
@@ -177,6 +180,7 @@ object ChannelChat {
         text: String,
         imetas: List<IMetaTag>,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event {
         val extraUrls = imetas.map { it.url }.filter { it.isNotBlank() && !text.contains(it) }
         val finalText = (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
@@ -186,7 +190,7 @@ object ChannelChat {
             epoch = epoch,
             text = finalText,
             createdAt = createdAt,
-            extraTags = imetas.map { it.toTagArray() }.toTypedArray(),
+            extraTags = imetas.map { it.toTagArray() }.toTypedArray() + extraTags,
         )
     }
 

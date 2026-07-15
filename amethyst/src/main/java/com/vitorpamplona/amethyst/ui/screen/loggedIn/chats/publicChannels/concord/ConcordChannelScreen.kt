@@ -301,10 +301,16 @@ private fun ConcordTypingIndicator(
     val typingMap by session.typing.collectAsStateWithLifecycle()
 
     var nowSecs by remember { mutableLongStateOf(TimeUtils.now()) }
-    LaunchedEffect(session) {
+    // Only tick while this channel actually has heartbeats, and stop once they've all aged out of
+    // the freshness window — an idle channel must not wake a 2s recomposition loop forever. A new
+    // heartbeat re-keys this effect (the map value changes) and restarts the fade.
+    LaunchedEffect(session, channelId, typingMap[channelId]) {
+        val perChannel = typingMap[channelId]
+        if (perChannel.isNullOrEmpty()) return@LaunchedEffect
         while (true) {
-            delay(2000L)
             nowSecs = TimeUtils.now()
+            if (perChannel.values.none { nowSecs - it <= ConcordCommunitySession.TYPING_STALE_SECS }) break
+            delay(2000L)
         }
     }
 

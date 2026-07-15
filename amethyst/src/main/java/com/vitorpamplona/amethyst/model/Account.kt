@@ -2084,7 +2084,7 @@ class Account(
                 // A minichat reply is a kind-1111 thread comment; an inline reply is a kind-9
                 // message quoting the parent; a fresh post is a plain kind-9 message.
                 parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now())
+                    ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
                 parent != null ->
                     ConcordActions.buildChannelInlineReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
                 else ->
@@ -2111,7 +2111,9 @@ class Account(
         val session = concordSessions.sessionFor(communityId) ?: return false
         val entry = session.entry
         val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now())
+        // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
+        val emojiTags = emoji.findEmojiTags(text).map { it.toTagArray() }.toTypedArray()
+        val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -2187,7 +2189,10 @@ class Account(
         val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
 
         val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now())
+        // A custom-emoji reaction is a `:shortcode:` content that needs its NIP-30 `emoji` tag to
+        // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags.
+        val emojiTags = emoji.findEmojiTags(reaction).map { it.toTagArray() }.toTypedArray()
+        val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
     }

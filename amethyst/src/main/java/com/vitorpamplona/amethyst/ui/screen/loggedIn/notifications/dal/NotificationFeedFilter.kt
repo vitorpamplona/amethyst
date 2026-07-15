@@ -444,7 +444,19 @@ class NotificationFeedFilter(
         // in a community I've joined is relevant whether or not I follow that member (fellow members
         // usually aren't follows). The p-tag gate below still applies, so only genuine replies /
         // reactions / mentions notify — general channel chatter that doesn't tag me never does.
-        val isConcord = it.inGatherers?.any { g -> g is ConcordChannel } == true
+        //
+        // A ConcordChannel gatherer alone isn't enough: notes live in the global LocalCache and keep a
+        // gatherer reference from every account/community that ever touched them, so require the
+        // community to be one THIS account has currently joined (mirrors the Marmot check above) —
+        // otherwise a note from a prior account or a left community would leak onto Notifications.
+        val isConcord =
+            it.inGatherers?.any { g ->
+                g is ConcordChannel && account.concordSessions.sessionFor(g.channelId.communityId) != null
+            } == true
+
+        // Concord is a messaging feature, so honor the same "Messages in notifications" toggle that
+        // silences DMs and Marmot groups above.
+        if (isConcord && !showMessages) return false
 
         // Global keeps every event that p-tags the user; Selected (and the
         // follow/list modes) also applies the per-kind relevance heuristics.

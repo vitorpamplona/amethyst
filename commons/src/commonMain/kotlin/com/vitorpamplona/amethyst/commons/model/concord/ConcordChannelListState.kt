@@ -103,15 +103,19 @@ class ConcordChannelListState(
 
     /** Add or replace [entry] (by community id) and return the new signed list event to publish. */
     suspend fun follow(entry: ConcordCommunityListEntry): ConcordCommunityListEvent {
-        val current = getConcordList()?.decrypt(signer).orEmpty()
+        // Seed from the offline backup as well as the live cache event: the saved list is
+        // consumed into the cache asynchronously in `init`, so a join that races that load
+        // would otherwise start from an empty `current` and wipe every prior membership.
+        val current = entriesWithBackup(concordListNote)
         val next = current.filterNot { it.id == entry.id } + entry
         return ConcordCommunityListEvent.create(signer, next)
     }
 
     /** Drop the community with [communityId] and return the new list event, or null if none existed. */
     suspend fun unfollow(communityId: String): ConcordCommunityListEvent? {
-        val event = getConcordList() ?: return null
-        val next = event.decrypt(signer).filterNot { it.id == communityId }
+        val current = entriesWithBackup(concordListNote)
+        if (current.none { it.id == communityId }) return null
+        val next = current.filterNot { it.id == communityId }
         return ConcordCommunityListEvent.create(signer, next)
     }
 

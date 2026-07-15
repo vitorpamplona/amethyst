@@ -174,8 +174,9 @@ object ConcordActions {
         text: String,
         imetas: List<IMetaTag>,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event {
-        val rumor = ChannelChat.imageMessage(authorSigner.pubKey, channelId, epoch, text, imetas, createdAt)
+        val rumor = ChannelChat.imageMessage(authorSigner.pubKey, channelId, epoch, text, imetas, createdAt, extraTags)
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
@@ -203,8 +204,9 @@ object ConcordActions {
         parent: Event,
         text: String,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event {
-        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent, createdAt)
+        val rumor = ChannelChat.reply(authorSigner.pubKey, channelId, epoch, text, parent, createdAt, extraTags)
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
@@ -217,8 +219,9 @@ object ConcordActions {
         target: Event,
         reaction: String,
         createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
     ): Event {
-        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt)
+        val rumor = ChannelChat.reaction(authorSigner.pubKey, channelId, epoch, target.id, target.pubKey, target.kind, reaction, createdAt, extraTags)
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 

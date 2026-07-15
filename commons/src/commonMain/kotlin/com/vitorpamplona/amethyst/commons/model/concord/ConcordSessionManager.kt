@@ -31,6 +31,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -86,9 +87,14 @@ class ConcordSessionManager(
             val departed = stateWatchers.keys.filterNot { it in wantedIds }
             for (id in departed) stateWatchers.remove(id)?.cancel()
 
-            // Watch each newly-created session so its folds bump the revision.
+            // Watch each newly-created session so its folds bump the revision. A Refounding
+            // rebuilds a still-joined community's session in place (same id, new root/epoch),
+            // so it comes back in `created` while its old watcher is still running — cancel
+            // that stale collector before replacing the map entry, or every Refounding leaks
+            // a coroutine holding a dead session and bumping the revision forever.
             for (id in created) {
                 val session = registry.sessionFor(id) ?: continue
+                stateWatchers.remove(id)?.cancel()
                 stateWatchers[id] =
                     scope.launch {
                         session.state.collect { bumpRevision() }
@@ -99,7 +105,10 @@ class ConcordSessionManager(
     }
 
     private fun bumpRevision() {
-        _revision.value = _revision.value + 1
+        // Called from the communities collector, every per-session state watcher, and the
+        // ingest path — different coroutines/dispatchers — so the increment must be atomic
+        // or concurrent bumps are lost.
+        _revision.update { it + 1 }
     }
 
     /** The `authors` set (control + known channel planes) for the kind-1059 subscription. */

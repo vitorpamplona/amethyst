@@ -174,15 +174,19 @@ fun ConcordEditScreen(
                     working = true
                     scope.launch {
                         val ok =
-                            account.editConcordMetadata(
-                                communityId = communityId,
-                                name = name.value.trim(),
-                                description = about.value.trim().ifBlank { null },
-                                icon = icon.value,
-                                banner = banner.value,
-                                relays = relays.map { it.url },
-                            )
-                        working = false
+                            try {
+                                account.editConcordMetadata(
+                                    communityId = communityId,
+                                    name = name.value.trim(),
+                                    description = about.value.trim().ifBlank { null },
+                                    icon = icon.value,
+                                    banner = banner.value,
+                                    relays = relays.map { it.url },
+                                )
+                            } finally {
+                                // Always re-enable — a thrown save would otherwise strand the button.
+                                working = false
+                            }
                         if (ok) nav.popBack()
                     }
                 },

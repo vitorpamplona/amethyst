@@ -67,18 +67,23 @@ class AuthorityResolverTest {
         0,
     )
 
-    private fun banlist(vararg banned: String) =
-        ControlEdition(
-            ControlEntityKind.BANLIST,
-            "44".repeat(32).hexToByteArray(),
-            0,
-            null,
-            null,
-            "[${banned.joinToString(",") { "\"$it\"" }}]",
-            owner,
-            "ban",
-            0,
-        )
+    private fun banlist(vararg banned: String) = banlistBy(owner, "ban", *banned)
+
+    private fun banlistBy(
+        author: String,
+        rumorId: String,
+        vararg banned: String,
+    ) = ControlEdition(
+        ControlEntityKind.BANLIST,
+        "44".repeat(32).hexToByteArray(),
+        0,
+        null,
+        null,
+        "[${banned.joinToString(",") { "\"$it\"" }}]",
+        author,
+        rumorId,
+        0,
+    )
 
     @Test
     fun ranksPermissionsAndActionAuthorityAreOwnerRooted() {
@@ -150,6 +155,36 @@ class AuthorityResolverTest {
         // A banned actor can take no action even though the role bit is present.
         assertFalse(r.hasPermission(alice, BAN))
         assertFalse(r.canActOn(alice, bob, BAN))
+    }
+
+    @Test
+    fun concurrentBansHealIntoAUnionAndAreNeverDropped() {
+        // Two authorized moderators ban different abusers at the same banlist version — a
+        // fork of the single banlist doc. Folding to one chain tip would silently drop the
+        // loser's ban and let that abuser back in; the union keeps both (M1 / CORD-06
+        // down-only healing).
+        val heads =
+            listOf(
+                role(adminRole, adminJson),
+                grant("ab".repeat(32), alice, listOf(adminRole), granter = owner), // alice gains BAN
+                banlistBy(owner, "ban-owner", bob), // owner bans bob
+                banlistBy(alice, "ban-alice", carol), // alice concurrently bans carol
+            )
+        val r = AuthorityResolver.resolve(heads, owner)
+        assertTrue(r.isBanned(bob))
+        assertTrue(r.isBanned(carol))
+    }
+
+    @Test
+    fun banlistEditionsFromUnauthorizedSignersAreIgnored() {
+        // carol holds no BAN permission, so her ban of dave must not take effect.
+        val heads =
+            listOf(
+                role(adminRole, adminJson),
+                banlistBy(carol, "ban-carol", dave),
+            )
+        val r = AuthorityResolver.resolve(heads, owner)
+        assertFalse(r.isBanned(dave))
     }
 
     @Test

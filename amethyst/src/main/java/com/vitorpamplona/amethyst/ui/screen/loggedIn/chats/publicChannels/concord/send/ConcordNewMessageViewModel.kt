@@ -75,6 +75,10 @@ open class ConcordNewMessageViewModel : ViewModel() {
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
 
     open fun init(accountVM: AccountViewModel) {
+        // Idempotent: the screen calls init() on every recomposition, and it recomposes often while
+        // paging history. Rebuilding uploadState/suggestion state each time would wipe a picked image
+        // mid-upload or reset an open @/emoji suggestion list, so only (re)build when the account changes.
+        if (::accountViewModel.isInitialized && this.accountViewModel === accountVM) return
         this.accountViewModel = accountVM
         this.account = accountVM.account
 
