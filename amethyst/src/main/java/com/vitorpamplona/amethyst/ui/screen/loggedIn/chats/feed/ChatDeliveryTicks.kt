@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -57,34 +59,35 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 /**
- * Relay-acceptance ticks for the logged-in user's own chat messages, rendered next
- * to the timestamp:
+ * The timestamp on a chat message, as a single tap target that opens the relay /
+ * delivery detail — "where did this message come from" and, for our own messages, how
+ * far it got. It's always tappable so the relay list is one tap away on every message.
  *
+ * Own messages additionally render the relay-acceptance tick glyph next to the time when
+ * we have delivery data:
  * - clock: published, no relay has accepted yet
  * - single check: accepted somewhere (at least one relay OK / seen-on relay)
- * - double check (green): DMs — every participant's gift wrap was accepted by at
- *   least one of that participant's relays; rooms — every target room relay accepted.
+ * - double check (green): every recipient's / target relay accepted
  *
- * For DM group rooms a `k/n` participant count accompanies the ticks. Messages sent
- * before an app restart have no tracker entry and fall back to the note's seen-on
- * relays (single check when present).
+ * Old messages we didn't track this session simply show no tick, but the time still
+ * opens the dialog (which lists the relays it was seen on, if any).
  */
 @Composable
-fun ChatDeliveryTicks(
+fun ChatTimeWithDelivery(
     baseNote: Note,
+    isLoggedInUser: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val tracker = accountViewModel.account.chatDeliveryTracker
-
     val delivery by
-        remember(baseNote) { tracker.deliveryFlow(baseNote.idHex) }
+        remember(baseNote) { accountViewModel.account.chatDeliveryTracker.deliveryFlow(baseNote.idHex) }
             .collectAsStateWithLifecycle()
 
     val seenOnState by
@@ -94,15 +97,19 @@ fun ChatDeliveryTicks(
     val seenOnRelays = seenOnState.note.relays
     val seenSomewhere = seenOnRelays.isNotEmpty()
 
-    // Old messages sent in a previous session have no tracker entry, and often no
-    // seen-on relays either. We genuinely know nothing about their delivery, so show
-    // no tick at all rather than a misleading "pending" clock (and an empty dialog).
-    if (delivery == null && !seenSomewhere) return
-
     var showDetails by remember { mutableStateOf(false) }
 
     ClickableBox(onClick = { showDetails = true }) {
-        RenderDeliveryTicks(delivery, seenSomewhere)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 2.dp),
+        ) {
+            ChatTimeAgo(baseNote)
+            if (isLoggedInUser && (delivery != null || seenSomewhere)) {
+                Spacer(StdHorzSpacer)
+                RenderDeliveryTicks(delivery, seenSomewhere)
+            }
+        }
     }
 
     if (showDetails) {
@@ -118,42 +125,33 @@ fun ChatDeliveryTicks(
 }
 
 /**
- * A received message's timestamp, made tappable to reveal which relays it was seen on
- * (and the exact time in the dialog) — the read-only counterpart to [ChatDeliveryTicks],
- * which reports OUR own outgoing acceptance. Falls back to a plain, non-tappable time
- * when the message carries no seen-on relays yet.
+ * Opens the relay / delivery detail for [baseNote] from anywhere (e.g. the long-press
+ * action sheet), independent of the timestamp affordance — pulls our own delivery
+ * tracking when present and always shows the relays the message was seen on.
  */
 @Composable
-fun ChatReceivedTimeInfo(
+fun ChatMessageDeliveryDialog(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onDismiss: () -> Unit,
 ) {
+    val delivery by
+        remember(baseNote) { accountViewModel.account.chatDeliveryTracker.deliveryFlow(baseNote.idHex) }
+            .collectAsStateWithLifecycle()
+
     val seenOnState by
         remember(baseNote) { baseNote.flow().relays.stateFlow }
             .collectAsStateWithLifecycle()
-    val seenOnRelays = seenOnState.note.relays
 
-    var showDetails by remember { mutableStateOf(false) }
-
-    if (seenOnRelays.isEmpty()) {
-        ChatTimeAgo(baseNote)
-    } else {
-        ClickableBox(onClick = { showDetails = true }) {
-            ChatTimeAgo(baseNote)
-        }
-    }
-
-    if (showDetails) {
-        ChatDeliveryDetailDialog(
-            baseNote = baseNote,
-            delivery = null,
-            seenOnRelays = seenOnRelays,
-            onDismiss = { showDetails = false },
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+    ChatDeliveryDetailDialog(
+        baseNote = baseNote,
+        delivery = delivery,
+        seenOnRelays = seenOnState.note.relays,
+        onDismiss = onDismiss,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
 
 /**
@@ -199,10 +197,17 @@ private fun ChatDeliveryDetailDialog(
                         }
 
                     else ->
-                        // Nothing to list yet — a just-sent message no relay has acknowledged.
-                        // Show the pending status so the dialog is never an empty title.
+                        // Nothing to list: our own just-sent message no relay has acknowledged
+                        // yet (pending), or a received/old message with no recorded relays.
                         Text(
-                            text = stringRes(R.string.chat_delivery_pending),
+                            text =
+                                stringRes(
+                                    if (delivery != null) {
+                                        R.string.chat_delivery_pending
+                                    } else {
+                                        R.string.chat_delivery_no_relay_info
+                                    },
+                                ),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                 }

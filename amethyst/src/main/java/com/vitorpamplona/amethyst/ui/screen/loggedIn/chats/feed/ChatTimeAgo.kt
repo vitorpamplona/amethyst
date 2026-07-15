@@ -114,14 +114,12 @@ fun ChatMessageFooter(
             val hasGlyph = event is PrivateDmEvent || event?.expiration() != null || geo != null || pow != null
             if (hasGlyph) Spacer(StdHorzSpacer)
 
-            when {
-                note.isDraft() -> ChatTimeAgo(note)
-                isLoggedInUser -> {
-                    ChatTimeAgo(note)
-                    Spacer(StdHorzSpacer)
-                    ChatDeliveryTicks(note, accountViewModel, nav)
-                }
-                else -> ChatReceivedTimeInfo(note, accountViewModel, nav)
+            // Drafts aren't published, so no relay/delivery detail; everything else gets
+            // the tappable timestamp that opens "where did this come from".
+            if (note.isDraft()) {
+                ChatTimeAgo(note)
+            } else {
+                ChatTimeWithDelivery(note, isLoggedInUser, accountViewModel, nav)
             }
         }
     }

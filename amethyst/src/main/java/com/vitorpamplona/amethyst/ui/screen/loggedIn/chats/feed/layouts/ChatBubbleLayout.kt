@@ -36,7 +36,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -88,6 +90,11 @@ import kotlin.math.abs
 // Half the height of a reaction chip, so the chip row overlaps the bubble by
 // exactly its own vertical center.
 private val ChatChipOverlapArrangement = Arrangement.spacedBy((-12).dp)
+
+// Extra space reserved at the bottom of a bubble that has overlapping chips but no
+// footer, so the chips ride over padding instead of the last line of text. The bubble
+// already has 6dp bottom padding; the chips poke ~12dp in, so ~8dp more clears them.
+private val ChatChipOverlapReserve = 8.dp
 
 // Swipe-to-reply: releasing past the threshold fires the reply; the bubble never
 // drags further than the max.
@@ -359,6 +366,10 @@ private fun InnerChatBubble(
                     Box(modifier = Modifier.align(if (isLoggedInUser) Alignment.Start else Alignment.End)) {
                         footerRow()
                     }
+                } else if (reactionsRow != null) {
+                    // No footer to sit over — reserve space so the overlapping chips don't
+                    // cover the last line of text.
+                    Spacer(Modifier.height(ChatChipOverlapReserve))
                 }
             }
         }

@@ -124,6 +124,7 @@ fun ChatMessageActionSheet(
     var addLabelDialogShowing by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
     var concordBanConfirming by remember { mutableStateOf(false) }
+    var showDeliveryDialog by remember { mutableStateOf(false) }
 
     // Own private rumors (NIP-17 DMs) must be retracted with a gift-wrapped
     // deletion — a public NIP-09 would e-tag the rumor id onto public relays.
@@ -173,6 +174,16 @@ fun ChatMessageActionSheet(
     if (showShareSheet) {
         ShareOptionsBottomSheet(
             note = note,
+            nav = nav,
+            onDismiss = onDismiss,
+        )
+        return
+    }
+
+    if (showDeliveryDialog) {
+        ChatMessageDeliveryDialog(
+            baseNote = note,
+            accountViewModel = accountViewModel,
             nav = nav,
             onDismiss = onDismiss,
         )
@@ -250,7 +261,7 @@ fun ChatMessageActionSheet(
             }
 
             // Stage one: the primary chat action (reply / edit draft) is always shown.
-            ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
+            ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, { showDeliveryDialog = true }, onDismiss)
 
             val handlers =
                 NoteActionHandlers(
@@ -346,7 +357,7 @@ private fun MoreActionsToggle(
 
 // ---------- Action tile sections ----------
 
-/** Chat-specific tiles (reply, edit draft) that have no 3-dot menu equivalent. */
+/** Chat-specific tiles (reply, message delivery, edit draft) that have no 3-dot menu equivalent. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChatOnlyRow(
@@ -354,6 +365,7 @@ private fun ChatOnlyRow(
     state: DropDownParams,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
+    onShowDelivery: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (note.isDraft() && !state.isLoggedUser) return
@@ -371,6 +383,11 @@ private fun ChatOnlyRow(
         ActionTile(MaterialSymbols.AutoMirrored.Chat, stringRes(R.string.reply_description)) {
             onWantsToReply(note)
             onDismiss()
+        }
+        // Which relays carry this message (and, for our own, their acceptance) — the
+        // reliable way to reach the relay list now that the detail row is gone.
+        ActionTile(MaterialSymbols.DoneAll, stringRes(R.string.chat_delivery_details_title)) {
+            onShowDelivery()
         }
     }
 }
