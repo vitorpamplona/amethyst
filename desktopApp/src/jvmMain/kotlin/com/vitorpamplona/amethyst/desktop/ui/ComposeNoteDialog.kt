@@ -118,7 +118,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.datatransfer.DataFlavor
@@ -140,7 +139,6 @@ fun ComposeNoteDialog(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     localCache: com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache? = null,
-    blossomServers: StateFlow<List<String>>? = null,
     replyTo: Event? = null,
     quoteOf: Event? = null,
     draftDTag: String? = null,
@@ -208,8 +206,9 @@ fun ComposeNoteDialog(
     val uploadState by uploadTracker.state.collectAsState()
     val orchestrator = remember { UploadOrchestrator() }
     // Media servers come straight from the account's kind-10063 list holder
-    // (account.blossomServerList.flow), reactively — no cache-poking, no prefs.
-    val serverList by (blossomServers?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
+    // (account.blossomServerList.flow), provided via LocalBlossomServers —
+    // reactively, no cache-poking, no prefs.
+    val serverList by (LocalBlossomServers.current?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
     val effectiveServers = serverList.ifEmpty { listOf(DEFAULT_BLOSSOM_SERVER) }
     var selectedServer by remember { mutableStateOf(effectiveServers.first()) }
     // If the list loads (or changes) after the dialog opens and the current pick

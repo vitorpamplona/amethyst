@@ -472,7 +472,6 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
-                blossomServers = iAccount.blossomServerList.flow,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 onBack = {},
@@ -503,7 +502,6 @@ internal fun RootContent(
                 torSettings = torState.settings,
                 onTorSettingsChanged = torState.onSettingsChanged,
                 namecoinPreferences = LocalNamecoinPreferences.current,
-                blossomServers = iAccount.blossomServerList.flow,
                 onBlossomServersChanged = { servers ->
                     // Publish a kind-10063 event so the list syncs to every
                     // Amethyst client, then consume it locally so state updates
@@ -554,7 +552,6 @@ internal fun RootContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
-                blossomServers = iAccount.blossomServerList.flow,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 onBack = {},
@@ -707,7 +704,6 @@ internal fun OverlayContent(
                 relayManager = relayManager,
                 localCache = localCache,
                 account = account,
-                blossomServers = iAccount?.blossomServerList?.flow,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
                 onBack = onBack,

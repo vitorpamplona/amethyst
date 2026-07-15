@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -92,7 +93,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.mapNotNull
@@ -125,7 +125,6 @@ sealed class Nip05Status {
 fun EditProfileDialog(
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
-    blossomServers: StateFlow<List<String>>? = null,
     latestMetadata: MetadataEvent?,
     latestIdentities: ExternalIdentitiesEvent?,
     onDismiss: () -> Unit,
@@ -173,7 +172,7 @@ fun EditProfileDialog(
     }
 
     val orchestrator = remember { UploadOrchestrator() }
-    val serverBaseUrl = blossomServers?.value?.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
+    val serverBaseUrl = LocalBlossomServers.current?.value?.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
 
     fun uploadFile(
         file: File,

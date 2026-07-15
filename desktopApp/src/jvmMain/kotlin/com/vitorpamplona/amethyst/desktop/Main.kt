@@ -112,6 +112,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscription
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
 import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
+import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
@@ -1471,19 +1472,23 @@ private fun AppInner(
                                 }
                             }
 
-                            // Compose dialog
+                            // Compose dialog. Hosted outside MainContent's provider,
+                            // so provide the account's blossom list here too.
                             if (showComposeDialog) {
-                                ComposeNoteDialog(
-                                    onDismiss = onDismissComposeDialog,
-                                    relayManager = relayManager,
-                                    account = account,
-                                    localCache = localCache,
-                                    blossomServers = iAccount.blossomServerList.flow,
-                                    replyTo = replyToNote,
-                                    draftDTag = composeEditDraftTag,
-                                    draftInitialContent = composeEditContent,
-                                    initialScheduledForSec = composeEditScheduledForSec,
-                                )
+                                CompositionLocalProvider(
+                                    LocalBlossomServers provides iAccount.blossomServerList.flow,
+                                ) {
+                                    ComposeNoteDialog(
+                                        onDismiss = onDismissComposeDialog,
+                                        relayManager = relayManager,
+                                        account = account,
+                                        localCache = localCache,
+                                        replyTo = replyToNote,
+                                        draftDTag = composeEditDraftTag,
+                                        draftInitialContent = composeEditContent,
+                                        initialScheduledForSec = composeEditScheduledForSec,
+                                    )
+                                }
                             }
 
                             // App Drawer overlay
@@ -1972,6 +1977,7 @@ fun MainContent(
 
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
+        LocalBlossomServers provides iAccount.blossomServerList.flow,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
@@ -2225,7 +2231,6 @@ fun RelaySettingsScreen(
             .TorSettings(torType = com.vitorpamplona.amethyst.commons.tor.TorType.OFF),
     onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit = {},
     namecoinPreferences: DesktopNamecoinPreferences? = null,
-    blossomServers: kotlinx.coroutines.flow.StateFlow<List<String>>? = null,
     onBlossomServersChanged: (List<String>) -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -2351,7 +2356,7 @@ fun RelaySettingsScreen(
             Spacer(Modifier.height(24.dp))
 
             // Media Server Settings (Blossom, kind 10063 — synced with mobile)
-            val networkBlossomServers by (blossomServers?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
+            val networkBlossomServers by (LocalBlossomServers.current?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
             // The kind-10063 list is authoritative; before it loads (or when the
             // user has published none) show the default server.
             val effectiveBlossomServers = networkBlossomServers.ifEmpty { listOf(DEFAULT_BLOSSOM_SERVER) }

@@ -1043,7 +1043,6 @@ fun FeedScreen(
                 relayManager = relayManager,
                 account = account,
                 localCache = localCache,
-                blossomServers = iAccount?.blossomServerList?.flow,
                 replyTo = replyToEvent,
             )
         }

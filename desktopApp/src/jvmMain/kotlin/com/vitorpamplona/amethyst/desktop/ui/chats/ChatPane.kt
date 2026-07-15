@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
+import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
@@ -136,13 +137,14 @@ fun ChatPane(
     cacheProvider: ICacheProvider,
     feedViewModel: ChatroomFeedViewModel,
     messageState: ChatNewMessageState,
-    blossomServers: StateFlow<List<String>>? = null,
     dmBroadcastStatus: DmBroadcastStatus = DmBroadcastStatus.Idle,
     onNavigateToProfile: (String) -> Unit = {},
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    // Account's Blossom media servers (kind 10063), read from context.
+    val blossomServers = LocalBlossomServers.current
     val feedState by feedViewModel.feedState.feedContent.collectAsState()
     val messageText by messageState.message.collectAsState()
     val recipientsMissingRelays by messageState.recipientsMissingDmRelays.collectAsState()
