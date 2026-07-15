@@ -22,6 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -109,6 +113,11 @@ private val ExpandableItems =
 
 /** Soft guidance, not a hard cap: a Material bottom bar reads best at ~5 tabs. */
 private const val RECOMMENDED_SLOTS = 5
+
+// Reveal expandable sections by unrolling straight down from the top edge (the default AnimatedVisibility
+// enter also expands horizontally from the bottom-end, which reads as a diagonal slide from the top-left).
+private val SectionExpand = expandVertically(expandFrom = Alignment.Top) + fadeIn()
+private val SectionCollapse = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")
@@ -492,7 +501,7 @@ private fun CategoryCard(
                 )
             }
 
-            AnimatedVisibility(visible = expanded) {
+            AnimatedVisibility(visible = expanded, enter = SectionExpand, exit = SectionCollapse) {
                 Column(Modifier.padding(bottom = 6.dp)) {
                     category.items.forEach { item ->
                         val def = NavBarCatalog[item] ?: return@forEach
@@ -672,7 +681,7 @@ private fun ExpandableAvailableRow(
         )
         AddPill(added = pinned, onClick = onTogglePin)
     }
-    AnimatedVisibility(visible = expanded) {
+    AnimatedVisibility(visible = expanded, enter = SectionExpand, exit = SectionCollapse) {
         Column { children() }
     }
 }
