@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.scheduledposts
 
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
@@ -107,16 +109,22 @@ class ScheduledPostWorkGateTest {
             runCurrent()
             assertEquals(listOf(false), decisions)
 
-            store.add(samplePost(id = "a"))
+            store.add(samplePost(id = "a", publishAtSec = 1_000))
             runCurrent()
             assertEquals(listOf(false, true), decisions)
 
             // A second pending post must not re-fire (distinctUntilChanged).
-            store.add(samplePost(id = "b"))
+            store.add(samplePost(id = "b", publishAtSec = 1_000))
             runCurrent()
             assertEquals(listOf(false, true), decisions)
 
-            // Draining both pending posts cancels the periodic chain.
+            // Draining both pending posts cancels the periodic chain. A row must be
+            // claimed (PENDING -> PUBLISHING) before it can be marked terminal — the
+            // store only allows markSent/markFailed from PUBLISHING, mirroring the
+            // real worker flow.
+            store.claimDuePosts(nowSec = 2_000)
+            runCurrent()
+            assertEquals(listOf(false, true), decisions)
             store.markSent("a")
             runCurrent()
             assertEquals(listOf(false, true), decisions)
@@ -156,8 +164,12 @@ class ScheduledPostWorkGateTest {
     fun publishNowOnFailedPost_reschedulesTheWorker() =
         runTest {
             val store = newStore()
-            store.add(samplePost(id = "a"))
+            store.add(samplePost(id = "a", publishAtSec = 1_000))
             startGate(store)
+            runCurrent()
+            // The worker claims (PENDING -> PUBLISHING) then fails the publish. A row
+            // may only be marked FAILED from PUBLISHING, so claim it first.
+            store.claimDuePosts(nowSec = 2_000)
             runCurrent()
             store.markFailed("a", "relay down")
             runCurrent()

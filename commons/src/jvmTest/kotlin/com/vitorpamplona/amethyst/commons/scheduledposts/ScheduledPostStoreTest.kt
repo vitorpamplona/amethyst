@@ -18,12 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.scheduledposts
+package com.vitorpamplona.amethyst.commons.scheduledposts
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -32,6 +33,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermission
 
 class ScheduledPostStoreTest {
     @get:Rule
@@ -87,6 +90,23 @@ class ScheduledPostStoreTest {
             assertEquals(1, reloaded.size)
             assertEquals("id-1", reloaded[0].id)
             assertEquals(ScheduledPostStatus.PENDING, reloaded[0].status)
+        }
+
+    @Test
+    fun persisted_file_is_owner_only() =
+        runTest {
+            newStore().add(samplePost())
+
+            val perms =
+                try {
+                    Files.getPosixFilePermissions(file.toPath())
+                } catch (e: UnsupportedOperationException) {
+                    // Non-POSIX filesystem (e.g. Windows CI) — nothing to assert.
+                    return@runTest
+                }
+            assertTrue("owner should read/write", perms.contains(PosixFilePermission.OWNER_READ))
+            assertFalse("group must not read the store", perms.contains(PosixFilePermission.GROUP_READ))
+            assertFalse("others must not read the store", perms.contains(PosixFilePermission.OTHERS_READ))
         }
 
     @Test
@@ -148,8 +168,13 @@ class ScheduledPostStoreTest {
     fun markSent_updates_status_and_clears_error() =
         runTest {
             val store = newStore()
-            store.add(samplePost())
+            store.add(samplePost(publishAtSec = 1000))
+            // markFailed/markSent only transition PUBLISHING rows, so claim first.
+            store.claimDuePosts(nowSec = 1000)
             store.markFailed("id-1", "earlier error")
+            // Re-claim to get back to PUBLISHING before the successful send.
+            store.publishNow("id-1", nowSec = 1000)
+            store.claimDuePosts(nowSec = 1000)
             store.markSent("id-1")
 
             val all = store.list()
@@ -161,7 +186,8 @@ class ScheduledPostStoreTest {
     fun markFailed_records_error() =
         runTest {
             val store = newStore()
-            store.add(samplePost())
+            store.add(samplePost(publishAtSec = 1000))
+            store.claimDuePosts(nowSec = 1000) // -> PUBLISHING
             store.markFailed("id-1", "boom")
 
             val all = store.list()
@@ -269,7 +295,8 @@ class ScheduledPostStoreTest {
     fun publishNow_clears_failed_state_for_retry() =
         runTest {
             val store = newStore()
-            store.add(samplePost())
+            store.add(samplePost(publishAtSec = 1000))
+            store.claimDuePosts(nowSec = 1000) // -> PUBLISHING so markFailed applies
             store.markFailed("id-1", "earlier failure")
 
             store.publishNow("id-1", nowSec = 5000)
@@ -389,8 +416,9 @@ class ScheduledPostStoreTest {
     fun removeForAccount_purges_terminal_states_too() =
         runTest {
             val store = newStore()
-            store.add(samplePost(id = "p1", accountPubkey = "pk-a"))
+            store.add(samplePost(id = "p1", publishAtSec = 1000, accountPubkey = "pk-a"))
             store.add(samplePost(id = "p2", accountPubkey = "pk-a"))
+            store.claimDuePosts(nowSec = 1000) // p1 -> PUBLISHING so markSent applies
             store.markSent("p1")
             store.cancel("p2")
 
@@ -554,5 +582,180 @@ class ScheduledPostStoreTest {
             assertEquals(original, reloaded)
             assertNotNull(reloaded.relayUrls)
             assertEquals(2, reloaded.relayUrls.size)
+        }
+
+    // --- Phase 0 store fixes ---
+
+    @Test
+    fun stuck_publishing_row_reverts_to_pending_on_load() =
+        runTest {
+            val claimTime = 1_700_000_000L
+            // Claim a post so it becomes PUBLISHING with lastAttemptAtSec = claimTime.
+            newStore { claimTime }.also {
+                it.add(samplePost(id = "stuck", publishAtSec = claimTime))
+                it.claimDuePosts(claimTime)
+            }
+
+            // A fresh store instance loads that stuck row 11 minutes later (> CLAIM_TTL of 10m).
+            val elevenMinutesLater = claimTime + 11L * 60
+            val reloaded = newStore { elevenMinutesLater }
+
+            val row = reloaded.list().single()
+            assertEquals(ScheduledPostStatus.PENDING, row.status)
+        }
+
+    @Test
+    fun stuck_publishing_row_reverts_and_is_reclaimable() =
+        runTest {
+            val claimTime = 1_700_000_000L
+            newStore { claimTime }.also {
+                it.add(samplePost(id = "stuck", publishAtSec = claimTime))
+                it.claimDuePosts(claimTime)
+            }
+
+            // The same store reloaded past the TTL should be able to claim the row again.
+            val elevenMinutesLater = claimTime + 11L * 60
+            val reloaded = newStore { elevenMinutesLater }
+
+            val claimedAgain = reloaded.claimDuePosts(elevenMinutesLater)
+            assertEquals(1, claimedAgain.size)
+            assertEquals("stuck", claimedAgain[0].id)
+        }
+
+    @Test
+    fun fresh_publishing_row_is_not_reverted_before_ttl() =
+        runTest {
+            val claimTime = 1_700_000_000L
+            newStore { claimTime }.also {
+                it.add(samplePost(id = "fresh-claim", publishAtSec = claimTime))
+                it.claimDuePosts(claimTime)
+            }
+
+            // Only 5 minutes elapsed — under the 10 minute TTL, so it stays PUBLISHING.
+            val fiveMinutesLater = claimTime + 5L * 60
+            val reloaded = newStore { fiveMinutesLater }
+
+            assertEquals(ScheduledPostStatus.PUBLISHING, reloaded.list().single().status)
+        }
+
+    @Test
+    fun accountScoped_claim_only_returns_matching_account() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(id = "a-due", publishAtSec = 1000, accountPubkey = "pk-a"))
+            store.add(samplePost(id = "b-due", publishAtSec = 1000, accountPubkey = "pk-b"))
+
+            val claimed = store.claimDuePosts(nowSec = 1000, accountPubkey = "pk-a")
+
+            assertEquals(setOf("a-due"), claimed.map { it.id }.toSet())
+            // pk-b's due post should remain PENDING, untouched by the scoped claim.
+            val bRow = store.list().single { it.id == "b-due" }
+            assertEquals(ScheduledPostStatus.PENDING, bRow.status)
+        }
+
+    @Test
+    fun accountScoped_claim_leaves_other_account_claimable() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(id = "a-due", publishAtSec = 1000, accountPubkey = "pk-a"))
+            store.add(samplePost(id = "b-due", publishAtSec = 1000, accountPubkey = "pk-b"))
+
+            store.claimDuePosts(nowSec = 1000, accountPubkey = "pk-a")
+            val bClaim = store.claimDuePosts(nowSec = 1000, accountPubkey = "pk-b")
+
+            assertEquals(setOf("b-due"), bClaim.map { it.id }.toSet())
+        }
+
+    // --- Fix 1: cross-process reload before mutation ---
+
+    @Test
+    fun claim_adopts_external_sent_written_by_another_process() =
+        runTest {
+            // Two store instances over the same file model the running app + the headless
+            // publisher. Instance A loads the store, then instance B (the "other process")
+            // claims and marks the post SENT — writing that to disk. When A next claims, it
+            // must reload B's SENT write and NOT re-claim the already-published post.
+            val storeA = newStore()
+            val storeB = newStore()
+
+            storeA.add(samplePost(id = "shared", publishAtSec = 1000))
+            // Pull A's in-memory state in (simulates A having loaded earlier).
+            storeA.list()
+
+            // B claims and publishes the post out from under A.
+            val bClaim = storeB.claimDuePosts(nowSec = 1000)
+            assertEquals(1, bClaim.size)
+            storeB.markSent("shared")
+
+            // A now claims; reload picks up B's SENT so nothing due remains.
+            val aClaim = storeA.claimDuePosts(nowSec = 1000)
+            assertEquals("A must not re-claim a post another process already SENT", 0, aClaim.size)
+            assertEquals(ScheduledPostStatus.SENT, storeA.list().single().status)
+        }
+
+    // --- Fix 5: status guards ---
+
+    @Test
+    fun cancel_on_publishing_row_is_noop_and_returns_false() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(publishAtSec = 1000))
+            store.claimDuePosts(nowSec = 1000) // -> PUBLISHING
+
+            val ok = store.cancel("id-1")
+
+            assertFalse("cancel must not touch a PUBLISHING row", ok)
+            assertEquals(ScheduledPostStatus.PUBLISHING, store.list().single().status)
+        }
+
+    @Test
+    fun cancel_on_failed_row_succeeds() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(publishAtSec = 1000))
+            store.claimDuePosts(nowSec = 1000)
+            store.markFailed("id-1", "boom")
+
+            val ok = store.cancel("id-1")
+
+            assertTrue(ok)
+            assertEquals(ScheduledPostStatus.CANCELLED, store.list().single().status)
+        }
+
+    @Test
+    fun markSent_only_transitions_from_publishing() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost()) // stays PENDING, never claimed
+
+            val ok = store.markSent("id-1")
+
+            assertFalse("markSent must only transition a PUBLISHING row", ok)
+            assertEquals(ScheduledPostStatus.PENDING, store.list().single().status)
+        }
+
+    @Test
+    fun markFailed_only_transitions_from_publishing() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost()) // PENDING
+
+            val ok = store.markFailed("id-1", "boom")
+
+            assertFalse("markFailed must only transition a PUBLISHING row", ok)
+            assertEquals(ScheduledPostStatus.PENDING, store.list().single().status)
+        }
+
+    @Test
+    fun publishNow_on_publishing_row_is_noop_and_returns_false() =
+        runTest {
+            val store = newStore()
+            store.add(samplePost(publishAtSec = 1000))
+            store.claimDuePosts(nowSec = 1000) // -> PUBLISHING
+
+            val ok = store.publishNow("id-1", nowSec = 2000)
+
+            assertFalse("publishNow must not touch a PUBLISHING row", ok)
+            assertEquals(ScheduledPostStatus.PUBLISHING, store.list().single().status)
         }
 }

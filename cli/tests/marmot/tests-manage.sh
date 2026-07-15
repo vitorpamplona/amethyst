@@ -189,3 +189,58 @@ test_11_leave_group() {
     record_result "$id" fail "A still in B's member list after leave"
   fi
 }
+
+# Regression guard for the Marmot group-icon feature: setting a group image writes
+# the MIP-01 v2 image fields into the NostrGroupData extension. mdk-core (the library
+# whitenoise uses) rejects ANY trailing bytes in that extension at a known version, so
+# a mis-encoded image commit would make the whole group unprocessable for wn and stall
+# it a full epoch behind A.
+#
+# We prove wn applied the image commit the hard way: A sets an image, then sends an
+# application message at the POST-image epoch. wn can only decrypt that message if it
+# advanced past the image-bearing GCE commit — so wn receiving it is direct evidence
+# the image extension parsed. (Once it parses, whitenoise even tries to fetch the
+# avatar from Blossom via background_sync_group_image_cache_if_needed.)
+#
+# A single application message is used rather than a second commit on purpose: two
+# commits fired 3s apart race wn's per-epoch processing and give a flaky signal.
+test_17_group_image_commit() {
+  banner "Test 17 — Group image commit stays parseable on whitenoise (MIP-01 v2)"
+  local id="17 group image"
+
+  local gid mls_gid
+  gid=$(load_state GROUP_02 || true)
+  mls_gid=$(load_state GROUP_02_MLS || true)
+  if [[ -z "${gid:-}" || -z "${mls_gid:-}" ]]; then
+    record_result "$id" skip "no GROUP_02"; return
+  fi
+
+  # Skip cleanly if A is no longer a member of GROUP_02 (a later test may have removed
+  # A) — this test only makes sense while A can still commit to the group.
+  if ! wn_b --json groups members "$mls_gid" 2>/dev/null \
+        | jq -e --arg p "$A_HEX" '(.result // .) | .[]? | select((.pubkey // .public_key) == $p)' \
+        >/dev/null 2>&1; then
+    record_result "$id" skip "A not in GROUP_02"; return
+  fi
+
+  # Contents are irrelevant — amy encrypts whatever bytes it's given; the interop
+  # question is purely whether the resulting image extension parses on wn.
+  local img="$STATE_DIR/marmot-icon.bin"
+  head -c 1024 /dev/urandom >"$img" 2>/dev/null || printf 'fake-avatar-bytes-for-interop' >"$img"
+
+  if ! amy_json marmot group set-image "$gid" "$img" >/dev/null; then
+    record_result "$id" fail "amy set-image failed"; return
+  fi
+
+  sleep 3
+  local tag="post-image-ping-from-amethyst"
+  if ! amy_json marmot message send "$gid" "$tag" >/dev/null; then
+    record_result "$id" fail "amy post-image send failed"; return
+  fi
+
+  if wait_for_message B "$mls_gid" "$tag" 120; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "wn could not decrypt A's post-image message — image commit not applied"
+  fi
+}

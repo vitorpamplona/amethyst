@@ -236,11 +236,11 @@ fun ConcordChannelListScreen(
             LazyColumn(Modifier.fillMaxSize().padding(padding)) {
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
-                    val name = def?.name ?: entry.key
+                    val name = def.name.ifBlank { entry.key }
                     val icon =
                         when {
-                            def?.voice == true -> MaterialSymbols.Mic
-                            def?.private == true -> MaterialSymbols.Lock
+                            def.voice == true -> MaterialSymbols.Mic
+                            def.private == true -> MaterialSymbols.Lock
                             else -> MaterialSymbols.Tag
                         }
                     Row(

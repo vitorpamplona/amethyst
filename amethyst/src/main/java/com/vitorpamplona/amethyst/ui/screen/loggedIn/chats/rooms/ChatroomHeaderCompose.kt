@@ -43,16 +43,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -83,7 +81,9 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
@@ -282,7 +282,7 @@ private fun ChannelRoomCompose(
     ChannelName(
         channelIdHex = channel.idHex,
         channelPicture = channelPicture,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, R.string.public_chat, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, MaterialSymbols.Public, R.string.public_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
@@ -318,7 +318,7 @@ private fun ChannelRoomCompose(
     ChannelName(
         channelIdHex = channel.roomId.toKey(),
         channelPicture = relayInfo.icon,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channel.toBestDisplayName(), R.string.ephemeral_relay_chat, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channel.toBestDisplayName(), MaterialSymbols.Timer, R.string.ephemeral_relay_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
@@ -340,10 +340,22 @@ private fun MarmotGroupRoomCompose(
     nav: INav,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
+    val image by chatroom.image.collectAsStateWithLifecycle()
+    val relays by chatroom.relays.collectAsStateWithLifecycle()
+    val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
 
     val author = lastMessage.author
     val noteEvent = lastMessage.event
     val groupName = displayName?.takeIf { it.isNotBlank() } ?: "Group ${chatroom.nostrGroupId.take(8)}"
+
+    // Prefer the group's own (encrypted) avatar; when it has none, fall back to the
+    // NIP-11 icon of one of the group's relays (fetched on a cache miss).
+    val channelPicture =
+        if (image != null) {
+            rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)
+        } else {
+            loadMarmotRelayIcon(relays)
+        }
 
     val lastContent =
         if (author != null && noteEvent != null) {
@@ -357,8 +369,8 @@ private fun MarmotGroupRoomCompose(
 
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
-        channelPicture = null,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
+        channelPicture = channelPicture,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, MaterialSymbols.Lock, R.string.marmot_group, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
@@ -518,7 +530,7 @@ private fun RelayGroupServerRoomCompose(
     ChannelName(
         channelIdHex = relay.url,
         channelPicture = relayInfo.icon,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, R.string.relay_group_server_label, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Dns, R.string.relay_group_server_label, modifier) },
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = false,
@@ -564,7 +576,7 @@ private fun ConcordServerRoomCompose(
     ChannelName(
         channelIdHex = row.communityId,
         channelPicture = rememberConcordImageModel(metadata?.icon, accountViewModel),
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, R.string.concord_server_label, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Group, R.string.concord_server_label, modifier) },
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
         hasNewMessages = false,
@@ -615,44 +627,34 @@ private fun RelayNameChip(
     }
 }
 
+/**
+ * Renders a Messages row title as the channel name followed by a muted [HeaderPill] naming the room
+ * type (Public Chat, Marmot Group, ...). The pill mirrors the Concord community chip so every group
+ * kind reads the same way across the screen: bold name, then a faint rounded chip with a type icon
+ * and short label. The name yields space to the chip so a long title can't crowd it out.
+ */
 @Composable
 private fun ChannelTitleWithLabelInfo(
     channelName: String,
+    labelIcon: MaterialSymbol,
     label: Int,
     modifier: Modifier,
 ) {
-    val label = stringRes(id = label)
-    val placeHolderColor = MaterialTheme.colorScheme.placeholderText
-    val channelNameAndBoostInfo =
-        remember(channelName) {
-            buildAnnotatedString {
-                withStyle(
-                    SpanStyle(
-                        fontWeight = FontWeight.Bold,
-                    ),
-                ) {
-                    append(channelName)
-                }
-
-                withStyle(
-                    SpanStyle(
-                        color = placeHolderColor,
-                        fontWeight = FontWeight.Normal,
-                    ),
-                ) {
-                    append(" $label")
-                }
-            }
-        }
-
-    Text(
-        text = channelNameAndBoostInfo,
-        fontWeight = FontWeight.Bold,
-        modifier = modifier,
-        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+        Text(
+            text = channelName,
+            fontWeight = FontWeight.Bold,
+            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Spacer(Modifier.width(6.dp))
+        HeaderPill(
+            symbol = labelIcon,
+            text = stringRes(id = label),
+        )
+    }
 }
 
 @Composable

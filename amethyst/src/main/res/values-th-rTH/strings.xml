@@ -286,6 +286,9 @@
     <string name="already_have_an_account">มีบัญชี Nostr อยู่แล้ว?</string>
     <string name="loading_feed">กำลังดาวน์โหลดฟีด</string>
     <string name="loading_account">กำลังโหลดข้อมูลบัญชี</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">เข้ารหัส</string>
     <string name="chats_history_proto_nip04">แบบเก่า</string>
     <string name="chats_reply_searching_history">กำลังค้นหาข้อความต้นฉบับ…</string>

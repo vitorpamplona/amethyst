@@ -285,6 +285,9 @@
     <string name="already_have_an_account">Već imate Nostr nalog?</string>
     <string name="loading_feed">Učitavanje objava</string>
     <string name="loading_account">Učitavanje naloga</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">šifrovano</string>
     <string name="chats_history_proto_nip04">zastarelo</string>
     <string name="chats_reply_searching_history">Traženje originalne poruke…</string>

@@ -18,33 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.scheduledposts
+package com.vitorpamplona.amethyst.commons.scheduledposts
 
-enum class ScheduledPostStatus {
-    PENDING,
-    PUBLISHING,
-    SENT,
-    FAILED,
-    CANCELLED,
+import com.vitorpamplona.quartz.utils.Log
+
+/**
+ * Desktop/JVM [ScheduledPostNotifier] that only logs. Desktop has no system
+ * notification channel wired for scheduled posts yet; this keeps the publish
+ * loop functional and observable until one is added.
+ */
+class LoggingScheduledPostNotifier : ScheduledPostNotifier {
+    override fun notifySent(post: ScheduledPost) {
+        Log.i(TAG) { "Scheduled post ${post.id} sent" }
+    }
+
+    override fun notifyFailed(
+        post: ScheduledPost,
+        error: String?,
+    ) {
+        Log.w(TAG) { "Scheduled post ${post.id} failed: ${error ?: "unknown error"}" }
+    }
+
+    companion object {
+        private const val TAG = "ScheduledPostNotifier"
+    }
 }
-
-data class ScheduledPost(
-    val id: String,
-    val accountPubkey: String,
-    val signedEventJson: String,
-    val relayUrls: List<String>,
-    val extraEventsJson: List<String>,
-    val publishAtSec: Long,
-    val createdAtSec: Long,
-    val status: ScheduledPostStatus = ScheduledPostStatus.PENDING,
-    val lastAttemptAtSec: Long? = null,
-    val attemptCount: Int = 0,
-    val lastError: String? = null,
-    // Set when the row enters a terminal state (SENT/CANCELLED). Drives retention.
-    val terminatedAtSec: Long? = null,
-)
-
-data class ScheduledPostFile(
-    val version: Int = 1,
-    val posts: List<ScheduledPost> = emptyList(),
-)

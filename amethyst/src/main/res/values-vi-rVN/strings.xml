@@ -279,6 +279,9 @@
     <string name="already_have_an_account">Đã có tài khoản Nostr?</string>
     <string name="loading_feed">Đang tải bảng tin</string>
     <string name="loading_account">Đang tải tài khoản</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">đã mã hóa</string>
     <string name="chats_history_proto_nip04">cũ</string>
     <string name="chats_reply_searching_history">Đang tìm kiếm tin nhắn gốc…</string>

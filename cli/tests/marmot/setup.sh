@@ -52,32 +52,27 @@ preflight() {
       2>&1 | tee -a "$LOG_FILE"
   fi
 
-  # Four harness-only patches to wnd so it runs fully offline / in
-  # sandboxes that block outbound + kernel keyring:
-  #   1. discovery-env: honour $WHITENOISE_DISCOVERY_RELAYS so we can
-  #      point wnd at our loopback relay instead of the baked-in public
-  #      set. Without it wnd exits with NoRelayConnections.
-  #   2. mock-keyring: honour $WHITENOISE_MOCK_KEYRING so wnd uses the
+  # Two harness-only patches to whitenoise-rs so it runs in sandboxes that
+  # block the kernel keyring:
+  #   1. mock-keyring: honour $WHITENOISE_MOCK_KEYRING so wnd uses the
   #      integration-tests mock keyring store when the kernel keyutils
-  #      syscalls are blocked (common in containers / CI).
-  #   3. defaults-env: reuse the same env var so `Relay::defaults()`
-  #      (what `create-identity` stamps into the new account's NIP-65 /
-  #      inbox / key-package lists) points at the loopback relay too.
-  #      Without it every account wnd creates carries damus.io /
-  #      primal.net / nos.lol, and every later activate / publish burns
-  #      connection budget on unreachable sockets — enough to break the
-  #      account-inbox subscription plane and drop kind:1059 delivery.
-  #   4. skip-unprocessable-retry: when mdk-core returns
-  #      `MlsMessageUnprocessable` (pre-membership commit, too-old epoch)
-  #      the message is provably undecryptable — retrying it ten times
-  #      with exponential backoff (total ~17 min) just blocks later
-  #      decryptable commits behind a queue of doomed retries, which in
-  #      the harness manifests as "A already left" / "name unchanged"
-  #      timeouts. The patch treats that error as terminal.
+  #      syscalls are blocked (common in containers / CI). Compiled in via
+  #      `--features whitenoise/integration-tests` on the build below.
+  #   2. skip-unprocessable-retry: when mdk-core returns a terminal MLS
+  #      error (MlsMessageUnprocessable / PreviouslyFailed / MdkCoreError)
+  #      the message is provably undecryptable — retrying it ten times with
+  #      exponential backoff (~17 min) just blocks later decryptable commits
+  #      behind a queue of doomed retries, which in the harness manifests as
+  #      "A already left" / "name unchanged" timeouts. The patch treats those
+  #      errors as terminal.
+  #
+  # The relay-override patches this harness used to carry (discovery-env /
+  # defaults-env) are gone: upstream wnd now takes native --discovery-relays
+  # and --default-account-relays flags (passed in start_daemon), which do the
+  # same job without patching. wn/wnd also moved into the crates/whitenoise-cli
+  # workspace member — the mock-keyring patch targets that path.
   local -a patches=(
-    "whitenoise-discovery-env.patch"
     "whitenoise-mock-keyring.patch"
-    "whitenoise-defaults-env.patch"
     "whitenoise-skip-unprocessable-retry.patch"
   )
   # Apply each patch with a real exit-code check. The previous version
@@ -114,7 +109,8 @@ preflight() {
     for attempt in $(seq 1 $max); do
       step "building wn + wnd (attempt $attempt/$max, ~5 min first run)"
       ( cd "$WN_REPO" && \
-          cargo build --release --features cli,integration-tests --bin wn --bin wnd ) \
+          cargo build --release -p whitenoise-cli \
+            --features whitenoise/integration-tests --bin wn --bin wnd ) \
         2>&1 | tee -a "$LOG_FILE"
       [[ -x "$WN_BIN" && -x "$WND_BIN" ]] && break
       [[ "$attempt" -lt "$max" ]] && warn "wn/wnd build failed (likely transient 503 from rustup or crates.io) — retrying"
@@ -243,17 +239,17 @@ start_daemon() {
       -exec rm -rf {} + 2>/dev/null || true
   fi
   mkdir -p "$data_dir/logs" "$data_dir/release"
-  # Env vars consumed by the two harness-only wnd patches applied in
-  # preflight:
-  #   WHITENOISE_DISCOVERY_RELAYS — forces the discovery plane at our
-  #     loopback relay (kills the "can't reach nos.lol" exit path).
-  #   WHITENOISE_MOCK_KEYRING     — swaps in the integration-tests mock
-  #     secret store so wnd doesn't fall over when the kernel blocks
-  #     keyutils syscalls.
-  # Both are harmless on a real host with connectivity + a real keyring.
-  WHITENOISE_DISCOVERY_RELAYS="$RELAY_URL" \
-    WHITENOISE_MOCK_KEYRING=1 \
+  # --discovery-relays / --default-account-relays are native wnd flags that
+  # force both the discovery plane and freshly-created accounts' NIP-65 / inbox
+  # / key-package lists onto our loopback relay (kills the "can't reach nos.lol"
+  # exit path and stops accounts from carrying unreachable public relays).
+  #
+  # WHITENOISE_MOCK_KEYRING=1 is consumed by the mock-keyring patch: it swaps in
+  # the integration-tests mock secret store so wnd doesn't fall over when the
+  # kernel blocks keyutils syscalls. Harmless on a real host with a real keyring.
+  WHITENOISE_MOCK_KEYRING=1 \
     nohup "$WND_BIN" --data-dir "$data_dir" --logs-dir "$data_dir/logs" \
+      --discovery-relays "$RELAY_URL" --default-account-relays "$RELAY_URL" \
       >"$data_dir/logs/stdout.log" 2>"$data_dir/logs/stderr.log" &
   local pid=$!
   echo "$pid" > "$data_dir/pid"

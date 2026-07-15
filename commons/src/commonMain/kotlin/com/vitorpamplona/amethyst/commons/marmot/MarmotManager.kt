@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.MarmotOutboundProcessor
@@ -742,6 +743,16 @@ class MarmotManager(
             }
             chatroom.adminPubkeys.value = metadata.adminPubkeys
             chatroom.relays.value = metadata.relays
+            chatroom.image.value =
+                if (metadata.hasImage()) {
+                    MarmotGroupImage(
+                        hash = metadata.imageHash!!,
+                        key = metadata.imageKey!!,
+                        nonce = metadata.imageNonce!!,
+                    )
+                } else {
+                    null
+                }
         }
         val previousCount = chatroom.members.value.size
         val members = memberPubkeys(nostrGroupId)

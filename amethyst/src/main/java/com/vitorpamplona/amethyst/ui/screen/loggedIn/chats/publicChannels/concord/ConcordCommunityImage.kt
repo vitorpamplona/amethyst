@@ -72,8 +72,8 @@ fun rememberConcordImageModel(
                         val ciphertext =
                             client.newCall(Request.Builder().url(pointer.url).build()).execute().use { resp ->
                                 if (!resp.isSuccessful) return@runCatching null
-                                resp.body?.bytes()
-                            } ?: return@runCatching null
+                                resp.body.bytes()
+                            }
 
                         val plaintext = pointer.decryptOrNull(ciphertext) ?: return@runCatching null
                         cacheFile.writeBytes(plaintext)

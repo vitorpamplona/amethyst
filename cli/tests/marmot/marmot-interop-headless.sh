@@ -128,6 +128,7 @@ test_05_b_adds_a_existing
 test_06_member_removal
 test_07_metadata_rename
 test_08_admin_promote_demote
+test_17_group_image_commit
 test_09_reply_react_unreact
 test_10_concurrent_commits
 test_11_leave_group

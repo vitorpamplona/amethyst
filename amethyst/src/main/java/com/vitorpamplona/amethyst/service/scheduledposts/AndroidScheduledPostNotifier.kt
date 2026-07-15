@@ -28,28 +28,22 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostNotifier
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.extractContentPreview
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
- * Posts user-visible system notifications when a scheduled post completes
- * (sent or failed). Without this, a worker firing in background offers zero
- * diagnostic to the user — see the silent-publish bug the ack-aware worker
- * now guards against; the notification closes the loop.
+ * Android [ScheduledPostNotifier]: posts a user-visible system notification when a
+ * scheduled post completes (sent or failed). Lives in the app module because it
+ * depends on app resources (strings, drawables) and [MainActivity], which are not
+ * available to `commons`.
  */
-object ScheduledPostNotifier {
-    // @Volatile so the channel reference is visible across the WorkManager IO
-    // thread pool — two workers firing in the same window can race on
-    // ensureChannel. createNotificationChannel itself is idempotent.
-    @Volatile
-    private var channel: NotificationChannel? = null
-    private const val SCHEDULED_POST_NOT_ID_BASE = 0x70000
-
-    fun notifySent(
-        context: Context,
-        post: ScheduledPost,
-    ) {
+class AndroidScheduledPostNotifier(
+    private val context: Context,
+) : ScheduledPostNotifier {
+    override fun notifySent(post: ScheduledPost) {
         ensureChannel(context)
         post(
             context = context,
@@ -59,8 +53,7 @@ object ScheduledPostNotifier {
         )
     }
 
-    fun notifyFailed(
-        context: Context,
+    override fun notifyFailed(
         post: ScheduledPost,
         error: String?,
     ) {
@@ -122,20 +115,29 @@ object ScheduledPostNotifier {
         }
     }
 
-    fun ensureChannel(context: Context) {
-        if (channel != null) return
-        channel =
-            NotificationChannel(
-                stringRes(context, R.string.app_notification_scheduled_posts_channel_id),
-                stringRes(context, R.string.app_notification_scheduled_posts_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description = stringRes(context, R.string.app_notification_scheduled_posts_channel_description)
-            }
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(channel!!)
-    }
-
     // Distinct id per post so multiple completions don't collapse onto one row.
     private fun idFor(postId: String): Int = SCHEDULED_POST_NOT_ID_BASE xor postId.hashCode()
+
+    companion object {
+        // @Volatile so the channel reference is visible across the WorkManager IO
+        // thread pool — two workers firing in the same window can race on
+        // ensureChannel. createNotificationChannel itself is idempotent.
+        @Volatile
+        private var channel: NotificationChannel? = null
+        private const val SCHEDULED_POST_NOT_ID_BASE = 0x70000
+
+        fun ensureChannel(context: Context) {
+            if (channel != null) return
+            channel =
+                NotificationChannel(
+                    stringRes(context, R.string.app_notification_scheduled_posts_channel_id),
+                    stringRes(context, R.string.app_notification_scheduled_posts_channel_name),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply {
+                    description = stringRes(context, R.string.app_notification_scheduled_posts_channel_description)
+                }
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(channel!!)
+        }
+    }
 }

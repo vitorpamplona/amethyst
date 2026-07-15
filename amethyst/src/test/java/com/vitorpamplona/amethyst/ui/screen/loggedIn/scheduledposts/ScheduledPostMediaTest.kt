@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts
 
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPost
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

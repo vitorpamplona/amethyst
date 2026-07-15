@@ -41,6 +41,8 @@ object GroupCommands {
                 "rename" to { rest -> GroupMetadataCommands.rename(dataDir, rest) },
                 "promote" to { rest -> GroupMetadataCommands.promote(dataDir, rest) },
                 "demote" to { rest -> GroupMetadataCommands.demote(dataDir, rest) },
+                "set-image" to { rest -> GroupMetadataCommands.setImage(dataDir, rest) },
+                "clear-image" to { rest -> GroupMetadataCommands.clearImage(dataDir, rest) },
                 "remove" to { rest -> GroupMembershipCommands.remove(dataDir, rest) },
                 "leave" to { rest -> GroupMembershipCommands.leave(dataDir, rest) },
             ),

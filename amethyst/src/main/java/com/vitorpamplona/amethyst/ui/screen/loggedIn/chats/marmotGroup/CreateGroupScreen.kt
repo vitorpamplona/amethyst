@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -42,10 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -58,6 +62,12 @@ fun CreateGroupScreen(
     nav: INav,
 ) {
     var groupName by remember { mutableStateOf("") }
+    var groupDescription by remember { mutableStateOf("") }
+    var pickedIcon by remember { mutableStateOf<SelectedMedia?>(null) }
+    // Stable seed for the placeholder avatar shown before an icon is picked. The real
+    // group id is generated per creation attempt (so retries don't collide), so this is
+    // a separate cosmetic seed rather than "".
+    val avatarSeed = remember { RandomInstance.bytes(32).toHexKey() }
     var isCreating by remember { mutableStateOf(false) }
     var showKeyPackageRelayDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -69,6 +79,14 @@ fun CreateGroupScreen(
             try {
                 val nostrGroupId = RandomInstance.bytes(32).toHexKey()
                 accountViewModel.createMarmotGroup(nostrGroupId)
+                // Encrypt + upload the picked icon (if any) before the metadata commit,
+                // so its parameters land in the group's MarmotGroupData extension.
+                val iconChange =
+                    pickedIcon?.let { media ->
+                        MarmotGroupIconChange.Set(
+                            accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, context),
+                        )
+                    } ?: MarmotGroupIconChange.Keep
                 // Always commit an initial metadata extension so that
                 // (a) the name (if any) is persisted in MLS extensions
                 //     and survives app restarts,
@@ -80,7 +98,8 @@ fun CreateGroupScreen(
                 accountViewModel.updateMarmotGroupMetadata(
                     nostrGroupId = nostrGroupId,
                     name = groupName.trim(),
-                    description = "",
+                    description = groupDescription.trim(),
+                    icon = iconChange,
                 )
                 nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)
             } catch (e: Exception) {
@@ -126,12 +145,39 @@ fun CreateGroupScreen(
                 modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
             )
 
+            MarmotGroupIconEditor(
+                groupId = avatarSeed,
+                existingImage = null,
+                pickedMedia = pickedIcon,
+                removeRequested = false,
+                enabled = !isCreating,
+                accountViewModel = accountViewModel,
+                onPick = { pickedIcon = it },
+                onRemove = { pickedIcon = null },
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = groupName,
                 onValueChange = { groupName = it },
                 label = { Text(stringRes(R.string.marmot_group_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                enabled = !isCreating,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = groupDescription,
+                onValueChange = { groupDescription = it },
+                label = { Text(stringRes(R.string.description)) },
+                placeholder = { Text(stringRes(R.string.marmot_group_description_placeholder)) },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 5,
+                enabled = !isCreating,
             )
 
             Text(

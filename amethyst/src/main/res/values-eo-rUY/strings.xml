@@ -289,6 +289,9 @@
     <string name="already_have_an_account">Ĉu vi jam havas Nostr-konton?</string>
     <string name="loading_feed">Ŝargante fluon</string>
     <string name="loading_account">Ŝargante konton</string>
+    <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">ĉifrita</string>
     <string name="chats_history_proto_nip04">malnova</string>
     <string name="chats_reply_searching_history">Serĉante la originalan mesaĝon…</string>
