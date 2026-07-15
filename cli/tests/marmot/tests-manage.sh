@@ -189,3 +189,49 @@ test_11_leave_group() {
     record_result "$id" fail "A still in B's member list after leave"
   fi
 }
+
+# Regression guard for the Marmot group-icon feature: setting a group image
+# writes the MIP-01 image fields into the NostrGroupData extension. mdk-core (the
+# library whitenoise uses) rejects ANY trailing bytes in that extension at a known
+# version, so a mis-encoded image commit would make the whole group unprocessable
+# for wn. We verify end-to-end that an amy-authored image commit stays parseable:
+# A sets an image, then renames — the rename is a LATER epoch, so wn can only
+# observe the new name if it first applied the image-bearing GCE commit. If the
+# image extension were rejected, wn would stall at the pre-image epoch and never
+# see the rename.
+test_17_group_image_commit() {
+  banner "Test 17 — Group image commit stays parseable on whitenoise (MIP-01 v2)"
+  local id="17 group image"
+
+  local gid mls_gid
+  gid=$(load_state GROUP_02 || true)
+  mls_gid=$(load_state GROUP_02_MLS || true)
+  if [[ -z "${gid:-}" || -z "${mls_gid:-}" ]]; then
+    record_result "$id" skip "no GROUP_02"; return
+  fi
+
+  # Contents are irrelevant — amy encrypts whatever bytes it's given; the interop
+  # question is purely whether the resulting image extension parses on wn.
+  local img="$STATE_DIR/marmot-icon.bin"
+  head -c 1024 /dev/urandom >"$img" 2>/dev/null || printf 'fake-avatar-bytes-for-interop' >"$img"
+
+  if ! amy_json marmot group set-image "$gid" "$img" >/dev/null; then
+    record_result "$id" fail "amy set-image failed"; return
+  fi
+  sleep 3
+  if ! amy_json marmot group rename "$gid" "Interop-02-iconecho" >/dev/null; then
+    record_result "$id" fail "amy rename after set-image failed"; return
+  fi
+
+  local deadline=$(( $(date +%s) + 120 )) seen=""
+  while [[ $(date +%s) -lt $deadline ]]; do
+    seen=$(wn_b --json groups show "$mls_gid" 2>/dev/null | jq -r '(.result // .) | (.group // .) | .name // empty')
+    [[ "$seen" == "Interop-02-iconecho" ]] && break
+    sleep 3
+  done
+  if [[ "$seen" == "Interop-02-iconecho" ]]; then
+    record_result "$id" pass
+  else
+    record_result "$id" fail "wn did not advance past the image commit (name=\"$seen\")"
+  fi
+}

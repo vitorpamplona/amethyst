@@ -20,15 +20,22 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
+import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
+import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import java.io.File
 
 /**
- * Metadata-only commits: rename, promote/demote. Each loads current metadata,
- * edits the right field, publishes a GCE commit to the group relays.
+ * Metadata-only commits: rename, promote/demote, set/clear image. Each loads current
+ * metadata, edits the right field, publishes a GCE commit to the group relays.
  */
 object GroupMetadataCommands {
     suspend fun rename(
@@ -64,9 +71,65 @@ object GroupMetadataCommands {
         }
     }
 
+    /**
+     * Set the group avatar (MIP-01 v2): encrypt the image, optionally push the
+     * ciphertext to Blossom (`--server`), and commit the image fields into the group
+     * metadata. The encryption is byte-for-byte interoperable with mdk/whitenoise.
+     *
+     * `group set-image <gid> <image-file> [--server URL] [--mime TYPE]`
+     */
+    suspend fun setImage(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val gid = args.positional(0, "gid")
+        val path = args.positional(1, "image-file")
+        val server = args.flag("server")
+        val file = File(path)
+        if (!file.isFile) return Output.error("bad_args", "no such file: $path")
+
+        val plaintext = file.readBytes()
+        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
+        val uploadKeySeed = MarmotGroupImageEncryption.generateUploadKey()
+
+        // Optionally push the encrypted blob to Blossom, signed by the keypair derived
+        // from image_upload_key so an admin holding the seed can later replace/delete it.
+        var uploadedUrl: String? = null
+        if (server != null) {
+            val uploadSigner = NostrSignerInternal(KeyPair(privKey = MarmotGroupImageEncryption.deriveUploadKeypairSecret(uploadKeySeed)))
+            val tmp = File.createTempFile("marmot-icon", ".bin")
+            try {
+                tmp.writeBytes(enc.ciphertext)
+                val auth = BlossomAuth.createUploadAuth(enc.imageHash, enc.ciphertext.size.toLong(), "Group image", uploadSigner)
+                val result = BlossomClient().upload(tmp, "application/octet-stream", server, auth)
+                if (result.sha256 != null && result.sha256 != enc.imageHash) {
+                    return Output.error("hash_mismatch", "blossom returned ${result.sha256}, expected ${enc.imageHash}")
+                }
+                uploadedUrl = result.url
+            } finally {
+                tmp.delete()
+            }
+        }
+
+        return edit(dataDir, gid, mapOf("image_hash" to enc.imageHash, "image_url" to uploadedUrl)) { _, cur ->
+            cur.withImage(enc.imageHash, enc.imageKey, enc.imageNonce, uploadKeySeed)
+        }
+    }
+
+    /** Remove the group avatar. `group clear-image <gid>` */
+    suspend fun clearImage(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        if (rest.isEmpty()) return Output.error("bad_args", "group clear-image <gid>")
+        return edit(dataDir, rest[0]) { _, cur -> cur.withoutImage() }
+    }
+
     private suspend fun edit(
         dataDir: DataDir,
         rawGid: HexKey,
+        extra: Map<String, Any?> = emptyMap(),
         mutate: suspend (Context, MarmotGroupData) -> MarmotGroupData,
     ): Int {
         Context.open(dataDir).use { ctx ->
@@ -96,7 +159,7 @@ object GroupMetadataCommands {
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to commit.signedEvent.id,
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + extra,
             )
             return 0
         }
