@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
@@ -443,7 +445,9 @@ class EventFactory {
                 FollowListEvent.KIND -> FollowListEvent(id, pubKey, createdAt, tags, content, sig)
                 FundraiserEvent.KIND -> FundraiserEvent(id, pubKey, createdAt, tags, content, sig)
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
+                GeohashChatEvent.KIND -> GeohashChatEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashListEvent.KIND -> GeohashListEvent(id, pubKey, createdAt, tags, content, sig)
+                GeohashPresenceEvent.KIND -> GeohashPresenceEvent(id, pubKey, createdAt, tags, content, sig)
                 GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralGiftWrapEvent.KIND -> EphemeralGiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 GitAuthorListEvent.KIND -> GitAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
