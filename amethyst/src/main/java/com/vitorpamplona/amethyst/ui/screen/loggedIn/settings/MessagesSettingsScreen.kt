@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -70,6 +71,8 @@ fun MessagesSettingsScreen(
 ) {
     val mode by accountViewModel.account.settings.relayGroupViewMode
         .collectAsStateWithLifecycle()
+    val concordMode by accountViewModel.account.settings.concordViewMode
+        .collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -87,24 +90,43 @@ fun MessagesSettingsScreen(
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             )
 
-            RelayGroupViewModeOption(
+            ViewModeOption(
                 title = stringRes(R.string.relay_group_view_inline),
                 description = stringRes(R.string.relay_group_view_inline_desc),
                 selected = mode == RelayGroupViewMode.INLINE,
                 onSelect = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.INLINE) },
             )
-            RelayGroupViewModeOption(
+            ViewModeOption(
                 title = stringRes(R.string.relay_group_view_grouped),
                 description = stringRes(R.string.relay_group_view_grouped_desc),
                 selected = mode == RelayGroupViewMode.GROUPED,
                 onSelect = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.GROUPED) },
+            )
+
+            Text(
+                text = stringRes(R.string.concord_view_mode_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+            )
+
+            ViewModeOption(
+                title = stringRes(R.string.concord_view_inline),
+                description = stringRes(R.string.concord_view_inline_desc),
+                selected = concordMode == ConcordViewMode.INLINE,
+                onSelect = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.INLINE) },
+            )
+            ViewModeOption(
+                title = stringRes(R.string.concord_view_grouped),
+                description = stringRes(R.string.concord_view_grouped_desc),
+                selected = concordMode == ConcordViewMode.GROUPED,
+                onSelect = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.GROUPED) },
             )
         }
     }
 }
 
 @Composable
-private fun RelayGroupViewModeOption(
+private fun ViewModeOption(
     title: String,
     description: String,
     selected: Boolean,

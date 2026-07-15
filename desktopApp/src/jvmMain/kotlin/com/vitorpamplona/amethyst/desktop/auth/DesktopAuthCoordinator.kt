@@ -105,7 +105,7 @@ class DesktopAuthCoordinator(
                 RelayAuthenticator(
                     client = relayManager.client,
                     scope = scope,
-                    signWithAllLoggedInUsers = { relayUrl, template ->
+                    signWithAllLoggedInUsers = { relayUrl, template, _ ->
                         val signed = signWithPolicy(account, relayUrl, template, policy)
                         signed?.let { listOf(it) } ?: emptyList()
                     },

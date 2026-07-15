@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
@@ -186,6 +188,15 @@ class SearchBarViewModel(
         searchTerm
             .mapLatest { term ->
                 if (term.isBlank()) return@mapLatest null
+
+                // A Concord invite link (…/invite/<naddr>#<fragment>) embeds a kind-33301 naddr that
+                // Nip19Parser would otherwise extract and route to the generic event screen (which
+                // can't render 33301). Detect the invite first and open the redeem flow — the whole
+                // URL is carried so the fragment token survives.
+                if (ConcordActions.parseInviteLink(term) != null) {
+                    return@mapLatest Route.ConcordInvite(term)
+                }
+
                 val parsed =
                     runCatching { Nip19Parser.uriToRoute(term)?.entity }
                         .onFailure { if (it is CancellationException) throw it }
@@ -211,9 +222,17 @@ class SearchBarViewModel(
                     }
 
                     is NAddress -> {
-                        LocalCache.consume(parsed)
-                        routeFor(LocalCache.getOrCreateAddressableNote(parsed.address()), account)
-                            ?: Route.EventRedirect(parsed.aTag())
+                        // A bare kind-33301 naddr is a Concord invite bundle — not renderable as a
+                        // generic addressable event (and unredeemable without the link's fragment
+                        // token). Send it to the invite flow, which shows a clean "needs the full
+                        // link" state rather than an "unable to render" event screen.
+                        if (parsed.kind == ConcordInviteBundleEvent.KIND) {
+                            Route.ConcordInvite(term)
+                        } else {
+                            LocalCache.consume(parsed)
+                            routeFor(LocalCache.getOrCreateAddressableNote(parsed.address()), account)
+                                ?: Route.EventRedirect(parsed.aTag())
+                        }
                     }
 
                     else -> {

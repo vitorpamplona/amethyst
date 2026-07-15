@@ -67,6 +67,7 @@ enum class NavBarItem {
     PODCASTS,
     PUBLIC_CHATS,
     RELAY_GROUPS,
+    CONCORD,
     FOLLOW_PACKS,
     LIVE_STREAMS,
     NESTS,
@@ -326,6 +327,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Forum,
                 resolveRoute = { Route.RelayGroups },
             ),
+        NavBarItem.CONCORD to
+            NavBarItemDef(
+                id = NavBarItem.CONCORD,
+                labelRes = R.string.concord_home_title,
+                icon = MaterialSymbols.Group,
+                resolveRoute = { Route.Concords },
+            ),
         NavBarItem.FOLLOW_PACKS to
             NavBarItemDef(
                 id = NavBarItem.FOLLOW_PACKS,
@@ -448,6 +456,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.COMMUNITIES,
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
+        NavBarItem.CONCORD,
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SOFTWARE_APPS,

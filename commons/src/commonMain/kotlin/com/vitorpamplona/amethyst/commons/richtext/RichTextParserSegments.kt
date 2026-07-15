@@ -164,6 +164,16 @@ class RelayGroupLinkSegment(
     segment: String,
 ) : Segment(segment)
 
+/**
+ * A Concord invite link (`…/invite/<naddr>#<fragment>`). Rendered as a tappable
+ * chip that opens the redeem flow; [segmentText] is the whole literal (including
+ * the URL fragment, which carries the unlock token and never hits a server).
+ */
+@Immutable
+class ConcordInviteLinkSegment(
+    segment: String,
+) : Segment(segment)
+
 @Immutable
 class BlossomUriSegment(
     segment: String,

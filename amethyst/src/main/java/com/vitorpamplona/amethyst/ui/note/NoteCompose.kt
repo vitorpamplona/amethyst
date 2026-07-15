@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
@@ -200,6 +202,7 @@ import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.ExerciseTemplateDisplay
@@ -1452,6 +1455,7 @@ private fun RenderNoteRow(
                 makeItShort,
                 canPreview,
                 quotesLeft,
+                unPackReply,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -1905,6 +1909,16 @@ fun FirstUserInfoRow(
 
         if (baseNote.isPrivateRumor()) {
             PrivateRumorMark(accountViewModel)
+        }
+
+        // A Concord message (e.g. surfaced in Notifications) names its parent community with the same
+        // highlighted chip the Messages row uses, tapping through to that community's channel list.
+        val concordChannel = remember(baseNote) { baseNote.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } }
+        concordChannel?.communityName?.let { communityName ->
+            ConcordCommunityPill(
+                communityName = communityName,
+                onClick = { nav.nav(Route.ConcordServer(concordChannel.channelId.communityId)) },
+            )
         }
 
         if (isPinned) {

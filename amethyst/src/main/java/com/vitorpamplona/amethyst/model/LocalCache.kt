@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -48,6 +49,8 @@ import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -355,6 +358,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
     val relayGroupChannels = LargeCache<GroupId, RelayGroupChannel>()
+    val concordChannels = LargeCache<ConcordChannelId, ConcordChannel>()
 
     val paymentTracker = NwcPaymentTracker()
 
@@ -722,6 +726,62 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
 
     fun getOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = relayGroupChannels.getOrCreate(key) { RelayGroupChannel(key) }
+
+    fun getConcordChannelIfExists(key: ConcordChannelId): ConcordChannel? = concordChannels.get(key)
+
+    fun getOrCreateConcordChannel(key: ConcordChannelId): ConcordChannel = concordChannels.getOrCreate(key) { ConcordChannel(key) }
+
+    /**
+     * Lands a decrypted Concord chat rumor in the cache as a real Note and, for
+     * message-like kinds, attaches it to its channel so the shared chat feed and
+     * the Messages inbox render it (with previews, threading, OTS, reactions/zaps
+     * reusing the same id-keyed machinery as every other chat). Reactions (kind 7),
+     * deletes (kind 5), etc. are consumed too — they wire to their target Note by
+     * `e`-tag through [justConsume] — but are not themselves added as channel rows.
+     *
+     * Fed by [com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager]
+     * once a wrap decrypts + validates against the folded Control Plane.
+     */
+    fun consumeConcordRumor(
+        communityId: String,
+        channelIdHex: String,
+        rumor: Event,
+    ) {
+        // Attach to the channel BEFORE justConsume sets the event and notifies feeds,
+        // so the note already carries its ConcordChannel gatherer when it flows through
+        // the Messages-list incremental filter (which routes rows by that gatherer).
+        val messageRow =
+            if (rumor is ChatEvent || rumor is CommentEvent) {
+                val ch = getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
+                val note = getOrCreateNote(rumor.id)
+                // Skip attaching a row for a message we already know is deleted (its kind-5 delete
+                // was processed first). Otherwise every reproject — which re-emits the whole wrap
+                // buffer — would re-add then re-remove it, churning the feed. justConsume still
+                // records the (already-known) deletion below; a delete arriving LATER is handled by
+                // the normal deletion cascade unlinking the note from its gatherers.
+                if (!deletionIndex.hasBeenDeleted(rumor)) ch.addNote(note)
+                ch to note
+            } else {
+                null
+            }
+        // wasVerified = true: a Concord rumor is unsigned (its `sig` is empty), so a signature
+        // check would fail and the event would never load onto its Note — leaving the chat row
+        // stuck on the "loading / not found" placeholder. Its authenticity is already established
+        // by the envelope open path (ConcordStreamEnvelope.open verifies the seal signature,
+        // binds rumor.pubKey == seal.pubKey, and checks rumor.verifyId()), exactly like a NIP-59
+        // gift-wrapped DM rumor, so we consume it as pre-verified.
+        justConsume(rumor, null, true)
+
+        // justConsume bails without loading the event when the rumor has already been deleted
+        // (a kind-5 delete referencing it was processed first — easy to hit in Concord because a
+        // reproject re-emits the whole wrap buffer and ordering isn't guaranteed) or fails to
+        // verify. We attached the row up front, so an unpopulated note would otherwise linger as a
+        // permanent "Event is loading…" ghost. Drop it; the reverse order (delete after the message)
+        // is already handled by the normal deletion cascade unlinking the note from its gatherers.
+        messageRow?.let { (ch, note) ->
+            if (note.event == null) ch.removeNote(note)
+        }
+    }
 
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
         if (isValidHex(key)) {
@@ -3754,6 +3814,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 // servers. Replaceable like its sibling lists; RelayGroupListState reads it from the
                 // addressable cache, so it must be stored (it was silently dropped before).
                 is SimpleGroupListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                // Concord private joined-communities list (kind 13302). Replaceable, self-encrypted;
+                // ConcordChannelListState observes it via the addressable cache (Address(13302, me, "")),
+                // so — exactly like the 10009 list above — it must be stored replaceably or the Concord
+                // hub stays empty even after the event arrives.
+                is ConcordCommunityListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

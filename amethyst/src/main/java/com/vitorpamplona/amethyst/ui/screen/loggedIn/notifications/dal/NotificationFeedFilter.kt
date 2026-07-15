@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -137,11 +138,15 @@ class NotificationFeedFilter(
             setOf(
                 BadgeAwardEvent.KIND,
                 ChannelMessageEvent.KIND,
-                // NIP-29 group chat (kind 9). A reply to my group message is a
-                // kind-9 that p-tags me (see ChannelNewMessageViewModel), fetched
-                // at startup by filterGroupNotificationsToPubkey. Without kind 9
-                // here the acceptableEvent kind gate drops it before the p-tag
-                // check, so those replies never render on the Notifications tab.
+                // kind-9 chat message, shared by two features:
+                //  • NIP-29 group chat: a reply to my group message is a kind-9 that p-tags me
+                //    (see ChannelNewMessageViewModel), fetched at startup by
+                //    filterGroupNotificationsToPubkey.
+                //  • NIP-C7 / Concord: an inline reply (Concord's default reply mode) or an @-mention
+                //    p-tags me; a minichat reply is a kind-1111 CommentEvent below.
+                // Either way it notifies only when it p-tags me — a plain channel message tags no one
+                // and never reaches here. Without kind 9 the acceptableEvent kind gate would drop these
+                // replies before the p-tag check, so they'd never render on the Notifications tab.
                 ChatEvent.KIND,
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
@@ -441,6 +446,40 @@ class NotificationFeedFilter(
         // Chess events bypass the follow filter — opponents may not be followed
         val isChessEvent = noteEvent is LiveChessGameAcceptEvent || noteEvent is LiveChessMoveEvent
 
+        // Concord community messages bypass the follow filter too: a reply/reaction that p-tags me
+        // in a community I've joined is relevant whether or not I follow that member (fellow members
+        // usually aren't follows). The p-tag gate below still applies, so only genuine replies /
+        // reactions / mentions notify — general channel chatter that doesn't tag me never does.
+        //
+        // A ConcordChannel gatherer alone isn't enough: notes live in the global LocalCache and keep a
+        // gatherer reference from every account/community that ever touched them, so require the
+        // community to be one THIS account has currently joined (mirrors the Marmot check above) —
+        // otherwise a note from a prior account or a left community would leak onto Notifications.
+        fun Note?.inJoinedConcordCommunity() =
+            this?.inGatherers?.any { g ->
+                g is ConcordChannel && account.concordSessions.sessionFor(g.channelId.communityId) != null
+            } == true
+
+        val isConcordMessage = it.inJoinedConcordCommunity()
+
+        // A like/repost is NOT itself attached to the channel gatherer — only chat messages/replies are
+        // (see LocalCache.consumeConcordRumor) — so `inGatherers` never flags it as Concord, and its
+        // author (a fellow member) usually isn't a follow, so it falls through the follow filter and is
+        // dropped. Recognize it through its TARGET: a reaction/repost pointing at a message in a
+        // community I've joined is a Concord reaction, and bypasses the follow filter like a reply does.
+        // Relevance (does it target ME) is still enforced below by the p-tag gate — a well-formed kind-7
+        // p-tags the reacted author (NIP-25), which is exactly what our own ChannelChat.reaction writes.
+        val isConcordReaction =
+            (noteEvent is ReactionEvent || noteEvent is RepostEvent || noteEvent is GenericRepostEvent) &&
+                it.replyTo?.lastOrNull().inJoinedConcordCommunity()
+
+        val isConcord = isConcordMessage || isConcordReaction
+
+        // Concord CHAT (a message/reply) honors the "Messages in notifications" toggle that silences DMs
+        // and Marmot groups above. A reaction isn't a message — regular reactions ignore that toggle, so
+        // Concord reactions do too (only isConcordMessage is gated).
+        if (isConcordMessage && !showMessages) return false
+
         // Global keeps every event that p-tags the user; Selected (and the
         // follow/list modes) also applies the per-kind relevance heuristics.
         val isRawGlobal = followList() is TopFilter.Global
@@ -454,11 +493,14 @@ class NotificationFeedFilter(
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            (isChessEvent || isConcord || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex)) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
-            (isRawGlobal || tagsAnEventByUser(it, loggedInUserHex))
+            // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/
+            // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
+            // otherwise need my target message already loaded to resolve replyTo.
+            (isRawGlobal || isConcord || tagsAnEventByUser(it, loggedInUserHex))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

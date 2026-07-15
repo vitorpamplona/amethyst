@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ReplyModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
@@ -80,6 +81,10 @@ fun EditFieldRow(
         DisplayReplyingToNote(it, accountViewModel, nav) {
             channelScreenModel.clearReply()
         }
+        ReplyModeToggle(
+            mode = channelScreenModel.replyMode.value,
+            onToggle = { channelScreenModel.toggleReplyMode() },
+        )
     }
 
     channelScreenModel.uploadState?.let { uploading ->

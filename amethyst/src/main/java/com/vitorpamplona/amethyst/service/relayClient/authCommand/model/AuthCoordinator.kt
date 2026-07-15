@@ -26,12 +26,18 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import java.util.concurrent.ConcurrentHashMap
 
 class ScreenAuthAccount(
     val account: Account,
@@ -49,7 +55,14 @@ class AuthCoordinator(
         RelayAuthenticator(
             client,
             scope,
-            signWithAllLoggedInUsers = { relayUrl, authTemplate ->
+            signWithAllLoggedInUsers = { relayUrl, authTemplate, interactive ->
+                // Concord plane traffic is gated behind NIP-42 as the derived *stream key*, not the
+                // user: a relay serves a plane's kind-1059 wraps only to a connection authenticated
+                // as that stream key. These AUTHs expose no user identity (ephemeral derived keys)
+                // and are signed locally, so we always attach them — independent of the per-account
+                // policy below — or Concord channels/messages never load. No-op for non-Concord relays.
+                val streamAuths = signConcordStreamAuths(relayUrl, authTemplate)
+
                 // Reconstruct *why* this relay wants auth from what the shared client is doing with
                 // it. Built lazily so accounts that fail the first-party gate below don't pay for it.
                 val context by
@@ -63,7 +76,6 @@ class AuthCoordinator(
                                 ),
                         )
                     }
-
                 // One socket is shared by every logged-in account, so an AUTH challenge is not tied
                 // to any single one of them. We answer PER ACCOUNT: an account only reveals its
                 // identity to a relay it has a first-party reason to be on (its own inbox/outbox
@@ -86,8 +98,24 @@ class AuthCoordinator(
                             RelayAuthVerdict.DENY -> false
                             RelayAuthVerdict.ASK -> {
                                 // Prompt at most once per challenge; reuse the answer for any other
-                                // account that also reaches ASK on this same relay.
-                                val choice = askChoice ?: promptBus.requestDecision(relayUrl, context.purposes).also { askChoice = it }
+                                // account that also reaches ASK on this same relay. But never block the
+                                // derived stream-key AUTH behind that dialog: on a relay that hosts our
+                                // Concord planes we DISMISS the user-auth ASK (skip account auth) so the
+                                // stream AUTHs return immediately instead of waiting on a prompt.
+                                //
+                                // A non-[interactive] pass is an automatic re-auth off an `auth-required:`
+                                // CLOSED (e.g. a Concord channel-plane REQ refused because the connection
+                                // AUTHed before the control plane folded in its channel stream keys). It
+                                // must never raise a fresh dialog: DISMISS the account ASK and let only the
+                                // already-approved identities (ledger-ALLOW accounts + stream keys) re-send.
+                                val choice =
+                                    askChoice ?: (
+                                        if (streamAuths.isNotEmpty() || !interactive) {
+                                            UserAuthChoice.DISMISS
+                                        } else {
+                                            promptBus.requestDecision(relayUrl, context.purposes)
+                                        }
+                                    ).also { askChoice = it }
                                 when (choice) {
                                     UserAuthChoice.ALLOW_ONCE -> true
                                     UserAuthChoice.ALWAYS_ALLOW -> {
@@ -114,9 +142,35 @@ class AuthCoordinator(
                     }
                 }
 
-                signed
+                signed + streamAuths
             },
         )
+
+    /**
+     * Signs one kind-22242 AUTH per Concord plane stream key hosted on [relayUrl], across every
+     * watched account. Signed locally from the derived stream secret (a raw [KeyPair] via
+     * [NostrSignerSync]) — never the account signer, and never surfacing the user's identity.
+     */
+    private suspend fun signConcordStreamAuths(
+        relayUrl: NormalizedRelayUrl,
+        authTemplate: EventTemplate<RelayAuthEvent>,
+    ): List<RelayAuthEvent> {
+        val secrets = authWithAccounts.distinct().flatMap { it.concordSessions.streamAuthSecretsFor(relayUrl) }
+        if (secrets.isEmpty()) return emptyList()
+        return secrets.mapNotNull { secret ->
+            try {
+                // Cache the signer by secret so we don't re-derive the secp256k1 keypair for every
+                // plane on every relay challenge/reconnect.
+                streamSigners.getOrPut(secret.toHexKey()) { NostrSignerSync(KeyPair(privKey = secret)) }.sign(authTemplate)
+            } catch (e: Exception) {
+                Log.e("AuthCoordinator", "Failed to sign a Concord stream-key AUTH", e)
+                null
+            }
+        }
+    }
+
+    // stream secret (hex) -> its local signer. Bounded by joined communities × channels.
+    private val streamSigners = ConcurrentHashMap<HexKey, NostrSignerSync>()
 
     /**
      * True when [account] has a first-party reason to authenticate with [relayUrl] on the shared

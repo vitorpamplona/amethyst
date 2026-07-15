@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -348,7 +349,7 @@ class AccountViewModel(
         RelayAuthenticator(
             newClient,
             customScope,
-            signWithAllLoggedInUsers = { _, authTemplate ->
+            signWithAllLoggedInUsers = { _, authTemplate, _ ->
                 if (account.signer.isWriteable()) {
                     try {
                         listOf(account.signer.sign(authTemplate))
@@ -541,6 +542,14 @@ class AccountViewModel(
         note: Note,
         reaction: String,
     ) {
+        // Concord messages are encrypted: a public kind-7 would e-tag the private rumor id onto
+        // public relays. Route the reaction through a channel-plane wrap instead. (Retraction of an
+        // existing Concord reaction is a follow-up; for now this only adds one.)
+        if (note.inGatherers?.any { it is ConcordChannel } == true) {
+            launchSigner { account.reactToConcordMessage(note, reaction) }
+            return
+        }
+
         launchSigner {
             val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {
@@ -580,6 +589,64 @@ class AccountViewModel(
     fun reactToOrDelete(note: Note) {
         val reaction = reactionChoices().first()
         reactToOrDelete(note, reaction)
+    }
+
+    /** Ban the author of a Concord channel message (no-op unless this account may ban them). */
+    fun banConcordMember(note: Note) {
+        val (communityId, member) = account.concordBanTarget(note) ?: return
+        launchSigner { account.banConcordMember(communityId, member) }
+    }
+
+    /** Toggle the Admin role on the author of a Concord channel message (owner only). */
+    fun toggleConcordAdmin(note: Note) {
+        val (communityId, member, isAdmin) = account.concordAdminTarget(note) ?: return
+        launchSigner {
+            if (isAdmin) account.removeConcordAdmin(communityId, member) else account.makeConcordAdmin(communityId, member)
+        }
+    }
+
+    /** Promote/demote [member] as an Admin of [communityId] (from the Members roster; owner only takes effect). */
+    fun setConcordAdmin(
+        communityId: String,
+        member: HexKey,
+        makeAdmin: Boolean,
+    ) = launchSigner {
+        if (makeAdmin) account.makeConcordAdmin(communityId, member) else account.removeConcordAdmin(communityId, member)
+    }
+
+    /** Ban/unban [member] from [communityId] (from the Members roster). */
+    fun setConcordBan(
+        communityId: String,
+        member: HexKey,
+        ban: Boolean,
+    ) = launchSigner {
+        if (ban) account.banConcordMember(communityId, member) else account.unbanConcordMember(communityId, member)
+    }
+
+    /**
+     * Remove [member] from [communityId] absolutely (CORD-06 Refounding): rotate the
+     * community key so the member's key stops working for anything sent afterwards.
+     * Heavier than a ban (re-keys every retained member); owner / BAN-holder only.
+     */
+    fun removeConcordMember(
+        communityId: String,
+        member: HexKey,
+    ) = launchSigner {
+        account.refoundConcordCommunity(communityId, setOf(member))
+    }
+
+    /** Pull the account's Concord community list from the stock + own relays (Concord hub bootstrap). */
+    fun importConcordCommunities() =
+        viewModelScope.launch(Dispatchers.IO) {
+            account.importConcordCommunities()
+        }
+
+    /** Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). */
+    fun sendConcordTyping(
+        communityId: String,
+        channelIdHex: String,
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        account.sendConcordTyping(communityId, channelIdHex)
     }
 
     @Immutable

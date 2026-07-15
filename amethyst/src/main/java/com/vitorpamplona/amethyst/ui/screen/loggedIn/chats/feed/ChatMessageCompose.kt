@@ -21,17 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,8 +49,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteMinichatReplyCount
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -96,6 +110,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as MaterialSymbolIcon
 
 @Composable
 fun ChatroomMessageCompose(
@@ -280,6 +295,8 @@ fun NormalChatNote(
 
                             ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
 
+                            MinichatReplyChip(note, accountViewModel, nav)
+
                             val geo = remember(note) { note.event?.geoHashOrScope() }
                             if (geo != null) {
                                 Spacer(StdHorzSpacer)
@@ -384,6 +401,63 @@ private fun MessageBubbleLines(
     }
 }
 
+/**
+ * A chip on a chat message's action row showing how many kind-1111 thread ("minichat")
+ * replies it has; tapping opens that thread. Shown only when there is at least one — an
+ * inline reply is an ordinary message and isn't counted.
+ *
+ * Only shown where minichats are actually wired: the public chats (Concord, NIP-28, NIP-29).
+ * NIP-17 DMs are deliberately excluded — most clients don't render kind-1111 replies in a DM
+ * view, so a thread there would be a dead end.
+ */
+@Composable
+private fun MinichatReplyChip(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val supportsMinichat =
+        remember(note) {
+            note.inGatherers?.any { it is ConcordChannel || it is PublicChatChannel || it is RelayGroupChannel } == true
+        }
+    if (!supportsMinichat) return
+
+    val count by observeNoteMinichatReplyCount(note, accountViewModel)
+    if (count > 0) {
+        Spacer(StdHorzSpacer)
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.clickable { nav.nav(Route.ChatMinichat(note.idHex)) },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                MaterialSymbolIcon(
+                    symbol = MaterialSymbols.Forum,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(13.dp),
+                )
+                Text(
+                    text = pluralStringResource(R.plurals.chat_minichat_reply_count, count, count),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Id of a note whose reply-to preview should be suppressed on a message row. Set by a
+ * thread view that already pins that note at the top (the minichat pins its root), so each
+ * reply doesn't redundantly re-render the same parent as an inner quote. Null everywhere else.
+ */
+val LocalSuppressReplyToNoteId = compositionLocalOf<String?> { null }
+
 @Composable
 fun RenderReplyRow(
     note: Note,
@@ -396,7 +470,8 @@ fun RenderReplyRow(
     onScrollToNote: ((Note) -> Unit)? = null,
 ) {
     val replyTo = note.replyTo?.lastOrNull()
-    if (!innerQuote && replyTo != null && !isCitedInContent(note, replyTo)) {
+    val suppressId = LocalSuppressReplyToNoteId.current
+    if (!innerQuote && replyTo != null && replyTo.idHex != suppressId && !isCitedInContent(note, replyTo)) {
         RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
     }
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,10 +36,13 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 
 @Composable
 fun RenderChat(
@@ -46,6 +50,7 @@ fun RenderChat(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
+    unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -65,6 +70,27 @@ fun RenderChat(
             overflow = TextOverflow.Ellipsis,
         )
     } else {
+        // A kind-9 chat message carries its reply target as a NIP-18 `q` (or NIP-10 `e`)
+        // tag, NOT as a NIP-10 thread — so it's not a BaseThreadedEvent and RenderTextEvent's
+        // reply-to preview never fires for it. Render the quoted parent here so a Concord/MLS
+        // chat reply shows what it's replying to wherever NoteCompose draws it (Notifications
+        // tab, feed, threads) — the chat feed has its own reply-row and passes NONE.
+        if (unPackReply == ReplyRenderType.FULL && !makeItShort) {
+            val replyingDirectlyTo =
+                remember(note) {
+                    // Skip the preview when the parent is already cited inline (`nostr:...`) in the
+                    // message — quotesLeft renders it at that spot, so a top preview would duplicate
+                    // it. Happens with MLS/WhiteNoise quotes; Concord `q` replies aren't cited inline.
+                    note.replyTo?.lastOrNull()?.takeUnless { parent ->
+                        (noteEvent as? BaseNoteEvent)?.findCitations()?.contains(parent.idHex) == true
+                    }
+                }
+            if (replyingDirectlyTo != null) {
+                ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
+                Spacer(modifier = StdVertSpacer)
+            }
+        }
+
         val callbackUri = remember(note) { note.toNostrUri() }
 
         SensitivityWarning(

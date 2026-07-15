@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.commands.AdminCommand
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
 import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
+import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
 import com.vitorpamplona.amethyst.cli.commands.CreateCommand
 import com.vitorpamplona.amethyst.cli.commands.DebitCommands
@@ -300,6 +301,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
             System.err.println("[amy] `wot` is deprecated — use `fof` (follows-of-follows). The computed web of trust is `graperank`.")
             FofCommand.dispatch(dataDir, tail)
         }
+        "concord" -> ConcordCommands.dispatch(dataDir, tail)
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -750,6 +752,15 @@ private fun printUsage() {
         |  marmot await epoch GID --min N
         |
         |  marmot reset [--yes]                       wipe all local MLS/KeyPackage state (destructive)
+        |
+        |  concord create --name NAME [--about T] [--relays wss://a,wss://b]
+        |                                             create an encrypted Concord Channel community
+        |  concord list                               list joined Concord communities
+        |  concord channels COMMUNITY                 list a community's channels
+        |  concord send COMMUNITY CHANNEL TEXT        post a message (CHANNEL = general|name|id)
+        |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages
+        |  concord invite COMMUNITY [--base URL]      mint + publish a shareable invite link
+        |  concord join URL                           redeem an invite link and save the community
         |
         |Local event store (shared, under `<data-dir>/shared/`):
         |  Backend selected by AMY_STORE: sqlite (default; `shared/events.db`)
