@@ -114,6 +114,8 @@ fun Nip46SignerScreen(
     val enabled by account.settings.nip46SignerEnabled.collectAsStateWithLifecycle()
     val secret by account.settings.nip46BunkerSecret.collectAsStateWithLifecycle()
     val relays by signer.listeningRelays.collectAsStateWithLifecycle()
+    val connectedRelays by account.client.connectedRelaysFlow().collectAsStateWithLifecycle()
+    val liveRelayCount = remember(relays, connectedRelays) { relays.count { it in connectedRelays } }
     val activity by signer.activityLog.entries.collectAsStateWithLifecycle()
     val writeable = remember { account.signer.isWriteable() }
     val npub = remember { NPub.create(account.signer.pubKey) }
@@ -175,6 +177,7 @@ fun Nip46SignerScreen(
             if (enabled) {
                 LiveStatusCard(
                     relayCount = relays.size,
+                    liveRelayCount = liveRelayCount,
                     connectedCount = connectedCount,
                     onToggleOff = { signer.setEnabled(false) },
                 )
@@ -319,6 +322,7 @@ private fun DisabledHero(onEnable: () -> Unit) {
 @Composable
 private fun LiveStatusCard(
     relayCount: Int,
+    liveRelayCount: Int,
     connectedCount: Int,
     onToggleOff: () -> Unit,
 ) {
@@ -340,11 +344,17 @@ private fun LiveStatusCard(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
+                val relayStatus =
+                    if (liveRelayCount < relayCount) {
+                        stringResource(R.string.nip46_signer_relays_some_down, liveRelayCount, relayCount)
+                    } else {
+                        pluralStringResource(R.plurals.nip46_signer_relays_all_live, relayCount, relayCount)
+                    }
                 Text(
                     buildString {
                         append(pluralStringResource(R.plurals.nip46_signer_connected_count, connectedCount, connectedCount))
                         append(" · ")
-                        append(pluralStringResource(R.plurals.nip46_signer_status_listening, relayCount, relayCount))
+                        append(relayStatus)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),

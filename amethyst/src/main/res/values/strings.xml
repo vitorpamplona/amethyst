@@ -909,6 +909,11 @@
         <item quantity="other">Listening on %1$d relays</item>
     </plurals>
     <string name="nip46_signer_status_no_relays">No inbox relays configured. Add inbox relays so apps can reach your signer.</string>
+    <plurals name="nip46_signer_relays_all_live">
+        <item quantity="one">Listening on %1$d relay</item>
+        <item quantity="other">Listening on %1$d relays, all connected</item>
+    </plurals>
+    <string name="nip46_signer_relays_some_down">%1$d of %2$d relays connected</string>
     <string name="nip46_signer_bunker_uri_label">Your bunker address</string>
     <string name="nip46_signer_bunker_uri_hint">Paste this into another app to connect it to your key.</string>
     <string name="nip46_signer_copy">Copy</string>
