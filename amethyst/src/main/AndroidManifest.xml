@@ -151,6 +151,14 @@
                 <data android:scheme="amethyst+walletconnect" />
             </intent-filter>
 
+            <!-- NIP-46: an app's `nostrconnect://` offer opens the signer screen, which pairs it. -->
+            <intent-filter android:label="Amethyst">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="nostrconnect" />
+            </intent-filter>
+
             <intent-filter android:label="New Post">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
