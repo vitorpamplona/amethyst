@@ -189,19 +189,63 @@ NoteCompose 12                  LoadDecryptedContent 6 ClickableUrl 6
 
 Two sub-problems:
 
-1. **`TranslatableRichTextViewer` is flavor-specific.** It has *separate*
-   `src/play/` (ML-Kit translation) and `src/fdroid/` (no translation)
-   implementations. It is the #1 dependency (55 uses) and cannot be naively
-   moved. **Resolution:** the `Display*` layer takes rich text as a
-   **`@Composable` slot** (`richText: @Composable (content: String) -> Unit`)
-   that the entry supplies. The shared body decides *where* text goes; the app
-   decides *how* it renders (translation or not). This keeps the flavor split in
-   `amethyst` untouched.
+1. **`TranslatableRichTextViewer` is flavor-specific** (#1 dependency, 55 uses)
+   and cannot be naively moved. But the fix is not a per-call slot — it is a
+   one-time restructure of the rich-text stack (**§3f, Phase 0**). After that
+   restructure, nested/inline rich text in `Display*` bodies calls the **commons
+   renderer directly**; only the single top-level translatable post body still
+   routes through the native translation wrapper, supplied by the entry.
 2. **`LoadNote`/`LoadUser`/`observe*` are relay-subscription + LocalCache
    bound.** These live in `amethyst/service/relayClient/reqCommand/`. Per the
    migration plan they stay native orchestration. **Resolution:** resolve on the
    entry side and pass the loaded `Note`/`User` (or a small immutable snapshot)
    down; or pass embedded-content as a slot the same way as rich text.
+
+### 3f. Phase 0 — restructure the rich-text stack (gating prerequisite)
+
+Rich text is the #1 dependency and blocks all of Tier 2. It is **not** a wall,
+because the stack is already layered — it just needs the core decoupled:
+
+```
+TranslatableRichTextViewer   flavor-specific (play=ML-Kit, fdroid=no-op)  ← translation
+  └─ ExpandableRichTextViewer   "show more/less" expansion                 ← middle
+       └─ RichTextViewer.kt (1031 LOC)   paragraphs, URLs, blossom,        ← RENDER CORE
+          custom emoji, bech links, hashtags, note/user embeds
+```
+
+Two facts make the core movable:
+
+- **The translation *state* is already in commons** —
+  `commons/ui/components/TranslationConfig`. Only the *service*
+  (`service/lang/LanguageTranslatorService`, `TranslationsCache`, ML-Kit) is
+  Android. So translation was never really entangled with rendering; it wraps it.
+- **The 1031-LOC core's real `accountViewModel` surface is only 5 members**
+  (despite 87 pass-through refs): `account` (for language settings only),
+  `bechLinkCache`, `checkGetOrCreateNote`, `getNoteIfExists`, `toastManager`.
+  Three are cache reads → the **`ICacheProvider` port (§3d)**; `toastManager` →
+  an `onError`/`onToast` callback; `nav` → `onClick*` callbacks.
+
+**Restructure:**
+
+1. Move `RichTextViewer` + `ExpandableRichTextViewer` to
+   `commons/ui/text/` (or `ui/components/`), taking `ICacheProvider` + nav/error
+   callbacks instead of `AccountViewModel`/`INav`. Language settings arrive as
+   plain values.
+2. Leave `TranslatableRichTextViewer` native and thin: it computes the
+   `TranslationConfig` via the native service, renders the status bar (drivable
+   from the commons `TranslationConfig`), and calls the **commons** renderer with
+   the final string. The `src/play`↔`src/fdroid` flavor split stays exactly where
+   it is.
+3. **The one edge that stays a slot:** `RichTextViewer` embeds *full notes*
+   inline (`DisplayFullNote`/`BechLink` → `NoteCompose`). That recurses into the
+   native dispatcher (§1), so full-note embeds take a
+   `renderEmbeddedNote: @Composable (Note) -> Unit` slot. Inline text, URLs,
+   emoji, hashtags, user mentions — everything else — moves cleanly.
+
+**Payoff:** once the core is in commons, Tier 2's rich text is a direct call, not
+a slot on every renderer. This is why Phase 0 gates the rest and should land
+before scaling Tier 2. It also directly advances migration-plan §4's
+"formatters → `ui/text`" line.
 
 **This is the crux of the generalization:** the seam is not "primitives only"
 (too limiting for content that embeds other notes/users), it is
@@ -300,14 +344,20 @@ these early.
    `RenderXxx` entry. Proves the string + package + preview-test loop end to end
    and sets the reviewable template. Verify with `./gradlew :commons:build` and
    a Compose `@Preview`.
-2. **Establish the slot contract (1 PR, Tier 2 pilot):** `Highlight` → move
-   `DisplayHighlight` to `commons` taking a `richText` slot + `onClickAuthor`/
-   `onClickNote` callbacks; entry supplies `TranslatableRichTextViewer` and
-   `LoadNote`. This is the load-bearing pattern — get it reviewed before scaling.
-3. **Bulk Tier 0/1** — mechanical, parallelizable, one small PR per event family.
-4. **Tier 2 family by family** (podcast ×13, git ×5, calendar ×4, music ×3,
-   chat ×3) once the slot contract is settled.
-5. **Tier 3** last, and only the visual shell; leave signer flows native.
+2. **Bulk Tier 0/1** — mechanical, parallelizable, one small PR per event family.
+   These need neither rich text nor the cache port, so they don't wait on Phase 0.
+3. **Phase 0 — rich-text restructure (§3f), the gate for Tier 2.** Move
+   `RichTextViewer`/`ExpandableRichTextViewer` to commons behind `ICacheProvider`
+   + callbacks, with a `renderEmbeddedNote` slot for full-note embeds; leave
+   `TranslatableRichTextViewer` native and thin. Depends on adding
+   `IAccount.cache: ICacheProvider` (§3d). This is the load-bearing PR — review
+   it carefully before scaling.
+4. **Tier 2 pilot:** `Highlight` → move `DisplayHighlight` to commons calling the
+   new commons renderer directly + `onClickAuthor`/`onClickNote` callbacks.
+   Confirms the post-Phase-0 shape.
+5. **Tier 2 family by family** (podcast ×13, git ×5, calendar ×4, music ×3,
+   chat ×3) once the pilot is settled.
+6. **Tier 3** last, and only the visual shell; leave signer flows native.
 
 Each step is small, compile-verifiable, and deletes an app-side render body —
 exactly the "manually, event by event" cadence you called for.
@@ -318,9 +368,11 @@ exactly the "manually, event by event" cadence you called for.
   quick-action menu, report/block gating.
 - `creators/` (post editor), `buttons/`, most of `share/` — interactive,
   signer- and Context-bound.
-- The flavor-specific `TranslatableRichTextViewer` implementations and the
-  `service/relayClient/reqCommand` observers/loaders — consumed via slots, not
-  moved.
+- The flavor-specific `TranslatableRichTextViewer` **translation wrapper** and
+  the ML-Kit `service/lang/*` — stay native (the *renderer core* underneath them
+  moves; see §3f).
+- The `service/relayClient/reqCommand` observers/loaders — resolved on the entry
+  side or consumed via slots, not moved.
 
 ## 8. Risks
 
