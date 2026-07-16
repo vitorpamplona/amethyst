@@ -930,6 +930,9 @@
     <string name="nip46_signer_manage_apps">Manage connected apps</string>
     <string name="nip46_signer_apps_empty">No apps are connected to your signer yet.\n\nScan or paste an app\'s code to connect it. Connected apps appear here, and idle ones are removed automatically after a week.</string>
     <string name="nip46_signer_app_last_used">used %1$s</string>
+    <string name="nip46_signer_app_relays_title">Relays</string>
+    <string name="nip46_signer_app_relays_inbox">Signs over your inbox relays — this app brought none of its own, so it keeps no extra background connection.</string>
+    <string name="nip46_signer_app_relays_own_hint">Amethyst holds a background connection to each of these while this app stays connected. Forget the app to drop them.</string>
     <plurals name="nip46_signer_app_relay_count">
         <item quantity="one">%1$d relay</item>
         <item quantity="other">%1$d relays</item>

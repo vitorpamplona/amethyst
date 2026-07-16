@@ -189,6 +189,12 @@ fun ConnectedAppDetailScreen(
                 AppIdentityHeader(current)
             }
 
+            // Relays this remote client is reached on — the whole reason it costs a background
+            // connection, so surface them for debugging relay footprint.
+            if (nip46Client != null) {
+                Nip46RelaysSection(nip46Info?.relays.orEmpty())
+            }
+
             // Signing trust level section
             if (current.signerPolicy != null) {
                 SectionHeader(stringResource(R.string.napplet_connected_app_trust_level))
@@ -279,6 +285,55 @@ fun ConnectedAppDetailScreen(
                 Icon(MaterialSymbols.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.napplet_connected_app_forget))
+            }
+        }
+    }
+}
+
+/**
+ * Lists the relays a NIP-46 remote client is reached on. When the client brought its own relays
+ * (the `nostrconnect://` flow) each one is a background connection Amethyst keeps open while the app
+ * stays connected — exactly what a user debugging relay footprint wants to see. An empty set means
+ * the client talks over the account's inbox relays (the bunker flow), so it adds no extra connection.
+ */
+@Composable
+private fun Nip46RelaysSection(relays: Set<String>) {
+    SectionHeader(stringResource(R.string.nip46_signer_app_relays_title))
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (relays.isEmpty()) {
+                Text(
+                    stringResource(R.string.nip46_signer_app_relays_inbox),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                relays.forEach { relay ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(
+                            MaterialSymbols.Dns,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            relay,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Text(
+                    stringResource(R.string.nip46_signer_app_relays_own_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
