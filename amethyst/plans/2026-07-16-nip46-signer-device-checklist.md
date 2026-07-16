@@ -64,6 +64,35 @@ Pair + sign + nip44 encrypt/decrypt + logout against each:
 - [ ] Nostrudel
 - [ ] snort / other NIP-46 client
 
+## Audit findings — known limitations (2026-07-16)
+
+An adversarial review of the signer logic surfaced these. The head-of-line
+issues below share one root cause: `authorize()`/`onConnect()` run **inline** in
+`NostrConnectSignerService`'s single-consumer loop, and relay-set changes restart
+that loop via `collectLatest`.
+
+- **FIXED — unbounded first-connect prompt.** `Nip46ConsentBridge.requestConnect`
+  now has the same 120s `withTimeoutOrNull` as `requestOp`, so an ignored
+  first-connect dialog can no longer wedge the loop forever.
+- **Consent blocks other clients (bounded).** While one prompt is open, other
+  clients' requests queue in the 256-deep DROP_LATEST channel and, past that,
+  drop. Bounded by the 120s timeouts. A proper fix is to dispatch prompt-needing
+  requests to child jobs (keeping dedup/rate-limit/`decide()` on the loop
+  thread, serializing only the dialogs) so auto-allowed traffic keeps flowing —
+  deferred because it risks stacked dialogs + concurrent external-signer ops and
+  needs on-device validation.
+- **Relay-set change cancels in-flight work.** A `logout` (or a new nostrconnect
+  pairing) mutates the listen set → `collectLatest` restarts the service →
+  cancels the in-flight `handle()`. Practical impact is low (a logout ACK is lost
+  but the client is leaving; a pairing-time cancel makes other clients retry).
+  Proper fix: manage subscriptions incrementally (diff add/remove) instead of a
+  full restart. Deferred (same reason).
+- **Low-severity, left as-is:** activity-log records an O(capacity) list copy per
+  serviced request (negligible under rate-limiting); the per-author rate limiter
+  evicts by insertion order rather than LRU (the 3-arg `accessOrder`
+  `LinkedHashMap` isn't in KMP commonMain); first-time transport-key/secret mint
+  is unsynchronized (practically serialized on the UI thread).
+
 ## Deliberately NOT changed
 The always-on foreground **notification** was left as-is: it is shared with the
 relay/DM always-on service, so retitling it "Signing for N apps" or deep-linking
