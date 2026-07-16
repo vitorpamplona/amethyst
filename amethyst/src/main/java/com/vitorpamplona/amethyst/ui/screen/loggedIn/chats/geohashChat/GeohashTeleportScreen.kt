@@ -22,26 +22,33 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -50,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPickerMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * Teleport: tap a point on the map to join a remote geohash cell (at a chosen
@@ -99,44 +107,73 @@ fun GeohashTeleportScreen(
                 },
             )
 
-            Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                Text(
-                    if (cell == null) "Tap the map to pick a spot." else "Precision",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Surface(
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(
+                        if (cell == null) "Tap the map to pick a spot" else "Precision",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
 
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    GeohashChannelLevel.ordered.forEach { lvl ->
-                        FilterChip(
-                            selected = lvl == level,
-                            onClick = { level = lvl },
-                            label = { Text(lvl.label()) },
-                        )
-                    }
-                }
-
-                if (cell != null) {
-                    LoadCityName(geohashStr = cell) { cityName ->
-                        Text(
-                            "$cityName · #$cell",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
-                        )
-                    }
-                    Button(
-                        onClick = {
-                            accountViewModel.followGeohash(cell)
-                            nav.popBack()
-                            nav.nav(Route.GeohashChat(cell, teleported = true))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text("Teleport here")
+                        GeohashChannelLevel.ordered.forEach { lvl ->
+                            FilterChip(
+                                selected = lvl == level,
+                                onClick = { level = lvl },
+                                label = { Text(lvl.label()) },
+                            )
+                        }
+                    }
+
+                    if (cell != null) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    SymbolIcon(
+                                        symbol = MaterialSymbols.LocationOn,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            }
+                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                LoadCityName(geohashStr = cell) { cityName ->
+                                    Text(cityName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                }
+                                Text(
+                                    "#$cell",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Button(
+                            onClick = {
+                                accountViewModel.followGeohash(cell)
+                                nav.popBack()
+                                nav.nav(Route.GeohashChat(cell, teleported = true))
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("✈  Teleport here", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
