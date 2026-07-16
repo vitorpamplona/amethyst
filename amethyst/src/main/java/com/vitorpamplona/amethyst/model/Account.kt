@@ -157,6 +157,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -255,6 +256,8 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -2039,20 +2042,34 @@ class Account(
      * Redeem a Concord invite link (`…/invite/<naddr>#<fragment>`): parse it, fetch
      * the kind-33301 public bundle from the link's relays (+ our outbox), unlock it
      * with the fragment token, and add the resulting secret-bearing entry to the
-     * kind-13302 joined list. Returns the joined community id, or null if the link
-     * is invalid, unreadable, or no valid bundle is found.
+     * kind-13302 joined list.
+     *
+     * Returns a [ConcordInviteResult] that separates the failure modes so the UI can
+     * both explain what went wrong and decide whether a retry could ever help — a
+     * bundle we can't open (e.g. minted by a newer client) must not strand the user
+     * on a spinner that retries forever.
      */
-    suspend fun joinConcordViaInvite(url: String): String? {
-        if (!isWriteable()) return null
-        val parsed = ConcordActions.parseInviteLink(url) ?: return null
+    suspend fun joinConcordViaInvite(url: String): ConcordInviteResult {
+        if (!isWriteable()) return ConcordInviteResult.InvalidLink
+        val parsed = ConcordActions.parseInviteLink(url) ?: return ConcordInviteResult.InvalidLink
 
         val relays =
             (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + outboxRelays.flow.value).toSet()
-        if (relays.isEmpty()) return null
+        if (relays.isEmpty()) return ConcordInviteResult.NotReachable
 
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
         val wraps = client.fetchAll(filters = filters)
-        val bundle = wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) } ?: return null
+
+        // Resolve the coordinate per CORD-05 §2 (newest wins; a vsk=9 tombstone revokes even over a
+        // stale openable copy) so we honour revocation and can tell the user *why* a link won't open
+        // instead of stranding them on a spinner that retries a link we can never redeem.
+        val bundle =
+            when (val status = ConcordActions.classifyInvite(wraps, parsed.fragment.token)) {
+                is InviteBundleStatus.Live -> status.invite
+                InviteBundleStatus.Revoked -> return ConcordInviteResult.Revoked
+                InviteBundleStatus.Unreadable -> return ConcordInviteResult.Incompatible
+                InviteBundleStatus.Absent -> return ConcordInviteResult.NotReachable
+            }
 
         val entry =
             ConcordCommunityListEntry(
@@ -2066,7 +2083,7 @@ class Account(
                 addedAt = TimeUtils.now() * 1000,
             )
         joinConcordCommunity(entry)
-        return bundle.communityId
+        return ConcordInviteResult.Joined(bundle.communityId)
     }
 
     /**
@@ -2176,6 +2193,7 @@ class Account(
                 signer.sign(
                     CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
                         hTag(group.groupId.id)
+                        previous(group.previousEventRefs(pubKey))
                     },
                 )
             cache.justConsumeMyOwnEvent(signed)
@@ -2703,6 +2721,7 @@ class Account(
         isRestricted: Boolean = false,
         hashtags: List<String> = emptyList(),
         geohashes: List<String> = emptyList(),
+        parent: String? = null,
     ): GroupId {
         signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
 
@@ -2715,6 +2734,7 @@ class Account(
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parent,
             )
         signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
 
@@ -2747,7 +2767,11 @@ class Account(
         title: String,
         body: String,
     ) {
-        val template = ThreadEvent.build(body, title) { hTag(channel.groupId.id) }
+        val template =
+            ThreadEvent.build(body, title) {
+                hTag(channel.groupId.id)
+                previous(channel.previousEventRefs(pubKey))
+            }
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -2758,6 +2782,37 @@ class Account(
     ) {
         val template = CreateInviteEvent.build(channel.groupId.id, code)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Replace the group's pinned-message list with a kind 9010 update-pin-list event
+     * (admin/moderator only). NIP-29 carries the FULL list, so the relay applies it and
+     * republishes the kind-39005 [com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent].
+     */
+    suspend fun updateRelayGroupPins(
+        channel: RelayGroupChannel,
+        pinnedEventIds: List<HexKey>,
+    ) {
+        val template = UpdatePinListEvent.build(channel.groupId.id, pinnedEventIds)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Pin [eventId] by appending it to the current list (no-op if already pinned). */
+    suspend fun pinRelayGroupMessage(
+        channel: RelayGroupChannel,
+        eventId: HexKey,
+    ) {
+        if (channel.isPinned(eventId)) return
+        updateRelayGroupPins(channel, channel.pinnedEventIds + eventId)
+    }
+
+    /** Unpin [eventId] by removing it from the current list (no-op if not pinned). */
+    suspend fun unpinRelayGroupMessage(
+        channel: RelayGroupChannel,
+        eventId: HexKey,
+    ) {
+        if (!channel.isPinned(eventId)) return
+        updateRelayGroupPins(channel, channel.pinnedEventIds - eventId)
     }
 
     /** Kick [pubkey] out of the group with a kind 9001 remove-user event (moderator only). */
@@ -2782,7 +2837,16 @@ class Account(
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
-    /** Edit the group's relay-signed metadata with a kind 9002 event (admin only). */
+    /**
+     * Edit the group's relay-signed metadata with a kind 9002 event (admin only).
+     *
+     * NIP-29 §Subgroups makes the metadata edit a full replacement of the hierarchy
+     * links: a 9002 with no `parent` tag re-roots the group, and one that drops any
+     * existing `child` is rejected by the relay. So unless the caller is explicitly
+     * re-parenting, we re-carry the group's current [parent] and full [children] list
+     * from its latest known metadata to keep the tree intact across a plain name/flag
+     * edit. Pass an explicit value to change them.
+     */
     suspend fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
         name: String?,
@@ -2794,6 +2858,8 @@ class Account(
         isRestricted: Boolean,
         hashtags: List<String> = emptyList(),
         geohashes: List<String> = emptyList(),
+        parent: String? = channel.parentGroupId(),
+        children: List<String> = channel.childGroupIds(),
     ) {
         val template =
             EditMetadataEvent.build(
@@ -2804,6 +2870,8 @@ class Account(
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parent,
+                children = children,
             )
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
@@ -4705,6 +4773,14 @@ class Account(
     suspend fun showWord(word: String) {
         sendMyPublicAndPrivateOutbox(blockPeopleList.showWord(word))
         sendMyPublicAndPrivateOutbox(muteList.showWord(word))
+    }
+
+    suspend fun hideHashtag(hashtag: String) {
+        sendMyPublicAndPrivateOutbox(muteList.hideHashtag(hashtag))
+    }
+
+    suspend fun showHashtag(hashtag: String) {
+        muteList.showHashtag(hashtag)?.let { sendMyPublicAndPrivateOutbox(it) }
     }
 
     suspend fun hideUser(pubkeyHex: HexKey) {

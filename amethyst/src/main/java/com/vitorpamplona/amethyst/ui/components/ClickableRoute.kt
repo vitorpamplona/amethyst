@@ -81,6 +81,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNIP19
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupNAddrInvite
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
@@ -212,10 +213,13 @@ private fun DisplayAddress(
     // only per relay), so we need that hint to open it.
     val groupRelay = if (nip19.kind == GroupMetadataEvent.KIND) nip19.relay.firstOrNull() else null
     if (groupRelay != null) {
+        // An invite code may be appended to the group naddr as `?invite=<code>`; it lands
+        // in additionalChars. Pass it through so the group auto-joins with a kind-9021 code.
+        val inviteCode = GroupNAddrInvite.parse(additionalChars)
         CreateClickableText(
             clickablePart = "#${nip19.dTag}",
             suffix = additionalChars,
-            route = Route.RelayGroup(nip19.dTag, groupRelay.url),
+            route = Route.RelayGroup(nip19.dTag, groupRelay.url, inviteCode = inviteCode),
             nav = nav,
         )
         return

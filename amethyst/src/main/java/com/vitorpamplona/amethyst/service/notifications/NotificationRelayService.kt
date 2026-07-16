@@ -37,6 +37,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.pluralStringRes
@@ -117,13 +118,18 @@ class NotificationRelayService : Service() {
             context.stopService(Intent(context, NotificationRelayService::class.java))
         }
 
+        // Gate for the restart layers (watchdog, boot, catch-up worker, onResume): the
+        // global master must be on, and — matching the manager's rule — at least one loaded
+        // writable account must be participating. An empty cache (logged out, or accounts
+        // not yet loaded) gates OFF, so the layers never resurrect the service for a
+        // logged-out user; on cold boot the account loads headlessly and the manager starts
+        // the service itself once a participant exists.
         fun isEnabled(context: Context): Boolean =
             try {
-                Amethyst.instance.sessionManager
-                    .loggedInAccount()
-                    ?.settings
-                    ?.alwaysOnNotificationService
-                    ?.value == true
+                LocalPreferences.isNotificationServiceEnabled() &&
+                    Amethyst.instance.accountsCache.accounts.value.values.any {
+                        it.settings.alwaysOnNotificationService.value
+                    }
             } catch (e: Exception) {
                 false
             }

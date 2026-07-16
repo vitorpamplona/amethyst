@@ -59,9 +59,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -323,10 +325,54 @@ fun ChatMessageActionSheet(
                             }
                         }
                     }
+
+                    // NIP-29 moderator action: pin/unpin this message in its relay group.
+                    // Only rendered (and only subscribes) when the note belongs to a group.
+                    val relayGroup = remember(note) { note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } }
+                    if (relayGroup != null && !note.isDraft()) {
+                        RelayGroupPinTile(note, relayGroup, onDismiss, accountViewModel)
+                    }
                 }
             }
 
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/**
+ * NIP-29 moderator-only tile that pins/unpins this message in its relay group.
+ * Observes the group's live roster + pin list, so it shows the right verb and
+ * hides itself entirely for members who can't moderate. Pinning replaces the whole
+ * kind-9010 list; the relay republishes the kind-39005 pins the bar reads.
+ */
+@Composable
+private fun RelayGroupPinTile(
+    note: Note,
+    baseChannel: RelayGroupChannel,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    val channelState by observeChannel(baseChannel, accountViewModel)
+    val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
+
+    val canModerate = channel.membershipOf(accountViewModel.userProfile().pubkeyHex).canModerate()
+    if (!canModerate) return
+
+    val pinned = channel.isPinned(note.idHex)
+
+    SectionDivider()
+    TileRow {
+        if (pinned) {
+            ActionTile(MaterialSymbols.PushPin, stringRes(R.string.relay_group_unpin_message)) {
+                accountViewModel.unpinRelayGroupMessage(channel, note)
+                onDismiss()
+            }
+        } else {
+            ActionTile(MaterialSymbols.PushPin, stringRes(R.string.relay_group_pin_message)) {
+                accountViewModel.pinRelayGroupMessage(channel, note)
+                onDismiss()
+            }
         }
     }
 }

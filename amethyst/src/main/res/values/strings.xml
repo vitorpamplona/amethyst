@@ -309,6 +309,9 @@
     <string name="loading_account">Loading account</string>
     <string name="concord_redeeming_invite">Redeeming invite…</string>
     <string name="concord_invite_failed">Could not fetch this invite. The link may be expired or its relays unreachable.</string>
+    <string name="concord_invite_failed_invalid">This invite link is invalid or can\'t be opened with this account.</string>
+    <string name="concord_invite_failed_incompatible">This invite link can\'t be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
+    <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_home_title">Concord Channels</string>
     <string name="concord_home_empty">You haven\'t joined any Concord Channels yet. Create one, or open an invite link.</string>
     <string name="concord_channels_empty">No channels yet.</string>
@@ -341,6 +344,11 @@
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
     </plurals>
+    <plurals name="concord_unread_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
+    <string name="concord_channel_no_messages">No messages yet</string>
     <string name="concord_create_action">Create</string>
     <string name="concord_invite_action">Invite people</string>
     <string name="concord_invite_title">Invite link</string>
@@ -1695,6 +1703,15 @@
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
 
+    <string name="always_on_notif_tile_label">Notification service</string>
+    <string name="always_on_notif_tile_subtitle_on">On</string>
+    <string name="always_on_notif_tile_subtitle_off">Off</string>
+
+    <string name="notification_service_master_title">Background notification service</string>
+    <string name="notification_service_master_description">Master switch for real-time background notifications. Turn off to save battery — like an airplane mode. When off, no account stays connected in the background, and it stays off (across restarts) until you turn it back on.</string>
+    <string name="notification_service_accounts_title">Accounts active in the background</string>
+    <string name="notification_service_participation_title">Keep this account active in the background</string>
+
     <string name="split_notifications_setting_title">Split notifications by Follows</string>
     <string name="split_notifications_setting_description">Show two notification tabs — Following (people you follow) and Everyone. The unread indicator glows only for activity from people you follow.</string>
     <string name="show_messages_in_notifications_setting_title">Show Messages</string>
@@ -2150,6 +2167,7 @@
     <string name="relay_group_members_title">Members</string>
     <string name="relay_group_make_admin">Make admin</string>
     <string name="relay_group_make_moderator">Make moderator</string>
+    <string name="relay_group_assign_role">Assign role: %1$s</string>
     <string name="relay_group_demote_member">Remove role</string>
     <string name="relay_group_remove_user">Remove from group</string>
     <string name="relay_group_remove_user_confirm">Remove %1$s from this group? They will lose access until re-added or re-invited.</string>
@@ -2162,6 +2180,10 @@
     <string name="relay_group_menu_members">Members</string>
     <string name="relay_group_menu_edit">Edit group</string>
     <string name="relay_group_threads_title">Threads</string>
+    <string name="relay_group_pin_message">Pin message</string>
+    <string name="relay_group_unpin_message">Unpin message</string>
+    <string name="relay_group_pinned_label">Pinned</string>
+    <string name="relay_group_pinned_content_description">Pinned messages</string>
     <string name="relay_group_open">Open group</string>
     <string name="relay_group_channels_empty">No groups on this relay yet.</string>
     <string name="relay_group_channels_not_nip29">This relay does not advertise support for groups (NIP-29), so it may not host any.</string>
@@ -2181,6 +2203,15 @@
     <string name="relay_group_field_topics_hint">bitcoin, nostr, art</string>
     <string name="relay_group_field_geohash">Location (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_section_structure">Structure</string>
+    <string name="relay_group_parent_desc">Nest this group under a parent to build a hierarchy.</string>
+    <string name="relay_group_parent_label">Parent group</string>
+    <string name="relay_group_parent_none">Top-level group</string>
+    <string name="relay_group_parent_pick_title">Choose a parent group</string>
+    <string name="relay_group_parent_search">Search groups</string>
+    <string name="relay_group_parent_top_level_option">No parent (top-level)</string>
+    <string name="relay_group_parent_none_desc">This group sits at the top level</string>
+    <string name="relay_group_parent_empty">No other groups on this relay yet</string>
     <string name="relay_group_section_permissions">Permissions</string>
     <string name="relay_group_flag_private">Private</string>
     <string name="relay_group_flag_private_desc">Only members can read messages.</string>
@@ -2320,6 +2351,8 @@
 
     <string name="hidden_words">Hidden Words</string>
     <string name="hide_new_word_label">Hide new word or sentence</string>
+    <string name="mute_hashtag">Mute hashtag</string>
+    <string name="unmute_hashtag">Unmute hashtag</string>
     <string name="settings_muted_threads_title">Muted threads</string>
     <string name="settings_muted_threads_empty">No muted threads</string>
     <string name="settings_muted_threads_unknown">Unknown thread · %1$s</string>

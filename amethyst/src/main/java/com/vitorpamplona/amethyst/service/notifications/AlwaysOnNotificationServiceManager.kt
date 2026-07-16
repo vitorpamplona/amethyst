@@ -22,14 +22,18 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 /**
@@ -41,16 +45,23 @@ import kotlinx.coroutines.launch
  * L4 - BootCompletedReceiver (restart on boot)
  * L5 - ServiceWatchdogManager (AlarmManager, 5-min health check)
  *
- * When enabled, all layers activate. When disabled, all layers deactivate.
- * The manager watches the account's alwaysOnNotificationService setting
- * and reacts to changes in real time.
+ * Two switches gate the system:
  *
- * While enabled, every saved writable account is kept loaded in
- * [AccountCacheState] so GiftWraps addressed to any of them (delivered via
- * open relay subscriptions) get unwrapped by the owning account's
- * `newNotesPreProcessor`. Without this, wraps for non-active accounts would
- * sit in [com.vitorpamplona.amethyst.model.LocalCache] with no subscriber
- * able to decrypt them.
+ * - The **global master** ([LocalPreferences.notificationServiceEnabledFlow], the
+ *   "Background notification service" toggle / Quick Settings tile). When off, every
+ *   layer is torn down and nothing restarts, regardless of any account's setting —
+ *   this is the battery-saver "airplane mode". Persisted, so an explicit off survives
+ *   restarts and crashes.
+ * - The **per-account participation** flag ([com.vitorpamplona.amethyst.model.AccountSettings.alwaysOnNotificationService],
+ *   "Keep this account active in the background"). While the master is on, the service
+ *   runs as long as **at least one** writable account participates.
+ *
+ * While the master is on, every saved writable account is kept loaded in
+ * [AccountCacheState] so (a) its participation flag is observable and (b) GiftWraps
+ * addressed to any of them (delivered via open relay subscriptions) get unwrapped by
+ * the owning account's `newNotesPreProcessor`. Without this, wraps for non-active
+ * accounts would sit in [com.vitorpamplona.amethyst.model.LocalCache] with no
+ * subscriber able to decrypt them.
  */
 class AlwaysOnNotificationServiceManager(
     private val context: Context,
@@ -68,22 +79,52 @@ class AlwaysOnNotificationServiceManager(
     private var wasEnabled = false
 
     /**
-     * Starts watching the given account's always-on setting.
-     * When the setting changes, all layers are started or stopped accordingly.
-     * On initial load with false, nothing happens (no-op for users who never enabled it).
+     * Starts watching the global master switch and the participation flags of every
+     * loaded writable account. The service layers run while the master is on AND at
+     * least one account participates; the master overrides everything when off.
+     *
+     * Idempotent: safe to call again on account switch/login — it restarts the watch.
      */
-    fun watchAccount(account: Account) {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun start() {
         watchJob?.cancel()
         wasEnabled = false
         watchJob =
             scope.launch {
-                account.settings.alwaysOnNotificationService.collectLatest { enabled ->
-                    if (enabled) {
-                        wasEnabled = true
-                        enableAllLayers()
-                    } else if (wasEnabled) {
-                        disableAllLayers()
+                localPreferences.notificationServiceEnabledFlow().collectLatest { masterEnabled ->
+                    if (!masterEnabled) {
+                        // Global airplane mode: suppress every layer regardless of
+                        // per-account participation, and stop keeping accounts loaded.
+                        if (wasEnabled) {
+                            disableServiceLayers()
+                            wasEnabled = false
+                        }
+                        stopMultiAccountPreload()
+                        return@collectLatest
                     }
+
+                    // Master on: keep every writable account loaded so its participation
+                    // flag is observable and its gift wraps can decrypt, then run the
+                    // service only while at least one account is participating.
+                    startMultiAccountPreload()
+                    accountsCache.accounts
+                        .flatMapLatest { accounts ->
+                            val flags = accounts.values.map { it.settings.alwaysOnNotificationService }
+                            if (flags.isEmpty()) {
+                                flowOf(false)
+                            } else {
+                                combine(flags) { values -> values.any { it } }
+                            }
+                        }.distinctUntilChanged()
+                        .collectLatest { anyParticipating ->
+                            if (anyParticipating) {
+                                wasEnabled = true
+                                enableServiceLayers()
+                            } else if (wasEnabled) {
+                                disableServiceLayers()
+                                wasEnabled = false
+                            }
+                        }
                 }
             }
     }
@@ -93,10 +134,15 @@ class AlwaysOnNotificationServiceManager(
         watchJob = null
         preloadJob?.cancel()
         preloadJob = null
+        // Logout/terminate: tear the layers down explicitly. Otherwise the watchdog alarm
+        // and periodic worker stay scheduled and would resurrect the service for a
+        // logged-out user (nobody participating).
+        disableServiceLayers()
+        wasEnabled = false
     }
 
-    private fun enableAllLayers() {
-        Log.d(TAG, "Enabling all notification service layers")
+    private fun enableServiceLayers() {
+        Log.d(TAG, "Enabling notification service layers")
 
         // L1: Start foreground service
         NotificationRelayService.start(context)
@@ -108,12 +154,10 @@ class AlwaysOnNotificationServiceManager(
         ServiceWatchdogManager.schedule(context)
 
         // L2 (FCM) and L4 (BOOT_COMPLETED) are always active via manifest
-
-        startMultiAccountPreload()
     }
 
-    private fun disableAllLayers() {
-        Log.d(TAG, "Disabling all notification service layers")
+    private fun disableServiceLayers() {
+        Log.d(TAG, "Disabling notification service layers")
 
         // L1: Stop foreground service
         NotificationRelayService.stop(context)
@@ -123,8 +167,6 @@ class AlwaysOnNotificationServiceManager(
 
         // L5: Cancel watchdog alarm
         ServiceWatchdogManager.cancel(context)
-
-        stopMultiAccountPreload()
     }
 
     /**
@@ -154,7 +196,7 @@ class AlwaysOnNotificationServiceManager(
 
     /**
      * Cancels the preload collector and releases every cached account except the
-     * currently active one, so users with the setting off return to single-account
+     * currently active one, so users with the master off return to single-account
      * memory/battery footprint.
      */
     private fun stopMultiAccountPreload() {

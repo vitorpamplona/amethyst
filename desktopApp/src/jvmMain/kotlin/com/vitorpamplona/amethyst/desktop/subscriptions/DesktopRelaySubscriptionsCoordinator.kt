@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -161,6 +162,71 @@ class DesktopRelaySubscriptionsCoordinator(
     // Last event received from any subscription — drives RelayHealthIndicator
     private val _lastEventAt = MutableStateFlow<Long?>(null)
     val lastEventAt: StateFlow<Long?> = _lastEventAt.asStateFlow()
+
+    // -- kind:10002 (NIP-65 outbox) back-fill for profiles we ingest --
+    // Every author whose kind:0 we consume gets their kind:10002 fetched and
+    // cached, so the outbox model (and the DM inbox resolver) can read their
+    // replaceables — kind:10050 included — straight from their write relays.
+    // `outboxRequested` is a permanent per-session dedup: we ask once per
+    // author. `pendingOutbox` buffers authors between batched REQs.
+    private val outboxRequested = ConcurrentHashMap.newKeySet<HexKey>()
+    private val pendingOutbox = ConcurrentHashMap.newKeySet<HexKey>()
+    private var outboxBackfillJob: Job? = null
+
+    /**
+     * Ensure we have (or have requested) [pubkey]'s kind:10002. No-op if it's
+     * already cached or already queued/asked. Safe to call on every kind:0
+     * ingest — wire it to [DesktopLocalCache.onProfileMetadataConsumed].
+     */
+    fun ensureOutboxRelayList(pubkey: HexKey) {
+        if (localCache.cachedAdvertisedRelayList(pubkey) != null) return
+        if (!outboxRequested.add(pubkey)) return
+        pendingOutbox.add(pubkey)
+        scheduleOutboxBackfill()
+    }
+
+    /**
+     * Drain [pendingOutbox] in batches of ≤100 authors, one REQ at a time,
+     * coalescing bursts with a short delay. kind:10002 lives on the index /
+     * discovery relays (they mirror it widely), so we query those; results go
+     * through [consumeEvent] → cache.
+     *
+     * `@Synchronized` + the `isActive` guard make this launch-once: concurrent
+     * callers from the consume path don't spawn duplicate drain jobs. The job
+     * loops until [pendingOutbox] is empty, so authors that arrive mid-fetch
+     * (or a burst larger than one 100-author batch) are picked up in the same
+     * run instead of stranded until the next profile happens to arrive.
+     */
+    @Synchronized
+    private fun scheduleOutboxBackfill() {
+        if (outboxBackfillJob?.isActive == true) return
+        outboxBackfillJob =
+            scope.launch(Dispatchers.IO) {
+                // Coalesce a burst of profile arrivals into the first batch.
+                delay(500)
+
+                while (pendingOutbox.isNotEmpty()) {
+                    val batch = pendingOutbox.take(100).toList()
+                    pendingOutbox.removeAll(batch.toSet())
+                    if (batch.isEmpty() || indexRelays.isEmpty()) continue
+
+                    val filter =
+                        Filter(
+                            kinds = listOf(AdvertisedRelayListEvent.KIND),
+                            authors = batch,
+                            limit = batch.size,
+                        )
+                    // fetchAll closes on EOSE (bounded by the timeout) rather
+                    // than holding the sub open for a fixed window.
+                    val events =
+                        client.fetchAll(
+                            filters = indexRelays.associateWith { listOf(filter) },
+                            timeoutMs = 8.seconds.inWholeMilliseconds,
+                        )
+                    events.forEach { consumeEvent(it, null) }
+                }
+            }
+    }
 
     /**
      * Central event router — consumes an event into the cache and emits to event stream.
@@ -438,6 +504,10 @@ class DesktopRelaySubscriptionsCoordinator(
         outboxDispatcher.clear()
         rateLimiter.reset()
         cleanupJob?.cancel()
+
+        outboxBackfillJob?.cancel()
+        outboxRequested.clear()
+        pendingOutbox.clear()
     }
 
     /**

@@ -25,16 +25,26 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.CodeTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
 
 fun TagArray.groupId() = firstTagValue(GroupIdTag.TAG_NAME)
 
 fun TagArray.previousEvents() = mapNotNull(PreviousTag::parse)
 
+/** The `parent` group id (subgroups), or null when this is a root group. At most one is expected. */
+fun TagArray.parentGroupId() = firstNotNullOfOrNull(ParentTag::parse)
+
+/** The ordered list of direct `child` subgroup ids advertised on a parent's metadata. */
+fun TagArray.childGroupIds(): List<String> = mapNotNull(ChildTag::parse)
+
 fun TagArray.userPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
 
 fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it }
+
+fun TagArray.pinnedEventIds(): List<HexKey> = mapValueTagged("e") { it }
 
 fun TagArray.inviteCode() = firstNotNullOfOrNull(CodeTag::parse)

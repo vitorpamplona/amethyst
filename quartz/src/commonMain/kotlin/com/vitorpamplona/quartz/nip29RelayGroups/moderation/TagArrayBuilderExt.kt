@@ -23,13 +23,21 @@ package com.vitorpamplona.quartz.nip29RelayGroups.moderation
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.CodeTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
 
 fun <T : Event> TagArrayBuilder<T>.groupId(groupId: String) = addUnique(GroupIdTag.assemble(groupId))
 
 fun <T : Event> TagArrayBuilder<T>.previous(eventIdPrefixes: List<String>) = addAll(PreviousTag.assemble(eventIdPrefixes))
+
+/** Sets the subgroup `parent` tag (the parent group's id). At most one per event. */
+fun <T : Event> TagArrayBuilder<T>.parentGroup(parentGroupId: String) = addUnique(ParentTag.assemble(parentGroupId))
+
+/** Appends the ordered `child` subgroup tags. */
+fun <T : Event> TagArrayBuilder<T>.childGroups(childGroupIds: List<String>) = addAll(ChildTag.assemble(childGroupIds))
 
 fun <T : Event> TagArrayBuilder<T>.userPubKey(pubKey: HexKey) = add(arrayOf("p", pubKey))
 

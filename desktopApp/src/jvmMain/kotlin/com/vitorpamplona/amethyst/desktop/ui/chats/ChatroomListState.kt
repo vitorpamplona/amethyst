@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -193,6 +194,17 @@ class ChatroomListState(
             delay(15_000)
             relayManager.unsubscribe(subId)
         }
+    }
+
+    /**
+     * Proactively download the NIP-17 DM relay lists (kind 10050) for the given
+     * conversation peers. Called from the list UI for the rows that are actually
+     * visible (and again as more scroll into view), so we only warm what the
+     * user is looking at rather than every conversation on disk. Delegates to
+     * the reusable, deduped [DesktopIAccount.prewarmDmInboxRelays].
+     */
+    fun prewarmPeerRelays(pubkeys: Collection<String>) {
+        (account as? DesktopIAccount)?.prewarmDmInboxRelays(pubkeys)
     }
 
     private suspend fun refreshRooms() {

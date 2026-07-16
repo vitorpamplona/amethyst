@@ -1619,6 +1619,16 @@ class AccountViewModel(
         body: String,
     ) = launchSigner { account.postRelayGroupThread(channel, title, body) }
 
+    fun pinRelayGroupMessage(
+        channel: RelayGroupChannel,
+        note: Note,
+    ) = launchSigner { account.pinRelayGroupMessage(channel, note.idHex) }
+
+    fun unpinRelayGroupMessage(
+        channel: RelayGroupChannel,
+        note: Note,
+    ) = launchSigner { account.unpinRelayGroupMessage(channel, note.idHex) }
+
     fun removeRelayGroupUser(
         channel: RelayGroupChannel,
         pubkey: HexKey,
@@ -1683,6 +1693,10 @@ class AccountViewModel(
     fun showWord(word: String) = launchSigner { account.showWord(word) }
 
     fun hideWord(word: String) = launchSigner { account.hideWord(word) }
+
+    fun hideHashtag(tag: String) = launchSigner { account.hideHashtag(tag) }
+
+    fun showHashtag(tag: String) = launchSigner { account.showHashtag(tag) }
 
     fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
 

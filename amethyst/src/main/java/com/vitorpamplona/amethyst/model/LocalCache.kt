@@ -164,6 +164,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
@@ -172,6 +173,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -797,7 +799,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         // permanent "Event is loading…" ghost. Drop it; the reverse order (delete after the message)
         // is already handled by the normal deletion cascade unlinking the note from its gatherers.
         messageRow?.let { (ch, note) ->
-            if (note.event == null) ch.removeNote(note)
+            if (note.event == null) {
+                ch.removeNote(note)
+            } else {
+                // The row was attached (addNote) BEFORE justConsume set the event, so addNote saw a
+                // null createdAt and could not pick lastNote or order the feed. The event is loaded
+                // now — refresh so the channel's last-message preview, unread count, and ordering are
+                // correct (otherwise lastNote stays null forever and every row reads "No messages yet").
+                ch.refreshAfterEventLoad(note)
+            }
         }
     }
 
@@ -1876,6 +1886,27 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     /**
+     * NIP-29 addressables (kinds 39000-39005) are authoritative for a group's metadata,
+     * roster, roles and pins ONLY when signed by the relay's own key — the NIP-11 `self`
+     * pubkey. This returns false only when we can positively tell an event is NOT relay-signed
+     * (the relay advertises a `self` and the event's author differs), so a stray or malicious
+     * user-published 39000/39001/… served by a lax relay can't overwrite a group's state (e.g.
+     * inject itself into the admin list). When `self` isn't known yet — the NIP-11 doc hasn't
+     * loaded, or the relay doesn't advertise one — we don't block, so legitimate groups still
+     * populate and this never regresses a relay whose key we simply haven't fetched.
+     */
+    private fun isRelaySignedGroupEvent(
+        event: Event,
+        relay: NormalizedRelayUrl,
+    ): Boolean {
+        val self =
+            Amethyst.instance.nip11Cache
+                .getFromCache(relay)
+                .self ?: return true
+        return event.pubKey == self
+    }
+
+    /**
      * NIP-29 relay-signed group metadata (kind 39000). Stored as an addressable
      * note and used to populate the [RelayGroupChannel]'s name/picture/about/
      * flags. The group is keyed by (host relay + group id): unlike NIP-C7, a
@@ -1890,7 +1921,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     ): Boolean {
         val new = consumeBaseReplaceable(event, relay, wasVerified)
 
-        if (relay != null) {
+        if (relay != null && isRelaySignedGroupEvent(event, relay)) {
             val note = getOrCreateAddressableNote(event.address())
             val channel = getOrCreateRelayGroupChannel(GroupId(event.groupId(), relay))
             (note.event as? GroupMetadataEvent)?.let { channel.updateGroupInfo(it, note) }
@@ -1906,7 +1937,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val new = consumeBaseReplaceable(event, relay, wasVerified)
-        if (relay != null) {
+        if (relay != null && isRelaySignedGroupEvent(event, relay)) {
             val latest = getOrCreateAddressableNote(event.address()).event as? GroupMembersEvent
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateMembers(it) }
         }
@@ -1920,9 +1951,37 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val new = consumeBaseReplaceable(event, relay, wasVerified)
-        if (relay != null) {
+        if (relay != null && isRelaySignedGroupEvent(event, relay)) {
             val latest = getOrCreateAddressableNote(event.address()).event as? GroupAdminsEvent
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateAdmins(it) }
+        }
+        return new
+    }
+
+    /** NIP-29 relay-signed pinned-message list (kind 39005) → the group's pins. */
+    fun consume(
+        event: GroupPinnedEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null && isRelaySignedGroupEvent(event, relay)) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? GroupPinnedEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updatePinned(it) }
+        }
+        return new
+    }
+
+    /** NIP-29 relay-declared supported roles (kind 39003) → the group's role set. */
+    fun consume(
+        event: SupportedRolesEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null && isRelaySignedGroupEvent(event, relay)) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? SupportedRolesEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateSupportedRoles(it) }
         }
         return new
     }
@@ -3892,16 +3951,22 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consume(event, relay, wasVerified)
                 }
 
-                // Remaining NIP-29 relay-group kinds. The two relay-signed addressables (39003
-                // roles, 39004 AV participants) are durable group state alongside 39000/39001/39002,
-                // so they're stored replaceably. The 9xxx moderation actions and join/leave requests
-                // are regular one-shot events the relay is authoritative for (it applies them and
-                // republishes the 39000/39001/39002); we store them so they're queryable and don't
-                // fall through to the "Not Supported" warning, but we don't act on them client-side.
-                is SupportedRolesEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
+                is GroupPinnedEvent -> {
+                    consume(event, relay, wasVerified)
                 }
 
+                // 39003 (relay-declared roles) is durable group state like 39000/39001/39002:
+                // route it onto the channel so a moderation UI can offer the relay's role set.
+                is SupportedRolesEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                // Remaining NIP-29 relay-group kinds. The relay-signed 39004 AV-participants
+                // addressable is durable group state, so it's stored replaceably. The 9xxx
+                // moderation actions and join/leave requests are regular one-shot events the
+                // relay is authoritative for (it applies them and republishes the
+                // 39000/39001/39002); we store them so they're queryable and don't fall through
+                // to the "Not Supported" warning, but we don't act on them client-side.
                 is GroupParticipantsEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
@@ -3919,6 +3984,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is DeleteEventEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is UpdatePinListEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 

@@ -61,11 +61,15 @@ data class LiveHiddenUsers(
     val spammers: Set<String> = emptySet(),
     val hiddenWords: Set<String> = emptySet(),
     val mutedThreads: Set<String> = emptySet(),
+    // Lowercased hashtags (without the leading '#') the user has muted via NIP-51 `"t"` entries.
+    val hiddenHashtags: Set<String> = emptySet(),
     val maxHashtagLimit: Int = 8,
 ) {
     fun isUserHidden(userHex: String) = hiddenUsers.contains(userHex) || spammers.contains(userHex)
 
     fun isThreadMuted(rootHex: String) = mutedThreads.contains(rootHex)
+
+    fun isHashtagHidden(hashtag: String) = hiddenHashtags.contains(hashtag.lowercase())
 }
 
 /**

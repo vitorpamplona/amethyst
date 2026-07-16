@@ -67,10 +67,17 @@ fun InviteRelayGroupDialog(
         .collectAsStateWithLifecycle()
     val liveChannel = channelState.channel as? RelayGroupChannel ?: channel
 
-    // A shareable, cross-client coordinate for the group (opens the chat in any
-    // NIP-29 client). Null until the relay-signed metadata has loaded.
-    val nAddr = liveChannel.toNAddr()?.let { "nostr:$it" }
     val isClosed = liveChannel.isClosed()
+
+    // A shareable, cross-client coordinate for the group (opens the chat in any NIP-29
+    // client). Null until the relay-signed metadata has loaded. For a closed (invite-only)
+    // group we append the one-time code as the spec's `?invite=<code>` suffix so the whole
+    // link is a single tap that auto-joins — no separate code to paste.
+    val nAddr =
+        liveChannel.toNAddr()?.let { base ->
+            val uri = "nostr:$base"
+            if (isClosed) "$uri?invite=$code" else uri
+        }
 
     // A join code is only meaningful for closed (invite-only) groups; open groups
     // join directly from the shared naddr. So mint the kind-9009 invite only when
@@ -116,15 +123,13 @@ fun InviteRelayGroupDialog(
             }
         },
         confirmButton = {
-            // Copy the group link, plus the code when the group is closed (so a
-            // recipient has both to join). Never fall back to copying a code the
-            // dialog didn't show — for an open group with metadata not yet loaded
-            // there is simply nothing to copy, so disable the button.
-            val toCopy = listOfNotNull(nAddr, if (isClosed) code else null).joinToString("\n")
+            // Copy the single shareable link. For a closed group the code is already
+            // embedded as `?invite=…`, so one tap joins. Nothing to copy until the
+            // group's metadata (and thus the naddr) has loaded, so disable until then.
             TextButton(
-                enabled = toCopy.isNotBlank(),
+                enabled = nAddr != null,
                 onClick = {
-                    scope.launch { clipboard.setText(toCopy) }
+                    nAddr?.let { link -> scope.launch { clipboard.setText(link) } }
                     onDismiss()
                 },
             ) {

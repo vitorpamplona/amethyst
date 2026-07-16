@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -142,6 +143,7 @@ class ResourceUsageAccountantTest {
             assertEquals(12L, store.allDays()[200]?.get("x"))
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun hookAddsAreDrainedInPlaceAndNeverRearmTheFlushLoop() =
         runTest {

@@ -252,6 +252,12 @@ fun NormalChatNote(
     // carrying per-message metadata (expiration, geohash, PoW, legacy-DM marker).
     val footerHasMeta = remember(note.event) { chatFooterHasMeta(note) }
 
+    // Only mount the reaction/zap chip row when the message actually has engagement.
+    // The chips overlap the bubble's bottom edge, so the bubble reserves space beneath
+    // the last line of text for them — without this gate every footerless bubble would
+    // reserve that space for an empty row, leaving a dead gap under the text.
+    val hasEngagement = !innerQuote && hasChatEngagement(note, accountViewModel)
+
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
         isDraft = note.event is DraftWrapEvent,
@@ -299,7 +305,7 @@ fun NormalChatNote(
             )
         },
         reactionsRow =
-            if (!innerQuote) {
+            if (hasEngagement) {
                 { ChatReactionChips(note, accountViewModel, nav) }
             } else {
                 null

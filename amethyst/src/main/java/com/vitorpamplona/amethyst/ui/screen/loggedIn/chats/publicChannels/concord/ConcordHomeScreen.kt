@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -258,10 +257,9 @@ private fun communityActivity(
     } ?: 0L
 
 /**
- * The number of a community's channels with a message newer than this account last read there —
- * combines each channel's persisted last-read ([concordChannelLastReadRoute]) against its
- * [com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel.lastNote]. Recomputed on
- * [revision] so a freshly-folded message flips the badge.
+ * The total number of new messages across a community's channels — the sum, over every channel, of
+ * messages newer than this account last read that channel ([concordChannelUnreadCountFlow]).
+ * Recomputed reactively as messages fold in and as channels are opened (last-read advances).
  */
 @Composable
 private fun communityUnreadCount(
@@ -271,23 +269,14 @@ private fun communityUnreadCount(
 ): Int {
     if (channelKeys.isEmpty()) return 0
     // Keyed only on the channel set (not the global revision): each per-channel flow reacts to both
-    // its last-read marker AND the channel's own notes flow, so a folded message flips the badge
+    // its last-read marker AND the channel's own notes flow, so a folded message updates the badge
     // without tearing down and restarting every flow on every unrelated fold (which reset the badge
     // to 0 and made it flicker).
     val flow =
         remember(communityId, channelKeys) {
             combine(
-                channelKeys.map { key ->
-                    val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, key))
-                    combine(
-                        account.loadLastReadFlow(concordChannelLastReadRoute(communityId, key)),
-                        channel.flow().notes.stateFlow,
-                    ) { lastRead, state ->
-                        val last = state.channel.lastNote?.createdAt() ?: 0L
-                        if (last > lastRead) 1 else 0
-                    }
-                },
-            ) { flags -> flags.sum() }
+                channelKeys.map { key -> concordChannelUnreadCountFlow(account, communityId, key) },
+            ) { counts -> counts.sum() }
         }
     return flow.collectAsStateWithLifecycle(0).value
 }
@@ -357,7 +346,7 @@ private fun CommunityHeader(
                 )
             }
         }
-        if (unread > 0) UnreadBadge(unread)
+        ConcordUnreadBadge(unread)
         SymbolIcon(
             // ▲ only when fully open; ▼ for both CLOSED and the UNREAD peek ("more to reveal").
             symbol = if (mode == ChannelExpand.OPEN) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
@@ -388,25 +377,6 @@ private fun CommunityBanner(
     )
 }
 
-/** A small pill showing the unread-channel count next to a community. */
-@Composable
-private fun UnreadBadge(count: Int) {
-    Box(
-        modifier =
-            Modifier
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(horizontal = 7.dp, vertical = 2.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            count.toString(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimary,
-        )
-    }
-}
-
 /**
  * One channel row with its last message (author + snippet), relative time, and an unread marker —
  * bold + a dot when there's a message newer than this account last read the channel.
@@ -432,9 +402,13 @@ private fun ConcordChannelRow(
         .flow()
         .notes.stateFlow
         .collectAsStateWithLifecycle()
-    val lastNote = channelState.channel.lastNote
-    val lastReadTime by account.loadLastReadFlow(concordChannelLastReadRoute(communityId, channelKey)).collectAsStateWithLifecycle()
-    val unread = (lastNote?.createdAt() ?: Long.MIN_VALUE) > lastReadTime
+    // The newest *timeline* message (not the raw lastNote): skips kind-1111 thread replies and
+    // hidden authors so the preview + time match the channel feed and the unread badge below.
+    val lastNote = remember(channelState) { channel.newestTimelineNote(account) }
+    val unreadCount by
+        remember(communityId, channelKey) { concordChannelUnreadCountFlow(account, communityId, channelKey) }
+            .collectAsStateWithLifecycle(0)
+    val unread = unreadCount > 0
 
     // In the UNREAD peek, a read channel simply isn't shown.
     if (hideIfRead && !unread) return
@@ -486,12 +460,10 @@ private fun ConcordChannelRow(
             Text(
                 timeAgo(ts, LocalContext.current, prefix = ""),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (unread) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-        }
+        ConcordUnreadBadge(unreadCount)
     }
 }
 

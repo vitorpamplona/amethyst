@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.auth.DesktopAuthCoordinator
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.model.DesktopRelayCategories
@@ -111,6 +112,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscription
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
 import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
+import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
@@ -148,6 +150,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.collections.immutable.toPersistentMap
@@ -1019,6 +1022,14 @@ private fun AppInner(
                     // metadata to relays the recipient never designated for DMs.
                     localCache.getUserIfExists(pubkey)?.dmInboxRelaysStrict()
                 },
+                outboxLookup = { pubkey ->
+                    // The recipient's kind:10050 lives on their NIP-65 write
+                    // relays. When we've already cached their kind:10002 (via the
+                    // feed / outbox dispatcher), hand those write relays to the
+                    // resolver so it reads the 10050 from the source instead of
+                    // relying on the curated indexers to have mirrored it.
+                    localCache.cachedAdvertisedRelayList(pubkey)?.writeRelaysNorm()
+                },
             )
         }
 
@@ -1050,7 +1061,15 @@ private fun AppInner(
                 scope = scope,
                 indexRelays = indexRelaysStore.effective(),
                 localCache = localCache,
-            ).also { it.startCleanupLoop() }
+            ).also { coordinator ->
+                coordinator.startCleanupLoop()
+                // Whenever we ingest a user's kind:0 profile, back-fill their
+                // kind:10002 so their outbox (write) relays — where their
+                // kind:10050 and other replaceables live — are known.
+                localCache.onProfileMetadataConsumed = { pubkey ->
+                    coordinator.ensureOutboxRelayList(pubkey)
+                }
+            }
         }
 
     // NIP-42 AUTH coordinator — wires relay-auth challenges through the
@@ -1339,6 +1358,34 @@ private fun AppInner(
                             val account = accountState as AccountState.LoggedIn
                             val nwcConnection by accountManager.nwcConnection.collectAsState()
 
+                            // Account state holders (relay lists, blossom servers, DMs, WoT).
+                            // Hoisted above MainContent so the top-level compose dialog can also
+                            // read the account's blossom server list from iAccount directly.
+                            val dmSendTracker = remember(relayManager) { DmSendTracker(relayManager.client) }
+                            // Created before iAccount so NIP-65 backup can be loaded.
+                            val accountRelays =
+                                remember(account, relayManager, scope) {
+                                    DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
+                                }
+                            // Cold-boot AUTH race fix: when the account's own kind:10050 DM-inbox
+                            // set loads (often AFTER an inbox relay has already challenged for
+                            // AUTH), retroactively auto-approve any pending tier-2 prompt for a
+                            // relay that is actually tier-1, instead of leaving a spurious banner.
+                            LaunchedEffect(authCoordinator, accountRelays) {
+                                accountRelays.dmRelayList.collect { dmInbox ->
+                                    authCoordinator.onSelfApprovedRelaysChanged(dmInbox)
+                                }
+                            }
+                            val iAccount =
+                                remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
+                                    DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
+                                }
+                            // When iAccount is replaced (account switch), close the previous
+                            // WoTService so its writer coroutine + ops Channel don't leak.
+                            DisposableEffect(iAccount) {
+                                onDispose { iAccount.wotService.close() }
+                            }
+
                             // Lazy-load Namecoin services. The Core RPC HTTP
                             // client is sourced from the Tor-aware DesktopHttpClient
                             // singleton so .onion RPC URLs route through the
@@ -1412,6 +1459,9 @@ private fun AppInner(
                                             localCache = localCache,
                                             accountManager = accountManager,
                                             account = account,
+                                            iAccount = iAccount,
+                                            accountRelays = accountRelays,
+                                            dmSendTracker = dmSendTracker,
                                             nwcConnection = nwcConnection,
                                             subscriptionsCoordinator = subscriptionsCoordinator,
                                             indexRelaysStore = indexRelaysStore,
@@ -1447,18 +1497,23 @@ private fun AppInner(
                                 }
                             }
 
-                            // Compose dialog
+                            // Compose dialog. Hosted outside MainContent's provider,
+                            // so provide the account's blossom list here too.
                             if (showComposeDialog) {
-                                ComposeNoteDialog(
-                                    onDismiss = onDismissComposeDialog,
-                                    relayManager = relayManager,
-                                    account = account,
-                                    localCache = localCache,
-                                    replyTo = replyToNote,
-                                    draftDTag = composeEditDraftTag,
-                                    draftInitialContent = composeEditContent,
-                                    initialScheduledForSec = composeEditScheduledForSec,
-                                )
+                                CompositionLocalProvider(
+                                    LocalBlossomServers provides iAccount.blossomServerList.flow,
+                                ) {
+                                    ComposeNoteDialog(
+                                        onDismiss = onDismissComposeDialog,
+                                        relayManager = relayManager,
+                                        account = account,
+                                        localCache = localCache,
+                                        replyTo = replyToNote,
+                                        draftDTag = composeEditDraftTag,
+                                        draftInitialContent = composeEditContent,
+                                        initialScheduledForSec = composeEditScheduledForSec,
+                                    )
+                                }
                             }
 
                             // App Drawer overlay
@@ -1542,6 +1597,9 @@ fun MainContent(
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    iAccount: DesktopIAccount,
+    accountRelays: DesktopAccountRelays,
+    dmSendTracker: DmSendTracker,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     indexRelaysStore: com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays,
@@ -1560,31 +1618,6 @@ fun MainContent(
     val scope = rememberCoroutineScope()
     val signerConnectionState by accountManager.signerConnectionState.collectAsState()
     val lastPingTimeSec by accountManager.lastPingTimeSec.collectAsState()
-
-    // DM infrastructure — hoisted here so it survives screen navigation
-    val dmSendTracker =
-        remember(relayManager) {
-            DmSendTracker(relayManager.client)
-        }
-    // Centralized relay state for all categories (DM, search, blocked, NIP-65 persistence)
-    // Created before iAccount so NIP-65 backup can be loaded
-    val accountRelays =
-        remember(account, relayManager, scope) {
-            DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
-        }
-
-    val iAccount =
-        remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
-            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
-        }
-
-    // When iAccount is replaced (account switch), the previous WoTService's
-    // internal writer coroutine + ops Channel would otherwise leak — the
-    // outer `scope` lives for the whole session. Close the previous
-    // instance on dispose so account-switch is a clean teardown.
-    DisposableEffect(iAccount) {
-        onDispose { iAccount.wotService.close() }
-    }
 
     // Follow Packs state — single per-account holder for Discover + sidebar + naddr cards
     val followPacksState =
@@ -1687,9 +1720,10 @@ fun MainContent(
                         ChatMessageRelayListEvent.KIND,
                         SearchRelayListEvent.KIND,
                         BlockedRelayListEvent.KIND,
+                        BlossomServersEvent.KIND,
                     ),
                 authors = listOf(account.pubKeyHex),
-                limit = 4,
+                limit = 5,
             )
         relayManager.subscribe(
             subId = bootstrapSubId,
@@ -1702,9 +1736,17 @@ fun MainContent(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
-                        // because localCache.consume() doesn't handle addressable events
-                        if (event is AdvertisedRelayListEvent) {
+                        // NIP-65 (kind 10002), the NIP-17 DM relay list (kind
+                        // 10050) and the Blossom server list (kind 10063) are
+                        // addressable/replaceable events; route them through
+                        // justConsumeMyOwnEvent so they land in the addressable-
+                        // note cache the User model / state holders observe (e.g.
+                        // dmInboxRelaysStrict, self-copy resolution) alongside
+                        // accountRelays' persisted copy.
+                        if (event is AdvertisedRelayListEvent ||
+                            event is ChatMessageRelayListEvent ||
+                            event is BlossomServersEvent
+                        ) {
                             scope.launch(Dispatchers.IO) {
                                 localCache.justConsumeMyOwnEvent(event)
                             }
@@ -1715,6 +1757,52 @@ fun MainContent(
                 },
         )
         onDispose { relayManager.unsubscribe(bootstrapSubId) }
+    }
+
+    // The bootstrap subscription above only reaches the default relays. A user's
+    // own account data — Blossom server list (kind 10063), DM/search/blocked
+    // relay lists — is published to their write relays, not the defaults, so it
+    // won't be found there. Re-fetch those kinds from the NIP-65 outbox
+    // (write + untagged relays) whenever it becomes known.
+    LaunchedEffect(iAccount) {
+        iAccount.nip65RelayList.outboxFlow.collect { outbox ->
+            if (outbox.isEmpty()) return@collect
+            relayManager.subscribe(
+                subId = "account-config-outbox",
+                filters =
+                    listOf(
+                        Filter(
+                            kinds =
+                                listOf(
+                                    AdvertisedRelayListEvent.KIND,
+                                    ChatMessageRelayListEvent.KIND,
+                                    SearchRelayListEvent.KIND,
+                                    BlockedRelayListEvent.KIND,
+                                    BlossomServersEvent.KIND,
+                                ),
+                            authors = listOf(account.pubKeyHex),
+                            limit = 10,
+                        ),
+                    ),
+                relays = outbox,
+                listener =
+                    object : SubscriptionListener {
+                        override fun onEvent(
+                            event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                            isLive: Boolean,
+                            relay: NormalizedRelayUrl,
+                            forFilters: List<Filter>?,
+                        ) {
+                            if (event is AdvertisedRelayListEvent || event is BlossomServersEvent) {
+                                scope.launch(Dispatchers.IO) {
+                                    localCache.justConsumeMyOwnEvent(event)
+                                }
+                            }
+                            accountRelays.consumeIfRelevant(event)
+                        }
+                    },
+            )
+        }
     }
 
     // Subscribe to incoming DMs and process into chatroomList
@@ -1966,6 +2054,7 @@ fun MainContent(
 
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
+        LocalBlossomServers provides iAccount.blossomServerList.flow,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
@@ -2219,6 +2308,7 @@ fun RelaySettingsScreen(
             .TorSettings(torType = com.vitorpamplona.amethyst.commons.tor.TorType.OFF),
     onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit = {},
     namecoinPreferences: DesktopNamecoinPreferences? = null,
+    onBlossomServersChanged: (List<String>) -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -2342,11 +2432,17 @@ fun RelaySettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
 
-            // Media Server Settings
-            MediaServerSettings(
-                initialServers = DesktopPreferences.blossomServers,
-                onServersChanged = { DesktopPreferences.blossomServers = it },
-            )
+            // Media Server Settings (Blossom, kind 10063 — synced with mobile)
+            val networkBlossomServers by (LocalBlossomServers.current?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
+            // The kind-10063 list is authoritative; before it loads (or when the
+            // user has published none) show the default server.
+            val effectiveBlossomServers = networkBlossomServers.ifEmpty { listOf(DEFAULT_BLOSSOM_SERVER) }
+            key(effectiveBlossomServers) {
+                MediaServerSettings(
+                    initialServers = effectiveBlossomServers,
+                    onServersChanged = onBlossomServersChanged,
+                )
+            }
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))

@@ -226,6 +226,10 @@ private fun RelayGroupMetadataScaffold(
                 Spacer(Modifier.height(16.dp))
 
                 GroupMetadataFields(viewModel)
+
+                Spacer(Modifier.height(16.dp))
+
+                ParentGroupSection(viewModel, accountViewModel)
             }
         }
     }

@@ -97,6 +97,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -514,7 +515,10 @@ open class ChannelNewMessageViewModel :
         val minichatParent = replyTo.value?.takeIf { replyMode.value == ReplyMode.MINICHAT }?.event
         if (minichatParent != null) {
             return CommentEvent.replyBuilder(tagger.message, EventHintBundle(minichatParent, channelRelays.firstOrNull())) {
-                if (channel is RelayGroupChannel) hTag(channel.groupId.id)
+                if (channel is RelayGroupChannel) {
+                    hTag(channel.groupId.id)
+                    previous(channel.previousEventRefs(account.userProfile().pubkeyHex))
+                }
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
@@ -671,6 +675,7 @@ open class ChannelNewMessageViewModel :
                     // composer but is missing from the signed event.
                     ChatEvent.reply(tagger.message, replyingToEvent) {
                         hTag(channel.groupId.id)
+                        previous(channel.previousEventRefs(account.userProfile().pubkeyHex))
                         pTag(replyingToEvent.toPTag())
 
                         hashtags(findHashtags(tagger.message))
@@ -685,6 +690,7 @@ open class ChannelNewMessageViewModel :
                 } else {
                     ChatEvent.build(tagger.message) {
                         hTag(channel.groupId.id)
+                        previous(channel.previousEventRefs(account.userProfile().pubkeyHex))
 
                         hashtags(findHashtags(tagger.message))
                         references(findURLs(tagger.message))

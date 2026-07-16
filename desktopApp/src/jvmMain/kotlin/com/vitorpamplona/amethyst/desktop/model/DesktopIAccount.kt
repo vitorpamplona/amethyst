@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
+import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -56,7 +57,11 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Desktop implementation of IAccount.
@@ -84,6 +89,14 @@ class DesktopIAccount(
 
     val oldBookmarkState = OldBookmarkListState(signer, localCache, scope)
     val bookmarkState = BookmarkListState(signer, localCache, scope)
+
+    /**
+     * User's Blossom media server list (NIP-B7 / kind 10063). Loads from the
+     * same event kind the Amethyst mobile app uses, so a server list configured
+     * on mobile shows up here too. Backed by [localCache]; populated by the
+     * account-config subscription in Main.kt.
+     */
+    val blossomServerList = BlossomServerListState(signer, localCache, scope)
 
     val kind3FollowList =
         Kind3FollowListState(
@@ -295,6 +308,47 @@ class DesktopIAccount(
     private suspend fun recipientRelayHints(tags: Array<Array<String>>): Map<HexKey, NormalizedRelayUrl?> {
         val recipients = tags.mapNotNull { if (it.size >= 2 && it[0] == "p") it[1] else null }.toSet()
         return recipients.associateWith { resolveDmInboxRelaysStrictOrdered(it).firstOrNull() }
+    }
+
+    // Peers whose kind:10050 we've already kicked off a prewarm for. Prewarm is
+    // best-effort and idempotent — once requested we don't re-request, because
+    // the resolver's own LRU (and, once a 10050 arrives, LocalCache) serves
+    // subsequent lookups. The send/pre-send paths call the resolver directly
+    // and are NOT gated by this set, so they always see fresh-within-TTL data.
+    private val prewarmedDmInboxKeys = ConcurrentHashMap.newKeySet<HexKey>()
+
+    // Cap concurrent kind:10050 fan-outs so scrolling a long conversation list
+    // (or opening several rooms quickly) doesn't burst the indexer relays.
+    private val dmInboxPrewarmLimiter = Semaphore(4)
+
+    /**
+     * Proactively resolve (and cache) the NIP-17 DM inbox relays (kind:10050)
+     * for [pubkeys], so the first message/reaction sent to any of them resolves
+     * from cache instead of paying an indexer round-trip, and the composer's
+     * "recipient has no DM relays" gate settles before the user starts typing.
+     *
+     * Reusable app-wide: any surface that displays a DM (the visible rows of the
+     * conversation list, an opened room, a future notification/preview) should
+     * call this so the relay list is downloaded before the user drops into the
+     * room. Viewport-scoped by design — callers pass only the peers they are
+     * actually showing, so a large conversation list only warms what's visible
+     * and warms more as the user scrolls.
+     */
+    fun prewarmDmInboxRelays(pubkeys: Collection<HexKey>) {
+        val resolver = dmInboxResolver ?: return
+        for (pubkey in pubkeys) {
+            if (pubkey.length != 64 || !prewarmedDmInboxKeys.add(pubkey)) continue
+            scope.launch(Dispatchers.IO) {
+                dmInboxPrewarmLimiter.withPermit {
+                    try {
+                        resolver.resolve(pubkey)
+                    } catch (_: Exception) {
+                        // Best-effort prefetch; the send path resolves again on demand.
+                        prewarmedDmInboxKeys.remove(pubkey)
+                    }
+                }
+            }
+        }
     }
 
     private fun addEventToChatroom(

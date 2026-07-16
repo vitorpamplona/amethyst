@@ -71,6 +71,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -94,6 +95,11 @@ data class AccountInfo(
 
 private object PrefKeys {
     const val CURRENT_ACCOUNT = "currently_logged_in_account"
+
+    // Global (non-account) master switch for the always-on notification service.
+    // When off, the service is suppressed for every account regardless of each
+    // account's own participation flag. Persisted so it survives restarts/crashes.
+    const val NOTIFICATION_SERVICE_ENABLED = "notification_service_enabled"
     const val SAVED_ACCOUNTS = "all_saved_accounts"
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
@@ -204,6 +210,36 @@ object LocalPreferences {
     // read in parallel, and the migration branch could double-write ALL_ACCOUNT_INFO.
     private val savedAccountsMutex = Mutex()
     private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
+
+    // Global master switch for the always-on notification service ("Background
+    // notification service"). Default ON: existing users keep current behavior, and
+    // per-account participation decides who actually stays active.
+    //
+    // Stored in PLAIN (non-encrypted) SharedPreferences on purpose. It is a non-sensitive
+    // global boolean, and — unlike encryptedPreferences(), which asserts non-main — plain
+    // prefs can be read synchronously on ANY thread. The restart-layer gate
+    // (NotificationRelayService.isEnabled) is synchronous and runs in fresh processes (boot
+    // receiver, WorkManager), so it MUST read the persisted value without a suspend hop;
+    // otherwise a saved OFF would be missed on cold boot and the service would resurrect.
+    // The flow is lazily seeded from disk once (synchronous, main-safe) and is thereafter
+    // the source of truth, so there is no async hydrate that could clobber a user toggle.
+    private fun globalSettingsPrefs(): SharedPreferences = Amethyst.instance.appContext.getSharedPreferences("amethyst_global_settings", Context.MODE_PRIVATE)
+
+    private val notificationServiceEnabled: MutableStateFlow<Boolean> by lazy {
+        MutableStateFlow(globalSettingsPrefs().getBoolean(PrefKeys.NOTIFICATION_SERVICE_ENABLED, true))
+    }
+
+    fun notificationServiceEnabledFlow(): StateFlow<Boolean> = notificationServiceEnabled
+
+    fun isNotificationServiceEnabled(): Boolean = notificationServiceEnabled.value
+
+    fun setNotificationServiceEnabled(enabled: Boolean) {
+        // In-memory update is the source of truth (main-safe); plain-prefs edit{} persists
+        // asynchronously via apply(), also main-safe. No suspend/hydrate hop, so no window
+        // where a late disk read can clobber this write.
+        notificationServiceEnabled.value = enabled
+        globalSettingsPrefs().edit { putBoolean(PrefKeys.NOTIFICATION_SERVICE_ENABLED, enabled) }
+    }
 
     suspend fun currentAccount(): String? {
         if (currentAccount == null) {

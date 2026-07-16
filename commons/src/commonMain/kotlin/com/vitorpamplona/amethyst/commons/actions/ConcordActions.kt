@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteLink
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.MintedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
@@ -313,6 +314,17 @@ object ConcordActions {
         bundleEvent: Event,
         token: ByteArray,
     ): CommunityInvite? = ConcordInviteBundle.parse(bundleEvent, token)?.takeIf { ConcordInviteBundle.validate(it) }
+
+    /**
+     * Resolves every event fetched at an invite's addressable coordinate into one
+     * [InviteBundleStatus] (live / revoked / unreadable / absent) per CORD-05 §2, so a
+     * redeeming client honours a `vsk=9` revocation tombstone and reports why a link
+     * can't be opened instead of retrying blindly.
+     */
+    fun classifyInvite(
+        wraps: List<Event>,
+        token: ByteArray,
+    ): InviteBundleStatus = ConcordInviteBundle.classify(wraps, token)
 
     /** Derives the control plane described by a redeemed [invite] so the joiner can read it. */
     fun controlPlaneFor(invite: CommunityInvite): GroupKey = controlPlane(invite.communityRoot.hexToByteArray(), invite.communityId.hexToByteArray(), invite.rootEpoch)

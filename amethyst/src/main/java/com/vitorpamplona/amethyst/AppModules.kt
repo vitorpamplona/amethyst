@@ -122,6 +122,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
+import com.vitorpamplona.quartz.nip01Core.relay.client.limits.RelayLimitsTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
@@ -710,6 +711,9 @@ class AppModules(
     // Captures statistics about relays
     val relayStats = RelayStats(client)
 
+    // Caches the latest LIMITS (rights + limits) each relay advertises.
+    val relayLimits = RelayLimitsTracker(client)
+
     // Resource-usage ledger: relay traffic/reconnect + connection-time,
     // foreground-time, process-CPU, and signature-verification collectors.
     init {
@@ -1100,11 +1104,13 @@ class AppModules(
                 }
         }
 
-        // Watch for account login and start/stop always-on notification service
+        // Watch for account login and start/stop always-on notification service.
+        // The manager gates on the global master switch + each account's participation
+        // (not the active account), so it only needs to run while someone is logged in.
         applicationIOScope.launch {
             sessionManager.accountContent.collectLatest { state ->
                 if (state is AccountState.LoggedIn) {
-                    alwaysOnNotificationServiceManager.watchAccount(state.account)
+                    alwaysOnNotificationServiceManager.start()
                 } else {
                     alwaysOnNotificationServiceManager.stop()
                 }
