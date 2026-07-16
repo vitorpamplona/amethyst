@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.LimitsMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -496,6 +497,96 @@ class KotlinSerializationMapperTest {
         val jacksonJson = JacksonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
         assertEquals(jacksonJson, kotlinJson)
+    }
+
+    @Test
+    fun serializeLimitsMessage_matchesJackson() {
+        val msg =
+            LimitsMessage(
+                canWrite = true,
+                canRead = true,
+                authForRead = true,
+                authForWrite = false,
+                acceptedEventKinds = listOf(0, 1, 3),
+                blockedEventKinds = listOf(4),
+                minPowDifficulty = 16,
+                maxMessageLength = 262144,
+                maxSubscriptions = 10,
+                maxFilters = 10,
+                maxLimit = 200,
+                maxEventTags = 2000,
+                maxContentLength = 131072,
+                createdAtMsecsAgo = 3600000L,
+                createdAtMsecsAhead = 60000L,
+                filterRateLimit = 100L,
+                publishingRateLimit = 500L,
+                requiredTags = listOf(listOf("t", "nostr"), listOf("p")),
+            )
+        val jacksonJson = JacksonMapper.toJson(msg)
+        val kotlinJson = KotlinSerializationMapper.toJson(msg)
+        assertEquals(jacksonJson, kotlinJson)
+    }
+
+    @Test
+    fun deserializeLimitsMessage() {
+        val json =
+            """["LIMITS",{"can_read":true,"can_write":true,"auth_for_read":true,"auth_for_write":false,""" +
+                """"max_subscriptions":10,"max_limit":200}]"""
+        val deserialized = KotlinSerializationMapper.fromJsonToMessage(json)
+        assertTrue(deserialized is LimitsMessage)
+        assertEquals(true, deserialized.canRead)
+        assertEquals(true, deserialized.canWrite)
+        assertEquals(true, deserialized.authForRead)
+        assertEquals(false, deserialized.authForWrite)
+        assertEquals(10, deserialized.maxSubscriptions)
+        assertEquals(200, deserialized.maxLimit)
+        assertNull(deserialized.maxFilters)
+    }
+
+    @Test
+    fun deserializeLimitsMessageToleratesMistypedAndMissingPayload() {
+        // The kotlinx path is the iOS/native incoming parser; a mistyped field or a
+        // payload-less ["LIMITS"] must degrade to null / empty, matching Jackson,
+        // rather than throwing.
+        val mistyped =
+            KotlinSerializationMapper.fromJsonToMessage(
+                """["LIMITS",{"can_write":null,"max_limit":"lots","accepted_event_kinds":[1,"x",3],"required_tags":["oops",["t","nostr"]]}]""",
+            )
+        assertTrue(mistyped is LimitsMessage)
+        assertNull(mistyped.canWrite)
+        assertNull(mistyped.maxLimit)
+        assertEquals(listOf(1, 3), mistyped.acceptedEventKinds)
+        assertEquals(listOf(emptyList(), listOf("t", "nostr")), mistyped.requiredTags)
+
+        val payloadless = KotlinSerializationMapper.fromJsonToMessage("""["LIMITS"]""")
+        assertTrue(payloadless is LimitsMessage)
+        assertNull(payloadless.maxLimit)
+    }
+
+    @Test
+    fun crossDeserializationLimitsMessage() {
+        val msg =
+            LimitsMessage(
+                canRead = true,
+                canWrite = false,
+                maxLimit = 500,
+                acceptedEventKinds = listOf(1, 30023),
+                requiredTags = listOf(listOf("t", "nostr")),
+            )
+
+        val jacksonJson = JacksonMapper.toJson(msg)
+        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(jacksonJson)
+        assertTrue(kotlinDeserialized is LimitsMessage)
+        assertEquals(msg.maxLimit, kotlinDeserialized.maxLimit)
+        assertEquals(msg.acceptedEventKinds, kotlinDeserialized.acceptedEventKinds)
+        assertEquals(msg.requiredTags, kotlinDeserialized.requiredTags)
+
+        val kotlinJson = KotlinSerializationMapper.toJson(msg)
+        val jacksonDeserialized = JacksonMapper.fromJsonToMessage(kotlinJson)
+        assertTrue(jacksonDeserialized is LimitsMessage)
+        assertEquals(msg.maxLimit, jacksonDeserialized.maxLimit)
+        assertEquals(msg.acceptedEventKinds, jacksonDeserialized.acceptedEventKinds)
+        assertEquals(msg.requiredTags, jacksonDeserialized.requiredTags)
     }
 
     @Test

@@ -296,7 +296,7 @@
     <string name="concord_redeeming_invite">兑换邀请中…</string>
     <string name="concord_invite_failed">无法获取此邀请。链接可能已过期或其中继不可访问。</string>
     <string name="concord_invite_failed_invalid">此邀请链接无效或无法用此账户打开。</string>
-    <string name="concord_invite_failed_incompatible">此邀请是用新版本的应用创建，尚无法在此处打开。 询问已更新的链接，或在更新后重试。</string>
+    <string name="concord_invite_failed_incompatible">此邀请是用新版本的应用创建，尚无法在此处打开。 请求已更新的链接，或在更新后重试。</string>
     <string name="concord_invite_failed_revoked">此邀请链接已被撤销，不能再使用。请求新链接。</string>
     <string name="concord_home_title">Concord 频道</string>
     <string name="concord_home_empty">您尚未加入任何Concord频道。创建一个频道，或者打开一个邀请链接。</string>
@@ -1898,7 +1898,7 @@
     <string name="new_conversation_relay_group_con_1">绑定单一中继</string>
     <string name="new_conversation_ephemeral_title">临时聊天</string>
     <string name="new_conversation_ephemeral_tagline">不论谁在线，立马聊天</string>
-    <string name="new_conversation_ephemeral_chip">现在在线</string>
+    <string name="new_conversation_ephemeral_chip">当前在线</string>
     <string name="new_conversation_ephemeral_best">与当前在线的任何人进行即时聊天。</string>
     <string name="new_conversation_ephemeral_cta">开始聊天</string>
     <string name="new_conversation_ephemeral_pro_1">与当前在线的人交谈</string>
@@ -1937,6 +1937,7 @@
     <string name="relay_group_members_title">成员</string>
     <string name="relay_group_make_admin">设为管理员</string>
     <string name="relay_group_make_moderator">设为协管</string>
+    <string name="relay_group_assign_role">分配角色: %1$s</string>
     <string name="relay_group_demote_member">删除职位</string>
     <string name="relay_group_remove_user">从群组中删除</string>
     <string name="relay_group_remove_user_confirm">从此群中移除 %1$s ？在重新添加或重新邀请之前这些人将失去访问权限。</string>
@@ -1972,6 +1973,15 @@
     <string name="relay_group_field_topics_hint">比特币，nostr，艺术品</string>
     <string name="relay_group_field_geohash">位置 (gehash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_section_structure">结构</string>
+    <string name="relay_group_parent_desc">把这个群置于父级下方以构建一个层次结构。</string>
+    <string name="relay_group_parent_label">父群</string>
+    <string name="relay_group_parent_none">顶层群</string>
+    <string name="relay_group_parent_pick_title">选择父群</string>
+    <string name="relay_group_parent_search">搜索群</string>
+    <string name="relay_group_parent_top_level_option">没有父级(顶层)</string>
+    <string name="relay_group_parent_none_desc">此群位于顶层</string>
+    <string name="relay_group_parent_empty">此中继上尚没有其他群</string>
     <string name="relay_group_section_permissions">权限</string>
     <string name="relay_group_flag_private">私密</string>
     <string name="relay_group_flag_private_desc">只有成员可以阅读消息。</string>

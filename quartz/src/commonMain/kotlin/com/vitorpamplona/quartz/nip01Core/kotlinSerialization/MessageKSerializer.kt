@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.LimitsMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
@@ -38,6 +39,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonArray
@@ -95,6 +97,11 @@ object MessageKSerializer : KSerializer<Message> {
 
                     is EoseMessage -> {
                         add(JsonPrimitive(value.subId))
+                    }
+
+                    is LimitsMessage -> {
+                        // LIMITS wire format: ["LIMITS", { <limit_properties> }]
+                        add(LimitsKSerializer.serializeToElement(value))
                     }
 
                     is NegMsgMessage -> {
@@ -158,6 +165,12 @@ object MessageKSerializer : KSerializer<Message> {
                 val queryId = array[1].jsonPrimitive.content
                 val result = CountResultKSerializer.deserializeFromElement(array[2].jsonObject)
                 CountMessage(queryId, result)
+            }
+
+            LimitsMessage.LABEL -> {
+                // Tolerate a payload-less or malformed ["LIMITS"] frame instead of throwing.
+                val payload = array.getOrNull(1) as? JsonObject ?: JsonObject(emptyMap())
+                LimitsKSerializer.deserializeFromElement(payload)
             }
 
             NegMsgMessage.LABEL -> {
