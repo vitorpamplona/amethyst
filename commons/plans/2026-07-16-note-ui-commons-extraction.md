@@ -115,8 +115,9 @@ leaf composables, not direct calls. The actual method surface across the whole
 
 - **Lookups** (resolve a hex/address to a `Note`/`User`): `getNoteIfExists`,
   `getOrCreateAddressableNote`, `getUserIfExists`, `checkGetOrCreateUser`,
-  `loadParticipants`, `loadUsers`, `userProfile`. → become **loader lambdas**
-  or pre-resolved state on the entry side.
+  `loadParticipants`, `loadUsers`, `userProfile`. → **read through the commons
+  cache port, not a lambda** (see §3d). Async participant/user loads that need
+  relay round-trips still resolve on the entry side.
 - **Config/settings**: `settings`, `zapAmountChoices`, `showSensitiveContent`,
   `httpClientBuilder`, `nip`. → passed as plain values / a small settings holder.
 - **Actions (write + signer)**: `zap`, `follow`/`unfollow`, `delete`, `hide`,
@@ -141,7 +142,40 @@ and swap `stringResource(R.string.x)` → `stringResource(Res.string.x)`. No new
 abstraction (see `StaticWebsiteCard`, which already does this). This is the
 single biggest *mechanical* cost, but it is rote.
 
-### 3d. The **leaf-composable toolkit** — the real blocker
+### 3d. Reads cross the seam via the **cache port**, not lambdas
+
+The cache is already commons-shaped — we should read through it rather than
+re-passing every lookup as a lambda:
+
+- `LocalCache` is declared `object LocalCache : ILocalCache, ICacheProvider`
+  (`amethyst/model/LocalCache.kt:351`). The read ports `ICacheProvider` +
+  `ICacheEventStream` already live in `commons/model/cache/`.
+- `Account` **already holds the cache as an injected instance**:
+  `Account.kt:379` `val cache: LocalCache`. So `account.cache` is a real path
+  today — and once `LocalCache` becomes a class (migration §8 end-state) it
+  becomes the correct *per-account* instance instead of a global singleton.
+- **`IAccount` does not expose it yet** — it only carries
+  `privateZapsDecryptionCache`. **Proposed:** add `val cache: ICacheProvider`
+  to `IAccount` (commons), implemented by `Account` (it already has the field).
+
+Two consequences for the split:
+
+1. **`AccountViewModel`'s lookups currently bypass `account.cache`** and call the
+   `object LocalCache` singleton directly (`getNoteIfExists =
+   LocalCache.getNoteIfExists(hex)`, and ~30 more). Re-point these at
+   `account.cache.…` as part of the extraction — it's the same call, but through
+   the instance/port, which is what makes them commons-reachable and
+   multi-account-correct.
+2. **Commons render code that needs a read takes the port, not a lambda.** A
+   `Display*` body that must resolve an embedded note/user depends on
+   `ICacheProvider` (or `IAccount`, for hide/mute predicates like
+   `isAcceptable`/`isHidden`) — both already commons-side. **Lambdas are then
+   reserved for nav and write/signer actions**, which genuinely can't move.
+
+Prefer this over the "loader lambda" framing in §3a wherever the lookup is a
+synchronous cache read.
+
+### 3e. The **leaf-composable toolkit** — the real blocker
 
 The render bodies don't just lay out boxes; they recursively call a handful of
 heavy shared composables that *themselves* take `accountViewModel`/`nav`. Top
@@ -248,7 +282,7 @@ value.
 Chat, CommunityHeader, FollowList, Git, InteractiveStory, MusicTrack,
 MusicPlaylist, PodcastEpisode, PodcastMetadata, Video, PictureDisplay,
 Attestation, NIP90ContentDiscoveryResponse, ZapPoll, AudioTrack, …`.
-Movable, but **only via the `@Composable` slot pattern** (§3d/§4). The layout
+Movable, but **only via the `@Composable` slot pattern** (§3e/§4). The layout
 moves to commons; rich-text/embeds stay app-supplied. `Highlight` is the
 recommended Tier-2 pilot (already half-split).
 
