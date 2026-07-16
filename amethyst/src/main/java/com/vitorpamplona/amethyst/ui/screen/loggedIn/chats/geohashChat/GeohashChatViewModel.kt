@@ -25,15 +25,11 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.geohash.GeohashRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
-import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,20 +39,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Composer side of a Bitchat-interoperable geohash location chat.
- *
- * The message *feed* is loaded through the shared channel data path — the
- * kind-20000 subscription is assembled by
- * [ChannelFilterAssembler][com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler]
- * (routed to the geographically-nearest relays), stored in
- * [LocalCache][com.vitorpamplona.amethyst.model.LocalCache] on the cell's
- * [GeohashChatChannel][com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel],
- * and surfaced by
- * [ChannelFeedViewModel][com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel] —
- * exactly like every other public/ephemeral chat. This ViewModel owns only the
- * bits that are geohash-specific: resolving the cell's relays for sending, the
- * anonymous per-cell identity, the teleport / post-as-self toggles, and mining
- * the small NIP-13 proof of work on outgoing messages.
+ * The identity/reactions side of a Bitchat-interoperable geohash location chat. The message feed and
+ * the composer are the shared chat components (`RefreshingChatroomFeedView` + `EditFieldRow` on a
+ * geohash-aware `ChannelNewMessageViewModel`); this holds only what those can't express for an
+ * anonymous per-cell identity:
+ * - [myPubKeys] — the pubkeys the renderer treats as "me" (the per-cell key + the account, for
+ *   "post as self") so own messages align/highlight/tick correctly.
+ * - [react] — a kind-7 toggled under the per-cell key so reacting stays anonymous.
  */
 class GeohashChatViewModel : ViewModel() {
     lateinit var geohash: String
@@ -67,56 +56,24 @@ class GeohashChatViewModel : ViewModel() {
     private val _relays = MutableStateFlow<List<NormalizedRelayUrl>>(emptyList())
     val relays: StateFlow<List<NormalizedRelayUrl>> = _relays.asStateFlow()
 
-    /**
-     * The pubkeys the UI should right-align as "mine": the anonymous per-geohash identity AND the
-     * real account key, so both posting modes (anonymous and "post as me") show as own messages.
-     */
+    /** The pubkeys to right-align/highlight as "mine": the anonymous per-cell key AND the account. */
     private val _myPubKeys = MutableStateFlow<Set<String>>(emptySet())
     val myPubKeys: StateFlow<Set<String>> = _myPubKeys.asStateFlow()
 
     /** The anonymous per-cell pubkey alone (for de-duping our own anonymous reactions). */
     private var anonPubKeyHex: String? = null
 
-    /** Whether our outgoing messages carry the ["t","teleport"] marker (not physically in the cell). */
-    private val _teleported = MutableStateFlow(false)
-    val teleported: StateFlow<Boolean> = _teleported.asStateFlow()
-
-    /**
-     * When true, messages are signed with the user's REAL account key instead of the anonymous
-     * per-geohash identity — trading location privacy for profile/reputation/zaps. Off by default.
-     */
-    private val _postAsSelf = MutableStateFlow(false)
-    val postAsSelf: StateFlow<Boolean> = _postAsSelf.asStateFlow()
-
-    /** The message the next send replies to (adds an ["e", id, "", "reply"] tag), or null for a top-level message. */
-    private val _replyTo = MutableStateFlow<Note?>(null)
-    val replyTo: StateFlow<Note?> = _replyTo.asStateFlow()
-
     private var started = false
 
     fun init(
         geohash: String,
         accountViewModel: AccountViewModel,
-        teleported: Boolean = false,
     ) {
         if (started) return
         started = true
         this.geohash = geohash
         this.accountViewModel = accountViewModel
-        _teleported.value = teleported
         viewModelScope.launch { start() }
-    }
-
-    fun setTeleported(value: Boolean) {
-        _teleported.value = value
-    }
-
-    fun setPostAsSelf(value: Boolean) {
-        _postAsSelf.value = value
-    }
-
-    fun setReplyTo(note: Note?) {
-        _replyTo.value = note
     }
 
     private suspend fun start() {
@@ -134,22 +91,22 @@ class GeohashChatViewModel : ViewModel() {
     }
 
     /**
-     * Toggle a reaction on [note] following the composer identity: the real account when "post as
-     * me" is on (full account react/undo), otherwise a kind-7 signed by the anonymous per-cell key so
+     * Toggle a reaction on [note] following the composer identity: the real account when [postAsSelf]
+     * is on (full account react/undo), otherwise a kind-7 signed by the anonymous per-cell key so
      * reacting does not deanonymize the user. If our per-cell key already reacted with [reaction],
      * this retracts it (a NIP-09 deletion signed by the same key); otherwise it adds it.
      */
     fun react(
         note: Note,
         reaction: String,
+        postAsSelf: Boolean,
     ) {
-        if (_postAsSelf.value) {
+        if (postAsSelf) {
             accountViewModel.reactToOrDelete(note, reaction)
             return
         }
 
         val anon = anonPubKeyHex
-        // Our own anonymous reaction events with this content, if any (for the undo path).
         val mine =
             if (anon == null) {
                 emptyList()
@@ -174,71 +131,8 @@ class GeohashChatViewModel : ViewModel() {
         }
     }
 
-    /** Build, mine a small PoW, sign with the per-geohash identity (or the account when opted in), and publish. */
-    fun sendMessage(
-        text: String,
-        nickname: String?,
-    ) {
-        val trimmed = text.trim()
-        if (trimmed.isEmpty()) return
-
-        val replyToId = _replyTo.value?.idHex
-        _replyTo.value = null
-
-        viewModelScope.launch {
-            val relays = _relays.value.toSet().ifEmpty { resolveRelays().toSet() }
-            if (relays.isEmpty()) return@launch
-
-            val account = accountViewModel.account
-            // Anonymous per-geohash identity by default; the real account only when the user opts in.
-            val signer: NostrSigner
-            val pubKeyHex: String
-            if (_postAsSelf.value) {
-                signer = account.signer
-                pubKeyHex = account.signer.pubKey
-            } else {
-                val keyPair = withContext(Dispatchers.IO) { account.geohashIdentity.keyPair(geohash) }
-                signer = NostrSignerInternal(keyPair)
-                pubKeyHex = keyPair.pubKey.toHexKey()
-            }
-
-            var template =
-                GeohashChatEvent.build(trimmed, geohash, nickname = nickname?.ifBlank { null }, teleported = _teleported.value) {
-                    replyToId?.let { add(arrayOf("e", it, "", "reply")) }
-                }
-            template =
-                withContext(Dispatchers.Default) {
-                    val deadline = System.nanoTime() + POW_TIMEOUT_NANOS
-                    runCatching {
-                        PoWMiner.mine(template, pubKeyHex, POW_BITS, powThreads()) { System.nanoTime() < deadline }
-                    }.getOrDefault(template)
-                }
-
-            runCatching { account.signWithAndSendPrivately(template, signer, relays) }
-        }
-    }
-
-    /** Announce presence in the cell (a bare kind-20001 heartbeat). */
-    fun announcePresence(nickname: String?) {
-        viewModelScope.launch {
-            val relays = _relays.value.toSet().ifEmpty { resolveRelays().toSet() }
-            if (relays.isEmpty()) return@launch
-            val keyPair = withContext(Dispatchers.IO) { accountViewModel.account.geohashIdentity.keyPair(geohash) }
-            val signer = NostrSignerInternal(keyPair)
-            val template = GeohashPresenceEvent.build(geohash, nickname = nickname?.ifBlank { null })
-            runCatching { accountViewModel.account.signWithAndSendPrivately(template, signer, relays) }
-        }
-    }
-
     private suspend fun resolveRelays(): List<NormalizedRelayUrl> {
         GeohashRelays.ensureLoaded()
         return GeohashRelays.closestRelays(geohash)
-    }
-
-    companion object {
-        private const val POW_BITS = 8
-        private const val POW_TIMEOUT_NANOS = 2_000_000_000L
-
-        private fun powThreads(): Int = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
     }
 }

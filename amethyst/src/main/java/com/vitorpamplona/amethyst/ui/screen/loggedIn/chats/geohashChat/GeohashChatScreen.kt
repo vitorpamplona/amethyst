@@ -33,26 +33,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -65,8 +62,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatReactOv
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * A Bitchat-interoperable public geohash location chat: everyone physically (or
@@ -74,14 +72,15 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
  * room. Messages are signed with a per-geohash throwaway identity, so posting
  * here does not reveal the account's npub.
  *
- * The room runs the **same** rendering as every other chat — the cell's
- * [GeohashChatChannel] feeds [ChannelFeedViewModel] and renders through the shared
- * [RefreshingChatroomFeedView] (grouping, delivery ticks, reply previews, rich
- * content, reactions, zaps, long-press, swipe, colors, highlighting). The only
- * geohash-specific bits are injected without a second account: the composer
- * (throwaway-identity signing, PoW, teleport / post-as-self) and two
- * composition-locals — [LocalChatActingIdentities] so own messages align/highlight
- * under the per-cell key, and [LocalChatReactOverride] so reactions stay anonymous.
+ * The room runs the **same** screen as every other chat — the cell's
+ * [GeohashChatChannel] feeds [ChannelFeedViewModel] rendered through the shared
+ * [RefreshingChatroomFeedView], and the composer is the shared [EditFieldRow] on a
+ * geohash-aware [ChannelNewMessageViewModel] (mention/@-tagging, custom emojis,
+ * uploads, drafts — with the per-cell signer + PoW + n/t tags). The only
+ * geohash-specific bits injected into the renderer are three composition-locals:
+ * [LocalChatActingIdentities] (own-message alignment/highlight under the per-cell
+ * key), [LocalChatReactOverride] (anonymous reactions), and
+ * [LocalChatDisplayNameResolver] (the Bitchat `n` nickname + ✈ teleport marker).
  */
 @Composable
 fun GeohashChatScreen(
@@ -103,8 +102,10 @@ private fun GeohashChatRoom(
     nav: INav,
 ) {
     val geohash = channel.geohash
-    val composer: GeohashChatViewModel = viewModel(key = "GeohashChat/$geohash")
-    composer.init(geohash, accountViewModel, teleported)
+
+    // Identity/reactions helper (per-cell pubkeys + anonymous react).
+    val identity: GeohashChatViewModel = viewModel(key = "GeohashIdentity/$geohash")
+    identity.init(geohash, accountViewModel)
 
     val feedViewModel: ChannelFeedViewModel =
         viewModel(
@@ -112,17 +113,17 @@ private fun GeohashChatRoom(
             factory = ChannelFeedViewModel.Factory(channel, accountViewModel.account),
         )
 
+    // The shared composer, made geohash-aware (per-cell signer + PoW + n/t tags) in its send path.
+    val newMessageModel: ChannelNewMessageViewModel = viewModel(key = "geohash:${geohash}NewMessage")
+    newMessageModel.init(accountViewModel)
+    newMessageModel.load(channel)
+    LaunchedEffect(newMessageModel) { if (teleported) newMessageModel.geohashTeleported = true }
+
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChannelFilterAssemblerSubscription(channel, accountViewModel.dataSources().channel, accountViewModel)
 
-    val relays by composer.relays.collectAsStateWithLifecycle()
-    val myPubKeys by composer.myPubKeys.collectAsStateWithLifecycle()
-    val teleporting by composer.teleported.collectAsStateWithLifecycle()
-    val postingAsSelf by composer.postAsSelf.collectAsStateWithLifecycle()
-    val replyingTo by composer.replyTo.collectAsStateWithLifecycle()
+    val myPubKeys by identity.myPubKeys.collectAsStateWithLifecycle()
 
-    var nickname by remember { mutableStateOf("") }
-    var draft by remember { mutableStateOf("") }
     var showPostAsSelfWarning by remember { mutableStateOf(false) }
 
     if (showPostAsSelfWarning) {
@@ -137,7 +138,7 @@ private fun GeohashChatRoom(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    composer.setPostAsSelf(true)
+                    newMessageModel.geohashPostAsSelf = true
                     showPostAsSelfWarning = false
                 }) { Text("Post as me") }
             },
@@ -149,7 +150,7 @@ private fun GeohashChatRoom(
 
     DisappearingScaffold(
         isInvertedLayout = true,
-        topBar = { GeohashChatTopBar(geohash, relays.size, nav) },
+        topBar = { GeohashChatTopBar(geohash, channel.relays().size, nav) },
         accountViewModel = accountViewModel,
         allowBarHide = false,
     ) { padding ->
@@ -157,18 +158,20 @@ private fun GeohashChatRoom(
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 CompositionLocalProvider(
                     LocalChatActingIdentities provides myPubKeys,
-                    LocalChatReactOverride provides { note, reaction -> composer.react(note, reaction) },
+                    LocalChatReactOverride provides { note, reaction ->
+                        identity.react(note, reaction, newMessageModel.geohashPostAsSelf)
+                    },
                     LocalChatDisplayNameResolver provides { note ->
                         // Author line = nickname (throwaway keys have no profile) + a ✈ marker for
                         // teleported senders (not physically in the cell). Folded into the name so it
                         // needs no extra renderer seam.
                         val event = note.event as? GeohashChatEvent
                         val nick = event?.nickname()?.takeIf { it.isNotBlank() }
-                        val teleported = event?.isTeleported() == true
+                        val isTeleported = event?.isTeleported() == true
                         when {
-                            nick != null && teleported -> "$nick ✈"
+                            nick != null && isTeleported -> "$nick ✈"
                             nick != null -> nick
-                            teleported -> "${note.author?.pubkeyDisplayHex().orEmpty()} ✈"
+                            isTeleported -> "${note.author?.pubkeyDisplayHex().orEmpty()} ✈"
                             else -> null
                         }
                     },
@@ -178,61 +181,55 @@ private fun GeohashChatRoom(
                         accountViewModel = accountViewModel,
                         nav = nav,
                         routeForLastRead = "Channel/geohash:$geohash",
-                        onWantsToReply = composer::setReplyTo,
+                        onWantsToReply = newMessageModel::reply,
                         onWantsToEditDraft = {},
                     )
                 }
             }
 
             HorizontalDivider()
-            replyingTo?.let { parent ->
-                GeohashReplyBar(parent, onCancel = { composer.setReplyTo(null) })
-            }
-            OutlinedTextField(
-                value = nickname,
-                onValueChange = { nickname = it },
-                singleLine = true,
-                label = { Text("Nickname (optional)") },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            GeohashComposerOptions(
+                model = newMessageModel,
+                onRequestPostAsSelf = { showPostAsSelfWarning = true },
             )
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilterChip(
-                    selected = teleporting,
-                    onClick = { composer.setTeleported(!teleporting) },
-                    label = { Text("✈ Teleport") },
-                )
-                FilterChip(
-                    selected = postingAsSelf,
-                    onClick = {
-                        if (postingAsSelf) composer.setPostAsSelf(false) else showPostAsSelfWarning = true
-                    },
-                    label = { Text("Post as me") },
-                )
-            }
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Message #$geohash") },
-                )
-                IconButton(
-                    enabled = draft.isNotBlank() && relays.isNotEmpty(),
-                    onClick = {
-                        composer.sendMessage(draft, nickname)
-                        draft = ""
-                    },
-                ) {
-                    SymbolIcon(symbol = MaterialSymbols.AutoMirrored.Send, contentDescription = "Send")
-                }
-            }
+            EditFieldRow(
+                channelScreenModel = newMessageModel,
+                accountViewModel = accountViewModel,
+                onSendNewMessage = feedViewModel.feedState::sendToTop,
+                nav = nav,
+            )
         }
+    }
+}
+
+@Composable
+private fun GeohashComposerOptions(
+    model: ChannelNewMessageViewModel,
+    onRequestPostAsSelf: () -> Unit,
+) {
+    OutlinedTextField(
+        value = model.geohashNickname,
+        onValueChange = { model.geohashNickname = it },
+        singleLine = true,
+        label = { Text("Nickname (optional)") },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+    )
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = model.geohashTeleported,
+            onClick = { model.geohashTeleported = !model.geohashTeleported },
+            label = { Text("✈ Teleport") },
+        )
+        FilterChip(
+            selected = model.geohashPostAsSelf,
+            onClick = {
+                if (model.geohashPostAsSelf) model.geohashPostAsSelf = false else onRequestPostAsSelf()
+            },
+            label = { Text("Post as me") },
+        )
     }
 }
 
@@ -257,24 +254,4 @@ private fun GeohashChatTopBar(
         },
         popBack = nav::popBack,
     )
-}
-
-@Composable
-private fun GeohashReplyBar(
-    parent: Note,
-    onCancel: () -> Unit,
-) {
-    val snippet = (parent.event as? GeohashChatEvent)?.content?.take(80).orEmpty()
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            "Replying: $snippet",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onCancel) { Text("Cancel") }
-    }
 }
