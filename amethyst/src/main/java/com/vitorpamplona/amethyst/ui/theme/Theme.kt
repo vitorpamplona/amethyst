@@ -106,23 +106,22 @@ private fun onAccent(color: Color): Color {
     return if (contrastOnBlack >= contrastOnWhite) Color.Black else Color.White
 }
 
-// Faint accent-tinted fill for the Material3 "container" roles (primaryContainer, etc.), laid
-// over the theme's base surface. Left unset, these roles fall back to Material's baseline violet,
-// which is why container-backed UI (settings icon boxes, selected reaction chips, zap-amount
-// chips, calendar selection, relay-group top bars) stayed purple under every accent.
+// Fill for the Material3 "container" roles (primaryContainer, etc.). A moderately saturated tone,
+// mirroring Material's baseline containers but recoloured to the accent, so filled shapes such as
+// the settings icon boxes, tonal buttons and selected chips stay clearly visible (not a faint
+// wash). Dark themes darken the light accent toward a mid tone; light themes lighten the deep
+// accent toward a pale tint. Left unset, these roles fall back to Material's baseline violet.
 private fun accentContainer(
-    color: Color,
-    surface: Color,
-    alpha: Float,
-): Color = color.copy(alpha = alpha).compositeOver(surface)
-
-// Text/icon color drawn on an accentContainer. The container sits close to the base surface, so
-// in the dark theme the light accent reads directly; in the light theme it is deepened toward
-// black to stay legible on the pale tint.
-private fun onAccentContainer(
-    color: Color,
+    accent: Color,
     dark: Boolean,
-): Color = if (dark) color else lerp(color, Color.Black, 0.30f)
+): Color = if (dark) lerp(accent, Color.Black, 0.58f) else lerp(accent, Color.White, 0.85f)
+
+// High-contrast content for an accentContainer: near-white in dark (so icons/labels read as white
+// on the accent), deep accent in light.
+private fun onAccentContainer(
+    accent: Color,
+    dark: Boolean,
+): Color = if (dark) lerp(accent, Color.White, 0.85f) else lerp(accent, Color.Black, 0.40f)
 
 // Representative colour for an accent option, used by the Settings accent-picker swatches — the
 // same primary the theme would apply for the given light/dark mode, so the swatch previews the
@@ -135,22 +134,21 @@ fun contentColorOnAccent(color: Color): Color = onAccent(color)
 private fun darkColors(accent: AccentColorType): ColorScheme {
     val primary = accentPrimary(accent, dark = true)
     val secondary = accentSecondary(accent, dark = true)
-    val surface = Color.Black
     return darkColorScheme(
         primary = primary,
         onPrimary = Color.White,
-        primaryContainer = accentContainer(primary, surface, 0.16f),
+        primaryContainer = accentContainer(primary, dark = true),
         onPrimaryContainer = onAccentContainer(primary, dark = true),
         secondary = secondary,
         onSecondary = onAccent(secondary),
         // Container roles derive from the accent (primary), not the teal secondary. Secondary/tertiary
         // container surfaces (FilledTonalButton, tonal chips) were neutral before; deriving them from
         // teal made them read as teal-on-teal, so they follow the accent hue instead.
-        secondaryContainer = accentContainer(primary, surface, 0.16f),
+        secondaryContainer = accentContainer(primary, dark = true),
         onSecondaryContainer = onAccentContainer(primary, dark = true),
         tertiary = secondary,
         onTertiary = onAccent(secondary),
-        tertiaryContainer = accentContainer(primary, surface, 0.16f),
+        tertiaryContainer = accentContainer(primary, dark = true),
         onTertiaryContainer = onAccentContainer(primary, dark = true),
         inversePrimary = accentPrimary(accent, dark = false),
         surfaceTint = primary,
@@ -178,22 +176,21 @@ private fun darkColors(accent: AccentColorType): ColorScheme {
 private fun lightColors(accent: AccentColorType): ColorScheme {
     val primary = accentPrimary(accent, dark = false)
     val secondary = accentSecondary(accent, dark = false)
-    val surface = Color.White
     return lightColorScheme(
         primary = primary,
         onPrimary = Color.White,
-        primaryContainer = accentContainer(primary, surface, 0.12f),
+        primaryContainer = accentContainer(primary, dark = false),
         onPrimaryContainer = onAccentContainer(primary, dark = false),
         secondary = secondary,
         onSecondary = onAccent(secondary),
         // Container roles derive from the accent (primary), not the teal secondary. Secondary/tertiary
         // container surfaces (FilledTonalButton, tonal chips) were neutral before; deriving them from
         // teal made them read as teal-on-teal, so they follow the accent hue instead.
-        secondaryContainer = accentContainer(primary, surface, 0.12f),
+        secondaryContainer = accentContainer(primary, dark = false),
         onSecondaryContainer = onAccentContainer(primary, dark = false),
         tertiary = secondary,
         onTertiary = onAccent(secondary),
-        tertiaryContainer = accentContainer(primary, surface, 0.12f),
+        tertiaryContainer = accentContainer(primary, dark = false),
         onTertiaryContainer = onAccentContainer(primary, dark = false),
         inversePrimary = accentPrimary(accent, dark = true),
         surfaceTint = primary,

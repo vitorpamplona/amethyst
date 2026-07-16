@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.icons.Following
 import com.vitorpamplona.amethyst.commons.icons.Like
 import com.vitorpamplona.amethyst.commons.icons.Liked
 import com.vitorpamplona.amethyst.commons.icons.Reply
@@ -42,7 +43,6 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
-import com.vitorpamplona.amethyst.commons.icons.following
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -66,10 +66,8 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(modifier: Modifier) {
-    val accent = MaterialTheme.colorScheme.primary
-    val icon = remember(accent) { following(accent) }
     Icon(
-        imageVector = icon,
+        imageVector = Following,
         contentDescription = stringRes(id = R.string.following),
         modifier = modifier,
         tint = Color.Unspecified,
