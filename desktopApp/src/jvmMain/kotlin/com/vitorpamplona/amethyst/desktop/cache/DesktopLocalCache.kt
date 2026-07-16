@@ -200,6 +200,16 @@ class DesktopLocalCache : ICacheProvider {
     }
 
     /**
+     * Invoked (with the author's pubkey) every time a kind:0 profile is
+     * ingested. Wired by the subscriptions coordinator to back-fill that
+     * author's kind:10002 (NIP-65 outbox) — so whenever we learn who a user
+     * is, we also learn where they write, which is where their kind:10050 and
+     * other replaceables live. The handler dedupes and skips authors whose
+     * 10002 is already cached, so firing on every kind:0 is cheap.
+     */
+    var onProfileMetadataConsumed: ((HexKey) -> Unit)? = null
+
+    /**
      * Updates user metadata from a MetadataEvent.
      * Called when receiving kind 0 events from relays.
      */
@@ -219,6 +229,10 @@ class DesktopLocalCache : ICacheProvider {
                 }
             }
         }
+
+        // Learn where this author writes (kind:10002) so their replaceables —
+        // kind:10050 included — can be read from their own outbox relays.
+        onProfileMetadataConsumed?.invoke(event.pubKey)
     }
 
     fun justVerify(event: Event): Boolean =

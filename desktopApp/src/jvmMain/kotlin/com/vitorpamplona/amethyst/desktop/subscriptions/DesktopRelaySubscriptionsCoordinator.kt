@@ -162,6 +162,75 @@ class DesktopRelaySubscriptionsCoordinator(
     private val _lastEventAt = MutableStateFlow<Long?>(null)
     val lastEventAt: StateFlow<Long?> = _lastEventAt.asStateFlow()
 
+    // -- kind:10002 (NIP-65 outbox) back-fill for profiles we ingest --
+    // Every author whose kind:0 we consume gets their kind:10002 fetched and
+    // cached, so the outbox model (and the DM inbox resolver) can read their
+    // replaceables — kind:10050 included — straight from their write relays.
+    // `outboxRequested` is a permanent per-session dedup: we ask once per
+    // author. `pendingOutbox` buffers authors between batched REQs.
+    private val outboxRequested = ConcurrentHashMap.newKeySet<HexKey>()
+    private val pendingOutbox = ConcurrentHashMap.newKeySet<HexKey>()
+    private var outboxBackfillJob: Job? = null
+
+    /**
+     * Ensure we have (or have requested) [pubkey]'s kind:10002. No-op if it's
+     * already cached or already queued/asked. Safe to call on every kind:0
+     * ingest — wire it to [DesktopLocalCache.onProfileMetadataConsumed].
+     */
+    fun ensureOutboxRelayList(pubkey: HexKey) {
+        if (localCache.cachedAdvertisedRelayList(pubkey) != null) return
+        if (!outboxRequested.add(pubkey)) return
+        pendingOutbox.add(pubkey)
+        scheduleOutboxBackfill()
+    }
+
+    /**
+     * Drain [pendingOutbox] in batches of ≤100 authors, one REQ at a time,
+     * coalescing bursts with a short delay. kind:10002 lives on the index /
+     * discovery relays (they mirror it widely), so we query those; results go
+     * through [consumeEvent] → cache. Reschedules itself while work remains.
+     */
+    private fun scheduleOutboxBackfill() {
+        if (outboxBackfillJob?.isActive == true) return
+        outboxBackfillJob =
+            scope.launch(Dispatchers.IO) {
+                // Coalesce a burst of profile arrivals into one batched REQ.
+                delay(500)
+
+                val batch = pendingOutbox.take(100).toList()
+                if (batch.isEmpty()) return@launch
+                pendingOutbox.removeAll(batch.toSet())
+
+                if (indexRelays.isNotEmpty()) {
+                    val subId = generateSubId("outbox-backfill")
+                    val filter =
+                        Filter(
+                            kinds = listOf(AdvertisedRelayListEvent.KIND),
+                            authors = batch,
+                            limit = batch.size,
+                        )
+                    val listener =
+                        object : SubscriptionListener {
+                            override fun onEvent(
+                                event: Event,
+                                isLive: Boolean,
+                                relay: NormalizedRelayUrl,
+                                forFilters: List<Filter>?,
+                            ) {
+                                consumeEvent(event, relay)
+                            }
+                        }
+                    client.subscribe(subId, indexRelays.associateWith { listOf(filter) }, listener)
+                    // Give the index relays time to return before closing.
+                    delay(8.seconds)
+                    client.unsubscribe(subId)
+                }
+
+                // More arrived while we were fetching — go again.
+                if (pendingOutbox.isNotEmpty()) scheduleOutboxBackfill()
+            }
+    }
+
     /**
      * Central event router — consumes an event into the cache and emits to event stream.
      * Called from relay onEvent callbacks. Non-blocking (launches on IO dispatcher).
@@ -438,6 +507,10 @@ class DesktopRelaySubscriptionsCoordinator(
         outboxDispatcher.clear()
         rateLimiter.reset()
         cleanupJob?.cancel()
+
+        outboxBackfillJob?.cancel()
+        outboxRequested.clear()
+        pendingOutbox.clear()
     }
 
     /**

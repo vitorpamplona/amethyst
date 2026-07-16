@@ -30,20 +30,22 @@ import kotlinx.coroutines.sync.withLock
 /**
  * Resolves a recipient's NIP-17 inbox relays (kind:10050) for DM delivery.
  *
- * Three-layer lookup, in order:
+ * Lookup order:
  *
  * 1. **LocalCache hit** — the caller has already seen the user's kind:10050
  *    via the normal feed subscription pipeline. Cheapest; no I/O.
  * 2. **In-memory LRU cache** — a prior resolve() succeeded for this pubkey
- *    within the TTL. Avoids re-querying indexers when the user opens a
- *    conversation list and clicks several recipients in sequence.
- * 3. **Indexer fan-out** — query a curated set of indexer relays for the
- *    user's kind:10050 via [RecipientRelayFetcher]. The client passed in
- *    here MUST be an **unauthenticated** instance (no [RelayAuthenticator]
- *    attached) — otherwise an indexer's AUTH challenge would extract an
- *    identity-key signature from the user, turning the metadata leak
- *    "indexer learns who we want to DM" into "indexer learns user U wants
- *    to DM pubkey X".
+ *    within the TTL. Avoids re-querying when the user opens a conversation
+ *    list and clicks several recipients in sequence.
+ * 3. **Network fan-out** ([resolve] does this in two phases) — query the
+ *    curated indexers **plus** the recipient's known write relays for
+ *    kind:10050/10002, and, if the indexers didn't have the 10050, read it
+ *    directly from the recipient's NIP-65 write (outbox) relays — the
+ *    canonical location per NIP-65. The client passed in here MUST be an
+ *    **unauthenticated** instance (no [RelayAuthenticator] attached) —
+ *    otherwise a relay's AUTH challenge would extract an identity-key
+ *    signature from the user, turning the metadata leak "some relay learns
+ *    who we want to DM" into "that relay learns user U wants to DM pubkey X".
  *
  * Filters to **kind:10050 only**. Per NIP-17 §Publishing, gift wraps MUST
  * land on relays in the recipient's kind:10050; this resolver never
@@ -62,6 +64,12 @@ import kotlinx.coroutines.sync.withLock
  * @property localLookup Callback the resolver invokes first to check the
  *   LocalCache — returns the user's current kind:10050 list or null if
  *   unknown. Allows commons/headless callers to plug in a CLI-safe lookup.
+ * @property outboxLookup Callback returning the recipient's NIP-65 write
+ *   (outbox) relays from the recipient's cached kind:10002, or null/empty when
+ *   unknown. Per the NIP-65 outbox model a user's replaceable events — kind:10050
+ *   included — live on their own write relays, so those are queried directly (in
+ *   addition to the curated indexers) rather than trusting the indexers to have
+ *   mirrored the 10050. Returns null by default (indexer-only, e.g. the CLI).
  * @property cacheTtlMs LRU cache TTL. 1h matches the brainstorm's open
  *   question; configurable here for tests.
  * @property cacheSize LRU bound. 100 entries × ~200 bytes each is trivial
@@ -71,6 +79,7 @@ class DmInboxRelayResolver(
     private val unauthenticatedClient: INostrClient,
     private val indexerRelays: Set<NormalizedRelayUrl>,
     private val localLookup: (HexKey) -> List<NormalizedRelayUrl>?,
+    private val outboxLookup: (HexKey) -> List<NormalizedRelayUrl>? = { null },
     private val cacheTtlMs: Long = 60 * 60 * 1_000L,
     private val cacheSize: Int = 100,
     private val nowMs: () -> Long = {
@@ -88,8 +97,17 @@ class DmInboxRelayResolver(
     private val mutex = Mutex()
 
     /**
-     * Resolve `pubkey`'s NIP-17 inbox relays. Returns empty list if neither
-     * the LocalCache nor the indexer fan-out yielded a kind:10050.
+     * Resolve `pubkey`'s NIP-17 inbox relays. Returns empty list if neither the
+     * LocalCache, the recipient's outbox relays, nor the indexer fan-out yielded
+     * a kind:10050.
+     *
+     * Two network phases against the unauthenticated client:
+     *  1. Query the curated indexers **plus** the recipient's known write relays
+     *     (from a cached kind:10002) for kinds 10050/10002 in one shot.
+     *  2. If that still produced no kind:10050 but we now know the recipient's
+     *     write relays (from the kind:10002 the indexers returned, or the cache),
+     *     read kind:10050 directly from those write relays — the canonical
+     *     NIP-65 outbox location, which the curated indexers may not mirror.
      */
     suspend fun resolve(pubkey: HexKey): List<NormalizedRelayUrl> {
         localLookup(pubkey)?.takeIf { it.isNotEmpty() }?.let { return it }
@@ -108,12 +126,27 @@ class DmInboxRelayResolver(
             }
         }
 
-        if (indexerRelays.isEmpty()) return emptyList()
+        val cachedOutbox = outboxLookup(pubkey)?.toSet().orEmpty()
+        val phase1Seed = indexerRelays + cachedOutbox
+        if (phase1Seed.isEmpty()) return emptyList()
 
-        val lists = RecipientRelayFetcher.fetchRelayLists(unauthenticatedClient, pubkey, indexerRelays)
+        // Phase 1: indexers ∪ known outbox relays.
+        val lists = RecipientRelayFetcher.fetchRelayLists(unauthenticatedClient, pubkey, phase1Seed)
         // Strict: kind:10050 ONLY. No NIP-65 fallback. Empty = canonical
         // "unreachable" signal; caller refuses to publish.
-        val relays = lists.dmInbox
+        var relays = lists.dmInbox
+
+        // Phase 2: the recipient's own write relays are where their kind:10050
+        // lives per NIP-65. If phase 1 (mostly the curated indexers) didn't
+        // surface it, read straight from the write relays we just learned about
+        // — the kind:10002 the indexers returned, unioned with anything cached —
+        // minus what we already queried.
+        if (relays.isEmpty()) {
+            val writeRelays = (lists.nip65Write().toSet() + cachedOutbox) - phase1Seed
+            if (writeRelays.isNotEmpty()) {
+                relays = RecipientRelayFetcher.fetchRelayLists(unauthenticatedClient, pubkey, writeRelays).dmInbox
+            }
+        }
 
         mutex.withLock {
             cache[pubkey] = Entry(relays, now + cacheTtlMs)
