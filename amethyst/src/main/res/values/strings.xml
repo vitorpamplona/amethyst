@@ -2154,6 +2154,7 @@
     <string name="relay_group_members_title">Members</string>
     <string name="relay_group_make_admin">Make admin</string>
     <string name="relay_group_make_moderator">Make moderator</string>
+    <string name="relay_group_assign_role">Assign role: %1$s</string>
     <string name="relay_group_demote_member">Remove role</string>
     <string name="relay_group_remove_user">Remove from group</string>
     <string name="relay_group_remove_user_confirm">Remove %1$s from this group? They will lose access until re-added or re-invited.</string>

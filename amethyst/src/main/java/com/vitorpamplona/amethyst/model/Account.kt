@@ -256,6 +256,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -2174,6 +2175,7 @@ class Account(
                 signer.sign(
                     CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
                         hTag(group.groupId.id)
+                        previous(group.previousEventRefs(pubKey))
                     },
                 )
             cache.justConsumeMyOwnEvent(signed)
@@ -2745,7 +2747,11 @@ class Account(
         title: String,
         body: String,
     ) {
-        val template = ThreadEvent.build(body, title) { hTag(channel.groupId.id) }
+        val template =
+            ThreadEvent.build(body, title) {
+                hTag(channel.groupId.id)
+                previous(channel.previousEventRefs(pubKey))
+            }
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 

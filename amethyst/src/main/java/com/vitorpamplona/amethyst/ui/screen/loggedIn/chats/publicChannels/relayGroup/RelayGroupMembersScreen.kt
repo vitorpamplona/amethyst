@@ -95,6 +95,10 @@ fun RelayGroupMembersScreen(
 private class RosterEntry(
     val pubkey: HexKey,
     val membership: RelayGroupMembership,
+    // The relay-assigned role names for this member (from the kind-39001 admin list),
+    // e.g. ["admin"], ["ceo", "gardener"]. Empty for plain members. Used to show the
+    // real relay-defined role label instead of only the coarse admin/moderator bucket.
+    val roles: List<String>,
 )
 
 @Composable
@@ -121,9 +125,10 @@ private fun RelayGroupMembers(
     // is overkill here — rely on relay order but push elevated roles to the top.
     val roster =
         remember(channel.admins, channel.members) {
+            val rolesByPubkey = channel.admins.associate { it.pubKey to it.roles }
             val everyone = (channel.admins.map { it.pubKey } + channel.members).distinct()
             everyone
-                .map { RosterEntry(it, channel.membershipOf(it)) }
+                .map { RosterEntry(it, channel.membershipOf(it), rolesByPubkey[it] ?: emptyList()) }
                 .sortedBy { it.membership.rank() }
         }
 
@@ -226,7 +231,7 @@ private fun RelayGroupMemberRow(
             }
         }
 
-        MemberRoleBadge(entry.membership)
+        MemberRoleBadge(entry)
 
         // Moderators can act on others (not themselves); the relay is the final
         // authority, but hide obviously-useless menus (a moderator can't touch an admin).
@@ -244,23 +249,56 @@ private fun RelayGroupMemberRow(
                 )
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                if (viewerIsAdmin && entry.membership != RelayGroupMembership.ADMIN) {
-                    DropdownMenuItem(
-                        text = { Text(stringRes(R.string.relay_group_make_admin)) },
-                        onClick = {
-                            menuOpen = false
-                            accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_ADMIN))
-                        },
-                    )
-                }
-                if (entry.membership != RelayGroupMembership.MODERATOR && entry.membership != RelayGroupMembership.ADMIN) {
-                    DropdownMenuItem(
-                        text = { Text(stringRes(R.string.relay_group_make_moderator)) },
-                        onClick = {
-                            menuOpen = false
-                            accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_MODERATOR))
-                        },
-                    )
+                val declaredRoles = channel.supportedRoles
+                if (declaredRoles.isNotEmpty()) {
+                    // The relay declares its own role set (kind 39003) — offer exactly those
+                    // instead of the built-in admin/moderator pair. Roles are privilege grants,
+                    // so only admins assign them; the relay is the final authority.
+                    if (viewerIsAdmin) {
+                        declaredRoles.forEach { role ->
+                            val alreadyHasRole = entry.roles.any { it.equals(role.name, true) }
+                            if (!alreadyHasRole) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(stringRes(R.string.relay_group_assign_role, role.name))
+                                            role.description?.let {
+                                                Text(
+                                                    text = it,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        menuOpen = false
+                                        accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(role.name))
+                                    },
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // No 39003 role set advertised: fall back to the built-in admin/moderator shortcuts.
+                    if (viewerIsAdmin && entry.membership != RelayGroupMembership.ADMIN) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.relay_group_make_admin)) },
+                            onClick = {
+                                menuOpen = false
+                                accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_ADMIN))
+                            },
+                        )
+                    }
+                    if (entry.membership != RelayGroupMembership.MODERATOR && entry.membership != RelayGroupMembership.ADMIN) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.relay_group_make_moderator)) },
+                            onClick = {
+                                menuOpen = false
+                                accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_MODERATOR))
+                            },
+                        )
+                    }
                 }
                 if (entry.membership == RelayGroupMembership.MODERATOR || entry.membership == RelayGroupMembership.ADMIN) {
                     DropdownMenuItem(
@@ -310,13 +348,21 @@ private fun RelayGroupMemberRow(
     }
 }
 
-/** A small colored pill for an elevated role; plain members get nothing. */
+/**
+ * A small colored pill for an elevated role; plain members get nothing.
+ *
+ * When the relay assigns explicit role labels (kind 39001), those are shown verbatim
+ * (e.g. `ceo`, `moderator`) so relay-defined roles are visible rather than collapsed
+ * into the coarse admin/moderator bucket. Falls back to the generic admin/moderator
+ * label when the member is in the admin list without any named role.
+ */
 @Composable
-private fun MemberRoleBadge(membership: RelayGroupMembership) {
+private fun MemberRoleBadge(entry: RosterEntry) {
     val label =
-        when (membership) {
-            RelayGroupMembership.ADMIN -> stringRes(R.string.relay_group_role_admin)
-            RelayGroupMembership.MODERATOR -> stringRes(R.string.relay_group_role_moderator)
+        when {
+            entry.roles.isNotEmpty() -> entry.roles.joinToString(", ")
+            entry.membership == RelayGroupMembership.ADMIN -> stringRes(R.string.relay_group_role_admin)
+            entry.membership == RelayGroupMembership.MODERATOR -> stringRes(R.string.relay_group_role_moderator)
             else -> return
         }
 

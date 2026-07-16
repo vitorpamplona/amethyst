@@ -1919,6 +1919,20 @@ object LocalCache : ILocalCache, ICacheProvider {
         return new
     }
 
+    /** NIP-29 relay-declared supported roles (kind 39003) → the group's role set. */
+    fun consume(
+        event: SupportedRolesEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null) {
+            val latest = getOrCreateAddressableNote(event.address()).event as? SupportedRolesEvent
+            latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateSupportedRoles(it) }
+        }
+        return new
+    }
+
     /**
      * Attach a group-scoped content event (a kind-9 chat, kind-1068 poll, …
      * carrying an `h` tag) to its [RelayGroupChannel]. NIP-29 reuses the generic
@@ -3876,16 +3890,18 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consume(event, relay, wasVerified)
                 }
 
-                // Remaining NIP-29 relay-group kinds. The two relay-signed addressables (39003
-                // roles, 39004 AV participants) are durable group state alongside 39000/39001/39002,
-                // so they're stored replaceably. The 9xxx moderation actions and join/leave requests
-                // are regular one-shot events the relay is authoritative for (it applies them and
-                // republishes the 39000/39001/39002); we store them so they're queryable and don't
-                // fall through to the "Not Supported" warning, but we don't act on them client-side.
+                // 39003 (relay-declared roles) is durable group state like 39000/39001/39002:
+                // route it onto the channel so a moderation UI can offer the relay's role set.
                 is SupportedRolesEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
+                    consume(event, relay, wasVerified)
                 }
 
+                // Remaining NIP-29 relay-group kinds. The relay-signed 39004 AV-participants
+                // addressable is durable group state, so it's stored replaceably. The 9xxx
+                // moderation actions and join/leave requests are regular one-shot events the
+                // relay is authoritative for (it applies them and republishes the
+                // 39000/39001/39002); we store them so they're queryable and don't fall through
+                // to the "Not Supported" warning, but we don't act on them client-side.
                 is GroupParticipantsEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
