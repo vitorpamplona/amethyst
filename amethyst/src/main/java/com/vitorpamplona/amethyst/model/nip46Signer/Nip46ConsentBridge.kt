@@ -25,10 +25,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
-import com.vitorpamplona.amethyst.napplet.NappletConnectCoordinator
-import com.vitorpamplona.amethyst.napplet.NappletConnectInfo
-import com.vitorpamplona.amethyst.napplet.NappletSignerConsentCoordinator
-import com.vitorpamplona.amethyst.napplet.NappletSignerConsentInfo
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.napplet.label
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
@@ -40,7 +40,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * Bridges the (KMP, headless) [com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer]
  * to the interactive consent UI. It reuses the SAME dialogs the napplet/browser signer path uses —
- * [NappletConnectCoordinator] (first-connect trust picker) and [NappletSignerConsentCoordinator]
+ * [SignerConnectCoordinator] (first-connect trust picker) and [SignerConsentCoordinator]
  * (per-operation allow/deny) — so a NIP-46 remote app prompts through one consistent surface, and
  * the user's "remember" choices land in the same [com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger].
  *
@@ -64,9 +64,9 @@ object Nip46ConsentBridge {
         val meta = request.clientMetadata
         val title = meta?.name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
         val domain = meta?.url?.ifBlank { null } ?: (clientPubKey.take(12) + "…")
-        return NappletConnectCoordinator.requestConnect(
+        return SignerConnectCoordinator.requestConnect(
             context,
-            NappletConnectInfo(appletTitle = title, coordinate = coordinate, domain = domain, iconUrl = meta?.image),
+            SignerConnectInfo(appletTitle = title, coordinate = coordinate, domain = domain, iconUrl = meta?.image),
         )
     }
 
@@ -90,7 +90,7 @@ object Nip46ConsentBridge {
             }
         val rawData = if (request is BunkerRequestSign) JacksonMapper.toJsonPretty(request.event) else ""
         val consentInfo =
-            NappletSignerConsentInfo(
+            SignerConsentInfo(
                 appletTitle = title,
                 coordinate = coordinate,
                 op = op,
@@ -101,7 +101,7 @@ object Nip46ConsentBridge {
             )
         // Fail closed if the prompt is never answered so a stuck dialog can't hold the signer hostage.
         return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {
-            NappletSignerConsentCoordinator.requestConsent(context, consentInfo)
+            SignerConsentCoordinator.requestConsent(context, consentInfo)
         } ?: SignerOpGrant.DenyOnce
     }
 }

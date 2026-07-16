@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -66,15 +66,15 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
-class NappletConnectActivity : ComponentActivity() {
+class SignerConnectActivity : ComponentActivity() {
     private var token: String? = null
     private var decided = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val token = intent.getStringExtra(NappletConnectCoordinator.EXTRA_TOKEN)
+        val token = intent.getStringExtra(SignerConnectCoordinator.EXTRA_TOKEN)
         this.token = token
-        val info = token?.let { NappletConnectCoordinator.infoFor(it) }
+        val info = token?.let { SignerConnectCoordinator.infoFor(it) }
         if (token == null || info == null) {
             finish()
             return
@@ -82,21 +82,21 @@ class NappletConnectActivity : ComponentActivity() {
 
         setContent {
             AmethystTheme {
-                NappletConnectScreen(
+                SignerConnectScreen(
                     info = info,
                     onConnect = { policy ->
                         decided = true
-                        NappletConnectCoordinator.complete(token, AppConnectResult.Connected(policy))
+                        SignerConnectCoordinator.complete(token, AppConnectResult.Connected(policy))
                         finish()
                     },
                     onBlock = {
                         decided = true
-                        NappletConnectCoordinator.complete(token, AppConnectResult.Blocked)
+                        SignerConnectCoordinator.complete(token, AppConnectResult.Blocked)
                         finish()
                     },
                     onCancel = {
                         decided = true
-                        NappletConnectCoordinator.complete(token, AppConnectResult.Cancelled)
+                        SignerConnectCoordinator.complete(token, AppConnectResult.Cancelled)
                         finish()
                     },
                 )
@@ -105,14 +105,14 @@ class NappletConnectActivity : ComponentActivity() {
     }
 
     override fun finish() {
-        if (!decided) token?.let { NappletConnectCoordinator.cancel(it) }
+        if (!decided) token?.let { SignerConnectCoordinator.cancel(it) }
         super.finish()
     }
 }
 
 @Composable
-private fun NappletConnectScreen(
-    info: NappletConnectInfo,
+private fun SignerConnectScreen(
+    info: SignerConnectInfo,
     onConnect: (AppSignerPolicy) -> Unit,
     onBlock: () -> Unit,
     onCancel: () -> Unit,

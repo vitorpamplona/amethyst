@@ -471,14 +471,14 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- First-connect "Connect to Nostr" dialog. -->
         <activity
-            android:name=".napplet.NappletConnectActivity"
+            android:name=".connectedApps.consent.SignerConnectActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- Per-operation signer consent dialog. -->
         <activity
-            android:name=".napplet.NappletSignerConsentActivity"
+            android:name=".connectedApps.consent.SignerConsentActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTop"

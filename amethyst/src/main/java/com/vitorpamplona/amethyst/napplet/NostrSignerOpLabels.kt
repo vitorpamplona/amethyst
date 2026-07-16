@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
@@ -40,13 +42,13 @@ fun NostrSignerOp.label(context: Context): String =
         NostrSignerOp.Decrypt -> context.getString(R.string.napplet_op_decrypt)
     }
 
-/** Builds the [NappletSignerConsentInfo] needed by the per-op consent dialog. */
+/** Builds the [SignerConsentInfo] needed by the per-op consent dialog. */
 fun buildSignerConsentInfo(
     context: Context,
     identity: NappletIdentity,
     op: NostrSignerOp,
     request: NappletRequest,
-): NappletSignerConsentInfo {
+): SignerConsentInfo {
     val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
@@ -84,7 +86,7 @@ fun buildSignerConsentInfo(
             }
             else -> ""
         }
-    return NappletSignerConsentInfo(
+    return SignerConsentInfo(
         appletTitle = title,
         coordinate = identity.coordinate,
         op = op,
@@ -95,11 +97,11 @@ fun buildSignerConsentInfo(
     )
 }
 
-/** Creates a [NappletConnectInfo] for the first-connect dialog. */
+/** Creates a [SignerConnectInfo] for the first-connect dialog. */
 fun buildConnectInfo(
     context: Context,
     identity: NappletIdentity,
-): NappletConnectInfo {
+): SignerConnectInfo {
     val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
@@ -114,5 +116,5 @@ fun buildConnectInfo(
         } else {
             identity.identifier.ifBlank { identity.authorPubKey.take(12) + "…" }
         }
-    return NappletConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain, iconUrl = iconUrl)
+    return SignerConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain, iconUrl = iconUrl)
 }

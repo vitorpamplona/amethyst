@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -69,15 +69,15 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-class NappletSignerConsentActivity : ComponentActivity() {
+class SignerConsentActivity : ComponentActivity() {
     private var token: String? = null
     private var decided = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val token = intent.getStringExtra(NappletSignerConsentCoordinator.EXTRA_TOKEN)
+        val token = intent.getStringExtra(SignerConsentCoordinator.EXTRA_TOKEN)
         this.token = token
-        val info = token?.let { NappletSignerConsentCoordinator.infoFor(it) }
+        val info = token?.let { SignerConsentCoordinator.infoFor(it) }
         if (token == null || info == null) {
             finish()
             return
@@ -85,16 +85,16 @@ class NappletSignerConsentActivity : ComponentActivity() {
 
         setContent {
             AmethystTheme {
-                NappletSignerConsentDialog(
+                SignerConsentDialog(
                     info = info,
                     onGrant = { grant ->
                         decided = true
-                        NappletSignerConsentCoordinator.complete(token, grant)
+                        SignerConsentCoordinator.complete(token, grant)
                         finish()
                     },
                     onDismiss = {
                         decided = true
-                        NappletSignerConsentCoordinator.cancel(token)
+                        SignerConsentCoordinator.cancel(token)
                         finish()
                     },
                 )
@@ -103,14 +103,14 @@ class NappletSignerConsentActivity : ComponentActivity() {
     }
 
     override fun finish() {
-        if (!decided) token?.let { NappletSignerConsentCoordinator.cancel(it) }
+        if (!decided) token?.let { SignerConsentCoordinator.cancel(it) }
         super.finish()
     }
 }
 
 @Composable
-private fun NappletSignerConsentDialog(
-    info: NappletSignerConsentInfo,
+private fun SignerConsentDialog(
+    info: SignerConsentInfo,
     onGrant: (SignerOpGrant) -> Unit,
     onDismiss: () -> Unit,
 ) {

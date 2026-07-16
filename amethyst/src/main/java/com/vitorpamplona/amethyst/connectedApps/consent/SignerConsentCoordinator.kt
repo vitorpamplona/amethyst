@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
@@ -29,7 +29,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /** Everything the per-operation consent dialog needs to render. */
-data class NappletSignerConsentInfo(
+data class SignerConsentInfo(
     val appletTitle: String,
     val coordinate: String,
     val op: NostrSignerOp,
@@ -48,9 +48,9 @@ data class NappletSignerConsentInfo(
  * Bridges the broker to the per-operation signer consent UI.
  * A dismissed dialog resolves to [SignerOpGrant.DenyOnce] — fails closed.
  */
-object NappletSignerConsentCoordinator {
+object SignerConsentCoordinator {
     private class Pending(
-        val info: NappletSignerConsentInfo,
+        val info: SignerConsentInfo,
         val deferred: CompletableDeferred<SignerOpGrant>,
     )
 
@@ -58,14 +58,14 @@ object NappletSignerConsentCoordinator {
 
     suspend fun requestConsent(
         context: Context,
-        info: NappletSignerConsentInfo,
+        info: SignerConsentInfo,
     ): SignerOpGrant {
         val token = UUID.randomUUID().toString()
         val deferred = CompletableDeferred<SignerOpGrant>()
         pending[token] = Pending(info, deferred)
 
         context.startActivity(
-            Intent(context, NappletSignerConsentActivity::class.java)
+            Intent(context, SignerConsentActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .putExtra(EXTRA_TOKEN, token),
         )
@@ -77,7 +77,7 @@ object NappletSignerConsentCoordinator {
         }
     }
 
-    fun infoFor(token: String): NappletSignerConsentInfo? = pending[token]?.info
+    fun infoFor(token: String): SignerConsentInfo? = pending[token]?.info
 
     fun complete(
         token: String,

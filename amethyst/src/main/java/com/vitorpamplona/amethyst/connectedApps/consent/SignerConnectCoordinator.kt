@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
@@ -28,7 +28,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /** Everything the "Connect to Nostr" dialog needs to render. */
-data class NappletConnectInfo(
+data class SignerConnectInfo(
     val appletTitle: String,
     val coordinate: String,
     val domain: String,
@@ -40,9 +40,9 @@ data class NappletConnectInfo(
  * the Activity resolves the deferred with the user's choice.
  * A dismissed dialog resolves to [AppConnectResult.Cancelled] — fails closed, no silent grant.
  */
-object NappletConnectCoordinator {
+object SignerConnectCoordinator {
     private class Pending(
-        val info: NappletConnectInfo,
+        val info: SignerConnectInfo,
         val deferred: CompletableDeferred<AppConnectResult>,
     )
 
@@ -50,14 +50,14 @@ object NappletConnectCoordinator {
 
     suspend fun requestConnect(
         context: Context,
-        info: NappletConnectInfo,
+        info: SignerConnectInfo,
     ): AppConnectResult {
         val token = UUID.randomUUID().toString()
         val deferred = CompletableDeferred<AppConnectResult>()
         pending[token] = Pending(info, deferred)
 
         context.startActivity(
-            Intent(context, NappletConnectActivity::class.java)
+            Intent(context, SignerConnectActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .putExtra(EXTRA_TOKEN, token),
         )
@@ -69,7 +69,7 @@ object NappletConnectCoordinator {
         }
     }
 
-    fun infoFor(token: String): NappletConnectInfo? = pending[token]?.info
+    fun infoFor(token: String): SignerConnectInfo? = pending[token]?.info
 
     fun complete(
         token: String,

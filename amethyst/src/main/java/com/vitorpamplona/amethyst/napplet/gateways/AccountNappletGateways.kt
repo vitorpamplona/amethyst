@@ -44,12 +44,12 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.napplet.NappletConnectCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
 import com.vitorpamplona.amethyst.napplet.NappletNotificationStore
-import com.vitorpamplona.amethyst.napplet.NappletSignerConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.buildConnectInfo
 import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -139,7 +139,7 @@ class AccountNappletGateways(
 
         val connectPrompt =
             NostrConnectPrompt { identity ->
-                NappletConnectCoordinator.requestConnect(
+                SignerConnectCoordinator.requestConnect(
                     context = context,
                     info = buildConnectInfo(context, identity),
                 )
@@ -147,7 +147,7 @@ class AccountNappletGateways(
 
         val signerConsent =
             NostrSignerConsentPrompt { identity, op, request ->
-                NappletSignerConsentCoordinator.requestConsent(
+                SignerConsentCoordinator.requestConsent(
                     context = context,
                     info = buildSignerConsentInfo(context, identity, op, request),
                 )
