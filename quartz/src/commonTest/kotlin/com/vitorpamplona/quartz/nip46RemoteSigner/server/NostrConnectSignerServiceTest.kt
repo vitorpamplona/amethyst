@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -224,6 +225,31 @@ class NostrConnectSignerServiceTest {
             assertTrue(reply is BunkerResponseEvent)
             assertEquals("req2", reply.id)
             assertEquals(1, reply.event.kind)
+        }
+
+    @Test
+    fun staleReplayedRequestIsIgnored() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay), maxRequestAgeSeconds = 120)
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            // A relay replays a request whose created_at is well past the age window (as if it had been
+            // stored and re-sent on resubscribe). It must not be serviced — no reply is published.
+            val template = EventTemplate<Event>(createdAt = 1L, kind = 1, tags = emptyArray(), content = "old")
+            val stale =
+                NostrConnectEvent.create(
+                    BunkerRequestSign(id = "stale", event = template),
+                    remoteKey = serverKey,
+                    signer = clientSigner(),
+                    createdAt = TimeUtils.now() - 600,
+                )
+            client.deliver(stale)
+
+            assertEquals(0, client.published.size, "a minutes-old replayed request is dropped, not re-signed")
         }
 
     @Test

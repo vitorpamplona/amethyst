@@ -66,9 +66,12 @@ class NostrConnectSignerService(
     /** Optional hook, invoked with each serviced request + client, for logging/metrics/activity feeds. */
     val onServiced: ((request: BunkerRequest, clientPubKey: String, error: String?) -> Unit)? = null,
     /**
-     * Upper bound on the request-id dedup set. A long-lived signer would otherwise
-     * accumulate every request id it ever saw; past this many, the oldest ids are
-     * evicted (they are far past any realistic same-request retry window).
+     * Upper bound on the dedup set of seen kind-24133 **event ids** (the wrapper events, so the same
+     * request fanned in from multiple relays is handled once). A long-lived signer would otherwise
+     * accumulate every event id it saw; past this many the oldest are evicted (far past any realistic
+     * same-event redelivery window). NOTE: this is keyed by the wrapper event id, not the inner NIP-46
+     * request id, and it does not survive a service restart — the [maxRequestAgeSeconds] gate is what
+     * suppresses relay replays of old requests across re-subscriptions.
      */
     val seenCap: Int = 4096,
     /**
@@ -84,6 +87,15 @@ class NostrConnectSignerService(
     val rateWindowSeconds: Long = 10,
     /** Cap on distinct authors tracked for rate-limiting (evicts oldest) so key-rotation can't grow it. */
     val maxTrackedAuthors: Int = 512,
+    /**
+     * Requests older than this (by `created_at`) are ignored. kind-24133 is ephemeral, but many relays
+     * store and REPLAY it whenever we re-subscribe (a relay-set change, reconnect, toggle, or rotation),
+     * and the in-memory dedup set does not survive that restart — so without an age gate the same
+     * minutes-old request gets signed again. Applied both as a `since` on the subscription (compliant
+     * relays never replay it) and as a receive-side guard (for relays that ignore `since`). The window
+     * must exceed realistic client/relay clock skew so a genuinely fresh request is never dropped.
+     */
+    val maxRequestAgeSeconds: Long = 120,
 ) {
     /**
      * Fixed-window per-author rate limit. Touched only by the single consumer
@@ -158,7 +170,9 @@ class NostrConnectSignerService(
         // Insertion-ordered dedup, confined to this one consumer coroutine (never the relay threads);
         // evicts the oldest id past the cap so a long-lived signer can't grow it without bound.
         val seen = LinkedHashSet<String>()
-        val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)))
+        // Only ask relays for recent requests: kind-24133 is ephemeral, but relays that store it would
+        // otherwise replay every old request each time we (re)subscribe. See [maxRequestAgeSeconds].
+        val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)), since = TimeUtils.now() - maxRequestAgeSeconds)
         client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
         try {
             while (true) {
@@ -169,6 +183,13 @@ class NostrConnectSignerService(
                         it.next()
                         it.remove()
                     }
+                }
+                // Drop stale requests a relay replayed from storage (the `since` filter covers compliant
+                // relays; this covers the rest). A live NIP-46 request is seconds old; a minutes-old one
+                // is a replay we may already have signed in a previous subscription.
+                if (TimeUtils.now() - event.createdAt > maxRequestAgeSeconds) {
+                    Log.w("NIP46Signer") { "ignoring stale request ${event.id.take(8)}… (${TimeUtils.now() - event.createdAt}s old)" }
+                    continue
                 }
                 // Rate-limit per author BEFORE decrypting — decryption can be an external-signer
                 // round-trip, so a flooding client must not force one per event.
