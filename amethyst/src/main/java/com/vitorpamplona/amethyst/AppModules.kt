@@ -122,7 +122,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
-import com.vitorpamplona.quartz.nip01Core.relay.client.limits.RelayLimits
+import com.vitorpamplona.quartz.nip01Core.relay.client.limits.RelayLimitsTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
@@ -712,7 +712,7 @@ class AppModules(
     val relayStats = RelayStats(client)
 
     // Caches the latest LIMITS (rights + limits) each relay advertises.
-    val relayLimits = RelayLimits(client)
+    val relayLimits = RelayLimitsTracker(client)
 
     // Resource-usage ledger: relay traffic/reconnect + connection-time,
     // foreground-time, process-CPU, and signature-verification collectors.

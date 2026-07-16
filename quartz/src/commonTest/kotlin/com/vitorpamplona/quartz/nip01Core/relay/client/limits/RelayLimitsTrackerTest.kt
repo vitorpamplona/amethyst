@@ -33,7 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class RelayLimitsTest {
+class RelayLimitsTrackerTest {
     private class CapturingClient(
         private val delegate: INostrClient = EmptyNostrClient(),
     ) : INostrClient by delegate {
@@ -62,10 +62,10 @@ class RelayLimitsTest {
         override fun disconnect() = Unit
     }
 
-    private fun setup(): Pair<RelayLimits, RelayConnectionListener> {
+    private fun setup(): Pair<RelayLimitsTracker, RelayConnectionListener> {
         val client = CapturingClient()
-        val limits = RelayLimits(client)
-        val listener = client.captured ?: error("RelayLimits did not register a listener")
+        val limits = RelayLimitsTracker(client)
+        val listener = client.captured ?: error("RelayLimitsTracker did not register a listener")
         return limits to listener
     }
 

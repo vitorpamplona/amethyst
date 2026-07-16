@@ -47,8 +47,12 @@ import kotlinx.coroutines.flow.update
  * The cache is connection-scoped: a relay's entry is dropped on disconnect, so a
  * stale limit from a previous session never leaks into a new one. A fresh
  * connection re-advertises `LIMITS` on connect.
+ *
+ * Named `…Tracker` to avoid colliding with the relay-*server* side's
+ * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits], which
+ * is the operator-configured source of truth a relay enforces and advertises.
  */
-class RelayLimits(
+class RelayLimitsTracker(
     val client: INostrClient,
 ) {
     // onIncomingMessage / onDisconnected fire on the per-relay socket dispatcher
@@ -88,13 +92,13 @@ class RelayLimits(
         }
 
     init {
-        Log.d("RelayLimits", "Init, Subscribe")
+        Log.d("RelayLimitsTracker", "Init, Subscribe")
         client.addConnectionListener(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
-        Log.d("RelayLimits", "Destroy, Unsubscribe")
+        Log.d("RelayLimitsTracker", "Destroy, Unsubscribe")
         client.removeConnectionListener(clientListener)
     }
 }
