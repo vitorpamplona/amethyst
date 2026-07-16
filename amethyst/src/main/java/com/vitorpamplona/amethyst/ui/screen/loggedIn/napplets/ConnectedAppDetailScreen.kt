@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ActivityCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46AppIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46LiveStatus
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ReconnectPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46StatusDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46AppOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
@@ -202,7 +205,12 @@ fun ConnectedAppDetailScreen(
                     .collectAsStateWithLifecycle()
                 val inboxRelays by accountViewModel.account.nip46Signer.inboxRelays
                     .collectAsStateWithLifecycle()
-                Nip46RelaysSection(nip46Info?.relays.orEmpty(), inboxRelays, connectedRelays)
+                Nip46RelaysSection(
+                    relays = nip46Info?.relays.orEmpty(),
+                    inboxRelays = inboxRelays,
+                    connectedRelays = connectedRelays,
+                    onReconnect = { accountViewModel.account.client.reconnect(ignoreRetryDelays = true) },
+                )
             }
 
             // Signing trust level section
@@ -312,8 +320,26 @@ private fun Nip46RelaysSection(
     relays: Set<String>,
     inboxRelays: Set<NormalizedRelayUrl>,
     connectedRelays: Set<NormalizedRelayUrl>,
+    onReconnect: () -> Unit,
 ) {
-    SectionHeader(stringResource(R.string.nip46_signer_app_relays_title))
+    val context = LocalContext.current
+    val anyOffline =
+        remember(relays, inboxRelays, connectedRelays) {
+            if (relays.isEmpty()) {
+                nip46AppOnline(emptySet(), inboxRelays, connectedRelays) == false
+            } else {
+                relays.any { RelayUrlNormalizer.normalizeOrNull(it)?.let { r -> r !in connectedRelays } ?: true }
+            }
+        }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.nip46_signer_app_relays_title)) }
+        if (anyOffline) {
+            Nip46ReconnectPill {
+                onReconnect()
+                Toast.makeText(context, R.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
@@ -472,7 +498,7 @@ private fun PolicyPicker(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PolicyCard(
             selected = selected == AppSignerPolicy.FULL_TRUST,
-            symbol = MaterialSymbols.Favorite,
+            symbol = MaterialSymbols.LockOpen,
             label = stringResource(R.string.napplet_policy_full_trust),
             description = stringResource(R.string.napplet_policy_full_trust_desc),
             onClick = { onSelect(AppSignerPolicy.FULL_TRUST) },

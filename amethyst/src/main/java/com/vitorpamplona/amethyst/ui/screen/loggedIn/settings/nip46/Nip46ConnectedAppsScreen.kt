@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -108,6 +112,7 @@ fun Nip46ConnectedAppsScreen(
 ) {
     val account = accountViewModel.account
     val signerPubKey = remember { account.signer.pubKey }
+    val context = LocalContext.current
 
     // Live relay state so each app shows whether the signer currently reaches it. An app that brought
     // its own relays (nostrconnect) is judged on those; a bunker-flow app rides the inbox relays.
@@ -167,6 +172,10 @@ fun Nip46ConnectedAppsScreen(
                         Nip46AppCard(
                             entry = entry,
                             online = online,
+                            onReconnect = {
+                                account.client.reconnect(ignoreRetryDelays = true)
+                                Toast.makeText(context, R.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
+                            },
                             onClick = { nav.nav(Route.ConnectedAppDetail(entry.coordinate)) },
                         )
                     }
@@ -179,6 +188,7 @@ fun Nip46ConnectedAppsScreen(
 private fun Nip46AppCard(
     entry: Nip46AppEntry,
     online: Boolean?,
+    onReconnect: () -> Unit,
     onClick: () -> Unit,
 ) {
     // Same identity line the detail screen (Nip46AppHeader) uses: the app's self-declared website
@@ -241,12 +251,16 @@ private fun Nip46AppCard(
                         label = { Text(policy.shortLabel(), style = MaterialTheme.typography.labelSmall) },
                     )
                 }
-                Icon(
-                    MaterialSymbols.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
+                if (online == false) {
+                    Nip46ReconnectPill(onReconnect)
+                } else {
+                    Icon(
+                        MaterialSymbols.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }
@@ -266,6 +280,26 @@ private val LiveGreen = Color(0xFF3DDC84)
 @Composable
 internal fun Nip46StatusDot(online: Boolean) {
     Box(Modifier.size(8.dp).clip(CircleShape).background(if (online) LiveGreen else MaterialTheme.colorScheme.outline))
+}
+
+/**
+ * A small "Reconnect" pill shown when an app's relays are offline. Forces the whole relay pool to
+ * re-dial now (ignoring backoff), which re-establishes the offline relays. Consumes its own tap so a
+ * pill inside a clickable card doesn't also open the card.
+ */
+@Composable
+internal fun Nip46ReconnectPill(onClick: () -> Unit) {
+    Text(
+        stringResource(R.string.nip46_signer_app_reconnect),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(999.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 11.dp, vertical = 4.dp),
+    )
 }
 
 /** A [Nip46StatusDot] + Connected/Offline label showing whether the signer currently reaches an app's relays. */

@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
@@ -199,21 +200,21 @@ private fun SignerConnectScreen(
                 ) {
                     PolicyOption(
                         selected = selected == AppSignerPolicy.FULL_TRUST,
-                        icon = "❤",
+                        symbol = MaterialSymbols.LockOpen,
                         label = stringResource(R.string.napplet_policy_full_trust),
                         description = stringResource(R.string.napplet_policy_full_trust_desc),
                         onClick = { selected = AppSignerPolicy.FULL_TRUST },
                     )
                     PolicyOption(
                         selected = selected == AppSignerPolicy.REASONABLE,
-                        icon = "👍",
+                        symbol = MaterialSymbols.Shield,
                         label = stringResource(R.string.napplet_policy_reasonable),
                         description = stringResource(R.string.napplet_policy_reasonable_desc),
                         onClick = { selected = AppSignerPolicy.REASONABLE },
                     )
                     PolicyOption(
                         selected = selected == AppSignerPolicy.PARANOID,
-                        icon = "🕶",
+                        symbol = MaterialSymbols.Lock,
                         label = stringResource(R.string.napplet_policy_paranoid),
                         description = stringResource(R.string.napplet_policy_paranoid_desc),
                         onClick = { selected = AppSignerPolicy.PARANOID },
@@ -254,7 +255,7 @@ private fun SignerConnectScreen(
 @Composable
 private fun PolicyOption(
     selected: Boolean,
-    icon: String,
+    symbol: MaterialSymbol,
     label: String,
     description: String,
     onClick: () -> Unit,
@@ -276,7 +277,12 @@ private fun PolicyOption(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(icon, style = MaterialTheme.typography.headlineSmall)
+            Icon(
+                symbol = symbol,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(26.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

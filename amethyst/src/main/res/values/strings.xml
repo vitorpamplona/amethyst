@@ -932,6 +932,8 @@
     <string name="nip46_signer_app_last_used">used %1$s</string>
     <string name="nip46_signer_app_online">Connected</string>
     <string name="nip46_signer_app_offline">Offline</string>
+    <string name="nip46_signer_app_reconnect">Reconnect</string>
+    <string name="nip46_signer_reconnecting">Reconnecting to relays…</string>
     <string name="nip46_signer_app_relays_title">Relays</string>
     <string name="nip46_signer_app_relays_inbox">Signs over your inbox relays — this app brought none of its own, so it keeps no extra background connection.</string>
     <string name="nip46_signer_app_relays_own_hint">Amethyst holds a background connection to each of these while this app stays connected. Forget the app to drop them.</string>
