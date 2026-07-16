@@ -295,6 +295,9 @@
     <string name="loading_account">正在载入帐户</string>
     <string name="concord_redeeming_invite">兑换邀请中…</string>
     <string name="concord_invite_failed">无法获取此邀请。链接可能已过期或其中继不可访问。</string>
+    <string name="concord_invite_failed_invalid">此邀请链接无效或无法用此账户打开。</string>
+    <string name="concord_invite_failed_incompatible">此邀请是用新版本的应用创建，尚无法在此处打开。 询问已更新的链接，或在更新后重试。</string>
+    <string name="concord_invite_failed_revoked">此邀请链接已被撤销，不能再使用。请求新链接。</string>
     <string name="concord_home_title">Concord 频道</string>
     <string name="concord_home_empty">您尚未加入任何Concord频道。创建一个频道，或者打开一个邀请链接。</string>
     <string name="concord_channels_empty">尚无频道。</string>
@@ -2080,6 +2083,8 @@
     <string name="no_blossom_apps_found_description">找不到Blossom应用。请安装本地Blossom应用查看此文件</string>
     <string name="hidden_words">隐藏单词</string>
     <string name="hide_new_word_label">隐藏新单词或句子</string>
+    <string name="mute_hashtag">静音话题标签</string>
+    <string name="unmute_hashtag">取消静音话题标签</string>
     <string name="settings_muted_threads_title">静音的主题帖</string>
     <string name="settings_muted_threads_empty">无静音的主题帖</string>
     <string name="settings_muted_threads_unknown">未知主题帖 · %1$s</string>
