@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -54,13 +56,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
@@ -83,6 +89,7 @@ import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ActivityCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,8 +140,31 @@ fun ConnectedAppDetailScreen(
             )
         }
 
+    // NIP-46 remote clients are tailored: their self-declared metadata (name/url) heads the screen and
+    // their serviced-request history is shown, instead of the napplet manifest path this coordinate can't
+    // be resolved through. `null` for napplet/browser coordinates, which keep the generic rendering.
+    val nip46Client = remember(coordinate) { Nip46PermissionAuthorizer.clientPubKeyOf(coordinate) }
+    var nip46Info by remember(coordinate) { mutableStateOf<Nip46ClientInfo?>(null) }
+    LaunchedEffect(coordinate) {
+        if (nip46Client != null) {
+            nip46Info = withContext(Dispatchers.Default) { Amethyst.instance.nip46ClientStore.load(coordinate) }
+        }
+    }
+    val allActivity by accountViewModel.account.nip46Signer.activityLog.entries
+        .collectAsStateWithLifecycle()
+    val nip46Activity = remember(allActivity, nip46Client) { allActivity.filter { nip46Client != null && it.clientPubKey == nip46Client } }
+    val nip46Title = nip46Info?.name?.ifBlank { null } ?: stringResource(R.string.nip46_signer_remote_app)
+
     Scaffold(
-        topBar = { TopBarWithBackButton(state?.title ?: coordinate.substringAfter(':', "").ifBlank { coordinate.take(12) + "…" }, nav) },
+        topBar = {
+            val title =
+                if (nip46Client != null) {
+                    nip46Title
+                } else {
+                    state?.title ?: coordinate.substringAfter(':', "").ifBlank { coordinate.take(12) + "…" }
+                }
+            TopBarWithBackButton(title, nav)
+        },
     ) { padding ->
         val current = state
         if (current == null) {
@@ -154,7 +184,11 @@ fun ConnectedAppDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // App identity header
-            AppIdentityHeader(current)
+            if (nip46Client != null) {
+                Nip46AppHeader(title = nip46Title, url = nip46Info?.url, clientPubKey = nip46Client)
+            } else {
+                AppIdentityHeader(current)
+            }
 
             // Signing trust level section
             if (current.signerPolicy != null) {
@@ -217,6 +251,12 @@ fun ConnectedAppDetailScreen(
                 }
             }
 
+            // Recent activity (NIP-46 clients only)
+            if (nip46Client != null && nip46Activity.isNotEmpty()) {
+                SectionHeader(stringResource(R.string.nip46_signer_activity_title))
+                Nip46ActivityCard(nip46Activity)
+            }
+
             // Forget button
             Spacer(Modifier.size(8.dp))
             Button(
@@ -240,6 +280,57 @@ fun ConnectedAppDetailScreen(
                 Icon(MaterialSymbols.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.napplet_connected_app_forget))
+            }
+        }
+    }
+}
+
+@Composable
+private fun Nip46AppHeader(
+    title: String,
+    url: String?,
+    clientPubKey: String,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    MaterialSymbols.Key,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    url?.ifBlank { null } ?: (clientPubKey.take(16) + "…"),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    stringResource(R.string.nip46_signer_remote_app),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

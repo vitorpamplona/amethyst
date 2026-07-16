@@ -91,7 +91,6 @@ import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
@@ -567,66 +566,8 @@ private fun ActivitySection(entries: List<Nip46ActivityEntry>) {
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                entries.take(8).forEach { entry ->
-                    ActivityRow(entry)
-                }
-            }
-        }
+        Nip46ActivityCard(entries)
     }
-}
-
-@Composable
-private fun ActivityRow(entry: Nip46ActivityEntry) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(if (entry.ok) LiveGreen else MaterialTheme.colorScheme.error),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                describeNip46Activity(entry),
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                entry.clientPubKey.take(12) + "…",
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        TimeAgo(entry.atSeconds)
-    }
-}
-
-@Composable
-private fun describeNip46Activity(entry: Nip46ActivityEntry): String {
-    val base =
-        when (entry.method) {
-            "sign_event" -> stringResource(R.string.nip46_signer_act_signed_kind, entry.kind ?: 0)
-            "nip04_encrypt", "nip44_encrypt" -> stringResource(R.string.nip46_signer_act_encrypted)
-            "nip04_decrypt", "nip44_decrypt" -> stringResource(R.string.nip46_signer_act_decrypted)
-            "get_public_key" -> stringResource(R.string.nip46_signer_act_shared_pubkey)
-            "connect" -> stringResource(R.string.nip46_signer_act_connected)
-            "ping" -> stringResource(R.string.nip46_signer_act_ping)
-            "get_relays" -> stringResource(R.string.nip46_signer_act_listed_relays)
-            else -> stringResource(R.string.nip46_signer_act_other, entry.method)
-        }
-    return if (entry.ok) base else "$base · ${stringResource(R.string.nip46_signer_activity_denied)}"
 }
 
 @Composable
