@@ -962,6 +962,7 @@
     <string name="nip82_older_releases_hide">Hide older releases</string>
     <string name="shorts">Shorts</string>
     <string name="public_chats">Public Chats</string>
+    <string name="location_channels">Location Channels</string>
     <string name="follow_packs">Follow Packs</string>
     <string name="live_streams">Live Streams</string>
     <string name="nests">Nests</string>
