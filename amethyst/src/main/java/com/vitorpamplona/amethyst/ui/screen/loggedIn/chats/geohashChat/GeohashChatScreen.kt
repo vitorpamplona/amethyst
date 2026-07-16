@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -278,7 +280,6 @@ private fun GeohashIdentityAvatar(
     val postAsSelf = model.geohashPostAsSelf
     val avatarModifier =
         Modifier
-            .padding(start = 10.dp, end = 4.dp, bottom = 6.dp)
             .size(36.dp)
             .clip(CircleShape)
             .combinedClickable(
@@ -286,27 +287,49 @@ private fun GeohashIdentityAvatar(
                 onLongClick = { showNickname = true },
             )
 
-    if (postAsSelf) {
-        val picture by observeUserPicture(accountViewModel.userProfile(), accountViewModel)
-        RobohashFallbackAsyncImage(
-            robot = accountViewModel.userProfile().pubkeyHex,
-            model = picture,
-            contentDescription = "Posting as yourself — tap to go anonymous, long-press for a nickname",
-            modifier = avatarModifier,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            autoPlayGif = false,
-        )
-    } else {
-        Box(
-            avatarModifier.background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            SymbolIcon(
-                symbol = MaterialSymbols.PersonOff,
-                contentDescription = "Posting anonymously — tap to post as yourself, long-press for a nickname",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(20.dp),
+    Column(
+        modifier = Modifier.padding(start = 8.dp, end = 4.dp, bottom = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (postAsSelf) {
+            val picture by observeUserPicture(accountViewModel.userProfile(), accountViewModel)
+            RobohashFallbackAsyncImage(
+                robot = accountViewModel.userProfile().pubkeyHex,
+                model = picture,
+                contentDescription = "Posting as yourself — tap to go anonymous, long-press for a nickname",
+                modifier = avatarModifier,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                autoPlayGif = false,
+            )
+        } else {
+            Box(
+                avatarModifier.background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                SymbolIcon(
+                    symbol = MaterialSymbols.PersonOff,
+                    contentDescription = "Posting anonymously — tap to post as yourself, long-press for a nickname",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            // Discoverability affordance: a compact caption under the anonymous avatar that shows the
+            // chosen nickname, or invites setting one when blank. Tapping it opens the same editor as
+            // long-pressing the avatar, so the nickname control is reachable without knowing the gesture.
+            val nickname = model.geohashNickname
+            Text(
+                text = nickname.ifBlank { "+ name" },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (nickname.isBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .widthIn(max = 56.dp)
+                        .padding(top = 2.dp)
+                        .clickable { showNickname = true },
             )
         }
     }
