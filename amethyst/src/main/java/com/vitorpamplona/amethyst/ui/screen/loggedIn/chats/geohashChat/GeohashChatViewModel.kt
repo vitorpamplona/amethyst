@@ -22,10 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayCsvLoader
-import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
 import com.vitorpamplona.amethyst.service.geohash.GeohashChatIdentity
+import com.vitorpamplona.amethyst.service.geohash.GeohashRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
@@ -191,13 +189,8 @@ class GeohashChatViewModel : ViewModel() {
     }
 
     private suspend fun resolveRelays(): List<NormalizedRelayUrl> {
-        if (!refreshed) {
-            runCatching {
-                GeoRelayCsvLoader { Amethyst.instance.okHttpClients.getHttpClient(false) }.refresh(sharedDirectory)
-            }
-            refreshed = sharedDirectory.size > GeoRelayDirectory.FALLBACK.size
-        }
-        return sharedDirectory.closestRelays(geohash)
+        GeohashRelays.ensureLoaded()
+        return GeohashRelays.closestRelays(geohash)
     }
 
     override fun onCleared() {
@@ -211,10 +204,5 @@ class GeohashChatViewModel : ViewModel() {
         private const val POW_TIMEOUT_NANOS = 2_000_000_000L
 
         private fun powThreads(): Int = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
-
-        /** Process-wide directory, refreshed once from the live CSV then reused across channels. */
-        private val sharedDirectory = GeoRelayDirectory()
-
-        @Volatile private var refreshed = false
     }
 }

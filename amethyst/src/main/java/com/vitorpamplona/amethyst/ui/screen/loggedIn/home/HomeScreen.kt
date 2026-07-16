@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -86,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.NewHashtagPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderEphemeralBubble
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderGeohashBubble
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -475,6 +477,7 @@ fun DisplayLiveBubbles(
         itemsIndexed(feed.list, key = { _, item -> item.hashCode() }) { _, item ->
             when (item) {
                 is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
+                is GeohashChatChannel -> RenderGeohashBubble(item, accountViewModel, nav)
                 is LiveActivitiesChannel -> RenderLiveActivityBubble(item, accountViewModel, nav)
             }
         }
