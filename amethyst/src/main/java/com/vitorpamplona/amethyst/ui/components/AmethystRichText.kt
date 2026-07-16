@@ -163,8 +163,11 @@ class AmethystRichTextSegmentRenderer(
         modifier: Modifier,
     ) {
         when (segment) {
-            is InvoiceSegment -> MayBeInvoicePreview(segment.segmentText, accountViewModel)
-            is WithdrawSegment -> MayBeWithdrawal(segment.segmentText, accountViewModel)
+            // Matches the original no-preview switchboard: don't surface a pay/withdraw
+            // affordance when previews are suppressed — show the raw text instead.
+            is InvoiceSegment -> if (canPreview) MayBeInvoicePreview(segment.segmentText, accountViewModel) else Text(segment.segmentText)
+            is WithdrawSegment -> if (canPreview) MayBeWithdrawal(segment.segmentText, accountViewModel) else Text(segment.segmentText)
+            // Cashu + Clink decode locally (network only on tap), so they render in both modes.
             is CashuSegment -> CashuPreview(segment.segmentText, accountViewModel)
             is ClinkOfferSegment -> ClinkOfferPreview(segment.offer, accountViewModel, nav)
             else -> Text(segment.segmentText)
