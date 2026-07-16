@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,12 +50,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
@@ -61,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAut
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -175,12 +181,7 @@ private fun Nip46AppCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                MaterialSymbols.Key,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp),
-            )
+            Nip46AppIcon(entry.info?.image, Modifier.size(48.dp))
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -242,6 +243,45 @@ private fun AppSignerPolicy.shortLabel(): String =
         AppSignerPolicy.REASONABLE -> stringResource(R.string.napplet_policy_reasonable)
         AppSignerPolicy.PARANOID -> stringResource(R.string.napplet_policy_paranoid)
     }
+
+/**
+ * The avatar for a NIP-46 client: its self-declared [image] (the app/site icon it advertised in its
+ * connect metadata) drawn in a circle, falling back to the Key glyph when it has none or the image
+ * fails to load. Shared by the list card and the detail header. We only render an icon the app itself
+ * provided — we never fetch a site favicon from the main app, which would bypass Tor and leak the
+ * user's IP (see BrowserIconRegistry).
+ */
+@Composable
+internal fun Nip46AppIcon(
+    image: String?,
+    modifier: Modifier = Modifier,
+) {
+    val model = image?.takeIf { it.isNotBlank() }
+    Box(
+        modifier = modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (model == null) {
+            Icon(
+                MaterialSymbols.Key,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(24.dp),
+            )
+        } else {
+            val glyph = rememberMaterialSymbolPainter(MaterialSymbols.Key, MaterialTheme.colorScheme.onPrimaryContainer)
+            AsyncImage(
+                model = model,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                placeholder = glyph,
+                error = glyph,
+                fallback = glyph,
+            )
+        }
+    }
+}
 
 /**
  * The identity line shown for a NIP-46 client: its self-declared website (host only) when it
