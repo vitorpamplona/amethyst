@@ -138,17 +138,20 @@ private fun darkColors(accent: AccentColorType): ColorScheme {
     val surface = Color.Black
     return darkColorScheme(
         primary = primary,
-        onPrimary = onAccent(primary),
+        onPrimary = Color.White,
         primaryContainer = accentContainer(primary, surface, 0.16f),
         onPrimaryContainer = onAccentContainer(primary, dark = true),
         secondary = secondary,
         onSecondary = onAccent(secondary),
-        secondaryContainer = accentContainer(secondary, surface, 0.16f),
-        onSecondaryContainer = onAccentContainer(secondary, dark = true),
+        // Container roles derive from the accent (primary), not the teal secondary. Secondary/tertiary
+        // container surfaces (FilledTonalButton, tonal chips) were neutral before; deriving them from
+        // teal made them read as teal-on-teal, so they follow the accent hue instead.
+        secondaryContainer = accentContainer(primary, surface, 0.16f),
+        onSecondaryContainer = onAccentContainer(primary, dark = true),
         tertiary = secondary,
         onTertiary = onAccent(secondary),
-        tertiaryContainer = accentContainer(secondary, surface, 0.16f),
-        onTertiaryContainer = onAccentContainer(secondary, dark = true),
+        tertiaryContainer = accentContainer(primary, surface, 0.16f),
+        onTertiaryContainer = onAccentContainer(primary, dark = true),
         inversePrimary = accentPrimary(accent, dark = false),
         surfaceTint = primary,
         // Neutral (hue-free) base + surface ramp. Left unset, these fall back to Material's
@@ -178,17 +181,20 @@ private fun lightColors(accent: AccentColorType): ColorScheme {
     val surface = Color.White
     return lightColorScheme(
         primary = primary,
-        onPrimary = onAccent(primary),
+        onPrimary = Color.White,
         primaryContainer = accentContainer(primary, surface, 0.12f),
         onPrimaryContainer = onAccentContainer(primary, dark = false),
         secondary = secondary,
         onSecondary = onAccent(secondary),
-        secondaryContainer = accentContainer(secondary, surface, 0.12f),
-        onSecondaryContainer = onAccentContainer(secondary, dark = false),
+        // Container roles derive from the accent (primary), not the teal secondary. Secondary/tertiary
+        // container surfaces (FilledTonalButton, tonal chips) were neutral before; deriving them from
+        // teal made them read as teal-on-teal, so they follow the accent hue instead.
+        secondaryContainer = accentContainer(primary, surface, 0.12f),
+        onSecondaryContainer = onAccentContainer(primary, dark = false),
         tertiary = secondary,
         onTertiary = onAccent(secondary),
-        tertiaryContainer = accentContainer(secondary, surface, 0.12f),
-        onTertiaryContainer = onAccentContainer(secondary, dark = false),
+        tertiaryContainer = accentContainer(primary, surface, 0.12f),
+        onTertiaryContainer = onAccentContainer(primary, dark = false),
         inversePrimary = accentPrimary(accent, dark = true),
         surfaceTint = primary,
         // Neutral (hue-free) base + surface ramp. Left unset, these fall back to Material's
