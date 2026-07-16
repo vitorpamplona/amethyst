@@ -70,6 +70,8 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableEmail
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextInteractions
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextSegmentRenderer
@@ -204,7 +206,7 @@ class DesktopRichTextSegmentRenderer(
                     contentScale = ContentScale.Fit,
                 )
             is PdfSegment -> RenderPdfCard(segment.segmentText)
-            else -> ClickableLink(segment.segmentText, segment.segmentText)
+            else -> ClickableUrl(segment.segmentText, underline = true)
         }
     }
 
@@ -293,7 +295,7 @@ class DesktopRichTextSegmentRenderer(
         when (segment) {
             is InvoiceSegment -> RenderInvoiceCard(segment.segmentText, callbacks)
             is CashuSegment -> RenderCashuCard(segment.segmentText)
-            is WithdrawSegment -> ClickableLink(segment.segmentText, segment.segmentText)
+            is WithdrawSegment -> ClickableUrl(segment.segmentText, underline = true)
             else -> Text(segment.segmentText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
         }
     }
@@ -302,35 +304,20 @@ class DesktopRichTextSegmentRenderer(
     override fun LinkPreview(
         url: String,
         modifier: Modifier,
-    ) = ClickableLink(url, url)
+    ) = ClickableUrl(url, underline = true)
 
     @Composable
     override fun Url(
         url: String,
         displayText: String,
         modifier: Modifier,
-    ) = ClickableLink(url, displayText)
+    ) = ClickableUrl(url, displayText, underline = true)
 
     @Composable
     override fun Email(
         address: String,
         modifier: Modifier,
-    ) = Text(
-        text = address,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.primary,
-        textDecoration = TextDecoration.Underline,
-        modifier =
-            Modifier
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable {
-                    runCatching {
-                        java.awt.Desktop
-                            .getDesktop()
-                            .browse(URI("mailto:$address"))
-                    }
-                },
-    )
+    ) = ClickableEmail(address, underline = true)
 
     @Composable
     override fun Phone(
@@ -374,31 +361,6 @@ class DesktopRichTextSegmentRenderer(
         quotesLeft: Int,
         modifier: Modifier,
     ) = RenderSecretEmoji(segment.segmentText)
-}
-
-@Composable
-private fun ClickableLink(
-    url: String,
-    displayText: String,
-) {
-    Text(
-        text = displayText,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.primary,
-        textDecoration = TextDecoration.Underline,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable {
-                    runCatching {
-                        java.awt.Desktop
-                            .getDesktop()
-                            .browse(URI(url))
-                    }
-                },
-    )
 }
 
 @Composable
