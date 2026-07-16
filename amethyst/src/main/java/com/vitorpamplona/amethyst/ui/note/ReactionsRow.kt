@@ -929,7 +929,7 @@ fun BoostReaction(
         },
     ) {
         ObserveBoostIcon(baseNote, accountViewModel) { hasBoosted ->
-            RepostedIcon(iconSizeModifier, if (hasBoosted) Color.Unspecified else grayTint)
+            RepostedIcon(iconSizeModifier, if (hasBoosted) MaterialTheme.colorScheme.primary else grayTint)
         }
 
         if (wantsToBoost) {

@@ -51,7 +51,7 @@ public val Reposted: ImageVector
             viewportHeight = 24.0f,
         ).apply {
             path(
-                fill = SolidColor(Color(0xFF59bc6d)),
+                fill = SolidColor(Color.Black),
                 stroke = null,
                 strokeLineWidth = 0.0f,
                 strokeLineCap = Butt,

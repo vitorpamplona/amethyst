@@ -65,12 +65,15 @@ fun AmethystIcon(iconSize: Dp) {
 }
 
 @Composable
-fun FollowingIcon(modifier: Modifier) {
+fun FollowingIcon(
+    modifier: Modifier,
+    tint: Color = MaterialTheme.colorScheme.primary,
+) {
     Icon(
         imageVector = Following,
         contentDescription = stringRes(id = R.string.following),
         modifier = modifier,
-        tint = Color.Unspecified,
+        tint = tint,
     )
 }
 
@@ -99,7 +102,7 @@ fun DownloadForOfflineIcon(
 @Composable
 fun LikedIcon(
     modifier: Modifier,
-    tint: Color = Color.Unspecified,
+    tint: Color = MaterialTheme.colorScheme.primary,
 ) {
     Icon(
         imageVector = Liked,
@@ -151,7 +154,7 @@ fun RepostIcon(
 @Composable
 fun RepostedIcon(
     modifier: Modifier,
-    tint: Color = Color.Unspecified,
+    tint: Color = MaterialTheme.colorScheme.primary,
 ) {
     Icon(
         imageVector = Reposted,

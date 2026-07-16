@@ -51,7 +51,7 @@ public val Following: ImageVector
                 viewportHeight = 30f,
             ).apply {
                 path(
-                    fill = SolidColor(Color(0xFF7F2EFF)),
+                    fill = SolidColor(Color.Black),
                     fillAlpha = 1.0f,
                     stroke = null,
                     strokeAlpha = 1.0f,
@@ -77,9 +77,9 @@ public val Following: ImageVector
                     close()
                 }
                 path(
-                    fill = SolidColor(Color(0xFFFFFFFF)),
+                    fill = SolidColor(Color.Black),
                     fillAlpha = 1.0f,
-                    stroke = SolidColor(Color(0xFF7F2EFF)),
+                    stroke = SolidColor(Color.Black),
                     strokeAlpha = 1.0f,
                     strokeLineWidth = 0.5f,
                     strokeLineCap = StrokeCap.Butt,
@@ -101,9 +101,9 @@ public val Following: ImageVector
                     close()
                 }
                 path(
-                    fill = SolidColor(Color(0xFFFFFFFF)),
+                    fill = SolidColor(Color.Black),
                     fillAlpha = 1.0f,
-                    stroke = SolidColor(Color(0xFF7F2EFF)),
+                    stroke = SolidColor(Color.Black),
                     strokeAlpha = 1.0f,
                     strokeLineWidth = 0.5f,
                     strokeLineCap = StrokeCap.Butt,
