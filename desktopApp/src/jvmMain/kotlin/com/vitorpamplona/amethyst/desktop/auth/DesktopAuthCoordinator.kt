@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.auth
 
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalDecision
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalPolicy
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalRequests
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalScope
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalStore
 import com.vitorpamplona.amethyst.commons.relayClient.auth.PendingAuthApproval
@@ -34,12 +35,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.PersistentMap
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
 /**
  * Desktop NIP-42 AUTH wiring.
@@ -79,13 +76,13 @@ class DesktopAuthCoordinator(
     @Volatile
     private var active: ActiveAuth? = null
 
-    private val _pendingApprovals = MutableStateFlow<PersistentMap<NormalizedRelayUrl, PendingAuthApproval>>(persistentMapOf())
+    private val requests = AuthApprovalRequests()
 
     /**
      * Tier-2 AUTH challenges awaiting the user's `[Once] [Always] [Never]`
      * decision. The banner UI subscribes and calls [resolve] to settle each.
      */
-    val pendingApprovals: StateFlow<PersistentMap<NormalizedRelayUrl, PendingAuthApproval>> = _pendingApprovals.asStateFlow()
+    val pendingApprovals: StateFlow<PersistentMap<NormalizedRelayUrl, PendingAuthApproval>> = requests.pending
 
     /** Wire AUTH for a newly logged-in account. Idempotent. */
     fun onLogin(account: AccountState.LoggedIn) {
@@ -97,9 +94,7 @@ class DesktopAuthCoordinator(
                 AuthApprovalPolicy(
                     selfApprovedRelays = { selfApprovedRelaysFor(account.pubKeyHex) },
                     store = store,
-                    onPromptRequired = { pending ->
-                        _pendingApprovals.update { it.put(pending.relayUrl, pending) }
-                    },
+                    onPromptRequired = { pending -> requests.add(pending) },
                 )
             val authenticator =
                 RelayAuthenticator(
@@ -121,26 +116,35 @@ class DesktopAuthCoordinator(
     }
 
     /**
-     * Resolve a tier-2 [PendingAuthApproval] from the banner UI.
-     *
-     * Removes the entry from [pendingApprovals] before completing the
-     * deferred, so the suspended signer wakes up exactly once.
+     * Resolve a tier-2 [PendingAuthApproval] from the banner UI. The suspended
+     * signer wakes up exactly once with the user's pick.
      */
     fun resolve(
         relayUrl: NormalizedRelayUrl,
         scope: AuthApprovalScope,
     ) {
-        val pending = _pendingApprovals.value[relayUrl] ?: return
-        _pendingApprovals.update { it.remove(relayUrl) }
-        pending.decision.complete(scope)
+        requests.resolve(relayUrl, scope)
+    }
+
+    /**
+     * Called when the active account's NIP-17 DM-inbox (kind:10050) set loads
+     * or changes. Auto-approves any pending tier-2 prompt whose relay is now in
+     * that set, fixing the cold-boot race where an own inbox relay challenges
+     * for AUTH before kind:10050 has been fetched and gets a spurious prompt
+     * that nothing would otherwise re-evaluate.
+     *
+     * [trusted] must be the strict kind:10050 inbox set (same tier-1 source as
+     * [selfApprovedRelaysFor]) — never the lenient NIP-65 fallback.
+     */
+    fun onSelfApprovedRelaysChanged(trusted: Set<NormalizedRelayUrl>) {
+        requests.autoApproveNowTrusted(trusted)
     }
 
     private fun tearDownLocked() {
         val prev = active ?: return
         prev.authenticator.destroy()
         // Cancel any in-flight tier-2 prompts so suspended signers wake up.
-        _pendingApprovals.value.values.forEach { it.decision.complete(AuthApprovalScope.BLOCKED) }
-        _pendingApprovals.value = persistentMapOf()
+        requests.cancelAll()
         active = null
     }
 
