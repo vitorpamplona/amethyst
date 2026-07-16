@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -105,6 +106,10 @@ fun ChatReactionChips(
     // default react/delete — e.g. geohash chat reacting with its anonymous per-cell
     // identity. Null keeps the standard account-signed behavior for every other caller.
     onReact: ((Note, String) -> Unit)? = null,
+    // When set, a reaction is highlighted as "mine" if its author is any of these pubkeys
+    // instead of the logged-in account — e.g. geohash chat, where "me" is the anonymous
+    // per-cell identity (and the account, when posting as self). Null uses the account.
+    myIdentities: Set<HexKey>? = null,
 ) {
     // Deliberate cost: this observes reactions/zaps for EVERY visible message
     // (the ids fold into the batched EventFinder relay filters — one shared REQ,
@@ -114,13 +119,19 @@ fun ChatReactionChips(
     val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
     val chips by
-        remember(reactionsState) {
+        remember(reactionsState, myIdentities) {
             derivedStateOf {
                 val note = reactionsState?.note ?: baseNote
                 val me = accountViewModel.userProfile()
                 note.reactions
                     .map { (type, reactors) ->
-                        ReactionChip(type, reactors.size, reactors.any { it.author == me })
+                        val mine =
+                            if (myIdentities != null) {
+                                reactors.any { it.author?.pubkeyHex in myIdentities }
+                            } else {
+                                reactors.any { it.author == me }
+                            }
+                        ReactionChip(type, reactors.size, mine)
                     }.sortedByDescending { it.count }
                     .toImmutableList()
             }

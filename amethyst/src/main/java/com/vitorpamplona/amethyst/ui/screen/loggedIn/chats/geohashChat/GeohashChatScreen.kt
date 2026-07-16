@@ -267,7 +267,7 @@ private fun GeohashMessageList(
             GeohashBubble(
                 msg = msg,
                 position = groupPositionFor(messages, index),
-                isMine = msg.event.pubKey in myPubKeys,
+                myPubKeys = myPubKeys,
                 // The message rendered directly above this one — a reply targeting it is redundant,
                 // so RenderReplyRow suppresses the quote in that case.
                 previousNoteId = messages.getOrNull(index - 1)?.note?.idHex,
@@ -284,7 +284,7 @@ private fun GeohashMessageList(
 private fun GeohashBubble(
     msg: GeoMsg,
     position: ChatGroupPosition,
-    isMine: Boolean,
+    myPubKeys: Set<String>,
     previousNoteId: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -292,6 +292,7 @@ private fun GeohashBubble(
     onReact: (Note, String) -> Unit,
 ) {
     val message = msg.event
+    val isMine = message.pubKey in myPubKeys
     ChatBubbleLayout(
         isLoggedInUser = isMine,
         isDraft = false,
@@ -322,7 +323,7 @@ private fun GeohashBubble(
                 onReactOverride = onReact,
             )
         },
-        reactionsRow = { ChatReactionChips(msg.note, accountViewModel, nav, onReact = onReact) },
+        reactionsRow = { ChatReactionChips(msg.note, accountViewModel, nav, onReact = onReact, myIdentities = myPubKeys) },
         footerRow =
             if (position.isLastOfGroup) {
                 { GeohashBubbleFooter(message) }
