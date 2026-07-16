@@ -1367,6 +1367,15 @@ private fun AppInner(
                                 remember(account, relayManager, scope) {
                                     DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
                                 }
+                            // Cold-boot AUTH race fix: when the account's own kind:10050 DM-inbox
+                            // set loads (often AFTER an inbox relay has already challenged for
+                            // AUTH), retroactively auto-approve any pending tier-2 prompt for a
+                            // relay that is actually tier-1, instead of leaving a spurious banner.
+                            LaunchedEffect(authCoordinator, accountRelays) {
+                                accountRelays.dmRelayList.collect { dmInbox ->
+                                    authCoordinator.onSelfApprovedRelaysChanged(dmInbox)
+                                }
+                            }
                             val iAccount =
                                 remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
                                     DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
