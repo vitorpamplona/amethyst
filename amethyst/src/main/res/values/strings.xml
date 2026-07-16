@@ -959,6 +959,7 @@
     <string name="nip46_signer_batch_select_all">Select all</string>
     <string name="nip46_signer_batch_select_none">Select none</string>
     <string name="nip46_signer_batch_remember">Remember these for each app</string>
+    <string name="nip46_signer_batch_signing_as">as %1$s</string>
     <string name="nip46_signer_batch_allow">Allow %1$d</string>
     <string name="nip46_signer_batch_deny">Deny %1$d</string>
     <string name="nip46_signer_activity_title">Recent activity</string>
