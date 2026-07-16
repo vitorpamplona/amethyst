@@ -284,21 +284,14 @@ val LightMaxWidthWithBackground =
         .fillMaxWidth()
         .background(LightColorPalette.background)
 
-val DarkSelectedReactionBoxModifier =
+// Geometry only — no color. The fill is applied live from the scheme's secondaryContainer in
+// the selectedReactionBoxModifier getter so the selected-reaction highlight follows the accent
+// instead of freezing to the purple palette captured at class load.
+val SelectedReactionBoxOuterModifier =
     Modifier
         .padding(horizontal = 5.dp, vertical = 5.dp)
         .size(Size40dp)
         .clip(shape = SmallBorder)
-        .background(DarkColorPalette.secondaryContainer)
-        .padding(5.dp)
-
-val LightSelectedReactionBoxModifier =
-    Modifier
-        .padding(horizontal = 5.dp, vertical = 5.dp)
-        .size(Size40dp)
-        .clip(shape = SmallBorder)
-        .background(LightColorPalette.secondaryContainer)
-        .padding(5.dp)
 
 val DarkChannelNotePictureModifier =
     Modifier
@@ -348,17 +341,13 @@ val lightLargeProfilePictureModifier =
         .clip(shape = CircleShape)
         .border(3.dp, LightColorPalette.onBackground, CircleShape)
 
-val darkNewItemBubbleModifier =
+// Geometry only — no color. The fill is applied live from the scheme's primary in the
+// newItemBubbleModifier getter so the unread dot follows the accent (matching its sibling
+// newItemBackgroundColor) instead of freezing to the purple palette captured at class load.
+val NewItemBubbleShapeModifier =
     Modifier
         .size(10.dp)
         .clip(shape = CircleShape)
-        .background(DarkColorPalette.primary)
-
-val lightNewItemBubbleModifier =
-    Modifier
-        .size(10.dp)
-        .clip(shape = CircleShape)
-        .background(LightColorPalette.primary)
 
 val darkBlackTagModifier =
     Modifier
@@ -613,7 +602,7 @@ val ColorScheme.relayIconModifier: Modifier
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.selectedReactionBoxModifier: Modifier
-    get() = if (isLight) LightSelectedReactionBoxModifier else DarkSelectedReactionBoxModifier
+    get() = SelectedReactionBoxOuterModifier.background(secondaryContainer).padding(5.dp)
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.largeProfilePictureModifier: Modifier
@@ -621,7 +610,7 @@ val ColorScheme.largeProfilePictureModifier: Modifier
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.newItemBubbleModifier: Modifier
-    get() = if (isLight) lightNewItemBubbleModifier else darkNewItemBubbleModifier
+    get() = NewItemBubbleShapeModifier.background(primary)
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.blackTagModifier: Modifier
