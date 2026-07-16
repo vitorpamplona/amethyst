@@ -311,6 +311,7 @@
     <string name="concord_invite_failed">Could not fetch this invite. The link may be expired or its relays unreachable.</string>
     <string name="concord_invite_failed_invalid">This invite link is invalid or can\'t be opened with this account.</string>
     <string name="concord_invite_failed_incompatible">This invite was created with a newer version of the app and can\'t be opened here yet. Ask for an updated link or try again after updating.</string>
+    <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_home_title">Concord Channels</string>
     <string name="concord_home_empty">You haven\'t joined any Concord Channels yet. Create one, or open an invite link.</string>
     <string name="concord_channels_empty">No channels yet.</string>

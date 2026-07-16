@@ -157,6 +157,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -2054,14 +2055,17 @@ class Account(
 
         val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
         val wraps = client.fetchAll(filters = filters)
-        val bundle = wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) }
-        if (bundle == null) {
-            // The filter matches only kind-33301 bundles authored by this link signer, so any wrap
-            // that came back IS a bundle we simply couldn't open — a wrong token or, as the reference
-            // client evolves, a bundle format newer than we support. Distinguish that from "nothing on
-            // any relay" so the UI skips the pointless retry on an incompatible link.
-            return if (wraps.isNotEmpty()) ConcordInviteResult.Incompatible else ConcordInviteResult.NotReachable
-        }
+
+        // Resolve the coordinate per CORD-05 §2 (newest wins; a vsk=9 tombstone revokes even over a
+        // stale openable copy) so we honour revocation and can tell the user *why* a link won't open
+        // instead of stranding them on a spinner that retries a link we can never redeem.
+        val bundle =
+            when (val status = ConcordActions.classifyInvite(wraps, parsed.fragment.token)) {
+                is InviteBundleStatus.Live -> status.invite
+                InviteBundleStatus.Revoked -> return ConcordInviteResult.Revoked
+                InviteBundleStatus.Unreadable -> return ConcordInviteResult.Incompatible
+                InviteBundleStatus.Absent -> return ConcordInviteResult.NotReachable
+            }
 
         val entry =
             ConcordCommunityListEntry(

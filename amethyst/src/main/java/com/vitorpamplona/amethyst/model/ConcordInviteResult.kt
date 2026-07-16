@@ -42,6 +42,12 @@ sealed interface ConcordInviteResult {
     data object NotReachable : ConcordInviteResult
 
     /**
+     * The link was revoked: the newest event at its coordinate is a `vsk=9` revocation
+     * tombstone (CORD-05 §2). Retrying can't help — the owner retired this link.
+     */
+    data object Revoked : ConcordInviteResult
+
+    /**
      * The bundle event was found but could not be opened with the link's token —
      * typically because it was minted by a newer/incompatible Concord client whose
      * bundle format this app can't read yet. Retrying can't help.

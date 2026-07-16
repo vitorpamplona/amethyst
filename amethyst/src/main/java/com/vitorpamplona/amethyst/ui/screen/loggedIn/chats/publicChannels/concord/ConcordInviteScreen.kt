@@ -85,6 +85,8 @@ fun ConcordInviteScreen(
                         RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed_invalid, canRetry = false)
                     is ConcordInviteResult.Incompatible ->
                         RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed_incompatible, canRetry = false)
+                    is ConcordInviteResult.Revoked ->
+                        RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed_revoked, canRetry = false)
                     is ConcordInviteResult.NotReachable ->
                         RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed, canRetry = true)
                 }
