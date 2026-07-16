@@ -1728,6 +1728,52 @@ fun MainContent(
         onDispose { relayManager.unsubscribe(bootstrapSubId) }
     }
 
+    // The bootstrap subscription above only reaches the default relays. A user's
+    // own account data — Blossom server list (kind 10063), DM/search/blocked
+    // relay lists — is published to their write relays, not the defaults, so it
+    // won't be found there. Re-fetch those kinds from the NIP-65 outbox
+    // (write + untagged relays) whenever it becomes known.
+    LaunchedEffect(iAccount) {
+        iAccount.nip65RelayList.outboxFlow.collect { outbox ->
+            if (outbox.isEmpty()) return@collect
+            relayManager.subscribe(
+                subId = "account-config-outbox",
+                filters =
+                    listOf(
+                        Filter(
+                            kinds =
+                                listOf(
+                                    AdvertisedRelayListEvent.KIND,
+                                    ChatMessageRelayListEvent.KIND,
+                                    SearchRelayListEvent.KIND,
+                                    BlockedRelayListEvent.KIND,
+                                    BlossomServersEvent.KIND,
+                                ),
+                            authors = listOf(account.pubKeyHex),
+                            limit = 10,
+                        ),
+                    ),
+                relays = outbox,
+                listener =
+                    object : SubscriptionListener {
+                        override fun onEvent(
+                            event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                            isLive: Boolean,
+                            relay: NormalizedRelayUrl,
+                            forFilters: List<Filter>?,
+                        ) {
+                            if (event is AdvertisedRelayListEvent || event is BlossomServersEvent) {
+                                scope.launch(Dispatchers.IO) {
+                                    localCache.justConsumeMyOwnEvent(event)
+                                }
+                            }
+                            accountRelays.consumeIfRelevant(event)
+                        }
+                    },
+            )
+        }
+    }
+
     // Subscribe to incoming DMs and process into chatroomList
     LaunchedEffect(account) {
         relayManager.connectedRelays.first { it.isNotEmpty() }
