@@ -384,6 +384,17 @@
                 android:value="Persistent real-time messaging relay connection for Nostr protocol. Maintains WebSocket connections to user-configured inbox relays for immediate notification delivery of direct messages, zaps, and mentions." />
         </service>
 
+        <service
+            android:name=".service.notifications.NotificationServiceTileService"
+            android:icon="@drawable/amethyst_service"
+            android:label="@string/always_on_notif_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".service.notifications.BootCompletedReceiver"
             android:exported="false">

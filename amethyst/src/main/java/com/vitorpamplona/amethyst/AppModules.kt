@@ -1104,11 +1104,13 @@ class AppModules(
                 }
         }
 
-        // Watch for account login and start/stop always-on notification service
+        // Watch for account login and start/stop always-on notification service.
+        // The manager gates on the global master switch + each account's participation
+        // (not the active account), so it only needs to run while someone is logged in.
         applicationIOScope.launch {
             sessionManager.accountContent.collectLatest { state ->
                 if (state is AccountState.LoggedIn) {
-                    alwaysOnNotificationServiceManager.watchAccount(state.account)
+                    alwaysOnNotificationServiceManager.start()
                 } else {
                     alwaysOnNotificationServiceManager.stop()
                 }
