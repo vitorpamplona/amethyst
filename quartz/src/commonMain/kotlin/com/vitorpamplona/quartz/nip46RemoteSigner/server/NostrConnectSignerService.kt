@@ -93,9 +93,10 @@ class NostrConnectSignerService(
      * and the in-memory dedup set does not survive that restart — so without an age gate the same
      * minutes-old request gets signed again. Applied both as a `since` on the subscription (compliant
      * relays never replay it) and as a receive-side guard (for relays that ignore `since`). The window
-     * must exceed realistic client/relay clock skew so a genuinely fresh request is never dropped.
+     * must exceed realistic client/relay clock skew so a genuinely fresh request is never dropped, but
+     * kept small so an app restart re-signs as little as possible (relays replay only this far back).
      */
-    val maxRequestAgeSeconds: Long = 120,
+    val maxRequestAgeSeconds: Long = 30,
 ) {
     /**
      * Fixed-window per-author rate limit. Touched only by the single consumer
