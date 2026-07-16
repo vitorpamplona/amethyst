@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.desktop.auth
 
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalScope
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalStore
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.util.prefs.Preferences
 
 /**
@@ -46,6 +48,16 @@ import java.util.prefs.Preferences
  * `ONCE` scope is never persisted — that's the in-memory contract enforced
  * by the [AuthApprovalStore] interface. This implementation only writes
  * `ALWAYS` and `BLOCKED`.
+ *
+ * **Key length:** `java.util.prefs.Preferences` caps keys at
+ * [Preferences.MAX_KEY_LENGTH] (80 chars) and throws `IllegalArgumentException`
+ * from [Preferences.put] for anything longer. Relay URLs routinely exceed that
+ * — e.g. an outbox-proxy URL that embeds an npub and a query string
+ * (`wss://filter.nostr.wine/npub1…?broadcast=true`, 100+ chars). Storing such a
+ * URL raw made [setScope] throw; the caller (`RelayAuthenticator`) swallows the
+ * exception, so the `ALWAYS` / `BLOCKED` grant was silently never persisted and
+ * the AUTH banner re-appeared on every challenge. [keyFor] folds any over-long
+ * URL into a bounded 64-char SHA-256 hex key to stay under the cap.
  */
 class PreferencesAuthApprovalStore(
     private val accountPubKeyHex: String,
@@ -55,8 +67,27 @@ class PreferencesAuthApprovalStore(
             "/com/vitorpamplona/amethyst/desktop/auth/$accountPubKeyHex",
         )
 
+    /**
+     * The Preferences key for a relay URL, guaranteed to fit within
+     * [Preferences.MAX_KEY_LENGTH].
+     *
+     * Short URLs are stored verbatim (readable, and backward-compatible with
+     * grants written before this fix). URLs at or over the limit are hashed to
+     * a `sha256:`-prefixed 64-char hex digest (71 chars total, under the 80
+     * cap). The prefix keeps the hashed keyspace disjoint from raw relay URLs,
+     * which always start with `ws://` / `wss://`, so the two can never collide.
+     */
+    private fun keyFor(relayUrl: NormalizedRelayUrl): String {
+        val url = relayUrl.url
+        return if (url.length <= Preferences.MAX_KEY_LENGTH) {
+            url
+        } else {
+            "sha256:" + sha256(url.encodeToByteArray()).toHexKey()
+        }
+    }
+
     override suspend fun getScope(relayUrl: NormalizedRelayUrl): AuthApprovalScope? {
-        val raw = node.get(relayUrl.url, null) ?: return null
+        val raw = node.get(keyFor(relayUrl), null) ?: return null
         return runCatching { AuthApprovalScope.valueOf(raw) }.getOrNull()
     }
 
@@ -70,7 +101,7 @@ class PreferencesAuthApprovalStore(
             // upgrade to "until next clear()".
             return
         }
-        node.put(relayUrl.url, scope.name)
+        node.put(keyFor(relayUrl), scope.name)
         node.flush()
     }
 
