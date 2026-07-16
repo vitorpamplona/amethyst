@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
@@ -106,7 +105,7 @@ fun ConnectedAppsScreen(
     LaunchedEffect(Unit) {
         val initial =
             withContext(Dispatchers.Default) {
-                loadConnectedApps(capabilityLedger, signerLedger, accountViewModel.account.signer.pubKey)
+                loadConnectedApps(capabilityLedger, signerLedger)
             }
         items = initial
         // Only include real napplet authors in the manifest subscription — skip the "browser"
@@ -204,82 +203,12 @@ private fun ConnectedAppCard(
     onClick: () -> Unit,
 ) {
     val author = remember(entry.coordinate) { entry.coordinate.substringBefore(':') }
-    val nip46Client = remember(entry.coordinate) { Nip46PermissionAuthorizer.clientPubKeyOf(entry.coordinate) }
     when {
         author == BROWSER_AUTHOR -> {
             val url = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
             BrowserAppCard(url = url, entry = entry, onClick = onClick)
         }
-        nip46Client != null -> RemoteSignerAppCard(clientPubKey = nip46Client, entry = entry, onClick = onClick)
         else -> NappletAppCard(author = author, entry = entry, untitled = untitled, onClick = onClick)
-    }
-}
-
-/** Card for a NIP-46 remote-signer client — an app that signs through Amethyst over relays. */
-@Composable
-private fun RemoteSignerAppCard(
-    clientPubKey: HexKey,
-    entry: ConnectedAppEntry,
-    onClick: () -> Unit,
-) {
-    val npub = remember(clientPubKey) { runCatching { NPub.create(clientPubKey) }.getOrDefault(clientPubKey.take(12) + "…") }
-    var info by remember(entry.coordinate) { mutableStateOf<Nip46ClientInfo?>(null) }
-    LaunchedEffect(entry.coordinate) {
-        info = withContext(Dispatchers.Default) { Amethyst.instance.nip46ClientStore.load(entry.coordinate) }
-    }
-    val title = info?.name?.ifBlank { null } ?: stringResource(R.string.nip46_signer_remote_app)
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                MaterialSymbols.Key,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp),
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    npub,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontFamily = FontFamily.Monospace,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                if (entry.signerPolicy != null) {
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text(entry.signerPolicy.shortLabel(), style = MaterialTheme.typography.labelSmall) },
-                    )
-                }
-                Icon(
-                    MaterialSymbols.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
     }
 }
 
@@ -448,18 +377,16 @@ private fun AppSignerPolicy.shortLabel(): String =
 private suspend fun loadConnectedApps(
     capabilityLedger: NappletPermissionLedger,
     signerLedger: NostrSignerPermissionLedger,
-    signerPubKey: HexKey,
 ): List<ConnectedAppEntry> {
     val capGrants = capabilityLedger.allPersistedGrants()
     val signerPolicies = signerLedger.store.allPolicies()
     val allCoordinates = (capGrants.keys + signerPolicies.keys).toSet()
     return allCoordinates
-        // NIP-46 grants are namespaced by signer, so only surface this account's remote clients;
-        // napplet/browser grants stay app-global and are shown for every account as before.
-        .filter { coordinate ->
-            coordinate.substringBefore(':') != Nip46PermissionAuthorizer.COORDINATE_PREFIX ||
-                Nip46PermissionAuthorizer.belongsTo(coordinate, signerPubKey)
-        }.map { coordinate ->
+        // NIP-46 remote-signer clients have their own screen (Nip46ConnectedAppsScreen) because,
+        // unlike napplets/browser origins, each holds a live background relay subscription that
+        // needs managing. Exclude them here so this screen stays napplet/nsite/browser only.
+        .filter { coordinate -> coordinate.substringBefore(':') != Nip46PermissionAuthorizer.COORDINATE_PREFIX }
+        .map { coordinate ->
             ConnectedAppEntry(
                 coordinate = coordinate,
                 signerPolicy = signerPolicies[coordinate],

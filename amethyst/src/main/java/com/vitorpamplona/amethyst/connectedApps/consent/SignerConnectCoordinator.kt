@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
@@ -64,16 +65,31 @@ object SignerConnectCoordinator {
         val deferred = CompletableDeferred<AppConnectResult>()
         pending[token] = Pending(info, deferred)
 
-        context.startActivity(
-            Intent(context, SignerConnectActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .putExtra(EXTRA_TOKEN, token),
-        )
+        // Fast path when Amethyst already owns the foreground; the full-screen-intent notification
+        // below is what surfaces the dialog when a connect request arrives while backgrounded (see
+        // SignerConsentNotifier). Wrapped because a BAL-blocked launch can throw on some OEMs.
+        runCatching {
+            context.startActivity(
+                Intent(context, SignerConnectActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra(EXTRA_TOKEN, token),
+            )
+        }
+
+        val notificationId =
+            SignerConsentNotifier.show(
+                context = context,
+                activityClass = SignerConnectActivity::class.java,
+                extraKey = EXTRA_TOKEN,
+                token = token,
+                titleRes = R.string.nip46_signer_notif_connect_title,
+            )
 
         return try {
             deferred.await()
         } finally {
             pending.remove(token)
+            SignerConsentNotifier.cancel(context, notificationId)
         }
     }
 

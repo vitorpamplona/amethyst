@@ -298,6 +298,60 @@ class Nip46PermissionAuthorizerTest {
         }
 
     @Test
+    fun pruneIdleForgetsAppsPastTheCutoffAndKeepsActiveOnes() =
+        runTest {
+            val ledger = ledger()
+            val store = InMemoryNip46ClientStore()
+            val idle = "b".repeat(64)
+            val active = "e".repeat(64)
+            val idleCoord = Nip46PermissionAuthorizer.coordinateFor(signer, idle)
+            val activeCoord = Nip46PermissionAuthorizer.coordinateFor(signer, active)
+            ledger.setPolicy(idleCoord, AppSignerPolicy.REASONABLE)
+            ledger.setPolicy(activeCoord, AppSignerPolicy.REASONABLE)
+            store.store(idleCoord, Nip46ClientInfo(name = "Idle", relays = setOf("wss://idle.example.com")))
+            store.store(activeCoord, Nip46ClientInfo(name = "Active", relays = setOf("wss://active.example.com")))
+
+            val now = 1_000_000L
+            val idleSeconds = 100L
+            ledger.updateLastUsed(idleCoord, now - idleSeconds - 1)
+            ledger.updateLastUsed(activeCoord, now - idleSeconds + 1)
+
+            val disconnected = mutableListOf<String>()
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    clientStore = store,
+                    onDisconnected = { disconnected.add(it) },
+                )
+
+            val pruned = authorizer.pruneIdle(idleSeconds, now = now)
+
+            assertEquals(listOf(idle), pruned, "only the idle app is forgotten")
+            assertEquals(listOf(idle), disconnected, "host notified for the idle app so its relay is dropped")
+            assertEquals(null, ledger.store.loadPolicy(idleCoord), "idle grant cleared")
+            assertEquals(AppSignerPolicy.REASONABLE, ledger.store.loadPolicy(activeCoord), "active grant kept")
+            assertEquals(null, store.load(idleCoord), "idle metadata cleared")
+        }
+
+    @Test
+    fun pruneIdleIgnoresOtherAccountsApps() =
+        runTest {
+            val ledger = ledger()
+            val otherSigner = "f".repeat(64)
+            val otherCoord = Nip46PermissionAuthorizer.coordinateFor(otherSigner, client)
+            ledger.setPolicy(otherCoord, AppSignerPolicy.REASONABLE)
+            ledger.updateLastUsed(otherCoord, 0L)
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
+
+            val pruned = authorizer.pruneIdle(100L, now = 1_000_000L)
+
+            assertTrue(pruned.isEmpty(), "an app belonging to another account is never pruned by this signer")
+            assertEquals(AppSignerPolicy.REASONABLE, ledger.store.loadPolicy(otherCoord))
+        }
+
+    @Test
     fun logoutIsEquivalentToForget() =
         runTest {
             val ledger = ledger()

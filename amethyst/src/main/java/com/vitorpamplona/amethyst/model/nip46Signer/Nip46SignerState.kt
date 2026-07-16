@@ -60,6 +60,14 @@ import kotlinx.coroutines.launch
 private const val MAX_SEEN_IDS = 128
 
 /**
+ * Auto-forget a connected app after this long with no activity. Each connected NIP-46 app makes the
+ * signer hold a background relay subscription indefinitely, so an app paired once and abandoned would
+ * leak a relay connection forever; pruning idle apps bounds that growth. Last-used is stamped on
+ * connect and on every serviced request, so an app still in use is never pruned.
+ */
+private const val IDLE_PRUNE_SECONDS = 7 * 24 * 60 * 60L
+
+/**
  * Runs Amethyst as a NIP-46 remote signer ("bunker") for the account, so other
  * apps can sign through it. While [AccountSettings.nip46SignerEnabled] is on, a
  * [NostrConnectSignerService] listens on the user's inbox relays (plus any relays
@@ -166,7 +174,14 @@ class Nip46SignerState(
         // extraRelays is a live projection of the persisted client store (the nostrconnect apps' own
         // relays). Load it on start so paired apps stay reachable across restarts; it is refreshed
         // whenever a client connects or is forgotten (bunker-flow apps use the inbox relays instead).
-        scope.launch(Dispatchers.IO) { refreshExtraRelaysFromStore() }
+        // Prune apps idle past IDLE_PRUNE_SECONDS first so we don't re-subscribe to a relay only an
+        // abandoned app used — forget() already refreshes extraRelays, and we refresh again in case
+        // nothing was pruned.
+        scope.launch(Dispatchers.IO) {
+            runCatching { authorizer.pruneIdle(IDLE_PRUNE_SECONDS) }
+                .onFailure { Log.w("NIP46Signer") { "idle prune failed: ${it.message}" } }
+            refreshExtraRelaysFromStore()
+        }
 
         scope.launch(Dispatchers.IO) {
             combine(settings.nip46SignerEnabled, listeningRelays, settings.nip46TransportKey) { enabled, relays, transportKey ->

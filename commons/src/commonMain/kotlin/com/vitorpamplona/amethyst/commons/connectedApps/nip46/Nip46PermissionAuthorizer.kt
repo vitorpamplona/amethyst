@@ -226,6 +226,29 @@ class Nip46PermissionAuthorizer(
         onDisconnected?.invoke(clientPubKey)
     }
 
+    /**
+     * Forgets every app under this account that hasn't been used in [maxIdleSeconds]. Each connected
+     * NIP-46 app makes the signer hold a background relay subscription forever, so an app the user
+     * paired once and abandoned would keep a relay connection alive indefinitely; this bounds that
+     * growth. `last-used` is stamped on connect and on every serviced operation, so an app that is
+     * still signing is never pruned. Returns the client pubkeys that were forgotten.
+     */
+    suspend fun pruneIdle(
+        maxIdleSeconds: Long,
+        now: Long = TimeUtils.now(),
+    ): List<HexKey> {
+        val cutoff = now - maxIdleSeconds
+        val stale =
+            ledger.store
+                .allPolicies()
+                .keys
+                .filter { belongsTo(it, signerPubKey) }
+                .filter { (ledger.lastUsed(it) ?: 0L) < cutoff }
+                .mapNotNull { clientPubKeyOf(it) }
+        stale.forEach { forget(it) }
+        return stale
+    }
+
     companion object {
         /** Ledger coordinate namespace for NIP-46 remote-signer clients. */
         const val COORDINATE_PREFIX = "nip46"

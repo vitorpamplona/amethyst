@@ -35,6 +35,28 @@ the client.
       scaffold it could crash at runtime (compiles fine). Verify on device; if it
       misbehaves, the JSON fallback path is one boolean away.
 
+## Entry point + connected-apps management (2026-07-16)
+- [ ] **Drawer entry**: the signer opens from the left drawer's "You" section, directly
+      under Wallet (moved out of Settings). It's also available as a bottom-bar favorite.
+- [ ] **Dedicated apps screen**: "Manage connected apps" on the signer screen opens a
+      NIP-46-only list (name, npub, relay count, last-used, trust chip), separate from the
+      napplet/nsite/browser Connected Apps screen. NIP-46 apps no longer appear there.
+- [ ] **Idle auto-forget**: an app left unused for 7 days is dropped on the next signer
+      start (its background relay subscription goes with it); an app still signing is kept.
+
+## Comes-to-front on a request (2026-07-16)
+- [ ] **Backgrounded surfacing**: with Amethyst fully backgrounded (Android 12+), a client
+      signing/connect request pops the consent dialog — via a full-screen-intent notification
+      on the high-importance "Signing requests" channel (the `startActivity` fast path is
+      BAL-blocked when backgrounded). On a locked screen it launches straight to the dialog;
+      while actively on another app it shows a heads-up prompt to tap.
+- [ ] **Foreground**: with Amethyst in the foreground the dialog opens directly (no extra
+      notification — `SignerConsentNotifier` no-ops when `foregroundTracker.isForeground`).
+- [ ] **Android 14+ caveat**: `USE_FULL_SCREEN_INTENT` is restricted for non-calling apps,
+      so the FSI may degrade to a heads-up rather than auto-launch — verify the prompt still
+      arrives and is tappable. Requires notification permission (already needed for the
+      always-on service).
+
 ## Consent (Tier 1)
 - [ ] **First-connect trust picker**: a bunker-flow connect with a valid secret
       shows the trust-level dialog (Full trust / Reasonable / Paranoid) BEFORE any

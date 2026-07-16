@@ -48,6 +48,7 @@ enum class NavBarItem {
     INTEREST_SETS,
     EMOJI_PACKS,
     WALLET,
+    NOSTR_SIGNER,
     COMMUNITIES,
     ARTICLES,
     PICTURES,
@@ -194,6 +195,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.wallet,
                 icon = MaterialSymbols.AccountBalanceWallet,
                 resolveRoute = { Route.Wallet },
+            ),
+        NavBarItem.NOSTR_SIGNER to
+            NavBarItemDef(
+                id = NavBarItem.NOSTR_SIGNER,
+                labelRes = R.string.nip46_signer_title,
+                icon = MaterialSymbols.Key,
+                resolveRoute = { Route.Nip46Signer() },
             ),
         NavBarItem.COMMUNITIES to
             NavBarItemDef(
@@ -443,6 +451,7 @@ val DrawerYouItems: List<NavBarItem> =
         NavBarItem.INTEREST_SETS,
         NavBarItem.EMOJI_PACKS,
         NavBarItem.WALLET,
+        NavBarItem.NOSTR_SIGNER,
     )
 
 /**
@@ -495,6 +504,7 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.FAVORITE_ALGO_FEEDS,
                 NavBarItem.EMOJI_PACKS,
                 NavBarItem.WALLET,
+                NavBarItem.NOSTR_SIGNER,
             ),
         ),
         NavBarCategory(

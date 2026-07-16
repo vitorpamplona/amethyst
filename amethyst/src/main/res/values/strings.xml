@@ -928,6 +928,12 @@
     <string name="nip46_signer_connect_hint">Paste a nostrconnect:// link</string>
     <string name="nip46_signer_connect_button">Connect</string>
     <string name="nip46_signer_manage_apps">Manage connected apps</string>
+    <string name="nip46_signer_apps_empty">No apps are connected to your signer yet.\n\nScan or paste an app\'s code to connect it. Connected apps appear here, and idle ones are removed automatically after a week.</string>
+    <string name="nip46_signer_app_last_used">used %1$s</string>
+    <plurals name="nip46_signer_app_relay_count">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
     <string name="nip46_signer_connected_ok">App connected. Amethyst now signs for it in the background.</string>
     <string name="nip46_signer_connected_named">Connected %1$s. Amethyst now signs for it in the background.</string>
     <string name="nip46_signer_connect_invalid">Not a valid nostrconnect:// link</string>
@@ -950,6 +956,11 @@
     <string name="nip46_signer_act_ping">Ping</string>
     <string name="nip46_signer_act_listed_relays">Listed relays</string>
     <string name="nip46_signer_act_other">%1$s</string>
+    <string name="nip46_signer_notif_channel_name">Signing requests</string>
+    <string name="nip46_signer_notif_channel_desc">Full-screen prompts asking you to approve an app that wants Amethyst to sign, encrypt, or decrypt with your key.</string>
+    <string name="nip46_signer_notif_sign_title">Approve a signing request?</string>
+    <string name="nip46_signer_notif_connect_title">An app wants to connect</string>
+    <string name="nip46_signer_notif_tap">Tap to review</string>
     <string name="nip46_signer_scan_caption">Scan to connect an app to your key</string>
     <string name="nip46_signer_scan_connect">Scan a code</string>
     <string name="nip46_signer_paste_link">Paste a link instead</string>

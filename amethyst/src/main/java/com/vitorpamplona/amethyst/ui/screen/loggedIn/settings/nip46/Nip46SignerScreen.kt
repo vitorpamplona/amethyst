@@ -207,7 +207,7 @@ fun Nip46SignerScreen(
             if (enabled || connectedCount > 0) {
                 ConnectedAppsRow(
                     count = connectedCount,
-                    onClick = { nav.nav(Route.ConnectedApps) },
+                    onClick = { nav.nav(Route.Nip46ConnectedApps) },
                 )
             }
 

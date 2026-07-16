@@ -112,6 +112,8 @@ sealed class Route {
         val connectUri: String? = null,
     ) : Route()
 
+    @Serializable object Nip46ConnectedApps : Route()
+
     @Serializable object RelayAuthSettings : Route()
 
     @Serializable data class ConnectedAppDetail(

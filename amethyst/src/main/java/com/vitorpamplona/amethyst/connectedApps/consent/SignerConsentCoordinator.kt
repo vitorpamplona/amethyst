@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -80,16 +81,32 @@ object SignerConsentCoordinator {
         val deferred = CompletableDeferred<SignerOpGrant>()
         pending[token] = Pending(info, deferred)
 
-        context.startActivity(
-            Intent(context, SignerConsentActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .putExtra(EXTRA_TOKEN, token),
-        )
+        // Fast path when Amethyst already owns the foreground: open the dialog directly. When the app
+        // is backgrounded this is silently dropped by Android 12+ BAL, so the full-screen-intent
+        // notification below is what actually surfaces the prompt. Wrapped because a blocked launch
+        // can throw on some OEMs rather than no-op.
+        runCatching {
+            context.startActivity(
+                Intent(context, SignerConsentActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra(EXTRA_TOKEN, token),
+            )
+        }
+
+        val notificationId =
+            SignerConsentNotifier.show(
+                context = context,
+                activityClass = SignerConsentActivity::class.java,
+                extraKey = EXTRA_TOKEN,
+                token = token,
+                titleRes = R.string.nip46_signer_notif_sign_title,
+            )
 
         return try {
             deferred.await()
         } finally {
             pending.remove(token)
+            SignerConsentNotifier.cancel(context, notificationId)
         }
     }
 
