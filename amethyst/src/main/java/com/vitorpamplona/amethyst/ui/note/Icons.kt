@@ -102,7 +102,7 @@ fun DownloadForOfflineIcon(
 @Composable
 fun LikedIcon(
     modifier: Modifier,
-    tint: Color = MaterialTheme.colorScheme.primary,
+    tint: Color = Color.Unspecified,
 ) {
     Icon(
         imageVector = Liked,
@@ -154,7 +154,7 @@ fun RepostIcon(
 @Composable
 fun RepostedIcon(
     modifier: Modifier,
-    tint: Color = MaterialTheme.colorScheme.primary,
+    tint: Color = Color.Unspecified,
 ) {
     Icon(
         imageVector = Reposted,

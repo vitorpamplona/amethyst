@@ -302,7 +302,7 @@ private fun RenderReactionOption(
             when (reactionType) {
                 "+" -> {
                     Row {
-                        LikedIcon(modifier = Modifier.size(20.dp))
+                        LikedIcon(modifier = Modifier.size(20.dp), tint = Color.Unspecified)
 
                         Text(
                             text = " ✖",

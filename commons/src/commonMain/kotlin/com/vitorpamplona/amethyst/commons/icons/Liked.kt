@@ -51,7 +51,7 @@ public val Liked: ImageVector
             viewportHeight = 24.0f,
         ).apply {
             path(
-                fill = SolidColor(Color.Black),
+                fill = SolidColor(Color(0xFFCA395f)),
                 strokeLineWidth = 0.0f,
                 strokeLineCap = Butt,
                 strokeLineJoin = Miter,
