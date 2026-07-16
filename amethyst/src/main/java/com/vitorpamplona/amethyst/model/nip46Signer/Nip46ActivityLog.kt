@@ -53,7 +53,4 @@ class Nip46ActivityLog(
     fun record(entry: Nip46ActivityEntry) {
         _entries.update { (listOf(entry) + it).take(capacity) }
     }
-
-    /** The most recent entries for one client (newest first). */
-    fun forClient(clientPubKey: HexKey): List<Nip46ActivityEntry> = _entries.value.filter { it.clientPubKey == clientPubKey }
 }

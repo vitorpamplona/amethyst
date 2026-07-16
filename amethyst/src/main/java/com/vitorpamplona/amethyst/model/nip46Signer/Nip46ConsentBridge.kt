@@ -49,8 +49,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 object Nip46ConsentBridge {
     /**
-     * Upper bound on how long a per-op prompt may block the signer's single-consumer loop. A user who
-     * ignores the dialog eventually fails the request closed (deny-once) instead of wedging the signer.
+     * Upper bound on how long a consent prompt may block the signer's single-consumer loop. A user who
+     * ignores the dialog eventually fails the request closed (deny / declined) instead of wedging the
+     * signer for every other client whose requests queue behind that one blocked prompt.
      */
     private const val CONSENT_TIMEOUT_MS = 120_000L
 
@@ -64,10 +65,12 @@ object Nip46ConsentBridge {
         val meta = request.clientMetadata
         val title = meta?.name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
         val domain = meta?.url?.ifBlank { null } ?: (clientPubKey.take(12) + "…")
-        return SignerConnectCoordinator.requestConnect(
-            context,
-            SignerConnectInfo(appletTitle = title, coordinate = coordinate, domain = domain, iconUrl = meta?.image),
-        )
+        val info = SignerConnectInfo(appletTitle = title, coordinate = coordinate, domain = domain, iconUrl = meta?.image)
+        // Fail closed (declined) if the prompt is never answered, so a stuck first-connect dialog can't
+        // hold the single-consumer loop hostage against every other client.
+        return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {
+            SignerConnectCoordinator.requestConnect(context, info)
+        } ?: AppConnectResult.Cancelled
     }
 
     /** Per-operation consent: describe the request (op + event preview) and await the user's grant. */
