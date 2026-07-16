@@ -186,6 +186,7 @@ fun DesktopMessagesScreen(
                 showNewDmDialog = false
             },
             onDismiss = { showNewDmDialog = false },
+            onPrewarmDmRelays = { (account as? DesktopIAccount)?.prewarmDmInboxRelays(it) },
         )
     }
 

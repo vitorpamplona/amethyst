@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
@@ -142,12 +143,16 @@ class DesktopLocalCache : ICacheProvider {
     override fun getOrCreateUser(pubkey: HexKey): User = users.getOrCreate(pubkey) { User(pubkey, userContext) }
 
     /**
-     * [UserContext] bridge — desktop's note store is keyed on string ids
-     * rather than full addressable maps, so we synthesise a stable id
-     * from the Address. User's lazy fields hold the resulting Note for
-     * its lifetime, same pinning guarantee as on Android.
+     * [UserContext] bridge — resolves the [User]'s pinned replaceable notes
+     * (kind:10002 outbox, kind:10050 DM inbox, kind:10019 nutzap info) against
+     * the same [addressableNotes] map that [consume] writes into. Backing these
+     * with [getOrCreateAddressableNote] (not the plain [notes] map) is what lets
+     * `User.dmInboxRelaysStrict()` / `outboxRelays()` actually reflect events the
+     * cache has ingested — the DM send path, the resolver's local lookup, and
+     * tier-1 AUTH all read those accessors. User's lazy fields hold the
+     * resulting note for its lifetime, same pinning guarantee as on Android.
      */
-    private val userContext = UserContext { addr -> getOrCreateNote(addr.toValue()) }
+    private val userContext = UserContext { addr -> getOrCreateAddressableNote(addr) }
 
     override fun countUsers(predicate: (String, User) -> Boolean): Int = users.count { key, user -> predicate(key, user) }
 
@@ -196,6 +201,16 @@ class DesktopLocalCache : ICacheProvider {
     }
 
     /**
+     * Invoked (with the author's pubkey) every time a kind:0 profile is
+     * ingested. Wired by the subscriptions coordinator to back-fill that
+     * author's kind:10002 (NIP-65 outbox) — so whenever we learn who a user
+     * is, we also learn where they write, which is where their kind:10050 and
+     * other replaceables live. The handler dedupes and skips authors whose
+     * 10002 is already cached, so firing on every kind:0 is cheap.
+     */
+    var onProfileMetadataConsumed: ((HexKey) -> Unit)? = null
+
+    /**
      * Updates user metadata from a MetadataEvent.
      * Called when receiving kind 0 events from relays.
      */
@@ -215,6 +230,10 @@ class DesktopLocalCache : ICacheProvider {
                 }
             }
         }
+
+        // Learn where this author writes (kind:10002) so their replaceables —
+        // kind:10050 included — can be read from their own outbox relays.
+        onProfileMetadataConsumed?.invoke(event.pubKey)
     }
 
     fun justVerify(event: Event): Boolean =
@@ -310,6 +329,10 @@ class DesktopLocalCache : ICacheProvider {
                 consumeAdvertisedRelayList(event, relay)
             }
 
+            is ChatMessageRelayListEvent -> {
+                consumeChatMessageRelayList(event, relay)
+            }
+
             is BlossomServersEvent -> {
                 consumeBlossomServerList(event, relay)
             }
@@ -349,6 +372,30 @@ class DesktopLocalCache : ICacheProvider {
      */
     private fun consumeAdvertisedRelayList(
         event: AdvertisedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val addressableNote = getOrCreateAddressableNote(event.address())
+        val existing = addressableNote.event
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
+        relay?.let { addressableNote.addRelay(it) }
+        return false
+    }
+
+    /**
+     * Consumes a kind 10050 (NIP-17) DM relay-list event. Stores the newest
+     * per-author copy in [addressableNotes] so [User.dmInboxRelaysStrict] and
+     * the DM send path can resolve a recipient's inbox without a fresh REQ.
+     *
+     * Without this branch, [route] dropped kind:10050 entirely — recipient DM
+     * relay lists arriving through the normal feed / DM subscriptions never
+     * landed in the cache, forcing every send to re-discover them via the
+     * indexer fan-out. Mirrors [consumeAdvertisedRelayList]; emits nothing to
+     * the event stream because the UI doesn't render kind 10050s directly.
+     */
+    private fun consumeChatMessageRelayList(
+        event: ChatMessageRelayListEvent,
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val addressableNote = getOrCreateAddressableNote(event.address())

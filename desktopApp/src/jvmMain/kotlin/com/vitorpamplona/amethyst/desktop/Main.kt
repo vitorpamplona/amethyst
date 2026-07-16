@@ -1022,6 +1022,14 @@ private fun AppInner(
                     // metadata to relays the recipient never designated for DMs.
                     localCache.getUserIfExists(pubkey)?.dmInboxRelaysStrict()
                 },
+                outboxLookup = { pubkey ->
+                    // The recipient's kind:10050 lives on their NIP-65 write
+                    // relays. When we've already cached their kind:10002 (via the
+                    // feed / outbox dispatcher), hand those write relays to the
+                    // resolver so it reads the 10050 from the source instead of
+                    // relying on the curated indexers to have mirrored it.
+                    localCache.cachedAdvertisedRelayList(pubkey)?.writeRelaysNorm()
+                },
             )
         }
 
@@ -1053,7 +1061,15 @@ private fun AppInner(
                 scope = scope,
                 indexRelays = indexRelaysStore.effective(),
                 localCache = localCache,
-            ).also { it.startCleanupLoop() }
+            ).also { coordinator ->
+                coordinator.startCleanupLoop()
+                // Whenever we ingest a user's kind:0 profile, back-fill their
+                // kind:10002 so their outbox (write) relays — where their
+                // kind:10050 and other replaceables live — are known.
+                localCache.onProfileMetadataConsumed = { pubkey ->
+                    coordinator.ensureOutboxRelayList(pubkey)
+                }
+            }
         }
 
     // NIP-42 AUTH coordinator — wires relay-auth challenges through the
@@ -1711,11 +1727,17 @@ fun MainContent(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        // NIP-65 (kind 10002) and the Blossom server list
-                        // (kind 10063) are addressable/replaceable events, so
-                        // they must go through justConsumeMyOwnEvent to land in
-                        // the addressable-note cache their state holders observe.
-                        if (event is AdvertisedRelayListEvent || event is BlossomServersEvent) {
+                        // NIP-65 (kind 10002), the NIP-17 DM relay list (kind
+                        // 10050) and the Blossom server list (kind 10063) are
+                        // addressable/replaceable events; route them through
+                        // justConsumeMyOwnEvent so they land in the addressable-
+                        // note cache the User model / state holders observe (e.g.
+                        // dmInboxRelaysStrict, self-copy resolution) alongside
+                        // accountRelays' persisted copy.
+                        if (event is AdvertisedRelayListEvent ||
+                            event is ChatMessageRelayListEvent ||
+                            event is BlossomServersEvent
+                        ) {
                             scope.launch(Dispatchers.IO) {
                                 localCache.justConsumeMyOwnEvent(event)
                             }
