@@ -116,6 +116,24 @@ abstract class Channel : NotesGatherer {
         }
     }
 
+    /**
+     * Refresh derived state after an already-[addNote]'d [note] finishes loading its event.
+     *
+     * Most channels attach a note whose event is already set, so [addNote] can pick [lastNote] and
+     * order the feed right away. Concord is the exception: it attaches a message row to its channel
+     * *before* the rumor is consumed (so the row already carries its gatherer when it flows through
+     * the Messages filter), which means [addNote] ran while `createdAt()` was still null and could
+     * neither set [lastNote] nor sort correctly. Once the event lands, call this so [lastNote] and
+     * any notes-flow observers (row previews, unread counts, ordering) reflect the real message.
+     */
+    fun refreshAfterEventLoad(note: Note) {
+        if (!notes.containsKey(note.idHex)) return
+        if ((note.createdAt() ?: 0L) > (lastNote?.createdAt() ?: 0L)) {
+            lastNote = note
+        }
+        flowSet?.notes?.invalidateData()
+    }
+
     override fun removeNote(note: Note) {
         if (notes.containsKey(note.idHex)) {
             notes.remove(note.idHex)

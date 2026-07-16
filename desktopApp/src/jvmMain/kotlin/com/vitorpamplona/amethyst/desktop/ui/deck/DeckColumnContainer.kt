@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.desktop.ui.scheduledposts.DraftsAndScheduledSc
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 
 class ColumnNavigationState {
     private val _stack = mutableStateListOf<DesktopScreen>()
@@ -501,6 +502,19 @@ internal fun RootContent(
                 torSettings = torState.settings,
                 onTorSettingsChanged = torState.onSettingsChanged,
                 namecoinPreferences = LocalNamecoinPreferences.current,
+                onBlossomServersChanged = { servers ->
+                    // Publish a kind-10063 event so the list syncs to every
+                    // Amethyst client, then consume it locally so state updates
+                    // immediately (mirrors the NIP-65 save flow above). Read-only
+                    // accounts can't sign, so this is a no-op there.
+                    if (iAccount.isWriteable()) {
+                        appScope.launch {
+                            val event = iAccount.blossomServerList.saveBlossomServersList(servers)
+                            relayManager.broadcastToAll(event)
+                            localCache.justConsumeMyOwnEvent(event)
+                        }
+                    }
+                },
             )
         }
 

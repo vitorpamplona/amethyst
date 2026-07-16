@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +70,14 @@ class RelayGroupChannel(
     var admins: List<GroupAdminTag> = emptyList()
         private set
     private var adminsUpdatedAt: Long = 0
+
+    /**
+     * Relay-signed pinned message ids (kind 39005), in the relay's display order.
+     * Pinning replaces the whole list, so this is always the full current set.
+     */
+    var pinnedEventIds: List<HexKey> = emptyList()
+        private set
+    private var pinnedUpdatedAt: Long = 0
 
     /**
      * Members ∪ admins, recomputed only when a roster event lands. [memberCount] and the discovery
@@ -157,6 +166,17 @@ class RelayGroupChannel(
         recomputeAllMembers()
         updateChannelInfo()
     }
+
+    fun updatePinned(event: GroupPinnedEvent) {
+        // Only newer lists supersede; equal-or-older is dropped so a duplicate
+        // arrival isn't reprocessed (no redundant emit).
+        if (event.createdAt <= pinnedUpdatedAt) return
+        pinnedEventIds = event.pinnedEventIds()
+        pinnedUpdatedAt = event.createdAt
+        updateChannelInfo()
+    }
+
+    fun isPinned(eventId: HexKey): Boolean = eventId in pinnedEventIds
 
     /**
      * The shareable NIP-19 `naddr` coordinate for this group's metadata (kind

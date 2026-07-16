@@ -79,9 +79,10 @@ import com.vitorpamplona.amethyst.commons.profile.EditProfileFields
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
 import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
-import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -171,7 +172,7 @@ fun EditProfileDialog(
     }
 
     val orchestrator = remember { UploadOrchestrator() }
-    val serverBaseUrl = DesktopPreferences.preferredBlossomServer
+    val serverBaseUrl = LocalBlossomServers.current?.value?.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
 
     fun uploadFile(
         file: File,

@@ -18,25 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip29RelayGroups.moderation
+package com.vitorpamplona.amethyst.desktop.model
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.CodeTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
-
-fun TagArray.groupId() = firstTagValue(GroupIdTag.TAG_NAME)
-
-fun TagArray.previousEvents() = mapNotNull(PreviousTag::parse)
-
-fun TagArray.userPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
-
-fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it }
-
-fun TagArray.pinnedEventIds(): List<HexKey> = mapValueTagged("e") { it }
-
-fun TagArray.inviteCode() = firstNotNullOfOrNull(CodeTag::parse)
+/**
+ * Fallback media server used when the account has published no kind-10063
+ * Blossom server list yet. The list itself is read reactively from the account's
+ * [com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState]
+ * (`iAccount.blossomServerList.flow`); this is only the empty-list default.
+ */
+const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"

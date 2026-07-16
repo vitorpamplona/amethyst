@@ -341,6 +341,11 @@
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
     </plurals>
+    <plurals name="concord_unread_messages">
+        <item quantity="one">%1$d new message</item>
+        <item quantity="other">%1$d new messages</item>
+    </plurals>
+    <string name="concord_channel_no_messages">No messages yet</string>
     <string name="concord_create_action">Create</string>
     <string name="concord_invite_action">Invite people</string>
     <string name="concord_invite_title">Invite link</string>
@@ -2161,6 +2166,10 @@
     <string name="relay_group_menu_members">Members</string>
     <string name="relay_group_menu_edit">Edit group</string>
     <string name="relay_group_threads_title">Threads</string>
+    <string name="relay_group_pin_message">Pin message</string>
+    <string name="relay_group_unpin_message">Unpin message</string>
+    <string name="relay_group_pinned_label">Pinned</string>
+    <string name="relay_group_pinned_content_description">Pinned messages</string>
     <string name="relay_group_open">Open group</string>
     <string name="relay_group_channels_empty">No groups on this relay yet.</string>
     <string name="relay_group_channels_not_nip29">This relay does not advertise support for groups (NIP-29), so it may not host any.</string>

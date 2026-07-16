@@ -18,25 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip29RelayGroups.moderation
+package com.vitorpamplona.amethyst.desktop.ui
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.CodeTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.PreviousTag
+import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.coroutines.flow.StateFlow
 
-fun TagArray.groupId() = firstTagValue(GroupIdTag.TAG_NAME)
-
-fun TagArray.previousEvents() = mapNotNull(PreviousTag::parse)
-
-fun TagArray.userPubKeys(): List<HexKey> = mapNotNull(PTag::parseKey)
-
-fun TagArray.deletedEventIds(): List<HexKey> = mapValueTagged("e") { it }
-
-fun TagArray.pinnedEventIds(): List<HexKey> = mapValueTagged("e") { it }
-
-fun TagArray.inviteCode() = firstNotNullOfOrNull(CodeTag::parse)
+/**
+ * The logged-in account's Blossom media server list (NIP-B7 / kind 10063),
+ * exposed as the reactive flow from the account's `BlossomServerListState`
+ * (`iAccount.blossomServerList.flow`). Provided once around the logged-in UI so
+ * upload composables read the list from context instead of threading it through
+ * every screen. `null` when no account is logged in — consumers fall back to
+ * [com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER].
+ */
+val LocalBlossomServers = staticCompositionLocalOf<StateFlow<List<String>>?> { null }

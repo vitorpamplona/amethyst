@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.isConcordTimelineMessage
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -400,10 +401,15 @@ class ChatroomListKnownFeedFilter(
             .sortedByDefaultFeedOrder()
             .firstOrNull()
 
-    /** The newest decrypted message loaded in this Concord channel, or null if none yet. */
+    /**
+     * The newest decrypted *timeline* message loaded in this Concord channel, or null if none yet.
+     * Uses [isConcordTimelineMessage] so a trailing kind-1111 thread reply (or a hidden author)
+     * isn't shown as the Messages-row "last message" — the same predicate the channel feed and the
+     * unread badge use, so the row summary can't disagree with what opening the channel renders.
+     */
     private fun ConcordChannel.newestConcordNote(account: Account): Note? =
         notes
-            .filter { _, it -> account.isAcceptable(it) && it.event != null }
+            .filter { _, it -> isConcordTimelineMessage(it, account) }
             .sortedByDefaultFeedOrder()
             .firstOrNull()
 

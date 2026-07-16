@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * The resolved presentation of a pinned chat/group [BottomBarEntry] — enough to render its avatar in
@@ -153,12 +154,8 @@ fun rememberConcordEntryDisplay(
     val communities by account.concordChannelList.liveCommunities.collectAsStateWithLifecycle()
 
     val session = remember(entry.communityId, revision) { account.concordSessions.sessionFor(entry.communityId) }
-    val metadata =
-        session
-            ?.state
-            ?.value
-            .takeIf { revision >= 0 }
-            ?.metadata
+    val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
+    val metadata = state.takeIf { revision >= 0 }?.metadata
 
     val fallbackName = remember(communities, entry.communityId) { communities.firstOrNull { it.id == entry.communityId }?.name?.ifBlank { null } }
     val label = metadata?.name?.takeIf { it.isNotBlank() } ?: fallbackName ?: stringRes(R.string.concord_home_title)

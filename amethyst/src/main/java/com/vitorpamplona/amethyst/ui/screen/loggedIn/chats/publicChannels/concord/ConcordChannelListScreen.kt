@@ -47,7 +47,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,20 +58,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -93,6 +106,21 @@ fun ConcordChannelListScreen(
     val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
     val state by (session?.state ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) })
         .collectAsStateWithLifecycle()
+
+    // Live typing heartbeats (kind 23311) per channel, so a channel where someone is composing shows
+    // "typing…" in place of its last-message preview. A single screen-level ticker re-applies the
+    // freshness window for every row at once, and only spins while at least one heartbeat is live.
+    val typingMap by (session?.typing ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyMap<HexKey, Map<HexKey, Long>>()) })
+        .collectAsStateWithLifecycle()
+    var typingNow by remember { mutableLongStateOf(TimeUtils.now()) }
+    LaunchedEffect(typingMap) {
+        if (typingMap.values.all { it.isEmpty() }) return@LaunchedEffect
+        while (true) {
+            typingNow = TimeUtils.now()
+            if (typingMap.values.all { per -> per.values.none { typingNow - it <= ConcordCommunitySession.TYPING_STALE_SECS } }) break
+            delay(2000L)
+        }
+    }
 
     val scope = rememberCoroutineScope()
     var inviteLink by remember { mutableStateOf<String?>(null) }
@@ -254,33 +282,194 @@ fun ConcordChannelListScreen(
                             def.private == true -> MaterialSymbols.Lock
                             else -> MaterialSymbols.Tag
                         }
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { nav.nav(Route.Concord(communityId, entry.key)) }
-                            .padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = if (canManageChannels) 4.dp else 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        SymbolIcon(
-                            symbol = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1)
-                        if (canManageChannels) {
-                            ConcordChannelRowMenu(
-                                onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
-                                onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
-                            )
+                    val typingAuthors =
+                        remember(typingMap, typingNow, entry.key) {
+                            (typingMap[entry.key] ?: emptyMap())
+                                .filterValues { typingNow - it <= ConcordCommunitySession.TYPING_STALE_SECS }
+                                .keys
+                                .sorted()
                         }
-                    }
+                    ConcordChannelListRow(
+                        communityId = communityId,
+                        channelKey = entry.key,
+                        channelName = name,
+                        icon = icon,
+                        isVoice = def.voice == true,
+                        typingAuthors = typingAuthors,
+                        canManageChannels = canManageChannels,
+                        accountViewModel = accountViewModel,
+                        onClick = { nav.nav(Route.Concord(communityId, entry.key)) },
+                        onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                        onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                    )
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
     }
+}
+
+/**
+ * One channel row in the community's server view: its icon, name, a preview of the last message
+ * (author + snippet), the relative time of that message, and an unread-message count badge — plus
+ * the manager-only overflow menu. Name/icon come from the folded Control Plane definition; the
+ * preview, time, and unread count are read reactively from the channel's own message store so they
+ * fill in the moment messages fold in and clear as soon as the channel is opened (last-read advances).
+ */
+@Composable
+private fun ConcordChannelListRow(
+    communityId: String,
+    channelKey: String,
+    channelName: String,
+    icon: MaterialSymbol,
+    isVoice: Boolean,
+    typingAuthors: List<HexKey>,
+    canManageChannels: Boolean,
+    accountViewModel: AccountViewModel,
+    onClick: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val account = accountViewModel.account
+    // getOrCreate (not getIfExists): a channel folded on the Control Plane may have no message note
+    // yet; its notes flow then makes the preview/time/unread/facepile reactive as messages arrive.
+    val channel = remember(communityId, channelKey) { LocalCache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelKey)) }
+    val channelState by channel
+        .flow()
+        .notes.stateFlow
+        .collectAsStateWithLifecycle()
+    // The newest *timeline* message (not the raw lastNote): skips kind-1111 thread replies and
+    // hidden authors so the preview + time match the channel feed and the unread badge below.
+    val lastNote = remember(channelState) { channel.newestTimelineNote(account) }
+    val unread by
+        remember(communityId, channelKey) { concordChannelUnreadCountFlow(account, communityId, channelKey) }
+            .collectAsStateWithLifecycle(0)
+    val hasUnread = unread > 0
+    // The recent posters' faces — recomputed as the channel's notes change (keyed on channelState).
+    val faceAuthors = remember(channelState) { channel.recentAuthorHexes(FACEPILE_MAX) }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = if (canManageChannels) 4.dp else 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SymbolIcon(
+            symbol = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = if (hasUnread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // Line 1: channel name + the recent-posters facepile pushed to the right.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    channelName,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                ConcordAuthorFacepile(faceAuthors, accountViewModel)
+            }
+            // Line 2: the last-message preview (or a live "typing…"), then the time + unread badge.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) {
+                    ConcordChannelPreviewLine(lastNote, isVoice, typingAuthors, accountViewModel)
+                }
+                lastNote?.createdAt()?.let { ts ->
+                    Text(
+                        timeAgo(ts, LocalContext.current, prefix = ""),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+                ConcordUnreadBadge(unread)
+            }
+        }
+        if (canManageChannels) {
+            ConcordChannelRowMenu(
+                onRename = onRename,
+                onDelete = onDelete,
+            )
+        }
+    }
+}
+
+/** How many recent-poster avatars a channel row's facepile shows at most. */
+private const val FACEPILE_MAX = 4
+
+/**
+ * The line under a channel name. When someone is composing it shows a live italic "X is typing…";
+ * otherwise the last message's author + a snippet ("author: hello"), or a muted "No messages yet"
+ * placeholder before anything has folded in. Author names resolve reactively (hex → profile name).
+ */
+@Composable
+private fun ConcordChannelPreviewLine(
+    lastNote: Note?,
+    isVoice: Boolean,
+    typingAuthors: List<HexKey>,
+    accountViewModel: AccountViewModel,
+) {
+    if (typingAuthors.isNotEmpty()) {
+        val label =
+            when (typingAuthors.size) {
+                1 -> stringRes(com.vitorpamplona.amethyst.R.string.concord_typing_one, rememberConcordDisplayName(typingAuthors[0], accountViewModel))
+                2 ->
+                    stringRes(
+                        com.vitorpamplona.amethyst.R.string.concord_typing_two,
+                        rememberConcordDisplayName(typingAuthors[0], accountViewModel),
+                        rememberConcordDisplayName(typingAuthors[1], accountViewModel),
+                    )
+                else -> stringRes(com.vitorpamplona.amethyst.R.string.concord_typing_many)
+            }
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        return
+    }
+
+    val event = lastNote?.event
+    val author = lastNote?.author
+    val preview: String =
+        if (event != null && author != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            val body = event.content.take(80)
+            if (body.isBlank()) authorName else "$authorName: $body"
+        } else if (event != null) {
+            event.content.take(80)
+        } else {
+            // Voice channels never carry chat notes, so "No messages yet" would read oddly — leave blank.
+            if (isVoice) return
+            stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_no_messages)
+        }
+    Text(
+        preview,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** Resolves [hex] to its best display name, reactively, falling back to a short hex. */
+@Composable
+private fun rememberConcordDisplayName(
+    hex: HexKey,
+    accountViewModel: AccountViewModel,
+): String {
+    val user = remember(hex) { accountViewModel.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
+    val name by observeUserName(user, accountViewModel)
+    return name
 }
 
 /** A pending channel create ([channelIdHex] null) or rename target. */

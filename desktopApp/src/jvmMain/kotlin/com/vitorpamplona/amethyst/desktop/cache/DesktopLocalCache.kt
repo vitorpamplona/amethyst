@@ -58,6 +58,7 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -332,10 +333,35 @@ class DesktopLocalCache : ICacheProvider {
                 consumeChatMessageRelayList(event, relay)
             }
 
+            is BlossomServersEvent -> {
+                consumeBlossomServerList(event, relay)
+            }
+
             else -> {
                 false
             }
         }
+
+    /**
+     * Consumes a kind 10063 (NIP-B7) Blossom media server list event. Stores
+     * the newest per-author copy in [addressableNotes] so state holders like
+     * [com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState]
+     * observe it via their flows. This is the same event the Amethyst mobile
+     * app uses for the media server list. Emits nothing to the event stream —
+     * the UI doesn't render kind 10063s directly.
+     */
+    private fun consumeBlossomServerList(
+        event: BlossomServersEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val addressableNote = getOrCreateAddressableNote(event.address())
+        val existing = addressableNote.event
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
+        relay?.let { addressableNote.addRelay(it) }
+        return false
+    }
 
     /**
      * Consumes a kind 10002 (NIP-65) advertised relay list event. Stores
