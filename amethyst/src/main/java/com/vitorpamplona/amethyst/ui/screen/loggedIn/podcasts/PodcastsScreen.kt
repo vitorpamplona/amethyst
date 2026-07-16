@@ -26,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -101,7 +100,7 @@ fun PodcastsScreen(
                     Icon(
                         symbol = MaterialSymbols.Mic,
                         contentDescription = stringRes(R.string.podcast_your_podcast),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }

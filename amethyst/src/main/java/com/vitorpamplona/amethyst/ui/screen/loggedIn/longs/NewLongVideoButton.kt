@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -130,7 +129,7 @@ fun NewLongVideoButton(
                         symbol = MaterialSymbols.Videocam,
                         contentDescription = stringRes(id = R.string.record_a_video),
                         modifier = Modifier.size(26.dp),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
 
@@ -149,7 +148,7 @@ fun NewLongVideoButton(
                         symbol = MaterialSymbols.AddPhotoAlternate,
                         contentDescription = stringRes(id = R.string.upload_image),
                         modifier = Modifier.size(26.dp),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
 
@@ -172,7 +171,7 @@ fun NewLongVideoButton(
                     symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(id = R.string.new_long_video),
                     modifier = Size26Modifier,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
 
@@ -185,7 +184,7 @@ fun NewLongVideoButton(
                     painter = painterRes(R.drawable.ic_compose, 5),
                     contentDescription = stringRes(id = R.string.new_long_video),
                     modifier = Size26Modifier,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }
