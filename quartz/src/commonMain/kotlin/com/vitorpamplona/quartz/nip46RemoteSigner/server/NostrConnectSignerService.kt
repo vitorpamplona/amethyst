@@ -175,7 +175,7 @@ class NostrConnectSignerService(
         }
     }
 
-    private suspend fun kotlinx.coroutines.CoroutineScope.runLoop() {
+    private suspend fun CoroutineScope.runLoop() {
         val self = transportSigner.pubKey
         // Bounded + DROP_LATEST so a flood bounds memory instead of growing an unlimited queue.
         val events = Channel<NostrConnectEvent>(capacity = maxQueue, onBufferOverflow = BufferOverflow.DROP_LATEST)

@@ -110,12 +110,11 @@ class SignerConsentActivity : ComponentActivity() {
             }
         }
     }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Torn down for good (back / dismiss), not a config change: fail every still-open request closed.
-        if (isFinishing) SignerConsentCoordinator.denyAllPending()
-    }
+    // Dismissal is failed-closed at the source: each dialog's onDismissRequest (back / tap-outside)
+    // denies its own request(s). We deliberately do NOT deny-all in onDestroy — a request arriving as
+    // this Activity finishes is owned by a freshly-launched instance, and denying it here would race
+    // that instance and reject a legitimate request. A process kill falls back to the bridge's 120s
+    // timeout, which also fails closed.
 }
 
 @Composable
@@ -374,7 +373,10 @@ private fun BatchedConsentDialog(
     onDismiss: () -> Unit,
 ) {
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
-    var selected by remember(pending.size) { mutableStateOf(pending.map { it.token }.toSet()) }
+    val tokens = pending.map { it.token }.toSet()
+    // Re-seed (all selected) whenever the set of pending tokens actually changes — keying on size alone
+    // would leave a newly-arrived request unselectable when another resolves in the same frame.
+    var selected by remember(tokens) { mutableStateOf(tokens) }
     var rememberChoice by remember { mutableStateOf(true) }
 
     Dialog(

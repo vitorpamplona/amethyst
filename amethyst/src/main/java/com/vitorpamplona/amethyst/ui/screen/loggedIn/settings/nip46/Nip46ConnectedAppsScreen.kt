@@ -392,16 +392,17 @@ internal fun nip46ClientSubtitle(
 private suspend fun loadNip46Apps(signerPubKey: HexKey): List<Nip46AppEntry> {
     val store = Amethyst.instance.signerPermissionStore
     val clientStore = Amethyst.instance.nip46ClientStore
+    // allPolicies() already carries each app's policy — read it from the map instead of a second
+    // loadPolicy() call per app.
     return store
         .allPolicies()
-        .keys
-        .filter { Nip46PermissionAuthorizer.belongsTo(it, signerPubKey) }
-        .mapNotNull { coordinate ->
+        .filterKeys { Nip46PermissionAuthorizer.belongsTo(it, signerPubKey) }
+        .mapNotNull { (coordinate, policy) ->
             val clientPubKey = Nip46PermissionAuthorizer.clientPubKeyOf(coordinate) ?: return@mapNotNull null
             Nip46AppEntry(
                 coordinate = coordinate,
                 clientPubKey = clientPubKey,
-                policy = store.loadPolicy(coordinate),
+                policy = policy,
                 info = clientStore.load(coordinate),
                 lastUsedSeconds = store.loadLastUsed(coordinate),
             )

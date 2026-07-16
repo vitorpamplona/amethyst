@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
@@ -331,18 +330,24 @@ class Nip46SignerState(
             val reply = NostrConnectEvent.create(ack, offer.clientPubKey, transportSigner())
             client.publish(reply, offer.relays)
 
-            // Register the app (the paste is the user's consent) and listen on its relays.
+            // Register the app (the paste is the user's consent) and listen on its relays. Only on
+            // FIRST contact — a re-pair must not overwrite trust-level or per-op decisions the user
+            // has since changed (e.g. an op they explicitly set to DENY).
             val coordinate = authorizer.coordinateFor(offer.clientPubKey)
             if (!ledger.hasPolicy(coordinate)) {
                 ledger.setPolicy(coordinate, authorizer.defaultPolicyOnConnect)
-            }
-            // Honor the offer's `perms`: the app declared exactly what it needs and the user chose to
-            // pair it, so pre-grant those ops instead of prompting on first use. The two highest-risk
-            // classes stay gated even when declared — decryption (reveals private content) and deletion
-            // (kind 5) still prompt on first use, where the user sees full context.
-            Nip46PermissionAuthorizer.parsePerms(offer.perms).forEach { op ->
-                val gated = op is NostrSignerOp.Decrypt || (op is NostrSignerOp.SignKind && op.kind == DeletionEvent.KIND)
-                if (!gated) ledger.setOpDecision(coordinate, op, NostrOpDecision.ALLOW)
+                // Honor the offer's `perms`, but only the ops the REASONABLE policy already auto-allows.
+                // The nostrconnect flow has no dialog — the user scans a code and never sees the perms
+                // spelled out — so pre-granting anything sensitive (config-overwrite kinds 0/3, deletion,
+                // decryption, DMs, unknown kinds) would be a silent privilege grant. Those still prompt on
+                // first use, with full context. Seeding the safe set records the app's declared scope as
+                // explicit, revocable grants without ever exceeding the default policy.
+                Nip46PermissionAuthorizer.parsePerms(offer.perms).forEach { op ->
+                    val safe =
+                        op is NostrSignerOp.Encrypt ||
+                            (op is NostrSignerOp.SignKind && op.kind in NostrSignerPermissionLedger.REASONABLE_SIGN_KINDS)
+                    if (safe) ledger.setOpDecision(coordinate, op, NostrOpDecision.ALLOW)
+                }
             }
             ledger.updateLastUsed(coordinate)
             // Persist the app's label + its relays so it survives a restart, then start listening now.
