@@ -33,8 +33,12 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Semaphore
 
 /**
  * Runs a NIP-46 remote signer ("bunker") for one account: subscribes to the
@@ -98,6 +102,15 @@ class NostrConnectSignerService(
      */
     val maxRequestAgeSeconds: Long = 30,
     /**
+     * How many requests may be in-flight (past dedup/rate-limit) at once. Each request is handled in
+     * its own child coroutine so that a request awaiting a user consent prompt does NOT block other
+     * clients' auto-allowed traffic — and so several prompts can be pending together and be approved in
+     * one batch. Intake (dedup, staleness, rate-limit) stays on the single consumer; only [handle] fans
+     * out. The actual crypto is still serialized inside [BunkerRequestProcessor]. This bounds how many
+     * child coroutines (and pending prompts) can accumulate under a flood.
+     */
+    val maxConcurrentHandles: Int = 16,
+    /**
      * Event ids serviced in a previous run, used to seed the in-memory dedup set so a relay replaying
      * stored requests across an app restart is caught by EXACT event id — immune to client clock skew,
      * unlike a timestamp floor (which would wrongly drop a second app whose clock lags). The host
@@ -155,6 +168,14 @@ class NostrConnectSignerService(
             return
         }
 
+        // supervisorScope: each request is handled in a child coroutine so a prompt awaiting the user
+        // doesn't block the loop or other clients; a failing child never tears down the loop or siblings.
+        supervisorScope {
+            runLoop()
+        }
+    }
+
+    private suspend fun kotlinx.coroutines.CoroutineScope.runLoop() {
         val self = transportSigner.pubKey
         // Bounded + DROP_LATEST so a flood bounds memory instead of growing an unlimited queue.
         val events = Channel<NostrConnectEvent>(capacity = maxQueue, onBufferOverflow = BufferOverflow.DROP_LATEST)
@@ -182,6 +203,8 @@ class NostrConnectSignerService(
         // Seed the dedup set with ids serviced in a prior run so a relay replaying stored requests after
         // a restart is caught by exact id (see [initialSeen]).
         val seen = LinkedHashSet(initialSeen)
+        // Bounds how many requests can be in-flight (and how many prompts can be pending) at once.
+        val handleGate = Semaphore(maxConcurrentHandles)
         // Only ask relays for recent requests: kind-24133 is ephemeral, but relays that store it would
         // otherwise replay every old request each time we (re)subscribe. See [maxRequestAgeSeconds].
         val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)), since = TimeUtils.now() - maxRequestAgeSeconds)
@@ -209,9 +232,21 @@ class NostrConnectSignerService(
                     Log.w("NIP46Signer") { "rate-limited request from ${event.pubKey.take(8)}…" }
                     continue
                 }
-                handle(event)
                 // Remember this id (persisted by the host) so a later restart won't re-service the replay.
+                // Done on the single consumer — BEFORE fanning out — because the host's seen-id store is
+                // not synchronized; a request we decided to service here should not be re-prompted after a
+                // restart even if it is ultimately denied (the in-memory `seen` already covers this run).
                 onHandledId?.invoke(event.id)
+                // Acquire BEFORE launching so intake applies backpressure at the cap instead of spawning
+                // unbounded child coroutines; dedup/rate-limit above already ran on this single consumer.
+                handleGate.acquire()
+                launch {
+                    try {
+                        handle(event)
+                    } finally {
+                        handleGate.release()
+                    }
+                }
             }
         } finally {
             client.unsubscribe(subId)

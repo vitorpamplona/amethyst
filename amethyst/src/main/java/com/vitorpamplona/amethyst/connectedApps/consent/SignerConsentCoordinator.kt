@@ -28,6 +28,9 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -61,17 +64,29 @@ data class SignerConsentInfo(
     val previewTemplate: EventTemplate<Event>? = null,
 )
 
+/** One pending per-operation consent request, as the batched sheet renders it. */
+data class PendingConsent(
+    val token: String,
+    val info: SignerConsentInfo,
+)
+
 /**
- * Bridges the broker to the per-operation signer consent UI.
- * A dismissed dialog resolves to [SignerOpGrant.DenyOnce] — fails closed.
+ * Bridges the broker to the per-operation signer consent UI. The signer services requests
+ * concurrently (so their prompts can batch), so several requests can await consent at once: they all
+ * land in [pending], one [SignerConsentActivity] observes that list and shows a single-request dialog
+ * or a batched list, and each resolved token completes its own deferred. A dismissed/ignored request
+ * resolves to [SignerOpGrant.DenyOnce] — fails closed.
  */
 object SignerConsentCoordinator {
-    private class Pending(
-        val info: SignerConsentInfo,
-        val deferred: CompletableDeferred<SignerOpGrant>,
-    )
+    private val deferreds = ConcurrentHashMap<String, CompletableDeferred<SignerOpGrant>>()
+    private val _pending = MutableStateFlow<List<PendingConsent>>(emptyList())
 
-    private val pending = ConcurrentHashMap<String, Pending>()
+    /** The live set of requests awaiting the user's decision; the Activity renders this. */
+    val pending: StateFlow<List<PendingConsent>> = _pending
+
+    // A stable notification id (one prompt notification for the whole batch, updated as requests
+    // arrive) so concurrent requests don't each post their own.
+    private val batchNotificationId = "nip46-signer-consent".hashCode()
 
     suspend fun requestConsent(
         context: Context,
@@ -79,48 +94,54 @@ object SignerConsentCoordinator {
     ): SignerOpGrant {
         val token = UUID.randomUUID().toString()
         val deferred = CompletableDeferred<SignerOpGrant>()
-        pending[token] = Pending(info, deferred)
+        deferreds[token] = deferred
+        _pending.update { it + PendingConsent(token, info) }
 
         // Fast path when Amethyst already owns the foreground: open the dialog directly. When the app
         // is backgrounded this is silently dropped by Android 12+ BAL, so the full-screen-intent
-        // notification below is what actually surfaces the prompt. Wrapped because a blocked launch
-        // can throw on some OEMs rather than no-op.
+        // notification is what surfaces the prompt. Both are idempotent — the Activity is singleTop and
+        // observes [pending], and the notification uses a stable id, so concurrent requests just refresh
+        // the one prompt. Wrapped because a BAL-blocked launch can throw on some OEMs rather than no-op.
         runCatching {
             context.startActivity(
                 Intent(context, SignerConsentActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .putExtra(EXTRA_TOKEN, token),
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             )
         }
-
-        val notificationId =
-            SignerConsentNotifier.show(
-                context = context,
-                activityClass = SignerConsentActivity::class.java,
-                extraKey = EXTRA_TOKEN,
-                token = token,
-                titleRes = R.string.nip46_signer_notif_sign_title,
-            )
+        SignerConsentNotifier.show(
+            context = context,
+            activityClass = SignerConsentActivity::class.java,
+            extraKey = EXTRA_TOKEN,
+            token = "nip46-signer-consent",
+            titleRes = R.string.nip46_signer_notif_sign_title,
+        )
 
         return try {
             deferred.await()
         } finally {
-            pending.remove(token)
-            SignerConsentNotifier.cancel(context, notificationId)
+            deferreds.remove(token)
+            _pending.update { list -> list.filterNot { it.token == token } }
+            if (_pending.value.isEmpty()) SignerConsentNotifier.cancel(context, batchNotificationId)
         }
     }
-
-    fun infoFor(token: String): SignerConsentInfo? = pending[token]?.info
 
     fun complete(
         token: String,
         grant: SignerOpGrant,
     ) {
-        pending[token]?.deferred?.complete(grant)
+        deferreds[token]?.complete(grant)
     }
 
-    fun cancel(token: String) {
-        pending[token]?.deferred?.complete(SignerOpGrant.DenyOnce)
+    fun completeAll(
+        tokens: Collection<String>,
+        grant: SignerOpGrant,
+    ) {
+        tokens.forEach { complete(it, grant) }
+    }
+
+    /** Deny every still-open request — used when the user dismisses the whole sheet. Fails closed. */
+    fun denyAllPending() {
+        deferreds.values.forEach { it.complete(SignerOpGrant.DenyOnce) }
     }
 
     const val EXTRA_TOKEN = "napplet_signer_consent_token"

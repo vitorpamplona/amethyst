@@ -45,6 +45,8 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.ReadWrite
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The signer/bunker side of NIP-46: turns a decrypted [BunkerRequest] from a
@@ -72,6 +74,15 @@ class BunkerRequestProcessor(
     val relays: suspend () -> Set<NormalizedRelayUrl>,
     val authorizer: Nip46RequestAuthorizer,
 ) {
+    /**
+     * Serializes the actual crypto ([signer] `sign`/`nip04|44_*`) across concurrent [process] calls.
+     * The service may run several requests at once so their consent prompts can batch, but the identity
+     * signer — especially an external NIP-55 app reached over IPC — must not see concurrent operations,
+     * so only the crypto runs under this lock. Authorization (which may open a user prompt and block for
+     * a long time) runs OUTSIDE the lock, so a pending prompt never stalls other clients' signing.
+     */
+    private val cryptoLock = Mutex()
+
     /**
      * Fulfils a single decrypted [request] sent by [clientPubKey], returning the
      * response to encrypt and send back. Never throws — signer/authorizer errors
@@ -147,7 +158,9 @@ class BunkerRequestProcessor(
             // external signer is gone — so refuse rather than prompt or hang on a key we can't use.
             BunkerResponseError(request.id, ERROR_ACCOUNT_UNAVAILABLE)
         } else if (authorizer.authorize(clientPubKey, request)) {
-            block()
+            // Authorization ran unlocked (it may have blocked on a user prompt); the crypto itself runs
+            // under [cryptoLock] so concurrent authorized requests don't hit the signer at the same time.
+            cryptoLock.withLock { block() }
         } else {
             BunkerResponseError(request.id, ERROR_UNAUTHORIZED)
         }

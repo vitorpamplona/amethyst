@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Bridges the NIP-46 signer core to Amethyst's shared "Connected Apps" trust
@@ -110,6 +112,12 @@ class Nip46PermissionAuthorizer(
     private val lastUsedThrottle = mutableMapOf<String, Long>()
     private val throttleLock = KmpLock()
 
+    // Serializes first-connect consent. The service now handles requests concurrently so per-op prompts
+    // can batch, but the connect prompt is a separate single dialog — this keeps two clients connecting
+    // at once from stacking two connect dialogs; the second waits for the first to resolve. A coroutine
+    // Mutex (not KmpLock) because the guarded region awaits a user dialog and must suspend, not block.
+    private val connectLock = Mutex()
+
     /** The ledger coordinate for [clientPubKey] under this account. */
     fun coordinateFor(clientPubKey: HexKey): String = coordinateFor(signerPubKey, clientPubKey)
 
@@ -137,16 +145,31 @@ class Nip46PermissionAuthorizer(
         }
 
         val coordinate = coordinateFor(clientPubKey)
-        if (!ledger.hasPolicy(coordinate)) {
-            // First contact: ask the user (if a prompt is wired) which trust level to grant; a
-            // headless signer with no prompt falls back to the non-interactive default.
-            when (val consent = connectConsent?.invoke(coordinate, clientPubKey, request)) {
-                null -> ledger.setPolicy(coordinate, defaultPolicyOnConnect)
-                is AppConnectResult.Connected -> ledger.setPolicy(coordinate, consent.policy)
-                AppConnectResult.Blocked -> return Nip46ConnectDecision.Reject("blocked by user")
-                AppConnectResult.Cancelled -> return Nip46ConnectDecision.Reject("connection declined")
+        // Serialize first-contact consent so two concurrent connects don't stack dialogs. The
+        // hasPolicy re-check inside the lock also means a client that connected on another in-flight
+        // request isn't prompted twice.
+        val rejection =
+            connectLock.withLock {
+                if (ledger.hasPolicy(coordinate)) {
+                    null
+                } else {
+                    // First contact: ask the user (if a prompt is wired) which trust level to grant; a
+                    // headless signer with no prompt falls back to the non-interactive default.
+                    when (val consent = connectConsent?.invoke(coordinate, clientPubKey, request)) {
+                        null -> {
+                            ledger.setPolicy(coordinate, defaultPolicyOnConnect)
+                            null
+                        }
+                        is AppConnectResult.Connected -> {
+                            ledger.setPolicy(coordinate, consent.policy)
+                            null
+                        }
+                        AppConnectResult.Blocked -> "blocked by user"
+                        AppConnectResult.Cancelled -> "connection declined"
+                    }
+                }
             }
-        }
+        if (rejection != null) return Nip46ConnectDecision.Reject(rejection)
         touchLastUsed(coordinate)
         onConnected?.invoke(clientPubKey, request)
 

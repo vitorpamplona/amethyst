@@ -952,6 +952,15 @@
     <string name="nip46_signer_hero_title">Sign for other apps</string>
     <string name="nip46_signer_turn_on">Turn on signer</string>
     <string name="nip46_signer_live">Live</string>
+    <plurals name="nip46_signer_batch_title">
+        <item quantity="one">%1$d signing request</item>
+        <item quantity="other">%1$d signing requests</item>
+    </plurals>
+    <string name="nip46_signer_batch_select_all">Select all</string>
+    <string name="nip46_signer_batch_select_none">Select none</string>
+    <string name="nip46_signer_batch_remember">Remember these for each app</string>
+    <string name="nip46_signer_batch_allow">Allow %1$d</string>
+    <string name="nip46_signer_batch_deny">Deny %1$d</string>
     <string name="nip46_signer_activity_title">Recent activity</string>
     <string name="nip46_signer_activity_empty">No requests serviced yet.</string>
     <string name="nip46_signer_activity_denied">denied</string>

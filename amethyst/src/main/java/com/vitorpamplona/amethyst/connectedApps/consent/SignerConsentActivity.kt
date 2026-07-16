@@ -40,13 +40,16 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,12 +57,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
@@ -76,41 +81,40 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class SignerConsentActivity : ComponentActivity() {
-    private var token: String? = null
-    private var decided = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val token = intent.getStringExtra(SignerConsentCoordinator.EXTRA_TOKEN)
-        this.token = token
-        val info = token?.let { SignerConsentCoordinator.infoFor(it) }
-        if (token == null || info == null) {
-            finish()
-            return
-        }
-
         setContent {
             AmethystTheme {
-                SignerConsentDialog(
-                    info = info,
-                    onGrant = { grant ->
-                        decided = true
-                        SignerConsentCoordinator.complete(token, grant)
-                        finish()
-                    },
-                    onDismiss = {
-                        decided = true
-                        SignerConsentCoordinator.cancel(token)
-                        finish()
-                    },
-                )
+                // The signer services requests concurrently, so more than one may await consent. Observe
+                // the shared queue: one request shows the rich dialog, several show a batched list. When
+                // the queue empties (all decided), close.
+                val pending by SignerConsentCoordinator.pending.collectAsStateWithLifecycle()
+                LaunchedEffect(pending.isEmpty()) { if (pending.isEmpty()) finish() }
+                when {
+                    pending.isEmpty() -> Unit
+                    pending.size == 1 -> {
+                        val p = pending.first()
+                        SignerConsentDialog(
+                            info = p.info,
+                            onGrant = { SignerConsentCoordinator.complete(p.token, it) },
+                            onDismiss = { SignerConsentCoordinator.complete(p.token, SignerOpGrant.DenyOnce) },
+                        )
+                    }
+                    else ->
+                        BatchedConsentDialog(
+                            pending = pending,
+                            onResolve = { tokens, grant -> SignerConsentCoordinator.completeAll(tokens, grant) },
+                            onDismiss = { SignerConsentCoordinator.denyAllPending() },
+                        )
+                }
             }
         }
     }
 
-    override fun finish() {
-        if (!decided) token?.let { SignerConsentCoordinator.cancel(it) }
-        super.finish()
+    override fun onDestroy() {
+        super.onDestroy()
+        // Torn down for good (back / dismiss), not a config change: fail every still-open request closed.
+        if (isFinishing) SignerConsentCoordinator.denyAllPending()
     }
 }
 
@@ -350,6 +354,139 @@ private fun SignerConsentDialog(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(stringResource(R.string.napplet_signer_deny_op, info.operationSummary))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Shown when more than one request is awaiting consent at once (the signer services requests
+ * concurrently). Lists each with a checkbox — all selected by default — and resolves the selected
+ * ones together as Allow or Deny. "Remember" makes an Allow persist per-op ([SignerOpGrant.AllowForOp]);
+ * off is a one-time [SignerOpGrant.AllowOnce]. Requests left unselected stay pending and re-render
+ * (as this list, or the single-request dialog once one remains).
+ */
+@Composable
+private fun BatchedConsentDialog(
+    pending: List<PendingConsent>,
+    onResolve: (tokens: List<String>, grant: SignerOpGrant) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
+    var selected by remember(pending.size) { mutableStateOf(pending.map { it.token }.toSet()) }
+    var rememberChoice by remember { mutableStateOf(true) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .heightIn(max = maxHeight),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+        ) {
+            Column(modifier = Modifier.padding(vertical = 20.dp)) {
+                Text(
+                    pluralStringResource(R.plurals.nip46_signer_batch_title, pending.size, pending.size),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
+                TextButton(
+                    onClick = {
+                        selected = if (selected.size == pending.size) emptySet() else pending.map { it.token }.toSet()
+                    },
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        stringResource(
+                            if (selected.size == pending.size) R.string.nip46_signer_batch_select_none else R.string.nip46_signer_batch_select_all,
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    pending.forEach { p ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Checkbox(
+                                checked = p.token in selected,
+                                onCheckedChange = { on -> selected = if (on) selected + p.token else selected - p.token },
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "${p.info.appletTitle} · ${p.info.operationSummary}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                )
+                                if (p.info.contentPreview.isNotBlank()) {
+                                    Text(
+                                        p.info.contentPreview,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Switch(checked = rememberChoice, onCheckedChange = { rememberChoice = it })
+                    Text(
+                        stringResource(R.string.nip46_signer_batch_remember),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        val tokens = pending.filter { it.token in selected }
+                        // Per-op remember uses each request's own op; one-time is a single AllowOnce.
+                        if (rememberChoice) {
+                            tokens.forEach { onResolve(listOf(it.token), SignerOpGrant.AllowForOp(it.info.op)) }
+                        } else {
+                            onResolve(tokens.map { it.token }, SignerOpGrant.AllowOnce)
+                        }
+                    },
+                    enabled = selected.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                ) {
+                    Text(stringResource(R.string.nip46_signer_batch_allow, selected.size))
+                }
+                OutlinedButton(
+                    onClick = { onResolve(pending.filter { it.token in selected }.map { it.token }, SignerOpGrant.DenyOnce) },
+                    enabled = selected.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(R.string.nip46_signer_batch_deny, selected.size))
                 }
             }
         }
