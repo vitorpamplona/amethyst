@@ -143,10 +143,24 @@ private fun darkColors(accent: AccentColorType): ColorScheme {
         onTertiaryContainer = onAccentContainer(secondary, dark = true),
         inversePrimary = accentPrimary(accent, dark = false),
         surfaceTint = primary,
+        // Neutral (hue-free) base + surface ramp. Left unset, these fall back to Material's
+        // violet-tinted baseline greys, which read as a faint purple wash independent of the
+        // accent. The greys below keep Material's lightness so contrast is unchanged.
         background = Color.Black,
+        onBackground = Color(0xFFE6E6E6),
         surface = Color.Black,
+        onSurface = Color(0xFFE6E6E6),
+        surfaceVariant = Color(0xFF1E1E1E),
+        onSurfaceVariant = Color(0xFFCACACA),
         surfaceDim = Color.Black,
-        surfaceVariant = Color(red = 29, green = 26, blue = 34),
+        surfaceBright = Color(0xFF383838),
+        surfaceContainerLowest = Color(0xFF141414),
+        surfaceContainerLow = Color(0xFF1A1A1A),
+        surfaceContainer = Color(0xFF252525),
+        surfaceContainerHigh = Color(0xFF2E2E2E),
+        surfaceContainerHighest = Color(0xFF383838),
+        outline = Color(0xFF909090),
+        outlineVariant = Color(0xFF454545),
     )
 }
 
@@ -169,8 +183,25 @@ private fun lightColors(accent: AccentColorType): ColorScheme {
         onTertiaryContainer = onAccentContainer(secondary, dark = false),
         inversePrimary = accentPrimary(accent, dark = true),
         surfaceTint = primary,
-        surfaceContainerHighest = Color(red = 236, green = 230, blue = 240),
-        surfaceVariant = Color(red = 250, green = 245, blue = 252),
+        // Neutral (hue-free) base + surface ramp. Left unset, these fall back to Material's
+        // violet-tinted baseline greys (e.g. surface #FEF7FF), which read as a faint purple wash
+        // independent of the accent. The greys below keep Material's lightness so contrast is
+        // unchanged.
+        background = Color(0xFFFDFDFD),
+        onBackground = Color(0xFF1C1C1C),
+        surface = Color(0xFFFDFDFD),
+        onSurface = Color(0xFF1C1C1C),
+        surfaceVariant = Color(0xFFFAFAFA),
+        onSurfaceVariant = Color(0xFF484848),
+        surfaceDim = Color(0xFFDEDEDE),
+        surfaceBright = Color(0xFFFDFDFD),
+        surfaceContainerLowest = Color(0xFFFFFFFF),
+        surfaceContainerLow = Color(0xFFF7F7F7),
+        surfaceContainer = Color(0xFFF2F2F2),
+        surfaceContainerHigh = Color(0xFFECECEC),
+        surfaceContainerHighest = Color(0xFFEBEBEB),
+        outline = Color(0xFF767676),
+        outlineVariant = Color(0xFFCACACA),
     )
 }
 
