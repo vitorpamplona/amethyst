@@ -2328,6 +2328,8 @@
 
     <string name="hidden_words">Hidden Words</string>
     <string name="hide_new_word_label">Hide new word or sentence</string>
+    <string name="mute_hashtag">Mute hashtag</string>
+    <string name="unmute_hashtag">Unmute hashtag</string>
     <string name="settings_muted_threads_title">Muted threads</string>
     <string name="settings_muted_threads_empty">No muted threads</string>
     <string name="settings_muted_threads_unknown">Unknown thread · %1$s</string>

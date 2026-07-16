@@ -4719,6 +4719,14 @@ class Account(
         sendMyPublicAndPrivateOutbox(muteList.showWord(word))
     }
 
+    suspend fun hideHashtag(hashtag: String) {
+        sendMyPublicAndPrivateOutbox(muteList.hideHashtag(hashtag))
+    }
+
+    suspend fun showHashtag(hashtag: String) {
+        muteList.showHashtag(hashtag)?.let { sendMyPublicAndPrivateOutbox(it) }
+    }
+
     suspend fun hideUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(muteList.hideUser(pubkeyHex))
     }

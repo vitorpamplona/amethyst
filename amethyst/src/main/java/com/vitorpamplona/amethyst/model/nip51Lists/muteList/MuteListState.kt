@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.HashtagTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
@@ -135,6 +136,39 @@ class MuteListState(
             MuteListEvent.remove(
                 earlierVersion = muteList,
                 mute = WordTag(word),
+                signer = signer,
+            )
+        } else {
+            null
+        }
+    }
+
+    suspend fun hideHashtag(hashtag: String): MuteListEvent {
+        val muteList = getMuteList()
+
+        return if (muteList != null) {
+            MuteListEvent.add(
+                earlierVersion = muteList,
+                mute = HashtagTag(hashtag),
+                isPrivate = true,
+                signer = signer,
+            )
+        } else {
+            MuteListEvent.create(
+                mute = HashtagTag(hashtag),
+                isPrivate = true,
+                signer = signer,
+            )
+        }
+    }
+
+    suspend fun showHashtag(hashtag: String): MuteListEvent? {
+        val muteList = getMuteList()
+
+        return if (muteList != null) {
+            MuteListEvent.remove(
+                earlierVersion = muteList,
+                mute = HashtagTag(hashtag),
                 signer = signer,
             )
         } else {

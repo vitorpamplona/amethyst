@@ -399,6 +399,33 @@ fun observeUserIsFollowingHashtag(
 @SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
+fun observeUserIsMutingHashtag(
+    hashtag: String,
+    accountViewModel: AccountViewModel,
+): State<Boolean> {
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(accountViewModel, hashtag) {
+            accountViewModel.account.hiddenUsers.flow
+                .mapLatest { it.isHashtagHidden(hashtag) }
+                .onStart {
+                    emit(
+                        accountViewModel.account.hiddenUsers.flow.value
+                            .isHashtagHidden(hashtag),
+                    )
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.IO)
+        }
+
+    return flow.collectAsStateWithLifecycle(
+        accountViewModel.account.hiddenUsers.flow.value
+            .isHashtagHidden(hashtag),
+    )
+}
+
+@SuppressLint("StateFlowValueCalledInComposition")
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
 fun observeUserIsFollowingGeohash(
     geohash: String,
     accountViewModel: AccountViewModel,
