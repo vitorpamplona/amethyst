@@ -63,9 +63,12 @@ class GeohashChatViewModel : ViewModel() {
     private val _relays = MutableStateFlow<List<NormalizedRelayUrl>>(emptyList())
     val relays: StateFlow<List<NormalizedRelayUrl>> = _relays.asStateFlow()
 
-    /** Our own per-geohash identity pubkey, so the UI can right-align our own (anonymous) messages. */
-    private val _myPubKey = MutableStateFlow<String?>(null)
-    val myPubKey: StateFlow<String?> = _myPubKey.asStateFlow()
+    /**
+     * The pubkeys the UI should right-align as "mine": the anonymous per-geohash identity AND the
+     * real account key, so both posting modes (anonymous and "post as me") show as own messages.
+     */
+    private val _myPubKeys = MutableStateFlow<Set<String>>(emptySet())
+    val myPubKeys: StateFlow<Set<String>> = _myPubKeys.asStateFlow()
 
     /** Whether our outgoing messages carry the ["t","teleport"] marker (not physically in the cell). */
     private val _teleported = MutableStateFlow(false)
@@ -102,13 +105,15 @@ class GeohashChatViewModel : ViewModel() {
     }
 
     private suspend fun start() {
-        _myPubKey.value =
+        val account = accountViewModel.account
+        val anonPubKey =
             withContext(Dispatchers.IO) {
-                accountViewModel.account.geohashIdentity
+                account.geohashIdentity
                     .keyPair(geohash)
                     .pubKey
                     .toHexKey()
             }
+        _myPubKeys.value = setOf(anonPubKey, account.signer.pubKey)
         _relays.value = resolveRelays()
     }
 

@@ -121,7 +121,7 @@ private fun GeohashChatRoom(
     ChannelFilterAssemblerSubscription(channel, accountViewModel.dataSources().channel, accountViewModel)
 
     val relays by composer.relays.collectAsStateWithLifecycle()
-    val myPubKey by composer.myPubKey.collectAsStateWithLifecycle()
+    val myPubKeys by composer.myPubKeys.collectAsStateWithLifecycle()
     val teleporting by composer.teleported.collectAsStateWithLifecycle()
     val postingAsSelf by composer.postAsSelf.collectAsStateWithLifecycle()
     val feedState by feedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
@@ -167,7 +167,7 @@ private fun GeohashChatRoom(
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val state = feedState) {
-                is FeedState.Loaded -> GeohashMessageList(state, myPubKey)
+                is FeedState.Loaded -> GeohashMessageList(state, myPubKeys)
                 else -> Unit
             }
         }
@@ -223,7 +223,7 @@ private fun GeohashChatRoom(
 @Composable
 private fun GeohashMessageList(
     loaded: FeedState.Loaded,
-    myPubKey: String?,
+    myPubKeys: Set<String>,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val messages =
@@ -242,7 +242,7 @@ private fun GeohashMessageList(
             GeohashBubble(
                 message = message,
                 position = groupPositionFor(messages, index),
-                isMine = message.pubKey == myPubKey,
+                isMine = message.pubKey in myPubKeys,
             )
         }
     }
