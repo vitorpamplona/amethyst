@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
@@ -59,6 +60,13 @@ fun RenderGeohashBubble(
             tint = MaterialTheme.colorScheme.primary,
         )
         Spacer(StdHorzSpacer)
-        Text(channel.toBestDisplayName())
+        // Users care about the place, not the geohash code — resolve the cell to a city name, falling
+        // back to the "#geohash" display name while the reverse-geocode is in flight (or unavailable).
+        LoadCityName(
+            geohashStr = channel.geohash,
+            onLoading = { Text(channel.toBestDisplayName()) },
+        ) { city ->
+            Text(city)
+        }
     }
 }

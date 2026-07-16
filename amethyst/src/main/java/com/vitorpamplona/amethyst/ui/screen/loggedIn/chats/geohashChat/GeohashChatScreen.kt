@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
+import android.Manifest
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +31,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -44,12 +48,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -59,12 +70,16 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatActingIdentities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatDisplayNameResolver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatReactOverride
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatShowSelfAuthorName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * A Bitchat-interoperable public geohash location chat: everyone physically (or
@@ -94,6 +109,7 @@ fun GeohashChatScreen(
     }
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun GeohashChatRoom(
     channel: GeohashChatChannel,
@@ -102,6 +118,7 @@ private fun GeohashChatRoom(
     nav: INav,
 ) {
     val geohash = channel.geohash
+    val relays = remember(channel) { channel.relays().toList() }
 
     // Identity/reactions helper (per-cell pubkeys + anonymous react).
     val identity: GeohashChatViewModel = viewModel(key = "GeohashIdentity/$geohash")
@@ -117,7 +134,28 @@ private fun GeohashChatRoom(
     val newMessageModel: ChannelNewMessageViewModel = viewModel(key = "geohash:${geohash}NewMessage")
     newMessageModel.init(accountViewModel)
     newMessageModel.load(channel)
-    LaunchedEffect(newMessageModel) { if (teleported) newMessageModel.geohashTeleported = true }
+
+    // Teleport is a fact, not a per-message choice: the app decides whether the sender is physically
+    // in this cell. When the device's location is known we compare it to the channel cell (objective);
+    // otherwise we fall back to how the user arrived — the map picker passes teleported=true, "near me"
+    // and manual entry default to false. This drives the ["t","teleport"] tag honestly. rememberPermissionState
+    // only reads the current grant (it never prompts), so opening a location chat can't trigger a GPS dialog.
+    val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
+    LaunchedEffect(locationPermission.status.isGranted) {
+        if (locationPermission.status.isGranted) {
+            Amethyst.instance.locationManager.setLocationPermission(true)
+        }
+    }
+    val deviceLocation by Amethyst.instance.locationManager.preciseGeohashStateFlow
+        .collectAsStateWithLifecycle()
+    val isTeleported =
+        remember(deviceLocation, geohash, teleported) {
+            when (val loc = deviceLocation) {
+                is LocationState.LocationResult.Success -> !loc.geoHash.toString().startsWith(geohash)
+                else -> teleported
+            }
+        }
+    LaunchedEffect(isTeleported) { newMessageModel.geohashTeleported = isTeleported }
 
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChannelFilterAssemblerSubscription(channel, accountViewModel.dataSources().channel, accountViewModel)
@@ -150,13 +188,14 @@ private fun GeohashChatRoom(
 
     DisappearingScaffold(
         isInvertedLayout = true,
-        topBar = { GeohashChatTopBar(geohash, channel.relays().size, nav) },
+        topBar = { GeohashChatTopBar(geohash, relays, nav) },
         accountViewModel = accountViewModel,
         allowBarHide = false,
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 CompositionLocalProvider(
+                    LocalChatShowSelfAuthorName provides true,
                     LocalChatActingIdentities provides myPubKeys,
                     LocalChatReactOverride provides { note, reaction ->
                         identity.react(note, reaction, newMessageModel.geohashPostAsSelf)
@@ -217,12 +256,8 @@ private fun GeohashComposerOptions(
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        FilterChip(
-            selected = model.geohashTeleported,
-            onClick = { model.geohashTeleported = !model.geohashTeleported },
-            label = { Text("✈ Teleport") },
-        )
         FilterChip(
             selected = model.geohashPostAsSelf,
             onClick = {
@@ -230,28 +265,95 @@ private fun GeohashComposerOptions(
             },
             label = { Text("Post as me") },
         )
+        // Read-only: the app sets teleport from your location (see GeohashChatRoom). Shown only when
+        // you're not in the cell, so you know your messages carry the ✈ marker — it isn't a toggle.
+        if (model.geohashTeleported) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "✈ Teleported",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun GeohashChatTopBar(
     geohash: String,
-    relayCount: Int,
+    relays: List<NormalizedRelayUrl>,
     nav: INav,
 ) {
+    var showRelays by remember { mutableStateOf(false) }
+    if (showRelays) {
+        GeohashRelayListDialog(geohash, relays) { showRelays = false }
+    }
+
     TopBarExtensibleWithBackButton(
         title = {
             Column {
-                Text("#$geohash", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                LoadCityName(geohashStr = geohash) { cityName ->
+                // Lead with the place — users care about "Palo Alto", not "9q9jh". Falls back to the
+                // #geohash while the reverse-geocode resolves (or when no geocoder is available).
+                LoadCityName(
+                    geohashStr = geohash,
+                    onLoading = {
+                        Text("#$geohash", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    },
+                ) { cityName ->
+                    Text(cityName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { showRelays = true },
+                ) {
+                    val relayText = if (relays.size == 1) "1 relay" else "${relays.size} relays"
                     Text(
-                        "$cityName · $relayCount relays",
+                        "#$geohash · $relayText",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SymbolIcon(
+                        symbol = MaterialSymbols.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
                     )
                 }
             }
         },
         popBack = nav::popBack,
+    )
+}
+
+/** Lists the geo-relays this cell broadcasts to — the answer to "which 5 relays?" when the count is tapped. */
+@Composable
+private fun GeohashRelayListDialog(
+    geohash: String,
+    relays: List<NormalizedRelayUrl>,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        title = { Text("Relays for #$geohash") },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (relays.isEmpty()) {
+                    Text(
+                        "No relays configured for this cell.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    relays.forEach { relay ->
+                        Text(relay.displayUrl(), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
     )
 }

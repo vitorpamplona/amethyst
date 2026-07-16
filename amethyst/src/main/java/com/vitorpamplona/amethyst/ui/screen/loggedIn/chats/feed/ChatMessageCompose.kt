@@ -195,12 +195,18 @@ fun NormalChatNote(
         }
     }
 
+    // A geohash chat asks own messages to still show the author line (which identity posted), so the
+    // usual "hide the name on my own bubbles" shortcut is opt-out there.
+    val showSelfAuthorName = LocalChatShowSelfAuthorName.current
+
     val drawAuthorInfo by
-        remember(note, isLoggedInUser) {
+        remember(note, isLoggedInUser, showSelfAuthorName) {
             derivedStateOf {
                 val noteEvent = note.event
                 when {
-                    isLoggedInUser -> false
+                    // Own messages: normally no name; in a multi-identity chat, show it (unless a DM,
+                    // which never draws the user's own author info).
+                    isLoggedInUser -> showSelfAuthorName && noteEvent !is PrivateDmEvent
 
                     // never shows the user's pictures
                     noteEvent is PrivateDmEvent -> false
@@ -437,6 +443,14 @@ val LocalChatReactOverride = compositionLocalOf<((Note, String) -> Unit)?> { nul
  * Null everywhere else (authors render from their profile as usual).
  */
 val LocalChatDisplayNameResolver = compositionLocalOf<((Note) -> String?)?> { null }
+
+/**
+ * Whether to draw the author line on the user's OWN (right-aligned) messages. Normally false — in a
+ * regular chat your own bubbles carry no name because it's obviously you. A geohash chat sets it true:
+ * there you may post under two identities (the anonymous per-cell key or your real account), so the
+ * bubble shows which name/nickname each message went out under.
+ */
+val LocalChatShowSelfAuthorName = compositionLocalOf { false }
 
 @Composable
 fun RenderReplyRow(
