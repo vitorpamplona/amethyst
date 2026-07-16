@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.service.geohash.GeohashChatIdentity
 import com.vitorpamplona.amethyst.service.geohash.GeohashRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
@@ -103,7 +102,13 @@ class GeohashChatViewModel : ViewModel() {
     }
 
     private suspend fun start() {
-        _myPubKey.value = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(accountViewModel.account, geohash).pubKey.toHexKey() }
+        _myPubKey.value =
+            withContext(Dispatchers.IO) {
+                accountViewModel.account.geohashIdentity
+                    .keyPair(geohash)
+                    .pubKey
+                    .toHexKey()
+            }
         _relays.value = resolveRelays()
     }
 
@@ -127,7 +132,7 @@ class GeohashChatViewModel : ViewModel() {
                 signer = account.signer
                 pubKeyHex = account.signer.pubKey
             } else {
-                val keyPair = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(account, geohash) }
+                val keyPair = withContext(Dispatchers.IO) { account.geohashIdentity.keyPair(geohash) }
                 signer = NostrSignerInternal(keyPair)
                 pubKeyHex = keyPair.pubKey.toHexKey()
             }
@@ -150,7 +155,7 @@ class GeohashChatViewModel : ViewModel() {
         viewModelScope.launch {
             val relays = _relays.value.toSet().ifEmpty { resolveRelays().toSet() }
             if (relays.isEmpty()) return@launch
-            val keyPair = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(accountViewModel.account, geohash) }
+            val keyPair = withContext(Dispatchers.IO) { accountViewModel.account.geohashIdentity.keyPair(geohash) }
             val signer = NostrSignerInternal(keyPair)
             val template = GeohashPresenceEvent.build(geohash, nickname = nickname?.ifBlank { null })
             runCatching { accountViewModel.account.signWithAndSendPrivately(template, signer, relays) }
