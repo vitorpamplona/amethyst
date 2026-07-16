@@ -160,7 +160,9 @@ private fun Nip46AppCard(
     entry: Nip46AppEntry,
     onClick: () -> Unit,
 ) {
-    val npub = remember(entry.clientPubKey) { runCatching { NPub.create(entry.clientPubKey) }.getOrDefault(entry.clientPubKey.take(12) + "…") }
+    // Same identity line the detail screen (Nip46AppHeader) uses: the app's self-declared website
+    // when it has one, npub otherwise — so a row and its detail never disagree.
+    val subtitle = remember(entry.info?.url, entry.clientPubKey) { nip46ClientSubtitle(entry.info?.url, entry.clientPubKey) }
     val title = entry.info?.name?.ifBlank { null } ?: stringResource(R.string.nip46_signer_remote_app)
     val relayCount = entry.info?.relays?.size ?: 0
 
@@ -190,7 +192,7 @@ private fun Nip46AppCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    npub,
+                    subtitle,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = FontFamily.Monospace,
@@ -240,6 +242,25 @@ private fun AppSignerPolicy.shortLabel(): String =
         AppSignerPolicy.REASONABLE -> stringResource(R.string.napplet_policy_reasonable)
         AppSignerPolicy.PARANOID -> stringResource(R.string.napplet_policy_paranoid)
     }
+
+/**
+ * The identity line shown for a NIP-46 client: its self-declared website (host only) when it
+ * advertised one, otherwise its npub. Shared by the list card and the detail header so a row and
+ * the screen it opens always agree.
+ */
+internal fun nip46ClientSubtitle(
+    url: String?,
+    clientPubKey: HexKey,
+): String {
+    val host =
+        url
+            ?.ifBlank { null }
+            ?.removePrefix("https://")
+            ?.removePrefix("http://")
+            ?.substringBefore('/')
+            ?.ifBlank { null }
+    return host ?: runCatching { NPub.create(clientPubKey) }.getOrDefault(clientPubKey.take(12) + "…")
+}
 
 private suspend fun loadNip46Apps(signerPubKey: HexKey): List<Nip46AppEntry> {
     val store = Amethyst.instance.signerPermissionStore
