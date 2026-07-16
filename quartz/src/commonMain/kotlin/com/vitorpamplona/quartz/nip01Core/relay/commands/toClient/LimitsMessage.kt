@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
+import androidx.compose.runtime.Immutable
+
 /**
- * NIP-22 `LIMITS` message: the relay advertises the current rights and limits
+ * `LIMITS` message: the relay advertises the current rights and limits
  * for this connection. Sent upon connection and again at any point during the
  * connection to reflect the client's changing rights (e.g. after a NIP-42 AUTH).
  *
@@ -32,6 +34,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
  * any previously cached value and not assume a default. Clients cache this
  * payload on the relay connection and apply it when sending `EVENT`s and `REQ`s.
  */
+@Immutable
 class LimitsMessage(
     /** Whether clients may publish events to this relay. */
     val canWrite: Boolean? = null,
