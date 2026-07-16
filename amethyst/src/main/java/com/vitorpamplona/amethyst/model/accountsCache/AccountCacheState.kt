@@ -77,6 +77,9 @@ class AccountCacheState(
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
+    /** Guards [loadAccount]'s check-then-create so concurrent callers can't build twin Accounts. */
+    private val loadLock = Any()
+
     fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
             val oldValue = existingAccounts[pubkey]
@@ -187,6 +190,22 @@ class AccountCacheState(
         val cached = accounts.value[signer.pubKey]
         if (cached != null) return cached
 
+        // Serialize construction: the UI login path and the always-on service's preload race
+        // to load the same account on cold start. Without the lock both see a null cache and
+        // both build an Account — the loser is never cancelled, leaving a zombie whose
+        // Nip46SignerState answers bunker requests with a NostrSignerExternal no Activity
+        // ever registers a launcher on (every sign fails "No activity to launch from"),
+        // while duplicating consent prompts and racing error replies to NIP-46 clients.
+        return synchronized(loadLock) {
+            accounts.value[signer.pubKey]?.let { return it }
+            createAccount(signer, accountSettings)
+        }
+    }
+
+    private fun createAccount(
+        signer: NostrSigner,
+        accountSettings: AccountSettings,
+    ): Account {
         val signerWithClientTag =
             NostrSignerWithClientTag(
                 inner = meterSigner(signer),
