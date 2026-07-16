@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupInviteLink
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupNAddrInvite
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -222,6 +223,12 @@ fun uriToRoute(
     }
     if (isConnectedAppRoute(uri)) {
         return connectedAppRoute(uri)
+    }
+
+    // A scanned/opened `nostrconnect://` offer is an app asking to connect to our signer: open the
+    // NIP-46 signer screen and let it run the pairing (it enables the signer as part of connecting).
+    if (uri.startsWith(NostrConnectURI.NOSTRCONNECT_SCHEME)) {
+        return Route.Nip46Signer(connectUri = uri)
     }
 
     relayGroupInviteRoute(uri)?.let { return it }

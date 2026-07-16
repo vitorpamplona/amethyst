@@ -101,6 +101,7 @@ private val LiveGreen = Color(0xFF3DDC84)
 fun Nip46SignerScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
+    connectUri: String? = null,
 ) {
     val account = accountViewModel.account
     val signer = account.nip46Signer
@@ -138,6 +139,11 @@ fun Nip46SignerScreen(
         }
     }
 
+    // Opened from a scanned/shared nostrconnect:// offer — pair that app on open (this also enables the signer).
+    LaunchedEffect(connectUri) {
+        if (!connectUri.isNullOrBlank()) onConnect(connectUri)
+    }
+
     if (scanning) {
         SimpleQrCodeScanner { contents ->
             scanning = false
@@ -162,47 +168,52 @@ fun Nip46SignerScreen(
                 return@Column
             }
 
-            if (!enabled) {
-                DisabledHero(onEnable = { signer.setEnabled(true) })
-                return@Column
-            }
-
-            LiveStatusCard(
-                relayCount = relays.size,
-                connectedCount = connectedCount,
-                onToggleOff = { signer.setEnabled(false) },
-            )
-
-            if (relays.isEmpty()) {
-                WarningCard(stringResource(R.string.nip46_signer_status_no_relays))
-            }
-
-            bunkerUri?.let { uri ->
-                QrHeroCard(
-                    uri = uri,
-                    onCopy = {
-                        clipboard.setText(AnnotatedString(uri))
-                        Toast.makeText(context, R.string.nip46_signer_copied, Toast.LENGTH_SHORT).show()
-                    },
-                    onRegenerate = { confirmRotate = true },
+            if (enabled) {
+                LiveStatusCard(
+                    relayCount = relays.size,
+                    connectedCount = connectedCount,
+                    onToggleOff = { signer.setEnabled(false) },
                 )
+
+                if (relays.isEmpty()) {
+                    WarningCard(stringResource(R.string.nip46_signer_status_no_relays))
+                }
+
+                bunkerUri?.let { uri ->
+                    QrHeroCard(
+                        uri = uri,
+                        onCopy = {
+                            clipboard.setText(AnnotatedString(uri))
+                            Toast.makeText(context, R.string.nip46_signer_copied, Toast.LENGTH_SHORT).show()
+                        },
+                        onRegenerate = { confirmRotate = true },
+                    )
+                }
+            } else {
+                DisabledHero(onEnable = { signer.setEnabled(true) })
             }
 
+            // The Connect section stays reachable even while off: scanning an app's nostrconnect://
+            // code pairs it and enables the signer as part of connecting (no separate "enable" step).
             ConnectSection(
                 onScan = { scanning = true },
                 onPaste = { onConnect(it) },
             )
 
-            ConnectedAppsRow(
-                count = connectedCount,
-                onClick = { nav.nav(Route.ConnectedApps) },
-            )
+            if (enabled || connectedCount > 0) {
+                ConnectedAppsRow(
+                    count = connectedCount,
+                    onClick = { nav.nav(Route.ConnectedApps) },
+                )
+            }
 
-            Text(
-                stringResource(R.string.nip46_signer_background_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (enabled) {
+                Text(
+                    stringResource(R.string.nip46_signer_background_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 

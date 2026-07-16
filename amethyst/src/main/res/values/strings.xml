@@ -923,8 +923,8 @@
     <string name="nip46_signer_connect_hint">Paste a nostrconnect:// link</string>
     <string name="nip46_signer_connect_button">Connect</string>
     <string name="nip46_signer_manage_apps">Manage connected apps</string>
-    <string name="nip46_signer_connected_ok">App connected</string>
-    <string name="nip46_signer_connected_named">Connected %1$s</string>
+    <string name="nip46_signer_connected_ok">App connected. Amethyst now signs for it in the background.</string>
+    <string name="nip46_signer_connected_named">Connected %1$s. Amethyst now signs for it in the background.</string>
     <string name="nip46_signer_connect_invalid">Not a valid nostrconnect:// link</string>
     <string name="nip46_signer_connect_no_relays">That link carries no relay to connect on</string>
     <string name="nip46_signer_connect_failed">Could not connect: %1$s</string>

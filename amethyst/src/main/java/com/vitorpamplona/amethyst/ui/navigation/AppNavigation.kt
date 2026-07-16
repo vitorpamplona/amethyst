@@ -424,7 +424,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.NostrApp>(capWidth = false) { NostrAppScreen(it.coordinate, accountViewModel, nav) }
         composableFromEnd<Route.ConnectedApps> { ConnectedAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ConnectedAppDetail> { ConnectedAppDetailScreen(it.coordinate, accountViewModel, nav) }
-        composableFromEnd<Route.Nip46Signer> { Nip46SignerScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.Nip46Signer> { Nip46SignerScreen(accountViewModel, nav, it.connectUri) }
         composableFromEnd<Route.RelayAuthSettings> { RelayAuthSettingsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }

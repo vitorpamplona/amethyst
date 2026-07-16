@@ -75,7 +75,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.profile_badges_title, MaterialSymbols.MilitaryTech, R.string.profile_badges_search_keywords, Route.ProfileBadges),
                     symEntry(R.string.payment_targets, MaterialSymbols.Payment, R.string.payment_targets_search_keywords, Route.EditPaymentTargets),
                     symEntry(R.string.napplet_permissions_title, MaterialSymbols.Apps, R.string.napplet_connected_apps_search_keywords, Route.ConnectedApps),
-                    symEntry(R.string.nip46_signer_title, MaterialSymbols.Key, R.string.nip46_signer_search_keywords, Route.Nip46Signer),
+                    symEntry(R.string.nip46_signer_title, MaterialSymbols.Key, R.string.nip46_signer_search_keywords, Route.Nip46Signer()),
                     symEntry(R.string.relay_auth_settings_title, MaterialSymbols.Lock, R.string.relay_auth_search_keywords, Route.RelayAuthSettings),
                     symEntry(R.string.security_filters, MaterialSymbols.Security, R.string.security_filters_search_keywords, Route.SecurityFilters),
                     symEntry(R.string.call_settings, MaterialSymbols.Phone, R.string.call_settings_search_keywords, Route.CallSettings),

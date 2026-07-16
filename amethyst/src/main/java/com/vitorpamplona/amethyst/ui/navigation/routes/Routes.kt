@@ -107,7 +107,10 @@ sealed class Route {
 
     @Serializable object ConnectedApps : Route()
 
-    @Serializable object Nip46Signer : Route()
+    @Serializable data class Nip46Signer(
+        /** When set (from a scanned/opened `nostrconnect://` offer), the screen connects that app on open. */
+        val connectUri: String? = null,
+    ) : Route()
 
     @Serializable object RelayAuthSettings : Route()
 
