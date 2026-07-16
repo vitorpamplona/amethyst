@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
 import android.Manifest
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,9 +35,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -50,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -61,6 +64,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -227,55 +232,134 @@ private fun GeohashChatRoom(
             }
 
             HorizontalDivider()
-            GeohashComposerOptions(
-                model = newMessageModel,
-                onRequestPostAsSelf = { showPostAsSelfWarning = true },
+            if (newMessageModel.geohashTeleported) {
+                TeleportIndicatorRow()
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                GeohashIdentityAvatar(
+                    model = newMessageModel,
+                    accountViewModel = accountViewModel,
+                    onRequestPostAsSelf = { showPostAsSelfWarning = true },
+                )
+                Box(Modifier.weight(1f)) {
+                    EditFieldRow(
+                        channelScreenModel = newMessageModel,
+                        accountViewModel = accountViewModel,
+                        onSendNewMessage = feedViewModel.feedState::sendToTop,
+                        nav = nav,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The composer's identity control — the one affordance that replaces the always-on nickname field and
+ * "post as me" chip. Shows the account's picture when posting as yourself, or an incognito avatar when
+ * posting under the anonymous per-cell key. Tap flips between the two (routing through the "post as me"
+ * warning when switching to your real identity); long-press opens the nickname editor.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GeohashIdentityAvatar(
+    model: ChannelNewMessageViewModel,
+    accountViewModel: AccountViewModel,
+    onRequestPostAsSelf: () -> Unit,
+) {
+    var showNickname by remember { mutableStateOf(false) }
+    if (showNickname) {
+        GeohashNicknameDialog(model) { showNickname = false }
+    }
+
+    val postAsSelf = model.geohashPostAsSelf
+    val avatarModifier =
+        Modifier
+            .padding(start = 10.dp, end = 4.dp, bottom = 6.dp)
+            .size(36.dp)
+            .clip(CircleShape)
+            .combinedClickable(
+                onClick = { if (postAsSelf) model.geohashPostAsSelf = false else onRequestPostAsSelf() },
+                onLongClick = { showNickname = true },
             )
-            EditFieldRow(
-                channelScreenModel = newMessageModel,
-                accountViewModel = accountViewModel,
-                onSendNewMessage = feedViewModel.feedState::sendToTop,
-                nav = nav,
+
+    if (postAsSelf) {
+        val picture by observeUserPicture(accountViewModel.userProfile(), accountViewModel)
+        RobohashFallbackAsyncImage(
+            robot = accountViewModel.userProfile().pubkeyHex,
+            model = picture,
+            contentDescription = "Posting as yourself — tap to go anonymous, long-press for a nickname",
+            modifier = avatarModifier,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif = false,
+        )
+    } else {
+        Box(
+            avatarModifier.background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            SymbolIcon(
+                symbol = MaterialSymbols.PersonOff,
+                contentDescription = "Posting anonymously — tap to post as yourself, long-press for a nickname",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(20.dp),
             )
         }
     }
 }
 
+/** Sets/edits the Bitchat `n` nickname carried on this cell's messages — reached by long-pressing the avatar. */
 @Composable
-private fun GeohashComposerOptions(
+private fun GeohashNicknameDialog(
     model: ChannelNewMessageViewModel,
-    onRequestPostAsSelf: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    OutlinedTextField(
-        value = model.geohashNickname,
-        onValueChange = { model.geohashNickname = it },
-        singleLine = true,
-        label = { Text("Nickname (optional)") },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-    )
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        FilterChip(
-            selected = model.geohashPostAsSelf,
-            onClick = {
-                if (model.geohashPostAsSelf) model.geohashPostAsSelf = false else onRequestPostAsSelf()
-            },
-            label = { Text("Post as me") },
-        )
-        // Read-only: the app sets teleport from your location (see GeohashChatRoom). Shown only when
-        // you're not in the cell, so you know your messages carry the ✈ marker — it isn't a toggle.
-        if (model.geohashTeleported) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+    var text by remember { mutableStateOf(model.geohashNickname) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                model.geohashNickname = text.trim()
+                onDismiss()
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("Nickname") },
+        text = {
+            Column {
                 Text(
-                    "✈ Teleported",
+                    "Shown next to your messages in this location channel. Leave blank to stay unnamed.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    placeholder = { Text("e.g. river-otter") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
             }
-        }
+        },
+    )
+}
+
+/** A read-only line telling the user their messages carry the ✈ teleport marker (the app sets this). */
+@Composable
+private fun TeleportIndicatorRow() {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "✈ Teleported — you're not in this cell",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
