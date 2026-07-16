@@ -35,7 +35,7 @@ import androidx.compose.runtime.Immutable
  * payload on the relay connection and apply it when sending `EVENT`s and `REQ`s.
  */
 @Immutable
-class LimitsMessage(
+data class LimitsMessage(
     /** Whether clients may publish events to this relay. */
     val canWrite: Boolean? = null,
     /** Whether clients may send `REQ` commands to this relay. */

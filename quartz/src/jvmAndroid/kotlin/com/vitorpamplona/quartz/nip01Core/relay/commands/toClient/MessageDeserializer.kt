@@ -104,10 +104,13 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                 }
 
                 LimitsMessage.LABEL -> {
-                    jp.nextToken()
-                    val result: JsonNode = jp.codec.readTree(jp)
-
-                    LimitsDeserializer.fromJson(result)
+                    // Tolerate a payload-less ["LIMITS"] frame instead of throwing.
+                    if (jp.nextToken() == JsonToken.START_OBJECT) {
+                        val result: JsonNode = jp.codec.readTree(jp)
+                        LimitsDeserializer.fromJson(result)
+                    } else {
+                        LimitsMessage()
+                    }
                 }
 
                 NegMsgMessage.LABEL -> {

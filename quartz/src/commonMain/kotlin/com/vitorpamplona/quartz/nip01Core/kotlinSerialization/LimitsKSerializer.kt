@@ -23,19 +23,35 @@ package com.vitorpamplona.quartz.nip01Core.kotlinSerialization
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.LimitsMessage
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
-import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
-/** kotlinx-serialization codec for the NIP-22 `LIMITS` object payload. */
+/** kotlinx-serialization codec for the `LIMITS` object payload. */
 object LimitsKSerializer {
+    // Tolerant readers so a malformed/mistyped field degrades to null instead of
+    // throwing: this is the iOS/native incoming-parse path, and it must match the
+    // leniency of the Jackson path (LimitsDeserializer) used on jvmAndroid.
+    private fun JsonObject.bool(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
+
+    private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
+
+    private fun JsonObject.long(key: String): Long? = (this[key] as? JsonPrimitive)?.longOrNull
+
+    private fun JsonObject.intList(key: String): List<Int>? = (this[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }
+
+    private fun JsonObject.tagList(key: String): List<List<String>>? =
+        (this[key] as? JsonArray)?.map { tag ->
+            (tag as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } ?: emptyList()
+        }
+
     fun serializeToElement(value: LimitsMessage): JsonObject =
         buildJsonObject {
             // Only emit the fields the relay actually set; absent limits stay absent.
@@ -71,26 +87,23 @@ object LimitsKSerializer {
 
     fun deserializeFromElement(jsonObject: JsonObject): LimitsMessage =
         LimitsMessage(
-            canWrite = jsonObject["can_write"]?.jsonPrimitive?.boolean,
-            canRead = jsonObject["can_read"]?.jsonPrimitive?.boolean,
-            authForRead = jsonObject["auth_for_read"]?.jsonPrimitive?.boolean,
-            authForWrite = jsonObject["auth_for_write"]?.jsonPrimitive?.boolean,
-            acceptedEventKinds = jsonObject["accepted_event_kinds"]?.jsonArray?.map { it.jsonPrimitive.int },
-            blockedEventKinds = jsonObject["blocked_event_kinds"]?.jsonArray?.map { it.jsonPrimitive.int },
-            minPowDifficulty = jsonObject["min_pow_difficulty"]?.jsonPrimitive?.int,
-            maxMessageLength = jsonObject["max_message_length"]?.jsonPrimitive?.int,
-            maxSubscriptions = jsonObject["max_subscriptions"]?.jsonPrimitive?.int,
-            maxFilters = jsonObject["max_filters"]?.jsonPrimitive?.int,
-            maxLimit = jsonObject["max_limit"]?.jsonPrimitive?.int,
-            maxEventTags = jsonObject["max_event_tags"]?.jsonPrimitive?.int,
-            maxContentLength = jsonObject["max_content_length"]?.jsonPrimitive?.int,
-            createdAtMsecsAgo = jsonObject["created_at_msecs_ago"]?.jsonPrimitive?.long,
-            createdAtMsecsAhead = jsonObject["created_at_msecs_ahead"]?.jsonPrimitive?.long,
-            filterRateLimit = jsonObject["filter_rate_limit"]?.jsonPrimitive?.long,
-            publishingRateLimit = jsonObject["publishing_rate_limit"]?.jsonPrimitive?.long,
-            requiredTags =
-                jsonObject["required_tags"]?.jsonArray?.map { tag ->
-                    (tag as JsonArray).map { it.jsonPrimitive.content }
-                },
+            canWrite = jsonObject.bool("can_write"),
+            canRead = jsonObject.bool("can_read"),
+            authForRead = jsonObject.bool("auth_for_read"),
+            authForWrite = jsonObject.bool("auth_for_write"),
+            acceptedEventKinds = jsonObject.intList("accepted_event_kinds"),
+            blockedEventKinds = jsonObject.intList("blocked_event_kinds"),
+            minPowDifficulty = jsonObject.int("min_pow_difficulty"),
+            maxMessageLength = jsonObject.int("max_message_length"),
+            maxSubscriptions = jsonObject.int("max_subscriptions"),
+            maxFilters = jsonObject.int("max_filters"),
+            maxLimit = jsonObject.int("max_limit"),
+            maxEventTags = jsonObject.int("max_event_tags"),
+            maxContentLength = jsonObject.int("max_content_length"),
+            createdAtMsecsAgo = jsonObject.long("created_at_msecs_ago"),
+            createdAtMsecsAhead = jsonObject.long("created_at_msecs_ahead"),
+            filterRateLimit = jsonObject.long("filter_rate_limit"),
+            publishingRateLimit = jsonObject.long("publishing_rate_limit"),
+            requiredTags = jsonObject.tagList("required_tags"),
         )
 }

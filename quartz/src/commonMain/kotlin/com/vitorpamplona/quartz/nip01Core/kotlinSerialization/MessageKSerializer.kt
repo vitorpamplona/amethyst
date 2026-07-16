@@ -39,6 +39,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonArray
@@ -99,7 +100,7 @@ object MessageKSerializer : KSerializer<Message> {
                     }
 
                     is LimitsMessage -> {
-                        // NIP-22 wire format: ["LIMITS", { <limit_properties> }]
+                        // LIMITS wire format: ["LIMITS", { <limit_properties> }]
                         add(LimitsKSerializer.serializeToElement(value))
                     }
 
@@ -167,7 +168,9 @@ object MessageKSerializer : KSerializer<Message> {
             }
 
             LimitsMessage.LABEL -> {
-                LimitsKSerializer.deserializeFromElement(array[1].jsonObject)
+                // Tolerate a payload-less or malformed ["LIMITS"] frame instead of throwing.
+                val payload = array.getOrNull(1) as? JsonObject ?: JsonObject(emptyMap())
+                LimitsKSerializer.deserializeFromElement(payload)
             }
 
             NegMsgMessage.LABEL -> {

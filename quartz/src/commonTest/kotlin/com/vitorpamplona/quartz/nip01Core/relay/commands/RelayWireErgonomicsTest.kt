@@ -172,4 +172,39 @@ class RelayWireErgonomicsTest {
         assertNull(parsed.canRead)
         assertNull(parsed.maxLimit)
     }
+
+    @Test
+    fun limitsMessageToleratesPayloadlessFrame() {
+        // A malformed ["LIMITS"] with no object must not throw; it yields an empty message.
+        val parsed = Message.fromJson("""["LIMITS"]""")
+        assertTrue(parsed is LimitsMessage)
+        assertNull(parsed.canRead)
+        assertNull(parsed.maxLimit)
+    }
+
+    @Test
+    fun limitsMessageToleratesMistypedAndNullFields() {
+        // Wrong-typed and explicitly-null fields degrade to null ("unspecified"),
+        // never to false/0, and never throw.
+        val json =
+            """["LIMITS",{"can_write":null,"max_limit":"lots","max_filters":true,""" +
+                """"accepted_event_kinds":[1,"x",3],"required_tags":["oops",["t","nostr"]]}]"""
+        val parsed = Message.fromJson(json)
+        assertTrue(parsed is LimitsMessage)
+        assertNull(parsed.canWrite, "explicit null stays null, not false")
+        assertNull(parsed.maxLimit, "a string is not an int -> null, not 0")
+        assertNull(parsed.maxFilters, "a boolean is not an int -> null")
+        assertEquals(listOf(1, 3), parsed.acceptedEventKinds, "non-int array elements are skipped")
+        // The bare "oops" string is not a tag array -> empty; the real pair survives.
+        assertEquals(listOf(emptyList(), listOf("t", "nostr")), parsed.requiredTags)
+    }
+
+    @Test
+    fun limitsMessageHasValueEquality() {
+        // data class equality lets StateFlow.distinctUntilChanged suppress no-op re-advertisements.
+        assertEquals(
+            LimitsMessage(canWrite = true, maxLimit = 200, acceptedEventKinds = listOf(1, 2)),
+            LimitsMessage(canWrite = true, maxLimit = 200, acceptedEventKinds = listOf(1, 2)),
+        )
+    }
 }

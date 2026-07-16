@@ -81,7 +81,7 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
             }
 
             is LimitsMessage -> {
-                // NIP-22 wire format: ["LIMITS", { <limit_properties> }]. Only
+                // LIMITS wire format: ["LIMITS", { <limit_properties> }]. Only
                 // the fields the relay set are emitted; absent limits stay absent.
                 gen.writeStartObject()
                 msg.canWrite?.let { gen.writeBooleanField("can_write", it) }

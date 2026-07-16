@@ -544,6 +544,26 @@ class KotlinSerializationMapperTest {
     }
 
     @Test
+    fun deserializeLimitsMessageToleratesMistypedAndMissingPayload() {
+        // The kotlinx path is the iOS/native incoming parser; a mistyped field or a
+        // payload-less ["LIMITS"] must degrade to null / empty, matching Jackson,
+        // rather than throwing.
+        val mistyped =
+            KotlinSerializationMapper.fromJsonToMessage(
+                """["LIMITS",{"can_write":null,"max_limit":"lots","accepted_event_kinds":[1,"x",3],"required_tags":["oops",["t","nostr"]]}]""",
+            )
+        assertTrue(mistyped is LimitsMessage)
+        assertNull(mistyped.canWrite)
+        assertNull(mistyped.maxLimit)
+        assertEquals(listOf(1, 3), mistyped.acceptedEventKinds)
+        assertEquals(listOf(emptyList(), listOf("t", "nostr")), mistyped.requiredTags)
+
+        val payloadless = KotlinSerializationMapper.fromJsonToMessage("""["LIMITS"]""")
+        assertTrue(payloadless is LimitsMessage)
+        assertNull(payloadless.maxLimit)
+    }
+
+    @Test
     fun crossDeserializationLimitsMessage() {
         val msg =
             LimitsMessage(

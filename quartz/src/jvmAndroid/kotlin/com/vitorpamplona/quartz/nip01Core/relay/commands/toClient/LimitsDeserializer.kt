@@ -24,32 +24,42 @@ import com.fasterxml.jackson.databind.JsonNode
 
 class LimitsDeserializer {
     companion object {
-        private fun JsonNode.intList(field: String): List<Int>? = get(field)?.takeIf { it.isArray }?.map { it.asInt() }
+        // Type-checked readers: a missing field, an explicit JSON null, or a
+        // wrong-typed value all yield null ("unspecified — keep the previous
+        // value") rather than coercing to false/0. Keeps this in step with the
+        // kotlinx path (LimitsKSerializer) used on iOS/native.
+        private fun JsonNode.bool(field: String): Boolean? = get(field)?.takeIf { it.isBoolean }?.booleanValue()
+
+        private fun JsonNode.int(field: String): Int? = get(field)?.takeIf { it.isNumber }?.intValue()
+
+        private fun JsonNode.long(field: String): Long? = get(field)?.takeIf { it.isNumber }?.longValue()
+
+        private fun JsonNode.intList(field: String): List<Int>? = get(field)?.takeIf { it.isArray }?.mapNotNull { it.takeIf { n -> n.isNumber }?.intValue() }
 
         private fun JsonNode.requiredTags(field: String): List<List<String>>? =
             get(field)?.takeIf { it.isArray }?.map { tag ->
-                tag.map { it.asText() }
+                if (tag.isArray) tag.mapNotNull { it.takeIf { n -> n.isValueNode }?.asText() } else emptyList()
             }
 
         fun fromJson(jsonObject: JsonNode): LimitsMessage =
             LimitsMessage(
-                canWrite = jsonObject.get("can_write")?.asBoolean(),
-                canRead = jsonObject.get("can_read")?.asBoolean(),
-                authForRead = jsonObject.get("auth_for_read")?.asBoolean(),
-                authForWrite = jsonObject.get("auth_for_write")?.asBoolean(),
+                canWrite = jsonObject.bool("can_write"),
+                canRead = jsonObject.bool("can_read"),
+                authForRead = jsonObject.bool("auth_for_read"),
+                authForWrite = jsonObject.bool("auth_for_write"),
                 acceptedEventKinds = jsonObject.intList("accepted_event_kinds"),
                 blockedEventKinds = jsonObject.intList("blocked_event_kinds"),
-                minPowDifficulty = jsonObject.get("min_pow_difficulty")?.asInt(),
-                maxMessageLength = jsonObject.get("max_message_length")?.asInt(),
-                maxSubscriptions = jsonObject.get("max_subscriptions")?.asInt(),
-                maxFilters = jsonObject.get("max_filters")?.asInt(),
-                maxLimit = jsonObject.get("max_limit")?.asInt(),
-                maxEventTags = jsonObject.get("max_event_tags")?.asInt(),
-                maxContentLength = jsonObject.get("max_content_length")?.asInt(),
-                createdAtMsecsAgo = jsonObject.get("created_at_msecs_ago")?.asLong(),
-                createdAtMsecsAhead = jsonObject.get("created_at_msecs_ahead")?.asLong(),
-                filterRateLimit = jsonObject.get("filter_rate_limit")?.asLong(),
-                publishingRateLimit = jsonObject.get("publishing_rate_limit")?.asLong(),
+                minPowDifficulty = jsonObject.int("min_pow_difficulty"),
+                maxMessageLength = jsonObject.int("max_message_length"),
+                maxSubscriptions = jsonObject.int("max_subscriptions"),
+                maxFilters = jsonObject.int("max_filters"),
+                maxLimit = jsonObject.int("max_limit"),
+                maxEventTags = jsonObject.int("max_event_tags"),
+                maxContentLength = jsonObject.int("max_content_length"),
+                createdAtMsecsAgo = jsonObject.long("created_at_msecs_ago"),
+                createdAtMsecsAhead = jsonObject.long("created_at_msecs_ahead"),
+                filterRateLimit = jsonObject.long("filter_rate_limit"),
+                publishingRateLimit = jsonObject.long("publishing_rate_limit"),
                 requiredTags = jsonObject.requiredTags("required_tags"),
             )
     }
