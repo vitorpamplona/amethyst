@@ -546,8 +546,9 @@ val ColorScheme.mediumImportanceLink: Color
 val ColorScheme.placeholderText: Color
     get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
 
+// NIP-05 identifiers were a fixed purple; follow the selected accent instead.
 val ColorScheme.nip05: Color
-    get() = if (isLight) Nip05EmailColorLight else Nip05EmailColorDark
+    get() = primary
 
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = if (isLight) LightOnBackgroundColorFilter else DarkOnBackgroundColorFilter

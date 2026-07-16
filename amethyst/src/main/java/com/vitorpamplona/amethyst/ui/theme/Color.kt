@@ -48,9 +48,6 @@ val BitcoinLight = Color(0xFFB66605)
 
 val Following = Color(0xFF03DAC5)
 
-val Nip05EmailColorDark = Color(0xFF765AA2)
-val Nip05EmailColorLight = Color(0xFFa770f3)
-
 val LightRedColor = Color(0xFFC62828)
 
 val RelayIconFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
