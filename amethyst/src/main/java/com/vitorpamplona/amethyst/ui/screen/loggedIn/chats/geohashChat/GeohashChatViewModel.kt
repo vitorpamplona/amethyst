@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -82,6 +83,13 @@ class GeohashChatViewModel : ViewModel() {
     private val _teleported = MutableStateFlow(false)
     val teleported: StateFlow<Boolean> = _teleported.asStateFlow()
 
+    /**
+     * When true, messages are signed with the user's REAL account key instead of the anonymous
+     * per-geohash identity — trading location privacy for profile/reputation/zaps. Off by default.
+     */
+    private val _postAsSelf = MutableStateFlow(false)
+    val postAsSelf: StateFlow<Boolean> = _postAsSelf.asStateFlow()
+
     private val seen = HashSet<String>()
     private val present = HashSet<String>()
     private val subId = newSubId()
@@ -103,6 +111,10 @@ class GeohashChatViewModel : ViewModel() {
 
     fun setTeleported(value: Boolean) {
         _teleported.value = value
+    }
+
+    fun setPostAsSelf(value: Boolean) {
+        _postAsSelf.value = value
     }
 
     private suspend fun start() {
@@ -169,19 +181,29 @@ class GeohashChatViewModel : ViewModel() {
         if (relays.isEmpty()) return
 
         viewModelScope.launch {
-            val keyPair = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(accountViewModel.account, geohash) }
-            val signer = NostrSignerInternal(keyPair)
+            val account = accountViewModel.account
+            // Anonymous per-geohash identity by default; the real account only when the user opts in.
+            val signer: NostrSigner
+            val pubKeyHex: String
+            if (_postAsSelf.value) {
+                signer = account.signer
+                pubKeyHex = account.signer.pubKey
+            } else {
+                val keyPair = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(account, geohash) }
+                signer = NostrSignerInternal(keyPair)
+                pubKeyHex = keyPair.pubKey.toHexKey()
+            }
 
             var template = GeohashChatEvent.build(trimmed, geohash, nickname = nickname?.ifBlank { null }, teleported = _teleported.value)
             template =
                 withContext(Dispatchers.Default) {
                     val deadline = System.nanoTime() + POW_TIMEOUT_NANOS
                     runCatching {
-                        PoWMiner.mine(template, keyPair.pubKey.toHexKey(), POW_BITS, powThreads()) { System.nanoTime() < deadline }
+                        PoWMiner.mine(template, pubKeyHex, POW_BITS, powThreads()) { System.nanoTime() < deadline }
                     }.getOrDefault(template)
                 }
 
-            runCatching { accountViewModel.account.signWithAndSendPrivately(template, signer, relays) }
+            runCatching { account.signWithAndSendPrivately(template, signer, relays) }
         }
     }
 

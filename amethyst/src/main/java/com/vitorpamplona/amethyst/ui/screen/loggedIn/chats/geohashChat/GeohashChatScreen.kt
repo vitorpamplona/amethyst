@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +31,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -37,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,10 +93,34 @@ fun GeohashChatScreen(
     val relays by viewModel.relays.collectAsStateWithLifecycle()
     val myPubKey by viewModel.myPubKey.collectAsStateWithLifecycle()
     val teleporting by viewModel.teleported.collectAsStateWithLifecycle()
+    val postingAsSelf by viewModel.postAsSelf.collectAsStateWithLifecycle()
 
     var nickname by remember { mutableStateOf("") }
     var draft by remember { mutableStateOf("") }
+    var showPostAsSelfWarning by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+
+    if (showPostAsSelfWarning) {
+        AlertDialog(
+            onDismissRequest = { showPostAsSelfWarning = false },
+            title = { Text("Post as your real account?") },
+            text = {
+                Text(
+                    "Location chat is anonymous by default. If you post as yourself, messages here are " +
+                        "signed with your Nostr identity and publicly reveal that you were at this location.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setPostAsSelf(true)
+                    showPostAsSelfWarning = false
+                }) { Text("Post as me") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPostAsSelfWarning = false }) { Text("Cancel") }
+            },
+        )
+    }
 
     Column(Modifier.fillMaxSize().imePadding()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -120,22 +149,28 @@ fun GeohashChatScreen(
         }
 
         HorizontalDivider()
+        OutlinedTextField(
+            value = nickname,
+            onValueChange = { nickname = it },
+            singleLine = true,
+            label = { Text("Nickname (optional)") },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        )
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = nickname,
-                onValueChange = { nickname = it },
-                singleLine = true,
-                label = { Text("Nickname (optional)") },
-                modifier = Modifier.weight(1f),
-            )
             FilterChip(
                 selected = teleporting,
                 onClick = { viewModel.setTeleported(!teleporting) },
                 label = { Text("✈ Teleport") },
-                modifier = Modifier.padding(start = 8.dp),
+            )
+            FilterChip(
+                selected = postingAsSelf,
+                onClick = {
+                    if (postingAsSelf) viewModel.setPostAsSelf(false) else showPostAsSelfWarning = true
+                },
+                label = { Text("Post as me") },
             )
         }
         Row(
