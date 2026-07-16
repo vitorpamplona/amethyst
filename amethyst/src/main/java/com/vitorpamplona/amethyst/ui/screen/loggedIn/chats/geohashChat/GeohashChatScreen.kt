@@ -159,7 +159,18 @@ private fun GeohashChatRoom(
                     LocalChatActingIdentities provides myPubKeys,
                     LocalChatReactOverride provides { note, reaction -> composer.react(note, reaction) },
                     LocalChatDisplayNameResolver provides { note ->
-                        (note.event as? GeohashChatEvent)?.nickname()?.takeIf { it.isNotBlank() }
+                        // Author line = nickname (throwaway keys have no profile) + a ✈ marker for
+                        // teleported senders (not physically in the cell). Folded into the name so it
+                        // needs no extra renderer seam.
+                        val event = note.event as? GeohashChatEvent
+                        val nick = event?.nickname()?.takeIf { it.isNotBlank() }
+                        val teleported = event?.isTeleported() == true
+                        when {
+                            nick != null && teleported -> "$nick ✈"
+                            nick != null -> nick
+                            teleported -> "${note.author?.pubkeyDisplayHex().orEmpty()} ✈"
+                            else -> null
+                        }
                     },
                 ) {
                     RefreshingChatroomFeedView(

@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.Dispatchers
@@ -133,10 +134,10 @@ class GeohashChatViewModel : ViewModel() {
     }
 
     /**
-     * React to [note] following the composer identity: the real account when "post as me" is on
-     * (full account react/undo), otherwise a kind-7 signed by the anonymous per-cell key so a reaction
-     * does not deanonymize the user. Anonymous reactions are add-only (no clean undo yet), so a repeat
-     * of the same reaction from our per-cell key is dropped.
+     * Toggle a reaction on [note] following the composer identity: the real account when "post as
+     * me" is on (full account react/undo), otherwise a kind-7 signed by the anonymous per-cell key so
+     * reacting does not deanonymize the user. If our per-cell key already reacted with [reaction],
+     * this retracts it (a NIP-09 deletion signed by the same key); otherwise it adds it.
      */
     fun react(
         note: Note,
@@ -147,17 +148,29 @@ class GeohashChatViewModel : ViewModel() {
             return
         }
 
-        val hint = note.toEventHint<Event>() ?: return
         val anon = anonPubKeyHex
-        if (anon != null && note.reactions[reaction]?.any { it.author?.pubkeyHex == anon } == true) return
+        // Our own anonymous reaction events with this content, if any (for the undo path).
+        val mine =
+            if (anon == null) {
+                emptyList()
+            } else {
+                note.reactions[reaction]?.filter { it.author?.pubkeyHex == anon }?.mapNotNull { it.event } ?: emptyList()
+            }
 
         viewModelScope.launch {
             val relays = _relays.value.toSet().ifEmpty { resolveRelays().toSet() }
             if (relays.isEmpty()) return@launch
-            val keyPair = withContext(Dispatchers.IO) { accountViewModel.account.geohashIdentity.keyPair(geohash) }
+            val account = accountViewModel.account
+            val keyPair = withContext(Dispatchers.IO) { account.geohashIdentity.keyPair(geohash) }
             val signer = NostrSignerInternal(keyPair)
-            val template = ReactionEvent.build(reaction, hint)
-            runCatching { accountViewModel.account.signWithAndSendPrivately(template, signer, relays) }
+            val template =
+                if (mine.isNotEmpty()) {
+                    DeletionEvent.build(mine)
+                } else {
+                    val hint = note.toEventHint<Event>() ?: return@launch
+                    ReactionEvent.build(reaction, hint)
+                }
+            runCatching { account.signWithAndSendPrivately(template, signer, relays) }
         }
     }
 
