@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
+import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayGroupLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
@@ -197,6 +198,19 @@ class AmethystRichTextSegmentRenderer(
                     ClickableConcordInviteLink(segment.segmentText, nav)
                 }
             else -> Text(segment.segmentText)
+        }
+    }
+
+    @Composable
+    override fun NowhereLink(
+        segment: NowhereLinkSegment,
+        canPreview: Boolean,
+        modifier: Modifier,
+    ) {
+        if (canPreview) {
+            NowhereLinkCard(segment)
+        } else {
+            ClickableUrl(segment.segmentText, segment.segmentText)
         }
     }
 

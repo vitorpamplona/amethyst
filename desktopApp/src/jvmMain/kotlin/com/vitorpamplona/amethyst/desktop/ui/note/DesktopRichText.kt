@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.desktop.ui.note
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,29 +57,23 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
-import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
-import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
-import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
-import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
-import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
-import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
-import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.PdfSegment
-import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
-import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
-import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
-import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextInteractions
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextSegmentRenderer
+import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextInteractions
+import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.service.DesktopCachedRichTextParser
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -89,10 +82,10 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import kotlinx.collections.immutable.ImmutableMap
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.net.URI
+import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextViewer as CommonsRichTextViewer
 
 data class RichTextCallbacks(
     val onMentionClick: ((String) -> Unit)? = null,
@@ -102,9 +95,17 @@ data class RichTextCallbacks(
     val onPayInvoice: ((String) -> Unit)? = null,
 )
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Renders Nostr rich text on Desktop through the shared cross-platform
+ * [CommonsRichTextViewer] core. Markdown stays on the native [RenderMarkdown]
+ * path; plain rich text is dispatched by the shared core, with every
+ * platform-divergent segment drawn mouse-first by [DesktopRichTextSegmentRenderer].
+ *
+ * Replaces the former hand-rolled `DesktopRichTextViewer` switchboard so Desktop
+ * and Android render the same segment model from one place.
+ */
 @Composable
-fun DesktopRichTextViewer(
+fun DesktopRichText(
     content: String,
     state: RichTextViewerState,
     localCache: DesktopLocalCache? = null,
@@ -114,298 +115,242 @@ fun DesktopRichTextViewer(
     if (DesktopCachedRichTextParser.isMarkdown(content)) {
         RenderMarkdown(
             content = content,
-            onLinkClick = { url ->
-                when {
-                    url.startsWith("nostr:") -> {
-                        val parsed = Nip19Parser.uriToRoute(url)
-                        when (val entity = parsed?.entity) {
-                            is NPub -> {
-                                callbacks.onMentionClick?.invoke(entity.hex)
-                            }
-
-                            is NProfile -> {
-                                callbacks.onMentionClick?.invoke(entity.hex)
-                            }
-
-                            is NNote -> {
-                                callbacks.onNavigateToThread?.invoke(entity.hex)
-                            }
-
-                            is NEvent -> {
-                                callbacks.onNavigateToThread?.invoke(entity.hex)
-                            }
-
-                            else -> {}
-                        }
-                    }
-
-                    else -> {
-                        runCatching {
-                            java.awt.Desktop
-                                .getDesktop()
-                                .browse(URI(url))
-                        }
-                    }
-                }
-            },
+            onLinkClick = { url -> handleDesktopLinkClick(url, callbacks) },
             modifier = modifier,
         )
         return
     }
 
-    Column(modifier = modifier) {
-        for (paragraph in state.paragraphs) {
-            when (paragraph) {
-                is ImageGalleryParagraph -> {
-                    val urls = paragraph.words.map { it.segmentText }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        for ((index, segment) in paragraph.words.withIndex()) {
-                            AsyncImage(
-                                model = segment.segmentText,
-                                contentDescription = null,
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .heightIn(max = 300.dp)
-                                        .clip(MaterialTheme.shapes.small)
-                                        .then(
-                                            if (callbacks.onImageClick != null) {
-                                                Modifier.clickable { callbacks.onImageClick.invoke(urls, index) }
-                                            } else {
-                                                Modifier
-                                            },
-                                        ),
-                                contentScale = ContentScale.Crop,
-                            )
-                        }
+    val renderer = remember(localCache, callbacks) { DesktopRichTextSegmentRenderer(localCache, callbacks) }
+    val interactions =
+        remember(callbacks) {
+            RichTextInteractions(
+                onOpenUrl = {
+                    runCatching {
+                        java.awt.Desktop
+                            .getDesktop()
+                            .browse(URI(it))
                     }
-                }
+                },
+                onOpenEmail = {
+                    runCatching {
+                        java.awt.Desktop
+                            .getDesktop()
+                            .browse(URI("mailto:$it"))
+                    }
+                },
+                onOpenPhone = { },
+                onClickHashtag = { callbacks.onHashtagClick?.invoke(it) },
+            )
+        }
 
-                else -> {
-                    val hasOnlyText = paragraph.words.all { it is RegularTextSegment }
-                    if (hasOnlyText) {
-                        Text(
-                            text = paragraph.words.joinToString("") { it.segmentText },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        // RichTextParser splits paragraphs on ' ' so each segment is one
-                        // space-delimited token; the source space lives BETWEEN segments,
-                        // not within them. spacedBy(4.dp) restores that inter-word gap
-                        // so mixed-content paragraphs (text + mention/hashtag/link) don't
-                        // render as a wall of glued-together words.
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(
-                                    4.dp,
-                                    if (paragraph.isRTL) Alignment.End else Alignment.Start,
-                                ),
-                        ) {
-                            for (word in paragraph.words) {
-                                RenderSegment(word, state, localCache, callbacks)
-                            }
-                        }
-                    }
-                }
+    CompositionLocalProvider(
+        LocalRichTextSegmentRenderer provides renderer,
+        LocalRichTextInteractions provides interactions,
+    ) {
+        CommonsRichTextViewer(
+            state = state,
+            canPreview = true,
+            quotesLeft = 1,
+            modifier = modifier,
+        )
+    }
+}
+
+private fun handleDesktopLinkClick(
+    url: String,
+    callbacks: RichTextCallbacks,
+) {
+    when {
+        url.startsWith("nostr:") -> {
+            val parsed = Nip19Parser.uriToRoute(url)
+            when (val entity = parsed?.entity) {
+                is NPub -> callbacks.onMentionClick?.invoke(entity.hex)
+                is NProfile -> callbacks.onMentionClick?.invoke(entity.hex)
+                is NNote -> callbacks.onNavigateToThread?.invoke(entity.hex)
+                is NEvent -> callbacks.onNavigateToThread?.invoke(entity.hex)
+                else -> {}
+            }
+        }
+
+        else -> {
+            runCatching {
+                java.awt.Desktop
+                    .getDesktop()
+                    .browse(URI(url))
             }
         }
     }
 }
 
-@Composable
-private fun RenderSegment(
-    segment: Segment,
-    state: RichTextViewerState,
-    localCache: DesktopLocalCache?,
-    callbacks: RichTextCallbacks,
-) {
-    when (segment) {
-        is RegularTextSegment -> {
-            Text(
-                text = segment.segmentText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        is LinkSegment -> {
-            ClickableLink(segment.segmentText, segment.segmentText)
-        }
-
-        is SchemelessUrlSegment -> {
-            ClickableLink("https://${segment.segmentText}", segment.segmentText)
-        }
-
-        is BechSegment -> {
-            RenderBechSegment(segment, localCache, callbacks)
-        }
-
-        is HashTagSegment -> {
-            val display = "#${segment.hashtag}" + (segment.extras ?: "")
-            Text(
-                text = display,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier =
-                    Modifier
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable { callbacks.onHashtagClick?.invoke(segment.hashtag) },
-            )
-        }
-
-        is HashIndexUserSegment -> {
-            val user = localCache?.getUserIfExists(segment.hex)
-            val display = "@${user?.toBestDisplayName() ?: segment.hex.take(8) + "..."}"
-            Text(
-                text = display + (segment.extras ?: ""),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier =
-                    Modifier
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable { callbacks.onMentionClick?.invoke(segment.hex) },
-            )
-        }
-
-        is HashIndexEventSegment -> {
-            QuotedNoteEmbed(
-                noteId = segment.hex,
-                localCache = localCache,
-                onMentionClick = callbacks.onMentionClick,
-                onNavigateToThread = callbacks.onNavigateToThread,
-            )
-        }
-
-        is EmailSegment -> {
-            Text(
-                text = segment.segmentText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                textDecoration = TextDecoration.Underline,
-                modifier =
-                    Modifier
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable {
-                            runCatching {
-                                java.awt.Desktop
-                                    .getDesktop()
-                                    .browse(URI("mailto:${segment.segmentText}"))
-                            }
-                        },
-            )
-        }
-
-        is PhoneSegment -> {
-            Text(
-                text = segment.segmentText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        is RelayUrlSegment -> {
-            Text(
-                text = segment.segmentText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier =
-                    Modifier
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable { copyToClipboard(segment.segmentText) },
-            )
-        }
-
-        is EmojiSegment -> {
-            RenderCustomEmojiSegment(segment.segmentText, state.customEmoji)
-        }
-
-        is NowhereLinkSegment -> {
-            RenderNowhereLinkCard(segment)
-        }
-
-        is InvoiceSegment -> {
-            RenderInvoiceCard(segment.segmentText, callbacks)
-        }
-
-        is CashuSegment -> {
-            RenderCashuCard(segment.segmentText)
-        }
-
-        is WithdrawSegment -> {
-            ClickableLink(segment.segmentText, segment.segmentText)
-        }
-
-        is BlossomUriSegment -> {
-            ClickableLink(segment.segmentText, segment.segmentText)
-        }
-
-        is PdfSegment -> {
-            RenderPdfCard(segment.segmentText)
-        }
-
-        is Base64Segment -> {
-            AsyncImage(
-                model = segment.segmentText,
-                contentDescription = null,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .clip(MaterialTheme.shapes.small),
-                contentScale = ContentScale.Fit,
-            )
-        }
-
-        is ImageSegment -> {
-            AsyncImage(
-                model = segment.segmentText,
-                contentDescription = null,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .clip(MaterialTheme.shapes.small),
-                contentScale = ContentScale.Fit,
-            )
-        }
-
-        is VideoSegment -> {
-            Text(
-                text = segment.segmentText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                textDecoration = TextDecoration.Underline,
-                modifier =
-                    Modifier
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable {
-                            runCatching {
-                                java.awt.Desktop
-                                    .getDesktop()
-                                    .browse(URI(segment.segmentText))
-                            }
-                        },
-            )
-        }
-
-        is SecretEmoji -> {
-            RenderSecretEmoji(segment.segmentText)
-        }
-
-        else -> {
-            Text(
-                text = segment.segmentText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+/**
+ * Desktop (mouse-first) implementation of the shared [RichTextSegmentRenderer].
+ * Each method draws a segment with the existing Desktop leaf composables in this
+ * file (and `NoteCard`), so Desktop keeps its own presentation and interaction
+ * while sharing the parse + dispatch with Android.
+ */
+class DesktopRichTextSegmentRenderer(
+    private val localCache: DesktopLocalCache?,
+    private val callbacks: RichTextCallbacks,
+) : RichTextSegmentRenderer {
+    @Composable
+    override fun Media(
+        segment: Segment,
+        state: RichTextViewerState,
+        modifier: Modifier,
+    ) {
+        when (segment) {
+            is ImageSegment, is Base64Segment ->
+                AsyncImage(
+                    model = segment.segmentText,
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .then(
+                                if (callbacks.onImageClick != null) {
+                                    Modifier.clickable { callbacks.onImageClick.invoke(listOf(segment.segmentText), 0) }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    contentScale = ContentScale.Fit,
+                )
+            is PdfSegment -> RenderPdfCard(segment.segmentText)
+            else -> ClickableLink(segment.segmentText, segment.segmentText)
         }
     }
+
+    @Composable
+    override fun Gallery(
+        paragraph: ImageGalleryParagraph,
+        state: RichTextViewerState,
+        modifier: Modifier,
+    ) {
+        val urls = remember(paragraph) { paragraph.words.map { it.segmentText } }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = modifier.fillMaxWidth()) {
+            paragraph.words.forEachIndexed { index, segment ->
+                AsyncImage(
+                    model = segment.segmentText,
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .heightIn(max = 300.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .then(
+                                if (callbacks.onImageClick != null) {
+                                    Modifier.clickable { callbacks.onImageClick.invoke(urls, index) }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+        }
+    }
+
+    @Composable
+    override fun Equation(
+        segment: MathSegment,
+        modifier: Modifier,
+    ) = Text(segment.segmentText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+
+    @Composable
+    override fun NostrEntity(
+        bech: String,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        modifier: Modifier,
+    ) {
+        val segment = remember(bech) { BechSegment(bech) }
+        RenderBechSegment(segment, localCache, callbacks)
+    }
+
+    @Composable
+    override fun QuotedEvent(
+        eventHex: String,
+        addedChars: String?,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        modifier: Modifier,
+    ) = QuotedNoteEmbed(
+        noteId = eventHex,
+        localCache = localCache,
+        onMentionClick = callbacks.onMentionClick,
+        onNavigateToThread = callbacks.onNavigateToThread,
+    )
+
+    @Composable
+    override fun UserMention(
+        userHex: String,
+        addedChars: String?,
+        modifier: Modifier,
+    ) {
+        val user = localCache?.getUserIfExists(userHex)
+        val display = "@${user?.toBestDisplayName() ?: (userHex.take(8) + "...")}"
+        Text(
+            text = display + (addedChars ?: ""),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand).clickable { callbacks.onMentionClick?.invoke(userHex) },
+        )
+    }
+
+    @Composable
+    override fun Payment(
+        segment: Segment,
+        modifier: Modifier,
+    ) {
+        when (segment) {
+            is InvoiceSegment -> RenderInvoiceCard(segment.segmentText, callbacks)
+            is CashuSegment -> RenderCashuCard(segment.segmentText)
+            is WithdrawSegment -> ClickableLink(segment.segmentText, segment.segmentText)
+            else -> Text(segment.segmentText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+
+    @Composable
+    override fun LinkPreview(
+        url: String,
+        modifier: Modifier,
+    ) = ClickableLink(url, url)
+
+    @Composable
+    override fun RelayLink(
+        segment: Segment,
+        modifier: Modifier,
+    ) {
+        if (segment is RelayUrlSegment) {
+            Text(
+                text = segment.segmentText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand).clickable { copyToClipboard(segment.segmentText) },
+            )
+        } else {
+            Text(segment.segmentText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+
+    @Composable
+    override fun NowhereLink(
+        segment: NowhereLinkSegment,
+        canPreview: Boolean,
+        modifier: Modifier,
+    ) = RenderNowhereLinkCard(segment)
+
+    @Composable
+    override fun SecretMessage(
+        segment: SecretEmoji,
+        state: RichTextViewerState,
+        canPreview: Boolean,
+        quotesLeft: Int,
+        modifier: Modifier,
+    ) = RenderSecretEmoji(segment.segmentText)
 }
 
 @Composable
@@ -661,33 +606,6 @@ private fun RenderSecretEmoji(text: String) {
                     .pointerHoverIcon(PointerIcon.Hand)
                     .clickable { expanded = true },
         )
-    }
-}
-
-@Composable
-private fun RenderCustomEmojiSegment(
-    word: String,
-    customEmoji: ImmutableMap<String, String>,
-) {
-    val matchedEmoji = remember(word, customEmoji) { customEmoji.entries.firstOrNull { word.contains(it.key) } }
-    if (matchedEmoji != null) {
-        val parts = word.split(matchedEmoji.key, limit = 2)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (parts[0].isNotEmpty()) {
-                Text(parts[0], style = MaterialTheme.typography.bodyMedium)
-            }
-            AsyncImage(
-                model = matchedEmoji.value,
-                contentDescription = matchedEmoji.key,
-                modifier = Modifier.size(20.dp),
-                contentScale = ContentScale.Fit,
-            )
-            if (parts.size > 1 && parts[1].isNotEmpty()) {
-                Text(parts[1], style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    } else {
-        Text(word, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

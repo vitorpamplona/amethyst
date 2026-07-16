@@ -174,8 +174,7 @@ private fun RenderWord(
 
         is SchemelessUrlSegment ->
             ClickableSpan(word.segmentText) { actions.onOpenUrl("https://${word.segmentText}") }
-        is NowhereLinkSegment ->
-            ClickableSpan(word.segmentText) { actions.onOpenUrl(word.segmentText) }
+        is NowhereLinkSegment -> renderer.NowhereLink(word, canPreview, Modifier)
 
         is RelayUrlSegment, is RelayGroupLinkSegment, is ConcordInviteLinkSegment ->
             renderer.RelayLink(word, Modifier)

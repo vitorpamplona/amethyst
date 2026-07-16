@@ -29,6 +29,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
+import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
@@ -147,6 +148,14 @@ interface RichTextSegmentRenderer {
         modifier: Modifier,
     )
 
+    /** A "nowhere.ink" ephemeral-tool link — a card when previewing, a link otherwise. */
+    @Composable
+    fun NowhereLink(
+        segment: NowhereLinkSegment,
+        canPreview: Boolean,
+        modifier: Modifier,
+    )
+
     /** A NIP-C0 secret-emoji span that expands into its own decoded rich-text message. */
     @Composable
     fun SecretMessage(
@@ -238,6 +247,13 @@ object PlainTextSegmentRenderer : RichTextSegmentRenderer {
     @Composable
     override fun RelayLink(
         segment: Segment,
+        modifier: Modifier,
+    ) = Text(segment.segmentText, modifier)
+
+    @Composable
+    override fun NowhereLink(
+        segment: NowhereLinkSegment,
+        canPreview: Boolean,
         modifier: Modifier,
     ) = Text(segment.segmentText, modifier)
 

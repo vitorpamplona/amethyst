@@ -295,7 +295,7 @@ fun NoteCard(
                         remember(strippedContent, note.tags) {
                             DesktopCachedRichTextParser.parseText(strippedContent, note.tags)
                         }
-                    DesktopRichTextViewer(
+                    DesktopRichText(
                         content = strippedContent,
                         state = richState,
                         localCache = localCache,
