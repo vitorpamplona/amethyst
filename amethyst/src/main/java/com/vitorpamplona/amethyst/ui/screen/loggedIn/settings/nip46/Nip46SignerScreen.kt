@@ -593,5 +593,6 @@ private fun describe(
         Nip46SignerState.ConnectResult.InvalidUri -> context.getString(R.string.nip46_signer_connect_invalid)
         Nip46SignerState.ConnectResult.NoRelays -> context.getString(R.string.nip46_signer_connect_no_relays)
         Nip46SignerState.ConnectResult.NotWriteable -> context.getString(R.string.nip46_signer_readonly)
+        Nip46SignerState.ConnectResult.Declined -> context.getString(R.string.nip46_signer_connect_declined)
         is Nip46SignerState.ConnectResult.Failed -> context.getString(R.string.nip46_signer_connect_failed, result.reason)
     }

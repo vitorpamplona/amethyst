@@ -182,6 +182,35 @@ private fun SignerConnectScreen(
                     }
                 }
 
+                // What the app declared it needs (nostrconnect `perms`) — so consent is informed,
+                // not a silent grant. Approving connects and pre-grants exactly these.
+                if (info.requestedPermissions.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Surface(
+                        modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                stringResource(R.string.nip46_connect_requests_title),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            info.requestedPermissions.forEach { perm ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(
+                                        MaterialSymbols.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Text(perm, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(12.dp))

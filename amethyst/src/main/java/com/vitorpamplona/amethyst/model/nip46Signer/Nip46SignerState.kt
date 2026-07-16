@@ -23,8 +23,9 @@ package com.vitorpamplona.amethyst.model.nip46Signer
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -323,30 +324,36 @@ class Nip46SignerState(
         if (offer.relays.isEmpty()) return ConnectResult.NoRelays
         if (!signer.isWriteable()) return ConnectResult.NotWriteable
 
+        val coordinate = authorizer.coordinateFor(offer.clientPubKey)
+        val requestedOps = Nip46PermissionAuthorizer.parsePerms(offer.perms)
+        val firstContact = !ledger.hasPolicy(coordinate)
+
+        // First contact: get informed consent — the app's identity, the perms it declared, and a trust
+        // level — BEFORE we publish the ack or grant anything. A re-pair keeps the existing trust and
+        // per-op decisions the user may have since changed (e.g. an op set to DENY), so it skips the prompt.
+        val grantedPolicy: AppSignerPolicy? =
+            if (firstContact) {
+                when (val result = Nip46ConsentBridge.requestNostrConnectConsent(coordinate, offer.name, offer.url, offer.image, requestedOps)) {
+                    is AppConnectResult.Connected -> result.policy
+                    AppConnectResult.Blocked, AppConnectResult.Cancelled -> return ConnectResult.Declined
+                }
+            } else {
+                null
+            }
+
         return try {
-            // Echo the offer secret back to the client, authored by the transport key so the client
-            // learns THAT as our remote-signer pubkey (not our identity).
+            // Echo the offer secret back to the client — authored by the transport key so the client
+            // learns THAT as our remote-signer pubkey (not our identity). Only after consent.
             val ack = BunkerResponse(newSubId(), offer.secret, null)
             val reply = NostrConnectEvent.create(ack, offer.clientPubKey, transportSigner())
             client.publish(reply, offer.relays)
 
-            // Register the app (the paste is the user's consent) and listen on its relays. Only on
-            // FIRST contact — a re-pair must not overwrite trust-level or per-op decisions the user
-            // has since changed (e.g. an op they explicitly set to DENY).
-            val coordinate = authorizer.coordinateFor(offer.clientPubKey)
-            if (!ledger.hasPolicy(coordinate)) {
-                ledger.setPolicy(coordinate, authorizer.defaultPolicyOnConnect)
-                // Honor the offer's `perms`, but only the ops the REASONABLE policy already auto-allows.
-                // The nostrconnect flow has no dialog — the user scans a code and never sees the perms
-                // spelled out — so pre-granting anything sensitive (config-overwrite kinds 0/3, deletion,
-                // decryption, DMs, unknown kinds) would be a silent privilege grant. Those still prompt on
-                // first use, with full context. Seeding the safe set records the app's declared scope as
-                // explicit, revocable grants without ever exceeding the default policy.
-                Nip46PermissionAuthorizer.parsePerms(offer.perms).forEach { op ->
-                    val safe =
-                        op is NostrSignerOp.Encrypt ||
-                            (op is NostrSignerOp.SignKind && op.kind in NostrSignerPermissionLedger.REASONABLE_SIGN_KINDS)
-                    if (safe) ledger.setOpDecision(coordinate, op, NostrOpDecision.ALLOW)
+            if (grantedPolicy != null) {
+                ledger.setPolicy(coordinate, grantedPolicy)
+                // The user just reviewed and approved these declared perms, so honor them — including
+                // sensitive ones — unless they chose PARANOID (ask every time, pre-grant nothing).
+                if (grantedPolicy != AppSignerPolicy.PARANOID) {
+                    requestedOps.forEach { ledger.setOpDecision(coordinate, it, NostrOpDecision.ALLOW) }
                 }
             }
             ledger.updateLastUsed(coordinate)
@@ -378,6 +385,9 @@ class Nip46SignerState(
         data object NoRelays : ConnectResult
 
         data object NotWriteable : ConnectResult
+
+        /** The user reviewed the connect request and declined (cancelled or blocked). */
+        data object Declined : ConnectResult
 
         data class Failed(
             val reason: String,

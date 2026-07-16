@@ -42,6 +42,12 @@ data class SignerConnectInfo(
     val accountName: String? = null,
     val accountPicture: String? = null,
     val accountPubKey: String? = null,
+    /**
+     * Human-readable permissions the app declared it needs (from a `nostrconnect://…?perms=` offer),
+     * shown so the user gives INFORMED consent before those ops are pre-granted. Empty for flows that
+     * carry no declaration (bunker connect), which just show the trust picker.
+     */
+    val requestedPermissions: List<String> = emptyList(),
 )
 
 /**

@@ -86,6 +86,39 @@ object Nip46ConsentBridge {
         } ?: AppConnectResult.Cancelled
     }
 
+    /**
+     * First-connect consent for the client-initiated (`nostrconnect://`) flow: like [requestConnect]
+     * but built from the pasted/scanned offer, and — crucially — it surfaces the app's declared
+     * [requestedOps] so the user gives informed consent before those ops are pre-granted. Returns the
+     * user's [AppConnectResult] (or [AppConnectResult.Cancelled] if the prompt is never answered).
+     */
+    suspend fun requestNostrConnectConsent(
+        coordinate: String,
+        name: String?,
+        url: String?,
+        image: String?,
+        requestedOps: List<NostrSignerOp>,
+    ): AppConnectResult {
+        val context = Amethyst.instance.appContext
+        val title = name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
+        val domain = url?.ifBlank { null } ?: (Nip46PermissionAuthorizer.clientPubKeyOf(coordinate)?.take(12)?.plus("…") ?: "")
+        val face = accountFace(coordinate)
+        val info =
+            SignerConnectInfo(
+                appletTitle = title,
+                coordinate = coordinate,
+                domain = domain,
+                iconUrl = image,
+                accountName = face.name,
+                accountPicture = face.picture,
+                accountPubKey = face.pubKey,
+                requestedPermissions = requestedOps.map { it.label(context) },
+            )
+        return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {
+            SignerConnectCoordinator.requestConnect(context, info)
+        } ?: AppConnectResult.Cancelled
+    }
+
     /** Per-operation consent: describe the request (op + event preview) and await the user's grant. */
     suspend fun requestOp(
         coordinate: String,

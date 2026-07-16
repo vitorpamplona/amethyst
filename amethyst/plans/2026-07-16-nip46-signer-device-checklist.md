@@ -17,6 +17,12 @@ the client.
       `get_public_key`.
 - [ ] **NostrConnect flow**: client shows a `nostrconnect://` code → "Scan a
       code" on the signer screen pairs it and the signer turns on.
+- [ ] **NostrConnect informed consent**: pairing a `nostrconnect://` offer that
+      carries `perms=` shows a connect sheet listing the app's requested
+      permissions (e.g. "Sign notes (kind 1)", "Decrypt messages") + a trust
+      picker BEFORE anything is granted. Approving pre-grants exactly those ops
+      (unless Paranoid); Cancel/Block declines and nothing is registered. A
+      re-pair of a known app skips the sheet and keeps prior decisions.
 - [ ] **Global scanner**: scan a `nostrconnect://` from the profile/search
       camera → lands on the signer screen and pairs.
 - [ ] **Deep link**: tap a `nostrconnect://` link (web/other app) → Amethyst

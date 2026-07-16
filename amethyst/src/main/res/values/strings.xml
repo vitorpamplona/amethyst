@@ -946,6 +946,8 @@
     <string name="nip46_signer_connect_invalid">Not a valid nostrconnect:// link</string>
     <string name="nip46_signer_connect_no_relays">That link carries no relay to connect on</string>
     <string name="nip46_signer_connect_failed">Could not connect: %1$s</string>
+    <string name="nip46_signer_connect_declined">Connection declined</string>
+    <string name="nip46_connect_requests_title">This app is requesting:</string>
     <string name="nip46_signer_readonly">This is a read-only account and cannot sign.</string>
     <string name="nip46_signer_remote_app">Remote signer app</string>
     <string name="nip46_signer_background_hint">Amethyst keeps a background connection (shown as an ongoing notification) so it can answer signing requests while closed.</string>
