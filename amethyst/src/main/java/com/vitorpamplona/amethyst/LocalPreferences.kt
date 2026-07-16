@@ -223,8 +223,7 @@ object LocalPreferences {
     // otherwise a saved OFF would be missed on cold boot and the service would resurrect.
     // The flow is lazily seeded from disk once (synchronous, main-safe) and is thereafter
     // the source of truth, so there is no async hydrate that could clobber a user toggle.
-    private fun globalSettingsPrefs(): SharedPreferences =
-        Amethyst.instance.appContext.getSharedPreferences("amethyst_global_settings", Context.MODE_PRIVATE)
+    private fun globalSettingsPrefs(): SharedPreferences = Amethyst.instance.appContext.getSharedPreferences("amethyst_global_settings", Context.MODE_PRIVATE)
 
     private val notificationServiceEnabled: MutableStateFlow<Boolean> by lazy {
         MutableStateFlow(globalSettingsPrefs().getBoolean(PrefKeys.NOTIFICATION_SERVICE_ENABLED, true))
