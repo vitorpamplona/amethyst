@@ -21,15 +21,21 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -40,14 +46,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AccentColorType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -55,7 +66,6 @@ import com.vitorpamplona.amethyst.model.FontFamilyType
 import com.vitorpamplona.amethyst.model.FontSizeType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.model.parseAccentColorType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
@@ -72,6 +82,9 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.contentColorOnAccent
+import com.vitorpamplona.amethyst.ui.theme.isLight
+import com.vitorpamplona.amethyst.ui.theme.previewColor
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
@@ -226,25 +239,67 @@ fun ShowThemeChoice(sharedPrefs: UiSettingsFlow) {
 
 @Composable
 fun ShowAccentColorChoice(sharedPrefs: UiSettingsFlow) {
-    val accentOptions =
-        persistentListOf(
-            TitleExplainer(stringRes(AccentColorType.PURPLE.resourceId)),
-            TitleExplainer(stringRes(AccentColorType.BLUE.resourceId)),
-            TitleExplainer(stringRes(AccentColorType.GREEN.resourceId)),
-            TitleExplainer(stringRes(AccentColorType.ORANGE.resourceId)),
-            TitleExplainer(stringRes(AccentColorType.RED.resourceId)),
-            TitleExplainer(stringRes(AccentColorType.PINK.resourceId)),
-        )
+    val accent by sharedPrefs.accentColor.collectAsState()
+    val dark = !MaterialTheme.colorScheme.isLight
 
-    val accentIndex by sharedPrefs.accentColor.collectAsState()
-
-    SettingsRow(
-        R.string.accent_color,
-        R.string.accent_color_description,
-        accentOptions,
-        accentIndex.screenCode,
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        sharedPrefs.accentColor.tryEmit(parseAccentColorType(it))
+        Text(
+            text = stringRes(R.string.accent_color),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringRes(R.string.accent_color_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            AccentColorType.entries.forEach { option ->
+                AccentColorSwatch(
+                    color = option.previewColor(dark),
+                    label = stringRes(option.resourceId),
+                    selected = option == accent,
+                    onClick = { sharedPrefs.accentColor.tryEmit(option) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccentColorSwatch(
+    color: Color,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(color)
+                .then(
+                    if (selected) {
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                    } else {
+                        Modifier
+                    },
+                ).clickable(onClick = onClick)
+                .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Icon(
+                symbol = MaterialSymbols.Done,
+                contentDescription = null,
+                tint = contentColorOnAccent(color),
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 

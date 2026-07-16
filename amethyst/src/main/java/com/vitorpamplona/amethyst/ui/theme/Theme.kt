@@ -124,6 +124,14 @@ private fun onAccentContainer(
     dark: Boolean,
 ): Color = if (dark) color else lerp(color, Color.Black, 0.30f)
 
+// Representative colour for an accent option, used by the Settings accent-picker swatches — the
+// same primary the theme would apply for the given light/dark mode, so the swatch previews the
+// real result.
+fun AccentColorType.previewColor(dark: Boolean): Color = accentPrimary(this, dark)
+
+// Contrast colour (black or white) for content drawn on top of an accent swatch.
+fun contentColorOnAccent(color: Color): Color = onAccent(color)
+
 private fun darkColors(accent: AccentColorType): ColorScheme {
     val primary = accentPrimary(accent, dark = true)
     val secondary = accentSecondary(accent, dark = true)
