@@ -473,9 +473,13 @@ private fun printUsage() {
         |
         |Remote signing (NIP-46):
         |  bunker [--relay URL[,URL…]]  run a remote signer for this (local-key) account; prints a
-        |    [--secret S] [--timeout SECS]  bunker:// uri and signs requests until interrupt/timeout
+        |    [--secret S] [--timeout SECS]  bunker:// uri and signs requests until interrupt/timeout.
+        |    [--perms P] [--interactive]    --perms sign_event:1,nip44_encrypt,… restricts which ops
+        |                                    are allowed (rest rejected); --interactive prompts y/N on
+        |                                    the terminal for anything not pre-allowed (needs a TTY).
+        |                                    Default (neither): approve everything.
         |  bunker connect NOSTRCONNECT-URI             act as signer for a client's nostrconnect://
-        |    [--timeout SECS]                            offer (acks + services its requests)
+        |    [--perms P] [--interactive] [--timeout SECS]  offer (acks + services; same gating flags)
         |  login bunker://PUBKEY?relay=…&secret=…       sign through a remote bunker (mints a local
         |                                                transport key; the account acts as PUBKEY)
         |  login --nostrconnect [--relay URL[,URL…]]   client-initiated: print a nostrconnect:// offer,

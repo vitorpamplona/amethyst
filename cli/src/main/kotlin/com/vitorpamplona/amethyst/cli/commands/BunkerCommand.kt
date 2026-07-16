@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer.Companion.toSignerOp
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -31,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
@@ -38,10 +42,14 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]`
+ * `amy bunker [--relay URL[,URL…]] [--secret S] [--perms P] [--interactive] [--timeout SECS]`
  *
  * Run a NIP-46 remote signer (a "bunker") for the active LOCAL account
  * (nak's `bunker`). Prints a `bunker://…` connection string, then listens on
@@ -53,21 +61,39 @@ import kotlinx.coroutines.withTimeoutOrNull
  * remotely through this bunker. Long-running — stops at `--timeout` SECS or on
  * interrupt.
  *
+ * By default every request is approved (the CLI bunker hosts the operator's own
+ * key — the pairing secret is the gate). Two opt-in gates narrow that:
+ *  - `--perms sign_event:1,nip44_encrypt,…` restricts the signer to the listed
+ *    ops (anything else is rejected). Fully scriptable/headless.
+ *  - `--interactive` prompts `y/N` on the terminal for any op the policy doesn't
+ *    already allow, so the operator approves/rejects each one live. Requires a
+ *    TTY; composes with `--perms` (perms auto-allow, prompt for the rest).
+ *
  * Thin assembly only: the request dispatch, the encrypted wrapper and the
  * subscribe/serve loop all live in quartz (`BunkerRequestProcessor`,
- * `NostrConnectSignerService`, `NostrConnectEvent`); this file just wires the
- * CLI account's `ctx.signer` into them and auto-approves every request (a
- * headless bunker for the operator's own local key).
+ * `NostrConnectSignerService`, `NostrConnectEvent`); the permission parsing +
+ * request→op mapping are reused from commons (`Nip46PermissionAuthorizer`).
  */
 object BunkerCommand {
     /**
-     * A headless bunker authorizer: validate the connect [secret] and then
-     * approve every operation. The CLI bunker hosts the operator's OWN key, so
-     * there is no separate user to prompt — the pairing secret is the gate.
+     * A bunker authorizer: validate the connect [secret], then decide each op.
+     *
+     * When [gated] is false (no `--perms`, no `--interactive`) every op is
+     * approved — the headless default for hosting the operator's own key. When
+     * gated, an op is allowed if [allowAllSignKinds] covers it or it is in
+     * [allowedOps]; otherwise it is denied, unless [interactive] is set, in which
+     * case the operator is prompted on the terminal. Prompts are serialized by
+     * [promptLock] because the service dispatches requests concurrently.
      */
     private class CliAuthorizer(
         val secret: String,
+        val allowedOps: List<NostrSignerOp>,
+        val allowAllSignKinds: Boolean,
+        val interactive: Boolean,
+        val gated: Boolean,
     ) : Nip46RequestAuthorizer {
+        private val promptLock = Mutex()
+
         override suspend fun onConnect(
             clientPubKey: HexKey,
             request: BunkerRequestConnect,
@@ -81,7 +107,35 @@ object BunkerCommand {
         override suspend fun authorize(
             clientPubKey: HexKey,
             request: BunkerRequest,
-        ): Boolean = true
+        ): Boolean {
+            if (!gated) return true
+            // Metadata ops (ping / get_public_key / get_relays) map to no op and need no grant.
+            val op = request.toSignerOp() ?: return true
+            val statically = (op is NostrSignerOp.SignKind && allowAllSignKinds) || op in allowedOps
+            if (statically) return true
+            return if (interactive) prompt(clientPubKey, request) else false
+        }
+
+        /** Ask the operator on the terminal. Serialized so concurrent requests don't interleave prompts. */
+        private suspend fun prompt(
+            clientPubKey: HexKey,
+            request: BunkerRequest,
+        ): Boolean =
+            promptLock.withLock {
+                withContext(Dispatchers.IO) {
+                    val kindInfo = (request as? BunkerRequestSign)?.let { " (kind:${it.event.kind})" } ?: ""
+                    System.err.println("[bunker] ${clientPubKey.take(8)}… requests ${request.method}$kindInfo")
+                    (request as? BunkerRequestSign)?.event?.content?.take(160)?.trim()?.let {
+                        if (it.isNotEmpty()) System.err.println("         content: ${it.replace('\n', ' ')}")
+                    }
+                    System.err.print("[bunker] approve? [y/N] ")
+                    System.err.flush()
+                    val answer = readlnOrNull()?.trim()?.lowercase()
+                    val approved = answer == "y" || answer == "yes"
+                    System.err.println(if (approved) "[bunker] → approved" else "[bunker] → denied")
+                    approved
+                }
+            }
     }
 
     suspend fun run(
@@ -101,6 +155,7 @@ object BunkerCommand {
     ): Int {
         val args = Args(rest)
         val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        interactiveTtyError(args)?.let { return it }
         val accountError = checkHostable(dataDir)
         if (accountError != null) return accountError
 
@@ -127,7 +182,9 @@ object BunkerCommand {
             )
             System.err.println("[bunker] listening as ${self.take(8)}… on ${relays.size} relay(s); paste the bunker:// uri into `amy login`")
 
-            serve(ctx, relays, secret, timeoutMs)
+            val authorizer = buildAuthorizer(args, secret)
+            logPolicy(args)
+            serve(ctx, relays, authorizer, timeoutMs)
             return 0
         }
     }
@@ -144,6 +201,7 @@ object BunkerCommand {
     ): Int {
         val args = Args(rest)
         val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        interactiveTtyError(args)?.let { return it }
         val uri = args.positional(0, "nostrconnect-uri")
         val offer = NostrConnect.parseOffer(uri) ?: return Output.error("bad_args", "not a valid nostrconnect:// uri")
         val accountError = checkHostable(dataDir)
@@ -169,11 +227,13 @@ object BunkerCommand {
                 ),
             )
             System.err.println("[bunker] acked nostrconnect from ${offer.clientPubkey.take(8)}…; now servicing requests")
-            // The CLI bunker auto-approves the operator's own key, so `perms` isn't a gate here; we surface
-            // it so an interop operator can see what an app-side signer would have been asked to pre-grant.
+            // Surface what the client asked for; whether it's honored depends on this bunker's own
+            // --perms/--interactive gate (below), not on the client's self-declared `perms`.
             offer.perms?.let { System.err.println("[bunker] client requested perms: $it") }
 
-            serve(ctx, offer.relays, offer.secret, timeoutMs)
+            val authorizer = buildAuthorizer(args, offer.secret)
+            logPolicy(args)
+            serve(ctx, offer.relays, authorizer, timeoutMs)
             return 0
         }
     }
@@ -186,18 +246,62 @@ object BunkerCommand {
             null
         }
 
+    /**
+     * `--interactive` prompts the operator on the terminal, so it needs a real TTY; a piped/headless
+     * stdin would make [readlnOrNull] return null and silently deny everything. Fail fast instead.
+     */
+    private fun interactiveTtyError(args: Args): Int? =
+        if (args.bool("interactive") && System.console() == null) {
+            Output.error("no_tty", "--interactive needs a terminal (stdin/stdout is not a TTY); use --perms for headless gating")
+        } else {
+            null
+        }
+
+    /** Builds the request gate from `--perms` / `--interactive` (both absent → approve everything). */
+    private fun buildAuthorizer(
+        args: Args,
+        secret: String,
+    ): CliAuthorizer {
+        val perms = args.flag("perms")?.ifBlank { null }
+        val interactive = args.bool("interactive")
+        // parsePerms drops a bare `sign_event` (Amethyst grants per kind), so detect it here for "any kind".
+        val allowAllSignKinds =
+            perms
+                ?.split(',')
+                ?.any { it.trim().lowercase() == "sign_event" || it.trim().lowercase() == "sign" } ?: false
+        return CliAuthorizer(
+            secret = secret,
+            allowedOps = Nip46PermissionAuthorizer.parsePerms(perms),
+            allowAllSignKinds = allowAllSignKinds,
+            interactive = interactive,
+            gated = perms != null || interactive,
+        )
+    }
+
+    /** Tell the operator which gate is active, so an unexpectedly-restrictive run is obvious. */
+    private fun logPolicy(args: Args) {
+        val perms = args.flag("perms")?.ifBlank { null }
+        val interactive = args.bool("interactive")
+        when {
+            perms != null && interactive -> System.err.println("[bunker] gate: auto-allow [$perms], prompt for the rest")
+            perms != null -> System.err.println("[bunker] gate: allow only [$perms], reject the rest")
+            interactive -> System.err.println("[bunker] gate: prompt on the terminal for every op")
+            else -> System.err.println("[bunker] gate: auto-approve every request (secret is the only gate)")
+        }
+    }
+
     /** Subscribe for kind:24133 requests addressed to us and service them until timeout/interrupt. */
     private suspend fun serve(
         ctx: Context,
         relays: Set<NormalizedRelayUrl>,
-        secret: String,
+        authorizer: CliAuthorizer,
         timeoutMs: Long?,
     ) {
         val processor =
             BunkerRequestProcessor(
                 signer = ctx.signer,
                 relays = { relays },
-                authorizer = CliAuthorizer(secret),
+                authorizer = authorizer,
             )
         val service =
             NostrConnectSignerService(
