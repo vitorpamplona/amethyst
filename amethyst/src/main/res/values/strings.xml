@@ -4293,6 +4293,7 @@
     <string name="app_name_debug" translatable="false">Amy Debug</string>
     <string name="app_name_benchmark" translatable="false">Amy Benchmark</string>
     <string name="geohash_chat_open">Open location chat</string>
+    <string name="geohash_chat">Location chat</string>
     <string name="new_conversation_location_title">Location channel</string>
     <string name="new_conversation_location_tagline">Chat with whoever\'s near a place, by geohash.</string>
     <string name="new_conversation_location_chip">Local</string>
