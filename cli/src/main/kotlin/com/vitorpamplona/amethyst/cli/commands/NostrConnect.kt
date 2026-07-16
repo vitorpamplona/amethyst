@@ -57,12 +57,14 @@ object NostrConnect {
         val relays: Set<NormalizedRelayUrl>,
         val secret: String,
         val name: String?,
+        /** The client's self-declared permission request (`perms=sign_event:1,nip44_encrypt,…`), if any. */
+        val perms: String? = null,
     )
 
-    /** Parse `nostrconnect://<client-pubkey>?relay=…&secret=…&name=…` (percent-decoded). */
+    /** Parse `nostrconnect://<client-pubkey>?relay=…&secret=…&perms=…&name=…` (percent-decoded). */
     fun parseOffer(uri: String): Offer? {
         val parsed = NostrConnectURI.parseNostrConnect(uri) ?: return null
-        return Offer(parsed.clientPubKey, parsed.relays, parsed.secret, parsed.name)
+        return Offer(parsed.clientPubKey, parsed.relays, parsed.secret, parsed.name, parsed.perms)
     }
 
     private fun buildOffer(
@@ -70,7 +72,8 @@ object NostrConnect {
         relays: Set<NormalizedRelayUrl>,
         secret: String,
         name: String?,
-    ): String = NostrConnectURI.buildNostrConnect(clientPubkey, relays, secret, name = name)
+        perms: String?,
+    ): String = NostrConnectURI.buildNostrConnect(clientPubkey, relays, secret, perms = perms, name = name)
 
     /**
      * `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]`
@@ -91,12 +94,16 @@ object NostrConnect {
         if (relays.isEmpty()) return Output.error("bad_args", "no relays; pass --relay URL[,URL…]")
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 120L) * 1000
         val name = args.flag("name")
+        // Optional NIP-46 permission request (`--perms sign_event:1,nip44_encrypt,…`). When present it
+        // rides along in the offer so a signer that honors `perms` (e.g. Amethyst's informed-consent
+        // sheet) can pre-grant exactly these ops. Blank is treated as absent.
+        val perms = args.flag("perms")?.ifBlank { null }
 
         val clientKey = KeyPair()
         val clientSigner = NostrSignerInternal(clientKey)
         val clientPub = clientKey.pubKey.toHexKey()
         val secret = KeyPair().privKey!!.toHexKey().take(32)
-        val offer = buildOffer(clientPub, relays, secret, name)
+        val offer = buildOffer(clientPub, relays, secret, name, perms)
 
         // Surface the offer immediately so the human/harness can paste it.
         System.err.println("[nostrconnect] paste this into your signer within ${timeoutMs / 1000}s:")

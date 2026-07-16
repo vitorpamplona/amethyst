@@ -479,7 +479,8 @@ private fun printUsage() {
         |  login bunker://PUBKEY?relay=…&secret=…       sign through a remote bunker (mints a local
         |                                                transport key; the account acts as PUBKEY)
         |  login --nostrconnect [--relay URL[,URL…]]   client-initiated: print a nostrconnect:// offer,
-        |    [--name N] [--timeout SECS]                 wait for a signer to connect, then persist it
+        |    [--name N] [--perms P] [--timeout SECS]     wait for a signer to connect, then persist it
+        |                                                (--perms sign_event:1,nip44_encrypt,… requests ops)
         |
         |Relays: `relay NOUN [add|remove|set|clear|list] …` (bare NOUN lists it)
         |  NOUN = outbox|inbox|nip65 (kind:10002)  dm (10050)  key-package (10051)

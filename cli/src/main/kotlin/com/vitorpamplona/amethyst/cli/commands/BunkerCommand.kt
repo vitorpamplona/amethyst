@@ -165,9 +165,13 @@ object BunkerCommand {
                     "connected_to" to offer.clientPubkey,
                     "pubkey" to ctx.identity.pubKeyHex,
                     "relays" to offer.relays.map { it.url },
+                    "requested_perms" to offer.perms,
                 ),
             )
             System.err.println("[bunker] acked nostrconnect from ${offer.clientPubkey.take(8)}…; now servicing requests")
+            // The CLI bunker auto-approves the operator's own key, so `perms` isn't a gate here; we surface
+            // it so an interop operator can see what an app-side signer would have been asked to pre-grant.
+            offer.perms?.let { System.err.println("[bunker] client requested perms: $it") }
 
             serve(ctx, offer.relays, offer.secret, timeoutMs)
             return 0
