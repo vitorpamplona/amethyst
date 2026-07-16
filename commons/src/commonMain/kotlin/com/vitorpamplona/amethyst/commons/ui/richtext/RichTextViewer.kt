@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,21 +36,21 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
@@ -79,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
-import kotlinx.collections.immutable.ImmutableMap
 
 /**
  * Cross-platform rich-text renderer. Owns everything identical on every front
@@ -154,7 +154,7 @@ private fun RenderWord(
 
     when (word) {
         is RegularTextSegment -> Text(word.segmentText)
-        is EmojiSegment -> CustomEmojiText(word.segmentText, state.customEmoji, Modifier)
+        is EmojiSegment -> RenderCustomEmoji(word.segmentText, state.customEmoji)
         is HashTagSegment -> HashTagText(word) { actions.onClickHashtag(word.hashtag) }
         is EmailSegment -> ClickableSpan(word.segmentText) { actions.onOpenEmail(word.segmentText) }
         is PhoneSegment -> ClickableSpan(word.segmentText) { actions.onOpenPhone(word.segmentText) }
@@ -205,77 +205,54 @@ private fun ClickableSpan(
     )
 }
 
+private val HashtagIconPlaceholder =
+    Placeholder(width = 17.sp, height = 17.sp, placeholderVerticalAlign = PlaceholderVerticalAlign.Center)
+
 /**
- * A `#hashtag` chip in the theme's primary color. The icon variants Amethyst
- * shows for known tags depend on an app-side icon table; until that table is
- * shared this renders the text form on every platform.
+ * A `#hashtag` chip in the theme's primary color, with the shared inline icon for
+ * well-known tags (see [checkForHashtagWithIcon]). Any trailing punctuation glued
+ * to the tag ([HashTagSegment.extras]) renders in the normal text color.
  */
 @Composable
 private fun HashTagText(
     segment: HashTagSegment,
     onClick: () -> Unit,
 ) {
-    val text = remember(segment.segmentText) { "#${segment.hashtag}${segment.extras ?: ""}" }
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.clickable(onClick = onClick),
-    )
-}
-
-/**
- * Inline custom emoji: replaces each shortcode present in [emojis] with its image,
- * leaving surrounding text intact. Universal to every front end, so it lives in
- * the core rather than the platform seam.
- */
-@Composable
-private fun CustomEmojiText(
-    text: String,
-    emojis: ImmutableMap<String, String>,
-    modifier: Modifier,
-) {
-    if (emojis.isEmpty()) {
-        Text(text, modifier)
-        return
-    }
-
-    val fontSize = LocalTextStyle.current.fontSize
-    val emojiSize = if (fontSize.isSpecified) fontSize else 16.sp
-    val inlineContent = HashMap<String, InlineTextContent>()
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.onBackground
+    val hashtagIcon = remember(segment.hashtag) { checkForHashtagWithIcon(segment.hashtag) }
 
     val annotated =
-        buildAnnotatedString {
-            var cursor = 0
-            while (cursor < text.length) {
-                var bestIdx = -1
-                var bestKey: String? = null
-                for (key in emojis.keys) {
-                    val idx = text.indexOf(key, cursor)
-                    if (idx >= 0 && (bestIdx == -1 || idx < bestIdx)) {
-                        bestIdx = idx
-                        bestKey = key
-                    }
+        remember(segment.segmentText, primary, background) {
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = primary)) { append("#${segment.hashtag}") }
+                if (hashtagIcon != null) {
+                    withStyle(SpanStyle(color = primary)) { appendInlineContent("inlineContent", "[icon]") }
                 }
-                if (bestKey == null) {
-                    append(text.substring(cursor))
-                    break
-                }
-                if (bestIdx > cursor) append(text.substring(cursor, bestIdx))
-
-                val url = emojis.getValue(bestKey)
-                inlineContent[bestKey] =
-                    InlineTextContent(
-                        Placeholder(emojiSize, emojiSize, PlaceholderVerticalAlign.Center),
-                    ) {
-                        AsyncImage(model = url, contentDescription = bestKey)
-                    }
-                appendInlineContent(bestKey, bestKey)
-                cursor = bestIdx + bestKey.length
+                segment.extras?.let { withStyle(SpanStyle(color = background)) { append(it) } }
             }
         }
 
-    Text(text = annotated, inlineContent = inlineContent, modifier = modifier)
+    Text(
+        text = annotated,
+        modifier = Modifier.clickable(onClick = onClick),
+        inlineContent =
+            if (hashtagIcon != null) {
+                mapOf(
+                    "inlineContent" to
+                        InlineTextContent(HashtagIconPlaceholder) {
+                            Icon(
+                                imageVector = hashtagIcon.icon,
+                                contentDescription = hashtagIcon.description,
+                                tint = Color.Unspecified,
+                                modifier = hashtagIcon.modifier,
+                            )
+                        },
+                )
+            } else {
+                emptyMap()
+            },
+    )
 }
 
 /** Width of a single space in [textStyle], used to space FlowRow words. */

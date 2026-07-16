@@ -211,19 +211,18 @@ class AmethystRichTextSegmentRenderer(
 }
 
 /**
- * Prototype entry that renders rich text through the shared cross-platform
- * [CommonsRichTextViewer] core instead of the Android-only [RichTextViewer]. It
+ * Renders rich text through the shared cross-platform [CommonsRichTextViewer] core.
+ * This is the production plain-text path that [RichTextViewer] delegates to: it
  * parses with the existing [CachedRichTextParser], keeps the markdown path native,
- * and for plain rich text provides the Android segment renderer + universal
- * interactions into the two CompositionLocals the core reads.
+ * and for plain rich text provides the Android segment renderer
+ * ([AmethystRichTextSegmentRenderer]) plus the universal interactions into the two
+ * CompositionLocals the core reads.
  *
- * This exists in parallel to [RichTextViewer] so the shared core can be exercised
- * against real leaves without touching the ~55 existing call sites. Pointing
- * [RichTextViewer] at this — and deleting the duplicated switchboard — is the
- * follow-up once the contract is reviewed. Known fidelity gaps to reconcile before
- * that switch: the core renders hashtags without Amethyst's inline icons and
- * renders url/email/phone as generic clickable text (the app's per-segment styling
- * for those is not yet shared).
+ * The core renders text, custom emoji, and hashtags (with their shared inline
+ * icons) itself; every divergent segment routes back to Amethyst's existing
+ * leaves through the renderer. Note: url/email/phone open via the platform URI
+ * handler rather than Amethyst's per-type Clickable* composables, so their tap
+ * behavior is the generic open action (rendering is unchanged clickable text).
  */
 @Composable
 fun CommonsBackedRichTextViewer(
