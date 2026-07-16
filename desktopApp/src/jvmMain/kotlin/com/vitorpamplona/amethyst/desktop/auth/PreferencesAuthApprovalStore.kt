@@ -67,27 +67,8 @@ class PreferencesAuthApprovalStore(
             "/com/vitorpamplona/amethyst/desktop/auth/$accountPubKeyHex",
         )
 
-    /**
-     * The Preferences key for a relay URL, guaranteed to fit within
-     * [Preferences.MAX_KEY_LENGTH].
-     *
-     * Short URLs are stored verbatim (readable, and backward-compatible with
-     * grants written before this fix). URLs at or over the limit are hashed to
-     * a `sha256:`-prefixed 64-char hex digest (71 chars total, under the 80
-     * cap). The prefix keeps the hashed keyspace disjoint from raw relay URLs,
-     * which always start with `ws://` / `wss://`, so the two can never collide.
-     */
-    private fun keyFor(relayUrl: NormalizedRelayUrl): String {
-        val url = relayUrl.url
-        return if (url.length <= Preferences.MAX_KEY_LENGTH) {
-            url
-        } else {
-            "sha256:" + sha256(url.encodeToByteArray()).toHexKey()
-        }
-    }
-
     override suspend fun getScope(relayUrl: NormalizedRelayUrl): AuthApprovalScope? {
-        val raw = node.get(keyFor(relayUrl), null) ?: return null
+        val raw = node.get(authApprovalPreferenceKey(relayUrl), null) ?: return null
         return runCatching { AuthApprovalScope.valueOf(raw) }.getOrNull()
     }
 
@@ -101,12 +82,34 @@ class PreferencesAuthApprovalStore(
             // upgrade to "until next clear()".
             return
         }
-        node.put(keyFor(relayUrl), scope.name)
+        node.put(authApprovalPreferenceKey(relayUrl), scope.name)
         node.flush()
     }
 
     override suspend fun clear() {
         node.removeNode()
         node.flush()
+    }
+}
+
+/**
+ * The Preferences key for a relay URL, guaranteed to fit within
+ * [Preferences.MAX_KEY_LENGTH].
+ *
+ * Short URLs are stored verbatim (readable, and backward-compatible with grants
+ * written before this fix). URLs over the limit are hashed to a
+ * `sha256:`-prefixed 64-char hex digest (71 chars total, under the 80 cap). The
+ * prefix keeps the hashed keyspace disjoint from raw relay URLs, which always
+ * start with `ws://` / `wss://`, so the two can never collide.
+ *
+ * Pure and side-effect-free so it can be unit-tested without touching the OS
+ * Preferences backing store.
+ */
+internal fun authApprovalPreferenceKey(relayUrl: NormalizedRelayUrl): String {
+    val url = relayUrl.url
+    return if (url.length <= Preferences.MAX_KEY_LENGTH) {
+        url
+    } else {
+        "sha256:" + sha256(url.encodeToByteArray()).toHexKey()
     }
 }

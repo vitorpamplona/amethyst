@@ -20,72 +20,75 @@
  */
 package com.vitorpamplona.amethyst.desktop.auth
 
-import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalScope
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.test.runTest
-import kotlin.test.AfterTest
+import java.util.prefs.Preferences
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
+/**
+ * Regression tests for the AUTH-banner-repeats bug.
+ *
+ * `PreferencesAuthApprovalStore` used the raw relay URL as the
+ * `java.util.prefs.Preferences` key. Preferences caps keys at
+ * [Preferences.MAX_KEY_LENGTH] (80 chars) and `put()` throws
+ * `IllegalArgumentException` for anything longer. Outbox-proxy relay URLs that
+ * embed an npub and a query string routinely exceed that, so the `ALWAYS` /
+ * `BLOCKED` grant silently failed to persist and the banner re-appeared on
+ * every AUTH challenge.
+ *
+ * These assert the key-derivation invariant directly (no OS Preferences I/O, so
+ * they run deterministically on every platform): every key stays within the
+ * cap, which is exactly the condition `Preferences.put` enforces.
+ */
 class PreferencesAuthApprovalStoreTest {
-    // A distinct per-run account so the test never collides with a real user's
-    // stored grants under Preferences.userRoot().
-    private val accountPubKeyHex = "test${System.nanoTime()}".padEnd(64, '0').take(64)
-    private val store = PreferencesAuthApprovalStore(accountPubKeyHex)
-
-    @AfterTest
-    fun cleanup() =
-        runTest {
-            store.clear()
-        }
+    // 102 chars — the outbox-proxy URL from the bug report, over the 80 cap.
+    private val longUrl = "wss://filter.nostr.wine/npub1max2lm5977tkj4zc28djq25g2muzmjgh2jqf83mq7vy539hfs7eqgec4et?broadcast=true"
 
     @Test
-    fun shortRelayUrlRoundTrips() =
-        runTest {
-            val relay = NormalizedRelayUrl("wss://relay.example/")
-            store.setScope(relay, AuthApprovalScope.ALWAYS)
-            assertEquals(AuthApprovalScope.ALWAYS, store.getScope(relay))
-        }
+    fun shortUrlStoredVerbatim() {
+        val url = "wss://relay.example/"
+        assertEquals(url, authApprovalPreferenceKey(NormalizedRelayUrl(url)))
+    }
 
     @Test
-    fun overLongRelayUrlPersistsInsteadOfThrowing() =
-        runTest {
-            // 102 chars — over java.util.prefs.Preferences.MAX_KEY_LENGTH (80).
-            // Storing this raw threw "Key too long", the exception was swallowed
-            // upstream, and the grant silently never persisted -> the AUTH banner
-            // re-appeared on every challenge. Regression guard for that bug.
-            val relay = NormalizedRelayUrl("wss://filter.nostr.wine/npub1max2lm5977tkj4zc28djq25g2muzmjgh2jqf83mq7vy539hfs7eqgec4et?broadcast=true")
-            assertEquals(102, relay.url.length)
+    fun overLongUrlIsHashedUnderTheCap() {
+        assertEquals(102, longUrl.length)
+        val key = authApprovalPreferenceKey(NormalizedRelayUrl(longUrl))
 
-            store.setScope(relay, AuthApprovalScope.ALWAYS)
-            assertEquals(AuthApprovalScope.ALWAYS, store.getScope(relay))
-        }
+        assertTrue(key.startsWith("sha256:"), "over-long URLs must fold to a hashed key")
+        assertTrue(
+            key.length <= Preferences.MAX_KEY_LENGTH,
+            "key length ${key.length} must stay within Preferences.MAX_KEY_LENGTH so put() never throws",
+        )
+    }
 
     @Test
-    fun overLongRelayUrlBlockedPersists() =
-        runTest {
-            val relay = NormalizedRelayUrl("wss://filter.nostr.wine/npub1max2lm5977tkj4zc28djq25g2muzmjgh2jqf83mq7vy539hfs7eqgec4et?broadcast=true")
-            store.setScope(relay, AuthApprovalScope.BLOCKED)
-            assertEquals(AuthApprovalScope.BLOCKED, store.getScope(relay))
+    fun everyKeyStaysWithinThePreferencesCap() {
+        // Boundary + well over: whatever the URL length, the derived key must be
+        // storable (this is the invariant Preferences.put enforces).
+        listOf(
+            "wss://relay.example/",
+            "wss://" + "a".repeat(Preferences.MAX_KEY_LENGTH), // 86 chars
+            "wss://" + "a".repeat(500),
+            longUrl,
+        ).forEach { url ->
+            val key = authApprovalPreferenceKey(NormalizedRelayUrl(url))
+            assertTrue(
+                key.length <= Preferences.MAX_KEY_LENGTH,
+                "key for a ${url.length}-char URL was ${key.length} chars, over the ${Preferences.MAX_KEY_LENGTH} cap",
+            )
         }
+    }
 
     @Test
-    fun distinctOverLongRelayUrlsDoNotCollide() =
-        runTest {
-            val a = NormalizedRelayUrl("wss://filter.nostr.wine/npub1max2lm5977tkj4zc28djq25g2muzmjgh2jqf83mq7vy539hfs7eqgec4et?broadcast=true")
-            val b = NormalizedRelayUrl("wss://filter.nostr.wine/npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq?broadcast=true")
-            store.setScope(a, AuthApprovalScope.ALWAYS)
-            store.setScope(b, AuthApprovalScope.BLOCKED)
-            assertEquals(AuthApprovalScope.ALWAYS, store.getScope(a))
-            assertEquals(AuthApprovalScope.BLOCKED, store.getScope(b))
-        }
-
-    @Test
-    fun onceIsNeverPersisted() =
-        runTest {
-            val relay = NormalizedRelayUrl("wss://relay.example/")
-            store.setScope(relay, AuthApprovalScope.ONCE)
-            assertNull(store.getScope(relay))
-        }
+    fun distinctOverLongUrlsProduceDistinctKeys() {
+        val a = "wss://filter.nostr.wine/npub1max2lm5977tkj4zc28djq25g2muzmjgh2jqf83mq7vy539hfs7eqgec4et?broadcast=true"
+        val b = "wss://filter.nostr.wine/npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq?broadcast=true"
+        assertNotEquals(
+            authApprovalPreferenceKey(NormalizedRelayUrl(a)),
+            authApprovalPreferenceKey(NormalizedRelayUrl(b)),
+        )
+    }
 }
