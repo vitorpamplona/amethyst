@@ -117,10 +117,6 @@ fun ChatMessageActionSheet(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
-    // When set, the quick-reaction row routes through this instead of the account's
-    // default react/delete — e.g. geohash chat reacting with its anonymous per-cell
-    // identity. Null keeps the standard account-signed behavior for every other caller.
-    onReactOverride: ((Note, String) -> Unit)? = null,
 ) {
     var showShareSheet by remember { mutableStateOf(false) }
     var wantsToEditPost by remember { mutableStateOf(false) }
@@ -251,7 +247,7 @@ fun ChatMessageActionSheet(
     ) {
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             if (!note.isDraft()) {
-                QuickReactionRow(note, onDismiss, accountViewModel, nav, onReactOverride)
+                QuickReactionRow(note, onDismiss, accountViewModel, nav)
 
                 QuickZapAmountRow(
                     note = note,
@@ -473,12 +469,22 @@ private fun QuickReactionRow(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onReactOverride: ((Note, String) -> Unit)? = null,
 ) {
+    // A geohash chat provides these so a reaction (and its "selected" highlight) stays under the
+    // anonymous per-cell identity; null (every other chat) keeps the standard account behavior.
+    val onReactOverride = LocalChatReactOverride.current
+    val actingIdentities = LocalChatActingIdentities.current
     val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
     val myReactions =
-        remember(note) {
-            note.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet()
+        remember(note, actingIdentities) {
+            if (actingIdentities != null) {
+                note.reactions
+                    .filterValues { reactors -> reactors.any { it.author?.pubkeyHex in actingIdentities } }
+                    .keys
+                    .toImmutableSet()
+            } else {
+                note.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet()
+            }
         }
 
     // Wrap onto as many rows as needed (like the zap grid) rather than a single

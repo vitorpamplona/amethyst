@@ -176,9 +176,17 @@ fun NormalChatNote(
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     previousNoteId: HexKey? = null,
 ) {
+    // A geohash chat renders "as" its anonymous per-cell identity (and the account, when posting as
+    // self); LocalChatActingIdentities lets the renderer treat those pubkeys as "me" (alignment,
+    // delivery ticks, own-highlight) without swapping the whole AccountViewModel. Null = the account.
+    val actingIdentities = LocalChatActingIdentities.current
     val isLoggedInUser =
-        remember(note.author) {
-            accountViewModel.isLoggedUser(note.author)
+        remember(note.author, actingIdentities) {
+            if (actingIdentities != null) {
+                note.author?.pubkeyHex in actingIdentities
+            } else {
+                accountViewModel.isLoggedUser(note.author)
+            }
         }
 
     if (routeForLastRead != null) {
@@ -188,11 +196,11 @@ fun NormalChatNote(
     }
 
     val drawAuthorInfo by
-        remember(note) {
+        remember(note, isLoggedInUser) {
             derivedStateOf {
                 val noteEvent = note.event
                 when {
-                    accountViewModel.isLoggedUser(note.author) -> false
+                    isLoggedInUser -> false
 
                     // never shows the user's pictures
                     noteEvent is PrivateDmEvent -> false
@@ -409,6 +417,26 @@ private fun MessageBubbleLines(
  * reply doesn't redundantly re-render the same parent as an inner quote. Null everywhere else.
  */
 val LocalSuppressReplyToNoteId = compositionLocalOf<String?> { null }
+
+/**
+ * The pubkeys the chat renderer should treat as "me" instead of the logged-in account — a geohash
+ * chat provides its anonymous per-cell identity (plus the account, for "post as self") so own
+ * messages align/highlight correctly without a second AccountViewModel. Null everywhere else.
+ */
+val LocalChatActingIdentities = compositionLocalOf<Set<HexKey>?> { null }
+
+/**
+ * How to react in this chat, overriding the account's default react/delete — a geohash chat signs
+ * the kind-7 with its per-cell key so a reaction stays anonymous. Null uses the account default.
+ */
+val LocalChatReactOverride = compositionLocalOf<((Note, String) -> Unit)?> { null }
+
+/**
+ * Resolves a per-message display name that overrides the author's profile name — a geohash chat
+ * returns the message's Bitchat `n` nickname, since throwaway per-cell keys have no kind-0 profile.
+ * Null everywhere else (authors render from their profile as usual).
+ */
+val LocalChatDisplayNameResolver = compositionLocalOf<((Note) -> String?)?> { null }
 
 @Composable
 fun RenderReplyRow(

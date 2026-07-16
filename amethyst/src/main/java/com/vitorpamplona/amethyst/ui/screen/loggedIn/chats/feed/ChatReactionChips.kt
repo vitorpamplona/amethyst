@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -102,15 +101,11 @@ fun ChatReactionChips(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
-    // When set, tapping a reaction chip routes through this instead of the account's
-    // default react/delete — e.g. geohash chat reacting with its anonymous per-cell
-    // identity. Null keeps the standard account-signed behavior for every other caller.
-    onReact: ((Note, String) -> Unit)? = null,
-    // When set, a reaction is highlighted as "mine" if its author is any of these pubkeys
-    // instead of the logged-in account — e.g. geohash chat, where "me" is the anonymous
-    // per-cell identity (and the account, when posting as self). Null uses the account.
-    myIdentities: Set<HexKey>? = null,
 ) {
+    // A geohash chat provides these so reactions stay under its anonymous per-cell identity
+    // (react + own-highlight); null (every other chat) keeps the standard account behavior.
+    val onReact = LocalChatReactOverride.current
+    val myIdentities = LocalChatActingIdentities.current
     // Deliberate cost: this observes reactions/zaps for EVERY visible message
     // (the ids fold into the batched EventFinder relay filters — one shared REQ,
     // not one per note), which is exactly what ReactionsRow already does for
