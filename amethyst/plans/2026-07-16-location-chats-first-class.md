@@ -91,6 +91,24 @@ The Home bubble is therefore: *anonymous liveliness + follows' geo-note activity
 - Join = `account.geohashList.follow(geohash)` then `nav.nav(Route.GeohashChat)`.
 - Reuse `LocationAsHash`/`ILocationGrabber` for the permission flow.
 
+### Geohash-list management (the kind-10081 add/remove UI)
+
+Today the **only** way to add to the kind-10081 list is the Follow toggle on the
+kind-1 `GeoHashScreen` — you must already be viewing that cell. Followed cells
+then appear as read-only feed chips in the Home top-nav (`TopNavFilterState`).
+There is **no** screen to view the list, remove entries, or add an *arbitrary*
+geohash. This builder is that missing "add" UI (it writes via
+`account.geohashList.follow`, the same path). Round it out with a small manage
+screen:
+
+- `NewGeohashChatScreen` doubles as the **add** surface (current-location levels /
+  manual / map).
+- Add a lightweight **"My location channels"** list (its own route, or a section
+  in the builder): render `account.geohashList.flow` with `LoadCityName` per cell,
+  a remove (`unfollowGeohash`) swipe/menu, and an "add" button into the builder.
+  This is also what Phase B's Messages rows and Phase D's Home bubble read from,
+  so it's the one management surface for the whole feature.
+
 ## Phase D — Home "live near you" bubble
 
 - New feed state `homeGeohashLive` in `AccountFeedContentStates.kt` (parallel to
