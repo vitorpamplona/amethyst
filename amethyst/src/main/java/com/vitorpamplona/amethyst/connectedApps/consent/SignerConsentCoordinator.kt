@@ -24,6 +24,8 @@ import android.content.Context
 import android.content.Intent
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -50,6 +52,12 @@ data class SignerConsentInfo(
     val accountName: String? = null,
     val accountPicture: String? = null,
     val accountPubKey: String? = null,
+    /**
+     * The unsigned event a `sign_event`/publish request would sign, so the dialog can render it as a
+     * note preview (what it will look like) in addition to the raw JSON. Null for encrypt/decrypt and
+     * non-event ops.
+     */
+    val previewTemplate: EventTemplate<Event>? = null,
 )
 
 /**

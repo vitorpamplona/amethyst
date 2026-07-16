@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -86,6 +87,12 @@ fun buildSignerConsentInfo(
             }
             else -> ""
         }
+    val previewTemplate =
+        when (request) {
+            is NappletRequest.Publish -> EventTemplate<Event>(TimeUtils.now(), request.kind, request.tags, request.content)
+            is NappletRequest.SignEvent -> EventTemplate<Event>(request.createdAt, request.kind, request.tags, request.content)
+            else -> null
+        }
     return SignerConsentInfo(
         appletTitle = title,
         coordinate = identity.coordinate,
@@ -94,6 +101,7 @@ fun buildSignerConsentInfo(
         contentPreview = preview,
         rawData = rawData,
         iconUrl = iconUrl,
+        previewTemplate = previewTemplate,
     )
 }
 

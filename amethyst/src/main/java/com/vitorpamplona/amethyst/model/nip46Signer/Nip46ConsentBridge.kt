@@ -118,6 +118,7 @@ object Nip46ConsentBridge {
                 accountName = face.name,
                 accountPicture = face.picture,
                 accountPubKey = face.pubKey,
+                previewTemplate = (request as? BunkerRequestSign)?.event,
             )
         // Fail closed if the prompt is never answered so a stuck dialog can't hold the signer hostage.
         return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {

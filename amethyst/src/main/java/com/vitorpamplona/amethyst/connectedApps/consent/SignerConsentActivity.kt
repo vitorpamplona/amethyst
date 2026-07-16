@@ -66,7 +66,13 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.call.CallSessionBridge
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class SignerConsentActivity : ComponentActivity() {
@@ -118,6 +124,25 @@ private fun SignerConsentDialog(
     var showMoreOptions by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
+
+    // Reuse the live AccountViewModel (via CallSessionBridge, the same handle CallActivity uses) to
+    // render the unsigned event as a real note preview — what it will actually look like. Best-effort:
+    // if the main Activity is gone (only the foreground signer service alive) we fall back to the JSON.
+    val accountViewModel = remember { CallSessionBridge.accountViewModel }
+    val previewNav = remember { EmptyNav() }
+    val previewNote =
+        remember(info, accountViewModel) {
+            val template = info.previewTemplate
+            val author = info.accountPubKey ?: accountViewModel?.account?.signer?.pubKey
+            if (template != null && author != null && accountViewModel != null) {
+                runCatching {
+                    val unsigned = RumorAssembler.assembleRumor<Event>(author, template)
+                    accountViewModel.createTempDraftNote(unsigned, LocalCache.getOrCreateUser(author))
+                }.getOrNull()
+            } else {
+                null
+            }
+        }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -173,7 +198,7 @@ private fun SignerConsentDialog(
                     }
                 }
 
-                val hasContent = info.contentPreview.isNotBlank() || info.rawData.isNotBlank()
+                val hasContent = previewNote != null || info.contentPreview.isNotBlank() || info.rawData.isNotBlank()
                 if (hasContent) {
                     Spacer(Modifier.height(12.dp))
                     Surface(
@@ -185,7 +210,16 @@ private fun SignerConsentDialog(
                         shape = MaterialTheme.shapes.medium,
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            if (info.contentPreview.isNotBlank()) {
+                            if (previewNote != null && accountViewModel != null) {
+                                // The event rendered as it will look once signed.
+                                NoteCompose(
+                                    baseNote = previewNote,
+                                    isQuotedNote = true,
+                                    quotesLeft = 0,
+                                    accountViewModel = accountViewModel,
+                                    nav = previewNav,
+                                )
+                            } else if (info.contentPreview.isNotBlank()) {
                                 Text(
                                     "“${info.contentPreview}”",
                                     style = MaterialTheme.typography.bodySmall,

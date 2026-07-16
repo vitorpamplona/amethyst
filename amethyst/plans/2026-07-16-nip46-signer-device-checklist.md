@@ -22,6 +22,19 @@ the client.
 - [ ] **Deep link**: tap a `nostrconnect://` link (web/other app) → Amethyst
       opens the signer screen and pairs (cold start AND already-running).
 
+## Note preview in the sign dialog (device-only)
+- [ ] A `sign_event`/publish request renders the unsigned event as a **NoteCompose
+      preview** (text + media + mentions, authored by the signing account), with
+      the "Show event" JSON toggle still available below it.
+- [ ] Works for both a NIP-46 remote app and a napplet Publish/SignEvent.
+- [ ] When the main Activity is gone (app fully backgrounded, only the signer
+      foreground service alive → `CallSessionBridge.accountViewModel` is null),
+      the dialog falls back to the plain content quote + JSON without crashing.
+- [ ] **Risk to watch:** NoteCompose is feed UI rendered inside a standalone
+      dialog Activity; if it reads a CompositionLocal only provided by the main
+      scaffold it could crash at runtime (compiles fine). Verify on device; if it
+      misbehaves, the JSON fallback path is one boolean away.
+
 ## Consent (Tier 1)
 - [ ] **First-connect trust picker**: a bunker-flow connect with a valid secret
       shows the trust-level dialog (Full trust / Reasonable / Paranoid) BEFORE any
