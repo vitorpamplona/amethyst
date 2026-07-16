@@ -273,7 +273,9 @@ private fun RelayGroupMemberRow(
                                     },
                                     onClick = {
                                         menuOpen = false
-                                        accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(role.name))
+                                        // Additive: NIP-29 allows multiple roles per member and the menu only
+                                        // offers roles they lack, so keep the ones they already hold.
+                                        accountViewModel.putRelayGroupUser(channel, entry.pubkey, entry.roles + role.name)
                                     },
                                 )
                             }

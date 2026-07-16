@@ -60,6 +60,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -136,14 +137,18 @@ private fun ParentSelectorCard(
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
-    val parentChannel =
-        remember(parentId, relay) {
-            parentId?.let { accountViewModel.getRelayGroupChannelIfExists(GroupId(it, relay)) }
+    // Resolve the parent (get-or-create so it's never stuck null when the metadata isn't cached
+    // yet), warm its single 39000, and observe it so the name/picture fill in as they arrive.
+    val liveParent: RelayGroupChannel? =
+        parentId?.let { id ->
+            val channel = remember(id, relay) { accountViewModel.checkGetOrCreateRelayGroupChannel(GroupId(id, relay)) }
+            RelayGroupWarmupSubscription(channel, accountViewModel.dataSources().relayGroupWarmup, accountViewModel)
+            val state by channel
+                .flow()
+                .metadata.stateFlow
+                .collectAsStateWithLifecycle()
+            state.channel as? RelayGroupChannel ?: channel
         }
-    // Warm the parent's metadata so its name/picture fills the card while the form is open.
-    parentChannel?.let {
-        RelayGroupWarmupSubscription(it, accountViewModel.dataSources().relayGroupWarmup, accountViewModel)
-    }
 
     Surface(
         shape = RoundedCornerShape(18.dp),
@@ -160,11 +165,11 @@ private fun ParentSelectorCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             GradientBadge {
-                if (parentId != null && parentChannel != null) {
+                if (liveParent != null) {
                     RobohashFallbackAsyncImage(
-                        robot = parentChannel.groupId.id,
-                        model = parentChannel.profilePicture(),
-                        contentDescription = parentChannel.toBestDisplayName(),
+                        robot = liveParent.groupId.id,
+                        model = liveParent.profilePicture(),
+                        contentDescription = liveParent.toBestDisplayName(),
                         modifier = Modifier.size(46.dp).clip(CircleShape),
                         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
@@ -172,7 +177,7 @@ private fun ParentSelectorCard(
                     )
                 } else {
                     Icon(
-                        symbol = if (parentId == null) MaterialSymbols.Home else MaterialSymbols.Group,
+                        symbol = MaterialSymbols.Home,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(24.dp),
@@ -187,12 +192,7 @@ private fun ParentSelectorCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text =
-                        when {
-                            parentId == null -> stringRes(R.string.relay_group_parent_none)
-                            parentChannel != null -> parentChannel.toBestDisplayName()
-                            else -> parentId
-                        },
+                    text = liveParent?.toBestDisplayName() ?: stringRes(R.string.relay_group_parent_none),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -255,9 +255,11 @@ private fun ParentGroupPickerSheet(
             descendantIdsOf(accountViewModel, selfGroupId, relay) + selfGroupId
         }
 
-    // Re-read the relay's genuine, relay-signed groups whenever a kind-39000 lands.
+    // Re-read the relay's genuine, relay-signed groups whenever a kind-39000 lands. The initial
+    // value is empty (cheap) rather than an eager scan — a produceState initial arg is evaluated
+    // on every recomposition (e.g. each search keystroke), so the scan lives only in the producer.
     val candidates by produceState(
-        initialValue = pickCandidates(accountViewModel, relay, relayInfo, forbidden),
+        initialValue = emptyList<RelayGroupChannel>(),
         relay,
         relayInfo,
         forbidden,

@@ -49,7 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
@@ -74,6 +74,11 @@ fun RelayGroupSubgroupsBar(
     if (parentId == null && childIds.isEmpty()) return
 
     val relay = channel.groupId.relayUrl
+
+    // Load the parent's + every child's kind-39000 (for their names) with ONE relay-directory
+    // subscription rather than a warm-up per chip — a single REQ that streams metadata for all
+    // of the relay's groups, versus up to N subscriptions that would each also pull content.
+    RelayGroupsOnRelaySubscription(relay, accountViewModel.dataSources().relayGroupsOnRelay, accountViewModel)
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp),
@@ -120,8 +125,8 @@ fun RelayGroupSubgroupsBar(
 }
 
 /**
- * A single tappable group chip. Resolves the group by id on the shared host relay and warms
- * its metadata so the name fills in, then navigates to that group when tapped.
+ * A single tappable group chip. Resolves the group by id on the shared host relay (its metadata
+ * is streamed by the bar's one directory subscription) and navigates to that group when tapped.
  */
 @Composable
 private fun SubgroupChip(
@@ -131,9 +136,6 @@ private fun SubgroupChip(
     nav: INav,
 ) {
     LoadRelayGroupChannel(groupId, accountViewModel) { child ->
-        // Fetch the child's 39000 (name/picture) while this bar is visible.
-        RelayGroupWarmupSubscription(child, accountViewModel.dataSources().relayGroupWarmup, accountViewModel)
-
         val childState by child
             .flow()
             .metadata.stateFlow

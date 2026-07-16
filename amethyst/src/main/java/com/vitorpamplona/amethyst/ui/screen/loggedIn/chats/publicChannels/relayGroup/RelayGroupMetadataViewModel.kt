@@ -94,11 +94,11 @@ class RelayGroupMetadataViewModel : ViewModel() {
         private set
 
     /**
-     * Subgroups: the group's current children, carried through untouched on save. NIP-29
-     * requires a kind-9002 to re-list every child or the relay drops them, so we preserve
-     * whatever the relay last advertised rather than letting a metadata edit clear the tree.
+     * True once the user actually picks a parent in this session. Until then we let the save
+     * read the group's live parent rather than the (possibly not-yet-loaded) prefilled value, so
+     * a plain rename can never re-root a subgroup just because its metadata hadn't arrived yet.
      */
-    private var childrenGroupIds: List<String> = emptyList()
+    private var parentTouched by mutableStateOf(false)
 
     var pickedMedia by mutableStateOf<SelectedMedia?>(null)
         private set
@@ -150,12 +150,12 @@ class RelayGroupMetadataViewModel : ViewModel() {
         // Stored geohashes are mip-mapped into every prefix; the last (longest) is the real one.
         geohash.value = TextFieldValue(event?.geohashes()?.maxByOrNull { it.length } ?: "")
         parentGroupId = channel.parentGroupId()
-        childrenGroupIds = channel.childGroupIds()
     }
 
     /** Set (or clear, with null) the group's parent from the picker; marks the form touched. */
     fun setParent(groupId: String?) {
         parentGroupId = groupId
+        parentTouched = true
         markTouched()
     }
 
@@ -258,8 +258,11 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 isRestricted = isRestricted,
                 hashtags = hashtags,
                 geohashes = geohashes,
-                parent = parentGroupId,
-                children = childrenGroupIds,
+                // Only override the parent when the user actually re-parented; otherwise let
+                // Account read the group's live parent so a rename can't accidentally re-root it.
+                // children likewise defaults to the live child list, so a concurrently-added
+                // subgroup isn't dropped by this metadata edit.
+                parent = if (parentTouched) parentGroupId else existing.parentGroupId(),
             )
         }
     }

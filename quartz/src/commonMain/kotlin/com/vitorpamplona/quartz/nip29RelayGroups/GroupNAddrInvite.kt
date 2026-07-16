@@ -43,7 +43,9 @@ object GroupNAddrInvite {
      */
     fun parse(suffix: String?): String? {
         if (suffix.isNullOrEmpty()) return null
-        val query = suffix.substringAfter('?', "")
+        // Normally the code trails the naddr as `?invite=<code>`. Fall back to a bare
+        // `invite=<code>` remainder too, in case an upstream parser strips the `?`.
+        val query = if ('?' in suffix) suffix.substringAfter('?') else suffix
         if (query.isEmpty()) return null
 
         return query

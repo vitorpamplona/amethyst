@@ -225,9 +225,11 @@ class RelayGroupChannel(
         notes
             .mapNotNull { _, note ->
                 val createdAt = note.createdAt()
-                if (createdAt != null && note.author?.pubkeyHex != selfPubkey) note to createdAt else null
+                val author = note.author
+                // Require a resolved author so an unlinked note can't slip past the self-exclusion
+                // and make us reference our own event (the very thing `previous` guards against).
+                if (createdAt != null && author != null && author.pubkeyHex != selfPubkey) note to createdAt else null
             }.sortedByDescending { it.second }
-            .take(50)
             .take(max)
             .map { it.first.idHex.take(8) }
 

@@ -55,6 +55,12 @@ class GroupNAddrInviteTest {
     }
 
     @Test
+    fun acceptsBareInviteWithoutQuestionMark() {
+        // Defensive: if an upstream parser drops the `?`, a bare `invite=<code>` still resolves.
+        assertEquals("abc123", GroupNAddrInvite.parse("invite=abc123"))
+    }
+
+    @Test
     fun ignoresLeadingBech32RemainderWithoutQuery() {
         // A plain trailing word (not a query) carries no invite.
         assertNull(GroupNAddrInvite.parse("someword"))
