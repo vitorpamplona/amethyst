@@ -374,10 +374,14 @@ private fun BatchedConsentDialog(
 ) {
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
     val tokens = pending.map { it.token }.toSet()
-    // Re-seed (all selected) whenever the set of pending tokens actually changes — keying on size alone
-    // would leave a newly-arrived request unselectable when another resolves in the same frame.
-    var selected by remember(tokens) { mutableStateOf(tokens) }
-    var rememberChoice by remember { mutableStateOf(true) }
+    // Seed all-selected ONCE for the initial batch the user opened. The signer services requests
+    // concurrently, so `tokens` can change under an open sheet; reconcile incrementally instead of
+    // re-seeding — drop resolved tokens but KEEP the user's deselections, and never auto-select a
+    // newly-arrived request. Otherwise a request landing (or resolving) mid-decision would silently
+    // re-check everything, and an "Allow selected" tap would grant ops the user deselected or never saw.
+    var selected by remember { mutableStateOf(tokens) }
+    LaunchedEffect(tokens) { selected = selected intersect tokens }
+    var rememberChoice by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,

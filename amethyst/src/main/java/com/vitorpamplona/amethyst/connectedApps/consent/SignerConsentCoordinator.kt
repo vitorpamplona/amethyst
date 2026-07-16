@@ -31,6 +31,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -88,6 +91,12 @@ object SignerConsentCoordinator {
     // arrive) so concurrent requests don't each post their own.
     private val batchNotificationId = "nip46-signer-consent".hashCode()
 
+    // Guards the surface (post/cancel of the one shared notification) against the pending set so a
+    // concurrent arrival's post can't be clobbered by another request's teardown cancel. Without it,
+    // request A could read "pending now empty" and then cancel AFTER request B posted a fresh
+    // notification under the same id, leaving B with no UI while backgrounded (silent deny at timeout).
+    private val surfaceLock = Mutex()
+
     suspend fun requestConsent(
         context: Context,
         info: SignerConsentInfo,
@@ -95,33 +104,39 @@ object SignerConsentCoordinator {
         val token = UUID.randomUUID().toString()
         val deferred = CompletableDeferred<SignerOpGrant>()
         deferreds[token] = deferred
-        _pending.update { it + PendingConsent(token, info) }
 
-        // Fast path when Amethyst already owns the foreground: open the dialog directly. When the app
-        // is backgrounded this is silently dropped by Android 12+ BAL, so the full-screen-intent
-        // notification is what surfaces the prompt. Both are idempotent — the Activity is singleTop and
-        // observes [pending], and the notification uses a stable id, so concurrent requests just refresh
-        // the one prompt. Wrapped because a BAL-blocked launch can throw on some OEMs rather than no-op.
-        runCatching {
-            context.startActivity(
-                Intent(context, SignerConsentActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        surfaceLock.withLock {
+            _pending.update { it + PendingConsent(token, info) }
+            // Fast path when Amethyst already owns the foreground: open the dialog directly. When the app
+            // is backgrounded this is silently dropped by Android 12+ BAL, so the full-screen-intent
+            // notification is what surfaces the prompt. Both are idempotent — the Activity is singleTop and
+            // observes [pending], and the notification uses a stable id, so concurrent requests just
+            // refresh the one prompt. Wrapped because a BAL-blocked launch can throw rather than no-op.
+            runCatching {
+                context.startActivity(
+                    Intent(context, SignerConsentActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                )
+            }
+            SignerConsentNotifier.show(
+                context = context,
+                activityClass = SignerConsentActivity::class.java,
+                extraKey = EXTRA_TOKEN,
+                token = "nip46-signer-consent",
+                titleRes = R.string.nip46_signer_notif_sign_title,
             )
         }
-        SignerConsentNotifier.show(
-            context = context,
-            activityClass = SignerConsentActivity::class.java,
-            extraKey = EXTRA_TOKEN,
-            token = "nip46-signer-consent",
-            titleRes = R.string.nip46_signer_notif_sign_title,
-        )
 
         return try {
             deferred.await()
         } finally {
             deferreds.remove(token)
-            _pending.update { list -> list.filterNot { it.token == token } }
-            if (_pending.value.isEmpty()) SignerConsentNotifier.cancel(context, batchNotificationId)
+            surfaceLock.withLock {
+                // Remove + emptiness check + cancel are one critical section vs. another request's
+                // add + show, so a fresh notification is never cancelled out from under a live request.
+                val stillPending = _pending.updateAndGet { list -> list.filterNot { it.token == token } }
+                if (stillPending.isEmpty()) SignerConsentNotifier.cancel(context, batchNotificationId)
+            }
         }
     }
 
