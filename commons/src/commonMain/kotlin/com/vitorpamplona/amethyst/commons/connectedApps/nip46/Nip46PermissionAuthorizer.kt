@@ -285,6 +285,32 @@ class Nip46PermissionAuthorizer(
                 null
             }
 
+        /**
+         * Parses a NIP-46 `perms` string (the comma-separated permission list a client advertises in
+         * its `nostrconnect://…?perms=` offer) into the [NostrSignerOp]s it asks for. Tokens follow the
+         * de-facto convention: `sign_event:<kind>`, `nip04_encrypt`/`nip44_encrypt` (→ [NostrSignerOp.Encrypt]),
+         * `nip04_decrypt`/`nip44_decrypt` (→ [NostrSignerOp.Decrypt]); `get_public_key`, `connect`, `ping`
+         * and any unrecognized/blank token are ignored (get_public_key is always allowed and needs no grant).
+         * A bare `sign_event` with no kind is ignored — Amethyst grants per kind, so a kindless request is
+         * too broad to honor.
+         */
+        fun parsePerms(perms: String?): List<NostrSignerOp> =
+            perms
+                ?.split(',')
+                ?.mapNotNull { token ->
+                    when (val t = token.trim().lowercase()) {
+                        "nip04_encrypt", "nip44_encrypt", "encrypt" -> NostrSignerOp.Encrypt
+                        "nip04_decrypt", "nip44_decrypt", "decrypt" -> NostrSignerOp.Decrypt
+                        else ->
+                            if (t.startsWith("sign_event:")) {
+                                t.removePrefix("sign_event:").toIntOrNull()?.let { NostrSignerOp.SignKind(it) }
+                            } else {
+                                null
+                            }
+                    }
+                }?.distinct()
+                .orEmpty()
+
         /** Maps a signing/encryption/decryption [BunkerRequest] to the [NostrSignerOp] it needs. */
         fun BunkerRequest.toSignerOp(): NostrSignerOp? =
             when (this) {

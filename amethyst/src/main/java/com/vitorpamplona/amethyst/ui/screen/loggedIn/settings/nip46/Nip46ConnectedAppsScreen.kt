@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -73,6 +75,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -104,6 +108,11 @@ fun Nip46ConnectedAppsScreen(
 ) {
     val account = accountViewModel.account
     val signerPubKey = remember { account.signer.pubKey }
+
+    // Live relay state so each app shows whether the signer currently reaches it. An app that brought
+    // its own relays (nostrconnect) is judged on those; a bunker-flow app rides the inbox relays.
+    val connectedRelays by account.client.connectedRelaysFlow().collectAsStateWithLifecycle()
+    val inboxRelays by account.nip46Signer.inboxRelays.collectAsStateWithLifecycle()
 
     var items by remember { mutableStateOf<List<Nip46AppEntry>?>(null) }
     // Bumped on resume so a Forget performed on the detail screen is reflected when we return.
@@ -151,8 +160,13 @@ fun Nip46ConnectedAppsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(current, key = { it.coordinate }) { entry ->
+                        val online =
+                            remember(entry.info?.relays, inboxRelays, connectedRelays) {
+                                nip46AppOnline(entry.info?.relays.orEmpty(), inboxRelays, connectedRelays)
+                            }
                         Nip46AppCard(
                             entry = entry,
+                            online = online,
                             onClick = { nav.nav(Route.ConnectedAppDetail(entry.coordinate)) },
                         )
                     }
@@ -164,6 +178,7 @@ fun Nip46ConnectedAppsScreen(
 @Composable
 private fun Nip46AppCard(
     entry: Nip46AppEntry,
+    online: Boolean?,
     onClick: () -> Unit,
 ) {
     // Same identity line the detail screen (Nip46AppHeader) uses: the app's self-declared website
@@ -214,6 +229,7 @@ private fun Nip46AppCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                online?.let { Nip46LiveStatus(it) }
             }
             Column(
                 horizontalAlignment = Alignment.End,
@@ -243,6 +259,43 @@ private fun AppSignerPolicy.shortLabel(): String =
         AppSignerPolicy.REASONABLE -> stringResource(R.string.napplet_policy_reasonable)
         AppSignerPolicy.PARANOID -> stringResource(R.string.napplet_policy_paranoid)
     }
+
+private val LiveGreen = Color(0xFF3DDC84)
+
+/** A colored dot: green when the signer currently reaches the relay(s), muted otherwise. */
+@Composable
+internal fun Nip46StatusDot(online: Boolean) {
+    Box(Modifier.size(8.dp).clip(CircleShape).background(if (online) LiveGreen else MaterialTheme.colorScheme.outline))
+}
+
+/** A [Nip46StatusDot] + Connected/Offline label showing whether the signer currently reaches an app's relays. */
+@Composable
+internal fun Nip46LiveStatus(online: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Nip46StatusDot(online)
+        Text(
+            stringResource(if (online) R.string.nip46_signer_app_online else R.string.nip46_signer_app_offline),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Whether the signer currently reaches [appRelays] (an app's own `nostrconnect://` relays). An app
+ * that brought no relays of its own rides the account [inboxRelays], so it's judged on those. Returns
+ * `null` when neither resolves to any relay (nothing to show a status for). "Online" means at least
+ * one of the app's relays is in [connectedRelays].
+ */
+internal fun nip46AppOnline(
+    appRelays: Set<String>,
+    inboxRelays: Set<NormalizedRelayUrl>,
+    connectedRelays: Set<NormalizedRelayUrl>,
+): Boolean? {
+    val effective = appRelays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet().ifEmpty { inboxRelays }
+    if (effective.isEmpty()) return null
+    return effective.any { it in connectedRelays }
+}
 
 /**
  * The avatar for a NIP-46 client: its self-declared [image] (the app/site icon it advertised in its

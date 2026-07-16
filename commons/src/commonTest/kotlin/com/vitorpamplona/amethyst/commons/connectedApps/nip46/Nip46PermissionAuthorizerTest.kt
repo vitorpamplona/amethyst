@@ -246,6 +246,35 @@ class Nip46PermissionAuthorizerTest {
         }
 
     @Test
+    fun parsePermsMapsTokensToOpsAndIgnoresTheRest() {
+        val ops =
+            Nip46PermissionAuthorizer.parsePerms(
+                "sign_event:1, sign_event:5, nip44_encrypt, nip04_decrypt, get_public_key, connect, sign_event",
+            )
+        assertEquals(
+            listOf(
+                NostrSignerOp.SignKind(1),
+                NostrSignerOp.SignKind(5),
+                NostrSignerOp.Encrypt,
+                NostrSignerOp.Decrypt,
+            ),
+            ops,
+            "known tokens map to ops (encrypt/decrypt collapse NIP-04+44); get_public_key/connect/kindless sign_event are dropped",
+        )
+    }
+
+    @Test
+    fun parsePermsDeduplicatesAndHandlesBlank() {
+        assertTrue(Nip46PermissionAuthorizer.parsePerms(null).isEmpty())
+        assertTrue(Nip46PermissionAuthorizer.parsePerms("").isEmpty())
+        assertEquals(
+            listOf(NostrSignerOp.Encrypt),
+            Nip46PermissionAuthorizer.parsePerms("nip04_encrypt,nip44_encrypt"),
+            "NIP-04 and NIP-44 encrypt both map to Encrypt and are de-duplicated",
+        )
+    }
+
+    @Test
     fun coordinateRoundTrips() {
         assertEquals(client, Nip46PermissionAuthorizer.clientPubKeyOf(coordinate))
         assertEquals(null, Nip46PermissionAuthorizer.clientPubKeyOf("browser:https://x.com"))

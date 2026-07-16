@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.model.nip46Signer
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -35,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
@@ -332,6 +335,14 @@ class Nip46SignerState(
             val coordinate = authorizer.coordinateFor(offer.clientPubKey)
             if (!ledger.hasPolicy(coordinate)) {
                 ledger.setPolicy(coordinate, authorizer.defaultPolicyOnConnect)
+            }
+            // Honor the offer's `perms`: the app declared exactly what it needs and the user chose to
+            // pair it, so pre-grant those ops instead of prompting on first use. The two highest-risk
+            // classes stay gated even when declared — decryption (reveals private content) and deletion
+            // (kind 5) still prompt on first use, where the user sees full context.
+            Nip46PermissionAuthorizer.parsePerms(offer.perms).forEach { op ->
+                val gated = op is NostrSignerOp.Decrypt || (op is NostrSignerOp.SignKind && op.kind == DeletionEvent.KIND)
+                if (!gated) ledger.setOpDecision(coordinate, op, NostrOpDecision.ALLOW)
             }
             ledger.updateLastUsed(coordinate)
             // Persist the app's label + its relays so it survives a restart, then start listening now.

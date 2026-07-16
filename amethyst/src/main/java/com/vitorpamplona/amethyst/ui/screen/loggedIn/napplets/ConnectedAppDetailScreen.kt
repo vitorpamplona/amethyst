@@ -88,7 +88,12 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ActivityCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46AppIcon
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46LiveStatus
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46StatusDot
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46AppOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -190,9 +195,14 @@ fun ConnectedAppDetailScreen(
             }
 
             // Relays this remote client is reached on — the whole reason it costs a background
-            // connection, so surface them for debugging relay footprint.
+            // connection, so surface them (with live status) for debugging relay footprint.
             if (nip46Client != null) {
-                Nip46RelaysSection(nip46Info?.relays.orEmpty())
+                val connectedRelays by accountViewModel.account.client
+                    .connectedRelaysFlow()
+                    .collectAsStateWithLifecycle()
+                val inboxRelays by accountViewModel.account.nip46Signer.inboxRelays
+                    .collectAsStateWithLifecycle()
+                Nip46RelaysSection(nip46Info?.relays.orEmpty(), inboxRelays, connectedRelays)
             }
 
             // Signing trust level section
@@ -291,13 +301,18 @@ fun ConnectedAppDetailScreen(
 }
 
 /**
- * Lists the relays a NIP-46 remote client is reached on. When the client brought its own relays
- * (the `nostrconnect://` flow) each one is a background connection Amethyst keeps open while the app
- * stays connected — exactly what a user debugging relay footprint wants to see. An empty set means
- * the client talks over the account's inbox relays (the bunker flow), so it adds no extra connection.
+ * Lists the relays a NIP-46 remote client is reached on, each with a live status dot. When the client
+ * brought its own relays (the `nostrconnect://` flow) each one is a background connection Amethyst
+ * keeps open while the app stays connected — exactly what a user debugging relay footprint wants to
+ * see, including which are actually up right now. An empty set means the client talks over the
+ * account's inbox relays (the bunker flow), so it adds no extra connection.
  */
 @Composable
-private fun Nip46RelaysSection(relays: Set<String>) {
+private fun Nip46RelaysSection(
+    relays: Set<String>,
+    inboxRelays: Set<NormalizedRelayUrl>,
+    connectedRelays: Set<NormalizedRelayUrl>,
+) {
     SectionHeader(stringResource(R.string.nip46_signer_app_relays_title))
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -306,20 +321,23 @@ private fun Nip46RelaysSection(relays: Set<String>) {
     ) {
         Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (relays.isEmpty()) {
+                // Bunker-flow app: rides the inbox relays. Show the overall inbox liveness so the row
+                // still reflects whether the signer can be reached at all.
+                val online = nip46AppOnline(emptySet(), inboxRelays, connectedRelays)
                 Text(
                     stringResource(R.string.nip46_signer_app_relays_inbox),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                online?.let { Nip46LiveStatus(it) }
             } else {
                 relays.forEach { relay ->
+                    val relayOnline =
+                        remember(relay, connectedRelays) {
+                            RelayUrlNormalizer.normalizeOrNull(relay)?.let { it in connectedRelays } ?: false
+                        }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(
-                            MaterialSymbols.Dns,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
-                        )
+                        Nip46StatusDot(relayOnline)
                         Text(
                             relay,
                             style = MaterialTheme.typography.bodyMedium,
