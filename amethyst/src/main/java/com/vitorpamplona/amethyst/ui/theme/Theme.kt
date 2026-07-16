@@ -46,6 +46,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -93,25 +95,84 @@ private fun accentSecondary(
     dark: Boolean,
 ): Color = if (accent == AccentColorType.PURPLE) Teal200 else accentPrimary(accent, dark)
 
-private fun darkColors(accent: AccentColorType) =
-    darkColorScheme(
-        primary = accentPrimary(accent, dark = true),
-        secondary = accentSecondary(accent, dark = true),
-        tertiary = accentSecondary(accent, dark = true),
+// Black or white — whichever has the higher WCAG contrast ratio against a solid accent fill
+// (primary/secondary/tertiary). Runs once per scheme build (not on a render path), so the
+// luminance() cost is irrelevant here. Picks black on the light pastel accents used in the dark
+// theme and on the purple theme's bright teal secondary, white on the deep accents used in light.
+private fun onAccent(color: Color): Color {
+    val luminance = color.luminance()
+    val contrastOnBlack = (luminance + 0.05f) / 0.05f
+    val contrastOnWhite = 1.05f / (luminance + 0.05f)
+    return if (contrastOnBlack >= contrastOnWhite) Color.Black else Color.White
+}
+
+// Faint accent-tinted fill for the Material3 "container" roles (primaryContainer, etc.), laid
+// over the theme's base surface. Left unset, these roles fall back to Material's baseline violet,
+// which is why container-backed UI (settings icon boxes, selected reaction chips, zap-amount
+// chips, calendar selection, relay-group top bars) stayed purple under every accent.
+private fun accentContainer(
+    color: Color,
+    surface: Color,
+    alpha: Float,
+): Color = color.copy(alpha = alpha).compositeOver(surface)
+
+// Text/icon color drawn on an accentContainer. The container sits close to the base surface, so
+// in the dark theme the light accent reads directly; in the light theme it is deepened toward
+// black to stay legible on the pale tint.
+private fun onAccentContainer(
+    color: Color,
+    dark: Boolean,
+): Color = if (dark) color else lerp(color, Color.Black, 0.30f)
+
+private fun darkColors(accent: AccentColorType): ColorScheme {
+    val primary = accentPrimary(accent, dark = true)
+    val secondary = accentSecondary(accent, dark = true)
+    val surface = Color.Black
+    return darkColorScheme(
+        primary = primary,
+        onPrimary = onAccent(primary),
+        primaryContainer = accentContainer(primary, surface, 0.16f),
+        onPrimaryContainer = onAccentContainer(primary, dark = true),
+        secondary = secondary,
+        onSecondary = onAccent(secondary),
+        secondaryContainer = accentContainer(secondary, surface, 0.16f),
+        onSecondaryContainer = onAccentContainer(secondary, dark = true),
+        tertiary = secondary,
+        onTertiary = onAccent(secondary),
+        tertiaryContainer = accentContainer(secondary, surface, 0.16f),
+        onTertiaryContainer = onAccentContainer(secondary, dark = true),
+        inversePrimary = accentPrimary(accent, dark = false),
+        surfaceTint = primary,
         background = Color.Black,
         surface = Color.Black,
         surfaceDim = Color.Black,
         surfaceVariant = Color(red = 29, green = 26, blue = 34),
     )
+}
 
-private fun lightColors(accent: AccentColorType) =
-    lightColorScheme(
-        primary = accentPrimary(accent, dark = false),
-        secondary = accentSecondary(accent, dark = false),
-        tertiary = accentSecondary(accent, dark = false),
+private fun lightColors(accent: AccentColorType): ColorScheme {
+    val primary = accentPrimary(accent, dark = false)
+    val secondary = accentSecondary(accent, dark = false)
+    val surface = Color.White
+    return lightColorScheme(
+        primary = primary,
+        onPrimary = onAccent(primary),
+        primaryContainer = accentContainer(primary, surface, 0.12f),
+        onPrimaryContainer = onAccentContainer(primary, dark = false),
+        secondary = secondary,
+        onSecondary = onAccent(secondary),
+        secondaryContainer = accentContainer(secondary, surface, 0.12f),
+        onSecondaryContainer = onAccentContainer(secondary, dark = false),
+        tertiary = secondary,
+        onTertiary = onAccent(secondary),
+        tertiaryContainer = accentContainer(secondary, surface, 0.12f),
+        onTertiaryContainer = onAccentContainer(secondary, dark = false),
+        inversePrimary = accentPrimary(accent, dark = true),
+        surfaceTint = primary,
         surfaceContainerHighest = Color(red = 236, green = 230, blue = 240),
         surfaceVariant = Color(red = 250, green = 245, blue = 252),
     )
+}
 
 private val DarkColorPalette = darkColors(AccentColorType.PURPLE)
 private val LightColorPalette = lightColors(AccentColorType.PURPLE)
