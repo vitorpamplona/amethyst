@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
@@ -1942,6 +1943,10 @@ class AccountViewModel(
     fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
 
     fun getEphemeralChatChannelIfExists(key: RoomId) = LocalCache.getEphemeralChatChannelIfExists(key)
+
+    fun checkGetOrCreateGeohashChannel(geohash: String): GeohashChatChannel = LocalCache.getOrCreateGeohashChannel(geohash)
+
+    fun getGeohashChannelIfExists(geohash: String) = LocalCache.getGeohashChannelIfExists(geohash)
 
     fun checkGetOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = LocalCache.getOrCreateRelayGroupChannel(key)
 

@@ -175,5 +175,14 @@ class GeoRelayDirectory(
                 geoRelayOf("relay.nostr.band", 50.1109, 8.6821),
                 geoRelayOf("nostr.wine", 45.5152, -122.6784),
             )
+
+        /**
+         * Process-wide directory shared by everything that routes geohash chat
+         * traffic — the [GeohashChatChannel][com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel]
+         * relay override, the joined-cell subscription, the chat screen. Seeded
+         * with [FALLBACK]; a platform loader replaces it with the live CSV at
+         * runtime via [setRelays].
+         */
+        val shared = GeoRelayDirectory()
     }
 }

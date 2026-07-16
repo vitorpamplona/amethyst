@@ -32,7 +32,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * to the small built-in list so routing works offline / on first run.
  */
 object GeohashRelays {
-    private val directory = GeoRelayDirectory()
+    // The process-wide directory that GeohashChatChannel.relays() also reads, so a refresh
+    // here immediately improves the relay set every geohash subscription resolves.
+    private val directory = GeoRelayDirectory.shared
 
     @Volatile private var refreshed = false
 

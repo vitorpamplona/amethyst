@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst.commons.model.geohashChat
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.service.georelay.GeoRelayDirectory
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * A public geohash location chat channel (Bitchat-interoperable), keyed by the
@@ -39,6 +41,15 @@ class GeohashChatChannel(
     val geohash: String,
 ) : Channel() {
     override fun toBestDisplayName() = "#$geohash"
+
+    /**
+     * The relays that serve this cell: the ones geographically nearest the cell
+     * center (see [GeoRelayDirectory]). Unlike the base implementation — which
+     * aggregates the relays a channel's events happened to arrive on — a geohash
+     * cell has a well-defined relay set derived from its coordinates, so the
+     * subscription layer can reach it even before the first message arrives.
+     */
+    override fun relays(): Set<NormalizedRelayUrl> = GeoRelayDirectory.shared.closestRelays(geohash).toSet()
 
     fun anyNameStartsWith(prefix: String): Boolean = geohash.contains(prefix, true)
 

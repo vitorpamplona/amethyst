@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,10 +57,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -73,10 +80,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
  * room. Messages are signed with a per-geohash throwaway identity, so posting
  * here does not reveal the account's npub.
  *
- * Renders through the shared [ChatBubbleLayout] so it matches the rest of
- * Amethyst's chat surfaces (grouped bubbles, own-vs-other alignment, footer),
- * while keeping its own ephemeral subscription instead of the LocalCache-backed
- * chat feed.
+ * The message feed is loaded through the **same data path as every other chat**:
+ * the cell's [GeohashChatChannel] is populated in LocalCache by the kind-20000
+ * subscription that [ChannelFilterAssemblerSubscription] assembles (routed to the
+ * geographically-nearest relays), and surfaced by the shared [ChannelFeedViewModel].
+ * Only the composer and per-message rendering are geohash-specific — the throwaway
+ * identity, the nickname (`n` tag), the teleport marker, and anonymous own-message
+ * alignment that the profile-based shared renderer can't express.
  */
 @Composable
 fun GeohashChatScreen(
@@ -85,20 +95,40 @@ fun GeohashChatScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel: GeohashChatViewModel = viewModel(key = "GeohashChat/$geohash")
-    viewModel.init(geohash, accountViewModel, teleported)
+    LoadGeohashChannel(geohash, accountViewModel) { channel ->
+        GeohashChatRoom(channel, teleported, accountViewModel, nav)
+    }
+}
 
-    val messages by viewModel.messages.collectAsStateWithLifecycle()
-    val participants by viewModel.participants.collectAsStateWithLifecycle()
-    val relays by viewModel.relays.collectAsStateWithLifecycle()
-    val myPubKey by viewModel.myPubKey.collectAsStateWithLifecycle()
-    val teleporting by viewModel.teleported.collectAsStateWithLifecycle()
-    val postingAsSelf by viewModel.postAsSelf.collectAsStateWithLifecycle()
+@Composable
+private fun GeohashChatRoom(
+    channel: GeohashChatChannel,
+    teleported: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val geohash = channel.geohash
+    val composer: GeohashChatViewModel = viewModel(key = "GeohashChat/$geohash")
+    composer.init(geohash, accountViewModel, teleported)
+
+    val feedViewModel: ChannelFeedViewModel =
+        viewModel(
+            key = "geohash:${geohash}ChannelFeedViewModel",
+            factory = ChannelFeedViewModel.Factory(channel, accountViewModel.account),
+        )
+
+    WatchLifecycleAndUpdateModel(feedViewModel)
+    ChannelFilterAssemblerSubscription(channel, accountViewModel.dataSources().channel, accountViewModel)
+
+    val relays by composer.relays.collectAsStateWithLifecycle()
+    val myPubKey by composer.myPubKey.collectAsStateWithLifecycle()
+    val teleporting by composer.teleported.collectAsStateWithLifecycle()
+    val postingAsSelf by composer.postAsSelf.collectAsStateWithLifecycle()
+    val feedState by feedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
     var nickname by remember { mutableStateOf("") }
     var draft by remember { mutableStateOf("") }
     var showPostAsSelfWarning by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
 
     if (showPostAsSelfWarning) {
         AlertDialog(
@@ -112,7 +142,7 @@ fun GeohashChatScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.setPostAsSelf(true)
+                    composer.setPostAsSelf(true)
                     showPostAsSelfWarning = false
                 }) { Text("Post as me") }
             },
@@ -125,26 +155,20 @@ fun GeohashChatScreen(
     Column(Modifier.fillMaxSize().imePadding()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text("#$geohash", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(
-                "$participants here · ${relays.size} relays",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            LoadCityName(geohashStr = geohash) { cityName ->
+                Text(
+                    "$cityName · ${relays.size} relays",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         HorizontalDivider()
 
-        LazyColumn(
-            state = listState,
-            reverseLayout = true,
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
-        ) {
-            itemsIndexed(messages.asReversed(), key = { _, it -> it.id }) { revIndex, message ->
-                val index = messages.size - 1 - revIndex
-                GeohashBubble(
-                    message = message,
-                    position = groupPositionFor(messages, index),
-                    isMine = message.pubKey == myPubKey,
-                )
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (val state = feedState) {
+                is FeedState.Loaded -> GeohashMessageList(state, myPubKey)
+                else -> Unit
             }
         }
 
@@ -162,13 +186,13 @@ fun GeohashChatScreen(
         ) {
             FilterChip(
                 selected = teleporting,
-                onClick = { viewModel.setTeleported(!teleporting) },
+                onClick = { composer.setTeleported(!teleporting) },
                 label = { Text("✈ Teleport") },
             )
             FilterChip(
                 selected = postingAsSelf,
                 onClick = {
-                    if (postingAsSelf) viewModel.setPostAsSelf(false) else showPostAsSelfWarning = true
+                    if (postingAsSelf) composer.setPostAsSelf(false) else showPostAsSelfWarning = true
                 },
                 label = { Text("Post as me") },
             )
@@ -186,12 +210,40 @@ fun GeohashChatScreen(
             IconButton(
                 enabled = draft.isNotBlank() && relays.isNotEmpty(),
                 onClick = {
-                    viewModel.sendMessage(draft, nickname)
+                    composer.sendMessage(draft, nickname)
                     draft = ""
                 },
             ) {
                 SymbolIcon(symbol = MaterialSymbols.AutoMirrored.Send, contentDescription = "Send")
             }
+        }
+    }
+}
+
+@Composable
+private fun GeohashMessageList(
+    loaded: FeedState.Loaded,
+    myPubKey: String?,
+) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+    val messages =
+        remember(items.list) {
+            items.list.mapNotNull { it.event as? GeohashChatEvent }.sortedBy { it.createdAt }
+        }
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        state = listState,
+        reverseLayout = true,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+    ) {
+        itemsIndexed(messages.asReversed(), key = { _, it -> it.id }) { revIndex, message ->
+            val index = messages.size - 1 - revIndex
+            GeohashBubble(
+                message = message,
+                position = groupPositionFor(messages, index),
+                isMine = message.pubKey == myPubKey,
+            )
         }
     }
 }
