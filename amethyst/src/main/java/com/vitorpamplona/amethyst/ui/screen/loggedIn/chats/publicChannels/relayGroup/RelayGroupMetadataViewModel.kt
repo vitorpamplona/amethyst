@@ -86,6 +86,20 @@ class RelayGroupMetadataViewModel : ViewModel() {
     var isHidden by mutableStateOf(false)
     var isRestricted by mutableStateOf(false)
 
+    /**
+     * Subgroups: the parent group this group nests under, or null for a top-level group.
+     * Editable via the parent picker. Seeded from the current metadata in [prefillFrom].
+     */
+    var parentGroupId by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * Subgroups: the group's current children, carried through untouched on save. NIP-29
+     * requires a kind-9002 to re-list every child or the relay drops them, so we preserve
+     * whatever the relay last advertised rather than letting a metadata edit clear the tree.
+     */
+    private var childrenGroupIds: List<String> = emptyList()
+
     var pickedMedia by mutableStateOf<SelectedMedia?>(null)
         private set
 
@@ -135,6 +149,14 @@ class RelayGroupMetadataViewModel : ViewModel() {
         topics.value = TextFieldValue(event?.hashtags()?.distinct()?.joinToString(" ") ?: "")
         // Stored geohashes are mip-mapped into every prefix; the last (longest) is the real one.
         geohash.value = TextFieldValue(event?.geohashes()?.maxByOrNull { it.length } ?: "")
+        parentGroupId = channel.parentGroupId()
+        childrenGroupIds = channel.childGroupIds()
+    }
+
+    /** Set (or clear, with null) the group's parent from the picker; marks the form touched. */
+    fun setParent(groupId: String?) {
+        parentGroupId = groupId
+        markTouched()
     }
 
     /** Split the topics field into distinct, non-blank, lowercased hashtags (leading `#` dropped). */
@@ -222,6 +244,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 isRestricted = isRestricted,
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parentGroupId,
             )
         } else {
             account.editRelayGroupMetadata(
@@ -235,6 +258,8 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 isRestricted = isRestricted,
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parentGroupId,
+                children = childrenGroupIds,
             )
         }
     }

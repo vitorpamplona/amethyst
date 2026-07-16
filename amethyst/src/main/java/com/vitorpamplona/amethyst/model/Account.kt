@@ -2703,6 +2703,7 @@ class Account(
         isRestricted: Boolean = false,
         hashtags: List<String> = emptyList(),
         geohashes: List<String> = emptyList(),
+        parent: String? = null,
     ): GroupId {
         signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
 
@@ -2715,6 +2716,7 @@ class Account(
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parent,
             )
         signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
 

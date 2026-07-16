@@ -2190,6 +2190,15 @@
     <string name="relay_group_field_topics_hint">bitcoin, nostr, art</string>
     <string name="relay_group_field_geohash">Location (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_section_structure">Structure</string>
+    <string name="relay_group_parent_desc">Nest this group under a parent to build a hierarchy.</string>
+    <string name="relay_group_parent_label">Parent group</string>
+    <string name="relay_group_parent_none">Top-level group</string>
+    <string name="relay_group_parent_pick_title">Choose a parent group</string>
+    <string name="relay_group_parent_search">Search groups</string>
+    <string name="relay_group_parent_top_level_option">No parent (top-level)</string>
+    <string name="relay_group_parent_none_desc">This group sits at the top level</string>
+    <string name="relay_group_parent_empty">No other groups on this relay yet</string>
     <string name="relay_group_section_permissions">Permissions</string>
     <string name="relay_group_flag_private">Private</string>
     <string name="relay_group_flag_private_desc">Only members can read messages.</string>
