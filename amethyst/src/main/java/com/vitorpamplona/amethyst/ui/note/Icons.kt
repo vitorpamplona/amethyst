@@ -66,9 +66,10 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(modifier: Modifier) {
-    // Match the FilledTonalButton palette: shield = secondaryContainer, figure = onSecondaryContainer.
-    val shield = MaterialTheme.colorScheme.secondaryContainer
-    val figure = MaterialTheme.colorScheme.onSecondaryContainer
+    // Match the previous badge look — a vivid accent shield with a white figure — recoloured to the
+    // selected accent: shield = primary, figure = onPrimary.
+    val shield = MaterialTheme.colorScheme.primary
+    val figure = MaterialTheme.colorScheme.onPrimary
     val icon = remember(shield, figure) { following(shield, figure) }
     Icon(
         imageVector = icon,
