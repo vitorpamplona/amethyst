@@ -34,10 +34,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,8 +52,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.AccountInfo
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
@@ -59,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -89,8 +95,13 @@ fun NotificationSettingsScreen(
 
 @Composable
 private fun DeliverySection(accountViewModel: AccountViewModel) {
-    val alwaysOn by accountViewModel.account.settings.alwaysOnNotificationService
-        .collectAsStateWithLifecycle()
+    // Global master switch (persisted, all accounts). produceState + runCatching keeps
+    // the @Preview safe when Amethyst.instance / LocalPreferences aren't available.
+    val master by produceState(initialValue = true) {
+        runCatching {
+            LocalPreferences.notificationServiceEnabledFlow().collect { value = it }
+        }
+    }
 
     SettingsSection(R.string.notification_settings_section_delivery) {
         if (hasPushNotificationProvider()) {
@@ -99,15 +110,66 @@ private fun DeliverySection(accountViewModel: AccountViewModel) {
         }
         SettingsSwitchTile(
             icon = MaterialSymbols.Notifications,
-            title = R.string.always_on_notif_setting_title,
-            description = R.string.always_on_notif_setting_description,
-            checked = alwaysOn,
-            onCheckedChange = { accountViewModel.account.settings.toggleAlwaysOnNotificationService() },
+            title = R.string.notification_service_master_title,
+            description = R.string.notification_service_master_description,
+            checked = master,
+            onCheckedChange = { LocalPreferences.setNotificationServiceEnabled(it) },
         )
     }
 
-    if (alwaysOn) {
+    if (master) {
+        BackgroundAccountsSection()
         BatteryOptimizationBanner()
+    }
+}
+
+/**
+ * Per-account participation list, shown under the master switch: one "keep active in the
+ * background" toggle per write-enabled account. Each row toggles that account's own
+ * [AccountSettings.alwaysOnNotificationService]; because LocalPreferences caches one
+ * AccountSettings per npub, the toggle reaches the same instance the always-on manager
+ * observes, so participation changes take effect live.
+ */
+@Composable
+private fun BackgroundAccountsSection() {
+    val accounts by produceState<List<Pair<AccountInfo, AccountSettings>>>(emptyList()) {
+        value =
+            runCatching {
+                LocalPreferences
+                    .allSavedAccounts()
+                    .filter { it.hasPrivKey || it.loggedInWithExternalSigner }
+                    .mapNotNull { info ->
+                        LocalPreferences.loadAccountConfigFromEncryptedStorage(info.npub)?.let { info to it }
+                    }
+            }.getOrDefault(emptyList())
+    }
+
+    if (accounts.isEmpty()) return
+
+    SettingsSection(R.string.notification_service_accounts_title) {
+        accounts.forEachIndexed { index, (info, settings) ->
+            if (index > 0) SettingsDivider()
+            AccountParticipationRow(info, settings)
+        }
+    }
+}
+
+@Composable
+private fun AccountParticipationRow(
+    info: AccountInfo,
+    settings: AccountSettings,
+) {
+    val participates by settings.alwaysOnNotificationService.collectAsStateWithLifecycle()
+    SettingsControlRow(
+        icon = MaterialSymbols.AccountCircle,
+        title = info.npub.toShortDisplay(),
+        description = stringRes(R.string.notification_service_participation_title),
+        onClick = { settings.toggleAlwaysOnNotificationService() },
+    ) {
+        Switch(
+            checked = participates,
+            onCheckedChange = { settings.toggleAlwaysOnNotificationService() },
+        )
     }
 }
 
