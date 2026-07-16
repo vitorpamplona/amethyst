@@ -31,7 +31,9 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
 
@@ -102,21 +104,24 @@ class DataStoreNostrSignerPermissionStore(
         storeFor(coordinate).edit { it.remove(opKey(op)) }
     }
 
-    override suspend fun allPolicies(): Map<String, AppSignerPolicy> {
-        val dir = File(filesDir, "datastore")
-        if (!dir.exists()) return emptyMap()
-        val result = mutableMapOf<String, AppSignerPolicy>()
-        for (file in dir.listFiles { f -> f.name.startsWith("nsp_") } ?: emptyArray()) {
-            val ds =
-                cache.getOrCreate(file.absolutePath) {
-                    PreferenceDataStoreFactory.create(produceFile = { file })
-                }
-            val coordinate = ds.data.first()[KEY_COORDINATE] ?: continue
-            val policy = loadPolicy(coordinate) ?: continue
-            result[coordinate] = policy
+    override suspend fun allPolicies(): Map<String, AppSignerPolicy> =
+        // Enumerates the datastore directory + reads each file — blocking disk IO, so keep it off the
+        // caller's thread (callers invoke this from Compose LaunchedEffects on the main dispatcher).
+        withContext(Dispatchers.IO) {
+            val dir = File(filesDir, "datastore")
+            if (!dir.exists()) return@withContext emptyMap()
+            val result = mutableMapOf<String, AppSignerPolicy>()
+            for (file in dir.listFiles { f -> f.name.startsWith("nsp_") } ?: emptyArray()) {
+                val ds =
+                    cache.getOrCreate(file.absolutePath) {
+                        PreferenceDataStoreFactory.create(produceFile = { file })
+                    }
+                val coordinate = ds.data.first()[KEY_COORDINATE] ?: continue
+                val policy = loadPolicy(coordinate) ?: continue
+                result[coordinate] = policy
+            }
+            result
         }
-        return result
-    }
 
     override suspend fun allOpDecisions(coordinate: String): Map<String, NostrOpDecision> {
         val prefs = storeFor(coordinate).data.first()
