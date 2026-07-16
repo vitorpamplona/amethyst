@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.geohash.GeohashRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
@@ -81,6 +82,10 @@ class GeohashChatViewModel : ViewModel() {
     private val _postAsSelf = MutableStateFlow(false)
     val postAsSelf: StateFlow<Boolean> = _postAsSelf.asStateFlow()
 
+    /** The message the next send replies to (adds an ["e", id, "", "reply"] tag), or null for a top-level message. */
+    private val _replyTo = MutableStateFlow<Note?>(null)
+    val replyTo: StateFlow<Note?> = _replyTo.asStateFlow()
+
     private var started = false
 
     fun init(
@@ -104,6 +109,10 @@ class GeohashChatViewModel : ViewModel() {
         _postAsSelf.value = value
     }
 
+    fun setReplyTo(note: Note?) {
+        _replyTo.value = note
+    }
+
     private suspend fun start() {
         val account = accountViewModel.account
         val anonPubKey =
@@ -125,6 +134,9 @@ class GeohashChatViewModel : ViewModel() {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
 
+        val replyToId = _replyTo.value?.idHex
+        _replyTo.value = null
+
         viewModelScope.launch {
             val relays = _relays.value.toSet().ifEmpty { resolveRelays().toSet() }
             if (relays.isEmpty()) return@launch
@@ -142,7 +154,10 @@ class GeohashChatViewModel : ViewModel() {
                 pubKeyHex = keyPair.pubKey.toHexKey()
             }
 
-            var template = GeohashChatEvent.build(trimmed, geohash, nickname = nickname?.ifBlank { null }, teleported = _teleported.value)
+            var template =
+                GeohashChatEvent.build(trimmed, geohash, nickname = nickname?.ifBlank { null }, teleported = _teleported.value) {
+                    replyToId?.let { add(arrayOf("e", it, "", "reply")) }
+                }
             template =
                 withContext(Dispatchers.Default) {
                     val deadline = System.nanoTime() + POW_TIMEOUT_NANOS

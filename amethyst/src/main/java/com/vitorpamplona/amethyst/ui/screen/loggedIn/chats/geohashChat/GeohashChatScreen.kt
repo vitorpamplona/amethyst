@@ -34,8 +34,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -50,8 +48,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,10 +55,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatMessageActionSheet
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatReactionChips
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
@@ -124,6 +123,7 @@ private fun GeohashChatRoom(
     val myPubKeys by composer.myPubKeys.collectAsStateWithLifecycle()
     val teleporting by composer.teleported.collectAsStateWithLifecycle()
     val postingAsSelf by composer.postAsSelf.collectAsStateWithLifecycle()
+    val replyingTo by composer.replyTo.collectAsStateWithLifecycle()
     val feedState by feedViewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
     var nickname by remember { mutableStateOf("") }
@@ -167,12 +167,23 @@ private fun GeohashChatRoom(
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val state = feedState) {
-                is FeedState.Loaded -> GeohashMessageList(state, myPubKeys)
+                is FeedState.Loaded ->
+                    GeohashMessageList(
+                        loaded = state,
+                        myPubKeys = myPubKeys,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onReply = composer::setReplyTo,
+                    )
+
                 else -> Unit
             }
         }
 
         HorizontalDivider()
+        replyingTo?.let { parent ->
+            GeohashReplyBar(parent, onCancel = { composer.setReplyTo(null) })
+        }
         OutlinedTextField(
             value = nickname,
             onValueChange = { nickname = it },
@@ -220,15 +231,26 @@ private fun GeohashChatRoom(
     }
 }
 
+/** A loaded geohash message: the LocalCache [Note] (target of reactions/zaps/replies) plus its parsed event. */
+private class GeoMsg(
+    val note: Note,
+    val event: GeohashChatEvent,
+)
+
 @Composable
 private fun GeohashMessageList(
     loaded: FeedState.Loaded,
     myPubKeys: Set<String>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onReply: (Note) -> Unit,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val messages =
         remember(items.list) {
-            items.list.mapNotNull { it.event as? GeohashChatEvent }.sortedBy { it.createdAt }
+            items.list
+                .mapNotNull { note -> (note.event as? GeohashChatEvent)?.let { GeoMsg(note, it) } }
+                .sortedBy { it.event.createdAt }
         }
     val listState = rememberLazyListState()
 
@@ -237,12 +259,15 @@ private fun GeohashMessageList(
         reverseLayout = true,
         modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
     ) {
-        itemsIndexed(messages.asReversed(), key = { _, it -> it.id }) { revIndex, message ->
+        itemsIndexed(messages.asReversed(), key = { _, it -> it.event.id }) { revIndex, msg ->
             val index = messages.size - 1 - revIndex
             GeohashBubble(
-                message = message,
+                msg = msg,
                 position = groupPositionFor(messages, index),
-                isMine = message.pubKey in myPubKeys,
+                isMine = msg.event.pubKey in myPubKeys,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onReply = onReply,
             )
         }
     }
@@ -250,11 +275,14 @@ private fun GeohashMessageList(
 
 @Composable
 private fun GeohashBubble(
-    message: GeohashChatEvent,
+    msg: GeoMsg,
     position: ChatGroupPosition,
     isMine: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onReply: (Note) -> Unit,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val message = msg.event
     ChatBubbleLayout(
         isLoggedInUser = isMine,
         isDraft = false,
@@ -262,18 +290,27 @@ private fun GeohashBubble(
         drawAuthorInfo = position.isFirstOfGroup && !isMine,
         groupPosition = position,
         onClick = { false },
-        onAuthorClick = {},
-        actionMenu = { onDismiss ->
-            DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-                DropdownMenuItem(
-                    text = { Text("Copy") },
-                    onClick = {
-                        clipboard.setText(AnnotatedString(message.content))
-                        onDismiss()
-                    },
-                )
+        onDoubleTap = {
+            // Quick default reaction (same gesture as every other chat surface).
+            if (accountViewModel.isWriteable() && accountViewModel.reactionChoices().isNotEmpty()) {
+                accountViewModel.reactToOrDelete(msg.note)
             }
         },
+        onSwipeReply = { onReply(msg.note) },
+        onAuthorClick = {},
+        actionMenu = { onDismiss ->
+            // The shared sheet: react, zap (Lightning + on-chain + nutzap), reply, copy, report, share.
+            // Its own isLoggedUser/isDraft gating hides own-only actions for anonymous authors.
+            ChatMessageActionSheet(
+                note = msg.note,
+                onWantsToReply = onReply,
+                onWantsToEditDraft = {},
+                onDismiss = onDismiss,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        },
+        reactionsRow = { ChatReactionChips(msg.note, accountViewModel, nav) },
         footerRow =
             if (position.isLastOfGroup) {
                 { GeohashBubbleFooter(message) }
@@ -283,6 +320,26 @@ private fun GeohashBubble(
         drawAuthorLine = { GeohashAuthorLine(message) },
     ) { _ ->
         Text(message.content, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun GeohashReplyBar(
+    parent: Note,
+    onCancel: () -> Unit,
+) {
+    val snippet = (parent.event as? GeohashChatEvent)?.content?.take(80).orEmpty()
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Replying: $snippet",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onCancel) { Text("Cancel") }
     }
 }
 
@@ -322,13 +379,13 @@ private const val GROUP_WINDOW_SECONDS = 10 * 60L
 
 /** Same author within the grouping window continues the bubble run. */
 private fun groups(
-    newer: GeohashChatEvent,
-    older: GeohashChatEvent,
-): Boolean = newer.pubKey == older.pubKey && abs(newer.createdAt - older.createdAt) <= GROUP_WINDOW_SECONDS
+    newer: GeoMsg,
+    older: GeoMsg,
+): Boolean = newer.event.pubKey == older.event.pubKey && abs(newer.event.createdAt - older.event.createdAt) <= GROUP_WINDOW_SECONDS
 
 /** Bubble position from time-ordered neighbors (older = earlier, newer = later). */
 private fun groupPositionFor(
-    messages: List<GeohashChatEvent>,
+    messages: List<GeoMsg>,
     index: Int,
 ): ChatGroupPosition {
     val note = messages[index]
