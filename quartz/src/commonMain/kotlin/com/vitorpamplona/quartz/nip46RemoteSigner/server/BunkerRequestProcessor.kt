@@ -142,7 +142,11 @@ class BunkerRequestProcessor(
         request: BunkerRequest,
         block: () -> BunkerResponse,
     ): BunkerResponse =
-        if (authorizer.authorize(clientPubKey, request)) {
+        if (!signer.isWriteable()) {
+            // The account this bunker signs for is no longer usable — logged out, read-only, or its
+            // external signer is gone — so refuse rather than prompt or hang on a key we can't use.
+            BunkerResponseError(request.id, ERROR_ACCOUNT_UNAVAILABLE)
+        } else if (authorizer.authorize(clientPubKey, request)) {
             block()
         } else {
             BunkerResponseError(request.id, ERROR_UNAUTHORIZED)
@@ -154,6 +158,9 @@ class BunkerRequestProcessor(
 
         /** Error result returned when [Nip46RequestAuthorizer.authorize] denies a request. */
         const val ERROR_UNAUTHORIZED: String = "unauthorized"
+
+        /** Error result returned when the account can no longer sign (logged out / read-only / no signer). */
+        const val ERROR_ACCOUNT_UNAVAILABLE: String = "account unavailable"
 
         /** NIP-46 `logout` method name — the client asks to be disconnected. */
         const val METHOD_LOGOUT: String = "logout"

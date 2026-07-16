@@ -59,6 +59,7 @@ class BunkerRequestProcessorTest {
     /** Records what the signer was asked to do and returns fixed values. */
     private class FakeSigner(
         pubKey: HexKey,
+        val writeable: Boolean = true,
     ) : NostrSigner(pubKey) {
         var signCount = 0
         var nip44EncryptCount = 0
@@ -75,7 +76,7 @@ class BunkerRequestProcessorTest {
                 sig = "f".repeat(128),
             )
 
-        override fun isWriteable() = true
+        override fun isWriteable() = writeable
 
         @Suppress("UNCHECKED_CAST")
         override suspend fun <T : Event> sign(
@@ -228,6 +229,22 @@ class BunkerRequestProcessorTest {
             assertTrue(res is BunkerResponseError)
             assertEquals(BunkerRequestProcessor.ERROR_UNAUTHORIZED, res.error)
             assertEquals(0, signer.signCount)
+        }
+
+    @Test
+    fun signRefusedWhenAccountNoLongerWriteable() =
+        runTest {
+            // The account was logged out / went read-only / lost its external signer: refuse without
+            // prompting or invoking the signer, even for an otherwise-authorized request.
+            val signer = FakeSigner(userPubKey, writeable = false)
+            val authorizer = FakeAuthorizer(Nip46ConnectDecision.Accept("ack"), allow = true)
+            val template = EventTemplate<Event>(createdAt = 1L, kind = 1, tags = emptyArray(), content = "hi")
+            val res = processor(signer = signer, authorizer = authorizer).process(clientPubKey, BunkerRequestSign("w", template))
+
+            assertTrue(res is BunkerResponseError)
+            assertEquals(BunkerRequestProcessor.ERROR_ACCOUNT_UNAVAILABLE, res.error)
+            assertEquals(0, signer.signCount, "the unusable signer is never invoked")
+            assertEquals(0, authorizer.authorizeCalls, "and we don't prompt for a key we can't use")
         }
 
     @Test
