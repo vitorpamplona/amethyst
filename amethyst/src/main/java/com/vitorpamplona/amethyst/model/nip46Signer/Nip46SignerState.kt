@@ -91,8 +91,12 @@ class Nip46SignerState(
      * unrelated to the account identity, so the bunker address/traffic doesn't reveal who it is for,
      * and (unlike the identity signer) an external NIP-55 account pays no IPC cost for envelope crypto.
      * Generated + persisted lazily on first use so accounts that never enable the signer mint nothing.
+     *
+     * Rebuilt from the persisted key on every call rather than cached, so [rotateAddress] takes effect:
+     * the service-restart trigger includes [AccountSettings.nip46TransportKey], and this reads the
+     * current value — deriving a keypair from stored bytes is cheap enough for the per-restart cost.
      */
-    private val transportSigner: NostrSignerInternal by lazy { NostrSignerInternal(KeyPair(ensureTransportKeyBytes())) }
+    private fun transportSigner(): NostrSignerInternal = NostrSignerInternal(KeyPair(ensureTransportKeyBytes()))
 
     /** All relays the signer listens on: the account inbox plus any nostrconnect offer relays. */
     val listeningRelays: StateFlow<Set<NormalizedRelayUrl>> =
@@ -134,11 +138,14 @@ class Nip46SignerState(
         scope.launch(Dispatchers.IO) { refreshExtraRelaysFromStore() }
 
         scope.launch(Dispatchers.IO) {
-            combine(settings.nip46SignerEnabled, listeningRelays) { enabled, relays -> enabled to relays }
-                // Inbox/relay StateFlows can re-emit an identical set; without this every duplicate
-                // would tear the subscription down and re-open it on every relay for no reason.
+            combine(settings.nip46SignerEnabled, listeningRelays, settings.nip46TransportKey) { enabled, relays, transportKey ->
+                Triple(enabled, relays, transportKey)
+            }
+                // Inbox/relay/key StateFlows can re-emit an identical value; without this every duplicate
+                // would tear the subscription down and re-open it on every relay for no reason. Including
+                // the transport key here makes rotateAddress() re-subscribe under the fresh key.
                 .distinctUntilChanged()
-                .collectLatest { (enabled, relays) ->
+                .collectLatest { (enabled, relays, _) ->
                     if (!enabled) return@collectLatest
                     if (!signer.isWriteable()) {
                         Log.w("NIP46Signer") { "signer not writeable; cannot host a bunker" }
@@ -152,7 +159,7 @@ class Nip46SignerState(
                     val service =
                         NostrConnectSignerService(
                             client = client,
-                            transportSigner = transportSigner,
+                            transportSigner = transportSigner(),
                             processor = processor,
                             relays = relays,
                             onServiced = { method, clientPubKey, error ->
@@ -168,7 +175,12 @@ class Nip46SignerState(
     val enabled: StateFlow<Boolean> get() = settings.nip46SignerEnabled
 
     fun setEnabled(enabled: Boolean) {
-        if (enabled) ensureSecret()
+        if (enabled) {
+            // Settle the secret and transport key BEFORE flipping the flag, so the service-restart
+            // trigger sees the final transport key on its first emission (no throwaway double-start).
+            ensureSecret()
+            ensureTransportKeyBytes()
+        }
         settings.changeNip46SignerEnabled(enabled)
     }
 
@@ -176,7 +188,7 @@ class Nip46SignerState(
     fun bunkerUri(): String {
         val secret = ensureSecret()
         // Advertise the transport key, not the identity key, so the address doesn't reveal who we are.
-        return NostrConnectURI.buildBunker(transportSigner.pubKey, inboxRelays.value, secret)
+        return NostrConnectURI.buildBunker(transportSigner().pubKey, inboxRelays.value, secret)
     }
 
     /** Replaces the pairing secret with a fresh one, revoking the ability of not-yet-connected apps to use the old one. */
@@ -184,6 +196,21 @@ class Nip46SignerState(
         val fresh = RandomInstance.randomChars(32)
         settings.changeNip46BunkerSecret(fresh)
         return fresh
+    }
+
+    /**
+     * The anti-spam "burn it down" action: mints a brand-new transport key (and pairing secret), so
+     * the old `bunker://` address goes dark — anyone who had it (a spammer included) can no longer
+     * reach us, and every app talking to the old transport pubkey is dropped. The running service
+     * re-subscribes under the new key because [AccountSettings.nip46TransportKey] feeds the restart
+     * trigger. Legit apps re-pair by re-scanning the new address; their trust survives because the
+     * Connected-Apps coordinate keys off the stable identity pubkey, not the transport key.
+     */
+    fun rotateAddress(): String {
+        val fresh = KeyPair()
+        settings.changeNip46TransportKey(fresh.privKey!!.toHexKey())
+        regenerateSecret()
+        return NostrConnectURI.buildBunker(fresh.pubKey.toHexKey(), inboxRelays.value, settings.nip46BunkerSecret.value)
     }
 
     /** Recomputes [extraRelays] from the persisted client store — the source of truth for nostrconnect relays. */
@@ -239,7 +266,7 @@ class Nip46SignerState(
             // Echo the offer secret back to the client, authored by the transport key so the client
             // learns THAT as our remote-signer pubkey (not our identity).
             val ack = BunkerResponse(newSubId(), offer.secret, null)
-            val reply = NostrConnectEvent.create(ack, offer.clientPubKey, transportSigner)
+            val reply = NostrConnectEvent.create(ack, offer.clientPubKey, transportSigner())
             client.publish(reply, offer.relays)
 
             // Register the app (the paste is the user's consent) and listen on its relays.

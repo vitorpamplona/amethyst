@@ -46,6 +46,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -115,6 +116,7 @@ fun Nip46SignerScreen(
     var connectedCount by remember { mutableIntStateOf(0) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var scanning by remember { mutableStateOf(false) }
+    var confirmRotate by remember { mutableStateOf(false) }
 
     var bunkerUri by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(enabled, secret, relays) {
@@ -182,10 +184,7 @@ fun Nip46SignerScreen(
                         clipboard.setText(AnnotatedString(uri))
                         Toast.makeText(context, R.string.nip46_signer_copied, Toast.LENGTH_SHORT).show()
                     },
-                    onRegenerate = {
-                        signer.regenerateSecret()
-                        Toast.makeText(context, R.string.nip46_signer_regenerated, Toast.LENGTH_SHORT).show()
-                    },
+                    onRegenerate = { confirmRotate = true },
                 )
             }
 
@@ -206,6 +205,40 @@ fun Nip46SignerScreen(
             )
         }
     }
+
+    if (confirmRotate) {
+        RotateAddressDialog(
+            onConfirm = {
+                confirmRotate = false
+                signer.rotateAddress()
+                Toast.makeText(context, R.string.nip46_signer_regenerated, Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { confirmRotate = false },
+        )
+    }
+}
+
+@Composable
+private fun RotateAddressDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(MaterialSymbols.Refresh, contentDescription = null, modifier = Modifier.size(24.dp)) },
+        title = { Text(stringResource(R.string.nip46_signer_rotate_confirm_title)) },
+        text = { Text(stringResource(R.string.nip46_signer_rotate_confirm_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.nip46_signer_rotate_confirm_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.nip46_signer_cancel))
+            }
+        },
+    )
 }
 
 // ----------------------------------------------------------------------------

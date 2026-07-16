@@ -913,8 +913,12 @@
     <string name="nip46_signer_bunker_uri_hint">Paste this into another app to connect it to your key.</string>
     <string name="nip46_signer_copy">Copy</string>
     <string name="nip46_signer_copied">Bunker address copied</string>
-    <string name="nip46_signer_regenerate">New secret</string>
-    <string name="nip46_signer_regenerated">Generated a new pairing secret</string>
+    <string name="nip46_signer_regenerate">New address</string>
+    <string name="nip46_signer_regenerated">Generated a new bunker address</string>
+    <string name="nip46_signer_rotate_confirm_title">Generate a new address?</string>
+    <string name="nip46_signer_rotate_confirm_message">This mints a fresh bunker address and disconnects every app currently connected. Anyone who has the old address — a spammer included — can no longer reach you. Reconnect your own apps by scanning the new code.</string>
+    <string name="nip46_signer_rotate_confirm_button">Generate</string>
+    <string name="nip46_signer_cancel">Cancel</string>
     <string name="nip46_signer_connect_label">Connect an app</string>
     <string name="nip46_signer_connect_hint">Paste a nostrconnect:// link</string>
     <string name="nip46_signer_connect_button">Connect</string>
