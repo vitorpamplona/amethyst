@@ -35,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
 import com.vitorpamplona.amethyst.commons.richtext.ConcordInviteLinkSegment
@@ -54,7 +55,6 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextInteractions
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextInteractions
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
-import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route

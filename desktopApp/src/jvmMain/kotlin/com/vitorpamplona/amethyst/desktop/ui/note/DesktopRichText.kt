@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
@@ -75,7 +76,6 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextSegmentRender
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextInteractions
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
-import com.vitorpamplona.amethyst.desktop.service.DesktopCachedRichTextParser
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -112,7 +112,7 @@ fun DesktopRichText(
     callbacks: RichTextCallbacks = RichTextCallbacks(),
     modifier: Modifier = Modifier,
 ) {
-    if (DesktopCachedRichTextParser.isMarkdown(content)) {
+    if (CachedRichTextParser.isMarkdown(content)) {
         RenderMarkdown(
             content = content,
             onLinkClick = { url -> handleDesktopLinkClick(url, callbacks) },
