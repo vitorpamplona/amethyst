@@ -54,6 +54,16 @@ class EditMetadataEvent(
 
     fun geohashes() = tags.geohashes()
 
+    /** Subgroups: the requested parent group id, or null to (re-)root this group. */
+    fun parent() = tags.parentGroupId()
+
+    /**
+     * Subgroups: the ordered child ids carried on this edit. Per NIP-29 a metadata
+     * edit of a parent group MUST re-list all of its children, so the relay rejects
+     * a `kind:9002` that drops any of them.
+     */
+    fun children() = tags.childGroupIds()
+
     fun previousEvents() = tags.previousEvents()
 
     override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
@@ -69,6 +79,8 @@ class EditMetadataEvent(
             status: Set<GroupMetadataEvent.GroupStatus> = emptySet(),
             hashtags: List<String> = emptyList(),
             geohashes: List<String> = emptyList(),
+            parent: String? = null,
+            children: List<String> = emptyList(),
             previousEvents: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EditMetadataEvent>.() -> Unit = {},
@@ -81,6 +93,8 @@ class EditMetadataEvent(
             addAll(HashtagTag.assemble(hashtags))
             // Mip-map each geohash into every prefix so a coarser followed geohash still matches.
             geohashes.forEach { addAll(GeoHashTag.assemble(it).toList()) }
+            parent?.let { parentGroup(it) }
+            childGroups(children)
             previous(previousEvents)
             initializer()
         }

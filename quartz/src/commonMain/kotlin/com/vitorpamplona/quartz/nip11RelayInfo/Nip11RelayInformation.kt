@@ -53,6 +53,7 @@ data class Nip11RelayInformation(
     val fees: RelayInformationFees? = null,
     val nip50: List<String>? = null,
     val supported_grasps: List<String>? = null,
+    val nip29: Nip29Support? = null,
 ) {
     /**
      * Serializes this document to JSON for serving at the relay's root over the
@@ -66,6 +67,17 @@ data class Nip11RelayInformation(
 
         fun fromJson(json: String): Nip11RelayInformation = JsonMapper.fromJson<Nip11RelayInformation>(json)
     }
+
+    /**
+     * NIP-29 relay capability advertisement. A relay that supports the subgroup
+     * hierarchy sets `nip29: { "subgroups": true }` in its NIP-11 document so
+     * clients know they can offer parent/child grouping for this relay's groups.
+     */
+    @Stable
+    @Serializable
+    data class Nip29Support(
+        val subgroups: Boolean? = null,
+    )
 
     @Stable
     @Serializable

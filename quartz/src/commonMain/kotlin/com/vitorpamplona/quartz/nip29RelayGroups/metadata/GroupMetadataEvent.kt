@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ChildTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.ParentTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -84,6 +86,22 @@ class GroupMetadataEvent(
     fun hasLivekit() = tags.hasTagName("livekit")
 
     /**
+     * Subgroups: the id of this group's parent, or null when this is a root group.
+     * At most one `parent` tag is expected (NIP-29 §Subgroups).
+     */
+    fun parent(): String? = tags.firstNotNullOfOrNull(ParentTag::parse)
+
+    /**
+     * Subgroups: the ordered ids of this group's direct children. The position of
+     * each `child` tag in the array is the intended display order. Empty when the
+     * group has no children (or the relay doesn't advertise them).
+     */
+    fun children(): List<String> = tags.mapNotNull(ChildTag::parse)
+
+    /** A group with no `parent` tag is a root group in the subgroup tree. */
+    fun isRoot(): Boolean = parent() == null
+
+    /**
      * The kinds this group accepts, when constrained, e.g. `["supported_kinds", "9", "11"]`.
      * `null` (tag absent) means all kinds are accepted.
      */
@@ -127,6 +145,8 @@ class GroupMetadataEvent(
             supportedKinds: List<Int>? = null,
             hashtags: List<String> = emptyList(),
             geohashes: List<String> = emptyList(),
+            parent: String? = null,
+            children: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GroupMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -141,6 +161,8 @@ class GroupMetadataEvent(
             addAll(HashtagTag.assemble(hashtags))
             // Mip-map each geohash into every prefix so a coarser followed geohash still matches.
             geohashes.forEach { addAll(GeoHashTag.assemble(it).toList()) }
+            parent?.let { add(ParentTag.assemble(it)) }
+            addAll(ChildTag.assemble(children))
             initializer()
         }
     }

@@ -137,6 +137,15 @@ class RelayGroupChannel(
 
     fun hasLivekit(): Boolean = event?.hasLivekit() ?: false
 
+    /** Subgroups: the id of this group's parent on the same host relay, or null when it's a root. */
+    fun parentGroupId(): String? = event?.parent()
+
+    /** Subgroups: the ordered ids of this group's direct children (empty when it has none). */
+    fun childGroupIds(): List<String> = event?.children() ?: emptyList()
+
+    /** Whether this group sits under a parent group (i.e. it is a subgroup). */
+    fun isSubgroup(): Boolean = event?.isRoot() == false
+
     fun updateGroupInfo(
         event: GroupMetadataEvent,
         eventNote: Note? = null,

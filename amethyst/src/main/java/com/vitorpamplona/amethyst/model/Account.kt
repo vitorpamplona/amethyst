@@ -2811,7 +2811,16 @@ class Account(
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
-    /** Edit the group's relay-signed metadata with a kind 9002 event (admin only). */
+    /**
+     * Edit the group's relay-signed metadata with a kind 9002 event (admin only).
+     *
+     * NIP-29 §Subgroups makes the metadata edit a full replacement of the hierarchy
+     * links: a 9002 with no `parent` tag re-roots the group, and one that drops any
+     * existing `child` is rejected by the relay. So unless the caller is explicitly
+     * re-parenting, we re-carry the group's current [parent] and full [children] list
+     * from its latest known metadata to keep the tree intact across a plain name/flag
+     * edit. Pass an explicit value to change them.
+     */
     suspend fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
         name: String?,
@@ -2823,6 +2832,8 @@ class Account(
         isRestricted: Boolean,
         hashtags: List<String> = emptyList(),
         geohashes: List<String> = emptyList(),
+        parent: String? = channel.parentGroupId(),
+        children: List<String> = channel.childGroupIds(),
     ) {
         val template =
             EditMetadataEvent.build(
@@ -2833,6 +2844,8 @@ class Account(
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parent,
+                children = children,
             )
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }

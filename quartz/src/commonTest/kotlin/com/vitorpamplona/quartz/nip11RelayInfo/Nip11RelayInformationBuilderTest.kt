@@ -148,6 +148,28 @@ class Nip11RelayInformationBuilderTest {
     }
 
     @Test
+    fun advertisesNip29SubgroupSupport() {
+        val info =
+            relayInformation {
+                name = "Groups"
+                supports(29)
+                subgroups()
+            }
+
+        assertEquals(true, info.nip29?.subgroups)
+        val json = info.toJson()
+        assertTrue(json.contains("\"nip29\":{\"subgroups\":true}"), json)
+        assertEquals(info, Nip11RelayInformation.fromJson(json))
+    }
+
+    @Test
+    fun omitsNip29WhenNotDeclared() {
+        val info = relayInformation { name = "R" }
+        assertNull(info.nip29)
+        assertTrue(!info.toJson().contains("nip29"), info.toJson())
+    }
+
+    @Test
     fun listHelpersAreRepeatableAndCollapseWhenEmpty() {
         val info =
             relayInformation {

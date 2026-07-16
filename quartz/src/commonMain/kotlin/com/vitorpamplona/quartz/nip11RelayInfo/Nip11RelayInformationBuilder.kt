@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip11RelayInfo
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation.Nip29Support
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation.RelayInformationFee
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation.RelayInformationFees
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation.RelayInformationLimitation
@@ -87,6 +88,7 @@ class Nip11RelayInformationBuilder {
 
     private var limitation: RelayInformationLimitation? = null
     private var fees: RelayInformationFees? = null
+    private var nip29: Nip29Support? = null
 
     /** Advertise supported NIP numbers, e.g. `supports(1, 11, 42, 50)`. Repeatable. */
     fun supports(vararg nips: Int) = apply { nips.forEach { supportedNips.add(it.toString()) } }
@@ -111,6 +113,9 @@ class Nip11RelayInformationBuilder {
 
     /** GRASP git-server capabilities the relay implements (`supported_grasps`). Repeatable. */
     fun grasps(vararg values: String) = apply { supportedGrasps.addAll(values) }
+
+    /** Advertise NIP-29 subgroup support (`nip29: { "subgroups": true }`). */
+    fun subgroups(supported: Boolean = true) = apply { nip29 = Nip29Support(subgroups = supported) }
 
     /** Declare the relay's `limitation` object via a nested DSL. */
     fun limitation(initializer: LimitationBuilder.() -> Unit) =
@@ -165,6 +170,7 @@ class Nip11RelayInformationBuilder {
             fees = fees,
             nip50 = nip50Subfeatures.ifEmpty { null }?.toList(),
             supported_grasps = supportedGrasps.ifEmpty { null }?.toList(),
+            nip29 = nip29,
         )
 
     @Nip11DslMarker
