@@ -254,6 +254,14 @@ class Nip46PermissionAuthorizer(
         /** The client pubkey of a `nip46:<signer>:<client>` coordinate, or `null` if it is not one. */
         fun clientPubKeyOf(coordinate: String): HexKey? = if (coordinate.startsWith("$COORDINATE_PREFIX:")) coordinate.substringAfterLast(':') else null
 
+        /** The signer (account identity) pubkey of a `nip46:<signer>:<client>` coordinate, or `null`. */
+        fun signerPubKeyOf(coordinate: String): HexKey? =
+            if (coordinate.startsWith("$COORDINATE_PREFIX:")) {
+                coordinate.substringAfter("$COORDINATE_PREFIX:").substringBefore(':').ifBlank { null }
+            } else {
+                null
+            }
+
         /** Maps a signing/encryption/decryption [BunkerRequest] to the [NostrSignerOp] it needs. */
         fun BunkerRequest.toSignerOp(): NostrSignerOp? =
             when (this) {

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nip46Signer
 
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
@@ -29,6 +30,7 @@ import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.napplet.label
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
@@ -65,7 +67,18 @@ object Nip46ConsentBridge {
         val meta = request.clientMetadata
         val title = meta?.name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
         val domain = meta?.url?.ifBlank { null } ?: (clientPubKey.take(12) + "…")
-        val info = SignerConnectInfo(appletTitle = title, coordinate = coordinate, domain = domain, iconUrl = meta?.image)
+        // The identity being connected to lives in the coordinate; show it as an avatar + name.
+        val face = accountFace(coordinate)
+        val info =
+            SignerConnectInfo(
+                appletTitle = title,
+                coordinate = coordinate,
+                domain = domain,
+                iconUrl = meta?.image,
+                accountName = face.name,
+                accountPicture = face.picture,
+                accountPubKey = face.pubKey,
+            )
         // Fail closed (declined) if the prompt is never answered, so a stuck first-connect dialog can't
         // hold the single-consumer loop hostage against every other client.
         return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {
@@ -92,6 +105,7 @@ object Nip46ConsentBridge {
                 ""
             }
         val rawData = if (request is BunkerRequestSign) JacksonMapper.toJsonPretty(request.event) else ""
+        val face = accountFace(coordinate)
         val consentInfo =
             SignerConsentInfo(
                 appletTitle = title,
@@ -101,10 +115,26 @@ object Nip46ConsentBridge {
                 contentPreview = preview,
                 rawData = rawData,
                 iconUrl = info?.image,
+                accountName = face.name,
+                accountPicture = face.picture,
+                accountPubKey = face.pubKey,
             )
         // Fail closed if the prompt is never answered so a stuck dialog can't hold the signer hostage.
         return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {
             SignerConsentCoordinator.requestConsent(context, consentInfo)
         } ?: SignerOpGrant.DenyOnce
     }
+
+    /** The account being signed for (avatar + name), resolved from the coordinate's signer pubkey. */
+    private fun accountFace(coordinate: String): AccountFace {
+        val pubKey = Nip46PermissionAuthorizer.signerPubKeyOf(coordinate)
+        val user = pubKey?.let { LocalCache.getUserIfExists(it) }
+        return AccountFace(name = user?.toBestDisplayName(), picture = user?.profilePicture(), pubKey = pubKey)
+    }
+
+    private data class AccountFace(
+        val name: String?,
+        val picture: String?,
+        val pubKey: String?,
+    )
 }

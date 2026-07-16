@@ -168,12 +168,17 @@ private fun SignerConnectScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
-                    Text(
-                        info.domain,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
+                    // Show WHICH account is being connected (avatar + name), not a raw pubkey.
+                    if (info.accountName != null) {
+                        ConnectedAccountRow(info.accountName, info.accountPicture, info.accountPubKey)
+                    } else {
+                        Text(
+                            info.domain,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))

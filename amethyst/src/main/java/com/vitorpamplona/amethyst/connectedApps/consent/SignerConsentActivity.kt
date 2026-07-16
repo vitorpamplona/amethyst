@@ -167,12 +167,10 @@ private fun SignerConsentDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
-                    Text(
-                        info.coordinate.substringAfter(':', "").ifBlank { info.coordinate.substringBefore(':').take(12) + "…" },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
+                    // Show WHICH account would sign/encrypt/decrypt (avatar + name), not the coordinate hex.
+                    if (info.accountName != null) {
+                        ConnectedAccountRow(info.accountName, info.accountPicture, info.accountPubKey)
+                    }
                 }
 
                 val hasContent = info.contentPreview.isNotBlank() || info.rawData.isNotBlank()

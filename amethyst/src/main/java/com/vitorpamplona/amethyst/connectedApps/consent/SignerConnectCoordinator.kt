@@ -33,6 +33,14 @@ data class SignerConnectInfo(
     val coordinate: String,
     val domain: String,
     val iconUrl: String? = null,
+    /**
+     * The account the app is connecting to, shown as an avatar + name instead of a raw pubkey. When
+     * [accountName] is null (e.g. napplet/browser paths that don't resolve it) the dialog falls back
+     * to [domain]. [accountPubKey] seeds the robohash avatar fallback when there's no picture.
+     */
+    val accountName: String? = null,
+    val accountPicture: String? = null,
+    val accountPubKey: String? = null,
 )
 
 /**

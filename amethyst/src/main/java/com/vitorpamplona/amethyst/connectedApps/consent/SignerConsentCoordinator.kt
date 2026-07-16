@@ -42,6 +42,14 @@ data class SignerConsentInfo(
      */
     val rawData: String = "",
     val iconUrl: String? = null,
+    /**
+     * The account that would sign/encrypt/decrypt, shown as an avatar + name so it's clear which
+     * logged-in identity is acting. Null on paths that don't resolve it; [accountPubKey] seeds the
+     * robohash avatar fallback when there's no picture.
+     */
+    val accountName: String? = null,
+    val accountPicture: String? = null,
+    val accountPubKey: String? = null,
 )
 
 /**
