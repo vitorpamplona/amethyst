@@ -650,6 +650,8 @@ sealed class Route {
 
     @Serializable object NewGeohashChat : Route()
 
+    @Serializable object GeohashChats : Route()
+
     @Serializable object GeohashTeleport : Route()
 
     @Serializable data class RelayGroup(

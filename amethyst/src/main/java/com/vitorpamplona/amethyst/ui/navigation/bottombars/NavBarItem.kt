@@ -340,7 +340,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.GEOHASH_CHATS,
                 labelRes = R.string.location_channels,
                 icon = MaterialSymbols.LocationOn,
-                resolveRoute = { Route.NewGeohashChat },
+                resolveRoute = { Route.GeohashChats },
             ),
         NavBarItem.FOLLOW_PACKS to
             NavBarItemDef(
@@ -560,6 +560,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
         NavBarItem.CONCORD,
+        NavBarItem.GEOHASH_CHATS,
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SOFTWARE_APPS,
