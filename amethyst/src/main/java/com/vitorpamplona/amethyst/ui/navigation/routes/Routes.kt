@@ -643,9 +643,14 @@ sealed class Route {
 
     @Serializable data class GeohashChat(
         val geohash: String,
+        // True when the user is not physically in the cell (jumped in via teleport). Seeds the
+        // composer's teleport toggle so their messages carry the ["t","teleport"] marker.
+        val teleported: Boolean = false,
     ) : Route()
 
     @Serializable object NewGeohashChat : Route()
+
+    @Serializable object GeohashTeleport : Route()
 
     @Serializable data class RelayGroup(
         val id: String,

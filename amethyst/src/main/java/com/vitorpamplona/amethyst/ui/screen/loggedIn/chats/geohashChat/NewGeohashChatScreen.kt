@@ -105,6 +105,14 @@ fun NewGeohashChatScreen(
             ManualEntrySection(onOpen = ::joinAndOpen)
             HorizontalDivider(Modifier.padding(vertical = 16.dp))
             NearMeSection(onOpen = ::joinAndOpen)
+            HorizontalDivider(Modifier.padding(vertical = 16.dp))
+            OutlinedButton(
+                onClick = { nav.nav(Route.GeohashTeleport) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                SymbolIcon(symbol = MaterialSymbols.LocationOn, contentDescription = null)
+                Text("  Teleport to a place on the map")
+            }
         }
     }
 }
@@ -259,7 +267,7 @@ private fun LevelRow(
     }
 }
 
-private fun GeohashChannelLevel.label(): String =
+internal fun GeohashChannelLevel.label(): String =
     when (this) {
         GeohashChannelLevel.REGION -> "Region"
         GeohashChannelLevel.PROVINCE -> "Province"

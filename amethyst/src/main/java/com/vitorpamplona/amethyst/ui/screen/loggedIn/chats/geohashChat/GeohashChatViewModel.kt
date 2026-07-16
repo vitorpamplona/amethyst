@@ -78,6 +78,10 @@ class GeohashChatViewModel : ViewModel() {
     private val _myPubKey = MutableStateFlow<String?>(null)
     val myPubKey: StateFlow<String?> = _myPubKey.asStateFlow()
 
+    /** Whether our outgoing messages carry the ["t","teleport"] marker (not physically in the cell). */
+    private val _teleported = MutableStateFlow(false)
+    val teleported: StateFlow<Boolean> = _teleported.asStateFlow()
+
     private val seen = HashSet<String>()
     private val present = HashSet<String>()
     private val subId = newSubId()
@@ -87,12 +91,18 @@ class GeohashChatViewModel : ViewModel() {
     fun init(
         geohash: String,
         accountViewModel: AccountViewModel,
+        teleported: Boolean = false,
     ) {
         if (started) return
         started = true
         this.geohash = geohash
         this.accountViewModel = accountViewModel
+        _teleported.value = teleported
         viewModelScope.launch { start() }
+    }
+
+    fun setTeleported(value: Boolean) {
+        _teleported.value = value
     }
 
     private suspend fun start() {
@@ -152,7 +162,6 @@ class GeohashChatViewModel : ViewModel() {
     fun sendMessage(
         text: String,
         nickname: String?,
-        teleported: Boolean = false,
     ) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
@@ -163,7 +172,7 @@ class GeohashChatViewModel : ViewModel() {
             val keyPair = withContext(Dispatchers.IO) { GeohashChatIdentity.keyPair(accountViewModel.account, geohash) }
             val signer = NostrSignerInternal(keyPair)
 
-            var template = GeohashChatEvent.build(trimmed, geohash, nickname = nickname?.ifBlank { null }, teleported = teleported)
+            var template = GeohashChatEvent.build(trimmed, geohash, nickname = nickname?.ifBlank { null }, teleported = _teleported.value)
             template =
                 withContext(Dispatchers.Default) {
                     val deadline = System.nanoTime() + POW_TIMEOUT_NANOS

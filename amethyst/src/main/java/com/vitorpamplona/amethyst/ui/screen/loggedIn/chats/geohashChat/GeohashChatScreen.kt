@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -75,16 +76,18 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 @Composable
 fun GeohashChatScreen(
     geohash: String,
+    teleported: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val viewModel: GeohashChatViewModel = viewModel(key = "GeohashChat/$geohash")
-    viewModel.init(geohash, accountViewModel)
+    viewModel.init(geohash, accountViewModel, teleported)
 
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val participants by viewModel.participants.collectAsStateWithLifecycle()
     val relays by viewModel.relays.collectAsStateWithLifecycle()
     val myPubKey by viewModel.myPubKey.collectAsStateWithLifecycle()
+    val teleporting by viewModel.teleported.collectAsStateWithLifecycle()
 
     var nickname by remember { mutableStateOf("") }
     var draft by remember { mutableStateOf("") }
@@ -117,13 +120,24 @@ fun GeohashChatScreen(
         }
 
         HorizontalDivider()
-        OutlinedTextField(
-            value = nickname,
-            onValueChange = { nickname = it },
-            singleLine = true,
-            label = { Text("Nickname (optional)") },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        )
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = nickname,
+                onValueChange = { nickname = it },
+                singleLine = true,
+                label = { Text("Nickname (optional)") },
+                modifier = Modifier.weight(1f),
+            )
+            FilterChip(
+                selected = teleporting,
+                onClick = { viewModel.setTeleported(!teleporting) },
+                label = { Text("✈ Teleport") },
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
