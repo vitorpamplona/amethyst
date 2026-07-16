@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.concord.cord05Invites
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.cord04Roles.control.vsk
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -30,6 +32,34 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.utils.RandomInstance
+
+/**
+ * What the events fetched at an invite's addressable coordinate `(33301,
+ * link_signer, d="")` actually resolve to under CORD-05 §2. The coordinate is
+ * replaceable, so its live state is the **newest** event: a revocation tombstone
+ * (`vsk=9`) supersedes and buries the bundle even if an older openable copy still
+ * lingers on some relay, which is exactly the "fetcher finds the grave instead of
+ * keys" behaviour the spec mandates.
+ */
+sealed interface InviteBundleStatus {
+    /** A live `vsk=6` bundle that opened with the link token. */
+    data class Live(
+        val invite: CommunityInvite,
+    ) : InviteBundleStatus
+
+    /** The newest event at the coordinate is a `vsk=9` revocation tombstone — the link was retired. */
+    data object Revoked : InviteBundleStatus
+
+    /**
+     * Something is at the coordinate, but it isn't a `vsk=6` bundle this client can open —
+     * a wrong/expired token, or a sub-kind (e.g. a mis-posted registry `vsk=8`) or format
+     * newer than we support.
+     */
+    data object Unreadable : InviteBundleStatus
+
+    /** Nothing was found at the coordinate on any queried relay (unreachable, expired, or not yet propagated). */
+    data object Absent : InviteBundleStatus
+}
 
 /** A freshly minted public invite link: the shareable URL, the link keys, and the bundle to publish. */
 class MintedInviteLink(
@@ -80,6 +110,25 @@ object ConcordInviteBundle {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /**
+     * Resolves the events fetched at an invite's addressable coordinate into a single
+     * [InviteBundleStatus] under CORD-05 §2 replaceable semantics. The newest event
+     * wins: a `vsk=9` revocation tombstone marks the link [InviteBundleStatus.Revoked]
+     * even when an older, still-openable bundle is also present (so a stale relay copy
+     * can't resurrect a retired link). Otherwise the first `vsk=6` bundle that opens +
+     * validates with [token] is [InviteBundleStatus.Live]; anything else present is
+     * [InviteBundleStatus.Unreadable], and an empty set is [InviteBundleStatus.Absent].
+     */
+    fun classify(
+        wraps: List<Event>,
+        token: ByteArray,
+    ): InviteBundleStatus {
+        val newest = wraps.maxByOrNull { it.createdAt } ?: return InviteBundleStatus.Absent
+        if (newest.tags.vsk() == ControlEntityKind.INVITE_REVOKED) return InviteBundleStatus.Revoked
+        val invite = wraps.firstNotNullOfOrNull { parse(it, token)?.takeIf { i -> validate(i) } }
+        return if (invite != null) InviteBundleStatus.Live(invite) else InviteBundleStatus.Unreadable
     }
 
     /**

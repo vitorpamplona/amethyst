@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.model.ConcordInviteResult
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -50,7 +51,15 @@ private sealed interface RedeemState {
         val communityId: String,
     ) : RedeemState
 
-    data object Failed : RedeemState
+    /**
+     * The redeem failed. [messageRes] explains why; [canRetry] is true only for a
+     * transient miss — an invalid or incompatible link can never succeed, so we don't
+     * offer a retry that would just loop back onto the same spinner.
+     */
+    data class Failed(
+        val messageRes: Int,
+        val canRetry: Boolean,
+    ) : RedeemState
 }
 
 /**
@@ -69,8 +78,18 @@ fun ConcordInviteScreen(
 
     LaunchedEffect(link, state) {
         if (state is RedeemState.Working) {
-            val communityId = accountViewModel.account.joinConcordViaInvite(link)
-            state = if (communityId != null) RedeemState.Done(communityId) else RedeemState.Failed
+            state =
+                when (val result = accountViewModel.account.joinConcordViaInvite(link)) {
+                    is ConcordInviteResult.Joined -> RedeemState.Done(result.communityId)
+                    is ConcordInviteResult.InvalidLink ->
+                        RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed_invalid, canRetry = false)
+                    is ConcordInviteResult.Incompatible ->
+                        RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed_incompatible, canRetry = false)
+                    is ConcordInviteResult.Revoked ->
+                        RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed_revoked, canRetry = false)
+                    is ConcordInviteResult.NotReachable ->
+                        RedeemState.Failed(com.vitorpamplona.amethyst.R.string.concord_invite_failed, canRetry = true)
+                }
         }
     }
 
@@ -96,16 +115,19 @@ fun ConcordInviteScreen(
             }
 
             is RedeemState.Failed -> {
+                val failed = state as RedeemState.Failed
                 Text(
-                    stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_failed),
+                    stringRes(failed.messageRes),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                 )
-                Button(
-                    onClick = { state = RedeemState.Working },
-                    modifier = Modifier.padding(top = 16.dp),
-                ) {
-                    Text(stringRes(com.vitorpamplona.amethyst.R.string.retry))
+                if (failed.canRetry) {
+                    Button(
+                        onClick = { state = RedeemState.Working },
+                        modifier = Modifier.padding(top = 16.dp),
+                    ) {
+                        Text(stringRes(com.vitorpamplona.amethyst.R.string.retry))
+                    }
                 }
             }
 
