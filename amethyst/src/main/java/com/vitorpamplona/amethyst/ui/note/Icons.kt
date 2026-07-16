@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
 
@@ -66,11 +67,13 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(modifier: Modifier) {
-    // Match the previous badge look — a vivid accent shield with a white figure — recoloured to the
-    // selected accent: shield = primary, figure = onPrimary.
-    val shield = MaterialTheme.colorScheme.primary
-    val figure = MaterialTheme.colorScheme.onPrimary
-    val icon = remember(shield, figure) { following(shield, figure) }
+    // Deep, saturated accent shield + white figure, like the original #7F2EFF badge. Use the accent's
+    // deep tone (its light-theme primary) in both themes: dark-theme `primary` is a pale pastel, so
+    // the shield would read washed out — inversePrimary carries the deep tone in the dark scheme,
+    // while `primary` already is it in light.
+    val scheme = MaterialTheme.colorScheme
+    val shield = if (scheme.isLight) scheme.primary else scheme.inversePrimary
+    val icon = remember(shield) { following(shield, Color.White) }
     Icon(
         imageVector = icon,
         contentDescription = stringRes(id = R.string.following),
