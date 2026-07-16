@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.LimitsMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
@@ -64,6 +65,7 @@ class RelayLogger(
                     is AuthMessage -> if (debugReceiving) Log.d(logTag) { "Auth: ${msg.challenge}" }
                     is NotifyMessage -> if (debugReceiving) Log.d(logTag) { "Notify: ${msg.message}" }
                     is CountMessage -> if (debugReceiving) Log.d(logTag) { "Count: ${msg.result.count} approx: ${msg.result.approximate} hll: ${msg.result.hll != null}" }
+                    is LimitsMessage -> if (debugReceiving) Log.d(logTag) { "Limits: canRead=${msg.canRead} canWrite=${msg.canWrite} maxLimit=${msg.maxLimit} maxSubscriptions=${msg.maxSubscriptions}" }
                     is ClosedMessage -> Log.w(logTag) { "Closed: ${msg.subId} ${msg.message}" }
                 }
             }

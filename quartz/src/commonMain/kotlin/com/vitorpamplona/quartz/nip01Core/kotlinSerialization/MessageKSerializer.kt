@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.LimitsMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
@@ -97,6 +98,11 @@ object MessageKSerializer : KSerializer<Message> {
                         add(JsonPrimitive(value.subId))
                     }
 
+                    is LimitsMessage -> {
+                        // NIP-22 wire format: ["LIMITS", { <limit_properties> }]
+                        add(LimitsKSerializer.serializeToElement(value))
+                    }
+
                     is NegMsgMessage -> {
                         add(JsonPrimitive(value.subId))
                         add(JsonPrimitive(value.message))
@@ -158,6 +164,10 @@ object MessageKSerializer : KSerializer<Message> {
                 val queryId = array[1].jsonPrimitive.content
                 val result = CountResultKSerializer.deserializeFromElement(array[2].jsonObject)
                 CountMessage(queryId, result)
+            }
+
+            LimitsMessage.LABEL -> {
+                LimitsKSerializer.deserializeFromElement(array[1].jsonObject)
             }
 
             NegMsgMessage.LABEL -> {

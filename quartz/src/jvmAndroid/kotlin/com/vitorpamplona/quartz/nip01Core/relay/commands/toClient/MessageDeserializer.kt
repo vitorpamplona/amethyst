@@ -103,6 +103,13 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                     )
                 }
 
+                LimitsMessage.LABEL -> {
+                    jp.nextToken()
+                    val result: JsonNode = jp.codec.readTree(jp)
+
+                    LimitsDeserializer.fromJson(result)
+                }
+
                 NegMsgMessage.LABEL -> {
                     NegMsgMessage(
                         subId = jp.nextTextValue(),

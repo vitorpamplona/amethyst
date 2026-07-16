@@ -80,6 +80,47 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
                 gen.writeString(msg.subId)
             }
 
+            is LimitsMessage -> {
+                // NIP-22 wire format: ["LIMITS", { <limit_properties> }]. Only
+                // the fields the relay set are emitted; absent limits stay absent.
+                gen.writeStartObject()
+                msg.canWrite?.let { gen.writeBooleanField("can_write", it) }
+                msg.canRead?.let { gen.writeBooleanField("can_read", it) }
+                msg.authForRead?.let { gen.writeBooleanField("auth_for_read", it) }
+                msg.authForWrite?.let { gen.writeBooleanField("auth_for_write", it) }
+                msg.acceptedEventKinds?.let {
+                    gen.writeArrayFieldStart("accepted_event_kinds")
+                    it.forEach { kind -> gen.writeNumber(kind) }
+                    gen.writeEndArray()
+                }
+                msg.blockedEventKinds?.let {
+                    gen.writeArrayFieldStart("blocked_event_kinds")
+                    it.forEach { kind -> gen.writeNumber(kind) }
+                    gen.writeEndArray()
+                }
+                msg.minPowDifficulty?.let { gen.writeNumberField("min_pow_difficulty", it) }
+                msg.maxMessageLength?.let { gen.writeNumberField("max_message_length", it) }
+                msg.maxSubscriptions?.let { gen.writeNumberField("max_subscriptions", it) }
+                msg.maxFilters?.let { gen.writeNumberField("max_filters", it) }
+                msg.maxLimit?.let { gen.writeNumberField("max_limit", it) }
+                msg.maxEventTags?.let { gen.writeNumberField("max_event_tags", it) }
+                msg.maxContentLength?.let { gen.writeNumberField("max_content_length", it) }
+                msg.createdAtMsecsAgo?.let { gen.writeNumberField("created_at_msecs_ago", it) }
+                msg.createdAtMsecsAhead?.let { gen.writeNumberField("created_at_msecs_ahead", it) }
+                msg.filterRateLimit?.let { gen.writeNumberField("filter_rate_limit", it) }
+                msg.publishingRateLimit?.let { gen.writeNumberField("publishing_rate_limit", it) }
+                msg.requiredTags?.let {
+                    gen.writeArrayFieldStart("required_tags")
+                    it.forEach { tag ->
+                        gen.writeStartArray()
+                        tag.forEach { part -> gen.writeString(part) }
+                        gen.writeEndArray()
+                    }
+                    gen.writeEndArray()
+                }
+                gen.writeEndObject()
+            }
+
             is NegMsgMessage -> {
                 gen.writeString(msg.subId)
                 gen.writeString(msg.message)
