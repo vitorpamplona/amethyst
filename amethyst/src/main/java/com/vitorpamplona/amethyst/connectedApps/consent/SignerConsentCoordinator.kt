@@ -154,10 +154,5 @@ object SignerConsentCoordinator {
         tokens.forEach { complete(it, grant) }
     }
 
-    /** Deny every still-open request — used when the user dismisses the whole sheet. Fails closed. */
-    fun denyAllPending() {
-        deferreds.values.forEach { it.complete(SignerOpGrant.DenyOnce) }
-    }
-
     const val EXTRA_TOKEN = "napplet_signer_consent_token"
 }

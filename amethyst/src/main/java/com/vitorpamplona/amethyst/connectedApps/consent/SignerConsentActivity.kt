@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,15 +90,22 @@ class SignerConsentActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             AmethystTheme {
-                // The signer services requests concurrently, so more than one may await consent. Observe
-                // the shared queue: one request shows the rich dialog, several show a batched list. When
-                // the queue empties (all decided), close.
+                // The signer services requests concurrently, so more than one may await consent. We never
+                // mix accounts in one sheet: render only the requests for the OLDEST-pending account as a
+                // group. When that account's group clears, the next account's requests render (a fresh
+                // per-account sheet). One request → the rich dialog; several → a batched list. When the
+                // whole queue empties, close.
                 val pending by SignerConsentCoordinator.pending.collectAsStateWithLifecycle()
+                val group =
+                    run {
+                        val account = pending.firstOrNull()?.info?.accountPubKey
+                        pending.filter { it.info.accountPubKey == account }
+                    }
                 LaunchedEffect(pending.isEmpty()) { if (pending.isEmpty()) finish() }
                 when {
-                    pending.isEmpty() -> Unit
-                    pending.size == 1 -> {
-                        val p = pending.first()
+                    group.isEmpty() -> Unit
+                    group.size == 1 -> {
+                        val p = group.first()
                         SignerConsentDialog(
                             info = p.info,
                             onGrant = { SignerConsentCoordinator.complete(p.token, it) },
@@ -106,9 +114,11 @@ class SignerConsentActivity : ComponentActivity() {
                     }
                     else ->
                         BatchedConsentDialog(
-                            pending = pending,
+                            pending = group,
                             onResolve = { tokens, grant -> SignerConsentCoordinator.completeAll(tokens, grant) },
-                            onDismiss = { SignerConsentCoordinator.denyAllPending() },
+                            // Dismissing denies only THIS account's group; other accounts' requests stay
+                            // pending and render next as their own sheet.
+                            onDismiss = { SignerConsentCoordinator.completeAll(group.map { it.token }, SignerOpGrant.DenyOnce) },
                         )
                 }
             }
@@ -127,29 +137,9 @@ private fun SignerConsentDialog(
     onGrant: (SignerOpGrant) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var showRawData by remember { mutableStateOf(false) }
     var showMoreOptions by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.85f
-
-    // Reuse the live AccountViewModel (via CallSessionBridge, the same handle CallActivity uses) to
-    // render the unsigned event as a real note preview — what it will actually look like. Best-effort:
-    // if the main Activity is gone (only the foreground signer service alive) we fall back to the JSON.
-    val accountViewModel = remember { CallSessionBridge.accountViewModel }
-    val previewNav = remember { EmptyNav() }
-    val previewNote =
-        remember(info, accountViewModel) {
-            val template = info.previewTemplate
-            val author = info.accountPubKey ?: accountViewModel?.account?.signer?.pubKey
-            if (template != null && author != null && accountViewModel != null) {
-                runCatching {
-                    val unsigned = RumorAssembler.assembleRumor<Event>(author, template)
-                    accountViewModel.createTempDraftNote(unsigned, LocalCache.getOrCreateUser(author))
-                }.getOrNull()
-            } else {
-                null
-            }
-        }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -205,66 +195,9 @@ private fun SignerConsentDialog(
                     }
                 }
 
-                val hasContent = previewNote != null || info.contentPreview.isNotBlank() || info.rawData.isNotBlank()
-                if (hasContent) {
-                    Spacer(Modifier.height(12.dp))
-                    Surface(
-                        modifier =
-                            Modifier
-                                .padding(horizontal = 24.dp)
-                                .fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = MaterialTheme.shapes.medium,
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            if (previewNote != null && accountViewModel != null) {
-                                // The event rendered as it will look once signed.
-                                NoteCompose(
-                                    baseNote = previewNote,
-                                    isQuotedNote = true,
-                                    quotesLeft = 0,
-                                    accountViewModel = accountViewModel,
-                                    nav = previewNav,
-                                )
-                            } else if (info.contentPreview.isNotBlank()) {
-                                Text(
-                                    "“${info.contentPreview}”",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            if (info.rawData.isNotBlank()) {
-                                if (showRawData) {
-                                    Spacer(Modifier.height(8.dp))
-                                    Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                                        SelectionContainer {
-                                            Text(
-                                                info.rawData,
-                                                style =
-                                                    MaterialTheme.typography.labelSmall.copy(
-                                                        fontFamily = FontFamily.Monospace,
-                                                    ),
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                softWrap = false,
-                                            )
-                                        }
-                                    }
-                                }
-                                TextButton(
-                                    onClick = { showRawData = !showRawData },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                                ) {
-                                    Text(
-                                        if (showRawData) {
-                                            stringResource(R.string.napplet_consent_hide_event)
-                                        } else {
-                                            stringResource(R.string.napplet_consent_show_event)
-                                        },
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
-                                }
-                            }
-                        }
-                    }
+                Spacer(Modifier.height(12.dp))
+                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                    SignerConsentPreview(info)
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -364,6 +297,83 @@ private fun SignerConsentDialog(
 }
 
 /**
+ * The "what you're acting on" block: the unsigned event rendered as a real NoteCompose (what it will
+ * look like once signed) with a JSON toggle for sign/publish, or the raw content / decrypted plaintext
+ * for encrypt/decrypt. Shared by the single-request dialog and each expanded batch row so a user can
+ * always inspect exactly what they are signing/encrypting/decrypting. Best-effort: if the main Activity
+ * is gone (only the foreground signer service alive) the NoteCompose is skipped and the JSON stands in.
+ */
+@Composable
+private fun SignerConsentPreview(info: SignerConsentInfo) {
+    var showRawData by remember(info) { mutableStateOf(false) }
+    val accountViewModel = remember { CallSessionBridge.accountViewModel }
+    val previewNav = remember { EmptyNav() }
+    val previewNote =
+        remember(info, accountViewModel) {
+            val template = info.previewTemplate
+            val author = info.accountPubKey ?: accountViewModel?.account?.signer?.pubKey
+            if (template != null && author != null && accountViewModel != null) {
+                runCatching {
+                    val unsigned = RumorAssembler.assembleRumor<Event>(author, template)
+                    accountViewModel.createTempDraftNote(unsigned, LocalCache.getOrCreateUser(author))
+                }.getOrNull()
+            } else {
+                null
+            }
+        }
+
+    val hasContent = previewNote != null || info.contentPreview.isNotBlank() || info.rawData.isNotBlank()
+    if (!hasContent) return
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            if (previewNote != null && accountViewModel != null) {
+                NoteCompose(
+                    baseNote = previewNote,
+                    isQuotedNote = true,
+                    quotesLeft = 0,
+                    accountViewModel = accountViewModel,
+                    nav = previewNav,
+                )
+            } else if (info.contentPreview.isNotBlank()) {
+                Text("“${info.contentPreview}”", style = MaterialTheme.typography.bodySmall)
+            }
+            if (info.rawData.isNotBlank()) {
+                if (showRawData) {
+                    Spacer(Modifier.height(8.dp))
+                    Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        SelectionContainer {
+                            Text(
+                                info.rawData,
+                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                softWrap = false,
+                            )
+                        }
+                    }
+                }
+                TextButton(
+                    onClick = { showRawData = !showRawData },
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                ) {
+                    Text(
+                        if (showRawData) {
+                            stringResource(R.string.napplet_consent_hide_event)
+                        } else {
+                            stringResource(R.string.napplet_consent_show_event)
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * Shown when more than one request is awaiting consent at once (the signer services requests
  * concurrently). Lists each with a checkbox — all selected by default — and resolves the selected
  * ones together as Allow or Deny. "Remember" makes an Allow persist per-op ([SignerOpGrant.AllowForOp]);
@@ -386,6 +396,8 @@ private fun BatchedConsentDialog(
     var selected by remember { mutableStateOf(tokens) }
     LaunchedEffect(tokens) { selected = selected intersect tokens }
     var rememberChoice by remember { mutableStateOf(false) }
+    // Tokens whose full preview (rendered event + JSON, or encrypt/decrypt plaintext) is expanded.
+    var expanded by remember { mutableStateOf(emptySet<String>()) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -402,11 +414,40 @@ private fun BatchedConsentDialog(
             tonalElevation = 6.dp,
         ) {
             Column(modifier = Modifier.padding(vertical = 20.dp)) {
-                Text(
-                    pluralStringResource(R.plurals.nip46_signer_batch_title, pending.size, pending.size),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                )
+                // The sheet is single-account (grouped upstream), so the account is a header, not a
+                // per-row label. It says WHO every request in this sheet would act as.
+                val account = pending.first().info
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    account.accountName?.let { name ->
+                        RobohashFallbackAsyncImage(
+                            robot = account.accountPubKey ?: name,
+                            model = account.accountPicture,
+                            contentDescription = null,
+                            modifier = Modifier.size(34.dp).clip(CircleShape),
+                            loadProfilePicture = true,
+                            loadRobohash = true,
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            pluralStringResource(R.plurals.nip46_signer_batch_title, pending.size, pending.size),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        account.accountName?.let { name ->
+                            Text(
+                                stringResource(R.string.nip46_signer_batch_signing_as, name),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
                 TextButton(
                     onClick = {
                         selected = if (selected.size == pending.size) emptySet() else pending.map { it.token }.toSet()
@@ -428,53 +469,48 @@ private fun BatchedConsentDialog(
                             .verticalScroll(rememberScrollState()),
                 ) {
                     pending.forEach { p ->
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Checkbox(
-                                checked = p.token in selected,
-                                onCheckedChange = { on -> selected = if (on) selected + p.token else selected - p.token },
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "${p.info.appletTitle} · ${p.info.operationSummary}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
+                        val isExpanded = p.token in expanded
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            expanded = if (isExpanded) expanded - p.token else expanded + p.token
+                                        }.padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                // Checkbox handles its own tap (select); tapping elsewhere on the row expands.
+                                Checkbox(
+                                    checked = p.token in selected,
+                                    onCheckedChange = { on -> selected = if (on) selected + p.token else selected - p.token },
                                 )
-                                if (p.info.contentPreview.isNotBlank()) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        p.info.contentPreview,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        "${p.info.appletTitle} · ${p.info.operationSummary}",
+                                        style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 1,
                                     )
-                                }
-                                // WHICH account signs — the batch can bundle requests for different
-                                // logged-in accounts (the coordinator is process-wide), so each row must
-                                // say who it acts as, not just which app asked.
-                                p.info.accountName?.let { account ->
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        RobohashFallbackAsyncImage(
-                                            robot = p.info.accountPubKey ?: account,
-                                            model = p.info.accountPicture,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp).clip(CircleShape),
-                                            loadProfilePicture = true,
-                                            loadRobohash = true,
-                                        )
+                                    if (p.info.contentPreview.isNotBlank()) {
                                         Text(
-                                            stringResource(R.string.nip46_signer_batch_signing_as, account),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            p.info.contentPreview,
+                                            style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
+                                }
+                                Icon(
+                                    if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                            if (isExpanded) {
+                                Box(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
+                                    SignerConsentPreview(p.info)
                                 }
                             }
                         }
