@@ -900,7 +900,7 @@
     <string name="napplet_connected_apps_search_keywords">apps permissions signer napplet nsite webapp trust connected</string>
 
     <!-- NIP-46 remote signer (bunker) -->
-    <string name="nip46_signer_title">Nostr Signer</string>
+    <string name="nip46_signer_title">Remote Signer</string>
     <string name="nip46_signer_search_keywords">signer bunker nip46 nostr connect remote sign</string>
     <string name="nip46_signer_explainer">Let other apps sign with your key. Amethyst listens on your inbox relays and checks each app\'s permissions before signing — using the same trust levels as Connected Apps.</string>
     <string name="nip46_signer_enable">Act as a remote signer</string>
