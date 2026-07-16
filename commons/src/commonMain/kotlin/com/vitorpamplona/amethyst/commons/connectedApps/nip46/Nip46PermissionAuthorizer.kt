@@ -77,6 +77,12 @@ class Nip46PermissionAuthorizer(
     val onConnected: (suspend (clientPubKey: HexKey, request: BunkerRequestConnect) -> Unit)? = null,
     /** Persisted client metadata/relays; cleared on logout so a disconnected app leaves nothing behind. */
     val clientStore: Nip46ClientStore? = null,
+    /**
+     * Invoked after a client is fully forgotten ([onLogout]/[forget]) so the host can react in the
+     * running session — e.g. stop listening on relays that only that client used, instead of waiting
+     * for the next restart.
+     */
+    val onDisconnected: (suspend (clientPubKey: HexKey) -> Unit)? = null,
 ) : Nip46RequestAuthorizer {
     // A high-throughput client can authorize many signs per second; last-used is display-only,
     // so coalesce the DataStore write to at most one per client per LAST_USED_THROTTLE_SECS
@@ -136,12 +142,20 @@ class Nip46PermissionAuthorizer(
         return allowed
     }
 
-    override suspend fun onLogout(clientPubKey: HexKey) {
-        // The client asked to disconnect — drop its standing grant (so it must pair again) and its
-        // persisted metadata/relays (so we stop listening on its relays after the next restart).
+    override suspend fun onLogout(clientPubKey: HexKey) = forget(clientPubKey)
+
+    /**
+     * Fully disconnects [clientPubKey], from either the client's `logout` request or the user's
+     * "Forget" action: drops its standing grant (so it must pair again), its persisted metadata/relays,
+     * and its in-memory throttle entry, then signals [onDisconnected] so the running session can stop
+     * listening on relays that only this client used.
+     */
+    suspend fun forget(clientPubKey: HexKey) {
         val coordinate = coordinateFor(clientPubKey)
         ledger.revokeAll(coordinate)
         clientStore?.remove(coordinate)
+        throttleLock.withLock { lastUsedThrottle.remove(coordinate) }
+        onDisconnected?.invoke(clientPubKey)
     }
 
     companion object {

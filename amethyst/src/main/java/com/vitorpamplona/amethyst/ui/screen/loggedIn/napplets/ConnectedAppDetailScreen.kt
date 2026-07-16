@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
@@ -221,7 +222,14 @@ fun ConnectedAppDetailScreen(
             Button(
                 onClick = {
                     mutate {
-                        signerLedger.revokeAll(coordinate)
+                        val nip46Client = Nip46PermissionAuthorizer.clientPubKeyOf(coordinate)
+                        if (nip46Client != null) {
+                            // Route NIP-46 clients through the host so the client store + the running
+                            // listen set are cleared too, not just the permission ledger.
+                            accountViewModel.account.nip46Signer.forgetClient(nip46Client)
+                        } else {
+                            signerLedger.revokeAll(coordinate)
+                        }
                         capabilityLedger.revokeAll(identity)
                     }
                     nav.popBack()

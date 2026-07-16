@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -105,22 +106,16 @@ class Nip46SignerState(
                 }
             },
             clientStore = clientStore,
+            // A forgotten client's relays are gone from the store now; recompute the listen set so we
+            // stop listening on them this session instead of waiting for a restart.
+            onDisconnected = { refreshExtraRelaysFromStore() },
         )
 
     init {
-        // Recover the relays of `nostrconnect://`-paired apps so they stay reachable across restarts
-        // (bunker-flow apps use the inbox relays, which are already in the listen set).
-        scope.launch(Dispatchers.IO) {
-            val recovered =
-                clientStore
-                    .all()
-                    .filterKeys { Nip46PermissionAuthorizer.belongsTo(it, signer.pubKey) }
-                    .values
-                    .flatMap { it.relays }
-                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-                    .toSet()
-            if (recovered.isNotEmpty()) extraRelays.value = extraRelays.value + recovered
-        }
+        // extraRelays is a live projection of the persisted client store (the nostrconnect apps' own
+        // relays). Load it on start so paired apps stay reachable across restarts; it is refreshed
+        // whenever a client connects or is forgotten (bunker-flow apps use the inbox relays instead).
+        scope.launch(Dispatchers.IO) { refreshExtraRelaysFromStore() }
 
         scope.launch(Dispatchers.IO) {
             combine(settings.nip46SignerEnabled, listeningRelays) { enabled, relays -> enabled to relays }
@@ -172,6 +167,25 @@ class Nip46SignerState(
         return fresh
     }
 
+    /** Recomputes [extraRelays] from the persisted client store — the source of truth for nostrconnect relays. */
+    private suspend fun refreshExtraRelaysFromStore() {
+        extraRelays.value =
+            clientStore
+                .all()
+                .filterKeys { Nip46PermissionAuthorizer.belongsTo(it, signer.pubKey) }
+                .values
+                .flatMap { it.relays }
+                .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                .toSet()
+    }
+
+    /**
+     * Forgets a connected client (the user's "Forget" action): revokes its grant, drops its stored
+     * metadata/relays, and stops listening on relays that only it used. Same path as a client-sent
+     * `logout`, so both are consistent.
+     */
+    suspend fun forgetClient(clientPubKey: HexKey) = authorizer.forget(clientPubKey)
+
     /** Returns the current pairing secret, generating and persisting one the first time. */
     private fun ensureSecret(): String {
         val current = settings.nip46BunkerSecret.value
@@ -209,7 +223,7 @@ class Nip46SignerState(
                 coordinate,
                 Nip46ClientInfo(name = offer.name, url = offer.url, image = offer.image, relays = offer.relays.map { it.url }.toSet()),
             )
-            extraRelays.value = extraRelays.value + offer.relays
+            refreshExtraRelaysFromStore()
 
             setEnabled(true)
             ConnectResult.Connected(offer.clientPubKey, offer.name)

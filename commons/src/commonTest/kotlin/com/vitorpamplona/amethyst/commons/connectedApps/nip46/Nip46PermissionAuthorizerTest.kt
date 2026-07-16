@@ -135,4 +135,43 @@ class Nip46PermissionAuthorizerTest {
 
             assertEquals(null, ledger.store.loadPolicy(coordinate))
         }
+
+    @Test
+    fun forgetClearsGrantAndStoreAndSignalsDisconnect() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
+            val store = InMemoryNip46ClientStore()
+            store.store(coordinate, Nip46ClientInfo(name = "X", relays = setOf("wss://relay.example.com")))
+            var disconnected: String? = null
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    clientStore = store,
+                    onDisconnected = { disconnected = it },
+                )
+
+            authorizer.forget(client)
+
+            assertEquals(null, ledger.store.loadPolicy(coordinate), "grant cleared")
+            assertEquals(null, store.load(coordinate), "stored metadata + relays cleared")
+            assertEquals(client, disconnected, "host notified so it can drop the relays this session")
+        }
+
+    @Test
+    fun logoutIsEquivalentToForget() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+            val store = InMemoryNip46ClientStore()
+            store.store(coordinate, Nip46ClientInfo(name = "X"))
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true }, clientStore = store)
+
+            authorizer.onLogout(client)
+
+            assertEquals(null, ledger.store.loadPolicy(coordinate))
+            assertEquals(null, store.load(coordinate))
+        }
 }
