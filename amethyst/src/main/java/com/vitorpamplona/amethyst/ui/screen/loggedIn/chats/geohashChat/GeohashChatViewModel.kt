@@ -27,11 +27,13 @@ import com.vitorpamplona.amethyst.service.geohash.GeohashRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,6 +72,9 @@ class GeohashChatViewModel : ViewModel() {
      */
     private val _myPubKeys = MutableStateFlow<Set<String>>(emptySet())
     val myPubKeys: StateFlow<Set<String>> = _myPubKeys.asStateFlow()
+
+    /** The anonymous per-cell pubkey alone (for de-duping our own anonymous reactions). */
+    private var anonPubKeyHex: String? = null
 
     /** Whether our outgoing messages carry the ["t","teleport"] marker (not physically in the cell). */
     private val _teleported = MutableStateFlow(false)
@@ -122,8 +127,38 @@ class GeohashChatViewModel : ViewModel() {
                     .pubKey
                     .toHexKey()
             }
+        anonPubKeyHex = anonPubKey
         _myPubKeys.value = setOf(anonPubKey, account.signer.pubKey)
         _relays.value = resolveRelays()
+    }
+
+    /**
+     * React to [note] following the composer identity: the real account when "post as me" is on
+     * (full account react/undo), otherwise a kind-7 signed by the anonymous per-cell key so a reaction
+     * does not deanonymize the user. Anonymous reactions are add-only (no clean undo yet), so a repeat
+     * of the same reaction from our per-cell key is dropped.
+     */
+    fun react(
+        note: Note,
+        reaction: String,
+    ) {
+        if (_postAsSelf.value) {
+            accountViewModel.reactToOrDelete(note, reaction)
+            return
+        }
+
+        val hint = note.toEventHint<Event>() ?: return
+        val anon = anonPubKeyHex
+        if (anon != null && note.reactions[reaction]?.any { it.author?.pubkeyHex == anon } == true) return
+
+        viewModelScope.launch {
+            val relays = _relays.value.toSet().ifEmpty { resolveRelays().toSet() }
+            if (relays.isEmpty()) return@launch
+            val keyPair = withContext(Dispatchers.IO) { accountViewModel.account.geohashIdentity.keyPair(geohash) }
+            val signer = NostrSignerInternal(keyPair)
+            val template = ReactionEvent.build(reaction, hint)
+            runCatching { accountViewModel.account.signWithAndSendPrivately(template, signer, relays) }
+        }
     }
 
     /** Build, mine a small PoW, sign with the per-geohash identity (or the account when opted in), and publish. */

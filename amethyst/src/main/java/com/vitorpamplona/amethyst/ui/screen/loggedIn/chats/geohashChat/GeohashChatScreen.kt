@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatMessageActionSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatReactionChips
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RenderReplyRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
@@ -174,6 +175,7 @@ private fun GeohashChatRoom(
                         accountViewModel = accountViewModel,
                         nav = nav,
                         onReply = composer::setReplyTo,
+                        onReact = composer::react,
                     )
 
                 else -> Unit
@@ -244,6 +246,7 @@ private fun GeohashMessageList(
     accountViewModel: AccountViewModel,
     nav: INav,
     onReply: (Note) -> Unit,
+    onReact: (Note, String) -> Unit,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val messages =
@@ -265,9 +268,13 @@ private fun GeohashMessageList(
                 msg = msg,
                 position = groupPositionFor(messages, index),
                 isMine = msg.event.pubKey in myPubKeys,
+                // The message rendered directly above this one — a reply targeting it is redundant,
+                // so RenderReplyRow suppresses the quote in that case.
+                previousNoteId = messages.getOrNull(index - 1)?.note?.idHex,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 onReply = onReply,
+                onReact = onReact,
             )
         }
     }
@@ -278,9 +285,11 @@ private fun GeohashBubble(
     msg: GeoMsg,
     position: ChatGroupPosition,
     isMine: Boolean,
+    previousNoteId: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
     onReply: (Note) -> Unit,
+    onReact: (Note, String) -> Unit,
 ) {
     val message = msg.event
     ChatBubbleLayout(
@@ -291,9 +300,10 @@ private fun GeohashBubble(
         groupPosition = position,
         onClick = { false },
         onDoubleTap = {
-            // Quick default reaction (same gesture as every other chat surface).
-            if (accountViewModel.isWriteable() && accountViewModel.reactionChoices().isNotEmpty()) {
-                accountViewModel.reactToOrDelete(msg.note)
+            // Quick default reaction — routed through the composer identity (anonymous by default),
+            // like every other chat surface's double-tap.
+            if (accountViewModel.isWriteable()) {
+                accountViewModel.reactionChoices().firstOrNull()?.let { onReact(msg.note, it) }
             }
         },
         onSwipeReply = { onReply(msg.note) },
@@ -301,6 +311,7 @@ private fun GeohashBubble(
         actionMenu = { onDismiss ->
             // The shared sheet: react, zap (Lightning + on-chain + nutzap), reply, copy, report, share.
             // Its own isLoggedUser/isDraft gating hides own-only actions for anonymous authors.
+            // onReactOverride routes the quick-reaction row through the composer identity.
             ChatMessageActionSheet(
                 note = msg.note,
                 onWantsToReply = onReply,
@@ -308,9 +319,10 @@ private fun GeohashBubble(
                 onDismiss = onDismiss,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                onReactOverride = onReact,
             )
         },
-        reactionsRow = { ChatReactionChips(msg.note, accountViewModel, nav) },
+        reactionsRow = { ChatReactionChips(msg.note, accountViewModel, nav, onReact = onReact) },
         footerRow =
             if (position.isLastOfGroup) {
                 { GeohashBubbleFooter(message) }
@@ -318,8 +330,22 @@ private fun GeohashBubble(
                 null
             },
         drawAuthorLine = { GeohashAuthorLine(message) },
-    ) { _ ->
-        Text(message.content, style = MaterialTheme.typography.bodyLarge)
+    ) { bgColor ->
+        Column {
+            // Shared reply-preview, with the shared suppression rules (hidden when the parent
+            // is the message directly above, pinned in a thread, or already cited inline).
+            RenderReplyRow(
+                note = msg.note,
+                innerQuote = false,
+                bgColor = bgColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onWantsToReply = onReply,
+                onWantsToEditDraft = {},
+                previousNoteId = previousNoteId,
+            )
+            Text(message.content, style = MaterialTheme.typography.bodyLarge)
+        }
     }
 }
 

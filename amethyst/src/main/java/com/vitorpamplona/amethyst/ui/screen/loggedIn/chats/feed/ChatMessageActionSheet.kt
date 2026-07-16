@@ -117,6 +117,10 @@ fun ChatMessageActionSheet(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    // When set, the quick-reaction row routes through this instead of the account's
+    // default react/delete — e.g. geohash chat reacting with its anonymous per-cell
+    // identity. Null keeps the standard account-signed behavior for every other caller.
+    onReactOverride: ((Note, String) -> Unit)? = null,
 ) {
     var showShareSheet by remember { mutableStateOf(false) }
     var wantsToEditPost by remember { mutableStateOf(false) }
@@ -247,7 +251,7 @@ fun ChatMessageActionSheet(
     ) {
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             if (!note.isDraft()) {
-                QuickReactionRow(note, onDismiss, accountViewModel, nav)
+                QuickReactionRow(note, onDismiss, accountViewModel, nav, onReactOverride)
 
                 QuickZapAmountRow(
                     note = note,
@@ -469,6 +473,7 @@ private fun QuickReactionRow(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onReactOverride: ((Note, String) -> Unit)? = null,
 ) {
     val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
     val myReactions =
@@ -488,7 +493,7 @@ private fun QuickReactionRow(
             ClickableBox(
                 modifier = if (reactionType in myReactions) MaterialTheme.colorScheme.selectedReactionBoxModifier else reactionBox,
                 onClick = {
-                    accountViewModel.reactToOrDelete(note, reactionType)
+                    onReactOverride?.invoke(note, reactionType) ?: accountViewModel.reactToOrDelete(note, reactionType)
                     onDismiss()
                 },
             ) {

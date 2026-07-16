@@ -101,6 +101,10 @@ fun ChatReactionChips(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    // When set, tapping a reaction chip routes through this instead of the account's
+    // default react/delete — e.g. geohash chat reacting with its anonymous per-cell
+    // identity. Null keeps the standard account-signed behavior for every other caller.
+    onReact: ((Note, String) -> Unit)? = null,
 ) {
     // Deliberate cost: this observes reactions/zaps for EVERY visible message
     // (the ids fold into the batched EventFinder relay filters — one shared REQ,
@@ -156,7 +160,7 @@ fun ChatReactionChips(
             // Once the receipt's amount arrives the real sats chip takes over, so the
             // pending chip only shows while the amount is still blank.
             isZapping = isZapping && zapAmount.isBlank(),
-            onToggleReaction = { accountViewModel.reactToOrDelete(baseNote, it) },
+            onToggleReaction = { onReact?.invoke(baseNote, it) ?: accountViewModel.reactToOrDelete(baseNote, it) },
             onOpenDetails = { showDetails = true },
             onOpenMinichat = { nav.nav(Route.ChatMinichat(baseNote.idHex)) },
         )
