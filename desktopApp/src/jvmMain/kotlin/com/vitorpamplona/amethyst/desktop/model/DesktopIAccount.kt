@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
+import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -84,6 +85,14 @@ class DesktopIAccount(
 
     val oldBookmarkState = OldBookmarkListState(signer, localCache, scope)
     val bookmarkState = BookmarkListState(signer, localCache, scope)
+
+    /**
+     * User's Blossom media server list (NIP-B7 / kind 10063). Loads from the
+     * same event kind the Amethyst mobile app uses, so a server list configured
+     * on mobile shows up here too. Backed by [localCache]; populated by the
+     * account-config subscription in Main.kt.
+     */
+    val blossomServerList = BlossomServerListState(signer, localCache, scope)
 
     val kind3FollowList =
         Kind3FollowListState(

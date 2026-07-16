@@ -93,19 +93,6 @@ object DesktopPreferences {
             prefs.put(KEY_PINNED_NAV_ITEMS, value)
         }
 
-    private const val KEY_BLOSSOM_SERVERS = "blossom_servers"
-    private const val DEFAULT_BLOSSOM_SERVER = "https://blossom.primal.net"
-
-    var blossomServers: List<String>
-        get() {
-            val raw = prefs.get(KEY_BLOSSOM_SERVERS, DEFAULT_BLOSSOM_SERVER)
-            return if (raw.isBlank()) emptyList() else raw.split(",")
-        }
-        set(value) = prefs.put(KEY_BLOSSOM_SERVERS, value.joinToString(","))
-
-    val preferredBlossomServer: String
-        get() = blossomServers.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
-
     private const val KEY_SIDEBAR_COLLAPSED = "sidebar_collapsed"
 
     var sidebarCollapsed: Boolean
