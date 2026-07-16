@@ -56,6 +56,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** How many recently-serviced request ids to persist for cross-restart replay dedup. */
+private const val MAX_SEEN_IDS = 128
+
 /**
  * Runs Amethyst as a NIP-46 remote signer ("bunker") for the account, so other
  * apps can sign through it. While [AccountSettings.nip46SignerEnabled] is on, a
@@ -90,6 +93,24 @@ class Nip46SignerState(
 
     /** Newest-first, in-memory feed of serviced requests, so the UI can show what apps are doing. */
     val activityLog = Nip46ActivityLog()
+
+    /**
+     * A bounded, recently-serviced set of kind-24133 event ids, persisted so a relay replaying stored
+     * requests after an app restart is deduped by exact id (see [NostrConnectSignerService.initialSeen]).
+     * Touched only from the service's single consumer coroutine, so it needs no synchronization.
+     */
+    private val recentHandledIds = LinkedHashSet(settings.nip46SeenRequestIds.value)
+
+    private fun rememberHandledId(eventId: HexKey) {
+        if (!recentHandledIds.add(eventId)) return
+        while (recentHandledIds.size > MAX_SEEN_IDS) {
+            recentHandledIds.iterator().let {
+                it.next()
+                it.remove()
+            }
+        }
+        settings.changeNip46SeenRequestIds(recentHandledIds.toSet())
+    }
 
     /**
      * The dedicated per-account transport signer that wraps the kind-24133 envelope — a local key
@@ -184,6 +205,10 @@ class Nip46SignerState(
                                     ),
                                 )
                             },
+                            // Seed dedup with the ids we serviced last session so an app restart doesn't
+                            // re-sign a relay's replay of the same stored requests (matched by exact id).
+                            initialSeen = settings.nip46SeenRequestIds.value,
+                            onHandledId = { id -> rememberHandledId(id) },
                         )
                     service.run()
                 }

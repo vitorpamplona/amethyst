@@ -97,6 +97,15 @@ class NostrConnectSignerService(
      * kept small so an app restart re-signs as little as possible (relays replay only this far back).
      */
     val maxRequestAgeSeconds: Long = 30,
+    /**
+     * Event ids serviced in a previous run, used to seed the in-memory dedup set so a relay replaying
+     * stored requests across an app restart is caught by EXACT event id — immune to client clock skew,
+     * unlike a timestamp floor (which would wrongly drop a second app whose clock lags). The host
+     * persists these (bounded) and feeds them back on start; see [onHandledId].
+     */
+    val initialSeen: Set<String> = emptySet(),
+    /** Invoked with each serviced request's kind-24133 event id so the host can persist it for [initialSeen]. */
+    val onHandledId: (suspend (eventId: String) -> Unit)? = null,
 ) {
     /**
      * Fixed-window per-author rate limit. Touched only by the single consumer
@@ -170,7 +179,9 @@ class NostrConnectSignerService(
 
         // Insertion-ordered dedup, confined to this one consumer coroutine (never the relay threads);
         // evicts the oldest id past the cap so a long-lived signer can't grow it without bound.
-        val seen = LinkedHashSet<String>()
+        // Seed the dedup set with ids serviced in a prior run so a relay replaying stored requests after
+        // a restart is caught by exact id (see [initialSeen]).
+        val seen = LinkedHashSet(initialSeen)
         // Only ask relays for recent requests: kind-24133 is ephemeral, but relays that store it would
         // otherwise replay every old request each time we (re)subscribe. See [maxRequestAgeSeconds].
         val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)), since = TimeUtils.now() - maxRequestAgeSeconds)
@@ -185,11 +196,11 @@ class NostrConnectSignerService(
                         it.remove()
                     }
                 }
-                // Drop stale requests a relay replayed from storage (the `since` filter covers compliant
-                // relays; this covers the rest). A live NIP-46 request is seconds old; a minutes-old one
-                // is a replay we may already have signed in a previous subscription.
+                // Drop stale requests a relay replayed from storage past the rolling age window (the
+                // `since` filter covers compliant relays; this covers the rest; exact-id replays within
+                // the window are already caught by [seen] above). A live NIP-46 request is seconds old.
                 if (TimeUtils.now() - event.createdAt > maxRequestAgeSeconds) {
-                    Log.w("NIP46Signer") { "ignoring stale request ${event.id.take(8)}… (${TimeUtils.now() - event.createdAt}s old)" }
+                    Log.w("NIP46Signer") { "ignoring stale request ${event.id.take(8)}… (created ${event.createdAt})" }
                     continue
                 }
                 // Rate-limit per author BEFORE decrypting — decryption can be an external-signer
@@ -199,6 +210,8 @@ class NostrConnectSignerService(
                     continue
                 }
                 handle(event)
+                // Remember this id (persisted by the host) so a later restart won't re-service the replay.
+                onHandledId?.invoke(event.id)
             }
         } finally {
             client.unsubscribe(subId)

@@ -208,6 +208,13 @@ class AccountSettings(
      */
     val nip46TransportKey: MutableStateFlow<String> = MutableStateFlow(""),
     /**
+     * The kind-24133 **event ids** this signer recently serviced. Persisted so that a relay replaying
+     * stored ephemeral requests across an app restart doesn't make it sign the same request twice —
+     * matched by exact event id, so it is immune to client clock skew (unlike a timestamp watermark,
+     * a global timestamp would wrongly drop a second app whose clock lags). Bounded to a recent window.
+     */
+    val nip46SeenRequestIds: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet()),
+    /**
      * NIP-9B opt-in: when true, community feeds drop events whose latest cached
      * `kind:34551` rules document fails [com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator].
      * Default false preserves pre-9A behaviour.
@@ -621,6 +628,14 @@ class AccountSettings(
     fun changeNip46TransportKey(hexPrivKey: String) {
         if (nip46TransportKey.value != hexPrivKey) {
             nip46TransportKey.tryEmit(hexPrivKey)
+            saveAccountSettings()
+        }
+    }
+
+    /** Replaces the recent serviced-request id set (already bounded by the caller). */
+    fun changeNip46SeenRequestIds(ids: Set<String>) {
+        if (nip46SeenRequestIds.value != ids) {
+            nip46SeenRequestIds.tryEmit(ids)
             saveAccountSettings()
         }
     }

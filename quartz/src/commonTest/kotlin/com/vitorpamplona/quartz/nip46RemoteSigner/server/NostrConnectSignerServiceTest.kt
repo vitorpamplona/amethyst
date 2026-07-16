@@ -253,6 +253,42 @@ class NostrConnectSignerServiceTest {
         }
 
     @Test
+    fun aFreshRequestWhoseIdWasServicedLastSessionIsNotRepeated() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+
+            // A still-fresh request whose id the previous run already serviced (seeded via initialSeen,
+            // as the host would restore from disk). It must be deduped by exact id — even though its
+            // created_at is within the window — so an app restart doesn't re-sign a relay's replay.
+            val template = EventTemplate<Event>(createdAt = 1L, kind = 1, tags = emptyArray(), content = "again")
+            val replayed = request(BunkerRequestSign(id = "req", event = template))
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay), initialSeen = setOf(replayed.id))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+            client.deliver(replayed)
+
+            assertEquals(0, client.published.size, "an id serviced last session is not signed again after restart")
+        }
+
+    @Test
+    fun aHandledIdIsReportedForPersistence() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val handled = mutableListOf<String>()
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay), onHandledId = { handled.add(it) })
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+            val event = request(BunkerRequestSign(id = "req", event = EventTemplate<Event>(createdAt = 1L, kind = 1, tags = emptyArray(), content = "x")))
+            client.deliver(event)
+
+            assertEquals(listOf(event.id), handled, "the serviced event id is reported so the host can persist it")
+        }
+
+    @Test
     fun logoutRequestInvokesAuthorizerAndAcks() =
         runTest {
             val client = LoopbackClient()
