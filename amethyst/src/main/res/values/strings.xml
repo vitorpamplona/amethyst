@@ -939,7 +939,6 @@
     <string name="nip46_signer_hero_title">Sign for other apps</string>
     <string name="nip46_signer_turn_on">Turn on signer</string>
     <string name="nip46_signer_live">Live</string>
-    <string name="nip46_signer_signing_as">Signing as %1$s</string>
     <string name="nip46_signer_activity_title">Recent activity</string>
     <string name="nip46_signer_activity_empty">No requests serviced yet.</string>
     <string name="nip46_signer_activity_denied">denied</string>

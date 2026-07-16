@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,10 +77,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -94,7 +93,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.launch
 
 private val LiveGreen = Color(0xFF3DDC84)
@@ -118,7 +116,6 @@ fun Nip46SignerScreen(
     val liveRelayCount = remember(relays, connectedRelays) { relays.count { it in connectedRelays } }
     val activity by signer.activityLog.entries.collectAsStateWithLifecycle()
     val writeable = remember { account.signer.isWriteable() }
-    val npub = remember { NPub.create(account.signer.pubKey) }
 
     var connectedCount by remember { mutableIntStateOf(0) }
     var refreshKey by remember { mutableIntStateOf(0) }
@@ -181,8 +178,6 @@ fun Nip46SignerScreen(
                     connectedCount = connectedCount,
                     onToggleOff = { signer.setEnabled(false) },
                 )
-
-                SigningAsLine(npub)
 
                 if (relays.isEmpty()) {
                     WarningCard(stringResource(R.string.nip46_signer_status_no_relays))
@@ -397,6 +392,7 @@ private fun QrHeroCard(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Surface(
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
             ) {
@@ -405,22 +401,14 @@ private fun QrHeroCard(
                     modifier =
                         Modifier
                             .padding(16.dp)
-                            .size(232.dp),
+                            .fillMaxWidth()
+                            .aspectRatio(1f),
                 )
             }
             Text(
                 stringResource(R.string.nip46_signer_scan_caption),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                uri,
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
             )
             Row(
@@ -541,30 +529,6 @@ private fun ConnectedAppsRow(
                 modifier = Modifier.size(22.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun SigningAsLine(npub: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            MaterialSymbols.Key,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(15.dp),
-        )
-        Text(
-            stringResource(R.string.nip46_signer_signing_as, npub.take(16) + "…"),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontFamily = FontFamily.Monospace,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
