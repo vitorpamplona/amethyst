@@ -4293,4 +4293,12 @@
     <string name="app_name_debug" translatable="false">Amy Debug</string>
     <string name="app_name_benchmark" translatable="false">Amy Benchmark</string>
     <string name="geohash_chat_open">Open location chat</string>
+    <string name="new_conversation_location_title">Location channel</string>
+    <string name="new_conversation_location_tagline">Chat with whoever\'s near a place, by geohash.</string>
+    <string name="new_conversation_location_chip">Local</string>
+    <string name="new_conversation_location_best">Best for talking to people physically around a location — your block, city, or region.</string>
+    <string name="new_conversation_location_cta">Pick a location</string>
+    <string name="new_conversation_location_pro_1">Anonymous — a throwaway identity per area, never your npub.</string>
+    <string name="new_conversation_location_pro_2">Bitchat-compatible; reaches nearby users on the same relays.</string>
+    <string name="new_conversation_location_con_1">Public and ephemeral — no history, anyone in the cell can read it.</string>
 </resources>

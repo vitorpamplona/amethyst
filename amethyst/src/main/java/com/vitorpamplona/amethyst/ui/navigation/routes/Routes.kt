@@ -645,6 +645,8 @@ sealed class Route {
         val geohash: String,
     ) : Route()
 
+    @Serializable object NewGeohashChat : Route()
+
     @Serializable data class RelayGroup(
         val id: String,
         val relayUrl: String,

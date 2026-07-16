@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.location
 
 import android.content.Context
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
 import com.vitorpamplona.quartz.utils.Log
@@ -60,6 +61,7 @@ class LocationState(
 
     private var hasLocationPermission = MutableStateFlow(false)
     private var latestLocation: LocationResult = LocationResult.Loading
+    private var latestPreciseLocation: LocationResult = LocationResult.Loading
 
     fun setLocationPermission(newValue: Boolean) {
         if (newValue != hasLocationPermission.value) {
@@ -96,6 +98,45 @@ class LocationState(
                 scope,
                 SharingStarted.WhileSubscribed(5000),
                 latestLocation,
+            )
+    }
+
+    /**
+     * Like [geohashStateFlow] but at building-level precision
+     * ([GeohashChannelLevel.BUILDING] = 8 chars). Location channels truncate this
+     * to every coarser level (a geohash is a prefix code), so one fix yields the
+     * whole region→building ladder. Kept separate so the coarser
+     * [geohashStateFlow] the "around me" feed relies on is unchanged.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val preciseGeohashStateFlow by lazy {
+        hasLocationPermission
+            .transformLatest {
+                if (it) {
+                    emit(LocationResult.Loading)
+                    val result =
+                        LocationFlow(context)
+                            .get(MIN_TIME, MIN_DISTANCE)
+                            .onStart { onListening?.invoke(true) }
+                            .onCompletion { onListening?.invoke(false) }
+                            .map {
+                                LocationResult.Success(it.toGeoHash(GeohashChannelLevel.BUILDING.chars)) as LocationResult
+                            }.onEach {
+                                latestPreciseLocation = it
+                            }.catch { e ->
+                                Log.w("GeohashStateFlow", "Exception in the precise flow", e)
+                                latestPreciseLocation = LocationResult.LackPermission
+                                emit(LocationResult.LackPermission)
+                            }
+
+                    emitAll(result)
+                } else {
+                    emit(LocationResult.LackPermission)
+                }
+            }.stateIn(
+                scope,
+                SharingStarted.WhileSubscribed(5000),
+                latestPreciseLocation,
             )
     }
 }

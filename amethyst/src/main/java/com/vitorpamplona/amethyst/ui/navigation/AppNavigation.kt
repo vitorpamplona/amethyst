@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalenda
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.GeohashChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.NewGeohashChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
@@ -634,6 +635,8 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
+
+        composableFromBottomArgs<Route.NewGeohashChat> { NewGeohashChatScreen(accountViewModel, nav) }
 
         composableFromEndArgs<Route.RelayGroup> {
             RelayGroupChatScreen(
