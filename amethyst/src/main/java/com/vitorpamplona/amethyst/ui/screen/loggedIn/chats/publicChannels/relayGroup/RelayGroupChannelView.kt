@@ -149,6 +149,12 @@ private fun ChannelView(
             onJumpToNote = { jumpToNoteId.value = it.idHex },
         )
 
+        RelayGroupSubgroupsBar(
+            channel = liveChannel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+
         Column(
             modifier =
                 remember {

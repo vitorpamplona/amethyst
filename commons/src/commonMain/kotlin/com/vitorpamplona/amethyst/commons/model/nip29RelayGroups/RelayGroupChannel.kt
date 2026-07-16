@@ -32,7 +32,9 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupAdminTag
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.RoleTag
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -78,6 +80,16 @@ class RelayGroupChannel(
     var pinnedEventIds: List<HexKey> = emptyList()
         private set
     private var pinnedUpdatedAt: Long = 0
+
+    /**
+     * Relay-declared roles this group supports (kind 39003), e.g. `admin`, `moderator`,
+     * `ceo`. Empty until (or unless) the relay publishes a 39003 for the group. These are
+     * the role names a moderation UI should offer when assigning a role, since the exact
+     * set is relay-defined (NIP-29 §Group management).
+     */
+    var supportedRoles: List<RoleTag> = emptyList()
+        private set
+    private var supportedRolesUpdatedAt: Long = 0
 
     /**
      * Members ∪ admins, recomputed only when a roster event lands. [memberCount] and the discovery
@@ -137,6 +149,15 @@ class RelayGroupChannel(
 
     fun hasLivekit(): Boolean = event?.hasLivekit() ?: false
 
+    /** Subgroups: the id of this group's parent on the same host relay, or null when it's a root. */
+    fun parentGroupId(): String? = event?.parent()
+
+    /** Subgroups: the ordered ids of this group's direct children (empty when it has none). */
+    fun childGroupIds(): List<String> = event?.children() ?: emptyList()
+
+    /** Whether this group sits under a parent group (i.e. it is a subgroup). */
+    fun isSubgroup(): Boolean = event?.isRoot() == false
+
     fun updateGroupInfo(
         event: GroupMetadataEvent,
         eventNote: Note? = null,
@@ -176,7 +197,41 @@ class RelayGroupChannel(
         updateChannelInfo()
     }
 
+    fun updateSupportedRoles(event: SupportedRolesEvent) {
+        // Only newer definitions supersede; equal-or-older is dropped (no redundant emit).
+        if (event.createdAt <= supportedRolesUpdatedAt) return
+        supportedRoles = event.roles()
+        supportedRolesUpdatedAt = event.createdAt
+        updateChannelInfo()
+    }
+
     fun isPinned(eventId: HexKey): Boolean = eventId in pinnedEventIds
+
+    /**
+     * NIP-29 timeline references (`previous` tag) for an event about to be sent to this
+     * group. Returns the first-8-hex-char id prefixes of the most recent events seen here
+     * from the host relay, excluding [selfPubkey]'s own posts.
+     *
+     * The spec uses these to stop a group's events from being replayed out of context on a
+     * forked relay: a relay rejects an event whose `previous` refs it doesn't recognise, so
+     * we only draw from events we actually received in this channel (guaranteeing the host
+     * relay has them) and cap at the spec's window of the last 50. It recommends including
+     * at least 3; [max] bounds how many we attach.
+     */
+    fun previousEventRefs(
+        selfPubkey: HexKey,
+        max: Int = 8,
+    ): List<String> =
+        notes
+            .mapNotNull { _, note ->
+                val createdAt = note.createdAt()
+                val author = note.author
+                // Require a resolved author so an unlinked note can't slip past the self-exclusion
+                // and make us reference our own event (the very thing `previous` guards against).
+                if (createdAt != null && author != null && author.pubkeyHex != selfPubkey) note to createdAt else null
+            }.sortedByDescending { it.second }
+            .take(max)
+            .map { it.first.idHex.take(8) }
 
     /**
      * The shareable NIP-19 `naddr` coordinate for this group's metadata (kind

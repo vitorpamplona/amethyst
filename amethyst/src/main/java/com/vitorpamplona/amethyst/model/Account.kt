@@ -257,6 +257,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -2189,6 +2190,7 @@ class Account(
                 signer.sign(
                     CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
                         hTag(group.groupId.id)
+                        previous(group.previousEventRefs(pubKey))
                     },
                 )
             cache.justConsumeMyOwnEvent(signed)
@@ -2716,6 +2718,7 @@ class Account(
         isRestricted: Boolean = false,
         hashtags: List<String> = emptyList(),
         geohashes: List<String> = emptyList(),
+        parent: String? = null,
     ): GroupId {
         signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
 
@@ -2728,6 +2731,7 @@ class Account(
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parent,
             )
         signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
 
@@ -2760,7 +2764,11 @@ class Account(
         title: String,
         body: String,
     ) {
-        val template = ThreadEvent.build(body, title) { hTag(channel.groupId.id) }
+        val template =
+            ThreadEvent.build(body, title) {
+                hTag(channel.groupId.id)
+                previous(channel.previousEventRefs(pubKey))
+            }
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
@@ -2826,7 +2834,16 @@ class Account(
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
-    /** Edit the group's relay-signed metadata with a kind 9002 event (admin only). */
+    /**
+     * Edit the group's relay-signed metadata with a kind 9002 event (admin only).
+     *
+     * NIP-29 §Subgroups makes the metadata edit a full replacement of the hierarchy
+     * links: a 9002 with no `parent` tag re-roots the group, and one that drops any
+     * existing `child` is rejected by the relay. So unless the caller is explicitly
+     * re-parenting, we re-carry the group's current [parent] and full [children] list
+     * from its latest known metadata to keep the tree intact across a plain name/flag
+     * edit. Pass an explicit value to change them.
+     */
     suspend fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
         name: String?,
@@ -2838,6 +2855,8 @@ class Account(
         isRestricted: Boolean,
         hashtags: List<String> = emptyList(),
         geohashes: List<String> = emptyList(),
+        parent: String? = channel.parentGroupId(),
+        children: List<String> = channel.childGroupIds(),
     ) {
         val template =
             EditMetadataEvent.build(
@@ -2848,6 +2867,8 @@ class Account(
                 status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parent,
+                children = children,
             )
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }

@@ -86,6 +86,20 @@ class RelayGroupMetadataViewModel : ViewModel() {
     var isHidden by mutableStateOf(false)
     var isRestricted by mutableStateOf(false)
 
+    /**
+     * Subgroups: the parent group this group nests under, or null for a top-level group.
+     * Editable via the parent picker. Seeded from the current metadata in [prefillFrom].
+     */
+    var parentGroupId by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * True once the user actually picks a parent in this session. Until then we let the save
+     * read the group's live parent rather than the (possibly not-yet-loaded) prefilled value, so
+     * a plain rename can never re-root a subgroup just because its metadata hadn't arrived yet.
+     */
+    private var parentTouched by mutableStateOf(false)
+
     var pickedMedia by mutableStateOf<SelectedMedia?>(null)
         private set
 
@@ -135,6 +149,14 @@ class RelayGroupMetadataViewModel : ViewModel() {
         topics.value = TextFieldValue(event?.hashtags()?.distinct()?.joinToString(" ") ?: "")
         // Stored geohashes are mip-mapped into every prefix; the last (longest) is the real one.
         geohash.value = TextFieldValue(event?.geohashes()?.maxByOrNull { it.length } ?: "")
+        parentGroupId = channel.parentGroupId()
+    }
+
+    /** Set (or clear, with null) the group's parent from the picker; marks the form touched. */
+    fun setParent(groupId: String?) {
+        parentGroupId = groupId
+        parentTouched = true
+        markTouched()
     }
 
     /** Split the topics field into distinct, non-blank, lowercased hashtags (leading `#` dropped). */
@@ -222,6 +244,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 isRestricted = isRestricted,
                 hashtags = hashtags,
                 geohashes = geohashes,
+                parent = parentGroupId,
             )
         } else {
             account.editRelayGroupMetadata(
@@ -235,6 +258,11 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 isRestricted = isRestricted,
                 hashtags = hashtags,
                 geohashes = geohashes,
+                // Only override the parent when the user actually re-parented; otherwise let
+                // Account read the group's live parent so a rename can't accidentally re-root it.
+                // children likewise defaults to the live child list, so a concurrently-added
+                // subgroup isn't dropped by this metadata edit.
+                parent = if (parentTouched) parentGroupId else existing.parentGroupId(),
             )
         }
     }

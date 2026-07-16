@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupInviteLink
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupNAddrInvite
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -226,7 +227,8 @@ fun uriToRoute(
     relayGroupInviteRoute(uri)?.let { return it }
     concordInviteRoute(uri)?.let { return it }
 
-    val nip19 = Nip19Parser.uriToRoute(uri)?.entity
+    val parsedNip19 = Nip19Parser.uriToRoute(uri)
+    val nip19 = parsedNip19?.entity
     if (nip19 != null) {
         LocalCache.consume(nip19)
 
@@ -252,7 +254,7 @@ fun uriToRoute(
                 }
 
                 is NAddress -> {
-                    relayGroupDirectRoute(nip19)
+                    relayGroupDirectRoute(nip19, parsedNip19.additionalChars)
                         ?: routeFor(
                             note = LocalCache.getOrCreateAddressableNote(nip19.address()),
                             loggedIn = account,
@@ -341,10 +343,16 @@ private fun calendarDirectRoute(nip19: NAddress): Route? =
  * id alone can't be resolved. With a hint we open the group chat straight away
  * (cold start included); without one there's nowhere to look, so fall through.
  */
-private fun relayGroupDirectRoute(nip19: NAddress): Route? {
+private fun relayGroupDirectRoute(
+    nip19: NAddress,
+    additionalChars: String?,
+): Route? {
     if (nip19.kind != GroupMetadataEvent.KIND) return null
     val relay = nip19.relay.firstOrNull() ?: return null
-    return Route.RelayGroup(nip19.dTag, relay.url)
+    // The spec allows an invite code appended as `naddr1…?invite=<code>`; it arrives
+    // in the trailing chars after the bech32 body. Carry it so the group auto-joins.
+    val inviteCode = GroupNAddrInvite.parse(additionalChars)
+    return Route.RelayGroup(nip19.dTag, relay.url, inviteCode = inviteCode)
 }
 
 /**
