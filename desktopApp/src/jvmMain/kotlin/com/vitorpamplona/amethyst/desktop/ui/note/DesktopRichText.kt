@@ -125,21 +125,6 @@ fun DesktopRichText(
     val interactions =
         remember(callbacks) {
             RichTextInteractions(
-                onOpenUrl = {
-                    runCatching {
-                        java.awt.Desktop
-                            .getDesktop()
-                            .browse(URI(it))
-                    }
-                },
-                onOpenEmail = {
-                    runCatching {
-                        java.awt.Desktop
-                            .getDesktop()
-                            .browse(URI("mailto:$it"))
-                    }
-                },
-                onOpenPhone = { },
                 onClickHashtag = { callbacks.onHashtagClick?.invoke(it) },
             )
         }
@@ -318,6 +303,44 @@ class DesktopRichTextSegmentRenderer(
         url: String,
         modifier: Modifier,
     ) = ClickableLink(url, url)
+
+    @Composable
+    override fun Url(
+        url: String,
+        displayText: String,
+        modifier: Modifier,
+    ) = ClickableLink(url, displayText)
+
+    @Composable
+    override fun Email(
+        address: String,
+        modifier: Modifier,
+    ) = Text(
+        text = address,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary,
+        textDecoration = TextDecoration.Underline,
+        modifier =
+            Modifier
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable {
+                    runCatching {
+                        java.awt.Desktop
+                            .getDesktop()
+                            .browse(URI("mailto:$address"))
+                    }
+                },
+    )
+
+    @Composable
+    override fun Phone(
+        number: String,
+        modifier: Modifier,
+    ) = Text(
+        text = number,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
 
     @Composable
     override fun RelayLink(

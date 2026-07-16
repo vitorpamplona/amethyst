@@ -156,8 +156,11 @@ private fun RenderWord(
         is RegularTextSegment -> Text(word.segmentText)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state.customEmoji)
         is HashTagSegment -> HashTagText(word) { actions.onClickHashtag(word.hashtag) }
-        is EmailSegment -> ClickableSpan(word.segmentText) { actions.onOpenEmail(word.segmentText) }
-        is PhoneSegment -> ClickableSpan(word.segmentText) { actions.onOpenPhone(word.segmentText) }
+
+        // Presentation + CTA are platform-owned: each front end styles its own
+        // clickable link/mail/phone and decides how to open it.
+        is EmailSegment -> renderer.Email(word.segmentText, Modifier)
+        is PhoneSegment -> renderer.Phone(word.segmentText, Modifier)
 
         // Divergent media — presentation and CTA are platform-owned.
         is ImageSegment, is VideoSegment, is PdfSegment, is Base64Segment, is BlossomUriSegment ->
@@ -169,11 +172,11 @@ private fun RenderWord(
             if (canPreview) {
                 renderer.LinkPreview(word.segmentText, Modifier)
             } else {
-                ClickableSpan(word.segmentText) { actions.onOpenUrl(word.segmentText) }
+                renderer.Url(word.segmentText, word.segmentText, Modifier)
             }
 
         is SchemelessUrlSegment ->
-            ClickableSpan(word.segmentText) { actions.onOpenUrl("https://${word.segmentText}") }
+            renderer.Url("https://${word.segmentText}", word.segmentText, Modifier)
         is NowhereLinkSegment -> renderer.NowhereLink(word, canPreview, Modifier)
 
         is RelayUrlSegment, is RelayGroupLinkSegment, is ConcordInviteLinkSegment ->
@@ -190,18 +193,6 @@ private fun RenderWord(
         // Unknown/other segments fall back to their raw text.
         else -> Text(word.segmentText)
     }
-}
-
-@Composable
-private fun ClickableSpan(
-    text: String,
-    onClick: () -> Unit,
-) {
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.clickable(onClick = onClick),
-    )
 }
 
 private val HashtagIconPlaceholder =

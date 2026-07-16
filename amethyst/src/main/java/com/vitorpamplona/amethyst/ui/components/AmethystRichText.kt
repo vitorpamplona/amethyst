@@ -32,7 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
@@ -179,6 +178,25 @@ class AmethystRichTextSegmentRenderer(
     ) = LoadUrlPreview(url, url, callbackUri, accountViewModel, nav)
 
     @Composable
+    override fun Url(
+        url: String,
+        displayText: String,
+        modifier: Modifier,
+    ) = ClickableUrl(displayText, url)
+
+    @Composable
+    override fun Email(
+        address: String,
+        modifier: Modifier,
+    ) = ClickableEmail(address)
+
+    @Composable
+    override fun Phone(
+        number: String,
+        modifier: Modifier,
+    ) = ClickablePhone(number)
+
+    @Composable
     override fun RelayLink(
         segment: Segment,
         modifier: Modifier,
@@ -266,13 +284,9 @@ fun CommonsBackedRichTextViewer(
                 AmethystRichTextSegmentRenderer(accountViewModel, nav, backgroundColor, callbackUri, canPreview)
             }
 
-        val uriHandler = LocalUriHandler.current
         val interactions =
-            remember(nav, uriHandler) {
+            remember(nav) {
                 RichTextInteractions(
-                    onOpenUrl = { runCatching { uriHandler.openUri(it) } },
-                    onOpenEmail = { runCatching { uriHandler.openUri("mailto:$it") } },
-                    onOpenPhone = { runCatching { uriHandler.openUri("tel:$it") } },
                     onClickHashtag = { nav.nav(Route.Hashtag(it.lowercase())) },
                 )
             }

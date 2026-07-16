@@ -141,6 +141,32 @@ interface RichTextSegmentRenderer {
         modifier: Modifier,
     )
 
+    /**
+     * A plain external link rendered inline (no preview): the no-preview [LinkPreview]
+     * fallback and schemeless URLs. [displayText] is what the user sees; [url] is where
+     * it opens. Each front end styles the link and owns how it opens.
+     */
+    @Composable
+    fun Url(
+        url: String,
+        displayText: String,
+        modifier: Modifier,
+    )
+
+    /** An email address. Each front end styles it and owns the compose/open action. */
+    @Composable
+    fun Email(
+        address: String,
+        modifier: Modifier,
+    )
+
+    /** A phone number. Each front end styles it and owns the dial action. */
+    @Composable
+    fun Phone(
+        number: String,
+        modifier: Modifier,
+    )
+
     /** A relay URL, NIP-29 group invite, or Concord invite chip. */
     @Composable
     fun RelayLink(
@@ -168,18 +194,14 @@ interface RichTextSegmentRenderer {
 }
 
 /**
- * Presentation-agnostic activations for the segments the shared core renders
- * itself. The *action* is unambiguous on every platform (open a URL, dial a
- * number, jump to a hashtag); only how the trigger looks/feels differs, which is
- * a Modifier concern the core applies. Anything whose action itself diverges by
- * platform (a mention that navigates vs. pops a hover-card) belongs in
+ * Activations for the segments the shared core renders itself. Only hashtags
+ * qualify: the core draws the chip (with the shared inline icon) identically on
+ * every platform, and only the navigation target differs — a pure callback. Links,
+ * mail, phone, mentions, etc. render *and* act per-platform, so they live on
  * [RichTextSegmentRenderer], not here.
  */
 @Immutable
 data class RichTextInteractions(
-    val onOpenUrl: (url: String) -> Unit = {},
-    val onOpenEmail: (address: String) -> Unit = {},
-    val onOpenPhone: (number: String) -> Unit = {},
     val onClickHashtag: (hashtag: String) -> Unit = {},
 )
 
@@ -243,6 +265,25 @@ object PlainTextSegmentRenderer : RichTextSegmentRenderer {
         url: String,
         modifier: Modifier,
     ) = Text(url, modifier)
+
+    @Composable
+    override fun Url(
+        url: String,
+        displayText: String,
+        modifier: Modifier,
+    ) = Text(displayText, modifier)
+
+    @Composable
+    override fun Email(
+        address: String,
+        modifier: Modifier,
+    ) = Text(address, modifier)
+
+    @Composable
+    override fun Phone(
+        number: String,
+        modifier: Modifier,
+    ) = Text(number, modifier)
 
     @Composable
     override fun RelayLink(
