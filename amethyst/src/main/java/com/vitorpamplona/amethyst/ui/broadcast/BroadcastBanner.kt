@@ -58,7 +58,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +77,8 @@ import com.vitorpamplona.amethyst.service.pow.formatTimeLeft
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -440,8 +441,8 @@ fun CompletedBroadcastContent(
         modifier = Modifier.fillMaxWidth(),
     ) {
         // Status colors (for icon tint only)
-        val successColor = Color(0xFF22C55E)
-        val warningColor = Color(0xFFF59E0B)
+        val successColor = MaterialTheme.colorScheme.allGoodColor
+        val warningColor = MaterialTheme.colorScheme.warningColor
 
         val (statusIcon, iconTint) =
             when (broadcast.status) {
@@ -530,8 +531,8 @@ fun MultipleCompletedBroadcastContent(
         modifier = Modifier.fillMaxWidth(),
     ) {
         // Status colors (for icon tint only)
-        val successColor = Color(0xFF22C55E)
-        val warningColor = Color(0xFFF59E0B)
+        val successColor = MaterialTheme.colorScheme.allGoodColor
+        val warningColor = MaterialTheme.colorScheme.warningColor
 
         val totalRelayCount = broadcasts.sumOf { it.totalRelays }
         val failedRelayCount = broadcasts.sumOf { it.failedRelays.size }

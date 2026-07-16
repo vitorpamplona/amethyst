@@ -77,6 +77,8 @@ import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -299,8 +301,8 @@ private fun BroadcastSection(
 @Composable
 private fun statusColor(status: BroadcastStatus): Color =
     when (status) {
-        BroadcastStatus.SUCCESS -> Color(0xFF22C55E)
-        BroadcastStatus.PARTIAL -> Color(0xFFF59E0B)
+        BroadcastStatus.SUCCESS -> MaterialTheme.colorScheme.allGoodColor
+        BroadcastStatus.PARTIAL -> MaterialTheme.colorScheme.warningColor
         BroadcastStatus.FAILED -> MaterialTheme.colorScheme.error
         BroadcastStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary
     }
@@ -312,8 +314,8 @@ private fun StatusIcon(
 ) {
     val (icon, tint, shouldRotate) =
         when (status) {
-            BroadcastStatus.SUCCESS -> Triple(MaterialSymbols.CheckCircle, Color(0xFF22C55E), false)
-            BroadcastStatus.PARTIAL -> Triple(MaterialSymbols.Error, Color(0xFFF59E0B), false)
+            BroadcastStatus.SUCCESS -> Triple(MaterialSymbols.CheckCircle, MaterialTheme.colorScheme.allGoodColor, false)
+            BroadcastStatus.PARTIAL -> Triple(MaterialSymbols.Error, MaterialTheme.colorScheme.warningColor, false)
             BroadcastStatus.FAILED -> Triple(MaterialSymbols.Error, MaterialTheme.colorScheme.error, false)
             BroadcastStatus.IN_PROGRESS -> Triple(MaterialSymbols.HourglassEmpty, MaterialTheme.colorScheme.primary, true)
         }
@@ -342,9 +344,9 @@ private fun RelayResultRow(
     onRetry: () -> Unit,
     rotationAngle: Float = 0f,
 ) {
-    val successColor = Color(0xFF22C55E)
+    val successColor = MaterialTheme.colorScheme.allGoodColor
     val errorColor = MaterialTheme.colorScheme.error
-    val warningColor = Color(0xFFF59E0B)
+    val warningColor = MaterialTheme.colorScheme.warningColor
 
     Row(
         modifier =
