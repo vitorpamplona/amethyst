@@ -1702,6 +1702,15 @@
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
 
+    <string name="always_on_notif_tile_label">Notification service</string>
+    <string name="always_on_notif_tile_subtitle_on">On</string>
+    <string name="always_on_notif_tile_subtitle_off">Off</string>
+
+    <string name="notification_service_master_title">Background notification service</string>
+    <string name="notification_service_master_description">Master switch for real-time background notifications. Turn off to save battery — like an airplane mode. When off, no account stays connected in the background, and it stays off (across restarts) until you turn it back on.</string>
+    <string name="notification_service_accounts_title">Accounts active in the background</string>
+    <string name="notification_service_participation_title">Keep this account active in the background</string>
+
     <string name="split_notifications_setting_title">Split notifications by Follows</string>
     <string name="split_notifications_setting_description">Show two notification tabs — Following (people you follow) and Everyone. The unread indicator glows only for activity from people you follow.</string>
     <string name="show_messages_in_notifications_setting_title">Show Messages</string>
