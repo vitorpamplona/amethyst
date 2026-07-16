@@ -1693,6 +1693,10 @@ class AccountViewModel(
 
     fun hideWord(word: String) = launchSigner { account.hideWord(word) }
 
+    fun hideHashtag(tag: String) = launchSigner { account.hideHashtag(tag) }
+
+    fun showHashtag(tag: String) = launchSigner { account.showHashtag(tag) }
+
     fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
 
     fun isLoggedUser(user: User?): Boolean = isLoggedUser(user?.pubkeyHex)

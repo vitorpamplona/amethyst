@@ -1309,6 +1309,12 @@ open class Note(
             }
         }
 
+        if (accountChoices.hiddenHashtags.isNotEmpty()) {
+            if (thisEvent.anyHashTag { it.lowercase() in accountChoices.hiddenHashtags }) {
+                return true
+            }
+        }
+
         if (accountChoices.hiddenWordsCase.isNotEmpty()) {
             if (thisEvent is BaseThreadedEvent && thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
                 return true

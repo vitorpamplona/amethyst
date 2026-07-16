@@ -90,4 +90,33 @@ class NoteIsHiddenForTest {
 
         assertTrue(note.isHiddenFor(choices), "Note whose author is hidden must still be hidden")
     }
+
+    private fun tTag(hashtag: String) = arrayOf("t", hashtag)
+
+    @Test
+    fun note_withMutedHashtag_isHidden() {
+        val event = textNoteEvent(id = replyId, eTags = arrayOf(tTag("bitcoin")))
+        val note = Note(replyId).also { it.event = event }
+        val choices = noHidden.copy(hiddenHashtags = setOf("bitcoin"))
+
+        assertTrue(note.isHiddenFor(choices), "Note tagged with a muted hashtag must be hidden")
+    }
+
+    @Test
+    fun note_withMutedHashtag_isCaseInsensitive() {
+        val event = textNoteEvent(id = replyId, eTags = arrayOf(tTag("Bitcoin")))
+        val note = Note(replyId).also { it.event = event }
+        val choices = noHidden.copy(hiddenHashtags = setOf("bitcoin"))
+
+        assertTrue(note.isHiddenFor(choices), "Muted-hashtag matching must ignore case")
+    }
+
+    @Test
+    fun note_withoutMutedHashtag_isNotHidden() {
+        val event = textNoteEvent(id = replyId, eTags = arrayOf(tTag("nostr")))
+        val note = Note(replyId).also { it.event = event }
+        val choices = noHidden.copy(hiddenHashtags = setOf("bitcoin"))
+
+        assertFalse(note.isHiddenFor(choices), "Note without the muted hashtag must not be hidden")
+    }
 }

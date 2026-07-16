@@ -25,15 +25,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsMutingHashtag
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
@@ -46,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.dal.HashtagFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
@@ -170,6 +182,59 @@ fun HashtagActionOptions(
             } else {
                 accountViewModel.followHashtag(tag)
             }
+        }
+    }
+
+    HashtagMuteMenu(tag, accountViewModel)
+}
+
+@Composable
+fun HashtagMuteMenu(
+    tag: String,
+    accountViewModel: AccountViewModel,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val isMuted by observeUserIsMutingHashtag(tag, accountViewModel)
+
+    IconButton(onClick = { menuOpen = true }) {
+        Icon(
+            symbol = MaterialSymbols.MoreVert,
+            contentDescription = stringRes(R.string.more_options),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+
+    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+        if (isMuted) {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.unmute_hashtag)) },
+                onClick = {
+                    menuOpen = false
+                    if (!accountViewModel.isWriteable()) {
+                        accountViewModel.toastManager.toast(
+                            R.string.read_only_user,
+                            R.string.login_with_a_private_key_to_be_able_to_show_word,
+                        )
+                    } else {
+                        accountViewModel.showHashtag(tag)
+                    }
+                },
+            )
+        } else {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.mute_hashtag)) },
+                onClick = {
+                    menuOpen = false
+                    if (!accountViewModel.isWriteable()) {
+                        accountViewModel.toastManager.toast(
+                            R.string.read_only_user,
+                            R.string.login_with_a_private_key_to_be_able_to_hide_word,
+                        )
+                    } else {
+                        accountViewModel.hideHashtag(tag)
+                    }
+                },
+            )
         }
     }
 }
