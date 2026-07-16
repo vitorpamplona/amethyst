@@ -63,8 +63,8 @@ class NostrConnectSignerService(
     val transportSigner: NostrSigner,
     val processor: BunkerRequestProcessor,
     val relays: Set<NormalizedRelayUrl>,
-    /** Optional hook, invoked with each serviced request's method + client, for logging/metrics. */
-    val onServiced: ((method: String, clientPubKey: String, error: String?) -> Unit)? = null,
+    /** Optional hook, invoked with each serviced request + client, for logging/metrics/activity feeds. */
+    val onServiced: ((request: BunkerRequest, clientPubKey: String, error: String?) -> Unit)? = null,
     /**
      * Upper bound on the request-id dedup set. A long-lived signer would otherwise
      * accumulate every request id it ever saw; past this many, the oldest ids are
@@ -198,7 +198,7 @@ class NostrConnectSignerService(
 
         val response = processor.process(client, request)
         val error = (response as? BunkerResponseError)?.error
-        onServiced?.invoke(request.method, client, error)
+        onServiced?.invoke(request, client, error)
 
         try {
             val reply = NostrConnectEvent.create(response, client, transportSigner)

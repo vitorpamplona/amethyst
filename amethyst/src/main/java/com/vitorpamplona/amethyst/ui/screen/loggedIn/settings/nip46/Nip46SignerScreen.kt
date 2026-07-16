@@ -86,13 +86,16 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.launch
 
 private val LiveGreen = Color(0xFF3DDC84)
@@ -112,7 +115,9 @@ fun Nip46SignerScreen(
     val enabled by account.settings.nip46SignerEnabled.collectAsStateWithLifecycle()
     val secret by account.settings.nip46BunkerSecret.collectAsStateWithLifecycle()
     val relays by signer.listeningRelays.collectAsStateWithLifecycle()
+    val activity by signer.activityLog.entries.collectAsStateWithLifecycle()
     val writeable = remember { account.signer.isWriteable() }
+    val npub = remember { NPub.create(account.signer.pubKey) }
 
     var connectedCount by remember { mutableIntStateOf(0) }
     var refreshKey by remember { mutableIntStateOf(0) }
@@ -175,6 +180,8 @@ fun Nip46SignerScreen(
                     onToggleOff = { signer.setEnabled(false) },
                 )
 
+                SigningAsLine(npub)
+
                 if (relays.isEmpty()) {
                     WarningCard(stringResource(R.string.nip46_signer_status_no_relays))
                 }
@@ -205,6 +212,10 @@ fun Nip46SignerScreen(
                     count = connectedCount,
                     onClick = { nav.nav(Route.ConnectedApps) },
                 )
+            }
+
+            if (enabled && activity.isNotEmpty()) {
+                ActivitySection(activity)
             }
 
             if (enabled) {
@@ -522,6 +533,100 @@ private fun ConnectedAppsRow(
             )
         }
     }
+}
+
+@Composable
+private fun SigningAsLine(npub: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            MaterialSymbols.Key,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(15.dp),
+        )
+        Text(
+            stringResource(R.string.nip46_signer_signing_as, npub.take(16) + "…"),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = FontFamily.Monospace,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun ActivitySection(entries: List<Nip46ActivityEntry>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            stringResource(R.string.nip46_signer_activity_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                entries.take(8).forEach { entry ->
+                    ActivityRow(entry)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityRow(entry: Nip46ActivityEntry) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(if (entry.ok) LiveGreen else MaterialTheme.colorScheme.error),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                describeNip46Activity(entry),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                entry.clientPubKey.take(12) + "…",
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TimeAgo(entry.atSeconds)
+    }
+}
+
+@Composable
+private fun describeNip46Activity(entry: Nip46ActivityEntry): String {
+    val base =
+        when (entry.method) {
+            "sign_event" -> stringResource(R.string.nip46_signer_act_signed_kind, entry.kind ?: 0)
+            "nip04_encrypt", "nip44_encrypt" -> stringResource(R.string.nip46_signer_act_encrypted)
+            "nip04_decrypt", "nip44_decrypt" -> stringResource(R.string.nip46_signer_act_decrypted)
+            "get_public_key" -> stringResource(R.string.nip46_signer_act_shared_pubkey)
+            "connect" -> stringResource(R.string.nip46_signer_act_connected)
+            "ping" -> stringResource(R.string.nip46_signer_act_ping)
+            "get_relays" -> stringResource(R.string.nip46_signer_act_listed_relays)
+            else -> stringResource(R.string.nip46_signer_act_other, entry.method)
+        }
+    return if (entry.ok) base else "$base · ${stringResource(R.string.nip46_signer_activity_denied)}"
 }
 
 @Composable

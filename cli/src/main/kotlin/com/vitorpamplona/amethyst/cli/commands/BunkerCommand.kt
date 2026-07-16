@@ -203,9 +203,9 @@ object BunkerCommand {
                 transportSigner = ctx.signer,
                 processor = processor,
                 relays = relays,
-                onServiced = { method, client, error ->
+                onServiced = { request, client, error ->
                     val outcome = if (error != null) "error: $error" else "ok"
-                    System.err.println("[bunker] $method from ${client.take(8)}… → $outcome")
+                    System.err.println("[bunker] ${request.method} from ${client.take(8)}… → $outcome")
                 },
             )
 

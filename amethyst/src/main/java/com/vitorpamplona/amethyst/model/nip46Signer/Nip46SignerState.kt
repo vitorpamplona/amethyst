@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
@@ -42,6 +43,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerService
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +87,9 @@ class Nip46SignerState(
 ) {
     /** Relays contributed by pasted `nostrconnect://` offers this session, unioned with the inbox set. */
     private val extraRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /** Newest-first, in-memory feed of serviced requests, so the UI can show what apps are doing. */
+    val activityLog = Nip46ActivityLog()
 
     /**
      * The dedicated per-account transport signer that wraps the kind-24133 envelope — a local key
@@ -167,8 +172,17 @@ class Nip46SignerState(
                             transportSigner = transportSigner(),
                             processor = processor,
                             relays = relays,
-                            onServiced = { method, clientPubKey, error ->
-                                Log.d("NIP46Signer") { "$method from ${clientPubKey.take(8)}… → ${error ?: "ok"}" }
+                            onServiced = { request, clientPubKey, error ->
+                                Log.d("NIP46Signer") { "${request.method} from ${clientPubKey.take(8)}… → ${error ?: "ok"}" }
+                                activityLog.record(
+                                    Nip46ActivityEntry(
+                                        atSeconds = TimeUtils.now(),
+                                        clientPubKey = clientPubKey,
+                                        method = request.method,
+                                        kind = (request as? BunkerRequestSign)?.event?.kind,
+                                        error = error,
+                                    ),
+                                )
                             },
                         )
                     service.run()
