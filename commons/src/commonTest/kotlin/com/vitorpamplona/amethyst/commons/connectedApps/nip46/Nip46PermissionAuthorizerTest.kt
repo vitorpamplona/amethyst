@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.connectedApps.nip46
 
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -106,6 +108,141 @@ class Nip46PermissionAuthorizerTest {
 
             ledger.setOpDecision(coordinate, NostrSignerOp.SignKind(TextNoteEvent.KIND), NostrOpDecision.ALLOW)
             assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+        }
+
+    @Test
+    fun askWithoutAPromptFailsClosed() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+            // No opConsent wired: an ASK op (decrypt under REASONABLE) is denied, never silently allowed.
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
+            assertFalse(authorizer.authorize(client, BunkerRequestNip44Decrypt("2", client, "ct")))
+        }
+
+    @Test
+    fun askPromptsAndAllowOnceIsNotPersisted() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.PARANOID)
+            var prompts = 0
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    opConsent = { _, _, _, _ ->
+                        prompts++
+                        SignerOpGrant.AllowOnce
+                    },
+                )
+
+            assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+            assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+            assertEquals(2, prompts, "allow-once must prompt every time")
+        }
+
+    @Test
+    fun askPromptAllowForOpIsRememberedAndStopsPrompting() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.PARANOID)
+            var prompts = 0
+            val op = NostrSignerOp.SignKind(TextNoteEvent.KIND)
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    opConsent = { _, _, _, _ ->
+                        prompts++
+                        SignerOpGrant.AllowForOp(op)
+                    },
+                )
+
+            assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+            assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+            assertEquals(1, prompts, "allow-for-op persists, so the second request does not prompt")
+            assertEquals(NostrOpDecision.ALLOW, ledger.store.loadOpDecision(coordinate, op))
+        }
+
+    @Test
+    fun askPromptDenyOnceRefusesTheRequest() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.PARANOID)
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    opConsent = { _, _, _, _ -> SignerOpGrant.DenyOnce },
+                )
+            assertFalse(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+        }
+
+    @Test
+    fun allowForSessionSkipsFuturePromptsUntilForgotten() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.PARANOID)
+            var prompts = 0
+            val op = NostrSignerOp.SignKind(TextNoteEvent.KIND)
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    opConsent = { _, _, _, _ ->
+                        prompts++
+                        SignerOpGrant.AllowForSession(op)
+                    },
+                )
+
+            assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+            assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+            assertEquals(1, prompts, "session grant is remembered in memory, no re-prompt")
+            assertEquals(null, ledger.store.loadOpDecision(coordinate, op), "session grant is not persisted")
+
+            authorizer.forget(client)
+            assertTrue(authorizer.authorize(client, signRequest(TextNoteEvent.KIND)))
+            assertEquals(2, prompts, "forgetting clears the session grant, so it prompts again")
+        }
+
+    @Test
+    fun firstConnectConsentChoosesTheTrustLevel() =
+        runTest {
+            val ledger = ledger()
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    connectConsent = { _, _, _ -> AppConnectResult.Connected(AppSignerPolicy.FULL_TRUST) },
+                )
+
+            val decision = authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "x"))
+
+            assertTrue(decision is Nip46ConnectDecision.Accept)
+            assertEquals(AppSignerPolicy.FULL_TRUST, ledger.store.loadPolicy(coordinate))
+        }
+
+    @Test
+    fun cancelledConnectConsentRejectsAndStoresNoPolicy() =
+        runTest {
+            val ledger = ledger()
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    connectConsent = { _, _, _ -> AppConnectResult.Cancelled },
+                )
+
+            val decision = authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "x"))
+
+            assertTrue(decision is Nip46ConnectDecision.Reject)
+            assertEquals(null, ledger.store.loadPolicy(coordinate))
         }
 
     @Test

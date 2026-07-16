@@ -144,6 +144,26 @@ class NostrSignerPermissionLedger(
     /** Removes all signer permissions for [coordinate] — trust level and all per-op overrides. */
     suspend fun revokeAll(coordinate: String) = store.clearAll(coordinate)
 
+    /**
+     * Applies the persisted part of a user's per-operation consent [grant] to [coordinate], so a
+     * "remember" choice sticks. The transient variants ([SignerOpGrant.AllowOnce],
+     * [SignerOpGrant.DenyOnce], [SignerOpGrant.AllowForSession]) persist nothing — the caller keeps
+     * session grants in memory. Mirrors the broker's per-op recording so every consent surface
+     * (napplet, browser, NIP-46) writes the ledger the same way.
+     */
+    suspend fun record(
+        coordinate: String,
+        grant: SignerOpGrant,
+    ) {
+        when (grant) {
+            is SignerOpGrant.AllowForOp -> setOpDecision(coordinate, grant.op, NostrOpDecision.ALLOW)
+            is SignerOpGrant.AllowUntil -> setTimedOpDecision(coordinate, grant.op, NostrOpDecision.ALLOW, grant.expiresAt)
+            is SignerOpGrant.AllowAll -> setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
+            is SignerOpGrant.DenyForOp -> setOpDecision(coordinate, grant.op, NostrOpDecision.DENY)
+            SignerOpGrant.AllowOnce, SignerOpGrant.DenyOnce, is SignerOpGrant.AllowForSession -> Unit
+        }
+    }
+
     private fun reasonableDecision(op: NostrSignerOp): NostrOpDecision =
         when (op) {
             is NostrSignerOp.SignKind ->

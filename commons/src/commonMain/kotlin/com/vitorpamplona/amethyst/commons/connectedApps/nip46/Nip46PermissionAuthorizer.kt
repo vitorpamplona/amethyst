@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.connectedApps.nip46
 
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -54,16 +56,16 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * Authorization mirrors the napplet path:
  *  - each signing/encryption/decryption request maps to a [NostrSignerOp]
  *    ([sign:kind][NostrSignerOp.SignKind] / [encrypt][NostrSignerOp.Encrypt] /
- *    [decrypt][NostrSignerOp.Decrypt]) and is allowed only when the ledger's
- *    standing decision is [NostrOpDecision.ALLOW]. `ASK`/`DENY` are refused —
- *    a background signer cannot raise an interactive prompt, so the user grants
- *    access ahead of time by choosing a trust level (or a per-op override) in
- *    Connected Apps.
+ *    [decrypt][NostrSignerOp.Decrypt]). `ALLOW` proceeds, `DENY` is refused, and
+ *    `ASK` triggers [opConsent] — the interactive prompt through the shared signer
+ *    consent dialog (with in-memory session grants and a remembered per-op result).
+ *    When no [opConsent] is wired (headless CLI, tests) `ASK` fails closed, so the
+ *    signer only ever performs pre-granted operations.
  *  - a `connect` request first validates the pairing secret via
- *    [validateSecret]; on success the app is registered at
- *    [defaultPolicyOnConnect] (only if it has no policy yet — never downgrading
- *    a level the user already chose), then [onConnected] runs so the host can
- *    record display metadata.
+ *    [validateSecret]; on first contact (no standing policy) it asks [connectConsent]
+ *    for the trust level, falling back to [defaultPolicyOnConnect] when no prompt is
+ *    wired; an existing policy is never downgraded. [onConnected] then runs so the
+ *    host can record display metadata.
  */
 class Nip46PermissionAuthorizer(
     val ledger: NostrSignerPermissionLedger,
@@ -83,7 +85,25 @@ class Nip46PermissionAuthorizer(
      * for the next restart.
      */
     val onDisconnected: (suspend (clientPubKey: HexKey) -> Unit)? = null,
+    /**
+     * Interactive first-connect consent. When a client connects with a valid secret but has no
+     * standing policy, this is asked (showing the app's metadata) and its [AppConnectResult] decides
+     * the trust level. `null` (headless CLI, tests) keeps the non-interactive behavior: auto-register
+     * at [defaultPolicyOnConnect].
+     */
+    val connectConsent: (suspend (coordinate: String, clientPubKey: HexKey, request: BunkerRequestConnect) -> AppConnectResult)? = null,
+    /**
+     * Interactive per-operation consent. Asked when the ledger's standing decision for a request is
+     * [NostrOpDecision.ASK]; the returned [SignerOpGrant] both decides the in-flight request and is
+     * recorded (remember/session/deny variants). `null` keeps the non-interactive behavior: ASK is
+     * treated as deny, so a headless signer only ever performs pre-granted operations.
+     */
+    val opConsent: (suspend (coordinate: String, clientPubKey: HexKey, op: NostrSignerOp, request: BunkerRequest) -> SignerOpGrant)? = null,
 ) : Nip46RequestAuthorizer {
+    // Session-only ("allow until the signer restarts") grants: coordinate + op key, held in memory
+    // and never persisted — mirrors the napplet broker's sessionAllows. Guarded by [throttleLock].
+    private val sessionAllows = mutableSetOf<String>()
+
     // A high-throughput client can authorize many signs per second; last-used is display-only,
     // so coalesce the DataStore write to at most one per client per LAST_USED_THROTTLE_SECS
     // instead of writing the whole per-client preferences file on every request.
@@ -118,7 +138,14 @@ class Nip46PermissionAuthorizer(
 
         val coordinate = coordinateFor(clientPubKey)
         if (!ledger.hasPolicy(coordinate)) {
-            ledger.setPolicy(coordinate, defaultPolicyOnConnect)
+            // First contact: ask the user (if a prompt is wired) which trust level to grant; a
+            // headless signer with no prompt falls back to the non-interactive default.
+            when (val consent = connectConsent?.invoke(coordinate, clientPubKey, request)) {
+                null -> ledger.setPolicy(coordinate, defaultPolicyOnConnect)
+                is AppConnectResult.Connected -> ledger.setPolicy(coordinate, consent.policy)
+                AppConnectResult.Blocked -> return Nip46ConnectDecision.Reject("blocked by user")
+                AppConnectResult.Cancelled -> return Nip46ConnectDecision.Reject("connection declined")
+            }
         }
         touchLastUsed(coordinate)
         onConnected?.invoke(clientPubKey, request)
@@ -137,10 +164,48 @@ class Nip46PermissionAuthorizer(
         // sign/encrypt/decrypt, so this branch is a safety net).
         val op = request.toSignerOp() ?: return true
         val coordinate = coordinateFor(clientPubKey)
-        val allowed = ledger.decide(coordinate, op) == NostrOpDecision.ALLOW
+
+        val allowed =
+            when (ledger.decide(coordinate, op)) {
+                NostrOpDecision.ALLOW -> true
+                NostrOpDecision.DENY -> false
+                // ASK: honor a live session grant first, otherwise prompt the user (if wired). No
+                // prompt → deny, so a headless signer only ever performs pre-granted operations.
+                NostrOpDecision.ASK -> {
+                    if (isSessionAllowed(coordinate, op)) {
+                        true
+                    } else {
+                        askOpConsent(coordinate, clientPubKey, op, request)
+                    }
+                }
+            }
         if (allowed) touchLastUsed(coordinate)
         return allowed
     }
+
+    private suspend fun askOpConsent(
+        coordinate: String,
+        clientPubKey: HexKey,
+        op: NostrSignerOp,
+        request: BunkerRequest,
+    ): Boolean {
+        val grant = opConsent?.invoke(coordinate, clientPubKey, op, request) ?: return false
+        ledger.record(coordinate, grant)
+        if (grant is SignerOpGrant.AllowForSession) {
+            throttleLock.withLock { sessionAllows.add(sessionKey(coordinate, op)) }
+        }
+        return grant.isAllowed
+    }
+
+    private suspend fun isSessionAllowed(
+        coordinate: String,
+        op: NostrSignerOp,
+    ): Boolean = throttleLock.withLock { sessionAllows.contains(sessionKey(coordinate, op)) }
+
+    private fun sessionKey(
+        coordinate: String,
+        op: NostrSignerOp,
+    ): String = "$coordinate|${op.key}"
 
     override suspend fun onLogout(clientPubKey: HexKey) = forget(clientPubKey)
 
@@ -154,7 +219,10 @@ class Nip46PermissionAuthorizer(
         val coordinate = coordinateFor(clientPubKey)
         ledger.revokeAll(coordinate)
         clientStore?.remove(coordinate)
-        throttleLock.withLock { lastUsedThrottle.remove(coordinate) }
+        throttleLock.withLock {
+            lastUsedThrottle.remove(coordinate)
+            sessionAllows.removeAll { it.startsWith("$coordinate|") }
+        }
         onDisconnected?.invoke(clientPubKey)
     }
 

@@ -129,6 +129,11 @@ class Nip46SignerState(
             // A forgotten client's relays are gone from the store now; recompute the listen set so we
             // stop listening on them this session instead of waiting for a restart.
             onDisconnected = { refreshExtraRelaysFromStore() },
+            // Interactive consent through the shared signer dialogs: a trust-level picker on first
+            // connect, and an allow/deny prompt whenever the ledger says ASK (dangerous kinds,
+            // decryption, DMs, or a PARANOID app). Same surface + ledger as napplet/browser signing.
+            connectConsent = Nip46ConsentBridge::requestConnect,
+            opConsent = Nip46ConsentBridge::requestOp,
         )
 
     init {
