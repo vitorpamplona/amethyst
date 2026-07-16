@@ -94,6 +94,7 @@
     <string name="security_filters">安全过滤器</string>
     <string name="log_out">退出</string>
     <string name="show_more">显示更多</string>
+    <string name="show_less">显示较少</string>
     <string name="lightning_invoice">闪电发票</string>
     <string name="invoice_expired">已过期</string>
     <string name="clink_lightning_offer">CLINK 报价</string>
@@ -1840,6 +1841,26 @@
     <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <string name="new_conversation_title">开始对话</string>
+    <string name="new_conversation_best_for">最适用于</string>
+    <string name="new_conversation_pros">好</string>
+    <string name="new_conversation_cons">折衷办法</string>
+    <string name="new_conversation_section_direct">私密</string>
+    <string name="new_conversation_section_encrypted">加密群组</string>
+    <string name="new_conversation_section_relay">识别中继</string>
+    <string name="new_conversation_dm_title">私信</string>
+    <string name="new_conversation_dm_tagline">私信，端到端加密</string>
+    <string name="new_conversation_dm_chip">1:1–5 个房间</string>
+    <string name="new_conversation_dm_best">和你认识的人的一对一及小型群聊。</string>
+    <string name="new_conversation_dm_cta">新消息</string>
+    <string name="new_conversation_dm_pro_1">1-1 &amp; 小型群组</string>
+    <string name="new_conversation_dm_pro_2">端到端加密的</string>
+    <string name="new_conversation_dm_con_1">稍后无法添加用户</string>
+    <string name="new_conversation_marmot_title">Marmot 群</string>
+    <string name="new_conversation_marmot_tagline">较大的私密群</string>
+    <string name="new_conversation_marmot_chip">绑定设备</string>
+    <string name="new_conversation_marmot_best">规模较大的私密群组，不再适合小型群组私信。</string>
+    <string name="new_conversation_marmot_cta">创建群组</string>
     <string name="relay_groups_title">中继组</string>
     <string name="relay_group_view_inline">行内</string>
     <string name="relay_group_view_grouped">根据中继</string>
