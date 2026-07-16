@@ -198,7 +198,9 @@ object BunkerCommand {
         val service =
             NostrConnectSignerService(
                 client = ctx.client,
-                signer = ctx.signer,
+                // The CLI bunker deliberately advertises the operator's own key as the transport key
+                // (a simple dev/interop tool); the app uses a separate transport key for privacy.
+                transportSigner = ctx.signer,
                 processor = processor,
                 relays = relays,
                 onServiced = { method, client, error ->

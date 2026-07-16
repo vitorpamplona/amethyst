@@ -38,13 +38,20 @@ import kotlinx.coroutines.channels.Channel
 
 /**
  * Runs a NIP-46 remote signer ("bunker") for one account: subscribes to the
- * given [relays] for kind-24133 requests addressed to the user, decrypts each
- * one with the user's [signer], hands it to [processor], and publishes the
- * encrypted reply back to the requesting client.
+ * given [relays] for kind-24133 requests addressed to the bunker, decrypts each
+ * envelope, hands the request to [processor], and publishes the encrypted reply.
  *
- * The signer is whatever the account logged in with — a local keypair or a
- * NIP-55 external app — so the same [NostrConnectEvent.create] transport
- * encryption and the same [BunkerRequestProcessor] dispatch serve both.
+ * Two keys are deliberately kept apart:
+ *  - [transportSigner] wraps and unwraps the kind-24133 envelope (subscription
+ *    p-tag, [NostrConnectEvent.decryptMessage] / [NostrConnectEvent.create]). It
+ *    is a dedicated per-account key that has nothing to do with the user's
+ *    identity, so the bunker address and the on-relay traffic don't reveal WHO
+ *    the bunker is for, and — since it is a local key — the envelope crypto never
+ *    round-trips an external NIP-55 signer.
+ *  - The [processor]'s signer is the user's IDENTITY signer (a local key or a
+ *    NIP-55 app); it performs the actual `sign_event`/`nip04|44_*` work and
+ *    answers `get_public_key` with the real npub — revealed only to a connected
+ *    client, over the already-encrypted channel.
  *
  * [run] is a long-running suspend loop: it services requests until the calling
  * coroutine is cancelled, then tears the subscription down. Callers who need to
@@ -53,7 +60,7 @@ import kotlinx.coroutines.channels.Channel
  */
 class NostrConnectSignerService(
     val client: INostrClient,
-    val signer: NostrSigner,
+    val transportSigner: NostrSigner,
     val processor: BunkerRequestProcessor,
     val relays: Set<NormalizedRelayUrl>,
     /** Optional hook, invoked with each serviced request's method + client, for logging/metrics. */
@@ -67,9 +74,9 @@ class NostrConnectSignerService(
     /**
      * Bound on events buffered between the relay threads and the single consumer.
      * Under a flood (a looping client, or a hostile peer p-tagging us) the newest
-     * events past this many are dropped instead of growing memory without limit —
-     * the transport [signer] can be an external NIP-55 app where each decrypt is an
-     * IPC round-trip, so the queue must not run away.
+     * events past this many are dropped instead of growing memory without limit.
+     * Envelope decryption is local, but each serviced request can drive an external
+     * NIP-55 op on the identity signer, so the queue must not run away.
      */
     val maxQueue: Int = 256,
     /** Max requests decrypted per author within [rateWindowSeconds] before further ones are dropped. */
@@ -126,7 +133,7 @@ class NostrConnectSignerService(
             return
         }
 
-        val self = signer.pubKey
+        val self = transportSigner.pubKey
         // Bounded + DROP_LATEST so a flood bounds memory instead of growing an unlimited queue.
         val events = Channel<NostrConnectEvent>(capacity = maxQueue, onBufferOverflow = BufferOverflow.DROP_LATEST)
         val rateLimiter = RateLimiter(maxRequestsPerWindow, rateWindowSeconds, maxTrackedAuthors)
@@ -178,10 +185,10 @@ class NostrConnectSignerService(
     }
 
     private suspend fun handle(event: NostrConnectEvent) {
-        val client = event.talkingWith(signer.pubKey)
+        val client = event.talkingWith(transportSigner.pubKey)
         val request =
             try {
-                event.decryptMessage(signer) as? BunkerRequest ?: return
+                event.decryptMessage(transportSigner) as? BunkerRequest ?: return
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -194,7 +201,7 @@ class NostrConnectSignerService(
         onServiced?.invoke(request.method, client, error)
 
         try {
-            val reply = NostrConnectEvent.create(response, client, signer)
+            val reply = NostrConnectEvent.create(response, client, transportSigner)
             this.client.publish(reply, relays)
         } catch (e: CancellationException) {
             throw e

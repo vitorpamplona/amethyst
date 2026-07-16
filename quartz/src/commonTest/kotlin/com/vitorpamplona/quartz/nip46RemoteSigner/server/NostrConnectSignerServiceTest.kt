@@ -32,9 +32,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -58,6 +60,7 @@ import kotlin.test.assertTrue
 class NostrConnectSignerServiceTest {
     private val serverKey = "a".repeat(64)
     private val clientKey = "b".repeat(64)
+    private val identityKey = "d".repeat(64)
     private val relay: NormalizedRelayUrl = RelayUrlNormalizer.normalizeOrNull("wss://relay.example.com")!!
 
     /** Passthrough crypto + real event construction, so NostrConnectEvent.create/decryptMessage round-trip. */
@@ -181,6 +184,27 @@ class NostrConnectSignerServiceTest {
             val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse
             assertEquals("req1", reply.id)
             assertEquals("s3cr3t", reply.result)
+        }
+
+    @Test
+    fun getPublicKeyReturnsIdentityNotTransportKey() =
+        runTest {
+            val client = LoopbackClient()
+            // The client connects to the transport key (serverKey); the actual work signer is a
+            // separate identity key. get_public_key must reveal the identity, not the transport key.
+            val transport = serverSigner()
+            val identity = PassthroughSigner(identityKey)
+            val processor = BunkerRequestProcessor(identity, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, transport, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            client.deliver(request(BunkerRequestGetPublicKey("reqpk")))
+
+            val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner())
+            assertTrue(reply is BunkerResponsePublicKey)
+            assertEquals(identityKey, reply.pubkey)
+            assertTrue(reply.pubkey != serverKey, "must not leak the transport key")
         }
 
     @Test

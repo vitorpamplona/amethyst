@@ -199,6 +199,15 @@ class AccountSettings(
      */
     val nip46BunkerSecret: MutableStateFlow<String> = MutableStateFlow(""),
     /**
+     * A dedicated per-account transport keypair (hex private key) for the NIP-46
+     * bunker. The kind-24133 envelope is wrapped with THIS key, not the account's
+     * identity key, so the bunker address and on-relay traffic don't reveal which
+     * user the bunker belongs to (the identity is disclosed only to a connected
+     * app via `get_public_key`). Generated once and kept stable so the advertised
+     * `bunker://` address doesn't change.
+     */
+    val nip46TransportKey: MutableStateFlow<String> = MutableStateFlow(""),
+    /**
      * NIP-9B opt-in: when true, community feeds drop events whose latest cached
      * `kind:34551` rules document fails [com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator].
      * Default false preserves pre-9A behaviour.
@@ -605,6 +614,13 @@ class AccountSettings(
     fun changeNip46BunkerSecret(secret: String) {
         if (nip46BunkerSecret.value != secret) {
             nip46BunkerSecret.tryEmit(secret)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeNip46TransportKey(hexPrivKey: String) {
+        if (nip46TransportKey.value != hexPrivKey) {
+            nip46TransportKey.tryEmit(hexPrivKey)
             saveAccountSettings()
         }
     }

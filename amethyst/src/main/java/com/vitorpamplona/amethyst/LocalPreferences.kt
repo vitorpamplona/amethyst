@@ -111,6 +111,7 @@ private object PrefKeys {
     const val HIDE_COMMUNITY_RULES_VIOLATIONS = "hideCommunityRulesViolations"
     const val NIP46_SIGNER_ENABLED = "nip46SignerEnabled"
     const val NIP46_BUNKER_SECRET = "nip46BunkerSecret"
+    const val NIP46_TRANSPORT_KEY = "nip46TransportKey"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
@@ -469,6 +470,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
                     putBoolean(PrefKeys.NIP46_SIGNER_ENABLED, settings.nip46SignerEnabled.value)
                     putString(PrefKeys.NIP46_BUNKER_SECRET, settings.nip46BunkerSecret.value)
+                    putString(PrefKeys.NIP46_TRANSPORT_KEY, settings.nip46TransportKey.value)
 
                     putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
                     putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
@@ -681,6 +683,7 @@ object LocalPreferences {
                     val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
                     val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
                     val nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: ""
+                    val nip46TransportKey = getString(PrefKeys.NIP46_TRANSPORT_KEY, "") ?: ""
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
@@ -862,6 +865,7 @@ object LocalPreferences {
                         hideCommunityRulesViolations = MutableStateFlow(hideCommunityRulesViolations),
                         nip46SignerEnabled = MutableStateFlow(nip46SignerEnabled),
                         nip46BunkerSecret = MutableStateFlow(nip46BunkerSecret),
+                        nip46TransportKey = MutableStateFlow(nip46TransportKey),
                         defaultHomeFollowList = MutableStateFlow(followListPrefs.home),
                         defaultStoriesFollowList = MutableStateFlow(followListPrefs.stories),
                         defaultNotificationFollowList = MutableStateFlow(followListPrefs.notification),

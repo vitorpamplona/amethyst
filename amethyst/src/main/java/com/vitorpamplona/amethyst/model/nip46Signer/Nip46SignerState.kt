@@ -26,11 +26,15 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAut
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
@@ -54,9 +58,13 @@ import kotlinx.coroutines.launch
  * Runs Amethyst as a NIP-46 remote signer ("bunker") for the account, so other
  * apps can sign through it. While [AccountSettings.nip46SignerEnabled] is on, a
  * [NostrConnectSignerService] listens on the user's inbox relays (plus any relays
- * pulled in by a pasted `nostrconnect://` offer) for kind:24133 requests, decrypts
- * them with the account's own [signer] — a local key or a NIP-55 external app,
- * whichever the user logged in with — and answers each one.
+ * pulled in by a pasted `nostrconnect://` offer) for kind:24133 requests.
+ *
+ * Two keys are kept apart: a dedicated local [transportSigner] wraps/unwraps the
+ * kind-24133 envelope (so the bunker address never reveals the user, and an
+ * external NIP-55 account pays no IPC cost for envelope crypto), while the actual
+ * sign/encrypt/decrypt and `get_public_key` use the account's identity [signer] —
+ * a local key or a NIP-55 external app, whichever the user logged in with.
  *
  * Every request is gated by [Nip46PermissionAuthorizer], i.e. the same
  * "Connected Apps" trust ledger that governs napplets and web origins: a remote
@@ -77,6 +85,14 @@ class Nip46SignerState(
 ) {
     /** Relays contributed by pasted `nostrconnect://` offers this session, unioned with the inbox set. */
     private val extraRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /**
+     * The dedicated per-account transport signer that wraps the kind-24133 envelope — a local key
+     * unrelated to the account identity, so the bunker address/traffic doesn't reveal who it is for,
+     * and (unlike the identity signer) an external NIP-55 account pays no IPC cost for envelope crypto.
+     * Generated + persisted lazily on first use so accounts that never enable the signer mint nothing.
+     */
+    private val transportSigner: NostrSignerInternal by lazy { NostrSignerInternal(KeyPair(ensureTransportKeyBytes())) }
 
     /** All relays the signer listens on: the account inbox plus any nostrconnect offer relays. */
     val listeningRelays: StateFlow<Set<NormalizedRelayUrl>> =
@@ -130,11 +146,13 @@ class Nip46SignerState(
                     }
                     if (relays.isEmpty()) return@collectLatest
 
+                    // Envelope wrapped with the local transport key; the actual work (and get_public_key)
+                    // uses the account's identity signer inside the processor.
                     val processor = BunkerRequestProcessor(signer, { listeningRelays.value }, authorizer)
                     val service =
                         NostrConnectSignerService(
                             client = client,
-                            signer = signer,
+                            transportSigner = transportSigner,
                             processor = processor,
                             relays = relays,
                             onServiced = { method, clientPubKey, error ->
@@ -154,10 +172,11 @@ class Nip46SignerState(
         settings.changeNip46SignerEnabled(enabled)
     }
 
-    /** The `bunker://<pubkey>?relay=…&secret=…` string to paste into another app. Generates a secret if needed. */
+    /** The `bunker://<transport-pubkey>?relay=…&secret=…` string to paste into another app. Generates keys/secret if needed. */
     fun bunkerUri(): String {
         val secret = ensureSecret()
-        return NostrConnectURI.buildBunker(signer.pubKey, inboxRelays.value, secret)
+        // Advertise the transport key, not the identity key, so the address doesn't reveal who we are.
+        return NostrConnectURI.buildBunker(transportSigner.pubKey, inboxRelays.value, secret)
     }
 
     /** Replaces the pairing secret with a fresh one, revoking the ability of not-yet-connected apps to use the old one. */
@@ -195,6 +214,16 @@ class Nip46SignerState(
         return fresh
     }
 
+    /** The transport private key bytes, generating and persisting a fresh keypair the first time (or if corrupt). */
+    private fun ensureTransportKeyBytes(): ByteArray {
+        val stored = settings.nip46TransportKey.value
+        val existing = stored.takeIf { it.length == 64 }?.let { runCatching { it.hexToByteArray() }.getOrNull() }
+        if (existing != null) return existing
+        val fresh = KeyPair()
+        settings.changeNip46TransportKey(fresh.privKey!!.toHexKey())
+        return fresh.privKey!!
+    }
+
     /**
      * The client-initiated (`nostrconnect://`) pairing flow: parse a client's
      * offer, send the connect ack that echoes its secret (so the client learns
@@ -207,9 +236,10 @@ class Nip46SignerState(
         if (!signer.isWriteable()) return ConnectResult.NotWriteable
 
         return try {
-            // Echo the offer secret back to the client on its relays.
+            // Echo the offer secret back to the client, authored by the transport key so the client
+            // learns THAT as our remote-signer pubkey (not our identity).
             val ack = BunkerResponse(newSubId(), offer.secret, null)
-            val reply = NostrConnectEvent.create(ack, offer.clientPubKey, signer)
+            val reply = NostrConnectEvent.create(ack, offer.clientPubKey, transportSigner)
             client.publish(reply, offer.relays)
 
             // Register the app (the paste is the user's consent) and listen on its relays.
