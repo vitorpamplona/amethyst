@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -188,46 +189,42 @@ class DesktopRelaySubscriptionsCoordinator(
      * Drain [pendingOutbox] in batches of ≤100 authors, one REQ at a time,
      * coalescing bursts with a short delay. kind:10002 lives on the index /
      * discovery relays (they mirror it widely), so we query those; results go
-     * through [consumeEvent] → cache. Reschedules itself while work remains.
+     * through [consumeEvent] → cache.
+     *
+     * `@Synchronized` + the `isActive` guard make this launch-once: concurrent
+     * callers from the consume path don't spawn duplicate drain jobs. The job
+     * loops until [pendingOutbox] is empty, so authors that arrive mid-fetch
+     * (or a burst larger than one 100-author batch) are picked up in the same
+     * run instead of stranded until the next profile happens to arrive.
      */
+    @Synchronized
     private fun scheduleOutboxBackfill() {
         if (outboxBackfillJob?.isActive == true) return
         outboxBackfillJob =
             scope.launch(Dispatchers.IO) {
-                // Coalesce a burst of profile arrivals into one batched REQ.
+                // Coalesce a burst of profile arrivals into the first batch.
                 delay(500)
 
-                val batch = pendingOutbox.take(100).toList()
-                if (batch.isEmpty()) return@launch
-                pendingOutbox.removeAll(batch.toSet())
+                while (pendingOutbox.isNotEmpty()) {
+                    val batch = pendingOutbox.take(100).toList()
+                    pendingOutbox.removeAll(batch.toSet())
+                    if (batch.isEmpty() || indexRelays.isEmpty()) continue
 
-                if (indexRelays.isNotEmpty()) {
-                    val subId = generateSubId("outbox-backfill")
                     val filter =
                         Filter(
                             kinds = listOf(AdvertisedRelayListEvent.KIND),
                             authors = batch,
                             limit = batch.size,
                         )
-                    val listener =
-                        object : SubscriptionListener {
-                            override fun onEvent(
-                                event: Event,
-                                isLive: Boolean,
-                                relay: NormalizedRelayUrl,
-                                forFilters: List<Filter>?,
-                            ) {
-                                consumeEvent(event, relay)
-                            }
-                        }
-                    client.subscribe(subId, indexRelays.associateWith { listOf(filter) }, listener)
-                    // Give the index relays time to return before closing.
-                    delay(8.seconds)
-                    client.unsubscribe(subId)
+                    // fetchAll closes on EOSE (bounded by the timeout) rather
+                    // than holding the sub open for a fixed window.
+                    val events =
+                        client.fetchAll(
+                            filters = indexRelays.associateWith { listOf(filter) },
+                            timeoutMs = 8.seconds.inWholeMilliseconds,
+                        )
+                    events.forEach { consumeEvent(it, null) }
                 }
-
-                // More arrived while we were fetching — go again.
-                if (pendingOutbox.isNotEmpty()) scheduleOutboxBackfill()
             }
     }
 

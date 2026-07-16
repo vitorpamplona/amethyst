@@ -138,13 +138,17 @@ class DmInboxRelayResolver(
 
         // Phase 2: the recipient's own write relays are where their kind:10050
         // lives per NIP-65. If phase 1 (mostly the curated indexers) didn't
-        // surface it, read straight from the write relays we just learned about
-        // — the kind:10002 the indexers returned, unioned with anything cached —
-        // minus what we already queried.
+        // surface it, read straight from the write relays the indexers'
+        // kind:10002 just pointed us at — minus what phase 1 already queried
+        // (which already includes any cached outbox relays). Bounded by a
+        // shorter timeout so a cold send doesn't stack two full fan-out waits.
         if (relays.isEmpty()) {
-            val writeRelays = (lists.nip65Write().toSet() + cachedOutbox) - phase1Seed
+            val writeRelays = lists.nip65Write().toSet() - phase1Seed
             if (writeRelays.isNotEmpty()) {
-                relays = RecipientRelayFetcher.fetchRelayLists(unauthenticatedClient, pubkey, writeRelays).dmInbox
+                relays =
+                    RecipientRelayFetcher
+                        .fetchRelayLists(unauthenticatedClient, pubkey, writeRelays, timeoutMs = 5_000L)
+                        .dmInbox
             }
         }
 
