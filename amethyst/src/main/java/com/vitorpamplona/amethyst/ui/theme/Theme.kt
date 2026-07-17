@@ -136,7 +136,10 @@ private fun darkColors(accent: AccentColorType): ColorScheme {
     val secondary = accentSecondary(accent, dark = true)
     return darkColorScheme(
         primary = primary,
-        onPrimary = Color.White,
+        // Content on a primary fill (filled buttons, FAB glyphs). Picked by contrast against the
+        // fill: on the dark theme `primary` is a light pastel, so this resolves to black (white on
+        // it is only ~2.6:1). Left as white it washed out every filled button/FAB.
+        onPrimary = onAccent(primary),
         primaryContainer = accentContainer(primary, dark = true),
         onPrimaryContainer = onAccentContainer(primary, dark = true),
         secondary = secondary,
@@ -178,7 +181,9 @@ private fun lightColors(accent: AccentColorType): ColorScheme {
     val secondary = accentSecondary(accent, dark = false)
     return lightColorScheme(
         primary = primary,
-        onPrimary = Color.White,
+        // Contrast-picked content on the primary fill; the light theme's deep primary resolves to
+        // white (unchanged), while keeping the rule identical across both schemes.
+        onPrimary = onAccent(primary),
         primaryContainer = accentContainer(primary, dark = false),
         onPrimaryContainer = onAccentContainer(primary, dark = false),
         secondary = secondary,
