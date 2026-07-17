@@ -31,6 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -51,7 +52,6 @@ import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,7 +100,7 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                AmethystSwitch(
+                Switch(
                     checked = enabled,
                     onCheckedChange = {
                         enabled = it

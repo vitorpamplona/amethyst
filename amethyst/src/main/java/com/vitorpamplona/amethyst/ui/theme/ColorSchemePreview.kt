@@ -67,17 +67,11 @@ private class RolePair(
 private val ROLE_PAIRS =
     listOf(
         RolePair(
-            "filledAccent / onFilledAccent",
-            { it.filledAccent },
-            { it.onFilledAccent },
-            "Top-bar Save·Post·Send·Create button, standalone Save button, checked switch.",
-            highlight = true,
-        ),
-        RolePair(
             "primary / onPrimary",
             { it.primary },
             { it.onPrimary },
-            "Floating action buttons, generic filled buttons, sliders, progress.",
+            "Top-bar Save button, FABs, filled buttons, checked switch, sliders, progress.",
+            highlight = true,
         ),
         RolePair(
             "primaryContainer / onPrimaryContainer",

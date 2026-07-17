@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,7 +37,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 
 @Composable
 fun SettingSwitchItem(
@@ -81,7 +81,7 @@ fun SettingSwitchItem(
         }
 
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            AmethystSwitch(
+            Switch(
                 checked = checked,
                 onCheckedChange = null,
                 enabled = enabled,

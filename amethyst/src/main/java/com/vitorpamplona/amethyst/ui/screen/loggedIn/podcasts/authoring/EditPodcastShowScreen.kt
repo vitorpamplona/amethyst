@@ -35,6 +35,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,7 +59,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.CoverImagePicker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.UploadInProgressBanner
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 import kotlinx.collections.immutable.persistentListOf
 
 /**
@@ -207,6 +207,6 @@ private fun SwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        AmethystSwitch(checked = checked, onCheckedChange = onChange)
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
