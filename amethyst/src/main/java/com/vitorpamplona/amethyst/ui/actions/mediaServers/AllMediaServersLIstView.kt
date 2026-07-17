@@ -116,7 +116,7 @@ fun AllMediaBody(
             SectionLabel(
                 title = stringRes(id = R.string.media_servers_priority_section),
                 caption = stringRes(id = R.string.media_servers_reorder_hint),
-                modifier = Modifier.padding(top = 8.dp),
+                topPadding = 4.dp,
             )
         }
 
@@ -172,9 +172,10 @@ fun AllMediaBody(
 private fun SectionLabel(
     title: String,
     caption: String? = null,
+    topPadding: Dp = 20.dp,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp)) {
+    Column(modifier = modifier.fillMaxWidth().padding(top = topPadding, bottom = 8.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
