@@ -80,7 +80,11 @@ internal fun SettingsSection(
             shape = RoundedCornerShape(20.dp),
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    // surfaceContainer (one step up from …Low) so the card separates from the page by
+                    // tone rather than a hard outline. The neutral surface ramp puts the page at
+                    // background #FDFDFD, where …Low #F7F7F7 was nearly invisible; #F2F2F2 reads as a
+                    // soft card in light and #252525 stands clear of black in dark.
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
