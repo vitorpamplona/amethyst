@@ -85,11 +85,12 @@ import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.contentColorOnAccent
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.previewColor
@@ -117,11 +118,19 @@ fun SettingsScreen(
     }
 }
 
-@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
+// Full-screen preview: the real top bar + the redesigned content, shown side by side in dark and
+// light so both grounds (and the card-hairline contrast) can be eyeballed at once.
+@Preview(name = "UI Preferences", device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun SettingsScreenPreview() {
-    ThemeComparisonColumn {
-        SettingsScreen(UiSettingsFlow())
+    ThemeComparisonRow {
+        Scaffold(
+            topBar = {
+                TopBarWithBackButton(stringRes(id = R.string.application_preferences), EmptyNav())
+            },
+        ) { padding ->
+            SettingsScreen(UiSettingsFlow(), Modifier.padding(padding))
+        }
     }
 }
 
