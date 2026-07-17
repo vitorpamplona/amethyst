@@ -1626,9 +1626,9 @@ object LocalCache : ILocalCache, ICacheProvider {
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
-        // Approval notes are badge-rendered directly in community feeds
-        // (BadgeBox has no repost-style indirection for them), so without
-        // this attribution their relay list stays empty forever.
+        // Approval notes render their own relay list directly in community feeds
+        // (there is no repost-style indirection to a replyTo for them), so without
+        // this attribution the "accepted by relays" gallery line stays empty forever.
         if (relay != null) {
             getOrCreateUser(event.pubKey).addRelayBeingUsed(relay, event.createdAt)
             note.addRelay(relay)

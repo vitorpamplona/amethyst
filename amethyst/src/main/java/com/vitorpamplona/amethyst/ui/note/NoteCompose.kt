@@ -745,11 +745,6 @@ fun InnerNoteWithReactions(
                 }
             }
         },
-        relayBadges = {
-            if (notBoostedNorQuote) {
-                BadgeBox(baseNote, accountViewModel, nav)
-            }
-        },
         firstRow = {
             FirstUserInfoRow(
                 baseNote = baseNote,
@@ -2073,21 +2068,6 @@ fun observeEdits(
     }
 
     return editState
-}
-
-@Composable
-fun BadgeBox(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (accountViewModel.settings.isCompleteUIMode()) {
-        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-            baseNote.replyTo?.lastOrNull()?.let { RelayBadges(it, accountViewModel, nav) }
-        } else {
-            RelayBadges(baseNote, accountViewModel, nav)
-        }
-    }
 }
 
 @Composable

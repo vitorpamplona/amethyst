@@ -563,20 +563,22 @@ private fun ReactionDetailGallery(
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf(defaultBackgroundColor) }
 
-    val hasReactions by observeNoteReferences(baseNote, accountViewModel)
+    // Keep subscribing for reaction/zap/boost arrivals, but no longer gate the gallery
+    // on them: the "accepted by relays" line is (almost) always present, so once the
+    // user expands the gallery there is always at least that line to show.
+    observeNoteReferences(baseNote, accountViewModel)
 
-    if (hasReactions) {
-        Row(
-            verticalAlignment = CenterVertically,
-            modifier = Modifier.padding(start = 10.dp, top = 5.dp),
-        ) {
-            Column {
-                WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
-                WatchNutzapsAndRenderGallery(baseNote, nav, accountViewModel)
-                WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
-                WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
-                WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
-            }
+    Row(
+        verticalAlignment = CenterVertically,
+        modifier = Modifier.padding(start = 10.dp, top = 5.dp),
+    ) {
+        Column {
+            WatchRelaysAndRenderGallery(baseNote, nav, accountViewModel)
+            WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+            WatchNutzapsAndRenderGallery(baseNote, nav, accountViewModel)
+            WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
+            WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
+            WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
         }
     }
 }

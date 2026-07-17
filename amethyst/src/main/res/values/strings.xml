@@ -3105,6 +3105,7 @@
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>
+    <string name="accepted_by_relays">Accepted by relays</string>
     <string name="expand_relay_list">Expand relay list</string>
     <string name="note_options">Note options</string>
     <string name="poll">Poll</string>
