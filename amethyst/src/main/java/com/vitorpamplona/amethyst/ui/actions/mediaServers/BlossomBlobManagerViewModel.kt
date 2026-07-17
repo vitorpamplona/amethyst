@@ -80,10 +80,11 @@ class BlossomBlobManagerViewModel : ViewModel() {
 
     private fun clientFor(server: String) = BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(server))
 
+    // The user's explicitly configured kind-10063 servers (empty if they never set
+    // a list) — not the DEFAULT_MEDIA_SERVERS fallback, so the matrix reflects the
+    // servers the user actually chose.
     private fun servers(): List<String> =
-        account.blossomServers.hostNameFlow.value
-            .filter { it.type == ServerType.Blossom }
-            .map { it.baseUrl }
+        account.blossomServers.flow.value
             .distinct()
 
     fun refresh() {
