@@ -39,6 +39,15 @@ data class StoredCommunity(
     val rootEpoch: Long = 0,
     val generalChannelId: String = "",
     val relays: List<String> = emptyList(),
+    // Past access roots kept per epoch (CORD-06 Refounding rotates the root). Lets `read --epoch <n>`
+    // re-derive a prior epoch's Chat Plane to reach pre-refounding history. Populated by `import`.
+    val heldRoots: List<StoredHeldRoot> = emptyList(),
+)
+
+/** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */
+data class StoredHeldRoot(
+    val epoch: Long = 0,
+    val root: String = "",
 )
 
 /**

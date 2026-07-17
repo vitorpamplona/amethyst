@@ -94,18 +94,37 @@ object ConcordChannelCommands {
         val limit = args.intFlag("limit", 50)
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
 
+        // Diagnostic overrides (concord-epoch-walking-backfill): read a PRIOR epoch's Chat Plane by
+        // supplying that epoch's community_root. A Refounding (CORD-06 §3) rotates the root and bumps
+        // the epoch, so pre-refounding messages live under a different derived stream key that the
+        // normal read (current epoch only) never fetches. Both derive from the same channel id, which
+        // is epoch-invariant, so channel resolution stays on the current epoch below.
+        val epoch = args.longFlag("epoch", sc.rootEpoch)
+        // Resolve the root for that epoch: explicit --root wins; else the current root if --epoch is
+        // the current epoch; else a stored heldRoot for that epoch (populated by `amy concord import`).
+        val rootHex =
+            args.flag("root")
+                ?: sc.root.takeIf { epoch == sc.rootEpoch }
+                ?: sc.heldRoots.firstOrNull { it.epoch == epoch }?.root
+                ?: return Output
+                    .error("not_found", "no root known for epoch $epoch — pass --root <hex> or run `amy concord import` to load heldRoots")
+                    .let { 1 }
+        if (!HEX64.matches(rootHex)) return Output.error("bad_args", "--root must be a 64-char hex community_root").let { 2 }
+
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
-            val channel = ConcordActions.publicChannel(sc.root.hexToByteArray(), channelId.hexToByteArray(), sc.rootEpoch)
+            val channel = ConcordActions.publicChannel(rootHex.hexToByteArray(), channelId.hexToByteArray(), epoch)
             val relays = ConcordCommands.relaysFor(ctx, sc)
             // The channel plane is NIP-42-gated to its own derived stream key; register it so the drain authenticates.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
             val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(channel.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
-            val msgs = ConcordActions.channelMessages(wraps, channel, channelId, sc.rootEpoch).takeLast(limit)
+            val msgs = ConcordActions.channelMessages(wraps, channel, channelId, epoch).takeLast(limit)
             Output.emit(
                 mapOf(
                     "channel" to channelId,
+                    "epoch" to epoch,
+                    "plane" to channel.publicKeyHex,
                     "count" to msgs.size,
                     "messages" to msgs.map { mapOf("id" to it.id, "author" to it.author, "content" to it.content, "created_at" to it.createdAt) },
                 ),

@@ -26,8 +26,12 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
+import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -45,10 +49,11 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|channels|send|read|invite|join|roles|role|grant|ban|unban>",
+            "concord <create|list|import|channels|send|read|invite|join|roles|role|grant|ban|unban>",
             mapOf(
                 "create" to { rest -> create(dataDir, rest) },
                 "list" to { rest -> list(dataDir, rest) },
+                "import" to { rest -> import(dataDir, rest) },
                 "channels" to { rest -> ConcordChannelCommands.channels(dataDir, rest) },
                 "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
                 "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
@@ -115,6 +120,67 @@ object ConcordCommands {
             }
         Output.emit(mapOf("communities" to communities))
         return 0
+    }
+
+    /**
+     * Fetch this account's own encrypted kind-13302 Concord community list, decrypt it, and
+     * upsert every community into the local store — crucially carrying each community's
+     * `heldRoots` (the prior-epoch access roots Amethyst accumulates across Refoundings, CORD-06).
+     * With those persisted, `amy concord read --epoch <n>` can re-derive a pre-refounding Chat
+     * Plane. A fresh account (never lived through a Refounding) simply has empty `heldRoots`.
+     */
+    private suspend fun import(
+        dataDir: DataDir,
+        @Suppress("UNUSED_PARAMETER") rest: Array<String>,
+    ): Int {
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val relays = (ctx.outboxRelays() + ctx.bootstrapRelays())
+            // Filter by the ACCOUNT identity, not ctx.signer.pubKey — for a bunker the signer's pubKey
+            // is the ephemeral NIP-46 transport key, not the user's identity.
+            val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(ctx.identity.pubKeyHex))
+            val events = ctx.drain(relays.associateWith { listOf(filter) }).map { it.second }
+            val newest =
+                events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
+                    ?: return Output.error("not_found", "no kind-13302 Concord list published by this account").let { 1 }
+
+            // Decrypt with the ACCOUNT identity as the NIP-44 self-peer. `newest.decrypt(signer)` uses
+            // `signer.pubKey`, which for a bunker is the ephemeral transport key, not the identity the
+            // list is self-encrypted to — so decrypt manually against ctx.identity.pubKeyHex.
+            val entries =
+                try {
+                    ConcordCommunityList.decode(ctx.signer.nip44Decrypt(newest.content, ctx.identity.pubKeyHex))
+                } catch (e: Exception) {
+                    return Output.error("decrypt_failed", "could not decrypt kind-13302: ${e.message}").let { 1 }
+                }
+            val store = ConcordStore(dataDir.concordFile)
+            val existing = store.load().associateBy { it.communityId }
+            val imported =
+                entries.map { e ->
+                    val prior = existing[e.id]
+                    store.upsert(
+                        StoredCommunity(
+                            name = e.name.ifBlank { prior?.name ?: "" },
+                            communityId = e.id,
+                            owner = e.owner,
+                            ownerSalt = e.ownerSalt,
+                            root = e.root,
+                            rootEpoch = e.rootEpoch,
+                            generalChannelId = prior?.generalChannelId ?: "",
+                            relays = e.relays,
+                            heldRoots = e.heldRoots.map { StoredHeldRoot(it.epoch, it.key) },
+                        ),
+                    )
+                    mapOf(
+                        "name" to e.name,
+                        "community_id" to e.id,
+                        "root_epoch" to e.rootEpoch,
+                        "held_roots" to e.heldRoots.map { mapOf("epoch" to it.epoch, "root" to it.key) },
+                    )
+                }
+            Output.emit(mapOf("imported" to imported))
+            return 0
+        }
     }
 
     private suspend fun invite(
