@@ -21,13 +21,17 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Identity
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import okhttp3.OkHttpClient
 
@@ -73,18 +77,52 @@ object LoginCommand {
                 )
 
         dataDir.saveIdentity(identity)
+
+        // For a bunker, the pubkey in the URI is the REMOTE SIGNER's key, which for many signer apps
+        // (Amber, nsec.app) is a per-connection key distinct from the user's identity key. Resolve the
+        // real identity via the NIP-46 get_public_key RPC and persist THAT (the bunker's remote key is
+        // kept in Identity.bunker for transport addressing). Best-effort: if the bunker can't answer,
+        // fall back to the URI pubkey so login still succeeds.
+        val account = if (identity.bunker != null) resolveBunkerIdentity(dataDir, identity) else identity
+
         Output.emit(
             mapOf(
-                "npub" to identity.npub,
-                "hex" to identity.pubKeyHex,
-                "read_only" to !identity.canSign,
-                "signer" to if (identity.bunker != null) "bunker" else "local",
-                "bunker_relays" to identity.bunker?.relays,
+                "npub" to account.npub,
+                "hex" to account.pubKeyHex,
+                "read_only" to !account.canSign,
+                "signer" to if (account.bunker != null) "bunker" else "local",
+                "bunker_relays" to account.bunker?.relays,
                 "data_dir" to dataDir.root.absolutePath,
             ),
         )
         return 0
     }
+
+    /**
+     * Connect the freshly-saved bunker and ask it (NIP-46 `get_public_key`) for the user's real
+     * identity pubkey, re-persisting the [Identity] when it differs from the bunker's transport key.
+     * Returns the corrected identity, or [provisional] unchanged if the RPC fails.
+     */
+    private suspend fun resolveBunkerIdentity(
+        dataDir: DataDir,
+        provisional: Identity,
+    ): Identity =
+        try {
+            Context.open(dataDir).use { ctx ->
+                ctx.prepare()
+                val real = (ctx.signer as NostrSignerRemote).getPublicKey().lowercase()
+                if (real == provisional.pubKeyHex.lowercase()) {
+                    provisional
+                } else {
+                    val corrected = provisional.copy(pubKeyHex = real, npub = real.hexToByteArray().toNpub())
+                    dataDir.saveIdentity(corrected)
+                    corrected
+                }
+            }
+        } catch (e: Exception) {
+            System.err.println("[nip46] could not resolve identity via get_public_key (${e.message}); using the bunker URI pubkey")
+            provisional
+        }
 
     private suspend fun resolveIdentity(
         key: String,
