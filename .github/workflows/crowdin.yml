@@ -61,6 +61,7 @@ jobs:
           branch: l10n_crowdin_translations
           add-paths: |
             amethyst/src/main/res/**/strings.xml
+            commons/src/commonMain/composeResources/**/strings.xml
             docs/changelog/translators.json
           commit-message: 'chore: sync Crowdin translations and seed translator npub placeholders'
           title: 'New Crowdin Translations'
