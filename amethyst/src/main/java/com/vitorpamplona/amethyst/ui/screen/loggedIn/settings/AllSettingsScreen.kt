@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -36,12 +40,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,24 +57,29 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -97,6 +109,17 @@ fun AllSettingsScreen(
 
     val searchState = rememberTextFieldState()
     val query = searchState.text.toString()
+    var isSearchExpanded by remember { mutableStateOf(false) }
+
+    val collapseSearch = {
+        isSearchExpanded = false
+        searchState.clearText()
+    }
+
+    // While the field is expanded, the system back gesture collapses it (and clears
+    // the query) instead of leaving the screen. Disabled otherwise so back behaves
+    // normally.
+    BackHandler(enabled = isSearchExpanded) { collapseSearch() }
 
     // The catalog is structurally stable for the screen's lifetime, so it is rebuilt only when
     // an input actually changes — not on every keystroke. `onResetMarmot` reads the volatile
@@ -121,7 +144,13 @@ fun AllSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.settings), nav)
+            SettingsSearchTopBar(
+                searchState = searchState,
+                isSearchExpanded = isSearchExpanded,
+                onExpandSearch = { isSearchExpanded = true },
+                onCollapseSearch = collapseSearch,
+                nav = nav,
+            )
         },
         bottomBar = {
             AppBottomBar(Route.AllSettings, nav, accountViewModel) { route ->
@@ -134,14 +163,6 @@ fun AllSettingsScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            SettingsSearchField(
-                state = searchState,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-            )
-
             if (filtered.isEmpty()) {
                 SettingsSearchEmptyState(
                     query = query,
@@ -190,28 +211,45 @@ fun AllSettingsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-private fun SettingsSearchField(
-    state: TextFieldState,
-    modifier: Modifier = Modifier,
+private fun SettingsSearchTopBar(
+    searchState: TextFieldState,
+    isSearchExpanded: Boolean,
+    onExpandSearch: () -> Unit,
+    onCollapseSearch: () -> Unit,
+    nav: INav,
 ) {
-    OutlinedThinPaddingTextField(
-        state = state,
-        modifier = modifier,
-        singleLine = true,
-        placeholder = { Text(stringRes(R.string.settings_search_placeholder)) },
-        leadingIcon = {
-            Icon(
-                symbol = MaterialSymbols.Search,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    ShorterTopAppBar(
+        title = {
+            if (isSearchExpanded) {
+                SettingsSearchInlineField(searchState)
+            } else {
+                Text(
+                    text = stringRes(id = R.string.settings),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                )
+            }
         },
-        trailingIcon =
-            if (state.text.isNotEmpty()) {
-                {
-                    IconButton(onClick = { state.clearText() }) {
+        navigationIcon = {
+            // When searching, the back arrow collapses the field. Otherwise it pops the
+            // back stack (suppressed when this screen sits at the bottom of the stack,
+            // e.g. reached via the bottom nav).
+            if (isSearchExpanded) {
+                IconButton(onClick = onCollapseSearch) {
+                    ArrowBackIcon()
+                }
+            } else if (nav.canPop()) {
+                IconButton(nav::popBack) {
+                    ArrowBackIcon()
+                }
+            }
+        },
+        actions = {
+            if (isSearchExpanded) {
+                if (searchState.text.isNotEmpty()) {
+                    IconButton(onClick = { searchState.clearText() }) {
                         Icon(
                             symbol = MaterialSymbols.Close,
                             contentDescription = stringRes(R.string.clear),
@@ -221,8 +259,44 @@ private fun SettingsSearchField(
                     }
                 }
             } else {
-                null
-            },
+                IconButton(onClick = onExpandSearch) {
+                    Icon(
+                        symbol = MaterialSymbols.Search,
+                        contentDescription = stringRes(R.string.settings_search_placeholder),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SettingsSearchInlineField(searchState: TextFieldState) {
+    val focusRequester = remember { FocusRequester() }
+
+    // Auto-focus and open the keyboard the moment the field expands.
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    BasicTextField(
+        state = searchState,
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+        textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
+        lineLimits = TextFieldLineLimits.SingleLine,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        decorator = { innerTextField ->
+            Box(contentAlignment = Alignment.CenterStart) {
+                if (searchState.text.isEmpty()) {
+                    Text(
+                        text = stringRes(R.string.settings_search_placeholder),
+                        style = LocalTextStyle.current,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
+                innerTextField()
+            }
+        },
     )
 }
 
