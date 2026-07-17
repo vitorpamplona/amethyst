@@ -24,9 +24,11 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Rfc3986
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -36,18 +38,26 @@ import kotlinx.coroutines.launch
 class BlossomServersViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
+    private var httpClientBuilder: IRoleBasedHttpClientBuilder? = null
 
     private val _fileServers = MutableStateFlow<List<ServerName>>(emptyList())
     val fileServers = _fileServers.asStateFlow()
+
+    /** Reachability status per server, keyed by [ServerName.baseUrl]. */
+    private val _health = MutableStateFlow<Map<String, ServerHealth>>(emptyMap())
+    val health = _health.asStateFlow()
+
     private var isModified = false
 
     fun init(accountViewModel: AccountViewModel) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.httpClientBuilder = accountViewModel.httpClientBuilder
     }
 
     fun load() {
         refresh()
+        checkAllHealth()
     }
 
     fun refresh() {
@@ -67,15 +77,63 @@ class BlossomServersViewModel : ViewModel() {
                 }
             }
         }
+        pruneHealth()
     }
 
-    fun addServerList(serverList: List<String>) {
-        serverList.forEach { serverUrl ->
-            addServer(serverUrl)
+    /** Moves a server to a new position; list order is the upload/fallback priority. */
+    fun moveServer(
+        from: Int,
+        to: Int,
+    ) {
+        _fileServers.update { list ->
+            if (from !in list.indices || to !in list.indices) return@update list
+            list.toMutableList().apply { add(to, removeAt(from)) }
+        }
+        isModified = true
+    }
+
+    /** Re-probes every server currently in the list. Fresh cached results are reused. */
+    fun checkAllHealth() {
+        _fileServers.value.forEach { probeServer(it.baseUrl) }
+    }
+
+    private fun probeServer(serverUrl: String) {
+        val builder = httpClientBuilder ?: return
+
+        // A probe is already in flight for this URL — don't launch a duplicate.
+        if (_health.value[serverUrl] == ServerHealth.Checking) return
+
+        // Reuse a still-fresh cached status instead of hitting the network again.
+        MediaServerHealthProbe.cached(serverUrl)?.let { cachedStatus ->
+            _health.update { it + (serverUrl to cachedStatus) }
+            return
+        }
+
+        _health.update { it + (serverUrl to ServerHealth.Checking) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = MediaServerHealthProbe.probe(serverUrl, builder::okHttpClientForPreview)
+            _health.update { it + (serverUrl to result) }
         }
     }
 
+    /** Drops health entries for servers no longer in the list so the map can't grow unbounded. */
+    private fun pruneHealth() {
+        val liveUrls = _fileServers.value.mapTo(HashSet()) { it.baseUrl }
+        _health.update { statuses -> statuses.filterKeys { it in liveUrls } }
+    }
+
+    fun addServerList(serverList: List<String>) {
+        var added = false
+        serverList.forEach { if (addServerInternal(it)) added = true }
+        if (added) persist()
+    }
+
     fun addServer(serverUrl: String) {
+        if (addServerInternal(serverUrl)) persist()
+    }
+
+    /** Adds a server to the in-memory list (no persist). Returns true if it was new. */
+    private fun addServerInternal(serverUrl: String): Boolean {
         val normalizedUrl =
             try {
                 Rfc3986.normalize(serverUrl.trim())
@@ -94,14 +152,12 @@ class BlossomServersViewModel : ViewModel() {
                 normalizedUrl,
                 ServerType.Blossom,
             )
-        if (_fileServers.value.contains(serverRef)) {
-            return
-        } else {
-            _fileServers.update {
-                it.plus(serverRef)
-            }
-        }
+        if (_fileServers.value.contains(serverRef)) return false
+
+        _fileServers.update { it.plus(serverRef) }
+        probeServer(serverRef.baseUrl)
         isModified = true
+        return true
     }
 
     fun removeServer(
@@ -120,22 +176,24 @@ class BlossomServersViewModel : ViewModel() {
                     ServerName(serverName, serverUrl, ServerType.Blossom),
                 )
             }
+            pruneHealth()
             isModified = true
+            persist()
         }
     }
 
-    fun removeAllServers() {
-        _fileServers.update { emptyList() }
-        isModified = true
-    }
+    /**
+     * Publishes any pending change. Called after each discrete edit (add/remove) and,
+     * for a reorder, once the drag gesture completes — so a drag doesn't publish a
+     * kind-10063 event on every intermediate swap.
+     */
+    fun persistPending() = persist()
 
-    fun saveFileServers() {
-        if (isModified) {
-            accountViewModel.launchSigner {
-                val serverList = _fileServers.value.map { it.baseUrl }
-                account.sendBlossomServersList(serverList)
-                refresh()
-            }
+    private fun persist() {
+        if (!isModified) return
+        isModified = false
+        accountViewModel.launchSigner {
+            account.sendBlossomServersList(_fileServers.value.map { it.baseUrl })
         }
     }
 
