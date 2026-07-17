@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 
@@ -33,6 +35,11 @@ class ChatroomListNewFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
+    private fun isEnabled(type: ChatFeedType): Boolean = type in account.settings.enabledChatFeeds.value
+
+    /** A room note is NIP-04 when its event is a [PrivateDmEvent], otherwise it is a NIP-17 message. */
+    private fun isDmEnabled(note: Note): Boolean = isEnabled(if (note.event is PrivateDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17)
+
     // returns the last Note of each user.
     override fun feed(): List<Note> {
         val chatList = account.chatroomList
@@ -40,19 +47,29 @@ class ChatroomListNewFeedFilter(
 
         val privateMessages =
             chatList.rooms.mapNotNull { key, chatroom ->
-                if (!chatroom.senderIntersects(followingKeySet) && !chatList.hasSentMessagesTo(key) && !account.isAllHidden(key.users)) {
-                    chatroom.newestMessage
+                val newest = chatroom.newestMessage
+                if (newest != null &&
+                    isDmEnabled(newest) &&
+                    !chatroom.senderIntersects(followingKeySet) &&
+                    !chatList.hasSentMessagesTo(key) &&
+                    !account.isAllHidden(key.users)
+                ) {
+                    newest
                 } else {
                     null
                 }
             }
 
         val marmotGroups =
-            account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
-                if (!chatroom.isKnown(followingKeySet)) {
-                    chatroom.newestMessage ?: chatroom.placeholderNote()
-                } else {
-                    null
+            if (!isEnabled(ChatFeedType.MARMOT)) {
+                emptyList()
+            } else {
+                account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
+                    if (!chatroom.isKnown(followingKeySet)) {
+                        chatroom.newestMessage ?: chatroom.placeholderNote()
+                    } else {
+                        null
+                    }
                 }
             }
 
@@ -114,6 +131,7 @@ class ChatroomListNewFeedFilter(
 
         val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
         newItems.forEach { newNote ->
+            if (!isDmEnabled(newNote)) return@forEach
             val noteEvent = newNote.event
             if (noteEvent is ChatroomKeyable) {
                 val roomKey = noteEvent.chatroomKey(me.pubkeyHex)

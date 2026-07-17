@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.geohash.GeohashRelays
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -50,9 +52,13 @@ class FollowingGeohashChatSubAssembler(
         key: ChatroomListState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
-        listOfNotNull(
-            filterFollowingGeohashChats(key.account.geohashList.flow.value, since),
-        ).flatten()
+        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.GEOHASH)) {
+            emptyList()
+        } else {
+            listOfNotNull(
+                filterFollowingGeohashChats(key.account.geohashList.flow.value, since),
+            ).flatten()
+        }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
 
@@ -74,6 +80,7 @@ class FollowingGeohashChatSubAssembler(
                 key.account.scope.launch(Dispatchers.IO) {
                     if (GeohashRelays.ensureLoaded()) invalidateFilters()
                 },
+                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.GEOHASH) { invalidateFilters() },
             )
 
         return super.newSub(key)

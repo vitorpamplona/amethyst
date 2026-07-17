@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -51,6 +53,7 @@ class MarmotGroupEventsEoseManager(
     ): List<RelayBasedFilter> {
         val manager = key.account.marmotManager ?: return emptyList()
         if (!key.account.isWriteable()) return emptyList()
+        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.MARMOT)) return emptyList()
 
         val result = mutableListOf<RelayBasedFilter>()
         val fallbackRelays = key.account.homeRelays.flow.value
@@ -130,6 +133,7 @@ class MarmotGroupEventsEoseManager(
                         invalidateFilters()
                     }
                 },
+                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.MARMOT) { invalidateFilters() },
             )
 
         return super.newSub(key)

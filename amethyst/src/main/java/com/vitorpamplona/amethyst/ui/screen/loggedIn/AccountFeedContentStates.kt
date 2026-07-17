@@ -210,6 +210,18 @@ class AccountFeedContentStates(
                 }
         }
 
+        // Toggling a chat type on/off in Settings › Messages changes which sections the inbox shows,
+        // but no event flows through LocalCache — force a full rebuild of both tabs so hidden types
+        // disappear (and re-enabled ones reappear from cache) immediately.
+        scope.launch(Dispatchers.IO) {
+            account.settings.enabledChatFeeds
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                    dmNew.invalidateData()
+                }
+        }
+
         // Pinning/unpinning a room only changes sort order, not membership, so no
         // chat event flows through LocalCache. Force a rebuild to re-sort. This
         // also fires when pins arrive via the synced AppSpecificData event.

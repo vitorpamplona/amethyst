@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -55,7 +57,7 @@ class ChatroomListNip04SubAssembler(
         key: ChatroomListState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        if (key.account.isWriteable()) {
+        if (key.account.isWriteable() && key.account.settings.isChatFeedEnabled(ChatFeedType.NIP04)) {
             val homeRelays = key.account.homeRelays.flow.value
             val dmRelays = key.account.dmRelays.flow.value
             windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
@@ -88,6 +90,7 @@ class ChatroomListNip04SubAssembler(
                     key.account.dmRelays.flow
                         .collectLatest { invalidateFilters() }
                 },
+                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP04) { invalidateFilters() },
             )
 
         return requestNewSubscription(
