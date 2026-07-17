@@ -523,10 +523,13 @@ private fun WatchReactionsZapsBoostsAndDisplayIfExists(
     content: @Composable () -> Unit,
 ) {
     val hasReactions by observeNoteReferences(baseNote, accountViewModel)
+    val hasRelays by observeNoteHasRelays(baseNote)
 
     val hasZapraiser = (baseNote.event?.zapraiserAmount() ?: 0) > 0
 
-    if (hasReactions || hasZapraiser) {
+    // The gallery always carries an "accepted by relays" line when the note has been
+    // seen on any relay, so the expand button must be reachable in that case too.
+    if (hasReactions || hasZapraiser || hasRelays) {
         content()
     }
 }
@@ -576,14 +579,14 @@ private fun ReactionDetailGallery(
             modifier = Modifier.padding(start = 10.dp, top = 5.dp),
         ) {
             Column {
-                if (relays.isNotEmpty()) {
-                    RenderAcceptedByRelaysGallery(relays, nav, accountViewModel)
-                }
                 WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
                 WatchNutzapsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
+                if (relays.isNotEmpty()) {
+                    RenderAcceptedByRelaysGallery(relays, nav, accountViewModel)
+                }
             }
         }
     }

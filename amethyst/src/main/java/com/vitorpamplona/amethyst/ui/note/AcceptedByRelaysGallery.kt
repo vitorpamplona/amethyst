@@ -42,10 +42,10 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
-import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.collections.immutable.ImmutableList
@@ -83,6 +83,24 @@ internal fun observeNoteRelays(baseNote: Note): State<ImmutableList<NormalizedRe
 }
 
 /**
+ * Lightweight "does this note have any relays" observer for the reaction row's
+ * expand-button gate, which runs for every note in the feed. Unlike
+ * [observeNoteRelays] it maps to a Boolean (no per-emission list allocation) and
+ * needs no throttling, since the emptiness flips at most a couple of times.
+ */
+@Composable
+internal fun observeNoteHasRelays(baseNote: Note): State<Boolean> {
+    val flow =
+        remember(baseNote) {
+            flow { emitAll(baseNote.flow().relays.stateFlow) }
+                .map { it.note.relays.isNotEmpty() }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(baseNote.relays.isNotEmpty())
+}
+
+/**
  * The "accepted by relays" line of the reaction gallery: the favicon of every relay
  * the note was seen on. This is the same relay-pill set that Complete UI Mode used to
  * paint below the author avatar; it now lives in the expanded reaction gallery so it
@@ -95,7 +113,9 @@ internal fun RenderAcceptedByRelaysGallery(
     accountViewModel: AccountViewModel,
 ) {
     Row(Modifier.fillMaxWidth()) {
-        Box(modifier = WidthAuthorPictureModifier) {
+        // NotificationIconModifier (55dp wide, 5dp end padding) matches the category-icon
+        // column of the zap/like/nutzap gallery rows so the Dns icon lines up with them.
+        Box(modifier = NotificationIconModifier) {
             Icon(
                 symbol = MaterialSymbols.Dns,
                 contentDescription = stringRes(id = R.string.accepted_by_relays),
