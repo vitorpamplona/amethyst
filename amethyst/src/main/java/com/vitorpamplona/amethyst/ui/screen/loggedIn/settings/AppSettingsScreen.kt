@@ -236,7 +236,9 @@ private fun BooleanSwitchTile(
 ) {
     val value by flow.collectAsState()
     val checked = value == BooleanType.ALWAYS
-    val toggle = { isOn: Boolean -> flow.tryEmit(if (isOn) BooleanType.ALWAYS else BooleanType.NEVER) }
+    // Explicit Unit return: tryEmit returns Boolean, so the lambda would otherwise infer as
+    // (Boolean) -> Boolean and not fit Switch.onCheckedChange / SettingsControlRow.onClick.
+    val toggle: (Boolean) -> Unit = { isOn -> flow.tryEmit(if (isOn) BooleanType.ALWAYS else BooleanType.NEVER) }
 
     SettingsControlRow(
         icon = icon,
@@ -293,7 +295,7 @@ private fun FeatureSetType.shortLabelRes(): Int =
 private fun FontFamilyTile(sharedPrefs: UiSettingsFlow) {
     val fontFamily by sharedPrefs.fontFamily.collectAsState()
     SegmentedChoiceTile(
-        icon = MaterialSymbols.Article,
+        icon = MaterialSymbols.Description,
         title = R.string.font_family,
         description = R.string.font_family_description,
         options = FontFamilyType.entries,
