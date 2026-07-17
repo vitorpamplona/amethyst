@@ -26,11 +26,17 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
 
 /**
- * Determines if the color scheme is light mode.
- * Based on primary color luminance.
+ * Determines if the color scheme is light mode, from the background's luminance
+ * (near-white in light themes, black in dark themes).
+ *
+ * NOTE: this used to test `primary.luminance() < 0.5f`, which was wrong — the
+ * default purple accent is a deep purple in the light theme AND a light purple
+ * in the dark theme, both below 0.5, so it reported "light" in *both* modes.
+ * The Android app keys the same decision off the background (`background !=
+ * Color.Black`); background luminance is the multiplatform-safe equivalent.
  */
 val ColorScheme.isLight: Boolean
-    get() = primary.luminance() < 0.5f
+    get() = background.luminance() > 0.5f
 
 /**
  * Color filter for onBackground color (for tinting icons/images).
