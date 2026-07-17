@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
 import com.vitorpamplona.amethyst.commons.richtext.ConcordInviteLinkSegment
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
-import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
@@ -103,13 +103,11 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
-import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -129,6 +127,12 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * Renders Nostr rich text. The plain (non-markdown) path now runs through the
+ * cross-platform [com.vitorpamplona.amethyst.commons.ui.richtext.RichTextViewer]
+ * core via [CommonsBackedRichTextViewer]; this entry is kept so its ~55 call sites
+ * are untouched. The Android-specific markdown path stays here.
+ */
 @Composable
 fun RichTextViewer(
     content: String,
@@ -141,15 +145,18 @@ fun RichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
-) {
-    Column(modifier = modifier) {
-        if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
-            RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
-        } else {
-            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav)
-        }
-    }
-}
+) = CommonsBackedRichTextViewer(
+    content = content,
+    canPreview = canPreview,
+    quotesLeft = quotesLeft,
+    modifier = modifier,
+    tags = tags,
+    backgroundColor = backgroundColor,
+    callbackUri = callbackUri,
+    authorPubKey = authorPubKey,
+    accountViewModel = accountViewModel,
+    nav = nav,
+)
 
 @Preview
 @Composable
@@ -333,57 +340,6 @@ fun RenderRegularPreview3() {
                 is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, EmptyNav())
 
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
-            }
-        }
-    }
-}
-
-@Composable
-private fun RenderRegular(
-    content: String,
-    tags: ImmutableListOfLists<String>,
-    canPreview: Boolean,
-    quotesLeft: Int,
-    backgroundColor: MutableState<Color>,
-    callbackUri: String? = null,
-    authorPubKey: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (canPreview) {
-        RenderRegular(content, tags, callbackUri, authorPubKey) { paragraph, state, spaceWidth, modifier ->
-            if (paragraph is ImageGalleryParagraph) {
-                ImageGallery(
-                    images = paragraph,
-                    state = state,
-                    accountViewModel = accountViewModel,
-                    modifier = modifier,
-                    roundedCorner = true,
-                )
-            } else {
-                RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
-                    RenderWordWithPreview(
-                        word,
-                        state,
-                        backgroundColor,
-                        quotesLeft,
-                        callbackUri,
-                        accountViewModel,
-                        nav,
-                    )
-                }
-            }
-        }
-    } else {
-        RenderRegular(content, tags, callbackUri, authorPubKey) { paragraph, state, spaceWidth, modifier ->
-            RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
-                RenderWordWithoutPreview(
-                    word,
-                    state,
-                    backgroundColor,
-                    accountViewModel,
-                    nav,
-                )
             }
         }
     }

@@ -101,6 +101,38 @@ class ConcurrentLruCacheTest {
     }
 
     @Test
+    fun `trimToSize evicts oldest down to the target`() {
+        val cache = ConcurrentLruCache<String, Int>(10)
+        cache.put("a", 1)
+        cache.put("b", 2)
+        cache.put("c", 3)
+        cache.trimToSize(1)
+        assertEquals(1, cache.size())
+        // Oldest (a, b) evicted; newest (c) kept.
+        assertNull(cache.get("a"))
+        assertNull(cache.get("b"))
+        assertEquals(3, cache.get("c"))
+    }
+
+    @Test
+    fun `trimToSize above current size is a no-op`() {
+        val cache = ConcurrentLruCache<String, Int>(10)
+        cache.put("a", 1)
+        cache.put("b", 2)
+        cache.trimToSize(5)
+        assertEquals(2, cache.size())
+    }
+
+    @Test
+    fun `trimToSize to zero clears`() {
+        val cache = ConcurrentLruCache<String, Int>(10)
+        cache.put("a", 1)
+        cache.trimToSize(0)
+        assertEquals(0, cache.size())
+        assertNull(cache.get("a"))
+    }
+
+    @Test
     fun `size never exceeds capacity under concurrent puts`() {
         val cap = 100
         val cache = ConcurrentLruCache<Int, Int>(cap)

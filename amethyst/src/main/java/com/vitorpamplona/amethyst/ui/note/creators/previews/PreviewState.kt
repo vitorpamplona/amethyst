@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.creators.previews
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.service.CachedUrlParser
+import com.vitorpamplona.amethyst.commons.richtext.CachedUrlParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow

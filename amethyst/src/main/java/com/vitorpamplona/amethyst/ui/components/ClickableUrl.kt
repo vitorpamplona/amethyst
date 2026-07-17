@@ -23,12 +23,18 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl as SharedClickableUrl
 
+/**
+ * A clickable URL. Plain http(s) links delegate to the shared cross-platform
+ * [SharedClickableUrl] (opens via `LocalUriHandler`); only the Android-specific
+ * `blossom:` case — opening a Blossom media URI in an external app via an Intent —
+ * stays here. Touch front end, so no underline.
+ */
 @Composable
 fun ClickableUrl(
     urlText: String,
@@ -36,23 +42,16 @@ fun ClickableUrl(
     style: TextStyle = LocalTextStyle.current,
     onError: (Int, Int) -> Unit = { _, _ -> },
 ) {
-    val uri = LocalUriHandler.current
-    val context = LocalContext.current
-
-    ClickableTextPrimary(
-        text = urlText,
-        style = style,
-        maxLines = 1,
-        overflow = TextOverflow.MiddleEllipsis,
-        onClick = {
-            if (url.startsWith("blossom:")) {
-                openBlossomUriAsIntent(context, url, onError)
-            } else {
-                runCatching {
-                    val doubleCheckedUrl = if (url.contains("://")) url else "https://$url"
-                    uri.openUri(doubleCheckedUrl)
-                }
-            }
-        },
-    )
+    if (url.startsWith("blossom:")) {
+        val context = LocalContext.current
+        ClickableTextPrimary(
+            text = urlText,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.MiddleEllipsis,
+            onClick = { openBlossomUriAsIntent(context, url, onError) },
+        )
+    } else {
+        SharedClickableUrl(url = url, displayText = urlText, style = style)
+    }
 }
