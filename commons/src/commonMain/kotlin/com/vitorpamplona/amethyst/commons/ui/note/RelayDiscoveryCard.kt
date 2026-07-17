@@ -70,17 +70,24 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RelayDiscoveryCard(noteEvent: RelayDiscoveryEvent) {
-    val relayUrl = remember(noteEvent) { noteEvent.relay() }
+    val relayUrl = remember(noteEvent) { noteEvent.relay()?.displayUrl() }
     val rttOpen = remember(noteEvent) { noteEvent.rttOpen() }
     val rttRead = remember(noteEvent) { noteEvent.rttRead() }
     val rttWrite = remember(noteEvent) { noteEvent.rttWrite() }
     val networkTypes = remember(noteEvent) { noteEvent.networkTypes() }
+    val networkValue = remember(networkTypes) { networkTypes.joinToString { it.code } }
     val relayTypes = remember(noteEvent) { noteEvent.relayTypes() }
-    val supportedNips = remember(noteEvent) { noteEvent.supportedNips() }
+    val relayTypeValue = remember(relayTypes) { relayTypes.joinToString() }
     val requirements = remember(noteEvent) { noteEvent.requirements() }
+    val requirementsLocked = remember(requirements) { requirements.any { !it.negated } }
+    val requirementsValue = remember(requirements) { requirements.joinToString { req -> if (req.negated) "!${req.value}" else req.value } }
+    val supportedNips = remember(noteEvent) { noteEvent.supportedNips() }
+    val supportedNipsValue = remember(supportedNips) { supportedNips.sorted().joinToString() }
     val acceptedKinds = remember(noteEvent) { noteEvent.acceptedKinds() }
+    val acceptedKindsValue = remember(acceptedKinds) { acceptedKinds.joinToString { kind -> if (kind.negated) "!${kind.kind}" else "${kind.kind}" } }
     val topics = remember(noteEvent) { noteEvent.topics() }
     val geohashes = remember(noteEvent) { noteEvent.geohashes() }
+    val geohashesValue = remember(geohashes) { geohashes.joinToString() }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -89,7 +96,7 @@ fun RelayDiscoveryCard(noteEvent: RelayDiscoveryEvent) {
         // Relay URL header
         if (relayUrl != null) {
             Text(
-                text = relayUrl.displayUrl(),
+                text = relayUrl,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -121,7 +128,7 @@ fun RelayDiscoveryCard(noteEvent: RelayDiscoveryEvent) {
             DiscoveryInfoRow(
                 icon = MaterialSymbols.Language,
                 label = stringResource(Res.string.relay_monitor_network),
-                value = networkTypes.joinToString { it.code },
+                value = networkValue,
             )
         }
 
@@ -130,19 +137,16 @@ fun RelayDiscoveryCard(noteEvent: RelayDiscoveryEvent) {
             DiscoveryInfoRow(
                 icon = MaterialSymbols.Dns,
                 label = stringResource(Res.string.relay_monitor_relay_type),
-                value = relayTypes.joinToString(),
+                value = relayTypeValue,
             )
         }
 
         // Requirements
         if (requirements.isNotEmpty()) {
             DiscoveryInfoRow(
-                icon = if (requirements.any { !it.negated }) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
+                icon = if (requirementsLocked) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
                 label = stringResource(Res.string.relay_monitor_requirements),
-                value =
-                    requirements.joinToString { req ->
-                        if (req.negated) "!${req.value}" else req.value
-                    },
+                value = requirementsValue,
             )
         }
 
@@ -151,7 +155,7 @@ fun RelayDiscoveryCard(noteEvent: RelayDiscoveryEvent) {
             DiscoveryInfoRow(
                 icon = MaterialSymbols.Numbers,
                 label = stringResource(Res.string.relay_monitor_supported_nips),
-                value = supportedNips.sorted().joinToString(),
+                value = supportedNipsValue,
             )
         }
 
@@ -160,10 +164,7 @@ fun RelayDiscoveryCard(noteEvent: RelayDiscoveryEvent) {
             DiscoveryInfoRow(
                 icon = MaterialSymbols.Dns,
                 label = stringResource(Res.string.relay_discovery_accepted_kinds),
-                value =
-                    acceptedKinds.joinToString { kind ->
-                        if (kind.negated) "!${kind.kind}" else "${kind.kind}"
-                    },
+                value = acceptedKindsValue,
             )
         }
 
@@ -196,7 +197,7 @@ fun RelayDiscoveryCard(noteEvent: RelayDiscoveryEvent) {
             DiscoveryInfoRow(
                 icon = MaterialSymbols.TravelExplore,
                 label = stringResource(Res.string.relay_discovery_geohash),
-                value = geohashes.joinToString(),
+                value = geohashesValue,
             )
         }
 

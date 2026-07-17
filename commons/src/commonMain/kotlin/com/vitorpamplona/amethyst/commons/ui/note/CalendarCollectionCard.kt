@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +47,9 @@ import org.jetbrains.compose.resources.pluralStringResource
 /** Card for a NIP-52 calendar collection (kind 31924): title, description, and event count. */
 @Composable
 fun CalendarCollectionCard(event: CalendarEvent) {
+    val title = remember(event) { event.title() }
+    val eventCount = remember(event) { event.calendarEventAddresses().size }
+
     Column(MaterialTheme.colorScheme.replyModifier) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp),
@@ -59,7 +63,7 @@ fun CalendarCollectionCard(event: CalendarEvent) {
             )
             Spacer(modifier = Modifier.size(8.dp))
             Text(
-                text = event.title() ?: "—",
+                text = title ?: "—",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -80,7 +84,6 @@ fun CalendarCollectionCard(event: CalendarEvent) {
         }
 
         Spacer(modifier = StdVertSpacer)
-        val eventCount = event.calendarEventAddresses().size
         Text(
             text = pluralStringResource(Res.plurals.calendar_collection_count, eventCount, eventCount),
             style = MaterialTheme.typography.labelMedium,

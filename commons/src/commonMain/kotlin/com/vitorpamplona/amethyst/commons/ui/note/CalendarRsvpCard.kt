@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,9 +50,9 @@ import org.jetbrains.compose.resources.stringResource
 /** Card for a NIP-52 calendar RSVP (kind 31925): the going/maybe/not-going status, note, and target. */
 @Composable
 fun CalendarRsvpCard(event: CalendarRSVPEvent) {
-    val status = event.status()
-    val targetAddress = event.calendarEventAddress()
-    val freebusy = event.freebusy()
+    val status = remember(event) { event.status() }
+    val targetAddress = remember(event) { event.calendarEventAddress() }
+    val freebusy = remember(event) { event.freebusy() }
 
     val statusLabel =
         when (status) {
