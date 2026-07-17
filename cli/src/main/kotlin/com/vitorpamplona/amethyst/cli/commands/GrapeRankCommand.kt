@@ -697,7 +697,12 @@ object GrapeRankCommand {
         ctx: Context,
         args: Args,
     ): Set<NormalizedRelayUrl> {
-        val reach = ctx.reachability.snapshot()
+        // Read the reachability records (kind:30166) with a throwaway signer, NOT
+        // ctx.reachability — the latter derives the monitor key and would CREATE the
+        // operator master (a passphrase prompt) purely to read a cache. The follower
+        // crawl never signs, so keep it truly account-and-key-free. snapshot() only
+        // reads; the signer is used solely for writes. Same trick as `status`.
+        val reach = RelayReachabilityStore(store = ctx.store, signer = NostrSignerInternal(KeyPair())).snapshot()
         val relays = LinkedHashSet<NormalizedRelayUrl>()
         relays.addAll(reach.live)
         // Every advertised outbox/inbox relay in the store — the homes of the users
