@@ -1954,6 +1954,9 @@
     <string name="light">Light</string>
     <string name="dark">Dark</string>
     <string name="application_preferences">Application Preferences</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_media">Media &amp; Data</string>
+    <string name="settings_section_general">General</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Language</string>
     <string name="theme">Theme</string>
