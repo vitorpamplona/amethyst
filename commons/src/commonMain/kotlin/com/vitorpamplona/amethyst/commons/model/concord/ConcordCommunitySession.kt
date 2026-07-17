@@ -124,6 +124,12 @@ class ConcordCommunitySession(
     // channel plane pubkey -> (channelIdHex, key), refreshed on each control re-fold.
     private var channelKeysByAddress = HashMap<HexKey, Pair<HexKey, GroupKey>>()
 
+    // Prior-epoch channel plane pubkey -> (channelIdHex, key, epoch), for pre-Refounding history.
+    // A CORD-06 Refounding rotates the root per epoch, so older messages live under a different
+    // plane per held root; we re-derive those here so historical wraps are subscribed, AUTHed, and
+    // decrypted alongside the current epoch. Empty when the account holds no prior roots.
+    private var historicalChannelKeysByAddress = HashMap<HexKey, Triple<HexKey, GroupKey, Long>>()
+
     private val _state = MutableStateFlow<ConcordCommunityState?>(null)
     val state: StateFlow<ConcordCommunityState?> = _state
 
@@ -185,8 +191,11 @@ class ConcordCommunitySession(
     /** The size of [allMembers] — the community's true (best-effort) member count. */
     fun memberCount(): Int = allMembers().size
 
-    /** The current Chat Plane addresses to subscribe to, one per folded channel. */
-    fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys.toSet() }
+    /**
+     * Every Chat Plane address to subscribe to: one per folded channel at the current epoch, plus
+     * each channel's prior-epoch planes we still hold a root for (pre-Refounding history).
+     */
+    fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys + historicalChannelKeysByAddress.keys }
 
     /** The Chat Plane stream address for [channelIdHex], once this community has folded that channel (else null). */
     fun channelPlaneAddress(channelIdHex: HexKey): HexKey? = lock.withLock { channelKeysByAddress.entries.firstOrNull { it.value.first == channelIdHex }?.key }
@@ -212,7 +221,10 @@ class ConcordCommunitySession(
      */
     fun streamKeys(): List<GroupKey> =
         lock.withLock {
-            listOf(controlPlaneKey) + channelKeysByAddress.values.map { it.second }
+            listOf(controlPlaneKey) +
+                channelKeysByAddress.values.map { it.second } +
+                // Prior-epoch channel stream keys so the gated relays serve their older wraps too.
+                historicalChannelKeysByAddress.values.map { it.second }
         }
 
     /** The CORD-06 auxiliary plane keys (Guestbook + next base-rekey) for their own isolated AUTH. */
@@ -271,39 +283,58 @@ class ConcordCommunitySession(
                 return ConcordIngestOutcome.STRUCTURAL
             }
             else -> {
-                val channelRef = lock.withLock { channelKeysByAddress[wrap.pubKey] } ?: return ConcordIngestOutcome.NOT_MINE
-                val (channelIdHex, key) = channelRef
-                // An ephemeral wrap on a channel plane is a transient signal (typing) — fold it into
-                // the typing state, never into the stored message buffer or the Note sink. The typing
-                // UI collects the [typing] StateFlow directly, so this needs no structural revision bump.
-                if (wrap.kind == ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL) {
-                    ingestTyping(wrap, channelIdHex, key)
-                    return ConcordIngestOutcome.NON_STRUCTURAL
+                val current = lock.withLock { channelKeysByAddress[wrap.pubKey] }
+                if (current != null) {
+                    val (channelIdHex, key) = current
+                    return ingestChannelWrap(wrap, channelIdHex, key, entry.rootEpoch, seenOnRelays)
                 }
-                val isNew =
-                    lock.withLock {
-                        channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap) == null
-                    }
-                // Project only the newly-arrived wrap — the buffer's earlier wraps were already
-                // emitted when they landed, so re-decrypting the whole history on every message
-                // would be O(history) per message (quadratic over a channel's lifetime). A duplicate
-                // re-delivery (isNew == false) is a no-op. A full-history sweep (member-roster harvest)
-                // relies on this staying O(1) per wrap.
-                if (isNew) emitChannelRumors(channelIdHex, key, listOf(wrap), seenOnRelays)
-                // A chat message lands in the feed via [onRumor] → LocalCache, independent of the
-                // revision; it changes no plane address, so it must NOT bump (see the storm note above).
-                return ConcordIngestOutcome.NON_STRUCTURAL
+                // A prior-epoch plane (pre-Refounding history). Decrypt with that epoch's key and
+                // bind-check against that epoch. Keyed separately from the current buffer so a re-fold
+                // (which rebuilds only the current-epoch keys) never re-projects the historical ones.
+                val historical = lock.withLock { historicalChannelKeysByAddress[wrap.pubKey] } ?: return ConcordIngestOutcome.NOT_MINE
+                val (channelIdHex, key, epoch) = historical
+                return ingestChannelWrap(wrap, channelIdHex, key, epoch, seenOnRelays)
             }
         }
+    }
+
+    /** Shared channel-wrap ingest for any epoch: typing → typing state, else buffer-dedup + emit. */
+    private fun ingestChannelWrap(
+        wrap: Event,
+        channelIdHex: HexKey,
+        key: GroupKey,
+        epoch: Long,
+        seenOnRelays: Set<NormalizedRelayUrl>,
+    ): ConcordIngestOutcome {
+        // An ephemeral wrap on a channel plane is a transient signal (typing) — fold it into the
+        // typing state, never the stored buffer or the Note sink. Typing is a current-epoch live
+        // signal, so a prior-epoch ephemeral (there won't be any — old epochs are frozen) is harmless.
+        if (wrap.kind == ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL) {
+            ingestTyping(wrap, channelIdHex, key, epoch)
+            return ConcordIngestOutcome.NON_STRUCTURAL
+        }
+        val isNew =
+            lock.withLock {
+                channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap) == null
+            }
+        // Project only the newly-arrived wrap — the buffer's earlier wraps were already emitted when
+        // they landed, so re-decrypting the whole history on every message would be O(history) per
+        // message (quadratic over a channel's lifetime). A duplicate re-delivery (isNew == false) is a
+        // no-op. A full-history sweep (member-roster harvest) relies on this staying O(1) per wrap.
+        if (isNew) emitChannelRumors(channelIdHex, key, epoch, listOf(wrap), seenOnRelays)
+        // A chat message lands in the feed via [onRumor] → LocalCache, independent of the revision; it
+        // changes no plane address, so it must NOT bump (see the storm note above).
+        return ConcordIngestOutcome.NON_STRUCTURAL
     }
 
     private fun ingestTyping(
         wrap: Event,
         channelIdHex: HexKey,
         key: GroupKey,
+        epoch: Long,
     ) {
         val rumor = ConcordStreamEnvelope.openOrNull(wrap, key)?.rumor ?: return
-        if (!ChannelChat.isTyping(rumor) || !ChannelChat.isBoundTo(rumor, channelIdHex, entry.rootEpoch)) return
+        if (!ChannelChat.isTyping(rumor) || !ChannelChat.isBoundTo(rumor, channelIdHex, epoch)) return
         val who = rumor.pubKey.lowercase()
         if (who == myPubKey.lowercase()) return // never show my own typing back to me
         val now = TimeUtils.now()
@@ -338,6 +369,16 @@ class ConcordCommunitySession(
                     next[key.publicKeyHex] = channelIdHex to key
                 }
                 channelKeysByAddress = next
+
+                // Re-derive the prior-epoch planes for the same (epoch-invariant) channel ids, so older
+                // pre-Refounding history is subscribed/AUTHed/decrypted. Channels are known only after a
+                // fold, hence derived here rather than up front.
+                val historical = HashMap<HexKey, Triple<HexKey, GroupKey, Long>>()
+                for (plane in ConcordActions.historicalChannelPlanes(entry.heldRoots, folded.channels.keys)) {
+                    historical[plane.key.publicKeyHex] = Triple(plane.channelIdHex, plane.key, plane.epoch)
+                }
+                historicalChannelKeysByAddress = historical
+
                 _state.value = folded
                 folded.channels.keys.filterNot { it in prevChannels }
             }
@@ -356,11 +397,13 @@ class ConcordCommunitySession(
         }
     }
 
-    /** Re-decrypts and re-projects a channel's WHOLE wrap buffer. Only for a re-fold (keys may change). */
+    /** Re-decrypts and re-projects a channel's WHOLE wrap buffer at the current epoch. Only for a
+     *  re-fold (keys may change). Prior-epoch wraps in the buffer simply won't open under the current
+     *  key and are skipped — they were already emitted when they landed (the sink dedups by id). */
     private fun reprojectChannel(channelIdHex: HexKey) {
         val key = lock.withLock { channelKeysByAddress.values.firstOrNull { it.first == channelIdHex }?.second } ?: return
         val wraps = lock.withLock { channelWrapsById[channelIdHex]?.values?.toList() } ?: return
-        emitChannelRumors(channelIdHex, key, wraps)
+        emitChannelRumors(channelIdHex, key, entry.rootEpoch, wraps)
     }
 
     /**
@@ -371,11 +414,12 @@ class ConcordCommunitySession(
     private fun emitChannelRumors(
         channelIdHex: HexKey,
         key: GroupKey,
+        epoch: Long,
         wraps: List<Event>,
         seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ) {
         val authors = HashSet<HexKey>()
-        ConcordActions.channelRumors(wraps, key, channelIdHex, entry.rootEpoch).forEach { rumor ->
+        ConcordActions.channelRumors(wraps, key, channelIdHex, epoch).forEach { rumor ->
             authors.add(rumor.pubKey.lowercase())
             onRumor(entry.id, channelIdHex, rumor, seenOnRelays)
         }

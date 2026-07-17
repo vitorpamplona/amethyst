@@ -36,6 +36,38 @@ class ConcordSubscriptionPlannerTest {
     private val owner = NostrSignerInternal(KeyPair())
 
     @Test
+    fun channelSubsAlsoCoverPriorEpochPlanesForHeldRoots() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val priorEpoch = 4L
+            val priorRoot = KeyPair().pubKey
+            val entry =
+                com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    heldRoots =
+                        listOf(
+                            com.vitorpamplona.quartz.concord.cord02Community
+                                .HeldRoot(priorEpoch, priorRoot.toHexKey()),
+                        ),
+                    relays = listOf("wss://r.example"),
+                    name = "Nostrichs",
+                )
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+            val subs = ConcordSubscriptionPlanner.channelPlaneSubs(entry, state)
+
+            // Both the current-epoch and the prior-epoch #general planes are subscribed.
+            val currentGeneral = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch).publicKeyHex
+            val priorGeneral = ConcordActions.publicChannel(priorRoot, community.generalChannelId, priorEpoch).publicKeyHex
+            assertTrue(subs.any { it.pubKeyHex == currentGeneral }, "current-epoch plane missing")
+            assertTrue(subs.any { it.pubKeyHex == priorGeneral }, "prior-epoch plane missing")
+            assertTrue(currentGeneral != priorGeneral) // a Refounding really does move the plane
+        }
+
+    @Test
     fun controlAndChannelSubsMatchDerivedAddresses() =
         runTest {
             val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
