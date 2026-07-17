@@ -29,7 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,18 +56,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 
 /**
- * The "accepted by relays" line of the reaction gallery: the favicon of every relay
- * the note was seen on. This is the same relay-pill set that Complete UI Mode used to
- * paint below the author avatar; it now lives in the expanded reaction gallery so it
- * is available to everyone, not just Complete mode.
+ * Observes the relays the note was seen on, throttled and de-duplicated for the
+ * "accepted by relays" gallery line. Exposed as State so the caller can both gate
+ * the gallery's visibility on it and feed it to [RenderAcceptedByRelaysGallery]
+ * from a single subscription.
  */
 @OptIn(FlowPreview::class)
 @Composable
-internal fun WatchRelaysAndRenderGallery(
-    baseNote: Note,
-    nav: INav,
-    accountViewModel: AccountViewModel,
-) {
+internal fun observeNoteRelays(baseNote: Note): State<ImmutableList<NormalizedRelayUrl>> {
     // Cold wrapper: `flow()` must be re-resolved on every collection start. A memory
     // trim destroys the NoteFlowSet while the lifecycle is stopped; a stateFlow
     // captured in remember would then be orphaned and never see another relay update.
@@ -81,15 +77,17 @@ internal fun WatchRelaysAndRenderGallery(
         }
 
     val initial = remember(baseNote) { baseNote.relays.toImmutableList() }
-    val relays by flow.collectAsStateWithLifecycle(initial)
-
-    if (relays.isNotEmpty()) {
-        RenderAcceptedByRelaysGallery(relays, nav, accountViewModel)
-    }
+    return flow.collectAsStateWithLifecycle(initial)
 }
 
+/**
+ * The "accepted by relays" line of the reaction gallery: the favicon of every relay
+ * the note was seen on. This is the same relay-pill set that Complete UI Mode used to
+ * paint below the author avatar; it now lives in the expanded reaction gallery so it
+ * is available to everyone, not just Complete mode.
+ */
 @Composable
-private fun RenderAcceptedByRelaysGallery(
+internal fun RenderAcceptedByRelaysGallery(
     relays: ImmutableList<NormalizedRelayUrl>,
     nav: INav,
     accountViewModel: AccountViewModel,

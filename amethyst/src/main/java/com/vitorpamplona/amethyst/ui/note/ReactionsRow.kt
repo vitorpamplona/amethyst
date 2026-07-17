@@ -563,22 +563,28 @@ private fun ReactionDetailGallery(
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf(defaultBackgroundColor) }
 
-    // Keep subscribing for reaction/zap/boost arrivals, but no longer gate the gallery
-    // on them: the "accepted by relays" line is (almost) always present, so once the
-    // user expands the gallery there is always at least that line to show.
-    observeNoteReferences(baseNote, accountViewModel)
+    val hasReactions by observeNoteReferences(baseNote, accountViewModel)
+    val relays by observeNoteRelays(baseNote)
 
-    Row(
-        verticalAlignment = CenterVertically,
-        modifier = Modifier.padding(start = 10.dp, top = 5.dp),
-    ) {
-        Column {
-            WatchRelaysAndRenderGallery(baseNote, nav, accountViewModel)
-            WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
-            WatchNutzapsAndRenderGallery(baseNote, nav, accountViewModel)
-            WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
-            WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
-            WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
+    // The gallery shows whenever there is anything to display: the "accepted by relays"
+    // line (relays are almost always present once a note is seen) or any zap/boost/
+    // reaction line. Guarding here keeps the padded Row from rendering an empty strip
+    // for a note that has neither.
+    if (hasReactions || relays.isNotEmpty()) {
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier = Modifier.padding(start = 10.dp, top = 5.dp),
+        ) {
+            Column {
+                if (relays.isNotEmpty()) {
+                    RenderAcceptedByRelaysGallery(relays, nav, accountViewModel)
+                }
+                WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+                WatchNutzapsAndRenderGallery(baseNote, nav, accountViewModel)
+                WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
+                WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
+                WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
+            }
         }
     }
 }
