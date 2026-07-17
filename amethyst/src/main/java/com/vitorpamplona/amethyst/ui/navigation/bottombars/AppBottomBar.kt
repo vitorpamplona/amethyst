@@ -236,6 +236,7 @@ internal fun rememberBottomBarSlot(
         is BottomBarEntry.PublicChat,
         is BottomBarEntry.RelayGroup,
         is BottomBarEntry.Concord,
+        is BottomBarEntry.Geohash,
         -> {
             val display = rememberGroupEntryDisplay(entry, accountViewModel) ?: return null
             // A pinned chat/group shows its avatar, like the favorite-app tabs — icon only.

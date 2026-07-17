@@ -76,6 +76,13 @@ sealed interface BottomBarEntry {
     data class Concord(
         val communityId: String,
     ) : BottomBarEntry
+
+    /** A pinned Bitchat geohash location channel, keyed by its geohash cell; opens the location chat. */
+    @Serializable
+    @SerialName("geohash")
+    data class Geohash(
+        val geohash: String,
+    ) : BottomBarEntry
 }
 
 /**
@@ -90,6 +97,7 @@ val BottomBarEntry.stableKey: String
             is BottomBarEntry.PublicChat -> "publicChat:$channelId"
             is BottomBarEntry.RelayGroup -> "relayGroup:$relayUrl|$groupId"
             is BottomBarEntry.Concord -> "concord:$communityId"
+            is BottomBarEntry.Geohash -> "geohash:$geohash"
         }
 
 /** The favorite-app ids in this bottom-bar config — the apps that should be kept warm as bottom-row tabs. */

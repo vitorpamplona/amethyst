@@ -179,6 +179,17 @@ class AccountFeedContentStates(
                 }
         }
 
+        // Joining/leaving a geohash location channel (kind 10081 list) changes the Messages list but
+        // no event flows through LocalCache, so force a rebuild — otherwise a just-joined cell (whose
+        // ephemeral messages haven't arrived yet) wouldn't show its placeholder row until later.
+        scope.launch(Dispatchers.IO) {
+            account.geohashList.flow
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
+        }
+
         // Flipping the NIP-29 view mode (inline groups vs one row per relay) changes what the
         // Messages feed emits for joined groups, but no event flows through LocalCache — force a
         // full rebuild so the list switches shape immediately.

@@ -107,6 +107,7 @@ private val ExpandableItems =
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
         NavBarItem.CONCORD,
+        NavBarItem.GEOHASH_CHATS,
     )
 
 /** Soft guidance, not a hard cap: a Material bottom bar reads best at ~5 tabs. */
@@ -588,6 +589,13 @@ private fun PickerChildren(
             GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
         }
 
+        NavBarItem.GEOHASH_CHATS -> {
+            val cells by accountViewModel.account.geohashList.flow
+                .collectAsStateWithLifecycle()
+            val entries = remember(cells) { cells.sorted().map { BottomBarEntry.Geohash(it) } }
+            GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
+        }
+
         else -> {}
     }
 }
@@ -828,6 +836,7 @@ private fun rememberPinnedVisual(
         is BottomBarEntry.PublicChat,
         is BottomBarEntry.RelayGroup,
         is BottomBarEntry.Concord,
+        is BottomBarEntry.Geohash,
         -> {
             // Read-only: the settings list resolves from cache; the live bar owns the subscription.
             val display = rememberGroupEntryDisplay(entry, accountViewModel, subscribe = false)

@@ -68,6 +68,7 @@ enum class NavBarItem {
     PUBLIC_CHATS,
     RELAY_GROUPS,
     CONCORD,
+    GEOHASH_CHATS,
     FOLLOW_PACKS,
     LIVE_STREAMS,
     NESTS,
@@ -334,6 +335,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Group,
                 resolveRoute = { Route.Concords },
             ),
+        NavBarItem.GEOHASH_CHATS to
+            NavBarItemDef(
+                id = NavBarItem.GEOHASH_CHATS,
+                labelRes = R.string.location_channels,
+                icon = MaterialSymbols.LocationOn,
+                resolveRoute = { Route.GeohashChats },
+            ),
         NavBarItem.FOLLOW_PACKS to
             NavBarItemDef(
                 id = NavBarItem.FOLLOW_PACKS,
@@ -471,6 +479,7 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.PUBLIC_CHATS,
                 NavBarItem.RELAY_GROUPS,
                 NavBarItem.CONCORD,
+                NavBarItem.GEOHASH_CHATS,
             ),
         ),
         NavBarCategory(
@@ -551,6 +560,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
         NavBarItem.CONCORD,
+        NavBarItem.GEOHASH_CHATS,
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SOFTWARE_APPS,

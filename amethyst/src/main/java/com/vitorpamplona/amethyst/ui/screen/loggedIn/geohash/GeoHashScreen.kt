@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash
 
 import android.annotation.SuppressLint
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -42,6 +44,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.dal.GeoHashFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 @Composable
 fun GeoHashScreen(
@@ -91,7 +95,7 @@ fun GeoHashScreen(
             TopBarExtensibleWithBackButton(
                 title = {
                     DisplayGeoTagHeader(tag.geohash, Modifier.weight(1f))
-                    GeoHashActionOptions(tag.geohash, accountViewModel)
+                    GeoHashActionOptions(tag.geohash, accountViewModel, nav)
                 },
                 popBack = nav::popBack,
             )
@@ -130,7 +134,15 @@ fun DisplayGeoTagHeader(
 fun GeoHashActionOptions(
     tag: String,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
+    IconButton(onClick = { nav.nav(Route.GeohashChat(tag)) }) {
+        SymbolIcon(
+            symbol = MaterialSymbols.AutoMirrored.Chat,
+            contentDescription = stringRes(R.string.geohash_chat_open),
+        )
+    }
+
     val isFollowingTag by observeUserIsFollowingGeohash(tag, accountViewModel)
 
     if (isFollowingTag) {

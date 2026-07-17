@@ -516,10 +516,21 @@ private fun QuickReactionRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A geohash chat provides these so a reaction (and its "selected" highlight) stays under the
+    // anonymous per-cell identity; null (every other chat) keeps the standard account behavior.
+    val onReactOverride = LocalChatReactOverride.current
+    val actingIdentities = LocalChatActingIdentities.current
     val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
     val myReactions =
-        remember(note) {
-            note.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet()
+        remember(note, actingIdentities) {
+            if (actingIdentities != null) {
+                note.reactions
+                    .filterValues { reactors -> reactors.any { it.author?.pubkeyHex in actingIdentities } }
+                    .keys
+                    .toImmutableSet()
+            } else {
+                note.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet()
+            }
         }
 
     // Wrap onto as many rows as needed (like the zap grid) rather than a single
@@ -534,7 +545,7 @@ private fun QuickReactionRow(
             ClickableBox(
                 modifier = if (reactionType in myReactions) MaterialTheme.colorScheme.selectedReactionBoxModifier else reactionBox,
                 onClick = {
-                    accountViewModel.reactToOrDelete(note, reactionType)
+                    onReactOverride?.invoke(note, reactionType) ?: accountViewModel.reactToOrDelete(note, reactionType)
                     onDismiss()
                 },
             ) {

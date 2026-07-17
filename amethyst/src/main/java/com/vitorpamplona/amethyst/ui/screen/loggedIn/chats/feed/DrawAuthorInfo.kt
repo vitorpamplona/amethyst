@@ -51,8 +51,11 @@ fun DrawAuthorInfo(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A geohash chat resolves the message's `n` nickname here (throwaway keys have no profile);
+    // null everywhere else, so authors render from their profile as usual.
+    val nameOverride = LocalChatDisplayNameResolver.current?.invoke(baseNote)
     baseNote.author?.let {
-        WatchAndDisplayUser(it, accountViewModel, nav)
+        WatchAndDisplayUser(it, nameOverride, accountViewModel, nav)
     }
 }
 
@@ -76,12 +79,15 @@ fun authorNameColorFor(
 @Composable
 private fun WatchAndDisplayUser(
     author: User,
+    nameOverride: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val userState by observeUserInfo(author, accountViewModel)
     val nickname by observeUserNickname(author, accountViewModel)
     val petName = nickname?.petName
+    // A geohash message's `n` nickname wins over the (usually empty) profile of a throwaway key.
+    val displayName = nameOverride ?: petName ?: userState?.info?.bestName()
 
     val isLightTheme = MaterialTheme.colorScheme.isLight
     val nameColor =
@@ -94,7 +100,7 @@ private fun WatchAndDisplayUser(
             InnerUserPicture(
                 userHex = author.pubkeyHex,
                 userPicture = userState?.info?.picture,
-                userName = petName ?: userState?.info?.bestName(),
+                userName = displayName,
                 size = Size20dp,
                 modifier = Modifier,
                 accountViewModel = accountViewModel,
@@ -109,23 +115,13 @@ private fun WatchAndDisplayUser(
             ObserveAndRenderUserCards(author, Size20dp, Modifier.align(Alignment.BottomCenter), accountViewModel)
         },
         name = {
-            if (userState != null) {
-                CreateTextWithEmoji(
-                    text = petName ?: userState?.info?.bestName() ?: author.pubkeyDisplayHex(),
-                    tags = (if (petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
-                    color = nameColor,
-                    maxLines = 1,
-                    fontWeight = FontWeight.Bold,
-                )
-            } else {
-                CreateTextWithEmoji(
-                    text = author.pubkeyDisplayHex(),
-                    tags = EmptyTagList,
-                    color = nameColor,
-                    maxLines = 1,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            CreateTextWithEmoji(
+                text = displayName ?: author.pubkeyDisplayHex(),
+                tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
+                color = nameColor,
+                maxLines = 1,
+                fontWeight = FontWeight.Bold,
+            )
         },
     )
 }

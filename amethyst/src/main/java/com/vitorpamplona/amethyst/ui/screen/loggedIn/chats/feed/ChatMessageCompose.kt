@@ -176,9 +176,17 @@ fun NormalChatNote(
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     previousNoteId: HexKey? = null,
 ) {
+    // A geohash chat renders "as" its anonymous per-cell identity (and the account, when posting as
+    // self); LocalChatActingIdentities lets the renderer treat those pubkeys as "me" (alignment,
+    // delivery ticks, own-highlight) without swapping the whole AccountViewModel. Null = the account.
+    val actingIdentities = LocalChatActingIdentities.current
     val isLoggedInUser =
-        remember(note.author) {
-            accountViewModel.isLoggedUser(note.author)
+        remember(note.author, actingIdentities) {
+            if (actingIdentities != null) {
+                note.author?.pubkeyHex in actingIdentities
+            } else {
+                accountViewModel.isLoggedUser(note.author)
+            }
         }
 
     if (routeForLastRead != null) {
@@ -187,12 +195,18 @@ fun NormalChatNote(
         }
     }
 
+    // A geohash chat asks own messages to still show the author line (which identity posted), so the
+    // usual "hide the name on my own bubbles" shortcut is opt-out there.
+    val showSelfAuthorName = LocalChatShowSelfAuthorName.current
+
     val drawAuthorInfo by
-        remember(note) {
+        remember(note, isLoggedInUser, showSelfAuthorName) {
             derivedStateOf {
                 val noteEvent = note.event
                 when {
-                    accountViewModel.isLoggedUser(note.author) -> false
+                    // Own messages: normally no name; in a multi-identity chat, show it (unless a DM,
+                    // which never draws the user's own author info).
+                    isLoggedInUser -> showSelfAuthorName && noteEvent !is PrivateDmEvent
 
                     // never shows the user's pictures
                     noteEvent is PrivateDmEvent -> false
@@ -235,8 +249,11 @@ fun NormalChatNote(
     }
 
     // The footer shows on the last message of a run (for the time) and on any message
-    // carrying per-message metadata (expiration, geohash, PoW, legacy-DM marker).
-    val footerHasMeta = remember(note.event) { chatFooterHasMeta(note) }
+    // carrying per-message metadata (expiration, geohash, PoW, legacy-DM marker). In a geohash
+    // room every message repeats the room's own cell, so that geohash is suppressed and doesn't,
+    // by itself, force a footer row (see LocalChatSuppressGeohash).
+    val suppressGeohash = LocalChatSuppressGeohash.current
+    val footerHasMeta = remember(note.event, suppressGeohash) { chatFooterHasMeta(note, suppressGeohash) }
 
     // Only mount the reaction/zap chip row when the message actually has engagement.
     // The chips overlap the bubble's bottom edge, so the bubble reserves space beneath
@@ -415,6 +432,41 @@ private fun MessageBubbleLines(
  * reply doesn't redundantly re-render the same parent as an inner quote. Null everywhere else.
  */
 val LocalSuppressReplyToNoteId = compositionLocalOf<String?> { null }
+
+/**
+ * The pubkeys the chat renderer should treat as "me" instead of the logged-in account — a geohash
+ * chat provides its anonymous per-cell identity (plus the account, for "post as self") so own
+ * messages align/highlight correctly without a second AccountViewModel. Null everywhere else.
+ */
+val LocalChatActingIdentities = compositionLocalOf<Set<HexKey>?> { null }
+
+/**
+ * How to react in this chat, overriding the account's default react/delete — a geohash chat signs
+ * the kind-7 with its per-cell key so a reaction stays anonymous. Null uses the account default.
+ */
+val LocalChatReactOverride = compositionLocalOf<((Note, String) -> Unit)?> { null }
+
+/**
+ * Resolves a per-message display name that overrides the author's profile name — a geohash chat
+ * returns the message's Bitchat `n` nickname, since throwaway per-cell keys have no kind-0 profile.
+ * Null everywhere else (authors render from their profile as usual).
+ */
+val LocalChatDisplayNameResolver = compositionLocalOf<((Note) -> String?)?> { null }
+
+/**
+ * Whether to draw the author line on the user's OWN (right-aligned) messages. Normally false — in a
+ * regular chat your own bubbles carry no name because it's obviously you. A geohash chat sets it true:
+ * there you may post under two identities (the anonymous per-cell key or your real account), so the
+ * bubble shows which name/nickname each message went out under.
+ */
+val LocalChatShowSelfAuthorName = compositionLocalOf { false }
+
+/**
+ * The geohash of the location room currently open, or null outside one. Every message in that room
+ * repeats the room's own cell in its `g` tag, so the bubble footer suppresses this one geohash —
+ * showing it on every message is redundant noise. Any other geohash still renders.
+ */
+val LocalChatSuppressGeohash = compositionLocalOf<String?> { null }
 
 @Composable
 fun RenderReplyRow(

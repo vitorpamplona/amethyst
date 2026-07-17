@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -99,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBubbleModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -190,6 +192,12 @@ private fun ChatroomEntry(
     val concordChannel = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
     if (concordChannel != null) {
         ConcordRoomCompose(lastMessage, concordChannel, accountViewModel, nav)
+        return
+    }
+
+    val geohashChannel = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? GeohashChatChannel }
+    if (geohashChannel != null) {
+        GeohashRoomCompose(lastMessage, geohashChannel, accountViewModel, nav)
         return
     }
 
@@ -329,6 +337,41 @@ private fun ChannelRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(routeFor(channel)) },
+    )
+}
+
+@Composable
+private fun GeohashRoomCompose(
+    lastMessage: Note,
+    channel: GeohashChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val channelState by observeChannel(channel, accountViewModel)
+    val geohashChannel = channelState?.channel as? GeohashChatChannel ?: channel
+
+    // Anonymous cells have no author profile; the sender's display name lives in the message's `n` tag.
+    val noteEvent = lastMessage.event as? GeohashChatEvent
+    val nick = noteEvent?.nickname()?.takeIf { it.isNotBlank() } ?: lastMessage.author?.pubkeyHex?.take(8)
+    val description = noteEvent?.content?.take(200)
+    val lastContent = if (noteEvent != null) "$nick: $description" else ""
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow("Geohash/${geohashChannel.geohash}").collectAsStateWithLifecycle()
+
+    ChannelName(
+        channelIdHex = "Geohash/${geohashChannel.geohash}",
+        channelPicture = null,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(geohashChannel.toBestDisplayName(), MaterialSymbols.LocationOn, R.string.geohash_chat, modifier) },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = lastContent,
+        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+        autoPlayGif =
+            accountViewModel.settings.autoPlayVideosFlow
+                .collectAsStateWithLifecycle()
+                .value,
+        onClick = { nav.nav(Route.GeohashChat(geohashChannel.geohash)) },
     )
 }
 

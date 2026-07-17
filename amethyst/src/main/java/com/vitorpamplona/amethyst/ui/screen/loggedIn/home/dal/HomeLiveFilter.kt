@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveComplexFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -70,6 +71,11 @@ class HomeLiveFilter(
             } +
                 LocalCache.liveChatChannels.filter { _, channel ->
                     shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
+                } +
+                LocalCache.geohashChannels.filter { _, channel ->
+                    // Geohash chat is anonymous (throwaway keys), so it is not follow-filtered — any
+                    // recent activity in a cell the user is engaged with surfaces as a "near you" bubble.
+                    (channel.lastNote?.createdAt() ?: 0L) > fifteenMinsAgo
                 }
 
         return sort(list.toSet())
@@ -145,6 +151,12 @@ class HomeLiveFilter(
                                 }
                             }
 
+                            is GeohashChatEvent -> {
+                                event.geohash()?.let { geohash ->
+                                    LocalCache.getGeohashChannelIfExists(geohash)
+                                }
+                            }
+
                             is LiveActivitiesChatMessageEvent -> {
                                 event.activityAddress()?.let { addr ->
                                     LocalCache.getLiveActivityChannelIfExists(addr)
@@ -190,6 +202,9 @@ class HomeLiveFilter(
     ): Boolean {
         val createdAt = note.createdAt() ?: return false
         val noteEvent = note.event
+
+        // Geohash chat is anonymous and location-scoped — surface any recent message, not follow-filtered.
+        if (noteEvent is GeohashChatEvent) return createdAt > timeLimit
 
         if (noteEvent is LiveActivitiesChatMessageEvent) {
             val activity = noteEvent.activityAddress() ?: return false

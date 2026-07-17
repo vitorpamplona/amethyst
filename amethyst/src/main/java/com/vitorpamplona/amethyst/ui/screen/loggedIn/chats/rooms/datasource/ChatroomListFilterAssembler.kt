@@ -47,6 +47,7 @@ class ChatroomListFilterAssembler(
             nip04History,
             FollowingPublicChatSubAssembler(client, ::allKeys),
             FollowingEphemeralChatSubAssembler(client, ::allKeys),
+            FollowingGeohashChatSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

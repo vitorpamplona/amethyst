@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.cli.commands.FetchCommand
 import com.vitorpamplona.amethyst.cli.commands.FilterCommand
 import com.vitorpamplona.amethyst.cli.commands.FofCommand
 import com.vitorpamplona.amethyst.cli.commands.FollowCommand
+import com.vitorpamplona.amethyst.cli.commands.GeochatCommands
 import com.vitorpamplona.amethyst.cli.commands.GiftCommands
 import com.vitorpamplona.amethyst.cli.commands.GitCommands
 import com.vitorpamplona.amethyst.cli.commands.GrapeRankCommand
@@ -262,6 +263,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "marmot" -> marmotDispatch(dataDir, tail)
         "relaygroup" -> RelayGroupCommands.dispatch(dataDir, tail)
         "dm" -> DmCommands.dispatch(dataDir, tail)
+        "geochat" -> GeochatCommands.dispatch(dataDir, tail)
         "profile" -> ProfileCommands.dispatch(dataDir, tail)
         "notes" -> NotesCommands.dispatch(dataDir, tail)
         "pow" -> PowCommands.dispatch(dataDir, tail)
