@@ -61,11 +61,11 @@ class ForegroundTracker : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityResumed(activity: Activity) {
-        // No-op: resume is not observable and stays false during PiP / dialogs.
+        // No-op: foreground is derived from started/stopped counts, not resume.
     }
 
     override fun onActivityPaused(activity: Activity) {
-        // No-op: pause is not observable and stays false during PiP / dialogs.
+        // No-op: foreground is derived from started/stopped counts, not pause.
     }
 
     override fun onActivitySaveInstanceState(
