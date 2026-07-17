@@ -131,7 +131,7 @@ fun AccentColorType.previewColor(dark: Boolean): Color = accentPrimary(this, dar
 // Contrast colour (black or white) for content drawn on top of an accent swatch.
 fun contentColorOnAccent(color: Color): Color = onAccent(color)
 
-private fun darkColors(accent: AccentColorType): ColorScheme {
+internal fun darkColors(accent: AccentColorType): ColorScheme {
     val primary = accentPrimary(accent, dark = true)
     val secondary = accentSecondary(accent, dark = true)
     return darkColorScheme(
@@ -173,7 +173,7 @@ private fun darkColors(accent: AccentColorType): ColorScheme {
     )
 }
 
-private fun lightColors(accent: AccentColorType): ColorScheme {
+internal fun lightColors(accent: AccentColorType): ColorScheme {
     val primary = accentPrimary(accent, dark = false)
     val secondary = accentSecondary(accent, dark = false)
     return lightColorScheme(
