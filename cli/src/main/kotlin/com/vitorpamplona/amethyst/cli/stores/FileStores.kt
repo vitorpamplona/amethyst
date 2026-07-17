@@ -21,17 +21,11 @@
 package com.vitorpamplona.amethyst.cli.stores
 
 import com.vitorpamplona.amethyst.cli.SecureFileIO
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.quartz.marmot.mls.group.MarmotMessageStore
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
-import com.vitorpamplona.quartz.utils.Log
 import java.io.File
-
-private fun File.deleteOrWarn(tag: String) {
-    if (!delete() && exists()) {
-        Log.w(tag) { "Failed to delete $absolutePath" }
-    }
-}
 
 /**
  * Test-harness file stores. **Unencrypted** — the production interfaces
@@ -66,8 +60,8 @@ class FileMlsGroupStateStore(
     override suspend fun load(nostrGroupId: String): ByteArray? = stateFile(nostrGroupId).takeIf { it.exists() }?.readBytes()
 
     override suspend fun delete(nostrGroupId: String) {
-        stateFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore")
-        retainedFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore")
+        stateFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "group state")
+        retainedFile(nostrGroupId).deleteOrWarn("FileMlsGroupStateStore", "retained epochs")
     }
 
     override suspend fun listGroups(): List<String> =
@@ -123,7 +117,7 @@ class FileKeyPackageBundleStore(
     override suspend fun load(): ByteArray? = file.takeIf { it.exists() }?.readBytes()
 
     override suspend fun delete() {
-        file.deleteOrWarn("FileKeyPackageBundleStore")
+        file.deleteOrWarn("FileKeyPackageBundleStore", "key package bundle")
     }
 }
 
@@ -151,6 +145,6 @@ class FileMarmotMessageStore(
     override suspend fun loadMessages(nostrGroupId: String): List<String> = file(nostrGroupId).takeIf { it.exists() }?.readLines()?.filter { it.isNotBlank() } ?: emptyList()
 
     override suspend fun delete(nostrGroupId: String) {
-        file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore")
+        file(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group messages")
     }
 }

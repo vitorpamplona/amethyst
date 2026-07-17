@@ -864,6 +864,7 @@
     <string name="napplet_decision_ask">Kérdezés</string>
     <string name="napplet_decision_deny">Megtagadás</string>
     <string name="napplet_connected_apps_search_keywords">alkalmazások, engedélyek, aláíró, napplet, nsite, webalkalmazás, bizalom, kapcsolódott</string>
+    <!-- NIP-46 remote signer (bunker) -->
     <string name="napplet_connected_app_trust_level">Aláírási bizalmi szint</string>
     <string name="napplet_connected_app_capabilities">Képességek</string>
     <string name="napplet_connected_app_forget">Alkalmazás elfelejtése</string>

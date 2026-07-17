@@ -304,6 +304,9 @@
     <string name="loading_account">Ładowanie konta</string>
     <string name="concord_redeeming_invite">Realizacja zaproszenia…</string>
     <string name="concord_invite_failed">Nie można pobrać tego zaproszenia. Być może link stracił ważność lub transmitery są niedostępne.</string>
+    <string name="concord_invite_failed_invalid">Ten link do zaproszenia jest nieprawidłowy lub nie można go otworzyć przy użyciu tego konta.</string>
+    <string name="concord_invite_failed_incompatible">Nie można otworzyć tego linku do zaproszenia. Być może jest on nieaktualny, został już zastąpiony nowszym lub został utworzony w nowszej wersji aplikacji. Poproś o nowy link do zaproszenia.</string>
+    <string name="concord_invite_failed_revoked">Ten link do zaproszenia został unieważniony i nie można już z niego korzystać. Poproś o nowy.</string>
     <string name="concord_home_title">Kanały Concord</string>
     <string name="concord_home_empty">Nie dołączyłeś(aś) jeszcze do kanału Concord. Utwórz kanał lub otwórz link z zaproszeniem.</string>
     <string name="concord_channels_empty">Brak kanałów.</string>
@@ -340,6 +343,13 @@
         <item quantity="many">%1$d członków</item>
         <item quantity="other">%1$d członkowie</item>
     </plurals>
+    <plurals name="concord_unread_messages">
+        <item quantity="one">%1$d nowa wiadomość</item>
+        <item quantity="few">%1$d nowych wiadomości</item>
+        <item quantity="many">%1$d nowych wiadomości</item>
+        <item quantity="other">%1$d nowe wiadomości</item>
+    </plurals>
+    <string name="concord_channel_no_messages">Brak wiadomości</string>
     <string name="concord_create_action">Utwórz</string>
     <string name="concord_invite_action">Zaproś osoby</string>
     <string name="concord_invite_title">Link do zaproszenia</string>
@@ -877,6 +887,46 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_decision_ask">Pytaj</string>
     <string name="napplet_decision_deny">Odmów</string>
     <string name="napplet_connected_apps_search_keywords">uprawnienia aplikacji, sygnatariusz, napplet, nsite, aplikacja internetowa, zaufanie, połączone</string>
+    <!-- NIP-46 remote signer (bunker) -->
+    <string name="nip46_signer_title">Zdalne logowanie</string>
+    <string name="nip46_signer_search_keywords">logowanie bunkier nip46 nostr zdalne logowanie</string>
+    <string name="nip46_signer_explainer">Zezwól innym aplikacjom na podpisywanie wiadomości za pomocą Twojego klucza. Amethyst monitoruje transmitery Twojej skrzynki odbiorczej i przed podpisaniem sprawdza uprawnienia każdej aplikacji — stosując te same poziomy zaufania, co w przypadku aplikacji połączonych.</string>
+    <string name="nip46_signer_enable">Występuj jako zdalny sygnatariusz</string>
+    <plurals name="nip46_signer_status_listening">
+        <item quantity="one">Nasłuchuje %1$d transmiter</item>
+        <item quantity="few">Nasłuchuje %1$d transmitery</item>
+        <item quantity="many">Nadsłuchuje %1$d transmitterów</item>
+        <item quantity="other">Nasłuchuje %1$d transmitery</item>
+    </plurals>
+    <string name="nip46_signer_status_no_relays">Nie skonfigurowano żadnych transmiterów poczty przychodzącej. Dodaj transmitery poczty przychodzącej, aby aplikacje mogły nawiązać połączenie z sygnatariuszem.</string>
+    <plurals name="nip46_signer_relays_all_live">
+        <item quantity="one">Nasłuchuje %1$d transmiter</item>
+        <item quantity="few">Nasłuchuje %1$d transmiterów</item>
+        <item quantity="many">Nasłuchuje %1$d transmiterów</item>
+        <item quantity="other">Nasłuchuje %1$d transmitery</item>
+    </plurals>
+    <string name="nip46_signer_relays_some_down">Podłączono %1$d z %2$d transmiterów</string>
+    <string name="nip46_signer_bunker_uri_label">Twój adres bunkra</string>
+    <string name="nip46_signer_bunker_uri_hint">Wklej to do innej aplikacji, aby połączyć to ze swoim kluczem.</string>
+    <string name="nip46_signer_copy">Kopiuj</string>
+    <string name="nip46_signer_copied">Adres Bunkra skopiowany</string>
+    <string name="nip46_signer_regenerate">Nowy adres</string>
+    <string name="nip46_signer_regenerated">Wygenerowano nowy adres bunkra</string>
+    <string name="nip46_signer_rotate_confirm_title">Wygenerować nowy adres?</string>
+    <string name="nip46_signer_rotate_confirm_message">Spowoduje to wygenerowanie nowego adresu bunkra i rozłączenie wszystkich aktualnie podłączonych aplikacji. Każdy, kto posiada stary adres — w tym spamerzy — nie będzie już mógł się z Tobą skontaktować. Aby ponownie połączyć swoje aplikacje, zeskanuj nowy kod.</string>
+    <string name="nip46_signer_rotate_confirm_button">Wygeneruj</string>
+    <string name="nip46_signer_cancel">Anuluj</string>
+    <string name="nip46_signer_connect_label">Podłącz aplikację</string>
+    <string name="nip46_signer_connect_hint">Wklej link nostrconnect://</string>
+    <string name="nip46_signer_connect_button">Połącz</string>
+    <string name="nip46_signer_manage_apps">Zarządzaj podłączonymi aplikacjami</string>
+    <string name="nip46_signer_apps_empty">Nie masz jeszcze żadnych połączonych aplikacji.\n\nZeskanuj lub wklej kod aplikacji, aby ją połączyć. Połączone aplikacje pojawiają się w tym miejscu, a te nieaktywne są automatycznie usuwane po upływie tygodnia.</string>
+    <string name="nip46_signer_app_last_used">użyto %1$s</string>
+    <string name="nip46_signer_app_online">Podłączony</string>
+    <string name="nip46_signer_app_offline">Offline</string>
+    <string name="nip46_signer_app_reconnect">Połącz ponownie</string>
+    <string name="nip46_signer_reconnecting">Ponowne łączenie z transmiterami…</string>
+    <string name="nip46_signer_app_relays_title">Transmitery</string>
     <string name="napplet_connected_app_trust_level">Podpisywanie poziomu zaufania</string>
     <string name="napplet_connected_app_capabilities">Możliwości</string>
     <string name="napplet_connected_app_forget">Zapomnij o aplikacji</string>
@@ -4049,4 +4099,5 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
+    <string name="new_conversation_location_con_1">Publiczny i efemeryczny – brak historii, każdy uczestnik może go odczytać.</string>
 </resources>

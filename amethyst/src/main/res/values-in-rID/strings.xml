@@ -692,6 +692,7 @@
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <!-- Permissions management screen -->
+    <!-- NIP-46 remote signer (bunker) -->
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->

@@ -51,19 +51,31 @@ class ForegroundTracker : Application.ActivityLifecycleCallbacks {
         _isForeground.value = startedActivities > 0
     }
 
+    // Only started/stopped drive the foreground signal; the remaining lifecycle
+    // callbacks are required by the interface but irrelevant to this tracker.
     override fun onActivityCreated(
         activity: Activity,
         savedInstanceState: Bundle?,
-    ) {}
+    ) {
+        // No-op: creation does not change foreground state.
+    }
 
-    override fun onActivityResumed(activity: Activity) {}
+    override fun onActivityResumed(activity: Activity) {
+        // No-op: foreground is derived from started/stopped counts, not resume.
+    }
 
-    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) {
+        // No-op: foreground is derived from started/stopped counts, not pause.
+    }
 
     override fun onActivitySaveInstanceState(
         activity: Activity,
         outState: Bundle,
-    ) {}
+    ) {
+        // No-op: state saving does not change foreground state.
+    }
 
-    override fun onActivityDestroyed(activity: Activity) {}
+    override fun onActivityDestroyed(activity: Activity) {
+        // No-op: onActivityStopped already decremented the counter.
+    }
 }

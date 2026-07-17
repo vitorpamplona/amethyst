@@ -46,7 +46,7 @@ class ResourceUsageReportAssembler {
         sb.append("\n\n")
 
         sb.append("| Prop | Value |\n")
-        sb.append("| --- | --- |\n")
+        sb.append(TABLE_SEPARATOR)
         sb.append("| Manuf | ${Build.MANUFACTURER} |\n")
         sb.append("| Model | ${Build.MODEL} |\n")
         sb.append("| Android | ${Build.VERSION.RELEASE} |\n")
@@ -64,7 +64,7 @@ class ResourceUsageReportAssembler {
         if (memory != null) {
             sb.append("\n**Memory right now**\n\n")
             sb.append("| Metric | Value |\n")
-            sb.append("| --- | --- |\n")
+            sb.append(TABLE_SEPARATOR)
             sb.append("| Device class | ${memory.memoryClassMb} MB |\n")
             sb.append("| App heap | ${memory.heapUsedMb} / ${memory.heapMaxMb} MB |\n")
             sb.append("| Native heap | ${memory.nativeHeapUsedMb} MB |\n")
@@ -88,7 +88,7 @@ class ResourceUsageReportAssembler {
     private fun summaryTable(s: UsageSummary): String =
         buildString {
             append("| Metric | Value |\n")
-            append("| --- | --- |\n")
+            append(TABLE_SEPARATOR)
             append("| Cellular data (background) | ${formatBytes(s.mobileBytesBg)} |\n")
             append("| Cellular data (foreground) | ${formatBytes(s.mobileBytesFg)} |\n")
             append("| Wi-Fi data | ${formatBytes(s.wifiBytesBg + s.wifiBytesFg)} |\n")
@@ -129,6 +129,9 @@ class ResourceUsageReportAssembler {
         }
 
     companion object {
+        /** Markdown table header/body separator row. */
+        private const val TABLE_SEPARATOR = "| --- | --- |\n"
+
         fun formatBytes(bytes: Long): String =
             when {
                 bytes >= 1024L * 1024L * 1024L -> String.format(Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
