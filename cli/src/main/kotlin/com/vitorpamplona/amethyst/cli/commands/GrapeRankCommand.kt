@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.quartz.experimental.graperank.FollowerCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRank
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
@@ -213,6 +214,7 @@ object GrapeRankCommand {
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
             "crawl" -> crawl(dataDir, tail.drop(1).toTypedArray())
+            "followers" -> followers(dataDir, tail.drop(1).toTypedArray())
             "status" -> status(dataDir)
             // The relay census outgrew graperank (it feeds the shared NIP-66
             // reachability cache every command reads) and moved to `amy relay
@@ -584,6 +586,123 @@ object GrapeRankCommand {
             )
         }
         return 0
+    }
+
+    /**
+     * `amy graperank followers [OBSERVER] [flags]` — the reverse crawl: find every
+     * user who FOLLOWS the observer and persist their kind:3 contact lists.
+     *
+     * The outbox model (what `crawl` uses) walks follows *outward* and can't find
+     * followers — you don't know a follower exists until you've seen their list, so
+     * you can't route to their outbox first. This casts a wide net instead: it asks
+     * as many relays as possible for kind:3 events that `#p`-tag the observer, paging
+     * each relay past its per-REQ cap. The relay universe is "all possible relays":
+     * the reachability-cache live set + every kind:10002 read/write relay and every
+     * kind:30166 monitored relay in the store + the index/aggregator relays that hold
+     * reverse-follow data for the network. Proven-dead relays are skipped
+     * (`--no-reachability-cache` to query them anyway).
+     *
+     * Each follower's list lands in the store, so it also enriches the graph a later
+     * `graperank score` builds — every follower becomes a FOLLOW edge into the
+     * observer. Idempotent and cumulative; run it a few times for completeness.
+     *
+     * Flags: `--relay URL[,URL…]` (query only these instead of the whole universe),
+     * `--page-limit N` (per-page REQ limit, default 500), `--timeout SECS` (per-page
+     * EOSE watchdog, default 15), `--relay-concurrency N` (relays paged at once,
+     * default 16), `--insert-batch N` (events per store commit, default 500).
+     */
+    private suspend fun followers(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val observerArg = args.positionalOrNull(0)
+        val relayArg = args.flag("relay")
+        val relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 16))
+
+        // Read-only + never signs, so it runs anonymously — but then an OBSERVER
+        // positional is required (there's no account to default to).
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+            if (ctx.anonymous && observerArg == null) {
+                return Output.error("bad_args", "usage: amy graperank followers OBSERVER [flags] (no account — pass an observer)")
+            }
+            val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
+
+            val relays =
+                relayArg
+                    ?.split(",")
+                    ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+                    ?.toSet()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: allKnownRelays(ctx, args)
+
+            if (relays.isEmpty()) {
+                return Output.error("no_relays", "no relays to query — run `amy relay probe` / `amy graperank crawl` first, or pass --relay")
+            }
+
+            System.err.println("[followers] querying ${relays.size} relays for kind:3 #p=${observer.take(8)}…")
+            val crawler =
+                FollowerCrawler(
+                    client = ctx.client,
+                    store = ctx.store,
+                    config =
+                        FollowerCrawler.Config(
+                            relays = relays,
+                            pageLimit = args.intFlag("page-limit", 500),
+                            timeoutMs = args.longFlag("timeout", 15L) * 1000,
+                            maxConcurrentRelays = relayConcurrency,
+                            insertBatchSize = args.intFlag("insert-batch", 500),
+                        ),
+                    log = { System.err.println(it) },
+                )
+            val stats = crawler.crawl(observer)
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "observer" to observer,
+                    "relays_queried" to stats.relaysQueried,
+                    "relays_answered" to stats.relaysAnswered,
+                    "followers_found" to stats.followersFound,
+                    "events_stored" to stats.eventsStored,
+                    "download_ms" to stats.downloadMs,
+                ),
+            )
+        }
+        return 0
+    }
+
+    /**
+     * "All possible relays" for the follower crawl: the reachability-cache live set,
+     * every kind:10002 read/write relay and every kind:30166 monitored relay the
+     * store knows, and the index/aggregator relays that hold reverse-follow data —
+     * minus the ones a prior probe proved dead (unless `--no-reachability-cache`).
+     */
+    private suspend fun allKnownRelays(
+        ctx: Context,
+        args: Args,
+    ): Set<NormalizedRelayUrl> {
+        val reach = ctx.reachability.snapshot()
+        val relays = LinkedHashSet<NormalizedRelayUrl>()
+        relays.addAll(reach.live)
+        // Every advertised outbox/inbox relay in the store — the homes of the users
+        // whose followers we're hunting are exactly where those followers publish too.
+        for (event in ctx.store.query<Event>(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND)))) {
+            if (event is AdvertisedRelayListEvent) relays.addAll(event.relaysNorm())
+        }
+        // Relays a NIP-66 monitor has ever seen (kind:30166) — the widest census.
+        for (event in ctx.store.query<Event>(Filter(kinds = listOf(RelayDiscoveryEvent.KIND)))) {
+            if (event is RelayDiscoveryEvent) event.relay()?.let { relays.add(it) }
+        }
+        // Aggregators/indexers hold reverse-follow data for users whose own outbox
+        // we've never learned — the biggest completeness lever for followers.
+        relays.addAll(CONTENT_AGGREGATOR_RELAYS)
+        relays.addAll(EXTRA_DISCOVERY_RELAYS)
+        relays.addAll(ctx.bootstrapRelays())
+        relays.addAll(Constants.eventFinderRelays)
+
+        if (!args.bool(NO_REACHABILITY_CACHE_FLAG)) relays.removeAll(reach.dead)
+        return relays
     }
 
     /**
