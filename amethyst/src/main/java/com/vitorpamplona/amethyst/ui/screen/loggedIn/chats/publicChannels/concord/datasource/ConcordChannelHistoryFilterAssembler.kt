@@ -101,17 +101,24 @@ class ConcordChannelHistorySubAssembler(
             ?.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
             ?: emptySet()
 
-    /** The channel's derived Chat Plane pubkey — the REQ author. Null until the Control Plane folds it. */
-    private fun planePkFor(key: ConcordChannelHistoryQueryState): String? =
+    /**
+     * The channel's derived Chat Plane pubkeys across every epoch (current + each prior epoch we hold
+     * a root for) — the REQ authors. A CORD-06 Refounding moves the plane per epoch, so requesting the
+     * union lets one backward `until` sweep walk the whole cross-Refounding timeline and reach messages
+     * older than the last Refounding. Empty until the Control Plane folds the channel.
+     */
+    private fun planePksFor(key: ConcordChannelHistoryQueryState): List<String> =
         key.account.concordSessions
             .sessionFor(key.communityId)
-            ?.channelPlaneAddress(key.channelId)
+            ?.channelPlaneAddressesAllEpochs(key.channelId)
+            .orEmpty()
 
     override fun updateFilter(
         key: ConcordChannelHistoryQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        val planePk = planePkFor(key) ?: return emptyList()
+        val planePks = planePksFor(key)
+        if (planePks.isEmpty()) return emptyList()
         val relays = relaysFor(key)
         // Only armed (advanced, not done) relays carry a REQ, each at its own requested cursor. A parked
         // relay keeps the same filter here, so re-assembly (another relay advancing) doesn't re-REQ it.
@@ -124,7 +131,10 @@ class ConcordChannelHistorySubAssembler(
                 filter =
                     Filter(
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
-                        authors = listOf(planePk),
+                        // All epoch planes at once: the relay serves them interleaved by created_at, so
+                        // one backward cursor walks across the Refounding boundaries; "exhausted" then
+                        // means every epoch is drained, not just the current one.
+                        authors = planePks,
                         until = until,
                         limit = pager.pageLimit,
                     ),

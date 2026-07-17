@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -34,6 +35,57 @@ import kotlin.test.assertTrue
 
 class ConcordCommunitySessionTest {
     private val owner = NostrSignerInternal(KeyPair())
+
+    @Test
+    fun ingestsPriorEpochWrapsFromAHeldRoot() =
+        runTest {
+            // A community whose access root has been rotated once (CORD-06 Refounding): the current
+            // entry is epoch 0/rootA, but the account still holds a prior epoch's root. The prior
+            // epoch's channel plane is a DIFFERENT stream key; historical backfill must subscribe,
+            // AUTH, and decrypt it so pre-Refounding messages surface.
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val priorEpoch = 7L
+            val priorRoot = KeyPair().pubKey // any 32-byte value is a valid root ikm
+            val entry =
+                ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    heldRoots = listOf(HeldRoot(priorEpoch, priorRoot.toHexKey())),
+                    relays = listOf("wss://r.example"),
+                    name = "Nostrichs",
+                )
+
+            val captured = mutableListOf<com.vitorpamplona.quartz.nip01Core.core.Event>()
+            val session = ConcordCommunitySession(entry, owner.pubKey) { _, _, rumor, _ -> captured += rumor }
+
+            // Fold genesis so #general is known — historical planes are derived off the folded channels.
+            community.genesisWraps.forEach { session.ingest(it) }
+
+            // The #general channel plane at the PRIOR epoch (derived from the held root) is now a known
+            // address AND a stream key to AUTH as.
+            val priorGeneral = ConcordActions.publicChannel(priorRoot, community.generalChannelId, priorEpoch)
+            assertTrue(session.channelAddresses().contains(priorGeneral.publicKeyHex), "historical plane not subscribed")
+            assertTrue(session.streamKeys().any { it.publicKeyHex == priorGeneral.publicKeyHex }, "historical stream key not AUTHed")
+
+            // The history pager asks for every epoch's plane at once: current + prior.
+            val currentGeneral = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch)
+            val allEpochPlanes = session.channelPlaneAddressesAllEpochs(community.generalChannelIdHex)
+            assertTrue(allEpochPlanes.contains(currentGeneral.publicKeyHex), "current plane missing from all-epochs")
+            assertTrue(allEpochPlanes.contains(priorGeneral.publicKeyHex), "prior plane missing from all-epochs")
+
+            // A message authored on the prior-epoch plane, bound to the prior epoch, decrypts + emits.
+            val oldMsg = ConcordActions.buildChannelMessage(owner, priorGeneral, community.generalChannelIdHex, priorEpoch, "gm from the old epoch", 2L)
+            assertEquals(ConcordIngestOutcome.NON_STRUCTURAL, session.ingest(oldMsg))
+            assertEquals(1, captured.count { it.content == "gm from the old epoch" })
+
+            // A wrap on the prior plane but bound to the WRONG epoch is rejected (no cross-epoch replay).
+            val spoofed = ConcordActions.buildChannelMessage(owner, priorGeneral, community.generalChannelIdHex, community.rootEpoch, "wrong epoch", 3L)
+            session.ingest(spoofed)
+            assertEquals(0, captured.count { it.content == "wrong epoch" })
+        }
 
     @Test
     fun ingestsControlThenChannelWrapsIntoFlows() =
