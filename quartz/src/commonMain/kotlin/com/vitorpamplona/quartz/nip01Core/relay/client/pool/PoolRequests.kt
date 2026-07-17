@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -43,7 +44,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * This code also awaits a subscription to come to EOSE since many relays
  * have through switching subs while they are processing the past.
  */
-class PoolRequests {
+class PoolRequests(
+    /**
+     * How many times a relay may CLOSE the *same* filter (across reconnects) before we
+     * stop replaying it to that relay. Small so a structurally-refused REQ (e.g. a
+     * search-only relay CLOSING a plain kinds filter) stops fast, but > 1 so a single
+     * transient close doesn't silence a legitimate subscription. A meaningful filter
+     * change or a successful REQ resets the count.
+     */
+    private val maxRefusalsBeforeSuppress: Int = 3,
+    /**
+     * Relay-wide capability refusals (a search-only relay refusing every feed REQ, a
+     * write-only relay refusing all REQs). Complements the per-subscription memory: this
+     * stops a relay being hammered by many *different* subscriptions it can't serve.
+     * Exposed so the app can subtract [RelayReqRefusals.blockedFlow] from feed read-sets.
+     */
+    val relayRefusals: RelayReqRefusals = RelayReqRefusals(),
+) {
     /**
      * Desired subs and listeners
      *
@@ -94,9 +111,18 @@ class PoolRequests {
      * to new ones or disconnect to old ones if they are not needed anymore
      */
     private fun updateRelays() {
+        // A relay is wanted only if at least one desired filter would actually be sent to it.
+        // A relay-wide capability block (NO_READS, or SEARCH_ONLY for a non-search filter)
+        // drops it here so the pool disconnects — closing the idle socket rather than keeping
+        // it open with every REQ suppressed. This is per-filter/capability, so a search-only
+        // relay stays connected as long as some sub carries a search filter for it.
         val myRelays = mutableSetOf<NormalizedRelayUrl>()
         desiredSubs.forEach { sub, perRelayFilters ->
-            myRelays.addAll(perRelayFilters.keys)
+            perRelayFilters.forEach { (relay, filters) ->
+                if (!relayRefusals.shouldSuppress(relay, filters)) {
+                    myRelays.add(relay)
+                }
+            }
         }
 
         if (desiredRelays.value != myRelays) {
@@ -259,15 +285,24 @@ class PoolRequests {
             }
 
             is ClosedMessage -> {
+                // Relay-wide capability tracking is independent of any single sub's lock. Run
+                // it first so decideCommandLocked below already sees the block; if it newly
+                // blocked the relay, drop it from the desired set so the pool disconnects.
+                val newlyBlocked = relayRefusals.onRefused(relay.url, msg.message)
+
                 var forFilters: List<Filter>? = null
                 val cmd =
                     relayState.get(msg.subId)?.let { state ->
                         state.withLock {
                             state.onClosed(relay.url)
                             forFilters = state.lastKnownFilterStates(relay.url)
+                            recordRefusalIfStructural(state, relay.url, msg.message, forFilters)
                             decideCommandLocked(state, msg.subId, relay.url)
                         }
                     }
+
+                if (newlyBlocked) updateRelays()
+
                 desiredSubListeners.get(msg.subId)?.onClosed(
                     message = msg.message,
                     relay = relay.url,
@@ -307,15 +342,25 @@ class PoolRequests {
         //
         // This is a fresh-connection sync (onConnected → onConnecting always
         // cleared the per-relay state first), so every desired filter is
-        // (re)sent unconditionally: unlike the change-driven path there is no
-        // in-flight REQ on this brand-new socket to dedupe against.
+        // (re)sent: unlike the change-driven path there is no in-flight REQ on
+        // this brand-new socket to dedupe against. The one exception is a filter
+        // this relay has structurally refused too many times — replaying it on
+        // every reconnect is the doomed-REQ loop this guard exists to stop.
         desiredSubs.forEach { subId, perRelayFilters ->
             val filters = perRelayFilters[relay]
             if (!filters.isNullOrEmpty()) {
-                subState(subId).let { state ->
-                    state.withLock { state.onOpenReq(relay, filters) }
-                }
-                sync(ReqCmd(subId, filters))
+                val send =
+                    subState(subId).let { state ->
+                        state.withLock {
+                            if (isStructurallyRefused(state, relay, filters)) {
+                                false
+                            } else {
+                                state.onOpenReq(relay, filters)
+                                true
+                            }
+                        }
+                    }
+                if (send) sync(ReqCmd(subId, filters))
             }
         }
     }
@@ -404,6 +449,10 @@ class PoolRequests {
                 val current = state.currentState(relay)
                 if (current == ReqSubStatus.SENT || current == ReqSubStatus.QUERYING_PAST) {
                     null
+                } else if (isStructurallyRefused(state, relay, newFilters)) {
+                    // The relay keeps CLOSING this exact filter; stop offering it. A
+                    // meaningful filter change makes isStructurallyRefused false again.
+                    null
                 } else {
                     // Pre-mark SENT + filters so a concurrent decider skips.
                     state.onOpenReq(relay, newFilters)
@@ -416,6 +465,67 @@ class PoolRequests {
                 null
             }
         }
+    }
+
+    /**
+     * True once [relay] has CLOSED this exact [filters] shape at least
+     * [maxRefusalsBeforeSuppress] times without a success in between. Filter equality
+     * reuses [FiltersChanged.needsToResendRequest], so a mere `since` bump still counts
+     * as the same refused shape while any real change re-enables the REQ.
+     *
+     * MUST be called while holding [state]'s lock.
+     */
+    private fun isStructurallyRefused(
+        state: RequestSubscriptionState<NormalizedRelayUrl>,
+        relay: NormalizedRelayUrl,
+        filters: List<Filter>,
+    ): Boolean {
+        if (filters.isEmpty()) return false
+        // Relay-wide capability block (search-only / no-reads) — independent of which sub.
+        if (relayRefusals.shouldSuppress(relay, filters)) return true
+        // Per-subscription: this relay keeps CLOSING this exact filter shape.
+        if (state.refusalCount(relay) < maxRefusalsBeforeSuppress) return false
+        val refused = state.refusedFilters(relay) ?: return false
+        return !FiltersChanged.needsToResendRequest(refused, filters)
+    }
+
+    /**
+     * Records a CLOSED as a refusal of [forFilters] when its reason is a structural
+     * "this relay won't serve this REQ" (unprefixed benign closes and the two
+     * self-resolving prefixes are ignored):
+     *  - `auth-required` — the auth subsystem re-signs and replays; suppressing it would
+     *    block the legitimate post-auth retry.
+     *  - `rate-limited` — the adaptive limiter spaces the REQ out; it's not doomed.
+     *  - no recognized prefix — lifecycle noise (`Subscription closed`, `not found`, …);
+     *    don't risk silencing a live sub on an unstructured message.
+     *
+     * MUST be called while holding [state]'s lock.
+     */
+    private fun recordRefusalIfStructural(
+        state: RequestSubscriptionState<NormalizedRelayUrl>,
+        relay: NormalizedRelayUrl,
+        reason: String,
+        forFilters: List<Filter>?,
+    ) {
+        if (forFilters.isNullOrEmpty()) return
+        val prefix = MachineReadablePrefix.parse(reason) ?: return
+        val structural =
+            when (prefix) {
+                MachineReadablePrefix.AUTH_REQUIRED,
+                MachineReadablePrefix.RATE_LIMITED,
+                MachineReadablePrefix.DUPLICATE,
+                MachineReadablePrefix.POW,
+                -> false
+                MachineReadablePrefix.BLOCKED,
+                MachineReadablePrefix.INVALID,
+                MachineReadablePrefix.RESTRICTED,
+                MachineReadablePrefix.ERROR,
+                MachineReadablePrefix.UNSUPPORTED,
+                -> true
+            }
+        if (!structural) return
+        val sameAsLast = state.refusedFilters(relay)?.let { !FiltersChanged.needsToResendRequest(it, forFilters) } ?: false
+        state.recordRefusal(relay, forFilters, sameAsLast)
     }
 
     fun destroy() {
