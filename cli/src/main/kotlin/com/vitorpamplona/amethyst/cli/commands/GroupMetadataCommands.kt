@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -108,7 +109,7 @@ object GroupMetadataCommands {
                 }
                 uploadedUrl = result.url
             } finally {
-                tmp.delete()
+                tmp.deleteOrWarn("GroupMetadataCommands", "encrypted group image")
             }
         }
 
