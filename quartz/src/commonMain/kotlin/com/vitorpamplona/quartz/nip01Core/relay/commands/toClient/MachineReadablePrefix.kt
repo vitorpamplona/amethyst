@@ -58,6 +58,9 @@ enum class MachineReadablePrefix(
 
     /** A generic, usually transient, server-side failure. */
     ERROR("error"),
+
+    /** The relay does not support this request (filter shape, feature, or kind). */
+    UNSUPPORTED("unsupported"),
     ;
 
     /** Builds a reason string in the NIP-01 `"<code>: <message>"` form. */

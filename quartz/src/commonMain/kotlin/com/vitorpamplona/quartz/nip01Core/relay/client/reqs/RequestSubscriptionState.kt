@@ -82,6 +82,48 @@ class RequestSubscriptionState<T> {
      */
     private val lastKnownFilterStates = mutableMapOf<T, List<Filter>>()
 
+    /**
+     * Refused-filter memory. Unlike [subStates]/[filterStates] above — per-connection
+     * wire state wiped by [connecting]/[disconnected] — this SURVIVES reconnects on
+     * purpose: a relay that structurally refuses a filter (a search-only relay CLOSING
+     * a plain kinds REQ, a relay that "does not accept REQs", "too many filters", …)
+     * refuses it again on every new socket, so [PoolRequests.syncState] replaying it
+     * each reconnect is pure waste. [refusalCounts] accumulates repeated refusals of
+     * the same shape so a one-off (transient) close isn't mistaken for a structural
+     * one. Cleared on a successful REQ ([onEose]/[onNewEvent]) or when the caller
+     * observes the desired filter meaningfully changed.
+     */
+    private val refusedFilters = mutableMapOf<T, List<Filter>>()
+    private val refusalCounts = mutableMapOf<T, Int>()
+
+    fun refusedFilters(reference: T) = refusedFilters[reference]
+
+    fun refusalCount(reference: T) = refusalCounts[reference] ?: 0
+
+    /**
+     * Records that [reference] refused [filters]. [sameAsLastRefusal] must be true when
+     * [filters] matches the previously refused shape (the caller owns that comparison,
+     * keeping filter-equality policy in one place), so repeated refusals accumulate
+     * instead of resetting.
+     */
+    fun recordRefusal(
+        reference: T,
+        filters: List<Filter>,
+        sameAsLastRefusal: Boolean,
+    ) {
+        if (sameAsLastRefusal) {
+            refusalCounts[reference] = refusalCount(reference) + 1
+        } else {
+            refusedFilters[reference] = filters
+            refusalCounts[reference] = 1
+        }
+    }
+
+    fun clearRefusal(reference: T) {
+        refusedFilters.remove(reference)
+        refusalCounts.remove(reference)
+    }
+
     fun currentFilters() = filterStates
 
     fun currentFilters(reference: T) = filterStates[reference]
@@ -91,12 +133,17 @@ class RequestSubscriptionState<T> {
     fun currentState(reference: T) = subStates[reference]
 
     fun onNewEvent(reference: T) {
+        // The relay is serving this REQ (it matched an event), so any past refusal
+        // no longer applies — let it be tried freely again.
+        clearRefusal(reference)
         if (subStates[reference] == ReqSubStatus.SENT) {
             subStates[reference] = ReqSubStatus.QUERYING_PAST
         }
     }
 
     fun onEose(reference: T) {
+        // Reaching EOSE means the relay accepted and finished the REQ; clear any refusal.
+        clearRefusal(reference)
         subStates[reference] = ReqSubStatus.LIVE
     }
 
