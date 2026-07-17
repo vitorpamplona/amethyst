@@ -540,6 +540,18 @@ val ColorScheme.selectedNote: Color
 val ColorScheme.secondaryButtonBackground: Color
     get() = primary.copy(alpha = 0.32f).compositeOver(background)
 
+// Solid fill for accent-colored controls (the top-bar Save/Post/Send button, checked switches).
+// On dark themes `primary` is a light pastel tuned for text/icons on black; used as a button/switch
+// fill under white content it washes out. Deepen it halfway toward the accent's deep (light-theme)
+// variant — the scheme already carries that as inversePrimary — so filled controls read as a rich,
+// saturated accent. Light themes already use the deep variant as primary, so they keep it unchanged.
+val ColorScheme.filledAccent: Color
+    get() = if (isLight) primary else lerp(primary, inversePrimary, 0.5f)
+
+// Black or white for content on a filledAccent surface — whichever wins the WCAG contrast check.
+val ColorScheme.onFilledAccent: Color
+    get() = onAccent(filledAccent)
+
 val ColorScheme.lessImportantLink: Color
     get() = primary.copy(alpha = 0.52f)
 

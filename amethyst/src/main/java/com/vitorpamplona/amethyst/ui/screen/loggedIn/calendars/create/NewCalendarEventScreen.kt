@@ -39,7 +39,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -68,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestio
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import kotlinx.coroutines.launch
@@ -214,7 +214,7 @@ private fun AllDayToggleRow(vm: NewCalendarEventViewModel) {
                 )
             }
         }
-        Switch(
+        AmethystSwitch(
             checked = vm.isAllDay.value,
             onCheckedChange = { vm.isAllDay.value = it },
             enabled = !vm.isEditing,

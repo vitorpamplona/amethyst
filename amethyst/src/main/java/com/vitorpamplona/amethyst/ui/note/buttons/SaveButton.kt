@@ -21,11 +21,15 @@
 package com.vitorpamplona.amethyst.ui.note.buttons
 
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.filledAccent
+import com.vitorpamplona.amethyst.ui.theme.onFilledAccent
 
 @Composable
 fun SaveButton(
@@ -37,6 +41,11 @@ fun SaveButton(
         enabled = isActive,
         modifier = modifier,
         onClick = onPost,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.filledAccent,
+                contentColor = MaterialTheme.colorScheme.onFilledAccent,
+            ),
     ) {
         Text(text = stringRes(R.string.save))
     }

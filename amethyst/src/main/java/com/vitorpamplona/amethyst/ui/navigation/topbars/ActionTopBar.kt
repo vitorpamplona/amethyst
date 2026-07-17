@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.navigation.topbars
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +35,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.filledAccent
+import com.vitorpamplona.amethyst.ui.theme.onFilledAccent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +74,11 @@ fun ActionTopBar(
                 modifier = HalfHorzPadding,
                 enabled = isActive(),
                 onClick = onPost,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.filledAccent,
+                        contentColor = MaterialTheme.colorScheme.onFilledAccent,
+                    ),
             ) {
                 Text(text = stringRes(postRes))
             }

@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 import android.text.format.DateFormat as AndroidDateFormat
@@ -170,7 +171,7 @@ fun CreateNestSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
-                androidx.compose.material3.Switch(
+                AmethystSwitch(
                     checked = state.scheduled,
                     onCheckedChange = viewModel::onScheduledToggle,
                 )

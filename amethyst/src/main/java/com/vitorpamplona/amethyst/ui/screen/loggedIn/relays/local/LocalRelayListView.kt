@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -42,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
+import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HorzHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.HorzPadding
@@ -103,7 +103,7 @@ fun LazyListScope.renderLocalItems(
             ) {
                 val checked by accountViewModel.account.settings.syncedSettings.security.sendKind0EventsToLocalRelay
                     .collectAsStateWithLifecycle()
-                Switch(
+                AmethystSwitch(
                     checked = checked,
                     onCheckedChange = {
                         accountViewModel.toggleSendKind0ToLocalRelay(it)

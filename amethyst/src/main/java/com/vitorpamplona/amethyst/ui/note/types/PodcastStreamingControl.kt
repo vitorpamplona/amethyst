@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +52,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.podcasts.PodcastStreamingAccrual
 import com.vitorpamplona.quartz.podcasts.PodcastValue
@@ -206,7 +206,7 @@ fun PodcastStreamingControl(
             )
         }
 
-        Switch(
+        AmethystSwitch(
             checked = enabled,
             onCheckedChange = { wantOn ->
                 if (wantOn && !hasInAppWallet) {

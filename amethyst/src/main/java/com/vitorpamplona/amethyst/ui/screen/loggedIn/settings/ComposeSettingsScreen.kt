@@ -33,7 +33,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.pow.POW_PRESETS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.AmethystSwitch
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -233,7 +233,7 @@ private fun PowCategoryChecklist(accountViewModel: AccountViewModel) {
             description = stringRes(category.descriptionRes()),
             enabled = miningOn,
         ) {
-            Switch(
+            AmethystSwitch(
                 checked = checked,
                 enabled = miningOn,
                 onCheckedChange = { accountViewModel.updatePowCategory(category, it) },
@@ -339,7 +339,7 @@ private fun SwitchTile(
         description = stringRes(description),
         onClick = { onCheckedChange(!checked) },
     ) {
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        AmethystSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
