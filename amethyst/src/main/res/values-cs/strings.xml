@@ -3027,10 +3027,6 @@
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Základ sloučení</string>
     <string name="git_pr_update_description">Pull request byl aktualizován na nový commit.</string>
-    <string name="git_status_open">Otevřeno</string>
-    <string name="git_status_merged">Sloučeno</string>
-    <string name="git_status_closed">Uzavřeno</string>
-    <string name="git_status_draft">Koncept</string>
     <string name="git_repo_tab_overview">Přehled</string>
     <string name="git_repo_tab_issues">Úkoly</string>
     <string name="git_repo_tab_patches">Patche a PR</string>

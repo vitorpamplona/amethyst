@@ -2105,10 +2105,6 @@
 <string name="forked_from">இதிலிருந்து பிரிந்தது</string>
 <string name="git_web_address">இணையம்:</string>
 <string name="git_clone_address">குளோன்:</string>
-<string name="git_status_open">திறந்த</string>
-<string name="git_status_merged">இணைக்கப்பட்ட</string>
-<string name="git_status_closed">மூடப்பட்ட</string>
-<string name="git_status_draft">வரைவு</string>
 <string name="git_repo_tab_overview">மேலோட்டம்</string>
 <string name="git_repo_tab_issues">சிக்கல்கள்</string>
 <string name="git_repo_tab_patches">திட்டுகள் &amp; PRs</string>

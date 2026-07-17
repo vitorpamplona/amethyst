@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Mở</string>
+    <string name="git_status_merged">Đã hợp nhất</string>
+    <string name="git_status_closed">Đã đóng</string>
+    <string name="git_status_draft">Nháp</string>
+</resources>

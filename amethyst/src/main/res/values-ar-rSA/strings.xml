@@ -2320,10 +2320,6 @@
     <string name="forked_from">مُفرَّع من</string>
     <string name="git_web_address">الويب:</string>
     <string name="git_clone_address">استنساخ:</string>
-    <string name="git_status_open">مفتوح</string>
-    <string name="git_status_merged">مدمج</string>
-    <string name="git_status_closed">مغلق</string>
-    <string name="git_status_draft">مسودة</string>
     <string name="git_repo_tab_overview">نظرة عامة</string>
     <string name="git_repo_tab_issues">المشكلات</string>
     <string name="git_repo_tab_patches">التصحيحات وطلبات السحب</string>

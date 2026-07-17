@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Malferma</string>
+    <string name="git_status_merged">Kunfandita</string>
+    <string name="git_status_closed">Fermita</string>
+    <string name="git_status_draft">Malneto</string>
+</resources>

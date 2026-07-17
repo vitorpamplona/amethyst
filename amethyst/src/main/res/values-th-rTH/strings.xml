@@ -2164,10 +2164,6 @@
     <string name="forked_from">คัดลอกมาจาก</string>
     <string name="git_web_address">เว็บไซน์</string>
     <string name="git_clone_address">สำเนา:</string>
-    <string name="git_status_open">เปิด</string>
-    <string name="git_status_merged">ผสานแล้ว</string>
-    <string name="git_status_closed">ปิด</string>
-    <string name="git_status_draft">ร่าง</string>
     <string name="git_repo_tab_overview">ภาพรวม</string>
     <string name="git_repo_section_about">เกี่ยวกับ</string>
     <string name="git_repo_section_links">ลิงก์</string>

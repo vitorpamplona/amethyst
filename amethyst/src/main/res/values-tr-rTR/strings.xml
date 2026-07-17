@@ -2221,10 +2221,6 @@
     <string name="restricted_writes">Kısıtlı Yazma</string>
     <string name="forked_from">Çatallandığı kaynak</string>
     <string name="git_clone_address">Klon:</string>
-    <string name="git_status_open">Açık</string>
-    <string name="git_status_merged">Birleştirildi</string>
-    <string name="git_status_closed">Kapalı</string>
-    <string name="git_status_draft">Taslak</string>
     <string name="git_repo_tab_overview">Genel Bakış</string>
     <string name="git_repo_tab_issues">Sorunlar</string>
     <string name="git_repo_tab_patches">Yamalar &amp; PR\'lar</string>

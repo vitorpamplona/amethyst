@@ -2218,10 +2218,6 @@
     <string name="forked_from">Ajratilgan</string>
     <string name="git_web_address">Veb:</string>
     <string name="git_clone_address">Klonlash:</string>
-    <string name="git_status_open">Ochiq</string>
-    <string name="git_status_merged">Birlashtirilgan</string>
-    <string name="git_status_closed">Yopiq</string>
-    <string name="git_status_draft">Qoralama</string>
     <string name="git_repo_tab_overview">Umumiy Ko\'rinish</string>
     <string name="git_repo_tab_issues">Muammolar</string>
     <string name="git_repo_tab_patches">Yamoqlar &amp; PR lar</string>

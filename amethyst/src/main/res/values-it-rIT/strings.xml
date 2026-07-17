@@ -2179,10 +2179,6 @@
     <string name="thank_you">Grazie!</string>
     <string name="restricted_writes">Scritture limitate</string>
     <string name="forked_from">Fork da</string>
-    <string name="git_status_open">Aperto</string>
-    <string name="git_status_merged">Unito</string>
-    <string name="git_status_closed">Chiuso</string>
-    <string name="git_status_draft">Bozza</string>
     <string name="git_repo_tab_overview">Panoramica</string>
     <string name="git_repo_tab_patches">Patch &amp; PR</string>
     <string name="git_repo_section_about">Informazioni</string>

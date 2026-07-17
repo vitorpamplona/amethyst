@@ -2831,10 +2831,6 @@
     <string name="git_commit">Véglegesítés</string>
     <string name="git_merge_base">Alap beolvasztása</string>
     <string name="git_pr_update_description">A beolvasztási kérés frissítve lett egy új véglegesítésbe.</string>
-    <string name="git_status_open">Nyitva</string>
-    <string name="git_status_merged">Beolvasztva</string>
-    <string name="git_status_closed">Lezárva</string>
-    <string name="git_status_draft">Vázlat</string>
     <string name="git_repo_tab_overview">Áttekintés</string>
     <string name="git_repo_tab_issues">Hibajegyek</string>
     <string name="git_repo_tab_patches">Foltok és beolvasztási kérések</string>

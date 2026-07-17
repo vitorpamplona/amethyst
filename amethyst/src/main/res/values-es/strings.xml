@@ -4946,13 +4946,9 @@
     
 <string name="export_as_zip">Exportar como ZIP (JSON)</string>
     
-<string name="git_status_open">Abierto</string>
     
-<string name="git_status_merged">Fusionado</string>
     
-<string name="git_status_closed">Cerrado</string>
     
-<string name="git_status_draft">Borrador</string>
     
 <string name="git_repo_tab_overview">Resumen</string>
     

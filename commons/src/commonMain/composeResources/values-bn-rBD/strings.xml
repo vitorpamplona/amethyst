@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">খোলা</string>
+    <string name="git_status_merged">মার্জ করা হয়েছে</string>
+    <string name="git_status_closed">বন্ধ</string>
+    <string name="git_status_draft">ড্রাফট</string>
+</resources>

@@ -2945,10 +2945,6 @@
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Merge-Basis</string>
     <string name="git_pr_update_description">Der Pull-Request wurde auf einen neuen Commit aktualisiert.</string>
-    <string name="git_status_open">Offen</string>
-    <string name="git_status_merged">Zusammengeführt</string>
-    <string name="git_status_closed">Geschlossen</string>
-    <string name="git_status_draft">Entwurf</string>
     <string name="git_repo_tab_overview">Übersicht</string>
     <string name="git_repo_tab_issues">Tickets</string>
     <string name="git_repo_tab_patches">Patches und PRs</string>

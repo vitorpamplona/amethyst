@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">खुला</string>
+    <string name="git_status_merged">विलीन</string>
+    <string name="git_status_closed">आवृत</string>
+    <string name="git_status_draft">पाण्डुलिपि</string>
+</resources>

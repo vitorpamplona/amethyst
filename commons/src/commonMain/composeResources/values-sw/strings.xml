@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Wazi</string>
+    <string name="git_status_merged">Imeunganishwa</string>
+    <string name="git_status_closed">Imefungwa</string>
+    <string name="git_status_draft">Rasimu</string>
+</resources>

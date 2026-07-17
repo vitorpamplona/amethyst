@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Atvērts</string>
+    <string name="git_status_merged">Sapludināts</string>
+    <string name="git_status_closed">Slēgts</string>
+    <string name="git_status_draft">Melnraksts</string>
+</resources>

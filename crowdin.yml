@@ -26,3 +26,16 @@ files:
         # target => no collision; cs-CZ is dropped from locales_config to match.
         cs: cs
         sw-KE: sw
+
+  # Shared UI strings that have been pulled down from the Android app into
+  # commons (Compose Multiplatform resources, consumed by amethyst + desktopApp).
+  # Same android layout + language mapping as the amethyst source so a key reads
+  # identically whichever module owns it after the note-ui-commons extraction.
+  - source: commons/src/commonMain/composeResources/values/strings.xml
+    translation: commons/src/commonMain/composeResources/values-%android_code%/%original_file_name%
+    type: android
+    skip_untranslated_strings: true
+    languages_mapping:
+      android_code:
+        cs: cs
+        sw-KE: sw

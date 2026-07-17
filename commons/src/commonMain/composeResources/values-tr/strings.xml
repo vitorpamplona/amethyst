@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Açık</string>
+    <string name="git_status_merged">Birleştirildi</string>
+    <string name="git_status_closed">Kapalı</string>
+    <string name="git_status_draft">Taslak</string>
+</resources>

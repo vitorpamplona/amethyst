@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">เปิด</string>
+    <string name="git_status_merged">ผสานแล้ว</string>
+    <string name="git_status_closed">ปิด</string>
+    <string name="git_status_draft">ร่าง</string>
+</resources>

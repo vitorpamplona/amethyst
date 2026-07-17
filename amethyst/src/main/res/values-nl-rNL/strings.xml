@@ -2486,10 +2486,6 @@
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Merge base</string>
     <string name="git_pr_update_description">De pull request bijgewerkt naar een nieuwe commit.</string>
-    <string name="git_status_open">Openen</string>
-    <string name="git_status_merged">Samengevoegd</string>
-    <string name="git_status_closed">Gesloten</string>
-    <string name="git_status_draft">Concept</string>
     <string name="git_repo_tab_overview">Overzicht</string>
     <string name="git_repo_tab_issues">Problemen</string>
     <string name="git_repo_tab_patches">Patches &amp; PRs</string>

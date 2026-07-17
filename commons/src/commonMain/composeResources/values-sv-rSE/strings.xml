@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Öppen</string>
+    <string name="git_status_merged">Sammanfogad</string>
+    <string name="git_status_closed">Stängd</string>
+    <string name="git_status_draft">Utkast</string>
+</resources>

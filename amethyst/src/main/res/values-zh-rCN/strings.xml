@@ -2822,10 +2822,6 @@
     <string name="git_commit">提交</string>
     <string name="git_merge_base">合并基</string>
     <string name="git_pr_update_description">将拉取请求更新为新提交。</string>
-    <string name="git_status_open">打开</string>
-    <string name="git_status_merged">已合并</string>
-    <string name="git_status_closed">已关闭</string>
-    <string name="git_status_draft">草稿</string>
     <string name="git_repo_tab_overview">概述</string>
     <string name="git_repo_tab_issues">议题</string>
     <string name="git_repo_tab_patches">补丁 &amp; PR</string>

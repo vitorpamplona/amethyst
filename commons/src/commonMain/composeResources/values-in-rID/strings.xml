@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Terbuka</string>
+    <string name="git_status_merged">Digabungkan</string>
+    <string name="git_status_closed">Ditutup</string>
+</resources>

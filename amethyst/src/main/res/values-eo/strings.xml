@@ -2105,10 +2105,6 @@
 <string name="forked_from">Forketita de</string>
 <string name="git_web_address">Retejo:</string>
 <string name="git_clone_address">Kloni:</string>
-<string name="git_status_open">Malferma</string>
-<string name="git_status_merged">Kunfandita</string>
-<string name="git_status_closed">Fermita</string>
-<string name="git_status_draft">Malneto</string>
 <string name="git_repo_tab_overview">Superrigardo</string>
 <string name="git_repo_tab_issues">Problemoj</string>
 <string name="git_repo_tab_patches">Flikoj &amp; PR-oj</string>

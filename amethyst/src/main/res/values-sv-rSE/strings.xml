@@ -2943,10 +2943,6 @@
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Mergebas</string>
     <string name="git_pr_update_description">Uppdaterade pull request till en ny commit.</string>
-    <string name="git_status_open">Öppen</string>
-    <string name="git_status_merged">Sammanfogad</string>
-    <string name="git_status_closed">Stängd</string>
-    <string name="git_status_draft">Utkast</string>
     <string name="git_repo_tab_overview">Översikt</string>
     <string name="git_repo_tab_issues">Ärenden</string>
     <string name="git_repo_tab_patches">Patchar och PR</string>

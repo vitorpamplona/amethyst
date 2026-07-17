@@ -101,4 +101,8 @@
     <string name="nickname_summary_label">Private note about this user</string>
     <string name="nickname_save">Save</string>
     <string name="nickname_cancel">Cancel</string>
+    <string name="git_status_open">Open</string>
+    <string name="git_status_merged">Merged</string>
+    <string name="git_status_closed">Closed</string>
+    <string name="git_status_draft">Draft</string>
 </resources>

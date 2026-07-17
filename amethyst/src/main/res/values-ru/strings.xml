@@ -2556,13 +2556,9 @@
     
     <string name="git_clone_address">Клонировать:</string>
     
-    <string name="git_status_open">Открыт</string>
     
-    <string name="git_status_merged">Объединён</string>
     
-    <string name="git_status_closed">Закрыт</string>
     
-    <string name="git_status_draft">Черновик</string>
     
     <string name="git_repo_tab_overview">Обзор</string>
     

@@ -2187,10 +2187,6 @@
     <string name="restricted_writes">제한된 쓰기</string>
     <string name="forked_from">포크 출처</string>
     <string name="git_web_address">웹:</string>
-    <string name="git_status_open">열림</string>
-    <string name="git_status_merged">병합됨</string>
-    <string name="git_status_closed">닫힘</string>
-    <string name="git_status_draft">초안</string>
     <string name="git_repo_tab_overview">개요</string>
     <string name="git_repo_tab_issues">이슈</string>
     <string name="git_repo_tab_patches">패치 &amp; PR</string>

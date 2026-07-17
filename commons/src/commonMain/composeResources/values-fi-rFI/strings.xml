@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Avoin</string>
+    <string name="git_status_merged">Yhdistetty</string>
+    <string name="git_status_closed">Suljettu</string>
+    <string name="git_status_draft">Luonnos</string>
+</resources>

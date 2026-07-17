@@ -2204,10 +2204,6 @@
     <string name="forked_from">Διακλαδώθηκε από</string>
     <string name="git_web_address">Ιστός:</string>
     <string name="git_clone_address">Κλωνοποίηση:</string>
-    <string name="git_status_open">Ανοιχτό</string>
-    <string name="git_status_merged">Συγχωνευμένο</string>
-    <string name="git_status_closed">Κλειστό</string>
-    <string name="git_status_draft">Πρόχειρο</string>
     <string name="git_repo_tab_overview">Επισκόπηση</string>
     <string name="git_repo_tab_issues">Ζητήματα</string>
     <string name="git_repo_tab_patches">Επιδιορθώσεις &amp; PRs</string>

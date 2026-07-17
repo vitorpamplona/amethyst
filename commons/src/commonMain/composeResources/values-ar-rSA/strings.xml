@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">مفتوح</string>
+    <string name="git_status_merged">مدمج</string>
+    <string name="git_status_closed">مغلق</string>
+    <string name="git_status_draft">مسودة</string>
+</resources>

@@ -2226,10 +2226,6 @@
     <string name="restricted_writes">Ograničena pisanja</string>
     <string name="forked_from">Forkovan od</string>
     <string name="git_clone_address">Kloniraj:</string>
-    <string name="git_status_open">Otvoreno</string>
-    <string name="git_status_merged">Spojeno</string>
-    <string name="git_status_closed">Zatvoreno</string>
-    <string name="git_status_draft">Nacrt</string>
     <string name="git_repo_tab_overview">Pregled</string>
     <string name="git_repo_tab_issues">Problemi</string>
     <string name="git_repo_tab_patches">Zakrpe &amp; PR-ovi</string>

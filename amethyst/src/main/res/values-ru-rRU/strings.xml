@@ -2271,10 +2271,6 @@
     <string name="forked_from">Форк от</string>
     <string name="git_web_address">Веб:</string>
     <string name="git_clone_address">Клонировать:</string>
-    <string name="git_status_open">Открыт</string>
-    <string name="git_status_merged">Объединён</string>
-    <string name="git_status_closed">Закрыт</string>
-    <string name="git_status_draft">Черновик</string>
     <string name="git_repo_tab_overview">Обзор</string>
     <string name="git_repo_tab_issues">Задачи</string>
     <string name="git_repo_tab_patches">Патчи и PR</string>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">열림</string>
+    <string name="git_status_merged">병합됨</string>
+    <string name="git_status_closed">닫힘</string>
+    <string name="git_status_draft">초안</string>
+</resources>

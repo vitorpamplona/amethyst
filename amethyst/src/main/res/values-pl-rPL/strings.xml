@@ -3028,10 +3028,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Scal gałąź główną</string>
     <string name="git_pr_update_description">Zaktualizowano pull request, uwzględniając nowy commit.</string>
-    <string name="git_status_open">Otwarte</string>
-    <string name="git_status_merged">Połączone</string>
-    <string name="git_status_closed">Zamknięte</string>
-    <string name="git_status_draft">Szkic</string>
     <string name="git_repo_tab_overview">Przegląd</string>
     <string name="git_repo_tab_issues">Problemy</string>
     <string name="git_repo_tab_patches">Łaty &amp; PRs</string>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">باز</string>
+    <string name="git_status_merged">ادغام شده</string>
+    <string name="git_status_closed">بسته</string>
+    <string name="git_status_draft">پیش‌نویس</string>
+</resources>

@@ -2244,10 +2244,6 @@
     <string name="forked_from">انشعاب شده از</string>
     <string name="git_web_address">وب:</string>
     <string name="git_clone_address">نسخه برداری:</string>
-    <string name="git_status_open">باز</string>
-    <string name="git_status_merged">ادغام شده</string>
-    <string name="git_status_closed">بسته</string>
-    <string name="git_status_draft">پیش‌نویس</string>
     <string name="git_repo_tab_overview">مرور کلی</string>
     <string name="git_repo_tab_issues">مشکلات</string>
     <string name="git_repo_tab_patches">وصله‌ها و PR‌ها</string>

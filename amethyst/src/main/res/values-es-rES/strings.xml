@@ -2283,10 +2283,6 @@
     <string name="git_commit">Confirmar</string>
     <string name="git_merge_base">Fusionar base</string>
     <string name="git_pr_update_description">Se actualizó la solicitud de incorporación de cambios con una nueva confirmación.</string>
-    <string name="git_status_open">Abierto</string>
-    <string name="git_status_merged">Fusionado</string>
-    <string name="git_status_closed">Cerrado</string>
-    <string name="git_status_draft">Borrador</string>
     <string name="git_repo_tab_overview">Resumen</string>
     <string name="git_repo_tab_issues">Incidencias</string>
     <string name="git_repo_tab_patches">Parches y PRs</string>

@@ -2566,13 +2566,9 @@
     
     <string name="export_as_zip">ส่งออกเป็น ZIP (JSON)</string>
     
-    <string name="git_status_open">เปิด</string>
     
-    <string name="git_status_merged">ผสานแล้ว</string>
     
-    <string name="git_status_closed">ปิด</string>
     
-    <string name="git_status_draft">ร่าง</string>
     
     <string name="git_repo_tab_overview">ภาพรวม</string>
     

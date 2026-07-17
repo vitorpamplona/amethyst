@@ -2236,10 +2236,6 @@
     <string name="forked_from">Atvasināts no</string>
     <string name="git_web_address">Tīmeklis:</string>
     <string name="git_clone_address">Klonēt:</string>
-    <string name="git_status_open">Atvērts</string>
-    <string name="git_status_merged">Sapludināts</string>
-    <string name="git_status_closed">Slēgts</string>
-    <string name="git_status_draft">Melnraksts</string>
     <string name="git_repo_tab_overview">Pārskats</string>
     <string name="git_repo_tab_issues">Problēmas</string>
     <string name="git_repo_tab_patches">Ielāpi &amp; PR</string>

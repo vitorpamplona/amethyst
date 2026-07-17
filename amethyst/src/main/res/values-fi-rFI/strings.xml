@@ -2210,10 +2210,6 @@
     <string name="forked_from">Haaroitettu kohteesta</string>
     <string name="git_web_address">Verkko:</string>
     <string name="git_clone_address">Kloonaa:</string>
-    <string name="git_status_open">Avoin</string>
-    <string name="git_status_merged">Yhdistetty</string>
-    <string name="git_status_closed">Suljettu</string>
-    <string name="git_status_draft">Luonnos</string>
     <string name="git_repo_tab_overview">Yleiskatsaus</string>
     <string name="git_repo_tab_issues">Ongelmat</string>
     <string name="git_repo_tab_patches">Korjaukset &amp; PR:t</string>

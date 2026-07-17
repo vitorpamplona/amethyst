@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">打开</string>
+    <string name="git_status_merged">已合并</string>
+    <string name="git_status_closed">已关闭</string>
+    <string name="git_status_draft">草稿</string>
+</resources>

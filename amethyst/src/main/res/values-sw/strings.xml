@@ -2213,10 +2213,6 @@
     <string name="forked_from">Imetoka kwenye</string>
     <string name="git_web_address">Wavuti:</string>
     <string name="git_clone_address">Nakili:</string>
-    <string name="git_status_open">Wazi</string>
-    <string name="git_status_merged">Imeunganishwa</string>
-    <string name="git_status_closed">Imefungwa</string>
-    <string name="git_status_draft">Rasimu</string>
     <string name="git_repo_tab_overview">Muhtasari</string>
     <string name="git_repo_tab_issues">Masuala</string>
     <string name="git_repo_tab_patches">Viraka &amp; PRs</string>

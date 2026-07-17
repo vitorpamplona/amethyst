@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Odprto</string>
+    <string name="git_status_merged">Združeno</string>
+    <string name="git_status_closed">Zaključeno</string>
+    <string name="git_status_draft">Osnutek</string>
+</resources>

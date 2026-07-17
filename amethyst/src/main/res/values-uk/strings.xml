@@ -2746,13 +2746,9 @@
     
     <string name="git_clone_address">Клонувати:</string>
     
-    <string name="git_status_open">Відкрито</string>
     
-    <string name="git_status_merged">Злито</string>
     
-    <string name="git_status_closed">Закрито</string>
     
-    <string name="git_status_draft">Чернетка</string>
     
     <string name="git_repo_tab_overview">Огляд</string>
     

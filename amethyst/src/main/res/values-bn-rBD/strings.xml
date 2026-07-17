@@ -2224,10 +2224,6 @@
     <string name="forked_from">থেকে ফর্ক করা হয়েছে</string>
     <string name="git_web_address">ওয়েব:</string>
     <string name="git_clone_address">ক্লোন:</string>
-    <string name="git_status_open">খোলা</string>
-    <string name="git_status_merged">মার্জ করা হয়েছে</string>
-    <string name="git_status_closed">বন্ধ</string>
-    <string name="git_status_draft">ড্রাফট</string>
     <string name="git_repo_tab_overview">ওভারভিউ</string>
     <string name="git_repo_tab_issues">ইস্যু</string>
     <string name="git_repo_tab_patches">প্যাচ &amp; PR</string>

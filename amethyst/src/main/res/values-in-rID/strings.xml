@@ -2161,9 +2161,6 @@ Seharusnya %3$s</string>
     <string name="thank_you">Terima kasih!</string>
     <string name="restricted_writes">Penulisan Terbatas</string>
     <string name="forked_from">Diturunkan dari</string>
-    <string name="git_status_open">Terbuka</string>
-    <string name="git_status_merged">Digabungkan</string>
-    <string name="git_status_closed">Ditutup</string>
     <string name="git_repo_tab_overview">Ikhtisar</string>
     <string name="git_repo_tab_issues">Isu</string>
     <string name="git_repo_tab_patches">Patch &amp; PR</string>

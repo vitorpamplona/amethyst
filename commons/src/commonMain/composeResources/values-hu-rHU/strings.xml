@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Nyitva</string>
+    <string name="git_status_merged">Beolvasztva</string>
+    <string name="git_status_closed">Lezárva</string>
+    <string name="git_status_draft">Vázlat</string>
+</resources>

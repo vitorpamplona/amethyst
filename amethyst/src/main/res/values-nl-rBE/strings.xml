@@ -3766,13 +3766,9 @@
     
 <string name="git_clone_address">Klonen:</string>
     
-<string name="git_status_open">Openen</string>
     
-<string name="git_status_merged">Samengevoegd</string>
     
-<string name="git_status_closed">Gesloten</string>
     
-<string name="git_status_draft">Concept</string>
     
 <string name="git_repo_tab_overview">Overzicht</string>
     

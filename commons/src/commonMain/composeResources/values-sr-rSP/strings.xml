@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Otvoreno</string>
+    <string name="git_status_merged">Spojeno</string>
+    <string name="git_status_closed">Zatvoreno</string>
+    <string name="git_status_draft">Nacrt</string>
+</resources>

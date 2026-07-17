@@ -3475,13 +3475,9 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="export_as_zip">Als ZIP exportieren (JSON)</string>
     
-<string name="git_status_open">Offen</string>
     
-<string name="git_status_merged">Zusammengeführt</string>
     
-<string name="git_status_closed">Geschlossen</string>
     
-<string name="git_status_draft">Entwurf</string>
     
 <string name="git_repo_tab_overview">Übersicht</string>
     

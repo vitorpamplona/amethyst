@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">திறந்த</string>
+    <string name="git_status_merged">இணைக்கப்பட்ட</string>
+    <string name="git_status_closed">மூடப்பட்ட</string>
+    <string name="git_status_draft">வரைவு</string>
+</resources>

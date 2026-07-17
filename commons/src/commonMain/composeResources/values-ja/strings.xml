@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">オープン</string>
+    <string name="git_status_merged">マージ済み</string>
+    <string name="git_status_closed">クローズ済み</string>
+    <string name="git_status_draft">下書き</string>
+</resources>

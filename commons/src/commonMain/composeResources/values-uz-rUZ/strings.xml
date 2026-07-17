@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Ochiq</string>
+    <string name="git_status_merged">Birlashtirilgan</string>
+    <string name="git_status_closed">Yopiq</string>
+    <string name="git_status_draft">Qoralama</string>
+</resources>

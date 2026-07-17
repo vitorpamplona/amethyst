@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Aperto</string>
+    <string name="git_status_merged">Unito</string>
+    <string name="git_status_closed">Chiuso</string>
+    <string name="git_status_draft">Bozza</string>
+</resources>

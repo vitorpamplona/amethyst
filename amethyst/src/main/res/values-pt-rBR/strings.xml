@@ -2943,10 +2943,6 @@
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Base de merge</string>
     <string name="git_pr_update_description">O pull request foi atualizado para um novo commit.</string>
-    <string name="git_status_open">Aberto</string>
-    <string name="git_status_merged">Mesclado</string>
-    <string name="git_status_closed">Fechado</string>
-    <string name="git_status_draft">Rascunho</string>
     <string name="git_repo_tab_overview">Visão geral</string>
     <string name="git_repo_tab_issues">Tickets</string>
     <string name="git_repo_tab_patches">Patches e PRs</string>
