@@ -23,6 +23,8 @@ the client.
       picker BEFORE anything is granted. Approving pre-grants exactly those ops
       (unless Paranoid); Cancel/Block declines and nothing is registered. A
       re-pair of a known app skips the sheet and keeps prior decisions.
+      Repro: `amy login --nostrconnect --perms sign_event:1,nip44_encrypt`
+      prints an offer that carries exactly those perms (see CLI interop driver).
 - [ ] **Global scanner**: scan a `nostrconnect://` from the profile/search
       camera → lands on the signer screen and pairs.
 - [ ] **Deep link**: tap a `nostrconnect://` link (web/other app) → Amethyst
@@ -104,6 +106,30 @@ Pair + sign + nip44 encrypt/decrypt + logout against each:
 - [ ] Coracle
 - [ ] Nostrudel
 - [ ] snort / other NIP-46 client
+
+## CLI interop driver (`amy`) — added 2026-07-17
+The `cli` module (`amy`) drives the same quartz/commons code, so it plays either
+side of every NIP-46 flow for reproducible interop tests without a second phone.
+All of it reuses `Nip46PermissionAuthorizer.parsePerms` / `toSignerOp` — no
+protocol logic in `cli`. See `amy --help` (the `Remote signing (NIP-46)` block).
+
+Amy as the **client** (Amethyst is the signer):
+- `amy login bunker://…` — pair against Amethyst's advertised `bunker://`, then
+  every `amy` signing verb routes through it. Surfaces `auth_url` challenges to
+  stderr, so it completes even when Amethyst defers consent.
+- `amy login --nostrconnect [--perms sign_event:1,nip44_encrypt,…]` — mint an
+  offer for Amethyst to scan. `--perms` is what exercises the app's
+  **informed-consent** sheet (the offer carries the declared ops).
+
+Amy as the **signer** (Amethyst, or any client, is the client):
+- `amy bunker` — headless auto-approve signer for the operator's own key.
+- `amy bunker --perms sign_event:1,nip44_encrypt` — restricted signer: allows
+  only the listed ops, **rejects** the rest. Use to test how the app-as-client
+  handles a signer that says no.
+- `amy bunker --interactive` — keeps listening and prompts `y/N` per request on
+  the terminal (TTY-only, default-deny, prompts serialized). Composes with
+  `--perms` (auto-allow the listed ops, prompt for the rest = the "Reasonable"
+  policy on the CLI).
 
 ## Audit findings — known limitations (2026-07-16)
 
