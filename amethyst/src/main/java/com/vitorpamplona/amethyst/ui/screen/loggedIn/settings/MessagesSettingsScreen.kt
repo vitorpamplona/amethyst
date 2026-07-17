@@ -23,24 +23,21 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -56,6 +53,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
@@ -64,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
@@ -168,18 +167,20 @@ fun MessagesSettingsScreen(
                     SectionHeader(title = stringRes(R.string.relay_group_view_mode_title))
                 }
                 item {
-                    ViewModeCard {
-                        ViewModeOption(
-                            title = stringRes(R.string.relay_group_view_inline),
-                            description = stringRes(R.string.relay_group_view_inline_desc),
+                    ViewModeCards {
+                        PolicyCard(
                             selected = mode == RelayGroupViewMode.INLINE,
-                            onSelect = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.INLINE) },
+                            symbol = MaterialSymbols.AutoMirrored.ViewList,
+                            label = stringRes(R.string.relay_group_view_inline),
+                            description = stringRes(R.string.relay_group_view_inline_desc),
+                            onClick = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.INLINE) },
                         )
-                        ViewModeOption(
-                            title = stringRes(R.string.relay_group_view_grouped),
-                            description = stringRes(R.string.relay_group_view_grouped_desc),
+                        PolicyCard(
                             selected = mode == RelayGroupViewMode.GROUPED,
-                            onSelect = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.GROUPED) },
+                            symbol = MaterialSymbols.Folder,
+                            label = stringRes(R.string.relay_group_view_grouped),
+                            description = stringRes(R.string.relay_group_view_grouped_desc),
+                            onClick = { accountViewModel.account.settings.updateRelayGroupViewMode(RelayGroupViewMode.GROUPED) },
                         )
                     }
                 }
@@ -190,18 +191,20 @@ fun MessagesSettingsScreen(
                     SectionHeader(title = stringRes(R.string.concord_view_mode_title))
                 }
                 item {
-                    ViewModeCard {
-                        ViewModeOption(
-                            title = stringRes(R.string.concord_view_inline),
-                            description = stringRes(R.string.concord_view_inline_desc),
+                    ViewModeCards {
+                        PolicyCard(
                             selected = concordMode == ConcordViewMode.INLINE,
-                            onSelect = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.INLINE) },
+                            symbol = MaterialSymbols.AutoMirrored.ViewList,
+                            label = stringRes(R.string.concord_view_inline),
+                            description = stringRes(R.string.concord_view_inline_desc),
+                            onClick = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.INLINE) },
                         )
-                        ViewModeOption(
-                            title = stringRes(R.string.concord_view_grouped),
-                            description = stringRes(R.string.concord_view_grouped_desc),
+                        PolicyCard(
                             selected = concordMode == ConcordViewMode.GROUPED,
-                            onSelect = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.GROUPED) },
+                            symbol = MaterialSymbols.Folder,
+                            label = stringRes(R.string.concord_view_grouped),
+                            description = stringRes(R.string.concord_view_grouped_desc),
+                            onClick = { accountViewModel.account.settings.updateConcordViewMode(ConcordViewMode.GROUPED) },
                         )
                     }
                 }
@@ -300,41 +303,9 @@ private fun ChatTypeToggleRow(
     }
 }
 
+/** Stacks the bordered selection cards (one per mode) with the same spacing the Relay Authentication
+ *  "When to authenticate" picker uses. */
 @Composable
-private fun ViewModeCard(content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-    ) {
-        Column(Modifier.padding(vertical = 4.dp)) { content() }
-    }
-}
-
-@Composable
-private fun ViewModeOption(
-    title: String,
-    description: String,
-    selected: Boolean,
-    onSelect: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .selectable(selected = selected, onClick = onSelect)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = onSelect)
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text(text = title, fontWeight = FontWeight.SemiBold)
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+private fun ViewModeCards(content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
 }
