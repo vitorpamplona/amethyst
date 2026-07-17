@@ -927,6 +927,64 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nip46_signer_app_reconnect">Połącz ponownie</string>
     <string name="nip46_signer_reconnecting">Ponowne łączenie z transmiterami…</string>
     <string name="nip46_signer_app_relays_title">Transmitery</string>
+    <string name="nip46_signer_app_relays_inbox">Znaki nad transmiterami skrzynki odbiorczej — ta aplikacja nie wprowadziła żadnych własnych, więc nie utrzymuje żadnego dodatkowego połączenia w tle.</string>
+    <string name="nip46_signer_app_relays_own_hint">Amethyst posiada połączenie w tle z każdym z nich, podczas gdy ta aplikacja pozostaje połączona. Zapomnij o aplikacji, aby je usunąć.</string>
+    <plurals name="nip46_signer_app_relay_count">
+        <item quantity="one">%1$d transmiter</item>
+        <item quantity="few">%1$d transmiterów</item>
+        <item quantity="many">%1$d transmiterów</item>
+        <item quantity="other">%1$d transmitery</item>
+    </plurals>
+    <string name="nip46_signer_connected_ok">Aplikacja połączona. Amethyst loguje się teraz do niej w tle.</string>
+    <string name="nip46_signer_connected_named">Połączono %1$s. Amethyst loguje się teraz do niej w tle.</string>
+    <string name="nip46_signer_connect_invalid">Nieprawidłowy link nostrconnect://</string>
+    <string name="nip46_signer_connect_no_relays">Ten link nie zawiera żadnego transmitera, z którym można by się połączyć</string>
+    <string name="nip46_signer_connect_failed">Nie udało się połączyć: %1$s</string>
+    <string name="nip46_signer_connect_declined">Połączenie odrzucone</string>
+    <string name="nip46_connect_requests_title">Ta aplikacja wymaga:</string>
+    <string name="nip46_signer_readonly">To konto jest przeznaczone wyłącznie do odczytu i nie ma uprawnień do logowania</string>
+    <string name="nip46_signer_remote_app">Aplikacja zdalnego logowania</string>
+    <string name="nip46_signer_background_hint">Ametyst utrzymuje połączenie w tle (wyświetlane jako bieżące powiadomienie), aby mógł odpowiadać na podpisywanie żądań po zamknięciu.</string>
+    <string name="nip46_signer_hero_title">Podpisz dla innych aplikacji</string>
+    <string name="nip46_signer_turn_on">Włącz podpisującego</string>
+    <string name="nip46_signer_live">Na żywo</string>
+    <plurals name="nip46_signer_batch_title">
+        <item quantity="one">%1$d żądanie podpisania</item>
+        <item quantity="few">%1$d żądań podpisu</item>
+        <item quantity="many">%1$d żądań podpisu</item>
+        <item quantity="other">%1$d żądania podpisu</item>
+    </plurals>
+    <string name="nip46_signer_batch_select_all">Wybierz wszystkie</string>
+    <string name="nip46_signer_batch_select_none">Odznacz wszystko</string>
+    <string name="nip46_signer_batch_remember">Zapamiętaj to dla każdej aplikacji</string>
+    <string name="nip46_signer_batch_signing_as">jako %1$s</string>
+    <string name="nip46_signer_batch_allow">Zezwól %1$d</string>
+    <string name="nip46_signer_batch_deny">Odmów %1$d</string>
+    <string name="nip46_signer_activity_title">Ostatnia aktywność</string>
+    <string name="nip46_signer_activity_empty">Nie obsłużono jeszcze żadnych zgłoszeń.</string>
+    <string name="nip46_signer_activity_denied">odrzucono</string>
+    <string name="nip46_signer_act_signed_kind">Podpisano wydarzenie (typ %1$d)</string>
+    <string name="nip46_signer_act_encrypted">Zaszyfrowałem wiadomość</string>
+    <string name="nip46_signer_act_decrypted">Odszyfrowano wiadomość</string>
+    <string name="nip46_signer_act_shared_pubkey">Udostępniłeś swój klucz publiczny</string>
+    <string name="nip46_signer_act_connected">Podłączony</string>
+    <string name="nip46_signer_act_ping">PIng</string>
+    <string name="nip46_signer_act_listed_relays">Wymienione transmitery</string>
+    <string name="nip46_signer_act_other">%1$s</string>
+    <string name="nip46_signer_notif_channel_name">Żądania podpisu</string>
+    <string name="nip46_signer_notif_channel_desc">Pełnoekranowe komunikaty z prośbą o zatwierdzenie aplikacji, która chce, aby Amethyst podpisała, zaszyfrowała lub odszyfrowała dane przy użyciu Twojego klucza.</string>
+    <string name="nip46_signer_notif_sign_title">Zatwierdzić żądanie podpisania?</string>
+    <string name="nip46_signer_notif_connect_title">Aplikacja chce się połączyć</string>
+    <string name="nip46_signer_notif_tap">Kliknij, aby przejrzeć</string>
+    <string name="nip46_signer_scan_caption">Zeskanuj aby połączyć aplikację z Twoim kluczem</string>
+    <string name="nip46_signer_scan_connect">Zeskanuj kod</string>
+    <string name="nip46_signer_paste_link">Zamiast tego wklej link</string>
+    <plurals name="nip46_signer_connected_count">
+        <item quantity="one">%1$d połączona aplikacja</item>
+        <item quantity="few">%1$d połączonych aplikacji</item>
+        <item quantity="many">%1$d połączonych aplikacji</item>
+        <item quantity="other">%1$d połączone aplikacje</item>
+    </plurals>
     <string name="napplet_connected_app_trust_level">Podpisywanie poziomu zaufania</string>
     <string name="napplet_connected_app_capabilities">Możliwości</string>
     <string name="napplet_connected_app_forget">Zapomnij o aplikacji</string>
@@ -997,6 +1055,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nip82_older_releases_hide">Ukryj starsze wersje</string>
     <string name="shorts">Filmiki</string>
     <string name="public_chats">Czaty publiczne</string>
+    <string name="location_channels">Kanały lokalizacji</string>
     <string name="follow_packs">Pakiety subskrybentów</string>
     <string name="live_streams">Transmisje na żywo</string>
     <string name="nests">Pokoje audio</string>
@@ -1668,6 +1727,13 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
+    <string name="always_on_notif_tile_label">Usługa powiadomień</string>
+    <string name="always_on_notif_tile_subtitle_on">Wł.</string>
+    <string name="always_on_notif_tile_subtitle_off">Wył.</string>
+    <string name="notification_service_master_title">Usługa powiadomień w tle</string>
+    <string name="notification_service_master_description">Przełącznik główny do powiadomień w tle w czasie rzeczywistym. Wyłącz go, aby oszczędzać baterię — podobnie jak w trybie samolotowym. Gdy jest wyłączony, żadne konto nie pozostaje połączone w tle, a przełącznik pozostaje wyłączony (nawet po ponownym uruchomieniu urządzenia) do momentu ponownego włączenia.</string>
+    <string name="notification_service_accounts_title">Konta aktywne w tle</string>
+    <string name="notification_service_participation_title">Zachowaj aktywne konto w tle</string>
     <string name="split_notifications_setting_title">Podział powiadomień według obserwowanych</string>
     <string name="split_notifications_setting_description">Wyświetl dwie zakładki powiadomień — „Obserwowani” (osoby, które obserwujesz) oraz „Wszyscy”. Wskaźnik nieprzeczytanych powiadomień świeci się tylko w przypadku aktywności osób, które obserwujesz.</string>
     <string name="show_messages_in_notifications_setting_title">Pokaż wiadomości</string>
@@ -1843,16 +1909,23 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="connectivity_type_unmetered_wifi_only">Nielimitowany Wi-Fi</string>
     <string name="connectivity_type_never">Nigdy</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
     <string name="ui_feature_set_type_complete">Kompletny</string>
     <string name="ui_feature_set_type_simplified">Uproszczony</string>
     <string name="ui_feature_set_type_performance">Dynamiczny</string>
     <!-- Compact labels for the segmented control. -->
+    <string name="ui_feature_set_type_complete_short">Pełny</string>
+    <string name="ui_feature_set_type_simplified_short">Prosty</string>
+    <string name="ui_feature_set_type_performance_short">Szybki</string>
     <string name="gallery_type_classic">Klasyczny</string>
     <string name="gallery_type_modern">Nowoczesny</string>
     <string name="system">Automatyczny</string>
     <string name="light">Jasny</string>
     <string name="dark">Ciemny</string>
     <string name="application_preferences">Ustawienia Aplikacji</string>
+    <string name="settings_section_appearance">Wygląd</string>
+    <string name="settings_section_media">Media &amp; Dane</string>
+    <string name="settings_section_general">Ogólne</string>
     <string name="wallet_connect">Podłącz portfel</string>
     <string name="language">Język</string>
     <string name="theme">Motyw</string>
@@ -1871,6 +1944,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">Monospace</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
+    <string name="font_family_system_short">Systemowy</string>
+    <string name="font_family_sans_serif_short">Sans</string>
+    <string name="font_family_serif_short">Serif</string>
+    <string name="font_family_monospace_short">Mono</string>
     <string name="font_size">Rozmiar czcionki</string>
     <string name="font_size_description">Dostosuj rozmiar tekstu w całej aplikacji</string>
     <string name="font_size_small">Mały</string>
@@ -2044,6 +2121,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_members_title">Członkowie</string>
     <string name="relay_group_make_admin">Stwórz administratora</string>
     <string name="relay_group_make_moderator">Stwórz moderatora</string>
+    <string name="relay_group_assign_role">Przypisz rolę: %1$s</string>
     <string name="relay_group_demote_member">Usuń rolę</string>
     <string name="relay_group_remove_user">Usuń z grupy</string>
     <string name="relay_group_remove_user_confirm">Usunąć %1$s z tej grupy? Stracą dostęp do czasu ponownego dodania lub ponownego zaproszenia.</string>
@@ -2056,6 +2134,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_menu_members">Członkowie</string>
     <string name="relay_group_menu_edit">Edytuj grupę</string>
     <string name="relay_group_threads_title">Wątki</string>
+    <string name="relay_group_pin_message">Przypnij wiadomość</string>
+    <string name="relay_group_unpin_message">Odepnij wiadomość</string>
+    <string name="relay_group_pinned_label">Przypięta</string>
+    <string name="relay_group_pinned_content_description">Przypięte wiadomości</string>
     <string name="relay_group_open">Grupa otwarta</string>
     <string name="relay_group_channels_empty">Brak grup na tym przekaźniku transmiterze.</string>
     <string name="relay_group_channels_not_nip29">Ten transmiter nie informuje o obsłudze grup (NIP-29), więc może ich nie obsługiwać.</string>
@@ -2075,6 +2157,15 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_field_topics_hint">bitcoin, nostr, sztuka</string>
     <string name="relay_group_field_geohash">Lokalizacja (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_section_structure">Struktura</string>
+    <string name="relay_group_parent_desc">Umieść tę grupę w podgrupie nadrzędnej, aby utworzyć hierarchię.</string>
+    <string name="relay_group_parent_label">Grupa nadrzędna</string>
+    <string name="relay_group_parent_none">Grupa najwyższego poziomu</string>
+    <string name="relay_group_parent_pick_title">Wybierz grupę nadrzędną</string>
+    <string name="relay_group_parent_search">Wyszukiwanie grup</string>
+    <string name="relay_group_parent_top_level_option">Brak grupy nadrzędnej (poziom najwyższy)</string>
+    <string name="relay_group_parent_none_desc">Ta grupa znajduje się na najwyższym poziomie</string>
+    <string name="relay_group_parent_empty">Brak innych grup na tym transmiterze</string>
     <string name="relay_group_section_permissions">Uprawnienia</string>
     <string name="relay_group_flag_private">Prywatna</string>
     <string name="relay_group_flag_private_desc">Tylko członkowie mogą czytać wiadomości.</string>
@@ -2198,6 +2289,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="no_blossom_apps_found_description">Nie znaleziono aplikacji Blossom. Zainstaluj lokalną aplikację Blossom, aby wyświetlić ten plik</string>
     <string name="hidden_words">Ukryte słowa</string>
     <string name="hide_new_word_label">Ukryj nowe słowo lub wyrażenie</string>
+    <string name="mute_hashtag">Wycisz hashtag</string>
+    <string name="unmute_hashtag">Włącz hashtag</string>
     <string name="settings_muted_threads_title">Zablokowane wątki</string>
     <string name="settings_muted_threads_empty">Brak zablokowanych wątków</string>
     <string name="settings_muted_threads_unknown">Nieznany wątek · %1$s</string>
@@ -3251,6 +3344,18 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="resource_usage_reason_bg_data">%1$s danych komórkowych w tle w ciągu jednego dnia</string>
     <string name="resource_usage_reason_conn_time">%1$s połączeń z transmiterem w ciągu jednego dnia, gdy aplikacja działała w tle przy połączeniu komórkowym</string>
     <string name="resource_usage_reason_wakelock">procesor pozostawał w stanie czuwania przez %1$s w celu przetwarzania powiadomień w ciągu jednego dnia</string>
+    <plurals name="resource_usage_reason_churn">
+        <item quantity="one">aplikacja uruchomiła się ponownie %1$d w ciągu jednego dnia</item>
+        <item quantity="few">aplikacja uruchomiła się ponownie %1$d razy w ciągu jednego dnia</item>
+        <item quantity="many">aplikacja uruchomiła się ponownie %1$d razy w ciągu jednego dnia</item>
+        <item quantity="other">aplikacja uruchomiła się ponownie %1$d razy w ciągu jednego dnia</item>
+    </plurals>
+    <plurals name="resource_usage_reason_reconnects">
+        <item quantity="one">aplikacja ponownie połączyła się z transmiterami %1$d raz w ciągu dnia</item>
+        <item quantity="few">aplikacja ponownie połączyła się z transmiterami %1$d razy w ciągu jednego dnia</item>
+        <item quantity="many">aplikacja ponownie połączyła się z transmiterami %1$d razy w ciągu jednego dnia</item>
+        <item quantity="other">aplikacja ponownie połączyła się z transmiterami %1$d razy w ciągu jednego dnia</item>
+    </plurals>
     <string name="resource_usage_alert_send">Przejrzyj &amp; wyślij</string>
     <string name="resource_usage_alert_not_now">Nie teraz</string>
     <string name="resource_usage_alert_opt_out">Nie pytaj ponownie</string>
@@ -4099,5 +4204,14 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
+    <string name="geohash_chat_open">Otwórz czat lokalizacyjny</string>
+    <string name="geohash_chat">Lokalizacja czatu</string>
+    <string name="new_conversation_location_title">Lokalizacja kanału</string>
+    <string name="new_conversation_location_tagline">Rozmawiaj z każdym, kto znajduje się w pobliżu danego miejsca, na podstawie geohashu.</string>
+    <string name="new_conversation_location_chip">Lokalnie</string>
+    <string name="new_conversation_location_best">Najlepiej nadaje się do nawiązywania kontaktów z osobami przebywającymi fizycznie w danej okolicy — w Twojej dzielnicy, mieście lub regionie.</string>
+    <string name="new_conversation_location_cta">Wybierz lokalizację</string>
+    <string name="new_conversation_location_pro_1">Anonimowy — to tymczasowa tożsamość przypisana do danego obszaru, nigdy nie jest to twój npub.</string>
+    <string name="new_conversation_location_pro_2">Kompatybilny z Bitchatem; dociera do pobliskich użytkowników na tych samych transmiterach.</string>
     <string name="new_conversation_location_con_1">Publiczny i efemeryczny – brak historii, każdy uczestnik może go odczytać.</string>
 </resources>

@@ -378,6 +378,7 @@
     <string name="concord_invite_card_join">Připojit se ke komunitě</string>
     <string name="concord_invite_card_subtitle">Pozvánka do komunity Concord</string>
     <string name="concord_invite_naddr_label">Pozvánka Concord (pro připojení otevřete celý odkaz pozvánky)</string>
+    <string name="concord_server_label">Concord</string>
     <string name="concord_view_mode_title">Zobrazení komunit Concord</string>
     <string name="concord_view_inline">Vložené</string>
     <string name="concord_view_grouped">Podle komunity</string>
@@ -922,11 +923,18 @@
     <string name="nip46_signer_apps_empty">K vašemu podepisovateli zatím nejsou připojené žádné aplikace.\n\nNaskenujte nebo vložte kód aplikace pro její připojení. Připojené aplikace se zobrazí zde a nečinné jsou po týdnu automaticky odebrány.</string>
     <string name="nip46_signer_app_last_used">použito %1$s</string>
     <string name="nip46_signer_app_online">Připojeno</string>
+    <string name="nip46_signer_app_offline">Offline</string>
     <string name="nip46_signer_app_reconnect">Znovu připojit</string>
     <string name="nip46_signer_reconnecting">Opětovné připojování k relayím…</string>
     <string name="nip46_signer_app_relays_title">Relaye</string>
     <string name="nip46_signer_app_relays_inbox">Podepisuje přes vaše inbox relaye — tato aplikace žádné vlastní nepřinesla, takže neudržuje žádné další připojení na pozadí.</string>
     <string name="nip46_signer_app_relays_own_hint">Amethyst udržuje připojení na pozadí ke každému z nich, dokud zůstává tato aplikace připojená. Zapomeňte aplikaci, abyste je ukončili.</string>
+    <plurals name="nip46_signer_app_relay_count">
+        <item quantity="one">%1$d relé</item>
+        <item quantity="few">%1$d relaye</item>
+        <item quantity="many">%1$d relaye</item>
+        <item quantity="other">%1$d relayů</item>
+    </plurals>
     <string name="nip46_signer_connected_ok">Aplikace připojena. Amethyst za ni nyní podepisuje na pozadí.</string>
     <string name="nip46_signer_connected_named">%1$s připojeno. Amethyst za ni nyní podepisuje na pozadí.</string>
     <string name="nip46_signer_connect_invalid">Neplatný odkaz nostrconnect://</string>
@@ -960,7 +968,9 @@
     <string name="nip46_signer_act_decrypted">Dešifrovala zprávu</string>
     <string name="nip46_signer_act_shared_pubkey">Sdílela váš veřejný klíč</string>
     <string name="nip46_signer_act_connected">Připojeno</string>
+    <string name="nip46_signer_act_ping">Ping</string>
     <string name="nip46_signer_act_listed_relays">Vypsala relaye</string>
+    <string name="nip46_signer_act_other">%1$s</string>
     <string name="nip46_signer_notif_channel_name">Požadavky na podepsání</string>
     <string name="nip46_signer_notif_channel_desc">Celoobrazovkové výzvy žádající o schválení aplikace, která chce, aby Amethyst podepsal, zašifroval nebo dešifroval vaším klíčem.</string>
     <string name="nip46_signer_notif_sign_title">Schválit požadavek na podepsání?</string>
@@ -1899,6 +1909,7 @@
     <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
     <string name="connectivity_type_never">Nikdy</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
     <string name="ui_feature_set_type_complete">Kompletní</string>
     <string name="ui_feature_set_type_simplified">Zjednodušené</string>
     <string name="ui_feature_set_type_performance">Výkonost</string>
@@ -1934,6 +1945,9 @@
     <string name="font_family_monospace">Neproporcionální</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="font_family_system_short">Systém</string>
+    <string name="font_family_sans_serif_short">Sans</string>
+    <string name="font_family_serif_short">Serif</string>
+    <string name="font_family_monospace_short">Mono</string>
     <string name="font_size">Velikost písma</string>
     <string name="font_size_description">Změna velikosti textu v celé aplikaci</string>
     <string name="font_size_small">Malá</string>
@@ -3259,6 +3273,7 @@
     <string name="resource_usage_tile_in_app">V aplikaci dnes</string>
     <string name="resource_usage_trend_section">Data za den</string>
     <string name="resource_usage_legend_cellular">Mobilní (MB)</string>
+    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
     <string name="resource_usage_activity_section">Aktivita (7 dní)</string>
     <string name="resource_usage_cellular_bg">Mobilní data (na pozadí)</string>
     <string name="resource_usage_cellular_fg">Mobilní data (v aplikaci)</string>

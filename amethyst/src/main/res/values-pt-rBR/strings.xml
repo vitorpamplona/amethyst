@@ -45,6 +45,7 @@
     <string name="timestamp_it">Carimbá-lo com data/hora</string>
     <string name="timestamp_pending">Carimbo de data/hora: Confirmações pendentes</string>
     <string name="timestamp_pending_short">OTS: Pendente</string>
+    <string name="one_year_plus">1a+</string>
     <string name="request_deletion">Pedir para excluir</string>
     <string name="block_report">Bloquear / Denunciar</string>
     <string name="block_hide_user"><![CDATA[Bloquear e ocultar usuário]]></string>
@@ -322,6 +323,7 @@
     <string name="concord_create_title">Novo canal Concord</string>
     <string name="concord_create_name">Nome</string>
     <string name="concord_create_about">Sobre (opcional)</string>
+    <string name="concord_create_relays">Relés</string>
     <string name="concord_create_icon">URL do ícone (opcional)</string>
     <plurals name="concord_channel_count">
         <item quantity="one">%1$d canal</item>
@@ -359,10 +361,12 @@
     <string name="concord_members_remove_message">Isso rotaciona a chave de criptografia da comunidade para que este membro não possa mais ler nada enviado depois. Todos os outros recebem novas chaves automaticamente. Isso não pode ser desfeito.</string>
     <string name="concord_members_remove_confirm">Remover</string>
     <string name="concord_role_owner">Dono</string>
+    <string name="concord_role_admin">Administrador</string>
     <string name="concord_role_banned">Banido</string>
     <string name="concord_invite_card_join">Entrar na comunidade</string>
     <string name="concord_invite_card_subtitle">Convite para comunidade Concord</string>
     <string name="concord_invite_naddr_label">Convite Concord (abra o link de convite completo para entrar)</string>
+    <string name="concord_server_label">Concord</string>
     <string name="concord_view_mode_title">Exibição da comunidade Concord</string>
     <string name="concord_view_inline">Em linha</string>
     <string name="concord_view_grouped">Por comunidade</string>
@@ -672,6 +676,8 @@
     <string name="app_definition_related">Relacionados</string>
     <string name="app_definition_implements">Implementa</string>
     <string name="app_definition_supported_nips">NIPs suportados</string>
+    <string name="app_definition_via">pelo %1$s</string>
+    <string name="app_definition_nip">NIP-%1$s</string>
     <string name="app_definition_kind_app">Aplicativo</string>
     <string name="platform_web">Web</string>
     <string name="platform_android">Android</string>
@@ -695,6 +701,7 @@
     <string name="workout_reps">Repetições</string>
     <string name="workout_weight">Peso</string>
     <string name="workout_exercises">Exercícios</string>
+    <string name="workout_volume">Volume</string>
     <string name="workout_notes">Notas</string>
     <string name="workout_hours">Horas</string>
     <string name="workout_minutes">Minutos</string>
@@ -702,6 +709,7 @@
     <string name="workout_suggestion_connect_title">Compartilhe seus treinos</string>
     <string name="workout_suggestion_connect_message">Permita que o Amethyst leia treinos concluídos do Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) e sugira uma publicação.</string>
     <string name="workout_suggestion_connect_button">Conectar</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Do Health Connect</string>
     <string name="exercise_running">Corrida</string>
     <string name="exercise_walking">Caminhada</string>
@@ -715,8 +723,12 @@
     <string name="exercise_diet">Dieta</string>
     <string name="exercise_fasting">Jejum</string>
     <string name="exercise_circuit">Circuito</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="exercise_amrap">AMRAP</string>
     <string name="software_apps">Aplicativos</string>
     <string name="route_software_apps">Apps</string>
+    <string name="napplets">nApplets</string>
+    <string name="nsites">nSites</string>
     <string name="nsite_none_found">Nenhum nSite encontrado ainda.</string>
     <string name="browser">Navegador</string>
     <string name="browser_reload">Recarregar</string>
@@ -757,10 +769,13 @@
     <string name="napplet_permissions_revoke">Revogar</string>
     <string name="napplet_permissions_ask_each_time">Perguntar sempre</string>
     <string name="napplet_none_found">Nenhum nApplet encontrado ainda.</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
+    <string name="napplet_cap_shell">Terminal</string>
     <string name="napplet_cap_identity">Identidade</string>
     <string name="napplet_cap_keys">Ações de teclado</string>
+    <string name="napplet_cap_relay">Relés</string>
     <string name="napplet_cap_storage">Armazenamento</string>
     <string name="napplet_cap_value">Pagamentos</string>
     <string name="napplet_cap_resource">Rede</string>
@@ -878,10 +893,16 @@
     <string name="nip46_signer_apps_empty">Nenhum aplicativo está conectado ao seu assinador ainda.\n\nEscaneie ou cole o código de um aplicativo para conectá-lo. Aplicativos conectados aparecem aqui, e os ociosos são removidos automaticamente após uma semana.</string>
     <string name="nip46_signer_app_last_used">usado %1$s</string>
     <string name="nip46_signer_app_online">Conectado</string>
+    <string name="nip46_signer_app_offline">Offiline</string>
     <string name="nip46_signer_app_reconnect">Reconectar</string>
     <string name="nip46_signer_reconnecting">Reconectando aos relays…</string>
+    <string name="nip46_signer_app_relays_title">Relés</string>
     <string name="nip46_signer_app_relays_inbox">Assina através dos seus relays de caixa de entrada — este aplicativo não trouxe nenhum próprio, então não mantém nenhuma conexão extra em segundo plano.</string>
     <string name="nip46_signer_app_relays_own_hint">O Amethyst mantém uma conexão em segundo plano com cada um destes enquanto este aplicativo permanecer conectado. Esqueça o aplicativo para encerrá-las.</string>
+    <plurals name="nip46_signer_app_relay_count">
+        <item quantity="one">%1$d Relé</item>
+        <item quantity="other">%1$d Relés</item>
+    </plurals>
     <string name="nip46_signer_connected_ok">Aplicativo conectado. O Amethyst agora assina por ele em segundo plano.</string>
     <string name="nip46_signer_connected_named">Conectado %1$s. O Amethyst agora assina por ele em segundo plano.</string>
     <string name="nip46_signer_connect_invalid">Não é um link nostrconnect:// válido</string>
@@ -913,7 +934,9 @@
     <string name="nip46_signer_act_decrypted">Descriptografou uma mensagem</string>
     <string name="nip46_signer_act_shared_pubkey">Compartilhou sua chave pública</string>
     <string name="nip46_signer_act_connected">Conectado</string>
+    <string name="nip46_signer_act_ping">Ping</string>
     <string name="nip46_signer_act_listed_relays">Listou os relays</string>
+    <string name="nip46_signer_act_other">%1$s</string>
     <string name="nip46_signer_notif_channel_name">Solicitações de assinatura</string>
     <string name="nip46_signer_notif_channel_desc">Avisos em tela cheia pedindo que você aprove um aplicativo que quer que o Amethyst assine, criptografe ou descriptografe com sua chave.</string>
     <string name="nip46_signer_notif_sign_title">Aprovar uma solicitação de assinatura?</string>
@@ -1147,16 +1170,21 @@
     <string name="route_podcasts">Podcasts</string>
     <string name="podcast_view_episodes">Ver episódios</string>
     <string name="podcast_no_episodes">Nenhum episódio encontrado ainda</string>
+    <string name="podcast_trailer">Trailer</string>
     <string name="podcast_trailer_season">Temporada %1$d</string>
     <string name="podcast_explicit">Explícito</string>
     <string name="podcast_completed">Concluído</string>
+    <string name="podcast_premium">Premium</string>
     <string name="podcast_support_show">Apoiar o programa</string>
     <string name="podcast_by_author">por %1$s</string>
     <string name="podcast_season_episode">T%1$d · E%2$d</string>
+    <string name="podcast_episode_number">Ep. %1$d</string>
     <string name="podcast_season">Temporada %1$d</string>
     <string name="podcast_video">Vídeo</string>
     <string name="podcast_transcript">Transcrição</string>
     <string name="podcast_chapters">Capítulos</string>
+    <string name="podcast_value_for_value">Valor-para-Valor</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Os zaps para isto são divididos entre:</string>
     <string name="podcast_hosts_and_guests">Apresentadores &amp; Convidados</string>
     <string name="podcast_play_soundbite">Reproduzir destaque</string>
@@ -1167,11 +1195,13 @@
     </plurals>
     <string name="podcast_role_host">Apresentador</string>
     <string name="podcast_role_cohost">Coapresentador</string>
+    <string name="podcast_role_editor">Editor</string>
     <string name="podcast_author_verified">Autor verificado</string>
     <string name="podcast_value_error_title">Erro de Value-for-Value</string>
     <string name="podcast_value_no_recipients">Este podcast não tem destinatários de valor pagáveis.</string>
     <string name="podcast_value_keysend_requires_nwc">Conecte uma carteira Nostr Wallet Connect para enviar a destinatários keysend (nó).</string>
     <string name="podcast_value_stream">Transmitir sats</string>
+    <string name="podcast_value_stream_rate">%1$d sats/min</string>
     <string name="podcast_value_stream_hint">Envia valor automaticamente enquanto você ouve.</string>
     <string name="podcast_value_streamed_total">%1$d sats transmitidos nesta sessão</string>
     <string name="podcast_value_stream_requires_wallet">Conecte uma carteira Nostr Wallet Connect ou de débito para transmitir sats enquanto ouve.</string>
@@ -1211,6 +1241,7 @@
     <string name="podcast_show_categories_label">Categorias</string>
     <string name="podcast_show_categories_placeholder">Tecnologia, Notícias</string>
     <string name="podcast_show_funding_label">Links de financiamento</string>
+    <string name="podcast_show_funding_placeholder">https://…</string>
     <string name="podcast_show_language_label">Idioma</string>
     <string name="podcast_show_language_placeholder">pt</string>
     <string name="podcast_show_copyright_label">Direitos autorais</string>
@@ -1231,6 +1262,10 @@
     <string name="podcast_create_your_show">Crie seu podcast</string>
     <string name="podcast_tap_to_edit_show">Toque para editar os detalhes do programa</string>
     <string name="podcast_create_show_hint">Configure o título, a arte e os detalhes do seu programa</string>
+    <plurals name="podcast_trailer_count">
+        <item quantity="one">%1$d trailer</item>
+        <item quantity="other">%1$d trailers</item>
+    </plurals>
     <string name="podcast_value_editor_hint">Adicione destinatários para dividir os sats recebidos por peso. Os ouvintes impulsionam ou transmitem valor para esses destinos.</string>
     <string name="podcast_value_add_recipient">Adicionar destinatário</string>
     <string name="podcast_value_add_address">Adicionar endereço manualmente</string>
@@ -1277,6 +1312,7 @@
     <string name="public_bookmarks">Itens Salvos Públicos</string>
     <string name="repository_bookmarks">Repositórios</string>
     <string name="repository_bookmarks_explainer">Seus repositórios git marcados</string>
+    <string name="podcast_bookmarks">Podcasts</string>
     <string name="podcast_bookmarks_explainer">Seus podcasts e episódios marcados</string>
     <string name="add_to_private_bookmarks">Adicionar aos Itens Salvos Privados</string>
     <string name="add_to_public_bookmarks">Adicionar aos Itens Salvos Públicos</string>
@@ -1823,6 +1859,7 @@
     <string name="connectivity_type_unmetered_wifi_only">WiFi não medida</string>
     <string name="connectivity_type_never">Nunca</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
     <string name="ui_feature_set_type_complete">Concluído</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
     <string name="ui_feature_set_type_performance">Desempenho</string>
@@ -1858,9 +1895,13 @@
     <string name="font_family_monospace">Monoespaçada</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="font_family_system_short">Sistema</string>
+    <string name="font_family_sans_serif_short">Sans</string>
+    <string name="font_family_serif_short">Serif</string>
+    <string name="font_family_monospace_short">Mono</string>
     <string name="font_size">Tamanho da fonte</string>
     <string name="font_size_description">Ajuste o tamanho do texto em todo o app</string>
     <string name="font_size_small">Pequeno</string>
+    <string name="font_size_normal">Normal</string>
     <string name="font_size_large">Grande</string>
     <string name="font_size_huge">Enorme</string>
     <string name="automatically_load_images_gifs">Pré-visualizar imagens</string>
@@ -2020,6 +2061,7 @@
     <string name="relay_group_join_code_hint">Este grupo é somente por convite. Insira o código que você recebeu.</string>
     <string name="relay_group_join_confirm">Entrar</string>
     <string name="relay_group_pending">Solicitado</string>
+    <string name="relay_group_role_admin">Administrador</string>
     <string name="relay_group_role_moderator">Moderador</string>
     <string name="relay_group_role_member">Membro</string>
     <string name="relay_group_members_title">Membros</string>
@@ -2060,6 +2102,7 @@
     <string name="relay_group_field_topics">Tópicos</string>
     <string name="relay_group_field_topics_hint">bitcoin, nostr, arte</string>
     <string name="relay_group_field_geohash">Localização (geohash)</string>
+    <string name="relay_group_field_geohash_hint">un0d</string>
     <string name="relay_group_section_structure">Estrutura</string>
     <string name="relay_group_parent_desc">Aninhe este grupo sob um grupo pai para construir uma hierarquia.</string>
     <string name="relay_group_parent_label">Grupo pai</string>
@@ -2377,6 +2420,7 @@
     <string name="cashu_wizard_set_main_first">Defina primeiro sua carteira principal, depois recupere os fundos das mais antigas.</string>
     <string name="cashu_wizard_adopting">Configurando sua carteira…</string>
     <string name="cashu_wizard_retry">Buscar novamente</string>
+    <string name="cashu_wizard_mints_label">Mints: %1$s</string>
     <string name="cashu_created_title">Carteira criada</string>
     <string name="cashu_created_subtitle">Agora escolha alguns mints para hospedar seus sats.</string>
     <string name="cashu_created_pick_mints">Escolher mints</string>
@@ -2724,6 +2768,7 @@
     <string name="bottom_bar_category_main">Principal</string>
     <string name="bottom_bar_category_chats">Conversas e Grupos</string>
     <string name="bottom_bar_category_you">Você</string>
+    <string name="bottom_bar_category_feeds">Feeds</string>
     <string name="bottom_bar_category_apps">Apps e Web</string>
     <string name="bottom_bar_category_other">Outros</string>
     <string name="home_tabs_settings">Abas da Tela Inicial</string>
@@ -2894,6 +2939,8 @@
     <string name="forked_from">Forkado de</string>
     <string name="git_web_address">Site:</string>
     <string name="git_clone_address">Clonar:</string>
+    <string name="git_branch">Branch</string>
+    <string name="git_commit">Commit</string>
     <string name="git_merge_base">Base de merge</string>
     <string name="git_pr_update_description">O pull request foi atualizado para um novo commit.</string>
     <string name="git_status_open">Aberto</string>
@@ -2907,6 +2954,8 @@
     <string name="git_repo_filter_closed">Fechados &amp; Resolvidos</string>
     <string name="git_repo_label_all">Todos</string>
     <string name="git_repo_bookmark">Marcar repositório</string>
+    <string name="git_repo_stat_branches">Branches</string>
+    <string name="git_repo_stat_tags">Tags</string>
     <string name="git_repo_stat_files">Arquivos</string>
     <string name="git_repo_stat_updated">Atualizado</string>
     <string name="git_repo_recent_activity">Atividade recente</string>
@@ -2920,6 +2969,7 @@
     <string name="git_repo_section_maintainers">Mantenedores</string>
     <string name="git_repo_section_topics">Tópicos</string>
     <string name="git_repo_personal_fork">Fork pessoal</string>
+    <string name="git_repo_tab_readme">Readme</string>
     <string name="git_repo_tab_code">Código</string>
     <string name="git_repo_code_loading">Carregando repositório…</string>
     <string name="git_repo_code_error">Não foi possível carregar o repositório a partir da sua URL de clone.</string>
@@ -2931,11 +2981,18 @@
     <string name="git_repo_root">raiz</string>
     <string name="git_repo_retry">Tentar novamente</string>
     <string name="git_repo_default_branch">padrão</string>
+    <string name="git_repo_branches">Branches</string>
+    <string name="git_repo_tags">Tags</string>
     <string name="git_repo_search_files">Pesquisar arquivos…</string>
     <string name="git_repo_no_search_results">Nenhum arquivo correspondente.</string>
+    <string name="git_repo_commits">Commits</string>
     <string name="git_repo_no_commits">Nenhum histórico de commits disponível.</string>
     <string name="git_repo_copy_file">Copiar conteúdo do arquivo</string>
     <string name="git_repo_plain_text">Texto</string>
+    <plurals name="git_repo_item_count">
+        <item quantity="one">%1$d iten</item>
+        <item quantity="other">%1$d itens</item>
+    </plurals>
     <plurals name="git_diff_files_changed">
         <item quantity="one">%1$d arquivo alterado</item>
         <item quantity="other">%1$d arquivos alterados</item>
@@ -2968,6 +3025,7 @@
     <string name="git_repo_settings_save">Salvar</string>
     <string name="git_repositories">Repositórios Git</string>
     <string name="nsite_title">Site Estático: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permissões:</string>
     <string name="profile_tab_apps">Apps e sites</string>
     <string name="nsite_root_site">Site Raiz</string>
@@ -3127,6 +3185,7 @@
     <string name="resource_usage_tile_in_app">No app hoje</string>
     <string name="resource_usage_trend_section">Dados por dia</string>
     <string name="resource_usage_legend_cellular">Celular (MB)</string>
+    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
     <string name="resource_usage_activity_section">Atividade (7 dias)</string>
     <string name="resource_usage_cellular_bg">Dados de celular (segundo plano)</string>
     <string name="resource_usage_cellular_fg">Dados de celular (no app)</string>
@@ -3352,6 +3411,7 @@
     <string name="kind_git_patch">Patch do Git</string>
     <string name="kind_git_repo">Repositório Git</string>
     <string name="kind_git_reply">Resposta do Git</string>
+    <string name="kind_git_pr">Pull request</string>
     <string name="kind_git_pr_update">Atualização de PR</string>
     <string name="kind_zap_goals">Metas de Zap</string>
     <string name="kind_hashtag_follows">Hashtags seguidas</string>
@@ -3830,10 +3890,15 @@
     </plurals>
     <string name="pow_option_default_off">Padrão (desligado)</string>
     <string name="pow_option_off">Desligado para esta publicação</string>
+    <plurals name="pow_option_bits">
+        <item quantity="one">%1$d bit</item>
+        <item quantity="other">%1$d bits</item>
+    </plurals>
     <string name="pow_notification_channel_name">Mineração de prova de trabalho</string>
     <string name="pow_notification_channel_description">Mostra publicações que ainda estão minerando sua prova de trabalho NIP-13 para que possam terminar depois que você sair do app.</string>
     <string name="pow_notification_cancel_all">Cancelar</string>
     <string name="pow_difficulty_estimate">≈ %1$s por publicação neste dispositivo</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">
         <item quantity="one">%1$d segundo</item>
         <item quantity="other">%1$d segundos</item>
@@ -3929,6 +3994,7 @@
     <string name="marmot_create_group_footer">Um novo grupo MLS será criado. Você pode adicionar membros depois.</string>
     <string name="marmot_group_default_name">Grupo Marmot</string>
     <string name="marmot_group_fallback_name">Grupo %1$s…</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Conhecidos</string>
     <string name="marmot_tab_known_count">Conhecidos (%1$d)</string>
     <string name="marmot_tab_new_requests">Novos pedidos</string>
@@ -3938,6 +4004,10 @@
     <string name="marmot_no_invitations">Nenhum convite</string>
     <string name="marmot_no_invitations_desc">Quando alguém adicionar você a um grupo, aparecerá aqui até você responder.</string>
     <string name="marmot_no_messages_yet">Nenhuma mensagem ainda</string>
+    <plurals name="marmot_message_count">
+        <item quantity="one">%1$d msg</item>
+        <item quantity="other">%1$d msgs</item>
+    </plurals>
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d membro</item>
         <item quantity="other">%1$d membros</item>
@@ -3972,6 +4042,7 @@
     <string name="marmot_add_member_action">Adicionar membro</string>
     <string name="marmot_add_member_placeholder">Nome, npub ou NIP-05</string>
     <string name="marmot_member_suffix_you"> (você)</string>
+    <string name="marmot_member_suffix_admin"> - administrador</string>
     <string name="marmot_member_removed">Membro removido</string>
     <string name="marmot_failed_to_remove_member">Falha ao remover membro: %1$s</string>
     <string name="marmot_remove_member">Remover membro</string>
@@ -3988,6 +4059,7 @@
     <string name="marmot_revoke_admin_confirm">Revogar privilégios de administrador de \"%1$s\"? A pessoa continuará sendo membro do grupo.</string>
     <string name="marmot_admin_revoked">Privilégios de administrador revogados</string>
     <string name="marmot_failed_to_revoke_admin">Falha ao revogar admin: %1$s</string>
+    <string name="marmot_relays_header">Relés</string>
     <string name="marmot_relay_no_events">nenhum evento ainda</string>
     <string name="marmot_relay_last_event">último evento%1$s</string>
     <string name="marmot_not_a_member">Não é membro deste grupo</string>
@@ -4005,6 +4077,7 @@
     <string name="geohash_chat">Chat de localização</string>
     <string name="new_conversation_location_title">Canal de localização</string>
     <string name="new_conversation_location_tagline">Converse com quem estiver perto de um lugar, por geohash.</string>
+    <string name="new_conversation_location_chip">Local</string>
     <string name="new_conversation_location_best">Melhor para conversar com pessoas fisicamente próximas de um local — seu quarteirão, cidade ou região.</string>
     <string name="new_conversation_location_cta">Escolher um local</string>
     <string name="new_conversation_location_pro_1">Anônimo — uma identidade descartável por área, nunca seu npub.</string>

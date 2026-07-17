@@ -45,6 +45,7 @@
     <string name="timestamp_it">Tidsstämpla det</string>
     <string name="timestamp_pending">Tidsstämpel: Väntar på bekräftelser</string>
     <string name="timestamp_pending_short">OTS: Väntar</string>
+    <string name="one_year_plus">1å+</string>
     <string name="request_deletion">Begär radering</string>
     <string name="block_report">Blockera / Rapportera</string>
     <string name="block_hide_user"><![CDATA[Blockera och göm användare]]></string>
@@ -360,10 +361,12 @@
     <string name="concord_members_remove_message">Detta roterar gemenskapens krypteringsnyckel så att den här medlemmen inte längre kan läsa något som skickas därefter. Alla andra får automatiskt en ny nyckel. Detta kan inte ångras.</string>
     <string name="concord_members_remove_confirm">Ta bort</string>
     <string name="concord_role_owner">Ägare</string>
+    <string name="concord_role_admin">Administratör</string>
     <string name="concord_role_banned">Bannlyst</string>
     <string name="concord_invite_card_join">Gå med i gemenskapen</string>
     <string name="concord_invite_card_subtitle">Inbjudan till Concord-gemenskap</string>
     <string name="concord_invite_naddr_label">Concord-inbjudan (öppna den fullständiga inbjudningslänken för att gå med)</string>
+    <string name="concord_server_label">Concord</string>
     <string name="concord_view_mode_title">Visning av Concord-gemenskap</string>
     <string name="concord_view_inline">Infogad</string>
     <string name="concord_view_grouped">Efter gemenskap</string>
@@ -673,6 +676,9 @@
     <string name="app_definition_related">Relaterat</string>
     <string name="app_definition_implements">Implementerar</string>
     <string name="app_definition_supported_nips">NIP:er som stöds</string>
+    <string name="app_definition_via">via %1$s</string>
+    <string name="app_definition_nip">NIP-%1$s</string>
+    <string name="app_definition_kind_app">App</string>
     <string name="platform_web">Web</string>
     <string name="platform_android">Android</string>
     <string name="platform_ios">iOS</string>
@@ -703,6 +709,7 @@
     <string name="workout_suggestion_connect_title">Dela dina träningspass</string>
     <string name="workout_suggestion_connect_message">Låt Amethyst läsa avslutade träningspass från Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) och föreslå ett inlägg.</string>
     <string name="workout_suggestion_connect_button">Anslut</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Från Health Connect</string>
     <string name="exercise_running">Löpning</string>
     <string name="exercise_walking">Promenad</string>
@@ -716,8 +723,12 @@
     <string name="exercise_diet">Kost</string>
     <string name="exercise_fasting">Fasta</string>
     <string name="exercise_circuit">Cirkelträning</string>
+    <string name="exercise_emom">EMOM</string>
+    <string name="exercise_amrap">AMRAP</string>
     <string name="software_apps">Appar</string>
     <string name="route_software_apps">Appar</string>
+    <string name="napplets">nApplets</string>
+    <string name="nsites">nSites</string>
     <string name="nsite_none_found">Inga nSites hittades ännu.</string>
     <string name="browser">Webbläsare</string>
     <string name="browser_reload">Ladda om</string>
@@ -758,8 +769,10 @@
     <string name="napplet_permissions_revoke">Återkalla</string>
     <string name="napplet_permissions_ask_each_time">Fråga mig varje gång</string>
     <string name="napplet_none_found">Inga nApplets hittades ännu.</string>
+    <string name="napplet_fallback_title">nApplet %1$s…</string>
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
+    <string name="napplet_cap_shell">Shell</string>
     <string name="napplet_cap_identity">Identitet</string>
     <string name="napplet_cap_keys">Tangentbordsåtgärder</string>
     <string name="napplet_cap_relay">Reläer</string>
@@ -902,6 +915,7 @@
     <string name="nip46_signer_background_hint">Amethyst håller en bakgrundsanslutning (visas som en pågående notifiering) så att den kan besvara signeringsförfrågningar när den är stängd.</string>
     <string name="nip46_signer_hero_title">Signera åt andra appar</string>
     <string name="nip46_signer_turn_on">Slå på fjärrsignatären</string>
+    <string name="nip46_signer_live">Live</string>
     <plurals name="nip46_signer_batch_title">
         <item quantity="one">%1$d signeringsförfrågan</item>
         <item quantity="other">%1$d signeringsförfrågningar</item>
@@ -920,7 +934,9 @@
     <string name="nip46_signer_act_decrypted">Dekrypterade ett meddelande</string>
     <string name="nip46_signer_act_shared_pubkey">Delade din publika nyckel</string>
     <string name="nip46_signer_act_connected">Ansluten</string>
+    <string name="nip46_signer_act_ping">Ping</string>
     <string name="nip46_signer_act_listed_relays">Listade reläer</string>
+    <string name="nip46_signer_act_other">%1$s</string>
     <string name="nip46_signer_notif_channel_name">Signeringsförfrågningar</string>
     <string name="nip46_signer_notif_channel_desc">Helskärmsmeddelanden som ber dig godkänna en app som vill att Amethyst ska signera, kryptera eller dekryptera med din nyckel.</string>
     <string name="nip46_signer_notif_sign_title">Godkänn en signeringsförfrågan?</string>
@@ -1154,15 +1170,21 @@
     <string name="route_podcasts">Poddar</string>
     <string name="podcast_view_episodes">Visa avsnitt</string>
     <string name="podcast_no_episodes">Inga avsnitt hittades än</string>
+    <string name="podcast_trailer">Trailer</string>
     <string name="podcast_trailer_season">Säsong %1$d</string>
+    <string name="podcast_explicit">Explicit</string>
     <string name="podcast_completed">Slutförd</string>
+    <string name="podcast_premium">Premium</string>
     <string name="podcast_support_show">Stöd podden</string>
     <string name="podcast_by_author">av %1$s</string>
     <string name="podcast_season_episode">S%1$d · A%2$d</string>
     <string name="podcast_episode_number">Avs %1$d</string>
     <string name="podcast_season">Säsong %1$d</string>
+    <string name="podcast_video">Video</string>
     <string name="podcast_transcript">Transkription</string>
     <string name="podcast_chapters">Kapitel</string>
+    <string name="podcast_value_for_value">Värde -för-värde</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
     <string name="podcast_hosts_and_guests">Värdar &amp; gäster</string>
     <string name="podcast_play_soundbite">Spela höjdpunkt</string>
@@ -1179,6 +1201,7 @@
     <string name="podcast_value_no_recipients">Den här podden har inga betalbara värdemottagare.</string>
     <string name="podcast_value_keysend_requires_nwc">Anslut en Nostr Wallet Connect-plånbok för att skicka till keysend-mottagare (noder).</string>
     <string name="podcast_value_stream">Streama sats</string>
+    <string name="podcast_value_stream_rate">%1$d sats/min</string>
     <string name="podcast_value_stream_hint">Skickar värde automatiskt medan du lyssnar.</string>
     <string name="podcast_value_streamed_total">Streamade %1$d sats denna session</string>
     <string name="podcast_value_stream_requires_wallet">Anslut en Nostr Wallet Connect- eller debiteringsplånbok för att streama sats medan du lyssnar.</string>
@@ -1218,6 +1241,7 @@
     <string name="podcast_show_categories_label">Kategorier</string>
     <string name="podcast_show_categories_placeholder">Teknik, Nyheter</string>
     <string name="podcast_show_funding_label">Finansieringslänkar</string>
+    <string name="podcast_show_funding_placeholder">https://…</string>
     <string name="podcast_show_language_label">Språk</string>
     <string name="podcast_show_language_placeholder">sv</string>
     <string name="podcast_show_copyright_label">Upphovsrätt</string>
@@ -1238,6 +1262,10 @@
     <string name="podcast_create_your_show">Skapa din podd</string>
     <string name="podcast_tap_to_edit_show">Tryck för att redigera podddetaljer</string>
     <string name="podcast_create_show_hint">Ange din podds titel, bild och detaljer</string>
+    <plurals name="podcast_trailer_count">
+        <item quantity="one">%1$d trailer</item>
+        <item quantity="other">%1$d trailrar</item>
+    </plurals>
     <string name="podcast_value_editor_hint">Lägg till mottagare för att fördela inkommande sats efter vikt. Lyssnare boostar eller streamar värde till dessa destinationer.</string>
     <string name="podcast_value_add_recipient">Lägg till mottagare</string>
     <string name="podcast_value_add_address">Lägg till adress manuellt</string>
@@ -1251,6 +1279,7 @@
     <string name="podcast_value_lnaddress">Lightning-adress</string>
     <string name="podcast_value_lnaddress_hint">namn@example.com</string>
     <string name="podcast_value_node_pubkey">Nodens publika nyckel</string>
+    <string name="podcast_value_node_pubkey_hint">02abc… (33-byte hex)</string>
     <string name="podcast_value_weight">Vikt</string>
     <string name="podcast_value_fee">Avgift</string>
     <plurals name="podcast_episode_count">
@@ -1830,6 +1859,7 @@
     <string name="connectivity_type_unmetered_wifi_only">Obegränsad WiFi</string>
     <string name="connectivity_type_never">Aldrig</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
     <string name="ui_feature_set_type_complete">Slutförd</string>
     <string name="ui_feature_set_type_simplified">Förenklad</string>
     <string name="ui_feature_set_type_performance">Prestanda</string>
@@ -1854,15 +1884,24 @@
     <string name="accent_color_purple">Lila</string>
     <string name="accent_color_blue">Blå</string>
     <string name="accent_color_green">Grön</string>
+    <string name="accent_color_orange">Orange</string>
     <string name="accent_color_red">Röd</string>
     <string name="accent_color_pink">Rosa</string>
     <string name="font_family">Typsnitt</string>
     <string name="font_family_description">Teckensnitt som används genom hela appen</string>
     <string name="font_family_system">Systemstandard</string>
+    <string name="font_family_sans_serif">Sans Serif</string>
+    <string name="font_family_serif">Serif</string>
+    <string name="font_family_monospace">Monospace</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
+    <string name="font_family_system_short">System</string>
+    <string name="font_family_sans_serif_short">Sans</string>
+    <string name="font_family_serif_short">Serif</string>
+    <string name="font_family_monospace_short">Mono</string>
     <string name="font_size">Teckenstorlek</string>
     <string name="font_size_description">Skala textstorleken i hela appen</string>
     <string name="font_size_small">Liten</string>
+    <string name="font_size_normal">Normal</string>
     <string name="font_size_large">Stor</string>
     <string name="font_size_huge">Enorm</string>
     <string name="automatically_load_images_gifs">Ladda automatiskt bilder/gif</string>
@@ -2022,6 +2061,8 @@
     <string name="relay_group_join_code_hint">Den här gruppen är endast för inbjudna. Ange koden du fick.</string>
     <string name="relay_group_join_confirm">Gå med</string>
     <string name="relay_group_pending">Begärd</string>
+    <string name="relay_group_role_admin">Administratör</string>
+    <string name="relay_group_role_moderator">Moderator</string>
     <string name="relay_group_role_member">Medlem</string>
     <string name="relay_group_members_title">Medlemmar</string>
     <string name="relay_group_make_admin">Gör till admin</string>
@@ -2061,6 +2102,7 @@
     <string name="relay_group_field_topics">Ämnen</string>
     <string name="relay_group_field_topics_hint">bitcoin, nostr, konst</string>
     <string name="relay_group_field_geohash">Plats (geohash)</string>
+    <string name="relay_group_field_geohash_hint">u0nd</string>
     <string name="relay_group_section_structure">Struktur</string>
     <string name="relay_group_parent_desc">Placera den här gruppen under en överordnad för att bygga en hierarki.</string>
     <string name="relay_group_parent_label">Överordnad grupp</string>
@@ -2378,6 +2420,7 @@
     <string name="cashu_wizard_set_main_first">Ange din huvudplånbok först, återhämta sedan medel från de äldre.</string>
     <string name="cashu_wizard_adopting">Konfigurerar din plånbok…</string>
     <string name="cashu_wizard_retry">Sök igen</string>
+    <string name="cashu_wizard_mints_label">Mints: %1$s</string>
     <string name="cashu_created_title">Plånbok skapad</string>
     <string name="cashu_created_subtitle">Välj nu några mints som ska hosta dina sats.</string>
     <string name="cashu_created_pick_mints">Välj mints</string>
@@ -2897,6 +2940,7 @@
     <string name="git_web_address">Webbplats:</string>
     <string name="git_clone_address">Klona:</string>
     <string name="git_branch">Gren</string>
+    <string name="git_commit">Commit</string>
     <string name="git_merge_base">Mergebas</string>
     <string name="git_pr_update_description">Uppdaterade pull request till en ny commit.</string>
     <string name="git_status_open">Öppen</string>
@@ -2925,6 +2969,7 @@
     <string name="git_repo_section_maintainers">Underhållare</string>
     <string name="git_repo_section_topics">Ämnen</string>
     <string name="git_repo_personal_fork">Personlig fork</string>
+    <string name="git_repo_tab_readme">Readme</string>
     <string name="git_repo_tab_code">Kod</string>
     <string name="git_repo_code_loading">Läser in repository…</string>
     <string name="git_repo_code_error">Det gick inte att läsa in repositoryt från dess klon-URL.</string>
@@ -2940,8 +2985,10 @@
     <string name="git_repo_tags">Taggar</string>
     <string name="git_repo_search_files">Sök filer…</string>
     <string name="git_repo_no_search_results">Inga matchande filer.</string>
+    <string name="git_repo_commits">Commits</string>
     <string name="git_repo_no_commits">Ingen commit-historik tillgänglig.</string>
     <string name="git_repo_copy_file">Kopiera filinnehåll</string>
+    <string name="git_repo_plain_text">Text</string>
     <plurals name="git_repo_item_count">
         <item quantity="one">%1$d objekt</item>
         <item quantity="other">%1$d objekt</item>
@@ -2978,6 +3025,7 @@
     <string name="git_repo_settings_save">Spara</string>
     <string name="git_repositories">Git-repositories</string>
     <string name="nsite_title">Statisk webbplats: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Behörigheter:</string>
     <string name="profile_tab_apps">Appar &amp; webbplatser</string>
     <string name="nsite_root_site">Webbplats rot</string>
@@ -3137,6 +3185,7 @@
     <string name="resource_usage_tile_in_app">I appen idag</string>
     <string name="resource_usage_trend_section">Data per dag</string>
     <string name="resource_usage_legend_cellular">Mobildata (MB)</string>
+    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
     <string name="resource_usage_activity_section">Aktivitet (7 dagar)</string>
     <string name="resource_usage_cellular_bg">Mobildata (bakgrund)</string>
     <string name="resource_usage_cellular_fg">Mobildata (i appen)</string>
@@ -3165,6 +3214,10 @@
     <string name="resource_usage_alwayson_section">Aviseringstjänst i bakgrunden</string>
     <string name="resource_usage_alwayson_explanation">Håller anslutningar till dina reläer öppna medan appen är stängd, så att aviseringar kommer fram utan Googles push-servrar. När det är aktiverat är detta oftast den största batterikostnaden i bakgrunden. Om batteri är viktigare för dig än direkta aviseringar kan du ändra leveransmetoden eller stänga av det.</string>
     <string name="resource_usage_alwayson_uptime">Körtid</string>
+    <plurals name="resource_usage_alwayson_starts">
+        <item quantity="one">%1$d startar</item>
+        <item quantity="other">%1$d startar</item>
+    </plurals>
     <string name="resource_usage_alwayson_bg_relay">Reläanslutningar hållna medan appen är stängd</string>
     <string name="resource_usage_alwayson_battery">Batteri förbrukat under tiden (hela enheten)</string>
     <string name="resource_usage_alwayson_settings_button">Ändra aviseringsinställningar</string>
@@ -3358,6 +3411,7 @@
     <string name="kind_git_patch">Git-patch</string>
     <string name="kind_git_repo">Git-repository</string>
     <string name="kind_git_reply">Git-svar</string>
+    <string name="kind_git_pr">Pull Request</string>
     <string name="kind_git_pr_update">PR-uppdatering</string>
     <string name="kind_zap_goals">Zap-mål</string>
     <string name="kind_hashtag_follows">Följda hashtaggar</string>
@@ -3655,6 +3709,7 @@
     </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <string name="ps1_save_title">PS1-minneskortsparning</string>
+    <string name="ps1_save_block">block %1$d</string>
     <string name="ps1_save_empty_slot">Tom plats</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">Polis</string>
@@ -3835,10 +3890,15 @@
     </plurals>
     <string name="pow_option_default_off">Standard (av)</string>
     <string name="pow_option_off">Av för det här inlägget</string>
+    <plurals name="pow_option_bits">
+        <item quantity="one">%1$d bit</item>
+        <item quantity="other">%1$d bits</item>
+    </plurals>
     <string name="pow_notification_channel_name">Mining av bevis på arbete</string>
     <string name="pow_notification_channel_description">Visar inlägg som fortfarande minar sitt NIP-13-bevis på arbete så att de kan slutföras efter att du lämnat appen.</string>
     <string name="pow_notification_cancel_all">Avbryt</string>
     <string name="pow_difficulty_estimate">≈ %1$s per inlägg på den här enheten</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">
         <item quantity="one">%1$d sekund</item>
         <item quantity="other">%1$d sekunder</item>
@@ -3934,6 +3994,7 @@
     <string name="marmot_create_group_footer">En ny MLS-grupp kommer att skapas. Du kan lägga till medlemmar efteråt.</string>
     <string name="marmot_group_default_name">Marmot-grupp</string>
     <string name="marmot_group_fallback_name">Grupp %1$s…</string>
+    <string name="marmot_user_fallback_name">%1$s…</string>
     <string name="marmot_tab_known">Kända</string>
     <string name="marmot_tab_known_count">Kända (%1$d)</string>
     <string name="marmot_tab_new_requests">Nya förfrågningar</string>
@@ -3981,6 +4042,7 @@
     <string name="marmot_add_member_action">Lägg till medlem</string>
     <string name="marmot_add_member_placeholder">Namn, npub eller NIP-05</string>
     <string name="marmot_member_suffix_you"> (du)</string>
+    <string name="marmot_member_suffix_admin"> - administratör</string>
     <string name="marmot_member_removed">Medlem borttagen</string>
     <string name="marmot_failed_to_remove_member">Misslyckades med att ta bort medlem: %1$s</string>
     <string name="marmot_remove_member">Ta bort medlem</string>
