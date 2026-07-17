@@ -22,33 +22,32 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,13 +56,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -73,13 +68,12 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -94,6 +88,7 @@ fun AllSettingsScreenPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllSettingsScreen(
     accountViewModel: AccountViewModel,
@@ -109,17 +104,19 @@ fun AllSettingsScreen(
 
     val searchState = rememberTextFieldState()
     val query = searchState.text.toString()
-    var isSearchExpanded by remember { mutableStateOf(false) }
+    var searchExpanded by remember { mutableStateOf(false) }
 
-    val collapseSearch = {
-        isSearchExpanded = false
-        searchState.clearText()
+    // Single source of truth for the search bar's expanded/collapsed transitions. Collapsing —
+    // whether by the back arrow, the system back gesture, or picking a result — always clears the
+    // query so the field returns empty the next time it opens.
+    val onExpandedChange: (Boolean) -> Unit = { expanded ->
+        searchExpanded = expanded
+        if (!expanded) searchState.clearText()
     }
 
-    // While the field is expanded, the system back gesture collapses it (and clears
-    // the query) instead of leaving the screen. Disabled otherwise so back behaves
-    // normally.
-    BackHandler(enabled = isSearchExpanded) { collapseSearch() }
+    // While the results are open, the system back gesture collapses the bar instead of leaving the
+    // screen. Disabled otherwise so back behaves normally.
+    BackHandler(enabled = searchExpanded) { onExpandedChange(false) }
 
     // The catalog is structurally stable for the screen's lifetime, so it is rebuilt only when
     // an input actually changes — not on every keystroke. `onResetMarmot` reads the volatile
@@ -144,13 +141,7 @@ fun AllSettingsScreen(
 
     Scaffold(
         topBar = {
-            SettingsSearchTopBar(
-                searchState = searchState,
-                isSearchExpanded = isSearchExpanded,
-                onExpandSearch = { isSearchExpanded = true },
-                onCollapseSearch = collapseSearch,
-                nav = nav,
-            )
+            TopBarWithBackButton(stringRes(id = R.string.settings), nav)
         },
         bottomBar = {
             AppBottomBar(Route.AllSettings, nav, accountViewModel) { route ->
@@ -163,12 +154,73 @@ fun AllSettingsScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            if (filtered.isEmpty()) {
-                SettingsSearchEmptyState(
-                    query = query,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
+            DockedSearchBar(
+                inputField = {
+                    SearchBarDefaults.InputField(
+                        state = searchState,
+                        onSearch = {},
+                        expanded = searchExpanded,
+                        onExpandedChange = onExpandedChange,
+                        placeholder = { Text(stringRes(R.string.settings_search_placeholder)) },
+                        leadingIcon = {
+                            if (searchExpanded) {
+                                IconButton(onClick = { onExpandedChange(false) }) {
+                                    ArrowBackIcon()
+                                }
+                            } else {
+                                Icon(
+                                    symbol = MaterialSymbols.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { searchState.clearText() }) {
+                                    Icon(
+                                        symbol = MaterialSymbols.Close,
+                                        contentDescription = stringRes(R.string.clear),
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                },
+                expanded = searchExpanded,
+                onExpandedChange = onExpandedChange,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                // Expanded: filtered results are shown inside the docked bar's dropdown. A blank
+                // query lists the whole catalog, narrowing as the user types.
+                if (filtered.isEmpty()) {
+                    SettingsSearchEmptyState(
+                        query = query,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                    ) {
+                        items(filtered) { category ->
+                            SettingsCategoryCard(
+                                category = category,
+                                onEntryClick = { onExpandedChange(false) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Collapsed: the full categorized settings list. Hidden while the results dropdown is
+            // open so it doesn't peek out beneath it.
+            if (!searchExpanded) {
                 Column(
                     modifier =
                         Modifier
@@ -177,7 +229,7 @@ fun AllSettingsScreen(
                             .padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
-                    filtered.forEach { category -> SettingsCategoryCard(category) }
+                    catalog.forEach { category -> SettingsCategoryCard(category) }
                 }
             }
         }
@@ -211,95 +263,6 @@ fun AllSettingsScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
-@Composable
-private fun SettingsSearchTopBar(
-    searchState: TextFieldState,
-    isSearchExpanded: Boolean,
-    onExpandSearch: () -> Unit,
-    onCollapseSearch: () -> Unit,
-    nav: INav,
-) {
-    ShorterTopAppBar(
-        title = {
-            if (isSearchExpanded) {
-                SettingsSearchInlineField(searchState)
-            } else {
-                Text(
-                    text = stringRes(id = R.string.settings),
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1,
-                )
-            }
-        },
-        navigationIcon = {
-            // When searching, the back arrow collapses the field. Otherwise it pops the
-            // back stack (suppressed when this screen sits at the bottom of the stack,
-            // e.g. reached via the bottom nav).
-            if (isSearchExpanded) {
-                IconButton(onClick = onCollapseSearch) {
-                    ArrowBackIcon()
-                }
-            } else if (nav.canPop()) {
-                IconButton(nav::popBack) {
-                    ArrowBackIcon()
-                }
-            }
-        },
-        actions = {
-            if (isSearchExpanded) {
-                if (searchState.text.isNotEmpty()) {
-                    IconButton(onClick = { searchState.clearText() }) {
-                        Icon(
-                            symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.clear),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            } else {
-                IconButton(onClick = onExpandSearch) {
-                    Icon(
-                        symbol = MaterialSymbols.Search,
-                        contentDescription = stringRes(R.string.settings_search_placeholder),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        },
-    )
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SettingsSearchInlineField(searchState: TextFieldState) {
-    val focusRequester = remember { FocusRequester() }
-
-    // Auto-focus and open the keyboard the moment the field expands.
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
-    BasicTextField(
-        state = searchState,
-        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-        textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
-        lineLimits = TextFieldLineLimits.SingleLine,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        decorator = { innerTextField ->
-            Box(contentAlignment = Alignment.CenterStart) {
-                if (searchState.text.isEmpty()) {
-                    Text(
-                        text = stringRes(R.string.settings_search_placeholder),
-                        style = LocalTextStyle.current,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                    )
-                }
-                innerTextField()
-            }
-        },
-    )
-}
-
 @Composable
 private fun SettingsSearchEmptyState(
     query: String,
@@ -317,24 +280,34 @@ private fun SettingsSearchEmptyState(
 }
 
 @Composable
-private fun SettingsCategoryCard(category: SettingsCategory) {
+private fun SettingsCategoryCard(
+    category: SettingsCategory,
+    onEntryClick: () -> Unit = {},
+) {
     SettingsSection(category.titleRes, category.isDanger) {
         category.entries.forEachIndexed { index, entry ->
             if (index > 0) SettingsDivider()
-            SettingsEntryRow(entry)
+            SettingsEntryRow(entry, onEntryClick)
         }
     }
 }
 
 @Composable
-private fun SettingsEntryRow(entry: SettingsEntry) {
+private fun SettingsEntryRow(
+    entry: SettingsEntry,
+    onEntryClick: () -> Unit = {},
+) {
+    val onClick = {
+        onEntryClick()
+        entry.onClick()
+    }
     when (val icon = entry.icon) {
         is SettingsIcon.Symbol ->
             SettingsItem(
                 title = entry.titleRes,
                 icon = icon.symbol,
                 isDanger = entry.isDanger,
-                onClick = entry.onClick,
+                onClick = onClick,
             )
         is SettingsIcon.Painter ->
             SettingsItem(
@@ -342,7 +315,7 @@ private fun SettingsEntryRow(entry: SettingsEntry) {
                 iconPainter = icon.iconPainter,
                 iconPainterRef = icon.iconPainterRef,
                 isDanger = entry.isDanger,
-                onClick = entry.onClick,
+                onClick = onClick,
             )
     }
 }
