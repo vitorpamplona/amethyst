@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,12 +80,13 @@ internal fun SettingsSection(
             shape = RoundedCornerShape(20.dp),
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    // surfaceContainer (one step up from …Low) so the card separates from the page by
+                    // tone rather than a hard outline. The neutral surface ramp puts the page at
+                    // background #FDFDFD, where …Low #F7F7F7 was nearly invisible; #F2F2F2 reads as a
+                    // soft card in light and #252525 stands clear of black in dark.
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            // A hairline edge so the card separates from the page even when the surface tones are
-            // close (light mode: surfaceContainerLow #F7F7F7 sits on background #FDFDFD).
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Column(content = content)
         }
