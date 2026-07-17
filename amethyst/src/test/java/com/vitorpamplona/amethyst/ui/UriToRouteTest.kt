@@ -59,6 +59,12 @@ class UriToRouteTest {
     }
 
     @Test
+    fun nostrConnectOfferRoutesToTheSignerScreenCarryingTheUri() {
+        val offer = "nostrconnect://" + "b".repeat(64) + "?relay=wss%3A%2F%2Frelay.example.com&secret=abc123"
+        assertEquals(Route.Nip46Signer(connectUri = offer), uriToRoute(offer, account))
+    }
+
+    @Test
     fun fragmentHashtagOrNullExtractsTheTag() {
         assertEquals("NostrMultiplayerGames", fragmentHashtagOrNull("#NostrMultiplayerGames"))
         assertNull(fragmentHashtagOrNull("#"))

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,13 +55,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -69,10 +79,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
@@ -82,6 +88,15 @@ import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ActivityCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46AppIcon
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46LiveStatus
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46ReconnectPill
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.Nip46StatusDot
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46AppOnline
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.nip46.nip46ClientSubtitle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -132,8 +147,31 @@ fun ConnectedAppDetailScreen(
             )
         }
 
+    // NIP-46 remote clients are tailored: their self-declared metadata (name/url) heads the screen and
+    // their serviced-request history is shown, instead of the napplet manifest path this coordinate can't
+    // be resolved through. `null` for napplet/browser coordinates, which keep the generic rendering.
+    val nip46Client = remember(coordinate) { Nip46PermissionAuthorizer.clientPubKeyOf(coordinate) }
+    var nip46Info by remember(coordinate) { mutableStateOf<Nip46ClientInfo?>(null) }
+    LaunchedEffect(coordinate) {
+        if (nip46Client != null) {
+            nip46Info = withContext(Dispatchers.Default) { Amethyst.instance.nip46ClientStore.load(coordinate) }
+        }
+    }
+    val allActivity by accountViewModel.account.nip46Signer.activityLog.entries
+        .collectAsStateWithLifecycle()
+    val nip46Activity = remember(allActivity, nip46Client) { allActivity.filter { nip46Client != null && it.clientPubKey == nip46Client } }
+    val nip46Title = nip46Info?.name?.ifBlank { null } ?: stringResource(R.string.nip46_signer_remote_app)
+
     Scaffold(
-        topBar = { TopBarWithBackButton(state?.title ?: coordinate.substringAfter(':', "").ifBlank { coordinate.take(12) + "…" }, nav) },
+        topBar = {
+            val title =
+                if (nip46Client != null) {
+                    nip46Title
+                } else {
+                    state?.title ?: coordinate.substringAfter(':', "").ifBlank { coordinate.take(12) + "…" }
+                }
+            TopBarWithBackButton(title, nav)
+        },
     ) { padding ->
         val current = state
         if (current == null) {
@@ -153,7 +191,27 @@ fun ConnectedAppDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // App identity header
-            AppIdentityHeader(current)
+            if (nip46Client != null) {
+                Nip46AppHeader(title = nip46Title, url = nip46Info?.url, image = nip46Info?.image, clientPubKey = nip46Client)
+            } else {
+                AppIdentityHeader(current)
+            }
+
+            // Relays this remote client is reached on — the whole reason it costs a background
+            // connection, so surface them (with live status) for debugging relay footprint.
+            if (nip46Client != null) {
+                val connectedRelays by accountViewModel.account.client
+                    .connectedRelaysFlow()
+                    .collectAsStateWithLifecycle()
+                val inboxRelays by accountViewModel.account.nip46Signer.inboxRelays
+                    .collectAsStateWithLifecycle()
+                Nip46RelaysSection(
+                    relays = nip46Info?.relays.orEmpty(),
+                    inboxRelays = inboxRelays,
+                    connectedRelays = connectedRelays,
+                    onReconnect = { accountViewModel.account.client.reconnect(ignoreRetryDelays = true) },
+                )
+            }
 
             // Signing trust level section
             if (current.signerPolicy != null) {
@@ -216,12 +274,25 @@ fun ConnectedAppDetailScreen(
                 }
             }
 
+            // Recent activity (NIP-46 clients only)
+            if (nip46Client != null && nip46Activity.isNotEmpty()) {
+                SectionHeader(stringResource(R.string.nip46_signer_activity_title))
+                Nip46ActivityCard(nip46Activity)
+            }
+
             // Forget button
             Spacer(Modifier.size(8.dp))
             Button(
                 onClick = {
                     mutate {
-                        signerLedger.revokeAll(coordinate)
+                        val nip46Client = Nip46PermissionAuthorizer.clientPubKeyOf(coordinate)
+                        if (nip46Client != null) {
+                            // Route NIP-46 clients through the host so the client store + the running
+                            // listen set are cleared too, not just the permission ledger.
+                            accountViewModel.account.nip46Signer.forgetClient(nip46Client)
+                        } else {
+                            signerLedger.revokeAll(coordinate)
+                        }
                         capabilityLedger.revokeAll(identity)
                     }
                     nav.popBack()
@@ -232,6 +303,119 @@ fun ConnectedAppDetailScreen(
                 Icon(MaterialSymbols.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.napplet_connected_app_forget))
+            }
+        }
+    }
+}
+
+/**
+ * Lists the relays a NIP-46 remote client is reached on, each with a live status dot. When the client
+ * brought its own relays (the `nostrconnect://` flow) each one is a background connection Amethyst
+ * keeps open while the app stays connected — exactly what a user debugging relay footprint wants to
+ * see, including which are actually up right now. An empty set means the client talks over the
+ * account's inbox relays (the bunker flow), so it adds no extra connection.
+ */
+@Composable
+private fun Nip46RelaysSection(
+    relays: Set<String>,
+    inboxRelays: Set<NormalizedRelayUrl>,
+    connectedRelays: Set<NormalizedRelayUrl>,
+    onReconnect: () -> Unit,
+) {
+    val context = LocalContext.current
+    val anyOffline =
+        remember(relays, inboxRelays, connectedRelays) {
+            if (relays.isEmpty()) {
+                nip46AppOnline(emptySet(), inboxRelays, connectedRelays) == false
+            } else {
+                relays.any { RelayUrlNormalizer.normalizeOrNull(it)?.let { r -> r !in connectedRelays } ?: true }
+            }
+        }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.nip46_signer_app_relays_title)) }
+        if (anyOffline) {
+            Nip46ReconnectPill {
+                onReconnect()
+                Toast.makeText(context, R.string.nip46_signer_reconnecting, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (relays.isEmpty()) {
+                // Bunker-flow app: rides the inbox relays. Show the overall inbox liveness so the row
+                // still reflects whether the signer can be reached at all.
+                val online = nip46AppOnline(emptySet(), inboxRelays, connectedRelays)
+                Text(
+                    stringResource(R.string.nip46_signer_app_relays_inbox),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                online?.let { Nip46LiveStatus(it) }
+            } else {
+                relays.forEach { relay ->
+                    val relayOnline =
+                        remember(relay, connectedRelays) {
+                            RelayUrlNormalizer.normalizeOrNull(relay)?.let { it in connectedRelays } ?: false
+                        }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Nip46StatusDot(relayOnline)
+                        Text(
+                            relay,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Text(
+                    stringResource(R.string.nip46_signer_app_relays_own_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Nip46AppHeader(
+    title: String,
+    url: String?,
+    image: String?,
+    clientPubKey: String,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Nip46AppIcon(image, Modifier.size(48.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    nip46ClientSubtitle(url, clientPubKey),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    stringResource(R.string.nip46_signer_remote_app),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -314,7 +498,7 @@ private fun PolicyPicker(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PolicyCard(
             selected = selected == AppSignerPolicy.FULL_TRUST,
-            symbol = MaterialSymbols.Favorite,
+            symbol = MaterialSymbols.LockOpen,
             label = stringResource(R.string.napplet_policy_full_trust),
             description = stringResource(R.string.napplet_policy_full_trust_desc),
             onClick = { onSelect(AppSignerPolicy.FULL_TRUST) },

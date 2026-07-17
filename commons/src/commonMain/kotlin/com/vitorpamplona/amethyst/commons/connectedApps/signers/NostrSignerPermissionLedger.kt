@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.napplet.signers
+package com.vitorpamplona.amethyst.commons.connectedApps.signers
 
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -143,6 +143,26 @@ class NostrSignerPermissionLedger(
 
     /** Removes all signer permissions for [coordinate] — trust level and all per-op overrides. */
     suspend fun revokeAll(coordinate: String) = store.clearAll(coordinate)
+
+    /**
+     * Applies the persisted part of a user's per-operation consent [grant] to [coordinate], so a
+     * "remember" choice sticks. The transient variants ([SignerOpGrant.AllowOnce],
+     * [SignerOpGrant.DenyOnce], [SignerOpGrant.AllowForSession]) persist nothing — the caller keeps
+     * session grants in memory. Mirrors the broker's per-op recording so every consent surface
+     * (napplet, browser, NIP-46) writes the ledger the same way.
+     */
+    suspend fun record(
+        coordinate: String,
+        grant: SignerOpGrant,
+    ) {
+        when (grant) {
+            is SignerOpGrant.AllowForOp -> setOpDecision(coordinate, grant.op, NostrOpDecision.ALLOW)
+            is SignerOpGrant.AllowUntil -> setTimedOpDecision(coordinate, grant.op, NostrOpDecision.ALLOW, grant.expiresAt)
+            is SignerOpGrant.AllowAll -> setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
+            is SignerOpGrant.DenyForOp -> setOpDecision(coordinate, grant.op, NostrOpDecision.DENY)
+            SignerOpGrant.AllowOnce, SignerOpGrant.DenyOnce, is SignerOpGrant.AllowForSession -> Unit
+        }
+    }
 
     private fun reasonableDecision(op: NostrSignerOp): NostrOpDecision =
         when (op) {

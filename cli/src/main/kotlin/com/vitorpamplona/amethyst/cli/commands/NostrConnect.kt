@@ -33,12 +33,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.withTimeoutOrNull
@@ -52,36 +52,19 @@ import okhttp3.OkHttpClient
  * which only parses). The signer side lives in [BunkerCommand].
  */
 object NostrConnect {
-    private const val NOSTRCONNECT_SCHEME = "nostrconnect://"
-
     data class Offer(
         val clientPubkey: String,
         val relays: Set<NormalizedRelayUrl>,
         val secret: String,
         val name: String?,
+        /** The client's self-declared permission request (`perms=sign_event:1,nip44_encrypt,…`), if any. */
+        val perms: String? = null,
     )
 
-    /** Parse `nostrconnect://<client-pubkey>?relay=…&secret=…&name=…` (percent-decoded). */
+    /** Parse `nostrconnect://<client-pubkey>?relay=…&secret=…&perms=…&name=…` (percent-decoded). */
     fun parseOffer(uri: String): Offer? {
-        if (!uri.startsWith(NOSTRCONNECT_SCHEME)) return null
-        val parts = uri.removePrefix(NOSTRCONNECT_SCHEME).split("?", limit = 2)
-        val clientPubkey = parts[0].lowercase()
-        if (clientPubkey.length != 64 || clientPubkey.any { it !in "0123456789abcdef" }) return null
-        val relays = mutableSetOf<NormalizedRelayUrl>()
-        var secret: String? = null
-        var name: String? = null
-        parts.getOrNull(1)?.split("&")?.forEach { param ->
-            val kv = param.split("=", limit = 2)
-            if (kv.size < 2) return@forEach
-            val value = java.net.URLDecoder.decode(kv[1], "UTF-8")
-            when (kv[0]) {
-                "relay" -> RelayUrlNormalizer.normalizeOrNull(value)?.let { relays.add(it) }
-                "secret" -> secret = value
-                "name" -> name = value
-            }
-        }
-        if (secret == null) return null
-        return Offer(clientPubkey, relays, secret, name)
+        val parsed = NostrConnectURI.parseNostrConnect(uri) ?: return null
+        return Offer(parsed.clientPubKey, parsed.relays, parsed.secret, parsed.name, parsed.perms)
     }
 
     private fun buildOffer(
@@ -89,15 +72,8 @@ object NostrConnect {
         relays: Set<NormalizedRelayUrl>,
         secret: String,
         name: String?,
-    ): String {
-        val enc = { s: String -> java.net.URLEncoder.encode(s, "UTF-8") }
-        return buildString {
-            append(NOSTRCONNECT_SCHEME).append(clientPubkey)
-            append("?").append(relays.joinToString("&") { "relay=${enc(it.url)}" })
-            append("&secret=").append(enc(secret))
-            if (name != null) append("&name=").append(enc(name))
-        }
-    }
+        perms: String?,
+    ): String = NostrConnectURI.buildNostrConnect(clientPubkey, relays, secret, perms = perms, name = name)
 
     /**
      * `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]`
@@ -118,12 +94,16 @@ object NostrConnect {
         if (relays.isEmpty()) return Output.error("bad_args", "no relays; pass --relay URL[,URL…]")
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 120L) * 1000
         val name = args.flag("name")
+        // Optional NIP-46 permission request (`--perms sign_event:1,nip44_encrypt,…`). When present it
+        // rides along in the offer so a signer that honors `perms` (e.g. Amethyst's informed-consent
+        // sheet) can pre-grant exactly these ops. Blank is treated as absent.
+        val perms = args.flag("perms")?.ifBlank { null }
 
         val clientKey = KeyPair()
         val clientSigner = NostrSignerInternal(clientKey)
         val clientPub = clientKey.pubKey.toHexKey()
         val secret = KeyPair().privKey!!.toHexKey().take(32)
-        val offer = buildOffer(clientPub, relays, secret, name)
+        val offer = buildOffer(clientPub, relays, secret, name, perms)
 
         // Surface the offer immediately so the human/harness can paste it.
         System.err.println("[nostrconnect] paste this into your signer within ${timeoutMs / 1000}s:")

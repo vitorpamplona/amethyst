@@ -22,6 +22,10 @@ package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -66,8 +70,15 @@ class AccountCacheState(
     val powQueue: () -> PoWPublishQueue? = { null },
     /** Optional resource-ledger wrapper applied to every account signer (see MeteringNostrSigner). */
     val meterSigner: (NostrSigner) -> NostrSigner = { it },
+    /** App-global Connected-Apps signer permission store (shared with napplets), gating the NIP-46 bunker. */
+    val signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
+    /** App-global store of connected NIP-46 client display + relay info. */
+    val nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
+
+    /** Guards [loadAccount]'s check-then-create so concurrent callers can't build twin Accounts. */
+    private val loadLock = Any()
 
     fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
@@ -179,6 +190,22 @@ class AccountCacheState(
         val cached = accounts.value[signer.pubKey]
         if (cached != null) return cached
 
+        // Serialize construction: the UI login path and the always-on service's preload race
+        // to load the same account on cold start. Without the lock both see a null cache and
+        // both build an Account — the loser is never cancelled, leaving a zombie whose
+        // Nip46SignerState answers bunker requests with a NostrSignerExternal no Activity
+        // ever registers a launcher on (every sign fails "No activity to launch from"),
+        // while duplicating consent prompts and racing error replies to NIP-46 clients.
+        return synchronized(loadLock) {
+            accounts.value[signer.pubKey]?.let { return it }
+            createAccount(signer, accountSettings)
+        }
+    }
+
+    private fun createAccount(
+        signer: NostrSigner,
+        accountSettings: AccountSettings,
+    ): Account {
         val signerWithClientTag =
             NostrSignerWithClientTag(
                 inner = meterSigner(signer),
@@ -258,6 +285,8 @@ class AccountCacheState(
             marmotKeyPackageStore = marmotKeyPackageStore,
             powQueue = powQueue,
             relayAuthPermissionStore = relayAuthPermissionStore,
+            signerPermissionStore = signerPermissionStore,
+            nip46ClientStore = nip46ClientStore,
         ).also { newAccount ->
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))

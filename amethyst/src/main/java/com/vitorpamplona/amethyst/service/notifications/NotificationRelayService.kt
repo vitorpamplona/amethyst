@@ -126,9 +126,11 @@ class NotificationRelayService : Service() {
         // the service itself once a participant exists.
         fun isEnabled(context: Context): Boolean =
             try {
+                // The service also backs the NIP-46 signer, so an account with the signer on
+                // participates just like one with always-on notifications on.
                 LocalPreferences.isNotificationServiceEnabled() &&
                     Amethyst.instance.accountsCache.accounts.value.values.any {
-                        it.settings.alwaysOnNotificationService.value
+                        it.settings.alwaysOnNotificationService.value || it.settings.nip46SignerEnabled.value
                     }
             } catch (e: Exception) {
                 false

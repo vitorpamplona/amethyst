@@ -109,6 +109,10 @@ private object PrefKeys {
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
     const val HIDE_COMMUNITY_RULES_VIOLATIONS = "hideCommunityRulesViolations"
+    const val NIP46_SIGNER_ENABLED = "nip46SignerEnabled"
+    const val NIP46_BUNKER_SECRET = "nip46BunkerSecret"
+    const val NIP46_TRANSPORT_KEY = "nip46TransportKey"
+    const val NIP46_SEEN_IDS = "nip46SeenRequestIds"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
@@ -465,6 +469,10 @@ object LocalPreferences {
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
                     putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
                     putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
+                    putBoolean(PrefKeys.NIP46_SIGNER_ENABLED, settings.nip46SignerEnabled.value)
+                    putString(PrefKeys.NIP46_BUNKER_SECRET, settings.nip46BunkerSecret.value)
+                    putString(PrefKeys.NIP46_TRANSPORT_KEY, settings.nip46TransportKey.value)
+                    putStringSet(PrefKeys.NIP46_SEEN_IDS, settings.nip46SeenRequestIds.value)
 
                     putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
                     putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
@@ -675,6 +683,10 @@ object LocalPreferences {
                     val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
                     val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
                     val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
+                    val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
+                    val nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: ""
+                    val nip46TransportKey = getString(PrefKeys.NIP46_TRANSPORT_KEY, "") ?: ""
+                    val nip46SeenRequestIds = getStringSet(PrefKeys.NIP46_SEEN_IDS, null) ?: setOf()
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
@@ -854,6 +866,10 @@ object LocalPreferences {
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
                         hideCommunityRulesViolations = MutableStateFlow(hideCommunityRulesViolations),
+                        nip46SignerEnabled = MutableStateFlow(nip46SignerEnabled),
+                        nip46BunkerSecret = MutableStateFlow(nip46BunkerSecret),
+                        nip46TransportKey = MutableStateFlow(nip46TransportKey),
+                        nip46SeenRequestIds = MutableStateFlow(nip46SeenRequestIds),
                         defaultHomeFollowList = MutableStateFlow(followListPrefs.home),
                         defaultStoriesFollowList = MutableStateFlow(followListPrefs.stories),
                         defaultNotificationFollowList = MutableStateFlow(followListPrefs.notification),

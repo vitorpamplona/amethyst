@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -58,23 +58,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
-class NappletConnectActivity : ComponentActivity() {
+class SignerConnectActivity : ComponentActivity() {
     private var token: String? = null
     private var decided = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val token = intent.getStringExtra(NappletConnectCoordinator.EXTRA_TOKEN)
+        val token = intent.getStringExtra(SignerConnectCoordinator.EXTRA_TOKEN)
         this.token = token
-        val info = token?.let { NappletConnectCoordinator.infoFor(it) }
+        val info = token?.let { SignerConnectCoordinator.infoFor(it) }
         if (token == null || info == null) {
             finish()
             return
@@ -82,21 +83,21 @@ class NappletConnectActivity : ComponentActivity() {
 
         setContent {
             AmethystTheme {
-                NappletConnectScreen(
+                SignerConnectScreen(
                     info = info,
                     onConnect = { policy ->
                         decided = true
-                        NappletConnectCoordinator.complete(token, AppConnectResult.Connected(policy))
+                        SignerConnectCoordinator.complete(token, AppConnectResult.Connected(policy))
                         finish()
                     },
                     onBlock = {
                         decided = true
-                        NappletConnectCoordinator.complete(token, AppConnectResult.Blocked)
+                        SignerConnectCoordinator.complete(token, AppConnectResult.Blocked)
                         finish()
                     },
                     onCancel = {
                         decided = true
-                        NappletConnectCoordinator.complete(token, AppConnectResult.Cancelled)
+                        SignerConnectCoordinator.complete(token, AppConnectResult.Cancelled)
                         finish()
                     },
                 )
@@ -105,14 +106,14 @@ class NappletConnectActivity : ComponentActivity() {
     }
 
     override fun finish() {
-        if (!decided) token?.let { NappletConnectCoordinator.cancel(it) }
+        if (!decided) token?.let { SignerConnectCoordinator.cancel(it) }
         super.finish()
     }
 }
 
 @Composable
-private fun NappletConnectScreen(
-    info: NappletConnectInfo,
+private fun SignerConnectScreen(
+    info: SignerConnectInfo,
     onConnect: (AppSignerPolicy) -> Unit,
     onBlock: () -> Unit,
     onCancel: () -> Unit,
@@ -168,12 +169,46 @@ private fun NappletConnectScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
-                    Text(
-                        info.domain,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
+                    // Show WHICH account is being connected (avatar + name), not a raw pubkey.
+                    if (info.accountName != null) {
+                        ConnectedAccountRow(info.accountName, info.accountPicture, info.accountPubKey)
+                    } else {
+                        Text(
+                            info.domain,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+                // What the app declared it needs (nostrconnect `perms`) — so consent is informed,
+                // not a silent grant. Approving connects and pre-grants exactly these.
+                if (info.requestedPermissions.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Surface(
+                        modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                stringResource(R.string.nip46_connect_requests_title),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            info.requestedPermissions.forEach { perm ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(
+                                        MaterialSymbols.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Text(perm, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -194,21 +229,21 @@ private fun NappletConnectScreen(
                 ) {
                     PolicyOption(
                         selected = selected == AppSignerPolicy.FULL_TRUST,
-                        icon = "❤",
+                        symbol = MaterialSymbols.LockOpen,
                         label = stringResource(R.string.napplet_policy_full_trust),
                         description = stringResource(R.string.napplet_policy_full_trust_desc),
                         onClick = { selected = AppSignerPolicy.FULL_TRUST },
                     )
                     PolicyOption(
                         selected = selected == AppSignerPolicy.REASONABLE,
-                        icon = "👍",
+                        symbol = MaterialSymbols.Shield,
                         label = stringResource(R.string.napplet_policy_reasonable),
                         description = stringResource(R.string.napplet_policy_reasonable_desc),
                         onClick = { selected = AppSignerPolicy.REASONABLE },
                     )
                     PolicyOption(
                         selected = selected == AppSignerPolicy.PARANOID,
-                        icon = "🕶",
+                        symbol = MaterialSymbols.Lock,
                         label = stringResource(R.string.napplet_policy_paranoid),
                         description = stringResource(R.string.napplet_policy_paranoid_desc),
                         onClick = { selected = AppSignerPolicy.PARANOID },
@@ -249,7 +284,7 @@ private fun NappletConnectScreen(
 @Composable
 private fun PolicyOption(
     selected: Boolean,
-    icon: String,
+    symbol: MaterialSymbol,
     label: String,
     description: String,
     onClick: () -> Unit,
@@ -271,7 +306,12 @@ private fun PolicyOption(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(icon, style = MaterialTheme.typography.headlineSmall)
+            Icon(
+                symbol = symbol,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(26.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -55,13 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -107,11 +108,12 @@ fun ConnectedAppsScreen(
                 loadConnectedApps(capabilityLedger, signerLedger)
             }
         items = initial
-        // Only include real pubkeys (not the "browser" sentinel) in the relay subscription.
+        // Only include real napplet authors in the manifest subscription — skip the "browser"
+        // sentinel and NIP-46 remote-signer clients (whose author segment is the "nip46" prefix).
         nappletAuthors =
             initial
                 .map { it.coordinate.substringBefore(':') }
-                .filter { it != BROWSER_AUTHOR }
+                .filter { it != BROWSER_AUTHOR && it != Nip46PermissionAuthorizer.COORDINATE_PREFIX }
                 .toSet()
     }
 
@@ -201,11 +203,12 @@ private fun ConnectedAppCard(
     onClick: () -> Unit,
 ) {
     val author = remember(entry.coordinate) { entry.coordinate.substringBefore(':') }
-    if (author == BROWSER_AUTHOR) {
-        val url = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
-        BrowserAppCard(url = url, entry = entry, onClick = onClick)
-    } else {
-        NappletAppCard(author = author, entry = entry, untitled = untitled, onClick = onClick)
+    when {
+        author == BROWSER_AUTHOR -> {
+            val url = remember(entry.coordinate) { entry.coordinate.substringAfter(':', "") }
+            BrowserAppCard(url = url, entry = entry, onClick = onClick)
+        }
+        else -> NappletAppCard(author = author, entry = entry, untitled = untitled, onClick = onClick)
     }
 }
 
@@ -379,6 +382,10 @@ private suspend fun loadConnectedApps(
     val signerPolicies = signerLedger.store.allPolicies()
     val allCoordinates = (capGrants.keys + signerPolicies.keys).toSet()
     return allCoordinates
+        // NIP-46 remote-signer clients have their own screen (Nip46ConnectedAppsScreen) because,
+        // unlike napplets/browser origins, each holds a live background relay subscription that
+        // needs managing. Exclude them here so this screen stays napplet/nsite/browser only.
+        .filter { coordinate -> coordinate.substringBefore(':') != Nip46PermissionAuthorizer.COORDINATE_PREFIX }
         .map { coordinate ->
             ConnectedAppEntry(
                 coordinate = coordinate,

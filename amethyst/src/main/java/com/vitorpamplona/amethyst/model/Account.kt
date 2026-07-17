@@ -27,6 +27,11 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -90,6 +95,7 @@ import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
+import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.GitRepositoryListState
@@ -384,6 +390,8 @@ class Account(
     val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
+    signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
+    nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
 ) : IAccount {
     private var userProfileCache: User? = null
 
@@ -437,6 +445,25 @@ class Account(
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
+
+    /** Connected-Apps signer permission ledger, shared by napplets and the NIP-46 bunker. */
+    val signerPermissionLedger = NostrSignerPermissionLedger(signerPermissionStore)
+
+    /**
+     * Runs this account as a NIP-46 remote signer for other apps when
+     * [AccountSettings.nip46SignerEnabled] is on, listening on the inbox relays
+     * and dispatching to [signer] (see [Nip46SignerState]).
+     */
+    val nip46Signer =
+        Nip46SignerState(
+            signer = signer,
+            client = client,
+            ledger = signerPermissionLedger,
+            clientStore = nip46ClientStore,
+            inboxRelays = nip65RelayList.inboxFlow,
+            scope = scope,
+            settings = settings,
+        )
 
     val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)
 

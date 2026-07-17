@@ -170,6 +170,7 @@ private fun PreloadFor(
         NavBarItem.INTEREST_SETS,
         NavBarItem.EMOJI_PACKS,
         NavBarItem.WALLET,
+        NavBarItem.NOSTR_SIGNER,
         NavBarItem.FAVORITE_ALGO_FEEDS,
         NavBarItem.SETTINGS,
         -> Unit

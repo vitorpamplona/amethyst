@@ -20,20 +20,20 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppConnectResult
-import com.vitorpamplona.amethyst.commons.napplet.signers.AppSignerPolicy
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrConnectPrompt
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrOpDecision
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerConsentPrompt
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerPermissionLedger
-import com.vitorpamplona.amethyst.commons.napplet.signers.SignerOpGrant
-import com.vitorpamplona.amethyst.commons.napplet.signers.toSignerOp
+import com.vitorpamplona.amethyst.commons.napplet.protocol.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils

@@ -23,11 +23,14 @@ package com.vitorpamplona.amethyst.napplet
 import android.content.Context
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
-import com.vitorpamplona.amethyst.commons.napplet.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
+import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -40,13 +43,13 @@ fun NostrSignerOp.label(context: Context): String =
         NostrSignerOp.Decrypt -> context.getString(R.string.napplet_op_decrypt)
     }
 
-/** Builds the [NappletSignerConsentInfo] needed by the per-op consent dialog. */
+/** Builds the [SignerConsentInfo] needed by the per-op consent dialog. */
 fun buildSignerConsentInfo(
     context: Context,
     identity: NappletIdentity,
     op: NostrSignerOp,
     request: NappletRequest,
-): NappletSignerConsentInfo {
+): SignerConsentInfo {
     val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
@@ -84,7 +87,13 @@ fun buildSignerConsentInfo(
             }
             else -> ""
         }
-    return NappletSignerConsentInfo(
+    val previewTemplate =
+        when (request) {
+            is NappletRequest.Publish -> EventTemplate<Event>(TimeUtils.now(), request.kind, request.tags, request.content)
+            is NappletRequest.SignEvent -> EventTemplate<Event>(request.createdAt, request.kind, request.tags, request.content)
+            else -> null
+        }
+    return SignerConsentInfo(
         appletTitle = title,
         coordinate = identity.coordinate,
         op = op,
@@ -92,14 +101,15 @@ fun buildSignerConsentInfo(
         contentPreview = preview,
         rawData = rawData,
         iconUrl = iconUrl,
+        previewTemplate = previewTemplate,
     )
 }
 
-/** Creates a [NappletConnectInfo] for the first-connect dialog. */
+/** Creates a [SignerConnectInfo] for the first-connect dialog. */
 fun buildConnectInfo(
     context: Context,
     identity: NappletIdentity,
-): NappletConnectInfo {
+): SignerConnectInfo {
     val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
@@ -114,5 +124,5 @@ fun buildConnectInfo(
         } else {
             identity.identifier.ifBlank { identity.authorPubKey.take(12) + "…" }
         }
-    return NappletConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain, iconUrl = iconUrl)
+    return SignerConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain, iconUrl = iconUrl)
 }
