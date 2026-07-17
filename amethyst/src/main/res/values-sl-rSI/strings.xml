@@ -3396,9 +3396,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="fundraiser_ends">Izteče se: %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain donacija</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">Shrani na pomnilniško kartico PS1</string>
-    <string name="ps1_save_block">%1$d blok</string>
-    <string name="ps1_save_empty_slot">Prazen prostor</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">Policija</string>
     <string name="road_event_speed_camera">Hitrostna kamera</string>

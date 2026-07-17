@@ -3800,9 +3800,6 @@
     <string name="fundraiser_ends">Končí %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain dar</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">Uložení na paměťovou kartu PS1</string>
-    <string name="ps1_save_block">blok %1$d</string>
-    <string name="ps1_save_empty_slot">Prázdný slot</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">Policie</string>
     <string name="road_event_speed_camera">Rychlostní radar</string>

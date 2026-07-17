@@ -18,4 +18,7 @@
         <item quantity="one">%1$s +%2$d a mais</item>
         <item quantity="other">%1$s +%2$d a mais</item>
     </plurals>
+    <string name="ps1_save_title">Salvamento em cartão de memória PS1</string>
+    <string name="ps1_save_block">bloco %1$d</string>
+    <string name="ps1_save_empty_slot">Espaço vazio</string>
 </resources>

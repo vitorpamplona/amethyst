@@ -18,4 +18,7 @@
         <item quantity="one">%1$s सं॰ %2$d अधिक</item>
         <item quantity="other">%1$s सं॰ %2$d अधिक</item>
     </plurals>
+    <string name="ps1_save_title">पीएस१ स्मृति पत्रक अभिलेखन</string>
+    <string name="ps1_save_block">खण्ड %1$d</string>
+    <string name="ps1_save_empty_slot">रिक्त छेद</string>
 </resources>

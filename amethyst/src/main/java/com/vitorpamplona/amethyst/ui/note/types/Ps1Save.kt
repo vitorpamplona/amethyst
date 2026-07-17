@@ -21,15 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,43 +29,26 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.note.Ps1SaveCard
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveIcon
 
 /** How many hex characters of the block to preview (the full block is ~16K chars). */
 private const val HEX_PREVIEW_CHARS = 192
 
-/** Floppy-disk emoji fallback for blocks without a decodable save icon. */
-private const val FLOPPY_PREFIX = "💾 "
-
 /** Milliseconds per animation frame, roughly the BIOS memory-card screen cadence. */
 private const val ICON_FRAME_MILLIS = 250L
 
 /**
- * Minimal, fixed-size card for a PS1 memory-card save block (kind 38192).
- *
- * The content is a full 8 KiB memory-card block, hex-encoded (~16K characters),
- * so the card never renders it whole: it shows the save's own 16×16 icon from
- * the title frame (animated exactly like the PS1 BIOS memory-card screen; a
- * floppy emoji when the block has none), the save title, a metadata line
- * (game product code, region, block number), and a short monospace hex preview
- * clamped to a few lines — no expansion, no network calls. The card is
- * identical in the feed and the opened view, so it takes no makeItShort flag.
+ * Entry for a PS1 memory-card save block: decodes the [Note] and hands the parsed
+ * values to the shared commons [Ps1SaveCard]. The save's 16×16 icon needs Android
+ * bitmap decoding, so it is supplied here as the card's icon slot.
  */
 @Composable
 fun RenderPs1Save(baseNote: Note) {
@@ -97,58 +72,15 @@ fun RenderPs1Save(baseNote: Note) {
             )
         }
 
-    Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (save.icon != null) {
-                Ps1SaveIconImage(save.icon)
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(
-                text = (if (save.icon == null) FLOPPY_PREFIX else "") + (save.title ?: stringRes(R.string.ps1_save_title)),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        val details =
-            listOfNotNull(
-                save.filename,
-                save.region,
-                save.blockNumber?.let { stringRes(R.string.ps1_save_block, it) },
-            ).joinToString(" · ")
-
-        if (details.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = details,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        if (save.isBlank) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringRes(R.string.ps1_save_empty_slot),
-                style = MaterialTheme.typography.bodyMedium,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        } else if (save.hexPreview != null) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = save.hexPreview,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
+    Ps1SaveCard(
+        title = save.title,
+        filename = save.filename,
+        region = save.region,
+        blockNumber = save.blockNumber,
+        isBlank = save.isBlank,
+        hexPreview = save.hexPreview,
+        icon = save.icon?.let { ic -> { Ps1SaveIconImage(ic) } },
+    )
 }
 
 /**

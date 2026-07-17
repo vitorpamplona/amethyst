@@ -15,4 +15,7 @@
     <plurals name="birdex_species_preview_more">
         <item quantity="other">%1$s + 另%2$d</item>
     </plurals>
+    <string name="ps1_save_title">PS1 内存卡保存</string>
+    <string name="ps1_save_block">块 %1$d</string>
+    <string name="ps1_save_empty_slot">空槽位</string>
 </resources>

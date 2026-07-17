@@ -18,4 +18,6 @@
         <item quantity="one">%1$s +%2$d till</item>
         <item quantity="other">%1$s +%2$d till</item>
     </plurals>
+    <string name="ps1_save_title">PS1-minneskortsparning</string>
+    <string name="ps1_save_empty_slot">Tom plats</string>
 </resources>

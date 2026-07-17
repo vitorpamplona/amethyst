@@ -3692,9 +3692,6 @@
     <string name="fundraiser_ends">Endet %1$s</string>
     <string name="fundraiser_onchain_donation">On-Chain-Spende</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">PS1-Memory-Card-Spielstand</string>
-    <string name="ps1_save_block">Block %1$d</string>
-    <string name="ps1_save_empty_slot">Leerer Slot</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">Polizei</string>
     <string name="road_event_speed_camera">Blitzer</string>

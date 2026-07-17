@@ -23,4 +23,7 @@
         <item quantity="many">%1$s +%2$d więcej</item>
         <item quantity="other">%1$s +%2$d więcej</item>
     </plurals>
+    <string name="ps1_save_title">Zapis karty pamięci PS1</string>
+    <string name="ps1_save_block">blok %1$d</string>
+    <string name="ps1_save_empty_slot">Pusty slot</string>
 </resources>
