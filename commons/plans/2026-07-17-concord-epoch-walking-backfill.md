@@ -260,10 +260,14 @@ Each covered epoch multiplies the subscription/AUTH footprint by
    Test: `ConcordSubscriptionPlannerTest.channelSubsAlsoCoverPriorEpochPlanesForHeldRoots`.
    The live channel sub now pulls prior-epoch wraps into `LocalCache`, so
    pre-Refounding messages appear on channel open (bounded by relay cap / `since`).
-3. **TODO** — amethyst `BackwardRelayPager` epoch-stepping + "All caught up"
-   semantics: "load older" still pages only the current-epoch plane; make it step
-   to prior epochs so deep scroll reaches the true start (step 2 already surfaces
-   each prior epoch's recent tail via the live sub).
+3. ~~amethyst `BackwardRelayPager` epoch-stepping + "All caught up" semantics~~
+   **DONE.** Rather than step epoch-by-epoch, the history REQ now asks for the
+   **union** of the channel's plane pubkeys across every held epoch
+   (`ConcordCommunitySession.channelPlaneAddressesAllEpochs`, used by
+   `ConcordChannelHistoryFilterAssembler`). The relay serves them interleaved by
+   `created_at`, so one backward `until` sweep walks the whole cross-Refounding
+   timeline and `exhausted` ("All caught up") means every epoch is drained. Pager
+   itself unchanged. No `ConcordChannelScreen` change needed.
 4. ~~`amy --epoch/--root` diagnostic~~ **DONE** (§7). Cross-validated: the app now
    subscribes to the exact prior-epoch plane pubkeys `amy concord read --epoch 0`
    proved hold the older Soapbox #nostrhub messages (identical `publicChannel`
