@@ -25,7 +25,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -70,7 +69,7 @@ fun NewCommunityNoteButton(
             painter = painterRes(R.drawable.ic_compose, 2),
             contentDescription = stringRes(id = R.string.new_community_note),
             modifier = Size26Modifier,
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

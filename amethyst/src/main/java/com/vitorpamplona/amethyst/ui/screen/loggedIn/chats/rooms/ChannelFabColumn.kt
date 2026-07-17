@@ -26,7 +26,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -54,7 +53,7 @@ fun ChannelFabColumn(nav: INav) {
             symbol = MaterialSymbols.Add,
             contentDescription = stringRes(R.string.messages_create_public_private_chat_description),
             modifier = Modifier.size(26.dp),
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

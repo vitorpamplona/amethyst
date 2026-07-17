@@ -48,7 +48,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsSettings
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 
 /**
@@ -149,7 +149,7 @@ private fun SectionHeaderOts() {
         Icon(
             MaterialSymbols.Search,
             contentDescription = null,
-            tint = Color(0xFFF7931A), // Bitcoin orange
+            tint = BitcoinOrange,
             modifier = Modifier.size(22.dp),
         )
         Spacer(Modifier.width(10.dp))
@@ -194,11 +194,11 @@ private fun ActiveExplorerDisplay(
                     "CUSTOM",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF7931A),
+                    color = BitcoinOrange,
                     modifier =
                         Modifier
                             .background(
-                                Color(0xFFF7931A).copy(alpha = 0.1f),
+                                BitcoinOrange.copy(alpha = 0.1f),
                                 RoundedCornerShape(4.dp),
                             ).padding(horizontal = 6.dp, vertical = 2.dp),
                 )

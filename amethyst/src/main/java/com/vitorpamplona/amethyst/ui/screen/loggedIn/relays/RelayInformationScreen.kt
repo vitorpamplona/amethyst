@@ -107,8 +107,10 @@ import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
@@ -1437,12 +1439,8 @@ private fun RttChip(
 ) {
     val color =
         when {
-            ms < 200 -> Color(0xFF4CAF50)
-
-            // green
-            ms < 500 -> Color(0xFFFFC107)
-
-            // amber
+            ms < 200 -> MaterialTheme.colorScheme.allGoodColor
+            ms < 500 -> MaterialTheme.colorScheme.warningColor
             else -> MaterialTheme.colorScheme.error
         }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

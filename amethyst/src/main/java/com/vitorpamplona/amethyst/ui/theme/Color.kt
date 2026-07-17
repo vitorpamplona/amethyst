@@ -24,17 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 
-val Primary50 = Color(red = 127, green = 103, blue = 190)
-val Primary60 = Color(red = 154, green = 130, blue = 219)
-val Primary70 = Color(red = 182, green = 157, blue = 248)
-val Primary80 = Color(red = 208, green = 188, blue = 255)
-
-val DEFAULT_PRIMARY = Color(red = 208, green = 188, blue = 255)
-val LIGHT_PURPLE = Color(red = 187, green = 134, blue = 252)
-
 val Purple200 = Color(0xFFBB86FC)
 val Purple500 = Color(0xFF6200EE)
-val Purple700 = Color(0xFF3700B3)
 val Teal200 = Color(0xFF03DAC5)
 
 // Accent palette options selected through Settings -> Accent Color.
@@ -56,17 +47,8 @@ val BitcoinDark = Color(0xFFF7931A)
 val BitcoinLight = Color(0xFFB66605)
 
 val Following = Color(0xFF03DAC5)
-val FollowsFollow = Color.Yellow
-val NIP05Verified = Color.Blue
-
-val Nip05EmailColor = Color(0xFFb198ec)
-val Nip05EmailColorDark = Color(0xFF765AA2)
-val Nip05EmailColorLight = Color(0xFFa770f3)
-
-val DarkerGreen = Color.Green.copy(alpha = 0.32f)
 
 val LightRedColor = Color(0xFFC62828)
-val LighterRedColor = Color(0xFFFF0E0E)
 
 val RelayIconFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
 

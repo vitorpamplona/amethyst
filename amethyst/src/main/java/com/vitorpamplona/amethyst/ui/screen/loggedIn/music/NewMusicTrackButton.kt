@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -54,7 +53,7 @@ fun NewMusicTrackButton(
             symbol = MaterialSymbols.MusicNote,
             contentDescription = stringRes(R.string.new_music_track),
             modifier = Size26Modifier,
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

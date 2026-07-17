@@ -73,6 +73,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -447,9 +449,9 @@ private fun MemorySection(memory: MemorySnapshot?) {
     if (memory == null) return
     val heapColor =
         when {
-            memory.heapFraction > 0.80f -> Color(0xFFE53935)
-            memory.heapFraction > 0.60f -> Color(0xFFFFA000)
-            else -> Color(0xFF43A047)
+            memory.heapFraction > 0.80f -> MaterialTheme.colorScheme.error
+            memory.heapFraction > 0.60f -> MaterialTheme.colorScheme.warningColor
+            else -> MaterialTheme.colorScheme.allGoodColor
         }
     SettingsSection(R.string.resource_usage_memory_section) {
         BarRow(

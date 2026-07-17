@@ -1254,7 +1254,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
                 painter = painterRes(R.drawable.original, 1),
                 contentDescription = stringRes(id = R.string.hash_verification_passed),
                 modifier = Size30Modifier,
-                tint = Color.Unspecified,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     } else {
@@ -1268,7 +1268,7 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
                 symbol = MaterialSymbols.Report,
                 contentDescription = stringRes(id = R.string.hash_verification_failed),
                 modifier = Size30Modifier,
-                tint = Color.Red,
+                tint = MaterialTheme.colorScheme.error,
             )
         }
     }

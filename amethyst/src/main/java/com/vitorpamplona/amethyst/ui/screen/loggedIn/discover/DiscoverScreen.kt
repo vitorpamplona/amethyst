@@ -48,7 +48,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -370,7 +369,7 @@ fun NewProductButton(
             symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_product),
             modifier = Size26Modifier,
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }
@@ -392,7 +391,7 @@ fun NewLongFormMarkdownButton(
             symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_long_form_post),
             modifier = Size26Modifier,
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

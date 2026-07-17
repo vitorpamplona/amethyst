@@ -46,6 +46,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -93,25 +95,126 @@ private fun accentSecondary(
     dark: Boolean,
 ): Color = if (accent == AccentColorType.PURPLE) Teal200 else accentPrimary(accent, dark)
 
-private fun darkColors(accent: AccentColorType) =
-    darkColorScheme(
-        primary = accentPrimary(accent, dark = true),
-        secondary = accentSecondary(accent, dark = true),
-        tertiary = accentSecondary(accent, dark = true),
-        background = Color.Black,
-        surface = Color.Black,
-        surfaceDim = Color.Black,
-        surfaceVariant = Color(red = 29, green = 26, blue = 34),
-    )
+// Black or white — whichever has the higher WCAG contrast ratio against a solid accent fill
+// (primary/secondary/tertiary). Runs once per scheme build (not on a render path), so the
+// luminance() cost is irrelevant here. Picks black on the light pastel accents used in the dark
+// theme and on the purple theme's bright teal secondary, white on the deep accents used in light.
+private fun onAccent(color: Color): Color {
+    val luminance = color.luminance()
+    val contrastOnBlack = (luminance + 0.05f) / 0.05f
+    val contrastOnWhite = 1.05f / (luminance + 0.05f)
+    return if (contrastOnBlack >= contrastOnWhite) Color.Black else Color.White
+}
 
-private fun lightColors(accent: AccentColorType) =
-    lightColorScheme(
-        primary = accentPrimary(accent, dark = false),
-        secondary = accentSecondary(accent, dark = false),
-        tertiary = accentSecondary(accent, dark = false),
-        surfaceContainerHighest = Color(red = 236, green = 230, blue = 240),
-        surfaceVariant = Color(red = 250, green = 245, blue = 252),
+// Fill for the Material3 "container" roles (primaryContainer, etc.). A moderately saturated tone,
+// mirroring Material's baseline containers but recoloured to the accent, so filled shapes such as
+// the settings icon boxes, tonal buttons and selected chips stay clearly visible (not a faint
+// wash). Dark themes darken the light accent toward a mid tone; light themes lighten the deep
+// accent toward a pale tint. Left unset, these roles fall back to Material's baseline violet.
+private fun accentContainer(
+    accent: Color,
+    dark: Boolean,
+): Color = if (dark) lerp(accent, Color.Black, 0.58f) else lerp(accent, Color.White, 0.85f)
+
+// High-contrast content for an accentContainer: near-white in dark (so icons/labels read as white
+// on the accent), deep accent in light.
+private fun onAccentContainer(
+    accent: Color,
+    dark: Boolean,
+): Color = if (dark) lerp(accent, Color.White, 0.85f) else lerp(accent, Color.Black, 0.40f)
+
+// Representative colour for an accent option, used by the Settings accent-picker swatches — the
+// same primary the theme would apply for the given light/dark mode, so the swatch previews the
+// real result.
+fun AccentColorType.previewColor(dark: Boolean): Color = accentPrimary(this, dark)
+
+// Contrast colour (black or white) for content drawn on top of an accent swatch.
+fun contentColorOnAccent(color: Color): Color = onAccent(color)
+
+private fun darkColors(accent: AccentColorType): ColorScheme {
+    val primary = accentPrimary(accent, dark = true)
+    val secondary = accentSecondary(accent, dark = true)
+    return darkColorScheme(
+        primary = primary,
+        onPrimary = Color.White,
+        primaryContainer = accentContainer(primary, dark = true),
+        onPrimaryContainer = onAccentContainer(primary, dark = true),
+        secondary = secondary,
+        onSecondary = onAccent(secondary),
+        // Container roles derive from the accent (primary), not the teal secondary. Secondary/tertiary
+        // container surfaces (FilledTonalButton, tonal chips) were neutral before; deriving them from
+        // teal made them read as teal-on-teal, so they follow the accent hue instead.
+        secondaryContainer = accentContainer(primary, dark = true),
+        onSecondaryContainer = onAccentContainer(primary, dark = true),
+        tertiary = secondary,
+        onTertiary = onAccent(secondary),
+        tertiaryContainer = accentContainer(primary, dark = true),
+        onTertiaryContainer = onAccentContainer(primary, dark = true),
+        inversePrimary = accentPrimary(accent, dark = false),
+        surfaceTint = primary,
+        // Neutral (hue-free) base + surface ramp. Left unset, these fall back to Material's
+        // violet-tinted baseline greys, which read as a faint purple wash independent of the
+        // accent. The greys below keep Material's lightness so contrast is unchanged.
+        background = Color.Black,
+        onBackground = Color(0xFFE6E6E6),
+        surface = Color.Black,
+        onSurface = Color(0xFFE6E6E6),
+        surfaceVariant = Color(0xFF1E1E1E),
+        onSurfaceVariant = Color(0xFFCACACA),
+        surfaceDim = Color.Black,
+        surfaceBright = Color(0xFF383838),
+        surfaceContainerLowest = Color(0xFF141414),
+        surfaceContainerLow = Color(0xFF1A1A1A),
+        surfaceContainer = Color(0xFF252525),
+        surfaceContainerHigh = Color(0xFF2E2E2E),
+        surfaceContainerHighest = Color(0xFF383838),
+        outline = Color(0xFF909090),
+        outlineVariant = Color(0xFF454545),
     )
+}
+
+private fun lightColors(accent: AccentColorType): ColorScheme {
+    val primary = accentPrimary(accent, dark = false)
+    val secondary = accentSecondary(accent, dark = false)
+    return lightColorScheme(
+        primary = primary,
+        onPrimary = Color.White,
+        primaryContainer = accentContainer(primary, dark = false),
+        onPrimaryContainer = onAccentContainer(primary, dark = false),
+        secondary = secondary,
+        onSecondary = onAccent(secondary),
+        // Container roles derive from the accent (primary), not the teal secondary. Secondary/tertiary
+        // container surfaces (FilledTonalButton, tonal chips) were neutral before; deriving them from
+        // teal made them read as teal-on-teal, so they follow the accent hue instead.
+        secondaryContainer = accentContainer(primary, dark = false),
+        onSecondaryContainer = onAccentContainer(primary, dark = false),
+        tertiary = secondary,
+        onTertiary = onAccent(secondary),
+        tertiaryContainer = accentContainer(primary, dark = false),
+        onTertiaryContainer = onAccentContainer(primary, dark = false),
+        inversePrimary = accentPrimary(accent, dark = true),
+        surfaceTint = primary,
+        // Neutral (hue-free) base + surface ramp. Left unset, these fall back to Material's
+        // violet-tinted baseline greys (e.g. surface #FEF7FF), which read as a faint purple wash
+        // independent of the accent. The greys below keep Material's lightness so contrast is
+        // unchanged.
+        background = Color(0xFFFDFDFD),
+        onBackground = Color(0xFF1C1C1C),
+        surface = Color(0xFFFDFDFD),
+        onSurface = Color(0xFF1C1C1C),
+        surfaceVariant = Color(0xFFFAFAFA),
+        onSurfaceVariant = Color(0xFF484848),
+        surfaceDim = Color(0xFFDEDEDE),
+        surfaceBright = Color(0xFFFDFDFD),
+        surfaceContainerLowest = Color(0xFFFFFFFF),
+        surfaceContainerLow = Color(0xFFF7F7F7),
+        surfaceContainer = Color(0xFFF2F2F2),
+        surfaceContainerHigh = Color(0xFFECECEC),
+        surfaceContainerHighest = Color(0xFFEBEBEB),
+        outline = Color(0xFF767676),
+        outlineVariant = Color(0xFFCACACA),
+    )
+}
 
 private val DarkColorPalette = darkColors(AccentColorType.PURPLE)
 private val LightColorPalette = lightColors(AccentColorType.PURPLE)
@@ -223,21 +326,14 @@ val LightMaxWidthWithBackground =
         .fillMaxWidth()
         .background(LightColorPalette.background)
 
-val DarkSelectedReactionBoxModifier =
+// Geometry only — no color. The fill is applied live from the scheme's secondaryContainer in
+// the selectedReactionBoxModifier getter so the selected-reaction highlight follows the accent
+// instead of freezing to the purple palette captured at class load.
+val SelectedReactionBoxOuterModifier =
     Modifier
         .padding(horizontal = 5.dp, vertical = 5.dp)
         .size(Size40dp)
         .clip(shape = SmallBorder)
-        .background(DarkColorPalette.secondaryContainer)
-        .padding(5.dp)
-
-val LightSelectedReactionBoxModifier =
-    Modifier
-        .padding(horizontal = 5.dp, vertical = 5.dp)
-        .size(Size40dp)
-        .clip(shape = SmallBorder)
-        .background(LightColorPalette.secondaryContainer)
-        .padding(5.dp)
 
 val DarkChannelNotePictureModifier =
     Modifier
@@ -287,17 +383,13 @@ val lightLargeProfilePictureModifier =
         .clip(shape = CircleShape)
         .border(3.dp, LightColorPalette.onBackground, CircleShape)
 
-val darkNewItemBubbleModifier =
+// Geometry only — no color. The fill is applied live from the scheme's primary in the
+// newItemBubbleModifier getter so the unread dot follows the accent (matching its sibling
+// newItemBackgroundColor) instead of freezing to the purple palette captured at class load.
+val NewItemBubbleShapeModifier =
     Modifier
         .size(10.dp)
         .clip(shape = CircleShape)
-        .background(DarkColorPalette.primary)
-
-val lightNewItemBubbleModifier =
-    Modifier
-        .size(10.dp)
-        .clip(shape = CircleShape)
-        .background(LightColorPalette.primary)
 
 val darkBlackTagModifier =
     Modifier
@@ -457,8 +549,9 @@ val ColorScheme.mediumImportanceLink: Color
 val ColorScheme.placeholderText: Color
     get() = if (isLight) LightPlaceholderText else DarkPlaceholderText
 
+// NIP-05 identifiers were a fixed purple; follow the selected accent instead.
 val ColorScheme.nip05: Color
-    get() = if (isLight) Nip05EmailColorLight else Nip05EmailColorDark
+    get() = primary
 
 val ColorScheme.onBackgroundColorFilter: ColorFilter
     get() = if (isLight) LightOnBackgroundColorFilter else DarkOnBackgroundColorFilter
@@ -552,7 +645,7 @@ val ColorScheme.relayIconModifier: Modifier
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.selectedReactionBoxModifier: Modifier
-    get() = if (isLight) LightSelectedReactionBoxModifier else DarkSelectedReactionBoxModifier
+    get() = SelectedReactionBoxOuterModifier.background(secondaryContainer).padding(5.dp)
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.largeProfilePictureModifier: Modifier
@@ -560,7 +653,7 @@ val ColorScheme.largeProfilePictureModifier: Modifier
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.newItemBubbleModifier: Modifier
-    get() = if (isLight) lightNewItemBubbleModifier else darkNewItemBubbleModifier
+    get() = NewItemBubbleShapeModifier.background(primary)
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.blackTagModifier: Modifier
