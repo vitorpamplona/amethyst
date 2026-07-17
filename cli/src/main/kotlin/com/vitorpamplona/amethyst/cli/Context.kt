@@ -221,7 +221,11 @@ class Context(
                 secret = b.connectSecret,
                 // Bunker requires web authorization: surface the URL; the request keeps waiting.
                 onAuthUrl = { url -> System.err.println("[nip46] authorize this request in a browser, then it will continue:\n  $url") },
-            )
+            ).also {
+                // signer.pubKey must be the USER identity, not the ephemeral transport key, so
+                // self-encryption/decryption (Concord list, private NIP-51 lists) uses the right peer.
+                it.bindUserPubkey(identity.pubKeyHex)
+            }
         } ?: NostrSignerInternal(identity.keyPair())
 
     /**

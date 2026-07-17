@@ -120,6 +120,32 @@ class NostrSignerRemoteIsolationTest {
     private val validHex = "a".repeat(64)
 
     @Test
+    fun pubKeyFallsBackToTransportKeyUntilBoundThenReturnsUserIdentity() {
+        val trackingClient = TrackingNostrClient()
+        val ephemeralSigner = NostrSignerInternal(KeyPair())
+        val userIdentity = "b".repeat(64)
+
+        val remote =
+            NostrSignerRemote(
+                signer = ephemeralSigner,
+                remotePubkey = validHex,
+                relays = setOf(bunkerRelay),
+                client = trackingClient,
+            )
+
+        // Before the user identity is known, pubKey is the ephemeral transport key — NOT the
+        // remotePubkey (which is the bunker's addressing key) and not yet the user's identity.
+        assertEquals(ephemeralSigner.pubKey, remote.pubKey)
+
+        // Once bound (mirrors a reloaded account / a cached get_public_key), pubKey is the user key.
+        remote.bindUserPubkey(userIdentity)
+        assertEquals(userIdentity, remote.pubKey)
+
+        // The transport keypair used for NIP-46 addressing is untouched by the binding.
+        assertEquals(ephemeralSigner.pubKey, remote.signer.pubKey)
+    }
+
+    @Test
     fun subscriptionFilterTargetsOnlyBunkerRelays() {
         val trackingClient = TrackingNostrClient()
         val ephemeralSigner = NostrSignerInternal(KeyPair())

@@ -346,6 +346,11 @@ class AccountManager internal constructor(
                 remoteSigner.getPublicKey()
             }
 
+        // Bind the identity so signer.pubKey is the USER key, not the ephemeral transport key —
+        // otherwise self-encryption (private NIP-51 lists, drafts, …) keys off the wrong pubkey.
+        // Idempotent with the getPublicKey() branch above, which already caches the same value.
+        remoteSigner.bindUserPubkey(pubKeyHex)
+
         val resolvedNpub = npub ?: pubKeyHex.hexToByteArray().toNpub()
 
         val state =

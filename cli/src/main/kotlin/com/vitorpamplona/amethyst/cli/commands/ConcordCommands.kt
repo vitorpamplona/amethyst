@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
-import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -136,20 +135,15 @@ object ConcordCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays = (ctx.outboxRelays() + ctx.bootstrapRelays())
-            // Filter by the ACCOUNT identity, not ctx.signer.pubKey — for a bunker the signer's pubKey
-            // is the ephemeral NIP-46 transport key, not the user's identity.
-            val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(ctx.identity.pubKeyHex))
+            val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(ctx.signer.pubKey))
             val events = ctx.drain(relays.associateWith { listOf(filter) }).map { it.second }
             val newest =
                 events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
                     ?: return Output.error("not_found", "no kind-13302 Concord list published by this account").let { 1 }
 
-            // Decrypt with the ACCOUNT identity as the NIP-44 self-peer. `newest.decrypt(signer)` uses
-            // `signer.pubKey`, which for a bunker is the ephemeral transport key, not the identity the
-            // list is self-encrypted to — so decrypt manually against ctx.identity.pubKeyHex.
             val entries =
                 try {
-                    ConcordCommunityList.decode(ctx.signer.nip44Decrypt(newest.content, ctx.identity.pubKeyHex))
+                    newest.decrypt(ctx.signer)
                 } catch (e: Exception) {
                     return Output.error("decrypt_failed", "could not decrypt kind-13302: ${e.message}").let { 1 }
                 }
