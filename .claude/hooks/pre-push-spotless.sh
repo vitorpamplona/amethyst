@@ -63,19 +63,10 @@ before="$(git diff HEAD -- '*.kt' '*.kts' 2>/dev/null | sha1sum)"
 
 log="$(mktemp /tmp/spotless-gate.XXXXXX.log)"
 if ! ./gradlew spotlessApply >"$log" 2>&1; then
-  # Distinguish a formatting failure (block) from Gradle being unable to RUN —
-  # e.g. deps can't resolve, or the wrapper can't even download the Gradle
-  # distribution, in a restricted sandbox. An infra failure must not strand the
-  # agent; warn and let CI's spotlessCheck be the backstop. The distribution
-  # patterns (the `gradle-<ver>-bin.zip` URL, the Java download exception, and a
-  # proxy 40x on that fetch) only appear when `./gradlew` failed *before* running
-  # any task, so they can't mask a real formatting/compile error.
-  if grep -qiE "could not resolve|could not (get|download)|handshake|connect timed out|no address|unable to (find|resolve) host|read timed out|server returned http response code|gradle-[0-9][0-9.]*-(bin|all)\.zip|could not install gradle" "$log"; then
-    echo "WARN: could not run spotlessApply (Gradle infra/network failure), skipping the formatting gate." >&2
-    echo "      CI's spotlessCheck still enforces formatting on the PR." >&2
-    rm -f "$log"
-    exit 0
-  fi
+  # Any failure blocks. The web sandbox pre-seeds the Gradle distribution (see
+  # .claude/hooks/session-start.sh) and Gradle resolves deps through the proxy,
+  # so spotlessApply no longer fails for infra reasons — a failure here is a
+  # real formatting/compile error, not a restricted-sandbox hiccup.
   echo "BLOCKED: spotlessApply failed — fix the build/formatting error before pushing." >&2
   echo "----- gradle output (tail) -----" >&2
   tail -n 40 "$log" >&2
