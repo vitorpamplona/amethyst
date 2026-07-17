@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">مفتوح</string>
+    <string name="git_status_merged">مدمج</string>
+    <string name="git_status_closed">مغلق</string>
+    <string name="git_status_draft">مسودة</string>
+    <plurals name="birdex_species_count">
+        <item quantity="zero">Birdex · لا أنواع</item>
+        <item quantity="one">Birdex · نوع واحد</item>
+        <item quantity="two">Birdex · نوعان</item>
+        <item quantity="few">Birdex · %1$d أنواع</item>
+        <item quantity="many">Birdex · %1$d نوعًا</item>
+        <item quantity="other">Birdex · %1$d نوع</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="zero">%1$s</item>
+        <item quantity="one">%1$s +%2$d آخر</item>
+        <item quantity="two">%1$s +%2$d آخران</item>
+        <item quantity="few">%1$s +%2$d أخرى</item>
+        <item quantity="many">%1$s +%2$d آخرين</item>
+        <item quantity="other">%1$s +%2$d آخرين</item>
+    </plurals>
+    <string name="road_event_accident">حادث</string>
+    <string name="road_event_animal">حيوان على الطريق</string>
+    <string name="road_event_confirmed">لا يزال موجودًا</string>
+    <string name="road_event_confirms_report">يؤكد تقرير طريق</string>
+    <string name="road_event_construction">أعمال إنشائية</string>
+    <string name="road_event_denied">لم يعد موجودًا</string>
+    <string name="road_event_denies_report">يُفيد بإزالة حدث طريق</string>
+    <string name="road_event_fog">ضباب</string>
+    <string name="road_event_hazard">خطر</string>
+    <string name="road_event_ice">جليد</string>
+    <string name="road_event_other">حدث على الطريق</string>
+    <string name="road_event_police">شرطة</string>
+    <string name="road_event_pothole">حفرة في الطريق</string>
+    <string name="road_event_road_closure">إغلاق طريق</string>
+    <string name="road_event_road_condition">حالة الطريق</string>
+    <string name="road_event_speed_camera">كاميرا سرعة</string>
+    <string name="road_event_traffic_jam">ازدحام مروري</string>
+    <string name="road_event_unknown">حدث على الطريق</string>
+    <string name="relay_monitor_rtt_open">فتح</string>
+    <string name="relay_monitor_rtt_read">قراءة</string>
+    <string name="relay_monitor_rtt_write">كتابة</string>
+    <string name="relay_monitor_network">الشبكة</string>
+    <string name="relay_monitor_relay_type">النوع</string>
+    <string name="relay_monitor_requirements">المتطلبات</string>
+    <string name="relay_monitor_supported_nips">NIPs المدعومة</string>
+    <string name="relay_monitor_ms">%1$d مللي ثانية</string>
+    <string name="relay_discovery_accepted_kinds">الأنواع المقبولة</string>
+    <string name="relay_discovery_geohash">الموقع</string>
+    <string name="calendar_rsvp_going">سأحضر</string>
+    <string name="calendar_rsvp_maybe">ربما</string>
+    <string name="calendar_rsvp_not_going">لن أتمكن من الحضور</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="zero">%1$d أحداث</item>
+        <item quantity="one">%1$d حدث</item>
+        <item quantity="two">%1$d حدثان</item>
+        <item quantity="few">%1$d أحداث</item>
+        <item quantity="many">%1$d حدثًا</item>
+        <item quantity="other">%1$d حدث</item>
+    </plurals>
+</resources>

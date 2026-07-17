@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Offen</string>
+    <string name="git_status_merged">Zusammengeführt</string>
+    <string name="git_status_closed">Geschlossen</string>
+    <string name="git_status_draft">Entwurf</string>
+    <string name="git_diff_binary">Binärdatei wird nicht angezeigt.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">Datei geändert</item>
+        <item quantity="other">Dateien geändert</item>
+    </plurals>
+    <string name="bird_detection_title">Vogelerkennung</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d Art</item>
+        <item quantity="other">Birdex · %1$d Arten</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d weitere</item>
+        <item quantity="other">%1$s +%2$d weitere</item>
+    </plurals>
+    <string name="ps1_save_title">PS1-Memory-Card-Spielstand</string>
+    <string name="ps1_save_block">Block %1$d</string>
+    <string name="ps1_save_empty_slot">Leerer Slot</string>
+    <string name="podcast_play_soundbite">Highlight abspielen</string>
+    <string name="road_event_accident">Unfall</string>
+    <string name="road_event_animal">Tier auf der Straße</string>
+    <string name="road_event_confirmed">Noch da</string>
+    <string name="road_event_confirms_report">Bestätigt einen Straßenbericht</string>
+    <string name="road_event_construction">Baustelle</string>
+    <string name="road_event_denied">Nicht mehr da</string>
+    <string name="road_event_denies_report">Meldet ein beseitigtes Straßenereignis</string>
+    <string name="road_event_fog">Nebel</string>
+    <string name="road_event_hazard">Gefahr</string>
+    <string name="road_event_ice">Eis</string>
+    <string name="road_event_other">Straßenereignis</string>
+    <string name="road_event_police">Polizei</string>
+    <string name="road_event_pothole">Schlagloch</string>
+    <string name="road_event_road_closure">Straßensperrung</string>
+    <string name="road_event_road_condition">Straßenzustand</string>
+    <string name="road_event_speed_camera">Blitzer</string>
+    <string name="road_event_traffic_jam">Stau</string>
+    <string name="road_event_unknown">Straßenereignis</string>
+    <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
+    <string name="relay_monitor_rtt_open">Öffnen</string>
+    <string name="relay_monitor_rtt_read">Lesen</string>
+    <string name="relay_monitor_rtt_write">Schreiben</string>
+    <string name="relay_monitor_network">Netzwerk</string>
+    <string name="relay_monitor_relay_type">Typ</string>
+    <string name="relay_monitor_requirements">Anforderungen</string>
+    <string name="relay_monitor_supported_nips">Unterstützte NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Akzeptierte Arten</string>
+    <string name="relay_discovery_geohash">Standort</string>
+    <string name="calendar_rsvp_going">Komme</string>
+    <string name="calendar_rsvp_maybe">Vielleicht</string>
+    <string name="calendar_rsvp_not_going">Komme nicht</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d Termin</item>
+        <item quantity="other">%1$d Termine</item>
+    </plurals>
+</resources>

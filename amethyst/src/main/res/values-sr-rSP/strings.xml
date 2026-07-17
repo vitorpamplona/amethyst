@@ -1328,15 +1328,6 @@
     <string name="about_legal">O nama &amp; Pravno</string>
     <string name="relay_error_messages">Greške i obaveštenja sa ovog relay-a</string>
     <string name="relay_monitor_reports">Izveštaji monitora relay-a</string>
-    <string name="relay_monitor_rtt_open">Otvori</string>
-    <string name="relay_monitor_rtt_read">Čitaj</string>
-    <string name="relay_monitor_rtt_write">Piši</string>
-    <string name="relay_monitor_network">Mreža</string>
-    <string name="relay_monitor_relay_type">Tip</string>
-    <string name="relay_monitor_supported_nips">Podržani NIPs</string>
-    <string name="relay_monitor_requirements">Zahtevi</string>
-    <string name="relay_discovery_accepted_kinds">Prihvaćene vrste</string>
-    <string name="relay_discovery_geohash">Lokacija</string>
     <string name="relay_active_subscriptions">Aktivne pretplate</string>
     <string name="relay_req_subscriptions">REQ pretplate (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT pretplate (%1$d)</string>
@@ -1995,15 +1986,7 @@
     <string name="calendar_collection_title">Naslov</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Naslov je obavezan.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d događaj</item>
-        <item quantity="few">%1$d događaja</item>
-        <item quantity="other">%1$d događaja</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Još nema događaja u ovom kalendaru.</string>
-    <string name="calendar_rsvp_going">Idem</string>
-    <string name="calendar_rsvp_maybe">Možda</string>
-    <string name="calendar_rsvp_not_going">Ne mogu ići</string>
     <string name="calendar_rsvp_section">RSVP-ovi (%1$d)</string>
     <string name="calendar_rsvp_none">Još nema RSVP-ova.</string>
     <string name="calendar_participants_section">Učesnici (%1$d)</string>
@@ -2226,10 +2209,6 @@
     <string name="restricted_writes">Ograničena pisanja</string>
     <string name="forked_from">Forkovan od</string>
     <string name="git_clone_address">Kloniraj:</string>
-    <string name="git_status_open">Otvoreno</string>
-    <string name="git_status_merged">Spojeno</string>
-    <string name="git_status_closed">Zatvoreno</string>
-    <string name="git_status_draft">Nacrt</string>
     <string name="git_repo_tab_overview">Pregled</string>
     <string name="git_repo_tab_issues">Problemi</string>
     <string name="git_repo_tab_patches">Zakrpe &amp; PR-ovi</string>
@@ -2789,36 +2768,8 @@
     <string name="goal_progress">%1$s prikupljeno od cilja od %2$s sats</string>
     <string name="fundraiser_ends">Završava se %1$s</string>
     <string name="fundraiser_onchain_donation">Donacija na lancu</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d vrsta</item>
-        <item quantity="few">Birdex · %1$d vrste</item>
-        <item quantity="other">Birdex · %1$d vrsta</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d više</item>
-        <item quantity="few">%1$s +%2$d više</item>
-        <item quantity="other">%1$s +%2$d više</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policija</string>
-    <string name="road_event_speed_camera">Radar</string>
-    <string name="road_event_traffic_jam">Saobraćajna gužva</string>
-    <string name="road_event_accident">Nesreća</string>
-    <string name="road_event_road_closure">Zatvaranje puta</string>
-    <string name="road_event_construction">Gradnja</string>
-    <string name="road_event_hazard">Opasnost</string>
-    <string name="road_event_road_condition">Stanje puta</string>
-    <string name="road_event_pothole">Rupa na putu</string>
-    <string name="road_event_fog">Magla</string>
-    <string name="road_event_ice">Led</string>
-    <string name="road_event_animal">Životinja na putu</string>
-    <string name="road_event_other">Saobraćajni događaj</string>
-    <string name="road_event_unknown">Saobraćajni događaj</string>
-    <string name="road_event_confirmed">I dalje postoji</string>
-    <string name="road_event_denied">Više ne postoji</string>
-    <string name="road_event_confirms_report">Potvrđuje saobraćajni izveštaj</string>
-    <string name="road_event_denies_report">Prijavljuje da je saobraćajni događaj rešen</string>
     <string name="goal_amount_label">Iznos cilja (sats)</string>
     <string name="goal_description_label">Opišite vaš cilj</string>
     <string name="goal_description_placeholder">Za šta skupljate sredstva?</string>

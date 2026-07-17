@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,7 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 
 /**
  * Heart color of the Liked icon vector; tints reaction activity cards the way

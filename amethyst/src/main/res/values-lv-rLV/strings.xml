@@ -1339,15 +1339,6 @@
     <string name="about_legal">Par &amp; juridiski</string>
     <string name="relay_error_messages">Kļūdas un paziņojumi no šī relay</string>
     <string name="relay_monitor_reports">Relay monitora ziņojumi</string>
-    <string name="relay_monitor_rtt_open">Atvērt</string>
-    <string name="relay_monitor_rtt_read">Lasīt</string>
-    <string name="relay_monitor_rtt_write">Rakstīt</string>
-    <string name="relay_monitor_network">Tīkls</string>
-    <string name="relay_monitor_relay_type">Tips</string>
-    <string name="relay_monitor_supported_nips">Atbalstītie NIP</string>
-    <string name="relay_monitor_requirements">Prasības</string>
-    <string name="relay_discovery_accepted_kinds">Pieņemtie veidi</string>
-    <string name="relay_discovery_geohash">Atrašanās vieta</string>
     <string name="relay_active_subscriptions">Aktīvie abonementi</string>
     <string name="relay_req_subscriptions">REQ abonementi (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT abonementi (%1$d)</string>
@@ -2005,15 +1996,7 @@
     <string name="calendar_collection_title">Virsraksts</string>
     <string name="calendar_collection_description">Apraksts</string>
     <string name="calendar_collection_invalid">Ir nepieciešams nosaukums.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="zero">%1$d notikumu</item>
-        <item quantity="one">%1$d notikums</item>
-        <item quantity="other">%1$d notikumi</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Šajā kalendārā vēl nav notikumu.</string>
-    <string name="calendar_rsvp_going">Iešu</string>
-    <string name="calendar_rsvp_maybe">Varbūt</string>
-    <string name="calendar_rsvp_not_going">Nevarēšu ierasties</string>
     <string name="calendar_rsvp_section">Atbildes (%1$d)</string>
     <string name="calendar_rsvp_none">Vēl nav atbilžu.</string>
     <string name="calendar_participants_section">Dalībnieki (%1$d)</string>
@@ -2236,10 +2219,6 @@
     <string name="forked_from">Atvasināts no</string>
     <string name="git_web_address">Tīmeklis:</string>
     <string name="git_clone_address">Klonēt:</string>
-    <string name="git_status_open">Atvērts</string>
-    <string name="git_status_merged">Sapludināts</string>
-    <string name="git_status_closed">Slēgts</string>
-    <string name="git_status_draft">Melnraksts</string>
     <string name="git_repo_tab_overview">Pārskats</string>
     <string name="git_repo_tab_issues">Problēmas</string>
     <string name="git_repo_tab_patches">Ielāpi &amp; PR</string>
@@ -2807,36 +2786,8 @@
     <string name="goal_progress">%1$s finansēts no %2$s sats mērķa</string>
     <string name="fundraiser_ends">Beidzas %1$s</string>
     <string name="fundraiser_onchain_donation">Ziedojums ķēdē</string>
-    <plurals name="birdex_species_count">
-        <item quantity="zero">Birdex · %1$d sugas</item>
-        <item quantity="one">Birdex · %1$d suga</item>
-        <item quantity="other">Birdex · %1$d sugas</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="zero">%1$s +%2$d vairāk</item>
-        <item quantity="one">%1$s +%2$d vairāk</item>
-        <item quantity="other">%1$s +%2$d vairāk</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policija</string>
-    <string name="road_event_speed_camera">Ātruma kamera</string>
-    <string name="road_event_traffic_jam">Sastrēgums</string>
-    <string name="road_event_accident">Avārija</string>
-    <string name="road_event_road_closure">Ceļa slēgšana</string>
-    <string name="road_event_construction">Būvdarbi</string>
-    <string name="road_event_hazard">Bīstamība</string>
-    <string name="road_event_road_condition">Ceļa stāvoklis</string>
-    <string name="road_event_pothole">Bedre</string>
-    <string name="road_event_fog">Migla</string>
-    <string name="road_event_ice">Ledus</string>
-    <string name="road_event_animal">Dzīvnieks uz ceļa</string>
-    <string name="road_event_other">Ceļa notikums</string>
-    <string name="road_event_unknown">Ceļa notikums</string>
-    <string name="road_event_confirmed">Joprojām tur</string>
-    <string name="road_event_denied">Vairs nav tur</string>
-    <string name="road_event_confirms_report">Apstiprina ceļa ziņojumu</string>
-    <string name="road_event_denies_report">Ziņo par ceļa notikuma novēršanu</string>
     <string name="goal_amount_label">Mērķa summa (sats)</string>
     <string name="goal_description_label">Aprakstiet savu mērķi</string>
     <string name="goal_description_placeholder">Par ko jūs vācāt līdzekļus?</string>

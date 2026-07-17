@@ -1313,15 +1313,6 @@
     <string name="not_available_acronym">해당 없음</string>
     <string name="relay_error_messages">이 relay의 오류 및 알림</string>
     <string name="relay_monitor_reports">Relay 모니터 보고서</string>
-    <string name="relay_monitor_rtt_open">열기</string>
-    <string name="relay_monitor_rtt_read">읽기</string>
-    <string name="relay_monitor_rtt_write">쓰기</string>
-    <string name="relay_monitor_network">네트워크</string>
-    <string name="relay_monitor_relay_type">유형</string>
-    <string name="relay_monitor_supported_nips">지원되는 NIP</string>
-    <string name="relay_monitor_requirements">요구 사항</string>
-    <string name="relay_discovery_accepted_kinds">허용된 종류</string>
-    <string name="relay_discovery_geohash">위치</string>
     <string name="relay_active_subscriptions">활성 구독</string>
     <string name="relay_req_subscriptions">REQ 구독 (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT 구독 (%1$d)</string>
@@ -1959,13 +1950,7 @@
     <string name="calendar_collection_title">제목</string>
     <string name="calendar_collection_description">설명</string>
     <string name="calendar_collection_invalid">제목을 입력해야 합니다.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d개 이벤트</item>
-    </plurals>
     <string name="calendar_collection_empty_members">이 캘린더에 아직 이벤트가 없습니다.</string>
-    <string name="calendar_rsvp_going">참석</string>
-    <string name="calendar_rsvp_maybe">미정</string>
-    <string name="calendar_rsvp_not_going">불참</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">아직 RSVP가 없습니다.</string>
     <string name="calendar_participants_section">참가자 (%1$d)</string>
@@ -2187,10 +2172,6 @@
     <string name="restricted_writes">제한된 쓰기</string>
     <string name="forked_from">포크 출처</string>
     <string name="git_web_address">웹:</string>
-    <string name="git_status_open">열림</string>
-    <string name="git_status_merged">병합됨</string>
-    <string name="git_status_closed">닫힘</string>
-    <string name="git_status_draft">초안</string>
     <string name="git_repo_tab_overview">개요</string>
     <string name="git_repo_tab_issues">이슈</string>
     <string name="git_repo_tab_patches">패치 &amp; PR</string>
@@ -2733,32 +2714,8 @@
     <string name="goal_progress">%2$s sats 목표 중 %1$s 달성</string>
     <string name="fundraiser_ends">%1$s 종료</string>
     <string name="fundraiser_onchain_donation">온체인 기부</string>
-    <plurals name="birdex_species_count">
-        <item quantity="other">Birdex · %1$d종</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s 외 %2$d개 더</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">경찰</string>
-    <string name="road_event_speed_camera">과속 카메라</string>
-    <string name="road_event_traffic_jam">교통 정체</string>
-    <string name="road_event_accident">사고</string>
-    <string name="road_event_road_closure">도로 폐쇄</string>
-    <string name="road_event_construction">공사 중</string>
-    <string name="road_event_hazard">위험</string>
-    <string name="road_event_road_condition">도로 상태</string>
-    <string name="road_event_pothole">포트홀</string>
-    <string name="road_event_fog">안개</string>
-    <string name="road_event_ice">결빙</string>
-    <string name="road_event_animal">도로 위 동물</string>
-    <string name="road_event_other">도로 이벤트</string>
-    <string name="road_event_unknown">도로 이벤트</string>
-    <string name="road_event_confirmed">아직 있음</string>
-    <string name="road_event_denied">더 이상 없음</string>
-    <string name="road_event_confirms_report">도로 신고를 확인함</string>
-    <string name="road_event_denies_report">도로 이벤트 해소를 보고함</string>
     <string name="goal_amount_label">목표 금액 (sats)</string>
     <string name="goal_description_label">목표 설명</string>
     <string name="goal_description_placeholder">무엇을 위해 모금하시나요?</string>

@@ -1330,15 +1330,6 @@
     <string name="about_legal">Hakkında &amp; Yasal</string>
     <string name="relay_error_messages">Bu Relay\'den Gelen Hatalar ve Bildirimler</string>
     <string name="relay_monitor_reports">Relay İzleme Raporları</string>
-    <string name="relay_monitor_rtt_open">Aç</string>
-    <string name="relay_monitor_rtt_read">Oku</string>
-    <string name="relay_monitor_rtt_write">Yaz</string>
-    <string name="relay_monitor_network">Ağ</string>
-    <string name="relay_monitor_relay_type">Tür</string>
-    <string name="relay_monitor_supported_nips">Desteklenen NIP\'ler</string>
-    <string name="relay_monitor_requirements">Gereksinimler</string>
-    <string name="relay_discovery_accepted_kinds">Kabul Edilen Türler</string>
-    <string name="relay_discovery_geohash">Konum</string>
     <string name="relay_active_subscriptions">Etkin Abonelikler</string>
     <string name="relay_req_subscriptions">REQ Abonelikleri (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Abonelikleri (%1$d)</string>
@@ -1989,14 +1980,7 @@
     <string name="calendar_collection_title">Başlık</string>
     <string name="calendar_collection_description">Açıklama</string>
     <string name="calendar_collection_invalid">Başlık zorunludur.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d etkinlik</item>
-        <item quantity="other">%1$d etkinlik</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Bu takvimde henüz etkinlik yok.</string>
-    <string name="calendar_rsvp_going">Katılıyorum</string>
-    <string name="calendar_rsvp_maybe">Belki</string>
-    <string name="calendar_rsvp_not_going">Katılamıyorum</string>
     <string name="calendar_rsvp_section">RSVP\'ler (%1$d)</string>
     <string name="calendar_rsvp_none">Henüz RSVP yok.</string>
     <string name="calendar_participants_section">Katılımcılar (%1$d)</string>
@@ -2221,10 +2205,6 @@
     <string name="restricted_writes">Kısıtlı Yazma</string>
     <string name="forked_from">Çatallandığı kaynak</string>
     <string name="git_clone_address">Klon:</string>
-    <string name="git_status_open">Açık</string>
-    <string name="git_status_merged">Birleştirildi</string>
-    <string name="git_status_closed">Kapalı</string>
-    <string name="git_status_draft">Taslak</string>
     <string name="git_repo_tab_overview">Genel Bakış</string>
     <string name="git_repo_tab_issues">Sorunlar</string>
     <string name="git_repo_tab_patches">Yamalar &amp; PR\'lar</string>
@@ -2771,34 +2751,8 @@
     <string name="goal_progress">%2$s sats hedefinin %1$s\'i finanse edildi</string>
     <string name="fundraiser_ends">Bitiş: %1$s</string>
     <string name="fundraiser_onchain_donation">Zincir üstü bağış</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d tür</item>
-        <item quantity="other">Birdex · %1$d tür</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d daha</item>
-        <item quantity="other">%1$s +%2$d daha</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polis</string>
-    <string name="road_event_speed_camera">Hız kamerası</string>
-    <string name="road_event_traffic_jam">Trafik sıkışıklığı</string>
-    <string name="road_event_accident">Kaza</string>
-    <string name="road_event_road_closure">Yol kapatma</string>
-    <string name="road_event_construction">Yapım çalışması</string>
-    <string name="road_event_hazard">Tehlike</string>
-    <string name="road_event_road_condition">Yol durumu</string>
-    <string name="road_event_pothole">Çukur</string>
-    <string name="road_event_fog">Sis</string>
-    <string name="road_event_ice">Buz</string>
-    <string name="road_event_animal">Yolda hayvan var</string>
-    <string name="road_event_other">Yol olayı</string>
-    <string name="road_event_unknown">Yol olayı</string>
-    <string name="road_event_confirmed">Hâlâ orada</string>
-    <string name="road_event_denied">Artık orada değil</string>
-    <string name="road_event_confirms_report">Bir yol raporunu doğruluyor</string>
-    <string name="road_event_denies_report">Bir yol olayının sona erdiğini bildiriyor</string>
     <string name="goal_amount_label">Hedef miktarı (sats)</string>
     <string name="goal_description_label">Hedefinizi açıklayın</string>
     <string name="goal_description_placeholder">Ne için bağış topluyorsunuz?</string>

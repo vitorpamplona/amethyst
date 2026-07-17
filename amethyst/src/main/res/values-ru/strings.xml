@@ -901,25 +901,15 @@
     
     <string name="relay_monitor_reports">Отчёты мониторинга relay</string>
     
-    <string name="relay_monitor_rtt_open">Открытие</string>
     
-    <string name="relay_monitor_rtt_read">Чтение</string>
     
-    <string name="relay_monitor_rtt_write">Запись</string>
     
-    <string name="relay_monitor_network">Сеть</string>
     
-    <string name="relay_monitor_relay_type">Тип</string>
     
-    <string name="relay_monitor_supported_nips">Поддерживаемые NIP</string>
     
-    <string name="relay_monitor_requirements">Требования</string>
     
-    <string name="relay_monitor_ms">%1$d мс</string>
     
-    <string name="relay_discovery_accepted_kinds">Принимаемые типы</string>
     
-    <string name="relay_discovery_geohash">Местоположение</string>
     
     <string name="relay_active_subscriptions">Активные подписки</string>
     
@@ -2079,20 +2069,11 @@
     
     <string name="calendar_collection_invalid">Необходимо указать название.</string>
     
-    <plurals name="calendar_collection_count">
-    <item quantity="one">%1$d событие</item>
-    <item quantity="few">%1$d события</item>
-    <item quantity="many">%1$d событий</item>
-    <item quantity="other">%1$d события</item>
-</plurals>
     
     <string name="calendar_collection_empty_members">В этом календаре пока нет событий.</string>
     
-    <string name="calendar_rsvp_going">Пойду</string>
     
-    <string name="calendar_rsvp_maybe">Возможно</string>
     
-    <string name="calendar_rsvp_not_going">Не смогу</string>
     
     <string name="calendar_rsvp_section">Ответы (%1$d)</string>
     
@@ -2556,13 +2537,9 @@
     
     <string name="git_clone_address">Клонировать:</string>
     
-    <string name="git_status_open">Открыт</string>
     
-    <string name="git_status_merged">Объединён</string>
     
-    <string name="git_status_closed">Закрыт</string>
     
-    <string name="git_status_draft">Черновик</string>
     
     <string name="git_repo_tab_overview">Обзор</string>
     
@@ -3652,56 +3629,26 @@
     <string name="fundraiser_onchain_donation">Пожертвование on-chain</string>
 
     
-    <plurals name="birdex_species_count">
-    <item quantity="one">Birdex · %1$d вид</item>
-    <item quantity="few">Birdex · %1$d вида</item>
-    <item quantity="many">Birdex · %1$d видов</item>
-    <item quantity="other">Birdex · %1$d вида</item>
-</plurals>
     
-    <plurals name="birdex_species_preview_more">
-    <item quantity="one">%1$s +%2$d ещё</item>
-    <item quantity="few">%1$s +%2$d ещё</item>
-    <item quantity="many">%1$s +%2$d ещё</item>
-    <item quantity="other">%1$s +%2$d ещё</item>
-</plurals>
 
     
-    <string name="road_event_police">Полиция</string>
     
-    <string name="road_event_speed_camera">Камера контроля скорости</string>
     
-    <string name="road_event_traffic_jam">Пробка</string>
     
-    <string name="road_event_accident">Авария</string>
     
-    <string name="road_event_road_closure">Перекрытие дороги</string>
     
-    <string name="road_event_construction">Дорожные работы</string>
     
-    <string name="road_event_hazard">Опасность</string>
     
-    <string name="road_event_road_condition">Состояние дороги</string>
     
-    <string name="road_event_pothole">Выбоина</string>
     
-    <string name="road_event_fog">Туман</string>
     
-    <string name="road_event_ice">Гололёд</string>
     
-    <string name="road_event_animal">Животное на дороге</string>
     
-    <string name="road_event_other">Дорожное событие</string>
     
-    <string name="road_event_unknown">Дорожное событие</string>
     
-    <string name="road_event_confirmed">Всё ещё там</string>
     
-    <string name="road_event_denied">Уже нет</string>
     
-    <string name="road_event_confirms_report">Подтверждает дорожное сообщение</string>
     
-    <string name="road_event_denies_report">Сообщает об устранении дорожного события</string>
     
     <string name="goal_amount_label">Целевая сумма (sats)</string>
     

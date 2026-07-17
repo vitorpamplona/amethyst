@@ -1322,16 +1322,6 @@
     <string name="not_available_acronym">不適用</string>
     <string name="relay_error_messages">該中繼的錯誤和通知</string>
     <string name="relay_monitor_reports">Relay 監控報告</string>
-    <string name="relay_monitor_rtt_open">開啟</string>
-    <string name="relay_monitor_rtt_read">讀取</string>
-    <string name="relay_monitor_rtt_write">寫入</string>
-    <string name="relay_monitor_network">網路</string>
-    <string name="relay_monitor_relay_type">類型</string>
-    <string name="relay_monitor_supported_nips">支援的 NIP</string>
-    <string name="relay_monitor_requirements">要求</string>
-    <string name="relay_monitor_ms">%1$d 毫秒</string>
-    <string name="relay_discovery_accepted_kinds">接受的種類</string>
-    <string name="relay_discovery_geohash">位置</string>
     <string name="relay_active_subscriptions">活躍訂閱</string>
     <string name="relay_req_subscriptions">REQ 訂閱（%1$d）</string>
     <string name="relay_count_subscriptions">COUNT 訂閱（%1$d）</string>
@@ -1965,13 +1955,7 @@
     <string name="calendar_collection_title">標題</string>
     <string name="calendar_collection_description">描述</string>
     <string name="calendar_collection_invalid">標題為必填項目。</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d 個活動</item>
-    </plurals>
     <string name="calendar_collection_empty_members">此行事曆尚無活動。</string>
-    <string name="calendar_rsvp_going">出席</string>
-    <string name="calendar_rsvp_maybe">也許</string>
-    <string name="calendar_rsvp_not_going">無法出席</string>
     <string name="calendar_rsvp_section">回覆（%1$d）</string>
     <string name="calendar_rsvp_none">尚無回覆。</string>
     <string name="calendar_participants_section">參與者（%1$d）</string>
@@ -2198,10 +2182,6 @@
     <string name="forked_from">分叉自</string>
     <string name="git_web_address">網址</string>
     <string name="git_clone_address">克隆：</string>
-    <string name="git_status_open">開放</string>
-    <string name="git_status_merged">已合併</string>
-    <string name="git_status_closed">已關閉</string>
-    <string name="git_status_draft">草稿</string>
     <string name="git_repo_tab_overview">概覽</string>
     <string name="git_repo_tab_issues">議題</string>
     <string name="git_repo_tab_patches">修補程式與 PR</string>
@@ -2750,32 +2730,8 @@
     <string name="goal_progress">%2$s sats 目標中已籌得 %1$s</string>
     <string name="fundraiser_ends">結束於 %1$s</string>
     <string name="fundraiser_onchain_donation">鏈上捐款</string>
-    <plurals name="birdex_species_count">
-        <item quantity="other">Birdex · %1$d 個物種</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s 還有 %2$d 個</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">警察</string>
-    <string name="road_event_speed_camera">測速攝影機</string>
-    <string name="road_event_traffic_jam">塞車</string>
-    <string name="road_event_accident">事故</string>
-    <string name="road_event_road_closure">道路封閉</string>
-    <string name="road_event_construction">施工</string>
-    <string name="road_event_hazard">危險</string>
-    <string name="road_event_road_condition">路況</string>
-    <string name="road_event_pothole">坑洞</string>
-    <string name="road_event_fog">霧</string>
-    <string name="road_event_ice">結冰</string>
-    <string name="road_event_animal">路上有動物</string>
-    <string name="road_event_other">道路事件</string>
-    <string name="road_event_unknown">道路事件</string>
-    <string name="road_event_confirmed">仍在那裡</string>
-    <string name="road_event_denied">已不在那裡</string>
-    <string name="road_event_confirms_report">確認道路報告</string>
-    <string name="road_event_denies_report">回報道路事件已解除</string>
     <string name="goal_amount_label">目標金額（sats）</string>
     <string name="goal_description_label">描述您的目標</string>
     <string name="goal_description_placeholder">您在為什麼籌款？</string>

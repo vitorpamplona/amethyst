@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Otevřeno</string>
+    <string name="git_status_merged">Sloučeno</string>
+    <string name="git_status_closed">Uzavřeno</string>
+    <string name="git_status_draft">Koncept</string>
+    <string name="git_diff_binary">Binární soubor se nezobrazuje.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d soubor změněn</item>
+        <item quantity="few">%1$d soubory změněny</item>
+        <item quantity="many">%1$d souboru změněno</item>
+        <item quantity="other">%1$d souborů změněno</item>
+    </plurals>
+    <string name="bird_detection_title">Detekce ptáků</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d druh</item>
+        <item quantity="few">Birdex · %1$d druhy</item>
+        <item quantity="many">Birdex · %1$d druhů</item>
+        <item quantity="other">Birdex · %1$d druhů</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d další</item>
+        <item quantity="few">%1$s +%2$d další</item>
+        <item quantity="many">%1$s +%2$d dalších</item>
+        <item quantity="other">%1$s +%2$d dalších</item>
+    </plurals>
+    <string name="ps1_save_title">Uložení na paměťovou kartu PS1</string>
+    <string name="ps1_save_block">blok %1$d</string>
+    <string name="ps1_save_empty_slot">Prázdný slot</string>
+    <string name="podcast_play_soundbite">Přehrát ukázku</string>
+    <string name="road_event_accident">Nehoda</string>
+    <string name="road_event_animal">Zvíře na silnici</string>
+    <string name="road_event_confirmed">Stále tam</string>
+    <string name="road_event_confirms_report">Potvrzuje hlášení o silnici</string>
+    <string name="road_event_construction">Stavba</string>
+    <string name="road_event_denied">Již tam není</string>
+    <string name="road_event_denies_report">Hlásí vyřešení silniční události</string>
+    <string name="road_event_fog">Mlha</string>
+    <string name="road_event_hazard">Nebezpečí</string>
+    <string name="road_event_ice">Náledí</string>
+    <string name="road_event_other">Silniční událost</string>
+    <string name="road_event_police">Policie</string>
+    <string name="road_event_pothole">Výmol</string>
+    <string name="road_event_road_closure">Uzavírka silnice</string>
+    <string name="road_event_road_condition">Stav vozovky</string>
+    <string name="road_event_speed_camera">Rychlostní radar</string>
+    <string name="road_event_traffic_jam">Dopravní zácpa</string>
+    <string name="road_event_unknown">Silniční událost</string>
+    <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
+    <string name="relay_monitor_rtt_open">Otevření</string>
+    <string name="relay_monitor_rtt_read">Čtení</string>
+    <string name="relay_monitor_rtt_write">Zápis</string>
+    <string name="relay_monitor_network">Síť</string>
+    <string name="relay_monitor_relay_type">Typ</string>
+    <string name="relay_monitor_requirements">Požadavky</string>
+    <string name="relay_monitor_supported_nips">Podporované NIP</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Přijímané druhy</string>
+    <string name="relay_discovery_geohash">Poloha</string>
+    <string name="calendar_rsvp_going">Účastním se</string>
+    <string name="calendar_rsvp_maybe">Možná</string>
+    <string name="calendar_rsvp_not_going">Nemůžu</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d událost</item>
+        <item quantity="few">%1$d události</item>
+        <item quantity="many">%1$d událostí</item>
+        <item quantity="other">%1$d událostí</item>
+    </plurals>
+</resources>

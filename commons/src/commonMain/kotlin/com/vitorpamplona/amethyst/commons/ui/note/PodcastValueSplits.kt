@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -31,19 +31,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_for_value
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_split_percent
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_zap_split_hint
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.quartz.podcasts.PodcastValue
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Renders a Podcasting-2.0 value-for-value split as a tinted card: a "Value-for-Value" header, a
@@ -57,10 +61,10 @@ import com.vitorpamplona.quartz.podcasts.PodcastValue
  */
 @Composable
 fun PodcastValueSplits(value: PodcastValue) {
-    val recipients = value.recipients.filter { it.split > 0 || it.address != null }
+    val recipients = remember(value) { value.recipients.filter { it.split > 0 || it.address != null } }
     if (recipients.isEmpty()) return
 
-    val total = value.totalSplit().takeIf { it > 0 } ?: recipients.size
+    val total = remember(value, recipients) { value.totalSplit().takeIf { it > 0 } ?: recipients.size }
 
     Column(
         modifier =
@@ -83,7 +87,7 @@ fun PodcastValueSplits(value: PodcastValue) {
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringRes(R.string.podcast_value_for_value),
+                text = stringResource(Res.string.podcast_value_for_value),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -92,7 +96,7 @@ fun PodcastValueSplits(value: PodcastValue) {
         }
 
         Text(
-            text = stringRes(R.string.podcast_value_zap_split_hint),
+            text = stringResource(Res.string.podcast_value_zap_split_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.grayText,
         )
@@ -126,7 +130,7 @@ fun PodcastValueSplits(value: PodcastValue) {
                         }
                 }
                 Text(
-                    text = stringRes(R.string.podcast_value_split_percent, percent),
+                    text = stringResource(Res.string.podcast_value_split_percent, percent),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,

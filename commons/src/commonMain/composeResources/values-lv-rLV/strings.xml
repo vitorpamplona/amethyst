@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Atvērts</string>
+    <string name="git_status_merged">Sapludināts</string>
+    <string name="git_status_closed">Slēgts</string>
+    <string name="git_status_draft">Melnraksts</string>
+    <plurals name="birdex_species_count">
+        <item quantity="zero">Birdex · %1$d sugas</item>
+        <item quantity="one">Birdex · %1$d suga</item>
+        <item quantity="other">Birdex · %1$d sugas</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="zero">%1$s +%2$d vairāk</item>
+        <item quantity="one">%1$s +%2$d vairāk</item>
+        <item quantity="other">%1$s +%2$d vairāk</item>
+    </plurals>
+    <string name="road_event_accident">Avārija</string>
+    <string name="road_event_animal">Dzīvnieks uz ceļa</string>
+    <string name="road_event_confirmed">Joprojām tur</string>
+    <string name="road_event_confirms_report">Apstiprina ceļa ziņojumu</string>
+    <string name="road_event_construction">Būvdarbi</string>
+    <string name="road_event_denied">Vairs nav tur</string>
+    <string name="road_event_denies_report">Ziņo par ceļa notikuma novēršanu</string>
+    <string name="road_event_fog">Migla</string>
+    <string name="road_event_hazard">Bīstamība</string>
+    <string name="road_event_ice">Ledus</string>
+    <string name="road_event_other">Ceļa notikums</string>
+    <string name="road_event_police">Policija</string>
+    <string name="road_event_pothole">Bedre</string>
+    <string name="road_event_road_closure">Ceļa slēgšana</string>
+    <string name="road_event_road_condition">Ceļa stāvoklis</string>
+    <string name="road_event_speed_camera">Ātruma kamera</string>
+    <string name="road_event_traffic_jam">Sastrēgums</string>
+    <string name="road_event_unknown">Ceļa notikums</string>
+    <string name="relay_monitor_rtt_open">Atvērt</string>
+    <string name="relay_monitor_rtt_read">Lasīt</string>
+    <string name="relay_monitor_rtt_write">Rakstīt</string>
+    <string name="relay_monitor_network">Tīkls</string>
+    <string name="relay_monitor_relay_type">Tips</string>
+    <string name="relay_monitor_requirements">Prasības</string>
+    <string name="relay_monitor_supported_nips">Atbalstītie NIP</string>
+    <string name="relay_discovery_accepted_kinds">Pieņemtie veidi</string>
+    <string name="relay_discovery_geohash">Atrašanās vieta</string>
+    <string name="calendar_rsvp_going">Iešu</string>
+    <string name="calendar_rsvp_maybe">Varbūt</string>
+    <string name="calendar_rsvp_not_going">Nevarēšu ierasties</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="zero">%1$d notikumu</item>
+        <item quantity="one">%1$d notikums</item>
+        <item quantity="other">%1$d notikumi</item>
+    </plurals>
+</resources>

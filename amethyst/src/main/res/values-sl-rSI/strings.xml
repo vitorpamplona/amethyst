@@ -1042,10 +1042,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="podcast_transcript">Prepis</string>
     <string name="podcast_chapters">Poglavja</string>
     <string name="podcast_value_for_value">Vrednost za vrednost</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_zap_split_hint">Zapi bojo razdeljeni med:</string>
     <string name="podcast_hosts_and_guests">Gostitelji in Gostje</string>
-    <string name="podcast_play_soundbite">Predvajaj vrhunec</string>
     <string name="podcast_top_supporters">Naj podporniki</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d poglavje</item>
@@ -1620,16 +1617,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Napake in obvestila s tega releja</string>
     <string name="relay_monitor_reports">Poročila o delovanju relejev</string>
-    <string name="relay_monitor_rtt_open">Odprto</string>
-    <string name="relay_monitor_rtt_read">Branje</string>
-    <string name="relay_monitor_rtt_write">Pisanje</string>
-    <string name="relay_monitor_network">Omrežje</string>
-    <string name="relay_monitor_relay_type">Vrsta</string>
-    <string name="relay_monitor_supported_nips">Podprti NIP-i</string>
-    <string name="relay_monitor_requirements">Zahteve</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Sprejeti tipi (kind)</string>
-    <string name="relay_discovery_geohash">Lokacija</string>
     <string name="relay_active_subscriptions">Aktivne naročnine</string>
     <string name="relay_req_subscriptions">REQ Naročnine (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Naročnine (%1$d)</string>
@@ -2477,16 +2464,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="calendar_collection_title">Naslov</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Naslov je zahtevan.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d dogodek</item>
-        <item quantity="two">%1$d dogodka</item>
-        <item quantity="few">%1$d dogodki</item>
-        <item quantity="other">%1$d dogodkov</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Ta koledar je še brez dogodkov.</string>
-    <string name="calendar_rsvp_going">Grem</string>
-    <string name="calendar_rsvp_maybe">Mogoče</string>
-    <string name="calendar_rsvp_not_going">Ne morem</string>
     <string name="calendar_rsvp_section">Odzivi (%1$d)</string>
     <string name="calendar_rsvp_none">Še ni odzivov</string>
     <string name="calendar_participants_section">Sodelujoči (%1$d)</string>
@@ -2729,10 +2707,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="git_commit">Objavi</string>
     <string name="git_merge_base">Združi osnovo</string>
     <string name="git_pr_update_description">Zahtevek za združitev (PR) je bil posodobljen na novo objavo.</string>
-    <string name="git_status_open">Odprto</string>
-    <string name="git_status_merged">Združeno</string>
-    <string name="git_status_closed">Zaključeno</string>
-    <string name="git_status_draft">Osnutek</string>
     <string name="git_repo_tab_overview">Predogled</string>
     <string name="git_repo_tab_issues">Težave</string>
     <string name="git_repo_tab_patches">Popravki in PR-ji</string>
@@ -2781,13 +2755,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
         <item quantity="few">%1$d elementi</item>
         <item quantity="other">%1$d elementov</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d datoteka spremenjena</item>
-        <item quantity="two">%1$d datoteki spremenjeni</item>
-        <item quantity="few">%1$d datoteke spremenjene</item>
-        <item quantity="other">%1$d datotek spremenjenih</item>
-    </plurals>
-    <string name="git_diff_binary">Binarna datoteka ni prikazana.</string>
     <string name="git_new_issue_button">Nov</string>
     <string name="git_new_issue_title">Prijavi težavo</string>
     <string name="git_new_issue_subject">Naslov</string>
@@ -3406,42 +3373,8 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="goal_progress">Zbranih %1$s od ciljnih %2$s satov</string>
     <string name="fundraiser_ends">Izteče se: %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain donacija</string>
-    <string name="bird_detection_title">Zaznana ptica</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d vrsta</item>
-        <item quantity="two">Birdex · %1$d vrsti</item>
-        <item quantity="few">Birdex · %1$d vrste</item>
-        <item quantity="other">Birdex · %1$d vrst</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s in še %2$d druga</item>
-        <item quantity="two">%1$s in še %2$d drugi</item>
-        <item quantity="few">%1$s in še %2$d druge</item>
-        <item quantity="other">%1$s in še %2$d drugih</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">Shrani na pomnilniško kartico PS1</string>
-    <string name="ps1_save_block">%1$d blok</string>
-    <string name="ps1_save_empty_slot">Prazen prostor</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policija</string>
-    <string name="road_event_speed_camera">Hitrostna kamera</string>
-    <string name="road_event_traffic_jam">Zastoj</string>
-    <string name="road_event_accident">Nesreča</string>
-    <string name="road_event_road_closure">Cesta zaprta</string>
-    <string name="road_event_construction">Delo na cesti</string>
-    <string name="road_event_hazard">Nevernost</string>
-    <string name="road_event_road_condition">Stanje cest</string>
-    <string name="road_event_pothole">Udarna jama</string>
-    <string name="road_event_fog">Megla</string>
-    <string name="road_event_ice">Led</string>
-    <string name="road_event_animal">Žival na cestišču</string>
-    <string name="road_event_other">Dogodek na cesti</string>
-    <string name="road_event_unknown">Dogodek na cesti</string>
-    <string name="road_event_confirmed">Še vedno tam</string>
-    <string name="road_event_denied">Ni več tam</string>
-    <string name="road_event_confirms_report">Potrdi prometno poročilo</string>
-    <string name="road_event_denies_report">Označi kot odstranjeno</string>
     <string name="goal_amount_label">Ciljni znesek (sat)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opiši svoj cilj</string>

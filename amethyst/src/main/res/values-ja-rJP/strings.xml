@@ -1320,15 +1320,6 @@
     <string name="about_legal">概要 &amp; 法的情報</string>
     <string name="relay_error_messages">この relay からのエラーと通知</string>
     <string name="relay_monitor_reports">relay モニターレポート</string>
-    <string name="relay_monitor_rtt_open">オープン</string>
-    <string name="relay_monitor_rtt_read">読み取り</string>
-    <string name="relay_monitor_rtt_write">書き込み</string>
-    <string name="relay_monitor_network">ネットワーク</string>
-    <string name="relay_monitor_relay_type">タイプ</string>
-    <string name="relay_monitor_supported_nips">対応 NIP</string>
-    <string name="relay_monitor_requirements">要件</string>
-    <string name="relay_discovery_accepted_kinds">受け入れ種別</string>
-    <string name="relay_discovery_geohash">場所</string>
     <string name="relay_active_subscriptions">アクティブなサブスクリプション</string>
     <string name="relay_req_subscriptions">REQ サブスクリプション（%1$d）</string>
     <string name="relay_count_subscriptions">COUNT サブスクリプション（%1$d）</string>
@@ -1968,13 +1959,7 @@
     <string name="calendar_collection_title">タイトル</string>
     <string name="calendar_collection_description">説明</string>
     <string name="calendar_collection_invalid">タイトルは必須です。</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$dイベント</item>
-    </plurals>
     <string name="calendar_collection_empty_members">このカレンダーにはまだイベントがありません。</string>
-    <string name="calendar_rsvp_going">参加する</string>
-    <string name="calendar_rsvp_maybe">未定</string>
-    <string name="calendar_rsvp_not_going">参加できない</string>
     <string name="calendar_rsvp_section">RSVP（%1$d件）</string>
     <string name="calendar_rsvp_none">まだRSVPがありません。</string>
     <string name="calendar_participants_section">参加者（%1$d人）</string>
@@ -2198,10 +2183,6 @@
     <string name="restricted_writes">書き込み制限あり</string>
     <string name="forked_from">フォーク元</string>
     <string name="git_clone_address">クローン:</string>
-    <string name="git_status_open">オープン</string>
-    <string name="git_status_merged">マージ済み</string>
-    <string name="git_status_closed">クローズ済み</string>
-    <string name="git_status_draft">下書き</string>
     <string name="git_repo_tab_overview">概要</string>
     <string name="git_repo_tab_issues">イシュー</string>
     <string name="git_repo_tab_patches">パッチ &amp; PR</string>
@@ -2746,32 +2727,8 @@
     <string name="goal_progress">%2$s sats のゴールに対して %1$s を達成</string>
     <string name="fundraiser_ends">%1$s 終了</string>
     <string name="fundraiser_onchain_donation">オンチェーン寄付</string>
-    <plurals name="birdex_species_count">
-        <item quantity="other">Birdex · %1$d 種</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s 他 %2$d 件</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">警察</string>
-    <string name="road_event_speed_camera">速度カメラ</string>
-    <string name="road_event_traffic_jam">渋滞</string>
-    <string name="road_event_accident">事故</string>
-    <string name="road_event_road_closure">通行止め</string>
-    <string name="road_event_construction">工事</string>
-    <string name="road_event_hazard">危険</string>
-    <string name="road_event_road_condition">路面状況</string>
-    <string name="road_event_pothole">ポットホール</string>
-    <string name="road_event_fog">霧</string>
-    <string name="road_event_ice">凍結</string>
-    <string name="road_event_animal">動物が道路上に</string>
-    <string name="road_event_other">道路上のイベント</string>
-    <string name="road_event_unknown">道路上のイベント</string>
-    <string name="road_event_confirmed">まだあります</string>
-    <string name="road_event_denied">もうありません</string>
-    <string name="road_event_confirms_report">道路レポートを確認</string>
-    <string name="road_event_denies_report">道路イベントの解消を報告</string>
     <string name="goal_amount_label">ゴール金額（sats）</string>
     <string name="goal_description_label">ゴールを説明してください</string>
     <string name="goal_description_placeholder">何のための資金調達ですか？</string>

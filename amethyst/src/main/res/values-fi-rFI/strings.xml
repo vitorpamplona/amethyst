@@ -1322,15 +1322,6 @@
     <string name="about_legal">Tietoja &amp; oikeudelliset</string>
     <string name="relay_error_messages">Virheet ja ilmoitukset tältä relaylta</string>
     <string name="relay_monitor_reports">Relay-monitorin raportit</string>
-    <string name="relay_monitor_rtt_open">Avaa</string>
-    <string name="relay_monitor_rtt_read">Lue</string>
-    <string name="relay_monitor_rtt_write">Kirjoita</string>
-    <string name="relay_monitor_network">Verkko</string>
-    <string name="relay_monitor_relay_type">Tyyppi</string>
-    <string name="relay_monitor_supported_nips">Tuetut NIPit</string>
-    <string name="relay_monitor_requirements">Vaatimukset</string>
-    <string name="relay_discovery_accepted_kinds">Hyväksytyt tyypit</string>
-    <string name="relay_discovery_geohash">Sijainti</string>
     <string name="relay_active_subscriptions">Aktiiviset tilaukset</string>
     <string name="relay_req_subscriptions">REQ-tilaukset (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-tilaukset (%1$d)</string>
@@ -1980,14 +1971,7 @@
     <string name="calendar_collection_title">Otsikko</string>
     <string name="calendar_collection_description">Kuvaus</string>
     <string name="calendar_collection_invalid">Otsikko on pakollinen.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d tapahtuma</item>
-        <item quantity="other">%1$d tapahtumaa</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Ei vielä tapahtumia tässä kalenterissa.</string>
-    <string name="calendar_rsvp_going">Osallistun</string>
-    <string name="calendar_rsvp_maybe">Ehkä</string>
-    <string name="calendar_rsvp_not_going">En pääse</string>
     <string name="calendar_rsvp_section">RSVP:t (%1$d)</string>
     <string name="calendar_rsvp_none">Ei vielä RSVP:itä.</string>
     <string name="calendar_participants_section">Osallistujat (%1$d)</string>
@@ -2210,10 +2194,6 @@
     <string name="forked_from">Haaroitettu kohteesta</string>
     <string name="git_web_address">Verkko:</string>
     <string name="git_clone_address">Kloonaa:</string>
-    <string name="git_status_open">Avoin</string>
-    <string name="git_status_merged">Yhdistetty</string>
-    <string name="git_status_closed">Suljettu</string>
-    <string name="git_status_draft">Luonnos</string>
     <string name="git_repo_tab_overview">Yleiskatsaus</string>
     <string name="git_repo_tab_issues">Ongelmat</string>
     <string name="git_repo_tab_patches">Korjaukset &amp; PR:t</string>
@@ -2763,34 +2743,8 @@
     <string name="goal_progress">%1$s rahoitettu tavoitteesta %2$s sat</string>
     <string name="fundraiser_ends">Päättyy %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain-lahjoitus</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d laji</item>
-        <item quantity="other">Birdex · %1$d lajia</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d lisää</item>
-        <item quantity="other">%1$s +%2$d lisää</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Poliisi</string>
-    <string name="road_event_speed_camera">Nopeusvalvontakamera</string>
-    <string name="road_event_traffic_jam">Ruuhka</string>
-    <string name="road_event_accident">Onnettomuus</string>
-    <string name="road_event_road_closure">Tiesulku</string>
-    <string name="road_event_construction">Tietyö</string>
-    <string name="road_event_hazard">Vaara</string>
-    <string name="road_event_road_condition">Tien kunto</string>
-    <string name="road_event_pothole">Kuoppa</string>
-    <string name="road_event_fog">Sumu</string>
-    <string name="road_event_ice">Jää</string>
-    <string name="road_event_animal">Eläin tiellä</string>
-    <string name="road_event_other">Tietapahtuma</string>
-    <string name="road_event_unknown">Tietapahtuma</string>
-    <string name="road_event_confirmed">Edelleen siellä</string>
-    <string name="road_event_denied">Ei enää siellä</string>
-    <string name="road_event_confirms_report">Vahvistaa tieilmoituksen</string>
-    <string name="road_event_denies_report">Ilmoittaa tietapahtuman selvitetyksi</string>
     <string name="goal_amount_label">Tavoitesumma (sat)</string>
     <string name="goal_description_label">Kuvaile tavoitteesi</string>
     <string name="goal_description_placeholder">Mihin keräät varoja?</string>

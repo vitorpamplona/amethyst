@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Malferma</string>
+    <string name="git_status_merged">Kunfandita</string>
+    <string name="git_status_closed">Fermita</string>
+    <string name="git_status_draft">Malneto</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d specio</item>
+        <item quantity="other">Birdex · %1$d specioj</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d plia</item>
+        <item quantity="other">%1$s +%2$d pliaj</item>
+    </plurals>
+    <string name="road_event_accident">Akcidento</string>
+    <string name="road_event_animal">Besto sur la vojo</string>
+    <string name="road_event_confirmed">Ankoraŭ tie</string>
+    <string name="road_event_confirms_report">Konfirmas vojan raporton</string>
+    <string name="road_event_construction">Konstruado</string>
+    <string name="road_event_denied">Ne plu tie</string>
+    <string name="road_event_denies_report">Raportas ke voja evento malaperis</string>
+    <string name="road_event_fog">Nebulo</string>
+    <string name="road_event_hazard">Danĝero</string>
+    <string name="road_event_ice">Glacio</string>
+    <string name="road_event_other">Voja evento</string>
+    <string name="road_event_police">Polico</string>
+    <string name="road_event_pothole">Trua vojo</string>
+    <string name="road_event_road_closure">Voja fermo</string>
+    <string name="road_event_road_condition">Voja stato</string>
+    <string name="road_event_speed_camera">Rapideca fotilo</string>
+    <string name="road_event_traffic_jam">Trafika ŝtopado</string>
+    <string name="road_event_unknown">Voja evento</string>
+    <string name="relay_monitor_rtt_open">Malfermi</string>
+    <string name="relay_monitor_rtt_read">Legi</string>
+    <string name="relay_monitor_rtt_write">Skribi</string>
+    <string name="relay_monitor_network">Reto</string>
+    <string name="relay_monitor_relay_type">Tipo</string>
+    <string name="relay_monitor_requirements">Postuloj</string>
+    <string name="relay_monitor_supported_nips">Subtenataj NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Akceptataj Tipoj</string>
+    <string name="relay_discovery_geohash">Loko</string>
+    <string name="calendar_rsvp_going">Iras</string>
+    <string name="calendar_rsvp_maybe">Eble</string>
+    <string name="calendar_rsvp_not_going">Ne povas iri</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d evento</item>
+        <item quantity="other">%1$d eventoj</item>
+    </plurals>
+</resources>

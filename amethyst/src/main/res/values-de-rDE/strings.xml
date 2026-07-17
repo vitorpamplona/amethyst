@@ -1187,9 +1187,7 @@
     <string name="podcast_chapters">Kapitel</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
     <string name="podcast_hosts_and_guests">Hosts &amp; Gäste</string>
-    <string name="podcast_play_soundbite">Highlight abspielen</string>
     <string name="podcast_top_supporters">Top-Unterstützer</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d Kapitel</item>
@@ -1763,16 +1761,6 @@
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Fehler und Hinweise von diesem Relay</string>
     <string name="relay_monitor_reports">Relay-Überwachungsberichte</string>
-    <string name="relay_monitor_rtt_open">Öffnen</string>
-    <string name="relay_monitor_rtt_read">Lesen</string>
-    <string name="relay_monitor_rtt_write">Schreiben</string>
-    <string name="relay_monitor_network">Netzwerk</string>
-    <string name="relay_monitor_relay_type">Typ</string>
-    <string name="relay_monitor_supported_nips">Unterstützte NIPs</string>
-    <string name="relay_monitor_requirements">Anforderungen</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Akzeptierte Arten</string>
-    <string name="relay_discovery_geohash">Standort</string>
     <string name="relay_active_subscriptions">Aktive Abonnements</string>
     <string name="relay_req_subscriptions">REQ-Abonnements (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-Abonnements (%1$d)</string>
@@ -2675,14 +2663,7 @@
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beschreibung</string>
     <string name="calendar_collection_invalid">Ein Titel ist erforderlich.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d Termin</item>
-        <item quantity="other">%1$d Termine</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Noch keine Termine in diesem Kalender.</string>
-    <string name="calendar_rsvp_going">Komme</string>
-    <string name="calendar_rsvp_maybe">Vielleicht</string>
-    <string name="calendar_rsvp_not_going">Komme nicht</string>
     <string name="calendar_rsvp_section">RSVPs (%1$d)</string>
     <string name="calendar_rsvp_none">Noch keine Antworten.</string>
     <string name="calendar_participants_section">Teilnehmer (%1$d)</string>
@@ -2945,10 +2926,6 @@
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Merge-Basis</string>
     <string name="git_pr_update_description">Der Pull-Request wurde auf einen neuen Commit aktualisiert.</string>
-    <string name="git_status_open">Offen</string>
-    <string name="git_status_merged">Zusammengeführt</string>
-    <string name="git_status_closed">Geschlossen</string>
-    <string name="git_status_draft">Entwurf</string>
     <string name="git_repo_tab_overview">Übersicht</string>
     <string name="git_repo_tab_issues">Tickets</string>
     <string name="git_repo_tab_patches">Patches und PRs</string>
@@ -2995,11 +2972,6 @@
         <item quantity="one">%1$d Element</item>
         <item quantity="other">%1$d Elemente</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">Datei geändert</item>
-        <item quantity="other">Dateien geändert</item>
-    </plurals>
-    <string name="git_diff_binary">Binärdatei wird nicht angezeigt.</string>
     <string name="git_new_issue_button">Neu</string>
     <string name="git_new_issue_title">Neues Issue</string>
     <string name="git_new_issue_subject">Titel</string>
@@ -3700,38 +3672,8 @@
     <string name="goal_progress">%1$s finanziert von %2$s Sats Ziel</string>
     <string name="fundraiser_ends">Endet %1$s</string>
     <string name="fundraiser_onchain_donation">On-Chain-Spende</string>
-    <string name="bird_detection_title">Vogelerkennung</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d Art</item>
-        <item quantity="other">Birdex · %1$d Arten</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d weitere</item>
-        <item quantity="other">%1$s +%2$d weitere</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">PS1-Memory-Card-Spielstand</string>
-    <string name="ps1_save_block">Block %1$d</string>
-    <string name="ps1_save_empty_slot">Leerer Slot</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polizei</string>
-    <string name="road_event_speed_camera">Blitzer</string>
-    <string name="road_event_traffic_jam">Stau</string>
-    <string name="road_event_accident">Unfall</string>
-    <string name="road_event_road_closure">Straßensperrung</string>
-    <string name="road_event_construction">Baustelle</string>
-    <string name="road_event_hazard">Gefahr</string>
-    <string name="road_event_road_condition">Straßenzustand</string>
-    <string name="road_event_pothole">Schlagloch</string>
-    <string name="road_event_fog">Nebel</string>
-    <string name="road_event_ice">Eis</string>
-    <string name="road_event_animal">Tier auf der Straße</string>
-    <string name="road_event_other">Straßenereignis</string>
-    <string name="road_event_unknown">Straßenereignis</string>
-    <string name="road_event_confirmed">Noch da</string>
-    <string name="road_event_denied">Nicht mehr da</string>
-    <string name="road_event_confirms_report">Bestätigt einen Straßenbericht</string>
-    <string name="road_event_denies_report">Meldet ein beseitigtes Straßenereignis</string>
     <string name="goal_amount_label">Zielbetrag (Sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beschreibe dein Ziel</string>

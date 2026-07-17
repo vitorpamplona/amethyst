@@ -80,6 +80,10 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
+import com.vitorpamplona.amethyst.commons.ui.note.RenderCodeSnippetHeaderForThread
+import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
+import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -160,13 +164,10 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderBirdDetection
 import com.vitorpamplona.amethyst.ui.note.types.RenderBirdex
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderCashuMint
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
-import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetHeaderForThread
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
-import com.vitorpamplona.amethyst.ui.note.types.RenderFedimint
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -181,7 +182,6 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent

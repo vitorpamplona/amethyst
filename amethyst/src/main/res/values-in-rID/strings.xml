@@ -1293,15 +1293,6 @@
     <string name="not_available_acronym">T/A</string>
     <string name="relay_error_messages">Kesalahan dan Pemberitahuan dari Relay Ini</string>
     <string name="relay_monitor_reports">Laporan Monitor Relay</string>
-    <string name="relay_monitor_rtt_open">Buka</string>
-    <string name="relay_monitor_rtt_read">Baca</string>
-    <string name="relay_monitor_rtt_write">Tulis</string>
-    <string name="relay_monitor_network">Jaringan</string>
-    <string name="relay_monitor_relay_type">Tipe</string>
-    <string name="relay_monitor_supported_nips">NIP yang Didukung</string>
-    <string name="relay_monitor_requirements">Persyaratan</string>
-    <string name="relay_discovery_accepted_kinds">Jenis yang Diterima</string>
-    <string name="relay_discovery_geohash">Lokasi</string>
     <string name="relay_active_subscriptions">Langganan Aktif</string>
     <string name="relay_req_subscriptions">Langganan REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Langganan COUNT (%1$d)</string>
@@ -1934,13 +1925,7 @@ Seharusnya %3$s</string>
     <string name="calendar_collection_title">Judul</string>
     <string name="calendar_collection_description">Deskripsi</string>
     <string name="calendar_collection_invalid">Judul diperlukan.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d acara</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Belum ada acara dalam kalender ini.</string>
-    <string name="calendar_rsvp_going">Hadir</string>
-    <string name="calendar_rsvp_maybe">Mungkin</string>
-    <string name="calendar_rsvp_not_going">Tidak bisa hadir</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Belum ada RSVP.</string>
     <string name="calendar_participants_section">Peserta (%1$d)</string>
@@ -2161,9 +2146,6 @@ Seharusnya %3$s</string>
     <string name="thank_you">Terima kasih!</string>
     <string name="restricted_writes">Penulisan Terbatas</string>
     <string name="forked_from">Diturunkan dari</string>
-    <string name="git_status_open">Terbuka</string>
-    <string name="git_status_merged">Digabungkan</string>
-    <string name="git_status_closed">Ditutup</string>
     <string name="git_repo_tab_overview">Ikhtisar</string>
     <string name="git_repo_tab_issues">Isu</string>
     <string name="git_repo_tab_patches">Patch &amp; PR</string>
@@ -2690,32 +2672,8 @@ Seharusnya %3$s</string>
     <string name="goal_progress">%1$s didanai dari target %2$s sats</string>
     <string name="fundraiser_ends">Berakhir %1$s</string>
     <string name="fundraiser_onchain_donation">Donasi on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="other">Birdex · %1$d spesies</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s +%2$d lainnya</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polisi</string>
-    <string name="road_event_speed_camera">Kamera kecepatan</string>
-    <string name="road_event_traffic_jam">Kemacetan</string>
-    <string name="road_event_accident">Kecelakaan</string>
-    <string name="road_event_road_closure">Penutupan jalan</string>
-    <string name="road_event_construction">Konstruksi</string>
-    <string name="road_event_hazard">Bahaya</string>
-    <string name="road_event_road_condition">Kondisi jalan</string>
-    <string name="road_event_pothole">Lubang jalan</string>
-    <string name="road_event_fog">Kabut</string>
-    <string name="road_event_ice">Es</string>
-    <string name="road_event_animal">Hewan di jalan</string>
-    <string name="road_event_other">Kejadian jalan</string>
-    <string name="road_event_unknown">Kejadian jalan</string>
-    <string name="road_event_confirmed">Masih ada</string>
-    <string name="road_event_denied">Sudah tidak ada</string>
-    <string name="road_event_confirms_report">Mengonfirmasi laporan jalan</string>
-    <string name="road_event_denies_report">Melaporkan kejadian jalan telah selesai</string>
     <string name="goal_amount_label">Jumlah target (sats)</string>
     <string name="goal_description_label">Deskripsikan tujuan Anda</string>
     <string name="goal_description_placeholder">Apa yang Anda galang dananya?</string>

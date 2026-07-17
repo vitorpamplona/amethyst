@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">திறந்த</string>
+    <string name="git_status_merged">இணைக்கப்பட்ட</string>
+    <string name="git_status_closed">மூடப்பட்ட</string>
+    <string name="git_status_draft">வரைவு</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d இனம்</item>
+        <item quantity="other">Birdex · %1$d இனங்கள்</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d மேலும்</item>
+        <item quantity="other">%1$s +%2$d மேலும்</item>
+    </plurals>
+    <string name="road_event_accident">விபத்து</string>
+    <string name="road_event_animal">சாலையில் விலங்கு</string>
+    <string name="road_event_confirmed">இன்னும் உள்ளது</string>
+    <string name="road_event_confirms_report">சாலை அறிக்கையை உறுதிப்படுத்துகிறது</string>
+    <string name="road_event_construction">கட்டுமானம்</string>
+    <string name="road_event_denied">இனி இல்லை</string>
+    <string name="road_event_denies_report">சாலை நிகழ்வு தீர்க்கப்பட்டதை அறிவிக்கிறது</string>
+    <string name="road_event_fog">மூடுபனி</string>
+    <string name="road_event_hazard">ஆபத்து</string>
+    <string name="road_event_ice">பனி</string>
+    <string name="road_event_other">சாலை நிகழ்வு</string>
+    <string name="road_event_police">காவல்துறை</string>
+    <string name="road_event_pothole">குழி</string>
+    <string name="road_event_road_closure">சாலை மூடல்</string>
+    <string name="road_event_road_condition">சாலை நிலை</string>
+    <string name="road_event_speed_camera">வேக கண்காணிப்பு கேமரா</string>
+    <string name="road_event_traffic_jam">போக்குவரத்து நெரிசல்</string>
+    <string name="road_event_unknown">சாலை நிகழ்வு</string>
+    <string name="relay_monitor_rtt_open">திற</string>
+    <string name="relay_monitor_rtt_read">படி</string>
+    <string name="relay_monitor_rtt_write">எழுது</string>
+    <string name="relay_monitor_network">நெட்வொர்க்</string>
+    <string name="relay_monitor_relay_type">வகை</string>
+    <string name="relay_monitor_requirements">தேவைகள்</string>
+    <string name="relay_monitor_supported_nips">ஆதரிக்கப்படும் NIPs</string>
+    <string name="relay_discovery_accepted_kinds">ஏற்றுக்கொள்ளப்படும் வகைகள்</string>
+    <string name="relay_discovery_geohash">இடம்</string>
+    <string name="calendar_rsvp_going">செல்கிறேன்</string>
+    <string name="calendar_rsvp_maybe">ஒருவேளை</string>
+    <string name="calendar_rsvp_not_going">செல்ல முடியாது</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d நிகழ்வு</item>
+        <item quantity="other">%1$d நிகழ்வுகள்</item>
+    </plurals>
+</resources>

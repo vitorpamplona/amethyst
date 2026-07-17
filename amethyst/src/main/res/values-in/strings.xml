@@ -1158,25 +1158,15 @@
     
     <string name="relay_monitor_reports">Laporan Monitor Relay</string>
     
-    <string name="relay_monitor_rtt_open">Buka</string>
     
-    <string name="relay_monitor_rtt_read">Baca</string>
     
-    <string name="relay_monitor_rtt_write">Tulis</string>
     
-    <string name="relay_monitor_network">Jaringan</string>
     
-    <string name="relay_monitor_relay_type">Tipe</string>
     
-    <string name="relay_monitor_supported_nips">NIP yang Didukung</string>
     
-    <string name="relay_monitor_requirements">Persyaratan</string>
     
-    <string name="relay_monitor_ms">%1$d ms</string>
     
-    <string name="relay_discovery_accepted_kinds">Jenis yang Diterima</string>
     
-    <string name="relay_discovery_geohash">Lokasi</string>
     
     <string name="relay_active_subscriptions">Langganan Aktif</string>
     
@@ -2218,17 +2208,11 @@
     
     <string name="calendar_collection_invalid">Judul diperlukan.</string>
     
-    <plurals name="calendar_collection_count">
-    <item quantity="other">%1$d acara</item>
-</plurals>
     
     <string name="calendar_collection_empty_members">Belum ada acara dalam kalender ini.</string>
     
-    <string name="calendar_rsvp_going">Hadir</string>
     
-    <string name="calendar_rsvp_maybe">Mungkin</string>
     
-    <string name="calendar_rsvp_not_going">Tidak bisa hadir</string>
     
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     
@@ -2686,13 +2670,9 @@
     
     <string name="git_clone_address">Clone:</string>
     
-    <string name="git_status_open">Terbuka</string>
     
-    <string name="git_status_merged">Digabungkan</string>
     
-    <string name="git_status_closed">Ditutup</string>
     
-    <string name="git_status_draft">Draft</string>
     
     <string name="git_repo_tab_overview">Ikhtisar</string>
     
@@ -3808,49 +3788,25 @@
     
     <string name="fundraiser_onchain_donation">Donasi on-chain</string>
     
-    <plurals name="birdex_species_count">
-    <item quantity="other">Birdex · %1$d spesies</item>
-</plurals>
     
-    <plurals name="birdex_species_preview_more">
-    <item quantity="other">%1$s +%2$d lainnya</item>
-</plurals>
     
-    <string name="road_event_police">Polisi</string>
     
-    <string name="road_event_speed_camera">Kamera kecepatan</string>
     
-    <string name="road_event_traffic_jam">Kemacetan</string>
     
-    <string name="road_event_accident">Kecelakaan</string>
     
-    <string name="road_event_road_closure">Penutupan jalan</string>
     
-    <string name="road_event_construction">Konstruksi</string>
     
-    <string name="road_event_hazard">Bahaya</string>
     
-    <string name="road_event_road_condition">Kondisi jalan</string>
     
-    <string name="road_event_pothole">Lubang jalan</string>
     
-    <string name="road_event_fog">Kabut</string>
     
-    <string name="road_event_ice">Es</string>
     
-    <string name="road_event_animal">Hewan di jalan</string>
     
-    <string name="road_event_other">Kejadian jalan</string>
     
-    <string name="road_event_unknown">Kejadian jalan</string>
     
-    <string name="road_event_confirmed">Masih ada</string>
     
-    <string name="road_event_denied">Sudah tidak ada</string>
     
-    <string name="road_event_confirms_report">Mengonfirmasi laporan jalan</string>
     
-    <string name="road_event_denies_report">Melaporkan kejadian jalan telah selesai</string>
     
     <string name="goal_amount_label">Jumlah target (sats)</string>
     

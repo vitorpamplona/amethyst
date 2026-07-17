@@ -1185,9 +1185,7 @@
     <string name="podcast_chapters">Kapitel</string>
     <string name="podcast_value_for_value">Värde -för-värde</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
     <string name="podcast_hosts_and_guests">Värdar &amp; gäster</string>
-    <string name="podcast_play_soundbite">Spela höjdpunkt</string>
     <string name="podcast_top_supporters">Främsta supportrar</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d kapitel</item>
@@ -1761,16 +1759,6 @@
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Fel och meddelanden från detta relä</string>
     <string name="relay_monitor_reports">Reläövervakningsrapporter</string>
-    <string name="relay_monitor_rtt_open">Öppna</string>
-    <string name="relay_monitor_rtt_read">Läs</string>
-    <string name="relay_monitor_rtt_write">Skriv</string>
-    <string name="relay_monitor_network">Nätverk</string>
-    <string name="relay_monitor_relay_type">Typ</string>
-    <string name="relay_monitor_supported_nips">NIP som stöds</string>
-    <string name="relay_monitor_requirements">Krav</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Accepterade typer</string>
-    <string name="relay_discovery_geohash">Plats</string>
     <string name="relay_active_subscriptions">Aktiva prenumerationer</string>
     <string name="relay_req_subscriptions">REQ-prenumerationer (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-prenumerationer (%1$d)</string>
@@ -2673,14 +2661,7 @@
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beskrivning</string>
     <string name="calendar_collection_invalid">En titel krävs.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d händelse</item>
-        <item quantity="other">%1$d händelser</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Inga händelser i denna kalender än.</string>
-    <string name="calendar_rsvp_going">Kommer</string>
-    <string name="calendar_rsvp_maybe">Kanske</string>
-    <string name="calendar_rsvp_not_going">Kommer inte</string>
     <string name="calendar_rsvp_section">OSA (%1$d)</string>
     <string name="calendar_rsvp_none">Inga OSA än.</string>
     <string name="calendar_participants_section">Deltagare (%1$d)</string>
@@ -2943,10 +2924,6 @@
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Mergebas</string>
     <string name="git_pr_update_description">Uppdaterade pull request till en ny commit.</string>
-    <string name="git_status_open">Öppen</string>
-    <string name="git_status_merged">Sammanfogad</string>
-    <string name="git_status_closed">Stängd</string>
-    <string name="git_status_draft">Utkast</string>
     <string name="git_repo_tab_overview">Översikt</string>
     <string name="git_repo_tab_issues">Ärenden</string>
     <string name="git_repo_tab_patches">Patchar och PR</string>
@@ -2993,11 +2970,6 @@
         <item quantity="one">%1$d objekt</item>
         <item quantity="other">%1$d objekt</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d fil ändrad</item>
-        <item quantity="other">%1$d filer ändrade</item>
-    </plurals>
-    <string name="git_diff_binary">Binär fil visas inte.</string>
     <string name="git_new_issue_button">Ny</string>
     <string name="git_new_issue_title">Nytt ärende</string>
     <string name="git_new_issue_subject">Titel</string>
@@ -3698,38 +3670,8 @@
     <string name="goal_progress">%1$s finansierat av %2$s sats mål</string>
     <string name="fundraiser_ends">Slutar %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain-donation</string>
-    <string name="bird_detection_title">Fågeldetektering</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d art</item>
-        <item quantity="other">Birdex · %1$d arter</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d till</item>
-        <item quantity="other">%1$s +%2$d till</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">PS1-minneskortsparning</string>
-    <string name="ps1_save_block">block %1$d</string>
-    <string name="ps1_save_empty_slot">Tom plats</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polis</string>
-    <string name="road_event_speed_camera">Fartkamera</string>
-    <string name="road_event_traffic_jam">Trafikstockning</string>
-    <string name="road_event_accident">Olycka</string>
-    <string name="road_event_road_closure">Vägavstängning</string>
-    <string name="road_event_construction">Vägarbete</string>
-    <string name="road_event_hazard">Fara</string>
-    <string name="road_event_road_condition">Vägförhållanden</string>
-    <string name="road_event_pothole">Väggropar</string>
-    <string name="road_event_fog">Dimma</string>
-    <string name="road_event_ice">Is</string>
-    <string name="road_event_animal">Djur på vägen</string>
-    <string name="road_event_other">Väghändelse</string>
-    <string name="road_event_unknown">Väghändelse</string>
-    <string name="road_event_confirmed">Finns kvar</string>
-    <string name="road_event_denied">Finns inte längre</string>
-    <string name="road_event_confirms_report">Bekräftar en vägrapport</string>
-    <string name="road_event_denies_report">Rapporterar att en väghändelse är borta</string>
     <string name="goal_amount_label">Målbelopp (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beskriv ditt mål</string>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Openen</string>
+    <string name="git_status_merged">Samengevoegd</string>
+    <string name="git_status_closed">Gesloten</string>
+    <string name="git_status_draft">Concept</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d soorten</item>
+        <item quantity="other">Birdex · %1$d soorten</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d meer</item>
+        <item quantity="other">%1$s +%2$d meer</item>
+    </plurals>
+    <string name="road_event_accident">Ongeluk</string>
+    <string name="road_event_animal">Dier op de weg</string>
+    <string name="road_event_confirmed">Nog steeds aanwezig</string>
+    <string name="road_event_confirms_report">Bevestigt een wegmelding</string>
+    <string name="road_event_construction">Wegwerkzaamheden</string>
+    <string name="road_event_denied">Niet meer aanwezig</string>
+    <string name="road_event_denies_report">Meldt dat een weggebeurtenis voorbij is</string>
+    <string name="road_event_fog">Mist</string>
+    <string name="road_event_hazard">Gevaar</string>
+    <string name="road_event_ice">Ijs</string>
+    <string name="road_event_other">Weggebeurtenis</string>
+    <string name="road_event_police">Politie</string>
+    <string name="road_event_pothole">Kuil in de weg</string>
+    <string name="road_event_road_closure">Wegafsluiting</string>
+    <string name="road_event_road_condition">Wegomstandigheid</string>
+    <string name="road_event_speed_camera">Flitser</string>
+    <string name="road_event_traffic_jam">File</string>
+    <string name="road_event_unknown">Weggebeurtenis</string>
+    <string name="relay_monitor_rtt_open">Open</string>
+    <string name="relay_monitor_rtt_read">Lezen</string>
+    <string name="relay_monitor_rtt_write">Schrijven</string>
+    <string name="relay_monitor_network">Netwerk</string>
+    <string name="relay_monitor_relay_type">Type</string>
+    <string name="relay_monitor_requirements">Vereisten</string>
+    <string name="relay_monitor_supported_nips">Ondersteunde NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Geaccepteerde kinds</string>
+    <string name="relay_discovery_geohash">Locatie</string>
+    <string name="calendar_rsvp_going">Ga</string>
+    <string name="calendar_rsvp_maybe">Misschien</string>
+    <string name="calendar_rsvp_not_going">Kan niet</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d evenement</item>
+        <item quantity="other">%1$d evenementen</item>
+    </plurals>
+</resources>

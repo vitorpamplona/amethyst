@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -41,9 +41,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.SmallBorder
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent

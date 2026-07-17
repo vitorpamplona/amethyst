@@ -1099,10 +1099,7 @@
     <string name="podcast_transcript">प्रतिलिपि</string>
     <string name="podcast_chapters">अध्याय</string>
     <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
-    <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
-    <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
     <string name="podcast_hosts_and_guests">निमन्त्रक तथा अभ्यागत</string>
-    <string name="podcast_play_soundbite">प्रमुखाम्श चलाएँ</string>
     <string name="podcast_top_supporters">ऊर्ध्वतम समर्थक</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d अध्याय</item>
@@ -1676,16 +1673,6 @@
     <string name="not_available_acronym">अनुपलब्ध</string>
     <string name="relay_error_messages">अपक्रम तथा सूचनाएँ इस पुनःप्रसारक से</string>
     <string name="relay_monitor_reports">पुनःप्रसारक परिवीक्षक सूचनाएँ</string>
-    <string name="relay_monitor_rtt_open">खोलें</string>
-    <string name="relay_monitor_rtt_read">पढें</string>
-    <string name="relay_monitor_rtt_write">लिखें</string>
-    <string name="relay_monitor_network">जाल</string>
-    <string name="relay_monitor_relay_type">प्रकार</string>
-    <string name="relay_monitor_supported_nips">अवलम्बन किए हुए निप॰ सूची</string>
-    <string name="relay_monitor_requirements">आवश्यकताएँ</string>
-    <string name="relay_monitor_ms">%1$d सहस्रतमसेकण्ड</string>
-    <string name="relay_discovery_accepted_kinds">स्वीकृत प्रकार</string>
-    <string name="relay_discovery_geohash">स्थान</string>
     <string name="relay_active_subscriptions">सक्रिय ग्राहकताएँ</string>
     <string name="relay_req_subscriptions">अनुरोध ग्राहकताएँ (%1$d)</string>
     <string name="relay_count_subscriptions">गणना ग्राहकताएँ (%1$d)</string>
@@ -2589,14 +2576,7 @@
     <string name="calendar_collection_title">शीर्षक</string>
     <string name="calendar_collection_description">विवरण</string>
     <string name="calendar_collection_invalid">शीर्षक अनिवार्य।</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d घटना</item>
-        <item quantity="other">%1$d घटनाएँ</item>
-    </plurals>
     <string name="calendar_collection_empty_members">इस दिनदर्शिका में कोई घटनाएँ नहीं अब तक।</string>
-    <string name="calendar_rsvp_going">जाना निश्चित</string>
-    <string name="calendar_rsvp_maybe">सम्भाव्य</string>
-    <string name="calendar_rsvp_not_going">नहीं जा सकते</string>
     <string name="calendar_rsvp_section">शीघ्रप्रत्युत्तर (%1$d)</string>
     <string name="calendar_rsvp_none">कोई शीघ्रप्रत्युत्तर नहीं अब तक।</string>
     <string name="calendar_participants_section">सहभागी (%1$d)</string>
@@ -2859,10 +2839,6 @@
     <string name="git_commit">स्थायी अभिलेखन</string>
     <string name="git_merge_base">मूल विलय</string>
     <string name="git_pr_update_description">कर्षण अनुरोध का अद्यतन किया गया एक नए स्थायी अभिलेखन तक।</string>
-    <string name="git_status_open">खुला</string>
-    <string name="git_status_merged">विलीन</string>
-    <string name="git_status_closed">आवृत</string>
-    <string name="git_status_draft">पाण्डुलिपि</string>
     <string name="git_repo_tab_overview">रूपरेखा विवरण</string>
     <string name="git_repo_tab_issues">समस्याएँ</string>
     <string name="git_repo_tab_patches">सुधारलेख तथा पीआर॰</string>
@@ -2909,11 +2885,6 @@
         <item quantity="one">%1$d वस्तु</item>
         <item quantity="other">%1$d वस्तुएँ</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d अभिलेख परिवर्तित</item>
-        <item quantity="other">%1$d अभिलेख परिवर्तित</item>
-    </plurals>
-    <string name="git_diff_binary">अंकीय अभिलेख नहीं दर्शाया गया।</string>
     <string name="git_new_issue_button">नव्य</string>
     <string name="git_new_issue_title">नया विषय</string>
     <string name="git_new_issue_subject">शीर्षक</string>
@@ -3614,38 +3585,8 @@
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
     <string name="fundraiser_ends">समाप्ति %1$s</string>
     <string name="fundraiser_onchain_donation">खण्डश्रृंखलाबद्ध दान</string>
-    <string name="bird_detection_title">पक्षी खोज</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
-        <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s सं॰ %2$d अधिक</item>
-        <item quantity="other">%1$s सं॰ %2$d अधिक</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">पीएस१ स्मृति पत्रक अभिलेखन</string>
-    <string name="ps1_save_block">खण्ड %1$d</string>
-    <string name="ps1_save_empty_slot">रिक्त छेद</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">रक्षापालिका</string>
-    <string name="road_event_speed_camera">गति चित्रग्राहक</string>
-    <string name="road_event_traffic_jam">यातायात अचलता</string>
-    <string name="road_event_accident">दुर्घटना</string>
-    <string name="road_event_road_closure">मार्ग आवृत</string>
-    <string name="road_event_construction">निर्माण</string>
-    <string name="road_event_hazard">संकट</string>
-    <string name="road_event_road_condition">मार्ग परिस्थिति</string>
-    <string name="road_event_pothole">गड्ढा</string>
-    <string name="road_event_fog">धूमिका</string>
-    <string name="road_event_ice">हिम</string>
-    <string name="road_event_animal">मार्ग पर मृग</string>
-    <string name="road_event_other">मार्ग घटना</string>
-    <string name="road_event_unknown">मार्ग घटना</string>
-    <string name="road_event_confirmed">अब भी वहीं</string>
-    <string name="road_event_denied">अब वहाँ नहीं</string>
-    <string name="road_event_confirms_report">मार्ग सूचना की पुष्टि</string>
-    <string name="road_event_denies_report">सूचना की मार्ग घटना हटाया गया</string>
     <string name="goal_amount_label">उद्देश्य मात्रा (साट्स)</string>
     <string name="goal_amount_placeholder">१०००००</string>
     <string name="goal_description_label">आपके उद्देश्य का विवरण करें</string>

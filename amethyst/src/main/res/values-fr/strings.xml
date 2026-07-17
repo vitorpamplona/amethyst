@@ -1721,11 +1721,8 @@
     
 <string name="not_available_acronym">N/A</string>
     
-<string name="relay_monitor_network">Réseau</string>
     
-<string name="relay_monitor_relay_type">Type</string>
     
-<string name="relay_monitor_supported_nips">NIPs supportés</string>
     
 <string name="relay_active_subscriptions">Abonnements actifs</string>
     
@@ -3426,19 +3423,12 @@
     
 <string name="relay_monitor_reports">Rapports du moniteur de relais</string>
     
-<string name="relay_monitor_rtt_open">Ouvrir</string>
     
-<string name="relay_monitor_rtt_read">Lire</string>
     
-<string name="relay_monitor_rtt_write">Écrire</string>
     
-<string name="relay_monitor_requirements">Conditions requises</string>
     
-<string name="relay_monitor_ms">%1$d ms</string>
     
-<string name="relay_discovery_accepted_kinds">Kinds acceptés</string>
     
-<string name="relay_discovery_geohash">Localisation</string>
     
 <string name="relay_outbox_events">Événements sortants (%1$d)</string>
     
@@ -3891,18 +3881,11 @@
     
 <string name="calendar_collection_invalid">Un titre est requis.</string>
     
-<plurals name="calendar_collection_count">
-    <item quantity="one">%1$d événement</item>
-    <item quantity="other">%1$d événements</item>
-</plurals>
     
 <string name="calendar_collection_empty_members">Aucun événement dans ce calendrier pour l\'instant.</string>
     
-<string name="calendar_rsvp_going">Présent</string>
     
-<string name="calendar_rsvp_maybe">Peut-être</string>
     
-<string name="calendar_rsvp_not_going">Absent</string>
     
 <string name="calendar_rsvp_section">RSVPs (%1$d)</string>
     
@@ -4104,13 +4087,9 @@
 
 <string name="export_relay_settings">Exporter les paramètres de relais</string>
 
-<string name="git_status_open">Ouvert</string>
 
-<string name="git_status_merged">Fusionné</string>
 
-<string name="git_status_closed">Fermé</string>
 
-<string name="git_status_draft">Brouillon</string>
 
 <string name="git_repo_tab_overview">Aperçu</string>
 
@@ -4809,51 +4788,25 @@
     
 <string name="fundraiser_onchain_donation">Don on-chain</string>
     
-<plurals name="birdex_species_count">
-    <item quantity="one">Birdex · %1$d espèce</item>
-    <item quantity="other">Birdex · %1$d espèces</item>
-</plurals>
     
-<plurals name="birdex_species_preview_more">
-    <item quantity="one">%1$s +%2$d de plus</item>
-    <item quantity="other">%1$s +%2$d de plus</item>
-</plurals>
     
-<string name="road_event_police">Police</string>
     
-<string name="road_event_speed_camera">Radar</string>
     
-<string name="road_event_traffic_jam">Embouteillage</string>
     
-<string name="road_event_accident">Accident</string>
     
-<string name="road_event_road_closure">Route fermée</string>
     
-<string name="road_event_construction">Travaux</string>
     
-<string name="road_event_hazard">Danger</string>
     
-<string name="road_event_road_condition">État de la route</string>
     
-<string name="road_event_pothole">Nid-de-poule</string>
     
-<string name="road_event_fog">Brouillard</string>
     
-<string name="road_event_ice">Verglas</string>
     
-<string name="road_event_animal">Animal sur la route</string>
     
-<string name="road_event_other">Événement routier</string>
     
-<string name="road_event_unknown">Événement routier</string>
     
-<string name="road_event_confirmed">Toujours présent</string>
     
-<string name="road_event_denied">Plus là</string>
     
-<string name="road_event_confirms_report">Confirme un signalement routier</string>
     
-<string name="road_event_denies_report">Signale un événement routier résolu</string>
     
 <string name="goal_amount_label">Montant de l\'objectif (sats)</string>
     

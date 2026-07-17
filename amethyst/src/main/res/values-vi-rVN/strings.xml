@@ -1303,15 +1303,6 @@
     <string name="about_legal">Giới thiệu &amp; Pháp lý</string>
     <string name="relay_error_messages">Lỗi và thông báo từ relay này</string>
     <string name="relay_monitor_reports">Báo cáo giám sát relay</string>
-    <string name="relay_monitor_rtt_open">Mở</string>
-    <string name="relay_monitor_rtt_read">Đọc</string>
-    <string name="relay_monitor_rtt_write">Ghi</string>
-    <string name="relay_monitor_network">Mạng</string>
-    <string name="relay_monitor_relay_type">Loại</string>
-    <string name="relay_monitor_supported_nips">NIP được hỗ trợ</string>
-    <string name="relay_monitor_requirements">Yêu cầu</string>
-    <string name="relay_discovery_accepted_kinds">Loại được chấp nhận</string>
-    <string name="relay_discovery_geohash">Vị trí</string>
     <string name="relay_active_subscriptions">Đăng ký đang hoạt động</string>
     <string name="relay_filter_authors">%1$d tác giả</string>
     <string name="relay_filter_ids">%1$d id</string>
@@ -1949,13 +1940,7 @@
     <string name="calendar_collection_title">Tiêu đề</string>
     <string name="calendar_collection_description">Mô tả</string>
     <string name="calendar_collection_invalid">Tiêu đề là bắt buộc.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d sự kiện</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Chưa có sự kiện nào trong lịch này.</string>
-    <string name="calendar_rsvp_going">Sẽ tham dự</string>
-    <string name="calendar_rsvp_maybe">Có thể</string>
-    <string name="calendar_rsvp_not_going">Không thể đến</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Chưa có RSVP nào.</string>
     <string name="calendar_participants_section">Người tham gia (%1$d)</string>
@@ -2175,10 +2160,6 @@
     <string name="thank_you">Cảm ơn bạn!</string>
     <string name="restricted_writes">Ghi Bị Hạn chế</string>
     <string name="forked_from">Được fork từ</string>
-    <string name="git_status_open">Mở</string>
-    <string name="git_status_merged">Đã hợp nhất</string>
-    <string name="git_status_closed">Đã đóng</string>
-    <string name="git_status_draft">Nháp</string>
     <string name="git_repo_tab_overview">Tổng quan</string>
     <string name="git_repo_section_about">Giới thiệu</string>
     <string name="git_repo_section_links">Liên kết</string>
@@ -2715,32 +2696,8 @@
     <string name="goal_progress">%1$s đã được tài trợ trong mục tiêu %2$s sats</string>
     <string name="fundraiser_ends">Kết thúc %1$s</string>
     <string name="fundraiser_onchain_donation">Đóng góp on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="other">Birdex · %1$d loài</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s +%2$d khác</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Cảnh sát</string>
-    <string name="road_event_speed_camera">Camera tốc độ</string>
-    <string name="road_event_traffic_jam">Tắc đường</string>
-    <string name="road_event_accident">Tai nạn</string>
-    <string name="road_event_road_closure">Đóng đường</string>
-    <string name="road_event_construction">Thi công</string>
-    <string name="road_event_hazard">Nguy hiểm</string>
-    <string name="road_event_road_condition">Tình trạng đường</string>
-    <string name="road_event_pothole">Ổ gà</string>
-    <string name="road_event_fog">Sương mù</string>
-    <string name="road_event_ice">Băng đá</string>
-    <string name="road_event_animal">Động vật trên đường</string>
-    <string name="road_event_other">Sự cố đường bộ</string>
-    <string name="road_event_unknown">Sự cố đường bộ</string>
-    <string name="road_event_confirmed">Vẫn còn ở đó</string>
-    <string name="road_event_denied">Không còn ở đó nữa</string>
-    <string name="road_event_confirms_report">Xác nhận báo cáo đường bộ</string>
-    <string name="road_event_denies_report">Báo cáo sự cố đường bộ đã được giải quyết</string>
     <string name="goal_amount_label">Số tiền mục tiêu (sats)</string>
     <string name="goal_description_label">Mô tả mục tiêu của bạn</string>
     <string name="goal_description_placeholder">Bạn đang gây quỹ cho điều gì?</string>

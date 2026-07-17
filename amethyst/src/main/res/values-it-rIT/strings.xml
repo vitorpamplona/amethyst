@@ -1305,15 +1305,6 @@
     <string name="not_available_acronym">N/D</string>
     <string name="relay_error_messages">Errori e avvisi da questo relay</string>
     <string name="relay_monitor_reports">Report del monitor relay</string>
-    <string name="relay_monitor_rtt_open">Apri</string>
-    <string name="relay_monitor_rtt_read">Lettura</string>
-    <string name="relay_monitor_rtt_write">Scrittura</string>
-    <string name="relay_monitor_network">Rete</string>
-    <string name="relay_monitor_relay_type">Tipo</string>
-    <string name="relay_monitor_supported_nips">NIP supportati</string>
-    <string name="relay_monitor_requirements">Requisiti</string>
-    <string name="relay_discovery_accepted_kinds">Kind accettati</string>
-    <string name="relay_discovery_geohash">Posizione</string>
     <string name="relay_active_subscriptions">Sottoscrizioni attive</string>
     <string name="relay_req_subscriptions">Sottoscrizioni REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Sottoscrizioni COUNT (%1$d)</string>
@@ -1953,14 +1944,7 @@
     <string name="calendar_collection_title">Titolo</string>
     <string name="calendar_collection_description">Descrizione</string>
     <string name="calendar_collection_invalid">È necessario un titolo.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventi</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Nessun evento in questo calendario ancora.</string>
-    <string name="calendar_rsvp_going">Partecipo</string>
-    <string name="calendar_rsvp_maybe">Forse</string>
-    <string name="calendar_rsvp_not_going">Non posso</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Nessun RSVP ancora.</string>
     <string name="calendar_participants_section">Partecipanti (%1$d)</string>
@@ -2179,10 +2163,6 @@
     <string name="thank_you">Grazie!</string>
     <string name="restricted_writes">Scritture limitate</string>
     <string name="forked_from">Fork da</string>
-    <string name="git_status_open">Aperto</string>
-    <string name="git_status_merged">Unito</string>
-    <string name="git_status_closed">Chiuso</string>
-    <string name="git_status_draft">Bozza</string>
     <string name="git_repo_tab_overview">Panoramica</string>
     <string name="git_repo_tab_patches">Patch &amp; PR</string>
     <string name="git_repo_section_about">Informazioni</string>
@@ -2730,34 +2710,8 @@
     <string name="goal_progress">%1$s finanziati su un obiettivo di %2$s sats</string>
     <string name="fundraiser_ends">Termina il %1$s</string>
     <string name="fundraiser_onchain_donation">Donazione on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d specie</item>
-        <item quantity="other">Birdex · %1$d specie</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d altro</item>
-        <item quantity="other">%1$s +%2$d altri</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polizia</string>
-    <string name="road_event_speed_camera">Autovelox</string>
-    <string name="road_event_traffic_jam">Ingorgo</string>
-    <string name="road_event_accident">Incidente</string>
-    <string name="road_event_road_closure">Strada chiusa</string>
-    <string name="road_event_construction">Lavori in corso</string>
-    <string name="road_event_hazard">Pericolo</string>
-    <string name="road_event_road_condition">Condizioni stradali</string>
-    <string name="road_event_pothole">Buca</string>
-    <string name="road_event_fog">Nebbia</string>
-    <string name="road_event_ice">Ghiaccio</string>
-    <string name="road_event_animal">Animale sulla strada</string>
-    <string name="road_event_other">Evento stradale</string>
-    <string name="road_event_unknown">Evento stradale</string>
-    <string name="road_event_confirmed">Ancora presente</string>
-    <string name="road_event_denied">Non più presente</string>
-    <string name="road_event_confirms_report">Conferma una segnalazione stradale</string>
-    <string name="road_event_denies_report">Segnala un evento stradale risolto</string>
     <string name="goal_amount_label">Importo obiettivo (sats)</string>
     <string name="goal_description_label">Descrivi il tuo obiettivo</string>
     <string name="goal_description_placeholder">Per cosa stai raccogliendo fondi?</string>

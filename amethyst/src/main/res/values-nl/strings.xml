@@ -2302,25 +2302,15 @@
     
 <string name="relay_monitor_reports">Relay-monitorrapporten</string>
     
-<string name="relay_monitor_rtt_open">Open</string>
     
-<string name="relay_monitor_rtt_read">Lezen</string>
     
-<string name="relay_monitor_rtt_write">Schrijven</string>
     
-<string name="relay_monitor_network">Netwerk</string>
     
-<string name="relay_monitor_relay_type">Type</string>
     
-<string name="relay_monitor_supported_nips">Ondersteunde NIPs</string>
     
-<string name="relay_monitor_requirements">Vereisten</string>
     
-<string name="relay_monitor_ms">%1$d ms</string>
     
-<string name="relay_discovery_accepted_kinds">Geaccepteerde kinds</string>
     
-<string name="relay_discovery_geohash">Locatie</string>
     
 <string name="relay_active_subscriptions">Actieve abonnementen</string>
     
@@ -2841,18 +2831,11 @@
     
 <string name="calendar_collection_invalid">Een titel is verplicht.</string>
     
-<plurals name="calendar_collection_count">
-    <item quantity="one">%1$d evenement</item>
-    <item quantity="other">%1$d evenementen</item>
-</plurals>
     
 <string name="calendar_collection_empty_members">Nog geen evenementen in deze agenda.</string>
     
-<string name="calendar_rsvp_going">Ga</string>
     
-<string name="calendar_rsvp_maybe">Misschien</string>
     
-<string name="calendar_rsvp_not_going">Kan niet</string>
     
 <string name="calendar_rsvp_none">Nog geen RSVPs.</string>
     
@@ -3183,13 +3166,9 @@
     
 <string name="export_as_zip">Exporteren als ZIP (JSON)</string>
     
-<string name="git_status_open">Openen</string>
     
-<string name="git_status_merged">Samengevoegd</string>
     
-<string name="git_status_closed">Gesloten</string>
     
-<string name="git_status_draft">Concept</string>
     
 <string name="git_repo_tab_overview">Overzicht</string>
     
@@ -4171,15 +4150,7 @@
     
 <string name="fundraiser_onchain_donation">On-chain donatie</string>
     
-<plurals name="birdex_species_count">
-    <item quantity="one">Birdex · %1$d soorten</item>
-    <item quantity="other">Birdex · %1$d soorten</item>
-</plurals>
     
-<plurals name="birdex_species_preview_more">
-    <item quantity="one">%1$s +%2$d meer</item>
-    <item quantity="other">%1$s +%2$d meer</item>
-</plurals>
     
     
 <string name="goal_amount_label">Doelbedrag (sats)</string>
@@ -5156,41 +5127,23 @@
     <item quantity="other">%1$d mints</item>
 </plurals>
     
-<string name="road_event_police">Politie</string>
     
-<string name="road_event_speed_camera">Flitser</string>
     
-<string name="road_event_traffic_jam">File</string>
     
-<string name="road_event_accident">Ongeluk</string>
     
-<string name="road_event_road_closure">Wegafsluiting</string>
     
-<string name="road_event_construction">Wegwerkzaamheden</string>
     
-<string name="road_event_hazard">Gevaar</string>
     
-<string name="road_event_road_condition">Wegomstandigheid</string>
     
-<string name="road_event_pothole">Kuil in de weg</string>
     
-<string name="road_event_fog">Mist</string>
     
-<string name="road_event_ice">Ijs</string>
     
-<string name="road_event_animal">Dier op de weg</string>
     
-<string name="road_event_other">Weggebeurtenis</string>
     
-<string name="road_event_unknown">Weggebeurtenis</string>
     
-<string name="road_event_confirmed">Nog steeds aanwezig</string>
     
-<string name="road_event_denied">Niet meer aanwezig</string>
     
-<string name="road_event_confirms_report">Bevestigt een wegmelding</string>
     
-<string name="road_event_denies_report">Meldt dat een weggebeurtenis voorbij is</string>
     
 <string name="marmot_groups_title">Marmot-groepen</string>
     

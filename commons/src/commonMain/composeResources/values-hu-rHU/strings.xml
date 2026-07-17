@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Nyitva</string>
+    <string name="git_status_merged">Beolvasztva</string>
+    <string name="git_status_closed">Lezárva</string>
+    <string name="git_status_draft">Vázlat</string>
+    <string name="git_diff_binary">Nem jeleníthető meg a bináris fájl tartalma.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d fájl módosult</item>
+        <item quantity="other">%1$d fájl módosult</item>
+    </plurals>
+    <string name="bird_detection_title">Madárfelismerés</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Madárnapló · %1$d faj</item>
+        <item quantity="other">Madárnapló · %1$d faj</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d további</item>
+        <item quantity="other">%1$s +%2$d további</item>
+    </plurals>
+    <string name="ps1_save_title">PS1 memóriakártya-mentés</string>
+    <string name="ps1_save_block">%1$d blokk</string>
+    <string name="ps1_save_empty_slot">Üres hely</string>
+    <string name="podcast_play_soundbite">Kiemelés lejátszása</string>
+    <string name="road_event_accident">Baleset</string>
+    <string name="road_event_animal">Állat az úton</string>
+    <string name="road_event_confirmed">Még mindig ott van</string>
+    <string name="road_event_confirms_report">Útjelentés megerősítése</string>
+    <string name="road_event_construction">Útépítés</string>
+    <string name="road_event_denied">Már nincs ott</string>
+    <string name="road_event_denies_report">Útlezárás feloldásának jelentése</string>
+    <string name="road_event_fog">Köd</string>
+    <string name="road_event_hazard">Veszély</string>
+    <string name="road_event_ice">Jég</string>
+    <string name="road_event_other">Útesemény</string>
+    <string name="road_event_police">Rendőrség</string>
+    <string name="road_event_pothole">Kátyú</string>
+    <string name="road_event_road_closure">Útlezárás</string>
+    <string name="road_event_road_condition">Útviszonyok</string>
+    <string name="road_event_speed_camera">Sebességmérő kamera</string>
+    <string name="road_event_traffic_jam">Forgalmi dugó</string>
+    <string name="road_event_unknown">Útesemény</string>
+    <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Értéket az értékért</string>
+    <string name="relay_monitor_rtt_open">Megnyitás</string>
+    <string name="relay_monitor_rtt_read">Olvasás </string>
+    <string name="relay_monitor_rtt_write">Írás</string>
+    <string name="relay_monitor_network">Hálózat</string>
+    <string name="relay_monitor_relay_type">Típus</string>
+    <string name="relay_monitor_requirements">Követelmények</string>
+    <string name="relay_monitor_supported_nips">Támogatott NIP-ek</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Elfogadott típusok</string>
+    <string name="relay_discovery_geohash">Helyszín</string>
+    <string name="calendar_rsvp_going">Ott leszek</string>
+    <string name="calendar_rsvp_maybe">Talán</string>
+    <string name="calendar_rsvp_not_going">Nem leszek ott</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d esemény</item>
+        <item quantity="other">%1$d esemény</item>
+    </plurals>
+</resources>

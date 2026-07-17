@@ -20,32 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.CalendarRsvpCard
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 
+/**
+ * Entry for a NIP-52 calendar RSVP: decodes the [Note] and renders the shared commons
+ * [CalendarRsvpCard]. Draws only from the event's own tags, so the entry keeps the
+ * dispatcher signature without touching the account or nav.
+ */
 @Composable
 fun RenderCalendarRSVPEvent(
     note: Note,
@@ -53,68 +39,6 @@ fun RenderCalendarRSVPEvent(
     nav: INav,
 ) {
     val event = note.event as? CalendarRSVPEvent ?: return
-    val status = event.status()
-    val targetAddress = event.calendarEventAddress()
-    val freebusy = event.freebusy()
 
-    val statusLabel =
-        when (status) {
-            RSVPStatusTag.STATUS.ACCEPTED -> stringRes(R.string.calendar_rsvp_going)
-            RSVPStatusTag.STATUS.TENTATIVE -> stringRes(R.string.calendar_rsvp_maybe)
-            RSVPStatusTag.STATUS.DECLINED -> stringRes(R.string.calendar_rsvp_not_going)
-            null -> "—"
-        }
-
-    val statusColor =
-        when (status) {
-            RSVPStatusTag.STATUS.ACCEPTED -> MaterialTheme.colorScheme.primary
-            RSVPStatusTag.STATUS.TENTATIVE -> MaterialTheme.colorScheme.tertiary
-            RSVPStatusTag.STATUS.DECLINED -> MaterialTheme.colorScheme.error
-            null -> Color.Gray
-        }
-
-    Column(MaterialTheme.colorScheme.replyModifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                symbol = MaterialSymbols.CalendarMonth,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = statusColor,
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(
-                text = statusLabel,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = statusColor,
-            )
-        }
-
-        if (event.content.isNotBlank()) {
-            Spacer(modifier = StdVertSpacer)
-            Text(
-                text = event.content,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 10.dp, end = 10.dp),
-            )
-        }
-
-        targetAddress?.let { addr ->
-            Spacer(modifier = StdVertSpacer)
-            Text(
-                text = "→ ${addr.toValue()}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 12.dp),
-            )
-        }
-
-        if (freebusy != null) {
-            Spacer(modifier = StdVertSpacer)
-        }
-    }
+    CalendarRsvpCard(event)
 }

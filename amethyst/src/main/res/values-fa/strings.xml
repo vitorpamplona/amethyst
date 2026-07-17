@@ -1250,25 +1250,15 @@
     
     <string name="relay_monitor_reports">گزارش‌های مانیتور relay</string>
     
-    <string name="relay_monitor_rtt_open">باز</string>
     
-    <string name="relay_monitor_rtt_read">خواندن</string>
     
-    <string name="relay_monitor_rtt_write">نوشتن</string>
     
-    <string name="relay_monitor_network">شبکه</string>
     
-    <string name="relay_monitor_relay_type">نوع</string>
     
-    <string name="relay_monitor_supported_nips">NIPهای پشتیبانی شده</string>
     
-    <string name="relay_monitor_requirements">الزامات</string>
     
-    <string name="relay_monitor_ms">%1$d ms</string>
     
-    <string name="relay_discovery_accepted_kinds">انواع پذیرفته شده</string>
     
-    <string name="relay_discovery_geohash">موقعیت مکانی</string>
     
     <string name="relay_active_subscriptions">اشتراک‌های فعال</string>
     
@@ -2124,18 +2114,11 @@
     
     <string name="calendar_collection_invalid">عنوان الزامی است.</string>
     
-    <plurals name="calendar_collection_count">
-    <item quantity="one">%1$d رویداد</item>
-    <item quantity="other">%1$d رویداد</item>
-</plurals>
     
     <string name="calendar_collection_empty_members">هنوز هیچ رویدادی در این تقویم نیست.</string>
     
-    <string name="calendar_rsvp_going">می‌آیم</string>
     
-    <string name="calendar_rsvp_maybe">شاید</string>
     
-    <string name="calendar_rsvp_not_going">نمی‌توانم بیایم</string>
     
     <string name="calendar_rsvp_section">پاسخ‌ها (%1$d)</string>
     
@@ -2477,13 +2460,9 @@
     
     <string name="export_as_zip">خروجی به صورت ZIP (JSON)</string>
     
-    <string name="git_status_open">باز</string>
     
-    <string name="git_status_merged">ادغام شده</string>
     
-    <string name="git_status_closed">بسته</string>
     
-    <string name="git_status_draft">پیش‌نویس</string>
     
     <string name="git_repo_tab_overview">مرور کلی</string>
     
@@ -3481,53 +3460,27 @@
     <string name="fundraiser_onchain_donation">اهدای آن‌چین</string>
 
     
-    <plurals name="birdex_species_count">
-    <item quantity="one">Birdex · %1$d گونه</item>
-    <item quantity="other">Birdex · %1$d گونه</item>
-</plurals>
 
     
-    <plurals name="birdex_species_preview_more">
-    <item quantity="one">%1$s و %2$d مورد بیشتر</item>
-    <item quantity="other">%1$s و %2$d مورد بیشتر</item>
-</plurals>
 
     
-    <string name="road_event_police">پلیس</string>
     
-    <string name="road_event_speed_camera">دوربین سرعت‌سنج</string>
     
-    <string name="road_event_traffic_jam">ترافیک</string>
     
-    <string name="road_event_accident">تصادف</string>
     
-    <string name="road_event_road_closure">بسته بودن جاده</string>
     
-    <string name="road_event_construction">عملیات عمرانی</string>
     
-    <string name="road_event_hazard">خطر</string>
     
-    <string name="road_event_road_condition">وضعیت جاده</string>
     
-    <string name="road_event_pothole">چاله</string>
     
-    <string name="road_event_fog">مه</string>
     
-    <string name="road_event_ice">یخ</string>
     
-    <string name="road_event_animal">حیوان روی جاده</string>
     
-    <string name="road_event_other">رویداد جاده‌ای</string>
     
-    <string name="road_event_unknown">رویداد جاده‌ای</string>
     
-    <string name="road_event_confirmed">هنوز هست</string>
     
-    <string name="road_event_denied">دیگر نیست</string>
     
-    <string name="road_event_confirms_report">گزارش جاده را تأیید می‌کند</string>
     
-    <string name="road_event_denies_report">رفع رویداد جاده‌ای را گزارش می‌دهد</string>
     
     <string name="goal_amount_label">مبلغ هدف (sat)</string>
     

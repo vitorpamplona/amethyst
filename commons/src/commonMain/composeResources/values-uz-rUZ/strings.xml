@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Ochiq</string>
+    <string name="git_status_merged">Birlashtirilgan</string>
+    <string name="git_status_closed">Yopiq</string>
+    <string name="git_status_draft">Qoralama</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d tur</item>
+        <item quantity="other">Birdex · %1$d tur</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d ta ko\'proq</item>
+        <item quantity="other">%1$s +%2$d ta ko\'proq</item>
+    </plurals>
+    <string name="road_event_accident">Avariya</string>
+    <string name="road_event_animal">Yo\'lda hayvon bor</string>
+    <string name="road_event_confirmed">Hali ham u yerda</string>
+    <string name="road_event_confirms_report">Yo\'l hisobotini tasdiqlaydi</string>
+    <string name="road_event_construction">Qurilish</string>
+    <string name="road_event_denied">Endi u yerda yo\'q</string>
+    <string name="road_event_denies_report">Yo\'l hodisasi bartaraf etilganligini bildiradi</string>
+    <string name="road_event_fog">Tuman</string>
+    <string name="road_event_hazard">Xavf</string>
+    <string name="road_event_ice">Muz</string>
+    <string name="road_event_other">Yo\'l hodisasi</string>
+    <string name="road_event_police">Politsiya</string>
+    <string name="road_event_pothole">Chuqur</string>
+    <string name="road_event_road_closure">Yo\'l yopiq</string>
+    <string name="road_event_road_condition">Yo\'l holati</string>
+    <string name="road_event_speed_camera">Tezlik kamerasi</string>
+    <string name="road_event_traffic_jam">Tirbandlik</string>
+    <string name="road_event_unknown">Yo\'l hodisasi</string>
+    <string name="relay_monitor_rtt_open">Ochish</string>
+    <string name="relay_monitor_rtt_read">O\'qish</string>
+    <string name="relay_monitor_rtt_write">Yozish</string>
+    <string name="relay_monitor_network">Tarmoq</string>
+    <string name="relay_monitor_relay_type">Turi</string>
+    <string name="relay_monitor_requirements">Talablar</string>
+    <string name="relay_monitor_supported_nips">Qo\'llab-quvvatlanadigan NIPlar</string>
+    <string name="relay_discovery_accepted_kinds">Qabul Qilingan Turlar</string>
+    <string name="relay_discovery_geohash">Joylashuv</string>
+    <string name="calendar_rsvp_going">Boraman</string>
+    <string name="calendar_rsvp_maybe">Ehtimol</string>
+    <string name="calendar_rsvp_not_going">Bora olmayman</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d tadbir</item>
+        <item quantity="other">%1$d tadbir</item>
+    </plurals>
+</resources>

@@ -1355,16 +1355,6 @@
     <string name="not_available_acronym">Н/Д</string>
     <string name="relay_error_messages">Помилки та сповіщення від цього relay</string>
     <string name="relay_monitor_reports">Звіти монітора relay</string>
-    <string name="relay_monitor_rtt_open">Відкрити</string>
-    <string name="relay_monitor_rtt_read">Читати</string>
-    <string name="relay_monitor_rtt_write">Писати</string>
-    <string name="relay_monitor_network">Мережа</string>
-    <string name="relay_monitor_relay_type">Тип</string>
-    <string name="relay_monitor_supported_nips">Підтримувані NIP</string>
-    <string name="relay_monitor_requirements">Вимоги</string>
-    <string name="relay_monitor_ms">%1$d мс</string>
-    <string name="relay_discovery_accepted_kinds">Прийняті типи</string>
-    <string name="relay_discovery_geohash">Місцезнаходження</string>
     <string name="relay_active_subscriptions">Активні підписки</string>
     <string name="relay_req_subscriptions">REQ підписки (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT підписки (%1$d)</string>
@@ -2035,16 +2025,7 @@
     <string name="calendar_collection_title">Назва</string>
     <string name="calendar_collection_description">Опис</string>
     <string name="calendar_collection_invalid">Назва є обов\'язковою.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d подія</item>
-        <item quantity="few">%1$d події</item>
-        <item quantity="many">%1$d подій</item>
-        <item quantity="other">%1$d подій</item>
-    </plurals>
     <string name="calendar_collection_empty_members">У цьому календарі ще немає подій.</string>
-    <string name="calendar_rsvp_going">Піду</string>
-    <string name="calendar_rsvp_maybe">Можливо</string>
-    <string name="calendar_rsvp_not_going">Не зможу</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Відповідей ще немає.</string>
     <string name="calendar_participants_section">Учасники (%1$d)</string>
@@ -2274,10 +2255,6 @@
     <string name="forked_from">Форк від</string>
     <string name="git_web_address">Веб:</string>
     <string name="git_clone_address">Клонувати:</string>
-    <string name="git_status_open">Відкрито</string>
-    <string name="git_status_merged">Злито</string>
-    <string name="git_status_closed">Закрито</string>
-    <string name="git_status_draft">Чернетка</string>
     <string name="git_repo_tab_overview">Огляд</string>
     <string name="git_repo_tab_issues">Завдання</string>
     <string name="git_repo_tab_patches">Патчі та PR</string>
@@ -2818,38 +2795,8 @@
     <string name="goal_progress">%1$s зібрано з %2$s sats мети</string>
     <string name="fundraiser_ends">Завершується %1$s</string>
     <string name="fundraiser_onchain_donation">Пожертва on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d вид</item>
-        <item quantity="few">Birdex · %1$d види</item>
-        <item quantity="many">Birdex · %1$d видів</item>
-        <item quantity="other">Birdex · %1$d виду</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d більше</item>
-        <item quantity="few">%1$s +%2$d більше</item>
-        <item quantity="many">%1$s +%2$d більше</item>
-        <item quantity="other">%1$s +%2$d більше</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Поліція</string>
-    <string name="road_event_speed_camera">Камера швидкості</string>
-    <string name="road_event_traffic_jam">Затор</string>
-    <string name="road_event_accident">Аварія</string>
-    <string name="road_event_road_closure">Перекриття дороги</string>
-    <string name="road_event_construction">Будівельні роботи</string>
-    <string name="road_event_hazard">Небезпека</string>
-    <string name="road_event_road_condition">Стан дороги</string>
-    <string name="road_event_pothole">Яма</string>
-    <string name="road_event_fog">Туман</string>
-    <string name="road_event_ice">Ожеледиця</string>
-    <string name="road_event_animal">Тварина на дорозі</string>
-    <string name="road_event_other">Дорожня подія</string>
-    <string name="road_event_unknown">Дорожня подія</string>
-    <string name="road_event_confirmed">Досі там</string>
-    <string name="road_event_denied">Вже немає</string>
-    <string name="road_event_confirms_report">Підтверджує дорожнє повідомлення</string>
-    <string name="road_event_denies_report">Повідомляє, що дорожня подія усунена</string>
     <string name="goal_amount_label">Сума мети (sats)</string>
     <string name="goal_description_label">Опишіть вашу ціль</string>
     <string name="goal_description_placeholder">На що ви збираєте кошти?</string>

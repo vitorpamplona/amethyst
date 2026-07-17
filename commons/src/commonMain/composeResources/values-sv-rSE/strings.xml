@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Öppen</string>
+    <string name="git_status_merged">Sammanfogad</string>
+    <string name="git_status_closed">Stängd</string>
+    <string name="git_status_draft">Utkast</string>
+    <string name="git_diff_binary">Binär fil visas inte.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d fil ändrad</item>
+        <item quantity="other">%1$d filer ändrade</item>
+    </plurals>
+    <string name="bird_detection_title">Fågeldetektering</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d art</item>
+        <item quantity="other">Birdex · %1$d arter</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d till</item>
+        <item quantity="other">%1$s +%2$d till</item>
+    </plurals>
+    <string name="ps1_save_title">PS1-minneskortsparning</string>
+    <string name="ps1_save_empty_slot">Tom plats</string>
+    <string name="podcast_play_soundbite">Spela höjdpunkt</string>
+    <string name="road_event_accident">Olycka</string>
+    <string name="road_event_animal">Djur på vägen</string>
+    <string name="road_event_confirmed">Finns kvar</string>
+    <string name="road_event_confirms_report">Bekräftar en vägrapport</string>
+    <string name="road_event_construction">Vägarbete</string>
+    <string name="road_event_denied">Finns inte längre</string>
+    <string name="road_event_denies_report">Rapporterar att en väghändelse är borta</string>
+    <string name="road_event_fog">Dimma</string>
+    <string name="road_event_hazard">Fara</string>
+    <string name="road_event_ice">Is</string>
+    <string name="road_event_other">Väghändelse</string>
+    <string name="road_event_police">Polis</string>
+    <string name="road_event_pothole">Väggropar</string>
+    <string name="road_event_road_closure">Vägavstängning</string>
+    <string name="road_event_road_condition">Vägförhållanden</string>
+    <string name="road_event_speed_camera">Fartkamera</string>
+    <string name="road_event_traffic_jam">Trafikstockning</string>
+    <string name="road_event_unknown">Väghändelse</string>
+    <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
+    <string name="relay_monitor_rtt_open">Öppna</string>
+    <string name="relay_monitor_rtt_read">Läs</string>
+    <string name="relay_monitor_rtt_write">Skriv</string>
+    <string name="relay_monitor_network">Nätverk</string>
+    <string name="relay_monitor_relay_type">Typ</string>
+    <string name="relay_monitor_requirements">Krav</string>
+    <string name="relay_monitor_supported_nips">NIP som stöds</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Accepterade typer</string>
+    <string name="relay_discovery_geohash">Plats</string>
+    <string name="calendar_rsvp_going">Kommer</string>
+    <string name="calendar_rsvp_maybe">Kanske</string>
+    <string name="calendar_rsvp_not_going">Kommer inte</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d händelse</item>
+        <item quantity="other">%1$d händelser</item>
+    </plurals>
+</resources>

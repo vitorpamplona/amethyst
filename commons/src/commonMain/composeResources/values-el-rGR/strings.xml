@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Ανοιχτό</string>
+    <string name="git_status_merged">Συγχωνευμένο</string>
+    <string name="git_status_closed">Κλειστό</string>
+    <string name="git_status_draft">Πρόχειρο</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d είδος</item>
+        <item quantity="other">Birdex · %1$d είδη</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d ακόμη</item>
+        <item quantity="other">%1$s +%2$d ακόμη</item>
+    </plurals>
+    <string name="road_event_accident">Ατύχημα</string>
+    <string name="road_event_animal">Ζώο στο δρόμο</string>
+    <string name="road_event_confirmed">Υπάρχει ακόμη</string>
+    <string name="road_event_confirms_report">Επιβεβαιώνει οδική αναφορά</string>
+    <string name="road_event_construction">Κατασκευές</string>
+    <string name="road_event_denied">Δεν υπάρχει πλέον</string>
+    <string name="road_event_denies_report">Αναφέρει ότι το οδικό συμβάν έχει εκκαθαριστεί</string>
+    <string name="road_event_fog">Ομίχλη</string>
+    <string name="road_event_hazard">Κίνδυνος</string>
+    <string name="road_event_ice">Πάγος</string>
+    <string name="road_event_other">Οδικό συμβάν</string>
+    <string name="road_event_police">Αστυνομία</string>
+    <string name="road_event_pothole">Λακκούβα</string>
+    <string name="road_event_road_closure">Αποκλεισμός δρόμου</string>
+    <string name="road_event_road_condition">Κατάσταση δρόμου</string>
+    <string name="road_event_speed_camera">Κάμερα ταχύτητας</string>
+    <string name="road_event_traffic_jam">Κυκλοφοριακή συμφόρηση</string>
+    <string name="road_event_unknown">Οδικό συμβάν</string>
+    <string name="relay_monitor_rtt_open">Άνοιγμα</string>
+    <string name="relay_monitor_rtt_read">Ανάγνωση</string>
+    <string name="relay_monitor_rtt_write">Εγγραφή</string>
+    <string name="relay_monitor_network">Δίκτυο</string>
+    <string name="relay_monitor_relay_type">Τύπος</string>
+    <string name="relay_monitor_requirements">Απαιτήσεις</string>
+    <string name="relay_monitor_supported_nips">Υποστηριζόμενα NIPs</string>
+    <string name="relay_discovery_accepted_kinds">Αποδεκτοί τύποι</string>
+    <string name="relay_discovery_geohash">Τοποθεσία</string>
+    <string name="calendar_rsvp_going">Πηγαίνω</string>
+    <string name="calendar_rsvp_maybe">Ίσως</string>
+    <string name="calendar_rsvp_not_going">Δεν μπορώ να πάω</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d συμβάν</item>
+        <item quantity="other">%1$d συμβάντα</item>
+    </plurals>
+</resources>

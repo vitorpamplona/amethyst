@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Wazi</string>
+    <string name="git_status_merged">Imeunganishwa</string>
+    <string name="git_status_closed">Imefungwa</string>
+    <string name="git_status_draft">Rasimu</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · spishi %1$d</item>
+        <item quantity="other">Birdex · spishi %1$d</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d zaidi</item>
+        <item quantity="other">%1$s +%2$d zaidi</item>
+    </plurals>
+    <string name="road_event_accident">Ajali</string>
+    <string name="road_event_animal">Mnyama barabarani</string>
+    <string name="road_event_confirmed">Bado ipo</string>
+    <string name="road_event_confirms_report">Inathibitisha ripoti ya barabara</string>
+    <string name="road_event_construction">Ujenzi</string>
+    <string name="road_event_denied">Haipo tena</string>
+    <string name="road_event_denies_report">Inaripoti tukio la barabara kuisha</string>
+    <string name="road_event_fog">Ukungu</string>
+    <string name="road_event_hazard">Hatari</string>
+    <string name="road_event_ice">Barafu</string>
+    <string name="road_event_other">Tukio la barabara</string>
+    <string name="road_event_police">Polisi</string>
+    <string name="road_event_pothole">Shimo barabarani</string>
+    <string name="road_event_road_closure">Kufungwa kwa barabara</string>
+    <string name="road_event_road_condition">Hali ya barabara</string>
+    <string name="road_event_speed_camera">Kamera ya kasi</string>
+    <string name="road_event_traffic_jam">Msongamano wa magari</string>
+    <string name="road_event_unknown">Tukio la barabara</string>
+    <string name="relay_monitor_rtt_open">Fungua</string>
+    <string name="relay_monitor_rtt_read">Soma</string>
+    <string name="relay_monitor_rtt_write">Andika</string>
+    <string name="relay_monitor_network">Mtandao</string>
+    <string name="relay_monitor_relay_type">Aina</string>
+    <string name="relay_monitor_requirements">Mahitaji</string>
+    <string name="relay_monitor_supported_nips">NIPs Zinazosaidiwa</string>
+    <string name="relay_discovery_accepted_kinds">Aina Zinazokubaliwa</string>
+    <string name="relay_discovery_geohash">Eneo</string>
+    <string name="calendar_rsvp_going">Naenda</string>
+    <string name="calendar_rsvp_maybe">Labda</string>
+    <string name="calendar_rsvp_not_going">Siwezi kwenda</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">tukio %1$d</item>
+        <item quantity="other">matukio %1$d</item>
+    </plurals>
+</resources>

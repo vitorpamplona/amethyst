@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.GitBrowseState
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepoSnapshotCache
 import com.vitorpamplona.amethyst.commons.nip34Git.GitRepositoryBrowserViewModel
+import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
+import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.model.Note

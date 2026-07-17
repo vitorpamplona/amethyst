@@ -1222,10 +1222,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="podcast_transcript">Transkrypcja</string>
     <string name="podcast_chapters">Rozdziały</string>
     <string name="podcast_value_for_value">Wartość-za-wartość</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_zap_split_hint">Zaps do tego są podzielone między:</string>
     <string name="podcast_hosts_and_guests">Gospodarze &amp; Goście</string>
-    <string name="podcast_play_soundbite">Odtwórz najciekawsze momenty</string>
     <string name="podcast_top_supporters">Najwięksi darczyńcy</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d rozdział</item>
@@ -1811,16 +1808,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="not_available_acronym">Nie dotyczy</string>
     <string name="relay_error_messages">Błędy i powiadomienia z tego transmitera</string>
     <string name="relay_monitor_reports">Raporty z monitoringu transmitera</string>
-    <string name="relay_monitor_rtt_open">Otwórz</string>
-    <string name="relay_monitor_rtt_read">Odczyt</string>
-    <string name="relay_monitor_rtt_write">Zapis</string>
-    <string name="relay_monitor_network">Sieć</string>
-    <string name="relay_monitor_relay_type">Typ</string>
-    <string name="relay_monitor_supported_nips">Obsługiwane Nipy</string>
-    <string name="relay_monitor_requirements">Wymagania</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Dopuszczalne typy</string>
-    <string name="relay_discovery_geohash">Lokalizacja</string>
     <string name="relay_active_subscriptions">Aktywne subskrypcje</string>
     <string name="relay_req_subscriptions">REQ Subskrypcje (%1$d)</string>
     <string name="relay_count_subscriptions">Subskrypcje KONTA (%1$d)</string>
@@ -2752,16 +2739,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_collection_title">Tytuł</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Tytuł jest wymagany.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d wydarzenie</item>
-        <item quantity="few">%1$d wydarzeń</item>
-        <item quantity="many">%1$d wydarzeń</item>
-        <item quantity="other">%1$d wydarzeń</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Brak wydarzeń w tym kalendarzu.</string>
-    <string name="calendar_rsvp_going">Będę</string>
-    <string name="calendar_rsvp_maybe">Może</string>
-    <string name="calendar_rsvp_not_going">Nie mogę iść</string>
     <string name="calendar_rsvp_section">Potwierdzeń (%1$d)</string>
     <string name="calendar_rsvp_none">Brak potwierdzeń.</string>
     <string name="calendar_participants_section">Uczestnicy (%1$d)</string>
@@ -3028,10 +3006,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="git_commit">Commit</string>
     <string name="git_merge_base">Scal gałąź główną</string>
     <string name="git_pr_update_description">Zaktualizowano pull request, uwzględniając nowy commit.</string>
-    <string name="git_status_open">Otwarte</string>
-    <string name="git_status_merged">Połączone</string>
-    <string name="git_status_closed">Zamknięte</string>
-    <string name="git_status_draft">Szkic</string>
     <string name="git_repo_tab_overview">Przegląd</string>
     <string name="git_repo_tab_issues">Problemy</string>
     <string name="git_repo_tab_patches">Łaty &amp; PRs</string>
@@ -3080,13 +3054,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">%1$d elementów</item>
         <item quantity="other">%1$d elementy</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">Plik %1$d zmieniony</item>
-        <item quantity="few">Plików %1$d zmienionych</item>
-        <item quantity="many">Plików %1$d zmienionych</item>
-        <item quantity="other">%1$d pliki zostały zmienione</item>
-    </plurals>
-    <string name="git_diff_binary">Plik binarny nie jest wyświetlany.</string>
     <string name="git_new_issue_button">Nowy</string>
     <string name="git_new_issue_title">Nowy problem</string>
     <string name="git_new_issue_subject">Tytuł</string>
@@ -3805,41 +3772,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="goal_progress">Sfinansowano %1$s z %2$s satoszów</string>
     <string name="fundraiser_ends">Kończy się %1$s</string>
     <string name="fundraiser_onchain_donation">Darowizna on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d gatunek</item>
-        <item quantity="few">Birdex · %1$d gatunków</item>
-        <item quantity="many">Birdex · %1$d gatunków</item>
-        <item quantity="other">Birdex · %1$d gatunki</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d więcej</item>
-        <item quantity="few">%1$s +%2$d więcej</item>
-        <item quantity="many">%1$s +%2$d więcej</item>
-        <item quantity="other">%1$s +%2$d więcej</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
-    <string name="ps1_save_title">Zapis karty pamięci PS1</string>
-    <string name="ps1_save_block">blok %1$d</string>
-    <string name="ps1_save_empty_slot">Pusty slot</string>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policja</string>
-    <string name="road_event_speed_camera">Fotoradar</string>
-    <string name="road_event_traffic_jam">Korek</string>
-    <string name="road_event_accident">Wypadek</string>
-    <string name="road_event_road_closure">Droga zamknięta</string>
-    <string name="road_event_construction">Roboty drogowe</string>
-    <string name="road_event_hazard">Zagrożenie</string>
-    <string name="road_event_road_condition">Uszkodzenie nawierzchni</string>
-    <string name="road_event_pothole">Wyboje</string>
-    <string name="road_event_fog">Mgła</string>
-    <string name="road_event_ice">Oblodzenie</string>
-    <string name="road_event_animal">Zwierzęta na drodze</string>
-    <string name="road_event_other">Wydarzenie drogowe</string>
-    <string name="road_event_unknown">Wydarzenie drogowe</string>
-    <string name="road_event_confirmed">Wciąż tam</string>
-    <string name="road_event_denied">Już tam nie ma</string>
-    <string name="road_event_confirms_report">Potwierdzenie zgłoszenia drogowego</string>
-    <string name="road_event_denies_report">Zgłasza, że wypadek został usunięty</string>
     <string name="goal_amount_label">Kwota zbiorki (w satoszach)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opisz cel zbiórki</string>

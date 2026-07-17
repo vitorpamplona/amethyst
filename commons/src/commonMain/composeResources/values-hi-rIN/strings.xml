@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">खुला</string>
+    <string name="git_status_merged">विलीन</string>
+    <string name="git_status_closed">आवृत</string>
+    <string name="git_status_draft">पाण्डुलिपि</string>
+    <string name="git_diff_binary">अंकीय अभिलेख नहीं दर्शाया गया।</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d अभिलेख परिवर्तित</item>
+        <item quantity="other">%1$d अभिलेख परिवर्तित</item>
+    </plurals>
+    <string name="bird_detection_title">पक्षी खोज</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
+        <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s सं॰ %2$d अधिक</item>
+        <item quantity="other">%1$s सं॰ %2$d अधिक</item>
+    </plurals>
+    <string name="ps1_save_title">पीएस१ स्मृति पत्रक अभिलेखन</string>
+    <string name="ps1_save_block">खण्ड %1$d</string>
+    <string name="ps1_save_empty_slot">रिक्त छेद</string>
+    <string name="podcast_play_soundbite">प्रमुखाम्श चलाएँ</string>
+    <string name="road_event_accident">दुर्घटना</string>
+    <string name="road_event_animal">मार्ग पर मृग</string>
+    <string name="road_event_confirmed">अब भी वहीं</string>
+    <string name="road_event_confirms_report">मार्ग सूचना की पुष्टि</string>
+    <string name="road_event_construction">निर्माण</string>
+    <string name="road_event_denied">अब वहाँ नहीं</string>
+    <string name="road_event_denies_report">सूचना की मार्ग घटना हटाया गया</string>
+    <string name="road_event_fog">धूमिका</string>
+    <string name="road_event_hazard">संकट</string>
+    <string name="road_event_ice">हिम</string>
+    <string name="road_event_other">मार्ग घटना</string>
+    <string name="road_event_police">रक्षापालिका</string>
+    <string name="road_event_pothole">गड्ढा</string>
+    <string name="road_event_road_closure">मार्ग आवृत</string>
+    <string name="road_event_road_condition">मार्ग परिस्थिति</string>
+    <string name="road_event_speed_camera">गति चित्रग्राहक</string>
+    <string name="road_event_traffic_jam">यातायात अचलता</string>
+    <string name="road_event_unknown">मार्ग घटना</string>
+    <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
+    <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
+    <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
+    <string name="relay_monitor_rtt_open">खोलें</string>
+    <string name="relay_monitor_rtt_read">पढें</string>
+    <string name="relay_monitor_rtt_write">लिखें</string>
+    <string name="relay_monitor_network">जाल</string>
+    <string name="relay_monitor_relay_type">प्रकार</string>
+    <string name="relay_monitor_requirements">आवश्यकताएँ</string>
+    <string name="relay_monitor_supported_nips">अवलम्बन किए हुए निप॰ सूची</string>
+    <string name="relay_monitor_ms">%1$d सहस्रतमसेकण्ड</string>
+    <string name="relay_discovery_accepted_kinds">स्वीकृत प्रकार</string>
+    <string name="relay_discovery_geohash">स्थान</string>
+    <string name="calendar_rsvp_going">जाना निश्चित</string>
+    <string name="calendar_rsvp_maybe">सम्भाव्य</string>
+    <string name="calendar_rsvp_not_going">नहीं जा सकते</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d घटना</item>
+        <item quantity="other">%1$d घटनाएँ</item>
+    </plurals>
+</resources>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Otvoreno</string>
+    <string name="git_status_merged">Spojeno</string>
+    <string name="git_status_closed">Zatvoreno</string>
+    <string name="git_status_draft">Nacrt</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d vrsta</item>
+        <item quantity="few">Birdex · %1$d vrste</item>
+        <item quantity="other">Birdex · %1$d vrsta</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d više</item>
+        <item quantity="few">%1$s +%2$d više</item>
+        <item quantity="other">%1$s +%2$d više</item>
+    </plurals>
+    <string name="road_event_accident">Nesreća</string>
+    <string name="road_event_animal">Životinja na putu</string>
+    <string name="road_event_confirmed">I dalje postoji</string>
+    <string name="road_event_confirms_report">Potvrđuje saobraćajni izveštaj</string>
+    <string name="road_event_construction">Gradnja</string>
+    <string name="road_event_denied">Više ne postoji</string>
+    <string name="road_event_denies_report">Prijavljuje da je saobraćajni događaj rešen</string>
+    <string name="road_event_fog">Magla</string>
+    <string name="road_event_hazard">Opasnost</string>
+    <string name="road_event_ice">Led</string>
+    <string name="road_event_other">Saobraćajni događaj</string>
+    <string name="road_event_police">Policija</string>
+    <string name="road_event_pothole">Rupa na putu</string>
+    <string name="road_event_road_closure">Zatvaranje puta</string>
+    <string name="road_event_road_condition">Stanje puta</string>
+    <string name="road_event_speed_camera">Radar</string>
+    <string name="road_event_traffic_jam">Saobraćajna gužva</string>
+    <string name="road_event_unknown">Saobraćajni događaj</string>
+    <string name="relay_monitor_rtt_open">Otvori</string>
+    <string name="relay_monitor_rtt_read">Čitaj</string>
+    <string name="relay_monitor_rtt_write">Piši</string>
+    <string name="relay_monitor_network">Mreža</string>
+    <string name="relay_monitor_relay_type">Tip</string>
+    <string name="relay_monitor_requirements">Zahtevi</string>
+    <string name="relay_monitor_supported_nips">Podržani NIPs</string>
+    <string name="relay_discovery_accepted_kinds">Prihvaćene vrste</string>
+    <string name="relay_discovery_geohash">Lokacija</string>
+    <string name="calendar_rsvp_going">Idem</string>
+    <string name="calendar_rsvp_maybe">Možda</string>
+    <string name="calendar_rsvp_not_going">Ne mogu ići</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d događaj</item>
+        <item quantity="few">%1$d događaja</item>
+        <item quantity="other">%1$d događaja</item>
+    </plurals>
+</resources>

@@ -1332,16 +1332,6 @@
 <string name="not_available_acronym">N/D</string>
 <string name="relay_error_messages">Eraroj kaj Atentigoj de ĉi tiu relay</string>
 <string name="relay_monitor_reports">Raportoj de relay-Monitoro</string>
-<string name="relay_monitor_rtt_open">Malfermi</string>
-<string name="relay_monitor_rtt_read">Legi</string>
-<string name="relay_monitor_rtt_write">Skribi</string>
-<string name="relay_monitor_network">Reto</string>
-<string name="relay_monitor_relay_type">Tipo</string>
-<string name="relay_monitor_supported_nips">Subtenataj NIPs</string>
-<string name="relay_monitor_requirements">Postuloj</string>
-<string name="relay_monitor_ms">%1$d ms</string>
-<string name="relay_discovery_accepted_kinds">Akceptataj Tipoj</string>
-<string name="relay_discovery_geohash">Loko</string>
 <string name="relay_active_subscriptions">Aktivaj Abonamentoj</string>
 <string name="relay_req_subscriptions">REQ Abonamentoj (%1$d)</string>
 <string name="relay_count_subscriptions">COUNT Abonamentoj (%1$d)</string>
@@ -1878,9 +1868,6 @@
 <string name="calendar_collection_description">Priskribo</string>
 <string name="calendar_collection_invalid">Titolo estas postulata.</string>
 <string name="calendar_collection_empty_members">Ankoraŭ neniuj eventoj en ĉi tiu kalendaro.</string>
-<string name="calendar_rsvp_going">Iras</string>
-<string name="calendar_rsvp_maybe">Eble</string>
-<string name="calendar_rsvp_not_going">Ne povas iri</string>
 <string name="calendar_rsvp_section">RSVP-oj (%1$d)</string>
 <string name="calendar_rsvp_none">Ankoraŭ neniuj RSVP-oj.</string>
 <string name="calendar_participants_section">Partoprenantoj (%1$d)</string>
@@ -2105,10 +2092,6 @@
 <string name="forked_from">Forketita de</string>
 <string name="git_web_address">Retejo:</string>
 <string name="git_clone_address">Kloni:</string>
-<string name="git_status_open">Malferma</string>
-<string name="git_status_merged">Kunfandita</string>
-<string name="git_status_closed">Fermita</string>
-<string name="git_status_draft">Malneto</string>
 <string name="git_repo_tab_overview">Superrigardo</string>
 <string name="git_repo_tab_issues">Problemoj</string>
 <string name="git_repo_tab_patches">Flikoj &amp; PR-oj</string>
@@ -2646,24 +2629,6 @@
 <string name="goal_progress">%1$s financita el %2$s sats celo</string>
 <string name="fundraiser_ends">Finiĝas %1$s</string>
 <string name="fundraiser_onchain_donation">Donaco en ĉeno</string>
-<string name="road_event_police">Polico</string>
-<string name="road_event_speed_camera">Rapideca fotilo</string>
-<string name="road_event_traffic_jam">Trafika ŝtopado</string>
-<string name="road_event_accident">Akcidento</string>
-<string name="road_event_road_closure">Voja fermo</string>
-<string name="road_event_construction">Konstruado</string>
-<string name="road_event_hazard">Danĝero</string>
-<string name="road_event_road_condition">Voja stato</string>
-<string name="road_event_pothole">Trua vojo</string>
-<string name="road_event_fog">Nebulo</string>
-<string name="road_event_ice">Glacio</string>
-<string name="road_event_animal">Besto sur la vojo</string>
-<string name="road_event_other">Voja evento</string>
-<string name="road_event_unknown">Voja evento</string>
-<string name="road_event_confirmed">Ankoraŭ tie</string>
-<string name="road_event_denied">Ne plu tie</string>
-<string name="road_event_confirms_report">Konfirmas vojan raporton</string>
-<string name="road_event_denies_report">Raportas ke voja evento malaperis</string>
 <string name="goal_amount_label">Celosummo (sats)</string>
 <string name="goal_amount_placeholder">100000</string>
 <string name="goal_description_label">Priskribu vian celon</string>
@@ -3004,10 +2969,6 @@
         <item quantity="one">%1$s, %2$d evento</item>
         <item quantity="other">%1$s, %2$d eventoj</item>
     </plurals>
-<plurals name="calendar_collection_count">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventoj</item>
-    </plurals>
 <plurals name="calendar_reminder_body">
         <item quantity="one">Komenciĝas post %1$d minuto</item>
         <item quantity="other">Komenciĝas post %1$d minutoj</item>
@@ -3051,14 +3012,6 @@
 <plurals name="cashu_untrusted_mint_title">
         <item quantity="one">Financoj konservitaj ĉe %1$d monfarejo, kiun vi ne uzas</item>
         <item quantity="other">Financoj konservitaj ĉe %1$d monfarioj, kiujn vi ne uzas</item>
-    </plurals>
-<plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d specio</item>
-        <item quantity="other">Birdex · %1$d specioj</item>
-    </plurals>
-<plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d plia</item>
-        <item quantity="other">%1$s +%2$d pliaj</item>
     </plurals>
 <plurals name="marmot_message_count">
         <item quantity="one">%1$d msg</item>

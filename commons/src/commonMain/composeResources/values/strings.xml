@@ -101,4 +101,64 @@
     <string name="nickname_summary_label">Private note about this user</string>
     <string name="nickname_save">Save</string>
     <string name="nickname_cancel">Cancel</string>
+    <string name="git_status_open">Open</string>
+    <string name="git_status_merged">Merged</string>
+    <string name="git_status_closed">Closed</string>
+    <string name="git_status_draft">Draft</string>
+    <string name="git_diff_binary">Binary file not shown.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d file changed</item>
+        <item quantity="other">%1$d files changed</item>
+    </plurals>
+    <string name="bird_detection_title">Bird detection</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d species</item>
+        <item quantity="other">Birdex · %1$d species</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d more</item>
+        <item quantity="other">%1$s +%2$d more</item>
+    </plurals>
+    <string name="ps1_save_title">PS1 memory card save</string>
+    <string name="ps1_save_block">block %1$d</string>
+    <string name="ps1_save_empty_slot">Empty slot</string>
+    <string name="podcast_play_soundbite">Play highlight</string>
+    <string name="road_event_accident">Accident</string>
+    <string name="road_event_animal">Animal on the road</string>
+    <string name="road_event_confirmed">Still there</string>
+    <string name="road_event_confirms_report">Confirms a road report</string>
+    <string name="road_event_construction">Construction</string>
+    <string name="road_event_denied">No longer there</string>
+    <string name="road_event_denies_report">Reports a road event cleared</string>
+    <string name="road_event_fog">Fog</string>
+    <string name="road_event_hazard">Hazard</string>
+    <string name="road_event_ice">Ice</string>
+    <string name="road_event_other">Road event</string>
+    <string name="road_event_police">Police</string>
+    <string name="road_event_pothole">Pothole</string>
+    <string name="road_event_road_closure">Road closure</string>
+    <string name="road_event_road_condition">Road condition</string>
+    <string name="road_event_speed_camera">Speed camera</string>
+    <string name="road_event_traffic_jam">Traffic jam</string>
+    <string name="road_event_unknown">Road event</string>
+    <string name="podcast_value_zap_split_hint">Zaps to this are split between:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
+    <string name="relay_monitor_rtt_open">Open</string>
+    <string name="relay_monitor_rtt_read">Read</string>
+    <string name="relay_monitor_rtt_write">Write</string>
+    <string name="relay_monitor_network">Network</string>
+    <string name="relay_monitor_relay_type">Type</string>
+    <string name="relay_monitor_requirements">Requirements</string>
+    <string name="relay_monitor_supported_nips">Supported NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Accepted Kinds</string>
+    <string name="relay_discovery_geohash">Location</string>
+    <string name="calendar_rsvp_going">Going</string>
+    <string name="calendar_rsvp_maybe">Maybe</string>
+    <string name="calendar_rsvp_not_going">Can\'t go</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
 </resources>

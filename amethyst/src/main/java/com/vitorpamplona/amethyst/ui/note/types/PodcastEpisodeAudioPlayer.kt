@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.note.PodcastSoundbites
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground

@@ -1325,15 +1325,6 @@
     <string name="not_available_acronym">H/P</string>
     <string name="relay_error_messages">Hitilafu na Notisi kutoka kwa Relay Hii</string>
     <string name="relay_monitor_reports">Ripoti za Msimamizi wa Relay</string>
-    <string name="relay_monitor_rtt_open">Fungua</string>
-    <string name="relay_monitor_rtt_read">Soma</string>
-    <string name="relay_monitor_rtt_write">Andika</string>
-    <string name="relay_monitor_network">Mtandao</string>
-    <string name="relay_monitor_relay_type">Aina</string>
-    <string name="relay_monitor_supported_nips">NIPs Zinazosaidiwa</string>
-    <string name="relay_monitor_requirements">Mahitaji</string>
-    <string name="relay_discovery_accepted_kinds">Aina Zinazokubaliwa</string>
-    <string name="relay_discovery_geohash">Eneo</string>
     <string name="relay_active_subscriptions">Usajili Unaofanya Kazi</string>
     <string name="relay_req_subscriptions">Usajili wa REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Usajili wa COUNT (%1$d)</string>
@@ -1982,14 +1973,7 @@
     <string name="calendar_collection_title">Kichwa</string>
     <string name="calendar_collection_description">Maelezo</string>
     <string name="calendar_collection_invalid">Kichwa kinahitajika.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">tukio %1$d</item>
-        <item quantity="other">matukio %1$d</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Hakuna matukio katika kalenda hii bado.</string>
-    <string name="calendar_rsvp_going">Naenda</string>
-    <string name="calendar_rsvp_maybe">Labda</string>
-    <string name="calendar_rsvp_not_going">Siwezi kwenda</string>
     <string name="calendar_rsvp_none">Hakuna RSVPs bado.</string>
     <string name="calendar_participants_section">Washiriki (%1$d)</string>
     <string name="calendar_event_in_calendars">Katika kalenda (%1$d)</string>
@@ -2213,10 +2197,6 @@
     <string name="forked_from">Imetoka kwenye</string>
     <string name="git_web_address">Wavuti:</string>
     <string name="git_clone_address">Nakili:</string>
-    <string name="git_status_open">Wazi</string>
-    <string name="git_status_merged">Imeunganishwa</string>
-    <string name="git_status_closed">Imefungwa</string>
-    <string name="git_status_draft">Rasimu</string>
     <string name="git_repo_tab_overview">Muhtasari</string>
     <string name="git_repo_tab_issues">Masuala</string>
     <string name="git_repo_tab_patches">Viraka &amp; PRs</string>
@@ -2771,34 +2751,8 @@
     <string name="goal_progress">%1$s imefadhiliwa kati ya lengo la %2$s sats</string>
     <string name="fundraiser_ends">Inaisha %1$s</string>
     <string name="fundraiser_onchain_donation">Mchango wa on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · spishi %1$d</item>
-        <item quantity="other">Birdex · spishi %1$d</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d zaidi</item>
-        <item quantity="other">%1$s +%2$d zaidi</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polisi</string>
-    <string name="road_event_speed_camera">Kamera ya kasi</string>
-    <string name="road_event_traffic_jam">Msongamano wa magari</string>
-    <string name="road_event_accident">Ajali</string>
-    <string name="road_event_road_closure">Kufungwa kwa barabara</string>
-    <string name="road_event_construction">Ujenzi</string>
-    <string name="road_event_hazard">Hatari</string>
-    <string name="road_event_road_condition">Hali ya barabara</string>
-    <string name="road_event_pothole">Shimo barabarani</string>
-    <string name="road_event_fog">Ukungu</string>
-    <string name="road_event_ice">Barafu</string>
-    <string name="road_event_animal">Mnyama barabarani</string>
-    <string name="road_event_other">Tukio la barabara</string>
-    <string name="road_event_unknown">Tukio la barabara</string>
-    <string name="road_event_confirmed">Bado ipo</string>
-    <string name="road_event_denied">Haipo tena</string>
-    <string name="road_event_confirms_report">Inathibitisha ripoti ya barabara</string>
-    <string name="road_event_denies_report">Inaripoti tukio la barabara kuisha</string>
     <string name="goal_amount_label">Kiasi cha lengo (sats)</string>
     <string name="goal_description_label">Elezea lengo lako</string>
     <string name="goal_description_placeholder">Unakusanya fedha kwa nini?</string>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">打开</string>
+    <string name="git_status_merged">已合并</string>
+    <string name="git_status_closed">已关闭</string>
+    <string name="git_status_draft">草稿</string>
+    <plurals name="birdex_species_count">
+        <item quantity="other">Birdex · %1$d 个物种</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="other">%1$s + 另%2$d</item>
+    </plurals>
+    <string name="road_event_accident">事故</string>
+    <string name="road_event_animal">道路上的动物</string>
+    <string name="road_event_confirmed">仍在那里</string>
+    <string name="road_event_confirms_report">确认道路报告</string>
+    <string name="road_event_construction">建设</string>
+    <string name="road_event_denied">已不存在</string>
+    <string name="road_event_denies_report">报告道路事件已清理完毕</string>
+    <string name="road_event_fog">雾</string>
+    <string name="road_event_hazard">危险</string>
+    <string name="road_event_ice">冰</string>
+    <string name="road_event_other">道路事件</string>
+    <string name="road_event_police">警察</string>
+    <string name="road_event_pothole">坑洼</string>
+    <string name="road_event_road_closure">道路关闭</string>
+    <string name="road_event_road_condition">道路状况</string>
+    <string name="road_event_speed_camera">测速照相</string>
+    <string name="road_event_traffic_jam">塞车</string>
+    <string name="road_event_unknown">道路事件</string>
+    <string name="relay_monitor_rtt_open">打开</string>
+    <string name="relay_monitor_rtt_read">读取</string>
+    <string name="relay_monitor_rtt_write">写入</string>
+    <string name="relay_monitor_network">网络</string>
+    <string name="relay_monitor_relay_type">类型</string>
+    <string name="relay_monitor_requirements">要求</string>
+    <string name="relay_monitor_supported_nips">支持的 NIPs</string>
+    <string name="relay_monitor_ms">%1$d 毫秒</string>
+    <string name="relay_discovery_accepted_kinds">接受的类型</string>
+    <string name="relay_discovery_geohash">位置信息</string>
+    <string name="calendar_rsvp_going">参加</string>
+    <string name="calendar_rsvp_maybe">可能</string>
+    <string name="calendar_rsvp_not_going">去不了</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">%1$d 个活动</item>
+    </plurals>
+</resources>

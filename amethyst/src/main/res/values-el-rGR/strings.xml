@@ -1321,15 +1321,6 @@
     <string name="not_available_acronym">Δ/Υ</string>
     <string name="relay_error_messages">Σφάλματα και ειδοποιήσεις από αυτό το Relay</string>
     <string name="relay_monitor_reports">Αναφορές παρακολούθησης Relay</string>
-    <string name="relay_monitor_rtt_open">Άνοιγμα</string>
-    <string name="relay_monitor_rtt_read">Ανάγνωση</string>
-    <string name="relay_monitor_rtt_write">Εγγραφή</string>
-    <string name="relay_monitor_network">Δίκτυο</string>
-    <string name="relay_monitor_relay_type">Τύπος</string>
-    <string name="relay_monitor_supported_nips">Υποστηριζόμενα NIPs</string>
-    <string name="relay_monitor_requirements">Απαιτήσεις</string>
-    <string name="relay_discovery_accepted_kinds">Αποδεκτοί τύποι</string>
-    <string name="relay_discovery_geohash">Τοποθεσία</string>
     <string name="relay_active_subscriptions">Ενεργές συνδρομές</string>
     <string name="relay_req_subscriptions">REQ Συνδρομές (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Συνδρομές (%1$d)</string>
@@ -1978,14 +1969,7 @@
     <string name="calendar_collection_title">Τίτλος</string>
     <string name="calendar_collection_description">Περιγραφή</string>
     <string name="calendar_collection_invalid">Απαιτείται τίτλος.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d συμβάν</item>
-        <item quantity="other">%1$d συμβάντα</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Δεν υπάρχουν συμβάντα σε αυτό το ημερολόγιο ακόμα.</string>
-    <string name="calendar_rsvp_going">Πηγαίνω</string>
-    <string name="calendar_rsvp_maybe">Ίσως</string>
-    <string name="calendar_rsvp_not_going">Δεν μπορώ να πάω</string>
     <string name="calendar_rsvp_none">Δεν υπάρχουν RSVPs ακόμα.</string>
     <string name="calendar_participants_section">Συμμετέχοντες (%1$d)</string>
     <string name="calendar_event_in_calendars">Σε ημερολόγια (%1$d)</string>
@@ -2204,10 +2188,6 @@
     <string name="forked_from">Διακλαδώθηκε από</string>
     <string name="git_web_address">Ιστός:</string>
     <string name="git_clone_address">Κλωνοποίηση:</string>
-    <string name="git_status_open">Ανοιχτό</string>
-    <string name="git_status_merged">Συγχωνευμένο</string>
-    <string name="git_status_closed">Κλειστό</string>
-    <string name="git_status_draft">Πρόχειρο</string>
     <string name="git_repo_tab_overview">Επισκόπηση</string>
     <string name="git_repo_tab_issues">Ζητήματα</string>
     <string name="git_repo_tab_patches">Επιδιορθώσεις &amp; PRs</string>
@@ -2734,34 +2714,8 @@
     <string name="goal_progress">%1$s χρηματοδοτήθηκαν από στόχο %2$s sats</string>
     <string name="fundraiser_ends">Λήγει %1$s</string>
     <string name="fundraiser_onchain_donation">Δωρεά on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d είδος</item>
-        <item quantity="other">Birdex · %1$d είδη</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d ακόμη</item>
-        <item quantity="other">%1$s +%2$d ακόμη</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Αστυνομία</string>
-    <string name="road_event_speed_camera">Κάμερα ταχύτητας</string>
-    <string name="road_event_traffic_jam">Κυκλοφοριακή συμφόρηση</string>
-    <string name="road_event_accident">Ατύχημα</string>
-    <string name="road_event_road_closure">Αποκλεισμός δρόμου</string>
-    <string name="road_event_construction">Κατασκευές</string>
-    <string name="road_event_hazard">Κίνδυνος</string>
-    <string name="road_event_road_condition">Κατάσταση δρόμου</string>
-    <string name="road_event_pothole">Λακκούβα</string>
-    <string name="road_event_fog">Ομίχλη</string>
-    <string name="road_event_ice">Πάγος</string>
-    <string name="road_event_animal">Ζώο στο δρόμο</string>
-    <string name="road_event_other">Οδικό συμβάν</string>
-    <string name="road_event_unknown">Οδικό συμβάν</string>
-    <string name="road_event_confirmed">Υπάρχει ακόμη</string>
-    <string name="road_event_denied">Δεν υπάρχει πλέον</string>
-    <string name="road_event_confirms_report">Επιβεβαιώνει οδική αναφορά</string>
-    <string name="road_event_denies_report">Αναφέρει ότι το οδικό συμβάν έχει εκκαθαριστεί</string>
     <string name="goal_amount_label">Ποσό στόχου (sats)</string>
     <string name="goal_description_label">Περιγράψτε τον στόχο σας</string>
     <string name="goal_description_placeholder">Για τι μαζεύετε χρήματα;</string>

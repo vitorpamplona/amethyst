@@ -1891,23 +1891,14 @@
     
 <string name="relay_monitor_reports">Informes de supervisor de relés</string>
     
-<string name="relay_monitor_rtt_open">Abrir</string>
     
-<string name="relay_monitor_rtt_read">Leer</string>
     
-<string name="relay_monitor_rtt_write">Escribir</string>
     
-<string name="relay_monitor_network">Red</string>
     
-<string name="relay_monitor_relay_type">Tipo</string>
     
-<string name="relay_monitor_supported_nips">NIP compatibles</string>
     
-<string name="relay_monitor_requirements">Requisitos</string>
     
-<string name="relay_monitor_ms">%1$d ms</string>
     
-<string name="relay_discovery_accepted_kinds">Tipos aceptados</string>
     
 <string name="relay_active_subscriptions">Suscripciones activas</string>
     
@@ -2822,41 +2813,23 @@
     
 <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">No se pudo crear una factura de Lightning desde %1$s: no se encontró el elemento pr en el JSON resultante.</string>
     
-<string name="road_event_police">Policía</string>
     
-<string name="road_event_speed_camera">Radar de velocidad</string>
     
-<string name="road_event_traffic_jam">Atasco de tráfico</string>
     
-<string name="road_event_accident">Accidente</string>
     
-<string name="road_event_road_closure">Corte de carretera</string>
     
-<string name="road_event_construction">Obras</string>
     
-<string name="road_event_hazard">Peligro</string>
     
-<string name="road_event_road_condition">Estado de la vía</string>
     
-<string name="road_event_pothole">Bache</string>
     
-<string name="road_event_fog">Niebla</string>
     
-<string name="road_event_ice">Hielo</string>
     
-<string name="road_event_animal">Animal en la carretera</string>
     
-<string name="road_event_other">Incidencia vial</string>
     
-<string name="road_event_unknown">Incidencia vial</string>
     
-<string name="road_event_confirmed">Sigue ahí</string>
     
-<string name="road_event_denied">Ya no está</string>
     
-<string name="road_event_confirms_report">Confirma un aviso de tráfico</string>
     
-<string name="road_event_denies_report">Informa de que la incidencia vial ha desaparecido</string>
     
 <string name="goal_amount_label">Importe del objetivo (sats)</string>
     
@@ -3913,7 +3886,6 @@
     
 <string name="about_legal">Información y avisos legales</string>
     
-<string name="relay_discovery_geohash">Ubicación</string>
     
 <string name="relay_outbox_events">Eventos de salida (%1$d)</string>
     
@@ -4661,18 +4633,11 @@
     
 <string name="calendar_collection_invalid">Se requiere un título.</string>
     
-<plurals name="calendar_collection_count">
-    <item quantity="one">%1$d evento</item>
-    <item quantity="other">%1$d eventos</item>
-</plurals>
     
 <string name="calendar_collection_empty_members">Aún no hay eventos en este calendario.</string>
     
-<string name="calendar_rsvp_going">Asistiré</string>
     
-<string name="calendar_rsvp_maybe">Tal vez</string>
     
-<string name="calendar_rsvp_not_going">No puedo ir</string>
     
 <string name="calendar_rsvp_section">RSVPs (%1$d)</string>
     
@@ -4946,13 +4911,9 @@
     
 <string name="export_as_zip">Exportar como ZIP (JSON)</string>
     
-<string name="git_status_open">Abierto</string>
     
-<string name="git_status_merged">Fusionado</string>
     
-<string name="git_status_closed">Cerrado</string>
     
-<string name="git_status_draft">Borrador</string>
     
 <string name="git_repo_tab_overview">Resumen</string>
     
@@ -5909,14 +5870,6 @@
     
 <string name="fundraiser_onchain_donation">Donación on-chain</string>
     
-<plurals name="birdex_species_count">
-    <item quantity="one">Birdex · %1$d especie</item>
-    <item quantity="other">Birdex · %1$d especies</item>
-</plurals>
     
-<plurals name="birdex_species_preview_more">
-    <item quantity="one">%1$s +%2$d más</item>
-    <item quantity="other">%1$s +%2$d más</item>
-</plurals>
 
 </resources>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="git_status_open">Відкрито</string>
+    <string name="git_status_merged">Злито</string>
+    <string name="git_status_closed">Закрито</string>
+    <string name="git_status_draft">Чернетка</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d вид</item>
+        <item quantity="few">Birdex · %1$d види</item>
+        <item quantity="many">Birdex · %1$d видів</item>
+        <item quantity="other">Birdex · %1$d виду</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d більше</item>
+        <item quantity="few">%1$s +%2$d більше</item>
+        <item quantity="many">%1$s +%2$d більше</item>
+        <item quantity="other">%1$s +%2$d більше</item>
+    </plurals>
+    <string name="road_event_accident">Аварія</string>
+    <string name="road_event_animal">Тварина на дорозі</string>
+    <string name="road_event_confirmed">Досі там</string>
+    <string name="road_event_confirms_report">Підтверджує дорожнє повідомлення</string>
+    <string name="road_event_construction">Будівельні роботи</string>
+    <string name="road_event_denied">Вже немає</string>
+    <string name="road_event_denies_report">Повідомляє, що дорожня подія усунена</string>
+    <string name="road_event_fog">Туман</string>
+    <string name="road_event_hazard">Небезпека</string>
+    <string name="road_event_ice">Ожеледиця</string>
+    <string name="road_event_other">Дорожня подія</string>
+    <string name="road_event_police">Поліція</string>
+    <string name="road_event_pothole">Яма</string>
+    <string name="road_event_road_closure">Перекриття дороги</string>
+    <string name="road_event_road_condition">Стан дороги</string>
+    <string name="road_event_speed_camera">Камера швидкості</string>
+    <string name="road_event_traffic_jam">Затор</string>
+    <string name="road_event_unknown">Дорожня подія</string>
+    <string name="relay_monitor_rtt_open">Відкрити</string>
+    <string name="relay_monitor_rtt_read">Читати</string>
+    <string name="relay_monitor_rtt_write">Писати</string>
+    <string name="relay_monitor_network">Мережа</string>
+    <string name="relay_monitor_relay_type">Тип</string>
+    <string name="relay_monitor_requirements">Вимоги</string>
+    <string name="relay_monitor_supported_nips">Підтримувані NIP</string>
+    <string name="relay_monitor_ms">%1$d мс</string>
+    <string name="relay_discovery_accepted_kinds">Прийняті типи</string>
+    <string name="relay_discovery_geohash">Місцезнаходження</string>
+    <string name="calendar_rsvp_going">Піду</string>
+    <string name="calendar_rsvp_maybe">Можливо</string>
+    <string name="calendar_rsvp_not_going">Не зможу</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d подія</item>
+        <item quantity="few">%1$d події</item>
+        <item quantity="many">%1$d подій</item>
+        <item quantity="other">%1$d подій</item>
+    </plurals>
+</resources>

@@ -1302,25 +1302,15 @@
     
     <string name="relay_monitor_reports">รายงานผู้ตรวจสอบ relay</string>
     
-    <string name="relay_monitor_rtt_open">เปิด</string>
     
-    <string name="relay_monitor_rtt_read">อ่าน</string>
     
-    <string name="relay_monitor_rtt_write">เขียน</string>
     
-    <string name="relay_monitor_network">เครือข่าย</string>
     
-    <string name="relay_monitor_relay_type">ประเภท</string>
     
-    <string name="relay_monitor_supported_nips">NIP ที่รองรับ</string>
     
-    <string name="relay_monitor_requirements">ข้อกำหนด</string>
     
-    <string name="relay_monitor_ms">%1$d ms</string>
     
-    <string name="relay_discovery_accepted_kinds">ประเภทที่ยอมรับ</string>
     
-    <string name="relay_discovery_geohash">ตำแหน่งที่ตั้ง</string>
     
     <string name="relay_active_subscriptions">การสมัครสมาชิกที่ใช้งานอยู่</string>
     
@@ -2214,17 +2204,11 @@
     
     <string name="calendar_collection_invalid">ต้องระบุชื่อเรื่อง</string>
     
-    <plurals name="calendar_collection_count">
-    <item quantity="other">%1$d กิจกรรม</item>
-</plurals>
     
     <string name="calendar_collection_empty_members">ยังไม่มีกิจกรรมในปฏิทินนี้</string>
     
-    <string name="calendar_rsvp_going">ไป</string>
     
-    <string name="calendar_rsvp_maybe">อาจไป</string>
     
-    <string name="calendar_rsvp_not_going">ไม่ได้</string>
     
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     
@@ -2566,13 +2550,9 @@
     
     <string name="export_as_zip">ส่งออกเป็น ZIP (JSON)</string>
     
-    <string name="git_status_open">เปิด</string>
     
-    <string name="git_status_merged">ผสานแล้ว</string>
     
-    <string name="git_status_closed">ปิด</string>
     
-    <string name="git_status_draft">ร่าง</string>
     
     <string name="git_repo_tab_overview">ภาพรวม</string>
     
@@ -3570,49 +3550,25 @@
     
     <string name="fundraiser_onchain_donation">การบริจาคบน on-chain</string>
     
-    <plurals name="birdex_species_count">
-    <item quantity="other">Birdex · %1$d สายพันธุ์</item>
-</plurals>
     
-    <plurals name="birdex_species_preview_more">
-    <item quantity="other">%1$s +%2$d รายการเพิ่มเติม</item>
-</plurals>
     
-    <string name="road_event_police">ตำรวจ</string>
     
-    <string name="road_event_speed_camera">กล้องจับความเร็ว</string>
     
-    <string name="road_event_traffic_jam">การจราจรติดขัด</string>
     
-    <string name="road_event_accident">อุบัติเหตุ</string>
     
-    <string name="road_event_road_closure">ถนนปิด</string>
     
-    <string name="road_event_construction">การก่อสร้าง</string>
     
-    <string name="road_event_hazard">อันตราย</string>
     
-    <string name="road_event_road_condition">สภาพถนน</string>
     
-    <string name="road_event_pothole">หลุมบ่อ</string>
     
-    <string name="road_event_fog">หมอก</string>
     
-    <string name="road_event_ice">น้ำแข็งบนถนน</string>
     
-    <string name="road_event_animal">สัตว์บนถนน</string>
     
-    <string name="road_event_other">เหตุการณ์บนถนน</string>
     
-    <string name="road_event_unknown">เหตุการณ์บนถนน</string>
     
-    <string name="road_event_confirmed">ยังคงอยู่</string>
     
-    <string name="road_event_denied">ไม่มีแล้ว</string>
     
-    <string name="road_event_confirms_report">ยืนยันรายงานบนถนน</string>
     
-    <string name="road_event_denies_report">รายงานว่าเหตุการณ์บนถนนสิ้นสุดแล้ว</string>
     
     <string name="goal_amount_label">จำนวนเป้าหมาย (sats)</string>
     

@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.commons.ui.note.StatusKind
 import com.vitorpamplona.amethyst.model.GitPullRequestUpdateIndex
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.ui.note.clickableNoteModifier
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.types.GitStatusPill
-import com.vitorpamplona.amethyst.ui.note.types.StatusKind
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
