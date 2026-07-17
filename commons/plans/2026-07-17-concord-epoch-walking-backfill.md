@@ -247,11 +247,26 @@ Each covered epoch multiplies the subscription/AUTH footprint by
 
 ## Suggested sequence
 
-1. Factor `EpochPlaneSet` derivation + make `ConcordCommunitySession` emit
-   historical addresses/keys/decrypt (commons unit-tested in isolation — no
-   network). Ship behind a flag defaulting off.
-2. Planner + AUTH wiring; commons tests.
-3. amethyst `BackwardRelayPager` epoch-stepping + "All caught up" semantics.
-4. ~~`amy --epoch/--root` diagnostic~~ **DONE** (§7); still need a real prior
-   Soapbox root to validate old-epoch decrypt end-to-end.
-5. Flip the flag on; on-device verify on a refounded community.
+1. ~~Factor derivation + make `ConcordCommunitySession` emit historical
+   addresses/keys/decrypt~~ **DONE.** `ConcordActions.historicalChannelPlanes`
+   (bounded by `MAX_BACKFILL_EPOCHS = 8`; 0 disables) + `HistoricalChannelPlane`;
+   the session keeps a `historicalChannelKeysByAddress` map derived in `refold()`,
+   folded into `channelAddresses()` (subscribe), `streamKeys()` (AUTH), and
+   `ingest()` (decrypt with the matching epoch, `isBoundTo` per epoch). Test:
+   `ConcordCommunitySessionTest.ingestsPriorEpochWrapsFromAHeldRoot`.
+2. ~~Planner + AUTH wiring~~ **DONE.** `ConcordSubscriptionPlanner.channelPlaneSubs`
+   appends the historical planes → the existing `ConcordChannelFilterAssembler`
+   subscribes to them with no change; AUTH flows through `session.streamKeys()`.
+   Test: `ConcordSubscriptionPlannerTest.channelSubsAlsoCoverPriorEpochPlanesForHeldRoots`.
+   The live channel sub now pulls prior-epoch wraps into `LocalCache`, so
+   pre-Refounding messages appear on channel open (bounded by relay cap / `since`).
+3. **TODO** — amethyst `BackwardRelayPager` epoch-stepping + "All caught up"
+   semantics: "load older" still pages only the current-epoch plane; make it step
+   to prior epochs so deep scroll reaches the true start (step 2 already surfaces
+   each prior epoch's recent tail via the live sub).
+4. ~~`amy --epoch/--root` diagnostic~~ **DONE** (§7). Cross-validated: the app now
+   subscribes to the exact prior-epoch plane pubkeys `amy concord read --epoch 0`
+   proved hold the older Soapbox #nostrhub messages (identical `publicChannel`
+   derivation).
+5. **TODO** — on-device verify on a refounded community (emulator Concord fold is
+   historically flaky; verify when it cooperates).
