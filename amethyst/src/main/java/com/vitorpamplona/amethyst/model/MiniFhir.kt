@@ -21,51 +21,71 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonContentPolymorphicSerializer
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
-@JsonTypeInfo(
-    use = JsonTypeInfo.Id.NAME,
-    include = JsonTypeInfo.As.PROPERTY,
-    property = "resourceType",
-)
-@JsonSubTypes(
-    JsonSubTypes.Type(value = Practitioner::class, name = "Practitioner"),
-    JsonSubTypes.Type(value = Patient::class, name = "Patient"),
-    JsonSubTypes.Type(value = Bundle::class, name = "Bundle"),
-    JsonSubTypes.Type(value = VisionPrescription::class, name = "VisionPrescription"),
-)
+/**
+ * FHIR resources are polymorphic on the `resourceType` string. We only model the
+ * handful of types Amethyst renders; anything else (and any resource with a
+ * missing/unrecognized type) decodes into [UnknownResource] so a mixed [Bundle]
+ * never fails to parse just because it carries a type we don't know about.
+ */
+object ResourceSerializer : JsonContentPolymorphicSerializer<Resource>(Resource::class) {
+    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Resource> =
+        when (element.jsonObject["resourceType"]?.jsonPrimitive?.content) {
+            "Practitioner" -> Practitioner.serializer()
+            "Patient" -> Patient.serializer()
+            "Bundle" -> Bundle.serializer()
+            "VisionPrescription" -> VisionPrescription.serializer()
+            else -> UnknownResource.serializer()
+        }
+}
+
+@Serializable(with = ResourceSerializer::class)
 @Stable
-open class Resource(
-    var resourceType: String? = null,
-    var id: String = "",
-)
+abstract class Resource {
+    abstract val resourceType: String?
+    abstract val id: String
+}
 
+/** Fallback for any FHIR resourceType we don't model. */
+@Serializable
+@Stable
+class UnknownResource(
+    override val resourceType: String? = null,
+    override val id: String = "",
+) : Resource()
+
+@Serializable
 @Stable
 class Practitioner(
-    resourceType: String? = null,
-    id: String = "",
+    override val resourceType: String? = null,
+    override val id: String = "",
     var active: Boolean? = null,
     var name: ArrayList<HumanName> = arrayListOf(),
     var gender: String? = null,
-) : Resource(resourceType, id)
+) : Resource()
 
+@Serializable
 @Stable
 class Patient(
-    resourceType: String? = null,
-    id: String = "",
+    override val resourceType: String? = null,
+    override val id: String = "",
     var active: Boolean? = null,
     var name: ArrayList<HumanName> = arrayListOf(),
     var gender: String? = null,
-) : Resource(resourceType, id)
+) : Resource()
 
+@Serializable
 @Stable
 class HumanName(
     var use: String? = null,
@@ -75,19 +95,21 @@ class HumanName(
     fun assembleName(): String = given.joinToString(" ") + " " + family
 }
 
+@Serializable
 @Stable
 class Bundle(
-    resourceType: String? = null,
-    id: String = "",
+    override val resourceType: String? = null,
+    override val id: String = "",
     var type: String? = null,
     var created: String? = null,
     var entry: List<Resource> = arrayListOf(),
-) : Resource(resourceType, id)
+) : Resource()
 
+@Serializable
 @Stable
 class VisionPrescription(
-    resourceType: String? = null,
-    id: String = "",
+    override val resourceType: String? = null,
+    override val id: String = "",
     var status: String? = null,
     var created: String? = null,
     var patient: Reference? = Reference(),
@@ -95,7 +117,7 @@ class VisionPrescription(
     var dateWritten: String? = null,
     var prescriber: Reference? = Reference(),
     var lensSpecification: List<LensSpecification> = arrayListOf(),
-) : Resource(resourceType, id) {
+) : Resource() {
     fun glasses() = lensSpecification.filter { it.product == "lens" }
 
     fun contacts() = lensSpecification.filter { it.product == "contacts" }
@@ -109,6 +131,7 @@ class VisionPrescription(
     fun contactsLeftEyes() = lensSpecification.filter { it.product == "contacts" && it.eye == "left" }
 }
 
+@Serializable
 @Stable
 class LensSpecification(
     var product: String? = null,
@@ -129,12 +152,14 @@ class LensSpecification(
     var note: String? = null,
 )
 
+@Serializable
 @Stable
 class Prism(
     var amount: Double? = null,
     var base: String? = null,
 )
 
+@Serializable
 class Reference(
     var reference: String? = null,
 )
@@ -156,12 +181,22 @@ fun findReferenceInDb(
     }
 }
 
-fun parseResourceBundleOrNull(json: String): FhirElementDatabase? {
-    val mapper =
-        jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+/**
+ * Lenient FHIR JSON reader: unknown keys are ignored (implementations routinely add
+ * their own fields) and missing keys fall back to the property defaults, so we parse
+ * as much of a resource as we can rather than rejecting the whole document.
+ */
+val FhirJson =
+    Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        explicitNulls = false
+        coerceInputValues = true
+    }
 
-    return try {
-        val resource = mapper.readValue<Resource>(json)
+fun parseResourceBundleOrNull(json: String): FhirElementDatabase? =
+    try {
+        val resource = FhirJson.decodeFromString(ResourceSerializer, json)
 
         val db =
             when (resource) {
@@ -182,4 +217,3 @@ fun parseResourceBundleOrNull(json: String): FhirElementDatabase? {
         Log.e("RenderEyeGlassesPrescription", "Parser error", e)
         null
     }
-}
