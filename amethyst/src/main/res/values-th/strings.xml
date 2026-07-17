@@ -3568,41 +3568,23 @@
     
     
     
-    <string name="road_event_police">ตำรวจ</string>
     
-    <string name="road_event_speed_camera">กล้องจับความเร็ว</string>
     
-    <string name="road_event_traffic_jam">การจราจรติดขัด</string>
     
-    <string name="road_event_accident">อุบัติเหตุ</string>
     
-    <string name="road_event_road_closure">ถนนปิด</string>
     
-    <string name="road_event_construction">การก่อสร้าง</string>
     
-    <string name="road_event_hazard">อันตราย</string>
     
-    <string name="road_event_road_condition">สภาพถนน</string>
     
-    <string name="road_event_pothole">หลุมบ่อ</string>
     
-    <string name="road_event_fog">หมอก</string>
     
-    <string name="road_event_ice">น้ำแข็งบนถนน</string>
     
-    <string name="road_event_animal">สัตว์บนถนน</string>
     
-    <string name="road_event_other">เหตุการณ์บนถนน</string>
     
-    <string name="road_event_unknown">เหตุการณ์บนถนน</string>
     
-    <string name="road_event_confirmed">ยังคงอยู่</string>
     
-    <string name="road_event_denied">ไม่มีแล้ว</string>
     
-    <string name="road_event_confirms_report">ยืนยันรายงานบนถนน</string>
     
-    <string name="road_event_denies_report">รายงานว่าเหตุการณ์บนถนนสิ้นสุดแล้ว</string>
     
     <string name="goal_amount_label">จำนวนเป้าหมาย (sats)</string>
     

@@ -3795,24 +3795,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="fundraiser_onchain_donation">Darowizna on-chain</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policja</string>
-    <string name="road_event_speed_camera">Fotoradar</string>
-    <string name="road_event_traffic_jam">Korek</string>
-    <string name="road_event_accident">Wypadek</string>
-    <string name="road_event_road_closure">Droga zamknięta</string>
-    <string name="road_event_construction">Roboty drogowe</string>
-    <string name="road_event_hazard">Zagrożenie</string>
-    <string name="road_event_road_condition">Uszkodzenie nawierzchni</string>
-    <string name="road_event_pothole">Wyboje</string>
-    <string name="road_event_fog">Mgła</string>
-    <string name="road_event_ice">Oblodzenie</string>
-    <string name="road_event_animal">Zwierzęta na drodze</string>
-    <string name="road_event_other">Wydarzenie drogowe</string>
-    <string name="road_event_unknown">Wydarzenie drogowe</string>
-    <string name="road_event_confirmed">Wciąż tam</string>
-    <string name="road_event_denied">Już tam nie ma</string>
-    <string name="road_event_confirms_report">Potwierdzenie zgłoszenia drogowego</string>
-    <string name="road_event_denies_report">Zgłasza, że wypadek został usunięty</string>
     <string name="goal_amount_label">Kwota zbiorki (w satoszach)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opisz cel zbiórki</string>

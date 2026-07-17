@@ -16,4 +16,22 @@
         <item quantity="many">%1$s +%2$d більше</item>
         <item quantity="other">%1$s +%2$d більше</item>
     </plurals>
+    <string name="road_event_accident">Аварія</string>
+    <string name="road_event_animal">Тварина на дорозі</string>
+    <string name="road_event_confirmed">Досі там</string>
+    <string name="road_event_confirms_report">Підтверджує дорожнє повідомлення</string>
+    <string name="road_event_construction">Будівельні роботи</string>
+    <string name="road_event_denied">Вже немає</string>
+    <string name="road_event_denies_report">Повідомляє, що дорожня подія усунена</string>
+    <string name="road_event_fog">Туман</string>
+    <string name="road_event_hazard">Небезпека</string>
+    <string name="road_event_ice">Ожеледиця</string>
+    <string name="road_event_other">Дорожня подія</string>
+    <string name="road_event_police">Поліція</string>
+    <string name="road_event_pothole">Яма</string>
+    <string name="road_event_road_closure">Перекриття дороги</string>
+    <string name="road_event_road_condition">Стан дороги</string>
+    <string name="road_event_speed_camera">Камера швидкості</string>
+    <string name="road_event_traffic_jam">Затор</string>
+    <string name="road_event_unknown">Дорожня подія</string>
 </resources>

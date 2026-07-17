@@ -12,4 +12,22 @@
         <item quantity="one">%1$s +%2$d ta ko\'proq</item>
         <item quantity="other">%1$s +%2$d ta ko\'proq</item>
     </plurals>
+    <string name="road_event_accident">Avariya</string>
+    <string name="road_event_animal">Yo\'lda hayvon bor</string>
+    <string name="road_event_confirmed">Hali ham u yerda</string>
+    <string name="road_event_confirms_report">Yo\'l hisobotini tasdiqlaydi</string>
+    <string name="road_event_construction">Qurilish</string>
+    <string name="road_event_denied">Endi u yerda yo\'q</string>
+    <string name="road_event_denies_report">Yo\'l hodisasi bartaraf etilganligini bildiradi</string>
+    <string name="road_event_fog">Tuman</string>
+    <string name="road_event_hazard">Xavf</string>
+    <string name="road_event_ice">Muz</string>
+    <string name="road_event_other">Yo\'l hodisasi</string>
+    <string name="road_event_police">Politsiya</string>
+    <string name="road_event_pothole">Chuqur</string>
+    <string name="road_event_road_closure">Yo\'l yopiq</string>
+    <string name="road_event_road_condition">Yo\'l holati</string>
+    <string name="road_event_speed_camera">Tezlik kamerasi</string>
+    <string name="road_event_traffic_jam">Tirbandlik</string>
+    <string name="road_event_unknown">Yo\'l hodisasi</string>
 </resources>

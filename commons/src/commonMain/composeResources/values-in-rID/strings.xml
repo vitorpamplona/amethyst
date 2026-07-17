@@ -9,4 +9,22 @@
     <plurals name="birdex_species_preview_more">
         <item quantity="other">%1$s +%2$d lainnya</item>
     </plurals>
+    <string name="road_event_accident">Kecelakaan</string>
+    <string name="road_event_animal">Hewan di jalan</string>
+    <string name="road_event_confirmed">Masih ada</string>
+    <string name="road_event_confirms_report">Mengonfirmasi laporan jalan</string>
+    <string name="road_event_construction">Konstruksi</string>
+    <string name="road_event_denied">Sudah tidak ada</string>
+    <string name="road_event_denies_report">Melaporkan kejadian jalan telah selesai</string>
+    <string name="road_event_fog">Kabut</string>
+    <string name="road_event_hazard">Bahaya</string>
+    <string name="road_event_ice">Es</string>
+    <string name="road_event_other">Kejadian jalan</string>
+    <string name="road_event_police">Polisi</string>
+    <string name="road_event_pothole">Lubang jalan</string>
+    <string name="road_event_road_closure">Penutupan jalan</string>
+    <string name="road_event_road_condition">Kondisi jalan</string>
+    <string name="road_event_speed_camera">Kamera kecepatan</string>
+    <string name="road_event_traffic_jam">Kemacetan</string>
+    <string name="road_event_unknown">Kejadian jalan</string>
 </resources>

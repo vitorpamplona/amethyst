@@ -16,4 +16,22 @@
         <item quantity="many">%1$s +%2$d ещё</item>
         <item quantity="other">%1$s +%2$d ещё</item>
     </plurals>
+    <string name="road_event_accident">Авария</string>
+    <string name="road_event_animal">Животное на дороге</string>
+    <string name="road_event_confirmed">Всё ещё там</string>
+    <string name="road_event_confirms_report">Подтверждает дорожное сообщение</string>
+    <string name="road_event_construction">Дорожные работы</string>
+    <string name="road_event_denied">Уже нет</string>
+    <string name="road_event_denies_report">Сообщает об устранении дорожного события</string>
+    <string name="road_event_fog">Туман</string>
+    <string name="road_event_hazard">Опасность</string>
+    <string name="road_event_ice">Гололёд</string>
+    <string name="road_event_other">Дорожное событие</string>
+    <string name="road_event_police">Полиция</string>
+    <string name="road_event_pothole">Выбоина</string>
+    <string name="road_event_road_closure">Перекрытие дороги</string>
+    <string name="road_event_road_condition">Состояние дороги</string>
+    <string name="road_event_speed_camera">Камера контроля скорости</string>
+    <string name="road_event_traffic_jam">Пробка</string>
+    <string name="road_event_unknown">Дорожное событие</string>
 </resources>

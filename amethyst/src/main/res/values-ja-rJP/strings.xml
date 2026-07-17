@@ -2744,24 +2744,6 @@
     <string name="fundraiser_onchain_donation">オンチェーン寄付</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">警察</string>
-    <string name="road_event_speed_camera">速度カメラ</string>
-    <string name="road_event_traffic_jam">渋滞</string>
-    <string name="road_event_accident">事故</string>
-    <string name="road_event_road_closure">通行止め</string>
-    <string name="road_event_construction">工事</string>
-    <string name="road_event_hazard">危険</string>
-    <string name="road_event_road_condition">路面状況</string>
-    <string name="road_event_pothole">ポットホール</string>
-    <string name="road_event_fog">霧</string>
-    <string name="road_event_ice">凍結</string>
-    <string name="road_event_animal">動物が道路上に</string>
-    <string name="road_event_other">道路上のイベント</string>
-    <string name="road_event_unknown">道路上のイベント</string>
-    <string name="road_event_confirmed">まだあります</string>
-    <string name="road_event_denied">もうありません</string>
-    <string name="road_event_confirms_report">道路レポートを確認</string>
-    <string name="road_event_denies_report">道路イベントの解消を報告</string>
     <string name="goal_amount_label">ゴール金額（sats）</string>
     <string name="goal_description_label">ゴールを説明してください</string>
     <string name="goal_description_placeholder">何のための資金調達ですか？</string>

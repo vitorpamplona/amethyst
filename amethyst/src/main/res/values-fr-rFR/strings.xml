@@ -3070,24 +3070,6 @@
     <string name="fundraiser_onchain_donation">Don on-chain</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Police</string>
-    <string name="road_event_speed_camera">Radar</string>
-    <string name="road_event_traffic_jam">Embouteillage</string>
-    <string name="road_event_accident">Accident</string>
-    <string name="road_event_road_closure">Route fermée</string>
-    <string name="road_event_construction">Travaux</string>
-    <string name="road_event_hazard">Danger</string>
-    <string name="road_event_road_condition">État de la route</string>
-    <string name="road_event_pothole">Nid-de-poule</string>
-    <string name="road_event_fog">Brouillard</string>
-    <string name="road_event_ice">Verglas</string>
-    <string name="road_event_animal">Animal sur la route</string>
-    <string name="road_event_other">Événement routier</string>
-    <string name="road_event_unknown">Événement routier</string>
-    <string name="road_event_confirmed">Toujours présent</string>
-    <string name="road_event_denied">Plus là</string>
-    <string name="road_event_confirms_report">Confirme un signalement routier</string>
-    <string name="road_event_denies_report">Signale un événement routier résolu</string>
     <string name="goal_amount_label">Montant de l\'objectif (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Décrivez votre objectif</string>

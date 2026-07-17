@@ -12,4 +12,22 @@
         <item quantity="one">%1$s +%2$d altro</item>
         <item quantity="other">%1$s +%2$d altri</item>
     </plurals>
+    <string name="road_event_accident">Incidente</string>
+    <string name="road_event_animal">Animale sulla strada</string>
+    <string name="road_event_confirmed">Ancora presente</string>
+    <string name="road_event_confirms_report">Conferma una segnalazione stradale</string>
+    <string name="road_event_construction">Lavori in corso</string>
+    <string name="road_event_denied">Non più presente</string>
+    <string name="road_event_denies_report">Segnala un evento stradale risolto</string>
+    <string name="road_event_fog">Nebbia</string>
+    <string name="road_event_hazard">Pericolo</string>
+    <string name="road_event_ice">Ghiaccio</string>
+    <string name="road_event_other">Evento stradale</string>
+    <string name="road_event_police">Polizia</string>
+    <string name="road_event_pothole">Buca</string>
+    <string name="road_event_road_closure">Strada chiusa</string>
+    <string name="road_event_road_condition">Condizioni stradali</string>
+    <string name="road_event_speed_camera">Autovelox</string>
+    <string name="road_event_traffic_jam">Ingorgo</string>
+    <string name="road_event_unknown">Evento stradale</string>
 </resources>

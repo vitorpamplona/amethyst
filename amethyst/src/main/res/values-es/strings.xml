@@ -2822,41 +2822,23 @@
     
 <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">No se pudo crear una factura de Lightning desde %1$s: no se encontró el elemento pr en el JSON resultante.</string>
     
-<string name="road_event_police">Policía</string>
     
-<string name="road_event_speed_camera">Radar de velocidad</string>
     
-<string name="road_event_traffic_jam">Atasco de tráfico</string>
     
-<string name="road_event_accident">Accidente</string>
     
-<string name="road_event_road_closure">Corte de carretera</string>
     
-<string name="road_event_construction">Obras</string>
     
-<string name="road_event_hazard">Peligro</string>
     
-<string name="road_event_road_condition">Estado de la vía</string>
     
-<string name="road_event_pothole">Bache</string>
     
-<string name="road_event_fog">Niebla</string>
     
-<string name="road_event_ice">Hielo</string>
     
-<string name="road_event_animal">Animal en la carretera</string>
     
-<string name="road_event_other">Incidencia vial</string>
     
-<string name="road_event_unknown">Incidencia vial</string>
     
-<string name="road_event_confirmed">Sigue ahí</string>
     
-<string name="road_event_denied">Ya no está</string>
     
-<string name="road_event_confirms_report">Confirma un aviso de tráfico</string>
     
-<string name="road_event_denies_report">Informa de que la incidencia vial ha desaparecido</string>
     
 <string name="goal_amount_label">Importe del objetivo (sats)</string>
     

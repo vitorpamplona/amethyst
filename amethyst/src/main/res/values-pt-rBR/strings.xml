@@ -3690,24 +3690,6 @@
     <string name="fundraiser_onchain_donation">Doação on-chain</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polícia</string>
-    <string name="road_event_speed_camera">Radar de velocidade</string>
-    <string name="road_event_traffic_jam">Congestionamento</string>
-    <string name="road_event_accident">Acidente</string>
-    <string name="road_event_road_closure">Via fechada</string>
-    <string name="road_event_construction">Obras</string>
-    <string name="road_event_hazard">Perigo</string>
-    <string name="road_event_road_condition">Condição da via</string>
-    <string name="road_event_pothole">Buraco na pista</string>
-    <string name="road_event_fog">Neblina</string>
-    <string name="road_event_ice">Gelo</string>
-    <string name="road_event_animal">Animal na pista</string>
-    <string name="road_event_other">Evento na via</string>
-    <string name="road_event_unknown">Evento na via</string>
-    <string name="road_event_confirmed">Ainda está lá</string>
-    <string name="road_event_denied">Não está mais lá</string>
-    <string name="road_event_confirms_report">Confirma um relato de trânsito</string>
-    <string name="road_event_denies_report">Informa que o evento de trânsito foi resolvido</string>
     <string name="goal_amount_label">Valor da meta (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Descreva sua meta</string>

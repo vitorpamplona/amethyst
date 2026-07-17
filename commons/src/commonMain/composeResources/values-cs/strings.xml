@@ -28,4 +28,22 @@
     <string name="ps1_save_block">blok %1$d</string>
     <string name="ps1_save_empty_slot">Prázdný slot</string>
     <string name="podcast_play_soundbite">Přehrát ukázku</string>
+    <string name="road_event_accident">Nehoda</string>
+    <string name="road_event_animal">Zvíře na silnici</string>
+    <string name="road_event_confirmed">Stále tam</string>
+    <string name="road_event_confirms_report">Potvrzuje hlášení o silnici</string>
+    <string name="road_event_construction">Stavba</string>
+    <string name="road_event_denied">Již tam není</string>
+    <string name="road_event_denies_report">Hlásí vyřešení silniční události</string>
+    <string name="road_event_fog">Mlha</string>
+    <string name="road_event_hazard">Nebezpečí</string>
+    <string name="road_event_ice">Náledí</string>
+    <string name="road_event_other">Silniční událost</string>
+    <string name="road_event_police">Policie</string>
+    <string name="road_event_pothole">Výmol</string>
+    <string name="road_event_road_closure">Uzavírka silnice</string>
+    <string name="road_event_road_condition">Stav vozovky</string>
+    <string name="road_event_speed_camera">Rychlostní radar</string>
+    <string name="road_event_traffic_jam">Dopravní zácpa</string>
+    <string name="road_event_unknown">Silniční událost</string>
 </resources>

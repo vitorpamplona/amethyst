@@ -2773,24 +2773,6 @@
     <string name="fundraiser_onchain_donation">Zanjirdagi xayriya</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Politsiya</string>
-    <string name="road_event_speed_camera">Tezlik kamerasi</string>
-    <string name="road_event_traffic_jam">Tirbandlik</string>
-    <string name="road_event_accident">Avariya</string>
-    <string name="road_event_road_closure">Yo\'l yopiq</string>
-    <string name="road_event_construction">Qurilish</string>
-    <string name="road_event_hazard">Xavf</string>
-    <string name="road_event_road_condition">Yo\'l holati</string>
-    <string name="road_event_pothole">Chuqur</string>
-    <string name="road_event_fog">Tuman</string>
-    <string name="road_event_ice">Muz</string>
-    <string name="road_event_animal">Yo\'lda hayvon bor</string>
-    <string name="road_event_other">Yo\'l hodisasi</string>
-    <string name="road_event_unknown">Yo\'l hodisasi</string>
-    <string name="road_event_confirmed">Hali ham u yerda</string>
-    <string name="road_event_denied">Endi u yerda yo\'q</string>
-    <string name="road_event_confirms_report">Yo\'l hisobotini tasdiqlaydi</string>
-    <string name="road_event_denies_report">Yo\'l hodisasi bartaraf etilganligini bildiradi</string>
     <string name="goal_amount_label">Maqsad miqdori (sats)</string>
     <string name="goal_description_label">Maqsadingizni tasvirlab bering</string>
     <string name="goal_description_placeholder">Nima uchun mablag\' yig\'yapsiz?</string>

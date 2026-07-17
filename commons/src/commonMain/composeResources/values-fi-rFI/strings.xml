@@ -12,4 +12,22 @@
         <item quantity="one">%1$s +%2$d lisää</item>
         <item quantity="other">%1$s +%2$d lisää</item>
     </plurals>
+    <string name="road_event_accident">Onnettomuus</string>
+    <string name="road_event_animal">Eläin tiellä</string>
+    <string name="road_event_confirmed">Edelleen siellä</string>
+    <string name="road_event_confirms_report">Vahvistaa tieilmoituksen</string>
+    <string name="road_event_construction">Tietyö</string>
+    <string name="road_event_denied">Ei enää siellä</string>
+    <string name="road_event_denies_report">Ilmoittaa tietapahtuman selvitetyksi</string>
+    <string name="road_event_fog">Sumu</string>
+    <string name="road_event_hazard">Vaara</string>
+    <string name="road_event_ice">Jää</string>
+    <string name="road_event_other">Tietapahtuma</string>
+    <string name="road_event_police">Poliisi</string>
+    <string name="road_event_pothole">Kuoppa</string>
+    <string name="road_event_road_closure">Tiesulku</string>
+    <string name="road_event_road_condition">Tien kunto</string>
+    <string name="road_event_speed_camera">Nopeusvalvontakamera</string>
+    <string name="road_event_traffic_jam">Ruuhka</string>
+    <string name="road_event_unknown">Tietapahtuma</string>
 </resources>

@@ -22,4 +22,22 @@
     <string name="ps1_save_block">bloco %1$d</string>
     <string name="ps1_save_empty_slot">Espaço vazio</string>
     <string name="podcast_play_soundbite">Reproduzir destaque</string>
+    <string name="road_event_accident">Acidente</string>
+    <string name="road_event_animal">Animal na pista</string>
+    <string name="road_event_confirmed">Ainda está lá</string>
+    <string name="road_event_confirms_report">Confirma um relato de trânsito</string>
+    <string name="road_event_construction">Obras</string>
+    <string name="road_event_denied">Não está mais lá</string>
+    <string name="road_event_denies_report">Informa que o evento de trânsito foi resolvido</string>
+    <string name="road_event_fog">Neblina</string>
+    <string name="road_event_hazard">Perigo</string>
+    <string name="road_event_ice">Gelo</string>
+    <string name="road_event_other">Evento na via</string>
+    <string name="road_event_police">Polícia</string>
+    <string name="road_event_pothole">Buraco na pista</string>
+    <string name="road_event_road_closure">Via fechada</string>
+    <string name="road_event_road_condition">Condição da via</string>
+    <string name="road_event_speed_camera">Radar de velocidade</string>
+    <string name="road_event_traffic_jam">Congestionamento</string>
+    <string name="road_event_unknown">Evento na via</string>
 </resources>

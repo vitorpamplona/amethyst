@@ -10,4 +10,22 @@
     <plurals name="birdex_species_preview_more">
         <item quantity="other">%1$s 외 %2$d개 더</item>
     </plurals>
+    <string name="road_event_accident">사고</string>
+    <string name="road_event_animal">도로 위 동물</string>
+    <string name="road_event_confirmed">아직 있음</string>
+    <string name="road_event_confirms_report">도로 신고를 확인함</string>
+    <string name="road_event_construction">공사 중</string>
+    <string name="road_event_denied">더 이상 없음</string>
+    <string name="road_event_denies_report">도로 이벤트 해소를 보고함</string>
+    <string name="road_event_fog">안개</string>
+    <string name="road_event_hazard">위험</string>
+    <string name="road_event_ice">결빙</string>
+    <string name="road_event_other">도로 이벤트</string>
+    <string name="road_event_police">경찰</string>
+    <string name="road_event_pothole">포트홀</string>
+    <string name="road_event_road_closure">도로 폐쇄</string>
+    <string name="road_event_road_condition">도로 상태</string>
+    <string name="road_event_speed_camera">과속 카메라</string>
+    <string name="road_event_traffic_jam">교통 정체</string>
+    <string name="road_event_unknown">도로 이벤트</string>
 </resources>

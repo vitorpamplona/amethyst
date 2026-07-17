@@ -3578,24 +3578,6 @@
     <string name="fundraiser_onchain_donation">Láncon belüli adomány</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Rendőrség</string>
-    <string name="road_event_speed_camera">Sebességmérő kamera</string>
-    <string name="road_event_traffic_jam">Forgalmi dugó</string>
-    <string name="road_event_accident">Baleset</string>
-    <string name="road_event_road_closure">Útlezárás</string>
-    <string name="road_event_construction">Útépítés</string>
-    <string name="road_event_hazard">Veszély</string>
-    <string name="road_event_road_condition">Útviszonyok</string>
-    <string name="road_event_pothole">Kátyú</string>
-    <string name="road_event_fog">Köd</string>
-    <string name="road_event_ice">Jég</string>
-    <string name="road_event_animal">Állat az úton</string>
-    <string name="road_event_other">Útesemény</string>
-    <string name="road_event_unknown">Útesemény</string>
-    <string name="road_event_confirmed">Még mindig ott van</string>
-    <string name="road_event_denied">Már nincs ott</string>
-    <string name="road_event_confirms_report">Útjelentés megerősítése</string>
-    <string name="road_event_denies_report">Útlezárás feloldásának jelentése</string>
     <string name="goal_amount_label">Célösszeg (satoshiban)</string>
     <string name="goal_amount_placeholder">100 000</string>
     <string name="goal_description_label">Cél leírása, bemutatása</string>

@@ -10,4 +10,22 @@
     <plurals name="birdex_species_preview_more">
         <item quantity="other">%1$s + 另%2$d</item>
     </plurals>
+    <string name="road_event_accident">事故</string>
+    <string name="road_event_animal">道路上的动物</string>
+    <string name="road_event_confirmed">仍在那里</string>
+    <string name="road_event_confirms_report">确认道路报告</string>
+    <string name="road_event_construction">建设</string>
+    <string name="road_event_denied">已不存在</string>
+    <string name="road_event_denies_report">报告道路事件已清理完毕</string>
+    <string name="road_event_fog">雾</string>
+    <string name="road_event_hazard">危险</string>
+    <string name="road_event_ice">冰</string>
+    <string name="road_event_other">道路事件</string>
+    <string name="road_event_police">警察</string>
+    <string name="road_event_pothole">坑洼</string>
+    <string name="road_event_road_closure">道路关闭</string>
+    <string name="road_event_road_condition">道路状况</string>
+    <string name="road_event_speed_camera">测速照相</string>
+    <string name="road_event_traffic_jam">塞车</string>
+    <string name="road_event_unknown">道路事件</string>
 </resources>

@@ -3800,24 +3800,6 @@
     <string name="fundraiser_onchain_donation">On-chain dar</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policie</string>
-    <string name="road_event_speed_camera">Rychlostní radar</string>
-    <string name="road_event_traffic_jam">Dopravní zácpa</string>
-    <string name="road_event_accident">Nehoda</string>
-    <string name="road_event_road_closure">Uzavírka silnice</string>
-    <string name="road_event_construction">Stavba</string>
-    <string name="road_event_hazard">Nebezpečí</string>
-    <string name="road_event_road_condition">Stav vozovky</string>
-    <string name="road_event_pothole">Výmol</string>
-    <string name="road_event_fog">Mlha</string>
-    <string name="road_event_ice">Náledí</string>
-    <string name="road_event_animal">Zvíře na silnici</string>
-    <string name="road_event_other">Silniční událost</string>
-    <string name="road_event_unknown">Silniční událost</string>
-    <string name="road_event_confirmed">Stále tam</string>
-    <string name="road_event_denied">Již tam není</string>
-    <string name="road_event_confirms_report">Potvrzuje hlášení o silnici</string>
-    <string name="road_event_denies_report">Hlásí vyřešení silniční události</string>
     <string name="goal_amount_label">Cílová částka (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Popište svůj cíl</string>

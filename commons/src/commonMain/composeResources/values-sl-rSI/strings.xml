@@ -28,4 +28,22 @@
     <string name="ps1_save_block">%1$d blok</string>
     <string name="ps1_save_empty_slot">Prazen prostor</string>
     <string name="podcast_play_soundbite">Predvajaj vrhunec</string>
+    <string name="road_event_accident">Nesreča</string>
+    <string name="road_event_animal">Žival na cestišču</string>
+    <string name="road_event_confirmed">Še vedno tam</string>
+    <string name="road_event_confirms_report">Potrdi prometno poročilo</string>
+    <string name="road_event_construction">Delo na cesti</string>
+    <string name="road_event_denied">Ni več tam</string>
+    <string name="road_event_denies_report">Označi kot odstranjeno</string>
+    <string name="road_event_fog">Megla</string>
+    <string name="road_event_hazard">Nevernost</string>
+    <string name="road_event_ice">Led</string>
+    <string name="road_event_other">Dogodek na cesti</string>
+    <string name="road_event_police">Policija</string>
+    <string name="road_event_pothole">Udarna jama</string>
+    <string name="road_event_road_closure">Cesta zaprta</string>
+    <string name="road_event_road_condition">Stanje cest</string>
+    <string name="road_event_speed_camera">Hitrostna kamera</string>
+    <string name="road_event_traffic_jam">Zastoj</string>
+    <string name="road_event_unknown">Dogodek na cesti</string>
 </resources>

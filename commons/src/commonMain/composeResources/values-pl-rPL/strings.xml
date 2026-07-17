@@ -27,4 +27,22 @@
     <string name="ps1_save_block">blok %1$d</string>
     <string name="ps1_save_empty_slot">Pusty slot</string>
     <string name="podcast_play_soundbite">Odtwórz najciekawsze momenty</string>
+    <string name="road_event_accident">Wypadek</string>
+    <string name="road_event_animal">Zwierzęta na drodze</string>
+    <string name="road_event_confirmed">Wciąż tam</string>
+    <string name="road_event_confirms_report">Potwierdzenie zgłoszenia drogowego</string>
+    <string name="road_event_construction">Roboty drogowe</string>
+    <string name="road_event_denied">Już tam nie ma</string>
+    <string name="road_event_denies_report">Zgłasza, że wypadek został usunięty</string>
+    <string name="road_event_fog">Mgła</string>
+    <string name="road_event_hazard">Zagrożenie</string>
+    <string name="road_event_ice">Oblodzenie</string>
+    <string name="road_event_other">Wydarzenie drogowe</string>
+    <string name="road_event_police">Policja</string>
+    <string name="road_event_pothole">Wyboje</string>
+    <string name="road_event_road_closure">Droga zamknięta</string>
+    <string name="road_event_road_condition">Uszkodzenie nawierzchni</string>
+    <string name="road_event_speed_camera">Fotoradar</string>
+    <string name="road_event_traffic_jam">Korek</string>
+    <string name="road_event_unknown">Wydarzenie drogowe</string>
 </resources>

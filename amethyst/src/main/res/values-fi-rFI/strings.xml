@@ -2761,24 +2761,6 @@
     <string name="fundraiser_onchain_donation">On-chain-lahjoitus</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Poliisi</string>
-    <string name="road_event_speed_camera">Nopeusvalvontakamera</string>
-    <string name="road_event_traffic_jam">Ruuhka</string>
-    <string name="road_event_accident">Onnettomuus</string>
-    <string name="road_event_road_closure">Tiesulku</string>
-    <string name="road_event_construction">Tietyö</string>
-    <string name="road_event_hazard">Vaara</string>
-    <string name="road_event_road_condition">Tien kunto</string>
-    <string name="road_event_pothole">Kuoppa</string>
-    <string name="road_event_fog">Sumu</string>
-    <string name="road_event_ice">Jää</string>
-    <string name="road_event_animal">Eläin tiellä</string>
-    <string name="road_event_other">Tietapahtuma</string>
-    <string name="road_event_unknown">Tietapahtuma</string>
-    <string name="road_event_confirmed">Edelleen siellä</string>
-    <string name="road_event_denied">Ei enää siellä</string>
-    <string name="road_event_confirms_report">Vahvistaa tieilmoituksen</string>
-    <string name="road_event_denies_report">Ilmoittaa tietapahtuman selvitetyksi</string>
     <string name="goal_amount_label">Tavoitesumma (sat)</string>
     <string name="goal_description_label">Kuvaile tavoitteesi</string>
     <string name="goal_description_placeholder">Mihin keräät varoja?</string>

@@ -22,4 +22,22 @@
     <string name="ps1_save_block">खण्ड %1$d</string>
     <string name="ps1_save_empty_slot">रिक्त छेद</string>
     <string name="podcast_play_soundbite">प्रमुखाम्श चलाएँ</string>
+    <string name="road_event_accident">दुर्घटना</string>
+    <string name="road_event_animal">मार्ग पर मृग</string>
+    <string name="road_event_confirmed">अब भी वहीं</string>
+    <string name="road_event_confirms_report">मार्ग सूचना की पुष्टि</string>
+    <string name="road_event_construction">निर्माण</string>
+    <string name="road_event_denied">अब वहाँ नहीं</string>
+    <string name="road_event_denies_report">सूचना की मार्ग घटना हटाया गया</string>
+    <string name="road_event_fog">धूमिका</string>
+    <string name="road_event_hazard">संकट</string>
+    <string name="road_event_ice">हिम</string>
+    <string name="road_event_other">मार्ग घटना</string>
+    <string name="road_event_police">रक्षापालिका</string>
+    <string name="road_event_pothole">गड्ढा</string>
+    <string name="road_event_road_closure">मार्ग आवृत</string>
+    <string name="road_event_road_condition">मार्ग परिस्थिति</string>
+    <string name="road_event_speed_camera">गति चित्रग्राहक</string>
+    <string name="road_event_traffic_jam">यातायात अचलता</string>
+    <string name="road_event_unknown">मार्ग घटना</string>
 </resources>

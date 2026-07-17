@@ -2769,24 +2769,6 @@
     <string name="fundraiser_onchain_donation">Mchango wa on-chain</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polisi</string>
-    <string name="road_event_speed_camera">Kamera ya kasi</string>
-    <string name="road_event_traffic_jam">Msongamano wa magari</string>
-    <string name="road_event_accident">Ajali</string>
-    <string name="road_event_road_closure">Kufungwa kwa barabara</string>
-    <string name="road_event_construction">Ujenzi</string>
-    <string name="road_event_hazard">Hatari</string>
-    <string name="road_event_road_condition">Hali ya barabara</string>
-    <string name="road_event_pothole">Shimo barabarani</string>
-    <string name="road_event_fog">Ukungu</string>
-    <string name="road_event_ice">Barafu</string>
-    <string name="road_event_animal">Mnyama barabarani</string>
-    <string name="road_event_other">Tukio la barabara</string>
-    <string name="road_event_unknown">Tukio la barabara</string>
-    <string name="road_event_confirmed">Bado ipo</string>
-    <string name="road_event_denied">Haipo tena</string>
-    <string name="road_event_confirms_report">Inathibitisha ripoti ya barabara</string>
-    <string name="road_event_denies_report">Inaripoti tukio la barabara kuisha</string>
     <string name="goal_amount_label">Kiasi cha lengo (sats)</string>
     <string name="goal_description_label">Elezea lengo lako</string>
     <string name="goal_description_placeholder">Unakusanya fedha kwa nini?</string>

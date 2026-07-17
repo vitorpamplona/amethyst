@@ -12,4 +12,22 @@
         <item quantity="one">%1$s +%2$d টি আরও</item>
         <item quantity="other">%1$s +%2$d টি আরও</item>
     </plurals>
+    <string name="road_event_accident">দুর্ঘটনা</string>
+    <string name="road_event_animal">রাস্তায় প্রাণী</string>
+    <string name="road_event_confirmed">এখনো আছে</string>
+    <string name="road_event_confirms_report">একটি রাস্তার রিপোর্ট নিশ্চিত করে</string>
+    <string name="road_event_construction">নির্মাণ কাজ</string>
+    <string name="road_event_denied">আর নেই</string>
+    <string name="road_event_denies_report">একটি রাস্তার ঘটনা পরিষ্কার হওয়ার রিপোর্ট করে</string>
+    <string name="road_event_fog">কুয়াশা</string>
+    <string name="road_event_hazard">বিপদ</string>
+    <string name="road_event_ice">বরফ</string>
+    <string name="road_event_other">রাস্তার ঘটনা</string>
+    <string name="road_event_police">পুলিশ</string>
+    <string name="road_event_pothole">গর্ত</string>
+    <string name="road_event_road_closure">রাস্তা বন্ধ</string>
+    <string name="road_event_road_condition">রাস্তার অবস্থা</string>
+    <string name="road_event_speed_camera">স্পিড ক্যামেরা</string>
+    <string name="road_event_traffic_jam">যানজট</string>
+    <string name="road_event_unknown">রাস্তার ঘটনা</string>
 </resources>

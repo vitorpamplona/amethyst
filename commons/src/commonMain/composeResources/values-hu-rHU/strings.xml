@@ -22,4 +22,22 @@
     <string name="ps1_save_block">%1$d blokk</string>
     <string name="ps1_save_empty_slot">Üres hely</string>
     <string name="podcast_play_soundbite">Kiemelés lejátszása</string>
+    <string name="road_event_accident">Baleset</string>
+    <string name="road_event_animal">Állat az úton</string>
+    <string name="road_event_confirmed">Még mindig ott van</string>
+    <string name="road_event_confirms_report">Útjelentés megerősítése</string>
+    <string name="road_event_construction">Útépítés</string>
+    <string name="road_event_denied">Már nincs ott</string>
+    <string name="road_event_denies_report">Útlezárás feloldásának jelentése</string>
+    <string name="road_event_fog">Köd</string>
+    <string name="road_event_hazard">Veszély</string>
+    <string name="road_event_ice">Jég</string>
+    <string name="road_event_other">Útesemény</string>
+    <string name="road_event_police">Rendőrség</string>
+    <string name="road_event_pothole">Kátyú</string>
+    <string name="road_event_road_closure">Útlezárás</string>
+    <string name="road_event_road_condition">Útviszonyok</string>
+    <string name="road_event_speed_camera">Sebességmérő kamera</string>
+    <string name="road_event_traffic_jam">Forgalmi dugó</string>
+    <string name="road_event_unknown">Útesemény</string>
 </resources>

@@ -2805,24 +2805,6 @@
     <string name="fundraiser_onchain_donation">Ziedojums ķēdē</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policija</string>
-    <string name="road_event_speed_camera">Ātruma kamera</string>
-    <string name="road_event_traffic_jam">Sastrēgums</string>
-    <string name="road_event_accident">Avārija</string>
-    <string name="road_event_road_closure">Ceļa slēgšana</string>
-    <string name="road_event_construction">Būvdarbi</string>
-    <string name="road_event_hazard">Bīstamība</string>
-    <string name="road_event_road_condition">Ceļa stāvoklis</string>
-    <string name="road_event_pothole">Bedre</string>
-    <string name="road_event_fog">Migla</string>
-    <string name="road_event_ice">Ledus</string>
-    <string name="road_event_animal">Dzīvnieks uz ceļa</string>
-    <string name="road_event_other">Ceļa notikums</string>
-    <string name="road_event_unknown">Ceļa notikums</string>
-    <string name="road_event_confirmed">Joprojām tur</string>
-    <string name="road_event_denied">Vairs nav tur</string>
-    <string name="road_event_confirms_report">Apstiprina ceļa ziņojumu</string>
-    <string name="road_event_denies_report">Ziņo par ceļa notikuma novēršanu</string>
     <string name="goal_amount_label">Mērķa summa (sats)</string>
     <string name="goal_description_label">Aprakstiet savu mērķi</string>
     <string name="goal_description_placeholder">Par ko jūs vācāt līdzekļus?</string>

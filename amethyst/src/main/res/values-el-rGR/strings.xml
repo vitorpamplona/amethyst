@@ -2732,24 +2732,6 @@
     <string name="fundraiser_onchain_donation">Δωρεά on-chain</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Αστυνομία</string>
-    <string name="road_event_speed_camera">Κάμερα ταχύτητας</string>
-    <string name="road_event_traffic_jam">Κυκλοφοριακή συμφόρηση</string>
-    <string name="road_event_accident">Ατύχημα</string>
-    <string name="road_event_road_closure">Αποκλεισμός δρόμου</string>
-    <string name="road_event_construction">Κατασκευές</string>
-    <string name="road_event_hazard">Κίνδυνος</string>
-    <string name="road_event_road_condition">Κατάσταση δρόμου</string>
-    <string name="road_event_pothole">Λακκούβα</string>
-    <string name="road_event_fog">Ομίχλη</string>
-    <string name="road_event_ice">Πάγος</string>
-    <string name="road_event_animal">Ζώο στο δρόμο</string>
-    <string name="road_event_other">Οδικό συμβάν</string>
-    <string name="road_event_unknown">Οδικό συμβάν</string>
-    <string name="road_event_confirmed">Υπάρχει ακόμη</string>
-    <string name="road_event_denied">Δεν υπάρχει πλέον</string>
-    <string name="road_event_confirms_report">Επιβεβαιώνει οδική αναφορά</string>
-    <string name="road_event_denies_report">Αναφέρει ότι το οδικό συμβάν έχει εκκαθαριστεί</string>
     <string name="goal_amount_label">Ποσό στόχου (sats)</string>
     <string name="goal_description_label">Περιγράψτε τον στόχο σας</string>
     <string name="goal_description_placeholder">Για τι μαζεύετε χρήματα;</string>

@@ -3396,24 +3396,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="fundraiser_onchain_donation">On-chain donacija</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policija</string>
-    <string name="road_event_speed_camera">Hitrostna kamera</string>
-    <string name="road_event_traffic_jam">Zastoj</string>
-    <string name="road_event_accident">Nesreča</string>
-    <string name="road_event_road_closure">Cesta zaprta</string>
-    <string name="road_event_construction">Delo na cesti</string>
-    <string name="road_event_hazard">Nevernost</string>
-    <string name="road_event_road_condition">Stanje cest</string>
-    <string name="road_event_pothole">Udarna jama</string>
-    <string name="road_event_fog">Megla</string>
-    <string name="road_event_ice">Led</string>
-    <string name="road_event_animal">Žival na cestišču</string>
-    <string name="road_event_other">Dogodek na cesti</string>
-    <string name="road_event_unknown">Dogodek na cesti</string>
-    <string name="road_event_confirmed">Še vedno tam</string>
-    <string name="road_event_denied">Ni več tam</string>
-    <string name="road_event_confirms_report">Potrdi prometno poročilo</string>
-    <string name="road_event_denies_report">Označi kot odstranjeno</string>
     <string name="goal_amount_label">Ciljni znesek (sat)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Opiši svoj cilj</string>

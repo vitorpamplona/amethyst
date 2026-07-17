@@ -3690,24 +3690,6 @@
     <string name="fundraiser_onchain_donation">On-chain-donation</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Polis</string>
-    <string name="road_event_speed_camera">Fartkamera</string>
-    <string name="road_event_traffic_jam">Trafikstockning</string>
-    <string name="road_event_accident">Olycka</string>
-    <string name="road_event_road_closure">Vägavstängning</string>
-    <string name="road_event_construction">Vägarbete</string>
-    <string name="road_event_hazard">Fara</string>
-    <string name="road_event_road_condition">Vägförhållanden</string>
-    <string name="road_event_pothole">Väggropar</string>
-    <string name="road_event_fog">Dimma</string>
-    <string name="road_event_ice">Is</string>
-    <string name="road_event_animal">Djur på vägen</string>
-    <string name="road_event_other">Väghändelse</string>
-    <string name="road_event_unknown">Väghändelse</string>
-    <string name="road_event_confirmed">Finns kvar</string>
-    <string name="road_event_denied">Finns inte längre</string>
-    <string name="road_event_confirms_report">Bekräftar en vägrapport</string>
-    <string name="road_event_denies_report">Rapporterar att en väghändelse är borta</string>
     <string name="goal_amount_label">Målbelopp (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beskriv ditt mål</string>

@@ -2801,24 +2801,6 @@
     <string name="fundraiser_onchain_donation">اهدای آن‌چین</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">پلیس</string>
-    <string name="road_event_speed_camera">دوربین سرعت‌سنج</string>
-    <string name="road_event_traffic_jam">ترافیک</string>
-    <string name="road_event_accident">تصادف</string>
-    <string name="road_event_road_closure">بسته بودن جاده</string>
-    <string name="road_event_construction">عملیات عمرانی</string>
-    <string name="road_event_hazard">خطر</string>
-    <string name="road_event_road_condition">وضعیت جاده</string>
-    <string name="road_event_pothole">چاله</string>
-    <string name="road_event_fog">مه</string>
-    <string name="road_event_ice">یخ</string>
-    <string name="road_event_animal">حیوان روی جاده</string>
-    <string name="road_event_other">رویداد جاده‌ای</string>
-    <string name="road_event_unknown">رویداد جاده‌ای</string>
-    <string name="road_event_confirmed">هنوز هست</string>
-    <string name="road_event_denied">دیگر نیست</string>
-    <string name="road_event_confirms_report">گزارش جاده را تأیید می‌کند</string>
-    <string name="road_event_denies_report">رفع رویداد جاده‌ای را گزارش می‌دهد</string>
     <string name="goal_amount_label">مبلغ هدف (sat)</string>
     <string name="goal_description_label">هدف خود را توضیح دهید</string>
     <string name="goal_description_placeholder">برای چه چیزی جمع‌آوری کمک می‌کنید؟</string>

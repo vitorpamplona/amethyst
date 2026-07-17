@@ -2731,24 +2731,6 @@
     <string name="fundraiser_onchain_donation">온체인 기부</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">경찰</string>
-    <string name="road_event_speed_camera">과속 카메라</string>
-    <string name="road_event_traffic_jam">교통 정체</string>
-    <string name="road_event_accident">사고</string>
-    <string name="road_event_road_closure">도로 폐쇄</string>
-    <string name="road_event_construction">공사 중</string>
-    <string name="road_event_hazard">위험</string>
-    <string name="road_event_road_condition">도로 상태</string>
-    <string name="road_event_pothole">포트홀</string>
-    <string name="road_event_fog">안개</string>
-    <string name="road_event_ice">결빙</string>
-    <string name="road_event_animal">도로 위 동물</string>
-    <string name="road_event_other">도로 이벤트</string>
-    <string name="road_event_unknown">도로 이벤트</string>
-    <string name="road_event_confirmed">아직 있음</string>
-    <string name="road_event_denied">더 이상 없음</string>
-    <string name="road_event_confirms_report">도로 신고를 확인함</string>
-    <string name="road_event_denies_report">도로 이벤트 해소를 보고함</string>
     <string name="goal_amount_label">목표 금액 (sats)</string>
     <string name="goal_description_label">목표 설명</string>
     <string name="goal_description_placeholder">무엇을 위해 모금하시나요?</string>

@@ -5861,41 +5861,23 @@
     <item quantity="other">%1$d mints</item>
 </plurals>
     
-<string name="road_event_police">Politie</string>
     
-<string name="road_event_speed_camera">Flitser</string>
     
-<string name="road_event_traffic_jam">File</string>
     
-<string name="road_event_accident">Ongeluk</string>
     
-<string name="road_event_road_closure">Wegafsluiting</string>
     
-<string name="road_event_construction">Wegwerkzaamheden</string>
     
-<string name="road_event_hazard">Gevaar</string>
     
-<string name="road_event_road_condition">Wegomstandigheid</string>
     
-<string name="road_event_pothole">Kuil in de weg</string>
     
-<string name="road_event_fog">Mist</string>
     
-<string name="road_event_ice">Ijs</string>
     
-<string name="road_event_animal">Dier op de weg</string>
     
-<string name="road_event_other">Weggebeurtenis</string>
     
-<string name="road_event_unknown">Weggebeurtenis</string>
     
-<string name="road_event_confirmed">Nog steeds aanwezig</string>
     
-<string name="road_event_denied">Niet meer aanwezig</string>
     
-<string name="road_event_confirms_report">Bevestigt een wegmelding</string>
     
-<string name="road_event_denies_report">Meldt dat een weggebeurtenis voorbij is</string>
     
 <string name="marmot_groups_title">Marmot-groepen</string>
     

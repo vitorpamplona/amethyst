@@ -2907,24 +2907,6 @@
     <string name="fundraiser_onchain_donation">تبرع على السلسلة</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">شرطة</string>
-    <string name="road_event_speed_camera">كاميرا سرعة</string>
-    <string name="road_event_traffic_jam">ازدحام مروري</string>
-    <string name="road_event_accident">حادث</string>
-    <string name="road_event_road_closure">إغلاق طريق</string>
-    <string name="road_event_construction">أعمال إنشائية</string>
-    <string name="road_event_hazard">خطر</string>
-    <string name="road_event_road_condition">حالة الطريق</string>
-    <string name="road_event_pothole">حفرة في الطريق</string>
-    <string name="road_event_fog">ضباب</string>
-    <string name="road_event_ice">جليد</string>
-    <string name="road_event_animal">حيوان على الطريق</string>
-    <string name="road_event_other">حدث على الطريق</string>
-    <string name="road_event_unknown">حدث على الطريق</string>
-    <string name="road_event_confirmed">لا يزال موجودًا</string>
-    <string name="road_event_denied">لم يعد موجودًا</string>
-    <string name="road_event_confirms_report">يؤكد تقرير طريق</string>
-    <string name="road_event_denies_report">يُفيد بإزالة حدث طريق</string>
     <string name="goal_amount_label">مبلغ الهدف (sats)</string>
     <string name="goal_description_label">صف هدفك</string>
     <string name="goal_description_placeholder">ما الذي تجمع التبرعات من أجله؟</string>

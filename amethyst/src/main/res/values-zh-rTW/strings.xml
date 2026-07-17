@@ -2748,24 +2748,6 @@
     <string name="fundraiser_onchain_donation">鏈上捐款</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">警察</string>
-    <string name="road_event_speed_camera">測速攝影機</string>
-    <string name="road_event_traffic_jam">塞車</string>
-    <string name="road_event_accident">事故</string>
-    <string name="road_event_road_closure">道路封閉</string>
-    <string name="road_event_construction">施工</string>
-    <string name="road_event_hazard">危險</string>
-    <string name="road_event_road_condition">路況</string>
-    <string name="road_event_pothole">坑洞</string>
-    <string name="road_event_fog">霧</string>
-    <string name="road_event_ice">結冰</string>
-    <string name="road_event_animal">路上有動物</string>
-    <string name="road_event_other">道路事件</string>
-    <string name="road_event_unknown">道路事件</string>
-    <string name="road_event_confirmed">仍在那裡</string>
-    <string name="road_event_denied">已不在那裡</string>
-    <string name="road_event_confirms_report">確認道路報告</string>
-    <string name="road_event_denies_report">回報道路事件已解除</string>
     <string name="goal_amount_label">目標金額（sats）</string>
     <string name="goal_description_label">描述您的目標</string>
     <string name="goal_description_placeholder">您在為什麼籌款？</string>

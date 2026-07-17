@@ -12,4 +12,22 @@
         <item quantity="one">%1$s +%2$d daha</item>
         <item quantity="other">%1$s +%2$d daha</item>
     </plurals>
+    <string name="road_event_accident">Kaza</string>
+    <string name="road_event_animal">Yolda hayvan var</string>
+    <string name="road_event_confirmed">Hâlâ orada</string>
+    <string name="road_event_confirms_report">Bir yol raporunu doğruluyor</string>
+    <string name="road_event_construction">Yapım çalışması</string>
+    <string name="road_event_denied">Artık orada değil</string>
+    <string name="road_event_denies_report">Bir yol olayının sona erdiğini bildiriyor</string>
+    <string name="road_event_fog">Sis</string>
+    <string name="road_event_hazard">Tehlike</string>
+    <string name="road_event_ice">Buz</string>
+    <string name="road_event_other">Yol olayı</string>
+    <string name="road_event_police">Polis</string>
+    <string name="road_event_pothole">Çukur</string>
+    <string name="road_event_road_closure">Yol kapatma</string>
+    <string name="road_event_road_condition">Yol durumu</string>
+    <string name="road_event_speed_camera">Hız kamerası</string>
+    <string name="road_event_traffic_jam">Trafik sıkışıklığı</string>
+    <string name="road_event_unknown">Yol olayı</string>
 </resources>

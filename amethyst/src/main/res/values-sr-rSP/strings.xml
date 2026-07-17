@@ -2787,24 +2787,6 @@
     <string name="fundraiser_onchain_donation">Donacija na lancu</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Policija</string>
-    <string name="road_event_speed_camera">Radar</string>
-    <string name="road_event_traffic_jam">Saobraćajna gužva</string>
-    <string name="road_event_accident">Nesreća</string>
-    <string name="road_event_road_closure">Zatvaranje puta</string>
-    <string name="road_event_construction">Gradnja</string>
-    <string name="road_event_hazard">Opasnost</string>
-    <string name="road_event_road_condition">Stanje puta</string>
-    <string name="road_event_pothole">Rupa na putu</string>
-    <string name="road_event_fog">Magla</string>
-    <string name="road_event_ice">Led</string>
-    <string name="road_event_animal">Životinja na putu</string>
-    <string name="road_event_other">Saobraćajni događaj</string>
-    <string name="road_event_unknown">Saobraćajni događaj</string>
-    <string name="road_event_confirmed">I dalje postoji</string>
-    <string name="road_event_denied">Više ne postoji</string>
-    <string name="road_event_confirms_report">Potvrđuje saobraćajni izveštaj</string>
-    <string name="road_event_denies_report">Prijavljuje da je saobraćajni događaj rešen</string>
     <string name="goal_amount_label">Iznos cilja (sats)</string>
     <string name="goal_description_label">Opišite vaš cilj</string>
     <string name="goal_description_placeholder">Za šta skupljate sredstva?</string>

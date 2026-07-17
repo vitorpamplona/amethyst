@@ -2816,24 +2816,6 @@
     <string name="fundraiser_onchain_donation">Пожертва on-chain</string>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
-    <string name="road_event_police">Поліція</string>
-    <string name="road_event_speed_camera">Камера швидкості</string>
-    <string name="road_event_traffic_jam">Затор</string>
-    <string name="road_event_accident">Аварія</string>
-    <string name="road_event_road_closure">Перекриття дороги</string>
-    <string name="road_event_construction">Будівельні роботи</string>
-    <string name="road_event_hazard">Небезпека</string>
-    <string name="road_event_road_condition">Стан дороги</string>
-    <string name="road_event_pothole">Яма</string>
-    <string name="road_event_fog">Туман</string>
-    <string name="road_event_ice">Ожеледиця</string>
-    <string name="road_event_animal">Тварина на дорозі</string>
-    <string name="road_event_other">Дорожня подія</string>
-    <string name="road_event_unknown">Дорожня подія</string>
-    <string name="road_event_confirmed">Досі там</string>
-    <string name="road_event_denied">Вже немає</string>
-    <string name="road_event_confirms_report">Підтверджує дорожнє повідомлення</string>
-    <string name="road_event_denies_report">Повідомляє, що дорожня подія усунена</string>
     <string name="goal_amount_label">Сума мети (sats)</string>
     <string name="goal_description_label">Опишіть вашу ціль</string>
     <string name="goal_description_placeholder">На що ви збираєте кошти?</string>
