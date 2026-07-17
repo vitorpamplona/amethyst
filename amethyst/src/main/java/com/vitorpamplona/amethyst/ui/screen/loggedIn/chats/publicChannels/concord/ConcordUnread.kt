@@ -28,8 +28,11 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * A reactive flow of how many messages in [communityId]/[channelKey] are newer than the
@@ -55,6 +58,34 @@ fun concordChannelUnreadCountFlow(
         channel.flow().notes.stateFlow,
     ) { lastRead, _ ->
         channel.newMessagesSince(account, lastRead)
+    }
+}
+
+/**
+ * True when ANY channel in Concord [communityId] has unread messages — the unread signal for the
+ * collapsed "grouped by community" Messages row ([ConcordServerRoomNote]). It follows the community's
+ * live session state so a channel added/removed by a Control-Plane fold re-subscribes the fan-in, and
+ * each channel contributes its own [concordChannelUnreadCountFlow]. Emits false for a community with
+ * no session or no channels yet.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+fun concordCommunityHasUnreadFlow(
+    account: Account,
+    communityId: String,
+): Flow<Boolean> {
+    val session = account.concordSessions.sessionFor(communityId) ?: return flowOf(false)
+    return session.state.flatMapLatest { state ->
+        val channelKeys =
+            state
+                ?.channels
+                ?.keys
+                ?.toList()
+                .orEmpty()
+        if (channelKeys.isEmpty()) {
+            flowOf(false)
+        } else {
+            combine(channelKeys.map { concordChannelUnreadCountFlow(account, communityId, it) }) { counts -> counts.any { it > 0 } }
+        }
     }
 }
 
