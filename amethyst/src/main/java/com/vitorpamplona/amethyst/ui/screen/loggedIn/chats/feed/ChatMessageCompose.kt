@@ -249,8 +249,11 @@ fun NormalChatNote(
     }
 
     // The footer shows on the last message of a run (for the time) and on any message
-    // carrying per-message metadata (expiration, geohash, PoW, legacy-DM marker).
-    val footerHasMeta = remember(note.event) { chatFooterHasMeta(note) }
+    // carrying per-message metadata (expiration, geohash, PoW, legacy-DM marker). In a geohash
+    // room every message repeats the room's own cell, so that geohash is suppressed and doesn't,
+    // by itself, force a footer row (see LocalChatSuppressGeohash).
+    val suppressGeohash = LocalChatSuppressGeohash.current
+    val footerHasMeta = remember(note.event, suppressGeohash) { chatFooterHasMeta(note, suppressGeohash) }
 
     // Only mount the reaction/zap chip row when the message actually has engagement.
     // The chips overlap the bubble's bottom edge, so the bubble reserves space beneath
@@ -457,6 +460,13 @@ val LocalChatDisplayNameResolver = compositionLocalOf<((Note) -> String?)?> { nu
  * bubble shows which name/nickname each message went out under.
  */
 val LocalChatShowSelfAuthorName = compositionLocalOf { false }
+
+/**
+ * The geohash of the location room currently open, or null outside one. Every message in that room
+ * repeats the room's own cell in its `g` tag, so the bubble footer suppresses this one geohash —
+ * showing it on every message is redundant noise. Any other geohash still renders.
+ */
+val LocalChatSuppressGeohash = compositionLocalOf<String?> { null }
 
 @Composable
 fun RenderReplyRow(

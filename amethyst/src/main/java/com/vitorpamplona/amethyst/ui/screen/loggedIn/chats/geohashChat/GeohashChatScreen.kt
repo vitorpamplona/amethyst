@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -39,7 +40,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatActingI
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatDisplayNameResolver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatReactOverride
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatShowSelfAuthorName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalChatSuppressGeohash
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
@@ -203,6 +204,7 @@ private fun GeohashChatRoom(
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 CompositionLocalProvider(
                     LocalChatShowSelfAuthorName provides true,
+                    LocalChatSuppressGeohash provides geohash,
                     LocalChatActingIdentities provides myPubKeys,
                     LocalChatReactOverride provides { note, reaction ->
                         identity.react(note, reaction, newMessageModel.geohashPostAsSelf)
@@ -233,20 +235,21 @@ private fun GeohashChatRoom(
                 }
             }
 
-            HorizontalDivider()
             if (newMessageModel.geohashTeleported) {
                 TeleportIndicatorRow()
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 GeohashIdentityAvatar(
                     model = newMessageModel,
                     accountViewModel = accountViewModel,
                     onRequestPostAsSelf = { showPostAsSelfWarning = true },
                 )
-                Box(Modifier.weight(1f)) {
+                // Nudge the field left into the composer's fixed 10dp inset so the picture sits close
+                // to the field rather than across a wide gap.
+                Box(Modifier.weight(1f).offset(x = (-4).dp)) {
                     EditFieldRow(
                         channelScreenModel = newMessageModel,
                         accountViewModel = accountViewModel,
@@ -288,7 +291,7 @@ private fun GeohashIdentityAvatar(
             )
 
     Column(
-        modifier = Modifier.padding(start = 8.dp, end = 4.dp, bottom = 4.dp),
+        modifier = Modifier.padding(start = 8.dp, end = 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (postAsSelf) {
