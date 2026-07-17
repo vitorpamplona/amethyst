@@ -265,8 +265,15 @@ object GrapeRankCommand {
                 rigor = args.flag("rigor")?.toDoubleOrNull() ?: GrapeRankParams().rigor,
             )
 
-        Context.open(dataDir).use { ctx ->
+        // Crawl never signs and score signs cards with the machine-level operator
+        // key (`~/.amy/operator/`, independent of any account), so neither needs a
+        // personal account — run anonymously when there is none, requiring an
+        // explicit observer since there's no logged-in user to default to.
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
+            if (ctx.anonymous && observerArg == null) {
+                return Output.error("bad_args", "no account — pass an OBSERVER (npub / hex / nprofile / NIP-05)")
+            }
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
 
             // Contact lists stream straight into a compact int-CSR structure as the
@@ -558,8 +565,13 @@ object GrapeRankCommand {
     ): Int {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
-        Context.open(dataDir).use { ctx ->
+        // Crawl never signs, so no account is needed — run anonymously when there is
+        // none, requiring an explicit observer (no logged-in user to default to).
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
+            if (ctx.anonymous && observerArg == null) {
+                return Output.error("bad_args", "no account — pass an OBSERVER (npub / hex / nprofile / NIP-05)")
+            }
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             // Persist-only crawl: no in-memory graph (null builder); every event
             // still lands in the store for a later `score`.
