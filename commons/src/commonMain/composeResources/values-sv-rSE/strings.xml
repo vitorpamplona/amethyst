@@ -40,4 +40,14 @@
     <string name="road_event_traffic_jam">Trafikstockning</string>
     <string name="road_event_unknown">Väghändelse</string>
     <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
+    <string name="relay_monitor_rtt_open">Öppna</string>
+    <string name="relay_monitor_rtt_read">Läs</string>
+    <string name="relay_monitor_rtt_write">Skriv</string>
+    <string name="relay_monitor_network">Nätverk</string>
+    <string name="relay_monitor_relay_type">Typ</string>
+    <string name="relay_monitor_requirements">Krav</string>
+    <string name="relay_monitor_supported_nips">NIP som stöds</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Accepterade typer</string>
+    <string name="relay_discovery_geohash">Plats</string>
 </resources>

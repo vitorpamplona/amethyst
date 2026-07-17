@@ -1338,15 +1338,6 @@
     <string name="not_available_acronym">N/D</string>
     <string name="relay_error_messages">Eraroj kaj Atentigoj de ĉi tiu relay</string>
     <string name="relay_monitor_reports">Raportoj de relay-Monitoro</string>
-    <string name="relay_monitor_rtt_open">Malfermi</string>
-    <string name="relay_monitor_rtt_read">Legi</string>
-    <string name="relay_monitor_rtt_write">Skribi</string>
-    <string name="relay_monitor_network">Reto</string>
-    <string name="relay_monitor_relay_type">Tipo</string>
-    <string name="relay_monitor_supported_nips">Subtenataj NIPs</string>
-    <string name="relay_monitor_requirements">Postuloj</string>
-    <string name="relay_discovery_accepted_kinds">Akceptataj Tipoj</string>
-    <string name="relay_discovery_geohash">Loko</string>
     <string name="relay_active_subscriptions">Aktivaj Abonamentoj</string>
     <string name="relay_req_subscriptions">REQ Abonamentoj (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Abonamentoj (%1$d)</string>

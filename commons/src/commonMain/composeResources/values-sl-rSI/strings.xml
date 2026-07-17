@@ -49,4 +49,14 @@
     <string name="podcast_value_zap_split_hint">Zapi bojo razdeljeni med:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Vrednost za vrednost</string>
+    <string name="relay_monitor_rtt_open">Odprto</string>
+    <string name="relay_monitor_rtt_read">Branje</string>
+    <string name="relay_monitor_rtt_write">Pisanje</string>
+    <string name="relay_monitor_network">Omrežje</string>
+    <string name="relay_monitor_relay_type">Vrsta</string>
+    <string name="relay_monitor_requirements">Zahteve</string>
+    <string name="relay_monitor_supported_nips">Podprti NIP-i</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Sprejeti tipi (kind)</string>
+    <string name="relay_discovery_geohash">Lokacija</string>
 </resources>

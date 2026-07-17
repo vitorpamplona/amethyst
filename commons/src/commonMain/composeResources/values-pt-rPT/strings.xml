@@ -30,4 +30,13 @@
     <string name="road_event_speed_camera">Radar de velocidade</string>
     <string name="road_event_traffic_jam">Congestionamento</string>
     <string name="road_event_unknown">Evento na via</string>
+    <string name="relay_monitor_rtt_open">Abrir</string>
+    <string name="relay_monitor_rtt_read">Leitura</string>
+    <string name="relay_monitor_rtt_write">Escrita</string>
+    <string name="relay_monitor_network">Rede</string>
+    <string name="relay_monitor_relay_type">Tipo</string>
+    <string name="relay_monitor_requirements">Requisitos</string>
+    <string name="relay_monitor_supported_nips">NIPs Suportados</string>
+    <string name="relay_discovery_accepted_kinds">Tipos Aceitos</string>
+    <string name="relay_discovery_geohash">Localização</string>
 </resources>

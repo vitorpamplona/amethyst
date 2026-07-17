@@ -30,4 +30,14 @@
     <string name="road_event_speed_camera">Radar de velocidad</string>
     <string name="road_event_traffic_jam">Atasco de tráfico</string>
     <string name="road_event_unknown">Incidencia vial</string>
+    <string name="relay_monitor_rtt_open">Abrir</string>
+    <string name="relay_monitor_rtt_read">Leer</string>
+    <string name="relay_monitor_rtt_write">Escribir</string>
+    <string name="relay_monitor_network">Red</string>
+    <string name="relay_monitor_relay_type">Tipo</string>
+    <string name="relay_monitor_requirements">Requisitos</string>
+    <string name="relay_monitor_supported_nips">NIP compatibles</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Tipos aceptados</string>
+    <string name="relay_discovery_geohash">Ubicación</string>
 </resources>

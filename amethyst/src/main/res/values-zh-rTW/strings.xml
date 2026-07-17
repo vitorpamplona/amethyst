@@ -1322,16 +1322,6 @@
     <string name="not_available_acronym">不適用</string>
     <string name="relay_error_messages">該中繼的錯誤和通知</string>
     <string name="relay_monitor_reports">Relay 監控報告</string>
-    <string name="relay_monitor_rtt_open">開啟</string>
-    <string name="relay_monitor_rtt_read">讀取</string>
-    <string name="relay_monitor_rtt_write">寫入</string>
-    <string name="relay_monitor_network">網路</string>
-    <string name="relay_monitor_relay_type">類型</string>
-    <string name="relay_monitor_supported_nips">支援的 NIP</string>
-    <string name="relay_monitor_requirements">要求</string>
-    <string name="relay_monitor_ms">%1$d 毫秒</string>
-    <string name="relay_discovery_accepted_kinds">接受的種類</string>
-    <string name="relay_discovery_geohash">位置</string>
     <string name="relay_active_subscriptions">活躍訂閱</string>
     <string name="relay_req_subscriptions">REQ 訂閱（%1$d）</string>
     <string name="relay_count_subscriptions">COUNT 訂閱（%1$d）</string>

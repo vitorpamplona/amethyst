@@ -1673,16 +1673,6 @@
     <string name="not_available_acronym">अनुपलब्ध</string>
     <string name="relay_error_messages">अपक्रम तथा सूचनाएँ इस पुनःप्रसारक से</string>
     <string name="relay_monitor_reports">पुनःप्रसारक परिवीक्षक सूचनाएँ</string>
-    <string name="relay_monitor_rtt_open">खोलें</string>
-    <string name="relay_monitor_rtt_read">पढें</string>
-    <string name="relay_monitor_rtt_write">लिखें</string>
-    <string name="relay_monitor_network">जाल</string>
-    <string name="relay_monitor_relay_type">प्रकार</string>
-    <string name="relay_monitor_supported_nips">अवलम्बन किए हुए निप॰ सूची</string>
-    <string name="relay_monitor_requirements">आवश्यकताएँ</string>
-    <string name="relay_monitor_ms">%1$d सहस्रतमसेकण्ड</string>
-    <string name="relay_discovery_accepted_kinds">स्वीकृत प्रकार</string>
-    <string name="relay_discovery_geohash">स्थान</string>
     <string name="relay_active_subscriptions">सक्रिय ग्राहकताएँ</string>
     <string name="relay_req_subscriptions">अनुरोध ग्राहकताएँ (%1$d)</string>
     <string name="relay_count_subscriptions">गणना ग्राहकताएँ (%1$d)</string>

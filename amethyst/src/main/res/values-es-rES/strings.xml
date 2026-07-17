@@ -1362,16 +1362,6 @@
     <string name="not_available_acronym">N/D</string>
     <string name="relay_error_messages">Errores y avisos de este relé</string>
     <string name="relay_monitor_reports">Informes de supervisor de relés</string>
-    <string name="relay_monitor_rtt_open">Abrir</string>
-    <string name="relay_monitor_rtt_read">Leer</string>
-    <string name="relay_monitor_rtt_write">Escribir</string>
-    <string name="relay_monitor_network">Red</string>
-    <string name="relay_monitor_relay_type">Tipo</string>
-    <string name="relay_monitor_supported_nips">NIP compatibles</string>
-    <string name="relay_monitor_requirements">Requisitos</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Tipos aceptados</string>
-    <string name="relay_discovery_geohash">Ubicación</string>
     <string name="relay_active_subscriptions">Suscripciones activas</string>
     <string name="relay_req_subscriptions">Suscripciones REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Suscripciones COUNT (%1$d)</string>

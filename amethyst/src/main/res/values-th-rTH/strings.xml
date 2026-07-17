@@ -1299,15 +1299,6 @@
     <string name="about_legal">เกี่ยวกับและข้อมูลทางกฎหมาย</string>
     <string name="relay_error_messages">ประกาศจากทางรีเลย์</string>
     <string name="relay_monitor_reports">รายงานผู้ตรวจสอบ relay</string>
-    <string name="relay_monitor_rtt_open">เปิด</string>
-    <string name="relay_monitor_rtt_read">อ่าน</string>
-    <string name="relay_monitor_rtt_write">เขียน</string>
-    <string name="relay_monitor_network">เครือข่าย</string>
-    <string name="relay_monitor_relay_type">ประเภท</string>
-    <string name="relay_monitor_supported_nips">NIP ที่รองรับ</string>
-    <string name="relay_monitor_requirements">ข้อกำหนด</string>
-    <string name="relay_discovery_accepted_kinds">ประเภทที่ยอมรับ</string>
-    <string name="relay_discovery_geohash">ตำแหน่งที่ตั้ง</string>
     <string name="relay_active_subscriptions">การสมัครสมาชิกที่ใช้งานอยู่</string>
     <string name="relay_req_subscriptions">การสมัครสมาชิก REQ (%1$d)</string>
     <string name="relay_count_subscriptions">การสมัครสมาชิก COUNT (%1$d)</string>

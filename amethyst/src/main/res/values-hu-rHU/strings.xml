@@ -1666,16 +1666,6 @@
     <string name="not_available_acronym">Nem érhető el</string>
     <string name="relay_error_messages">Hibák és megjegyzések ettől az átjátszótól</string>
     <string name="relay_monitor_reports">Átjátszófigyelési jelentések</string>
-    <string name="relay_monitor_rtt_open">Megnyitás</string>
-    <string name="relay_monitor_rtt_read">Olvasás </string>
-    <string name="relay_monitor_rtt_write">Írás</string>
-    <string name="relay_monitor_network">Hálózat</string>
-    <string name="relay_monitor_relay_type">Típus</string>
-    <string name="relay_monitor_supported_nips">Támogatott NIP-ek</string>
-    <string name="relay_monitor_requirements">Követelmények</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Elfogadott típusok</string>
-    <string name="relay_discovery_geohash">Helyszín</string>
     <string name="relay_active_subscriptions">Aktív előfizetések</string>
     <string name="relay_req_subscriptions">Szükséges előfizetések (%1$d)</string>
     <string name="relay_count_subscriptions">Előfizetések száma (%1$d)</string>

@@ -1808,16 +1808,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="not_available_acronym">Nie dotyczy</string>
     <string name="relay_error_messages">Błędy i powiadomienia z tego transmitera</string>
     <string name="relay_monitor_reports">Raporty z monitoringu transmitera</string>
-    <string name="relay_monitor_rtt_open">Otwórz</string>
-    <string name="relay_monitor_rtt_read">Odczyt</string>
-    <string name="relay_monitor_rtt_write">Zapis</string>
-    <string name="relay_monitor_network">Sieć</string>
-    <string name="relay_monitor_relay_type">Typ</string>
-    <string name="relay_monitor_supported_nips">Obsługiwane Nipy</string>
-    <string name="relay_monitor_requirements">Wymagania</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Dopuszczalne typy</string>
-    <string name="relay_discovery_geohash">Lokalizacja</string>
     <string name="relay_active_subscriptions">Aktywne subskrypcje</string>
     <string name="relay_req_subscriptions">REQ Subskrypcje (%1$d)</string>
     <string name="relay_count_subscriptions">Subskrypcje KONTA (%1$d)</string>

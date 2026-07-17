@@ -30,4 +30,13 @@
     <string name="road_event_speed_camera">வேக கண்காணிப்பு கேமரா</string>
     <string name="road_event_traffic_jam">போக்குவரத்து நெரிசல்</string>
     <string name="road_event_unknown">சாலை நிகழ்வு</string>
+    <string name="relay_monitor_rtt_open">திற</string>
+    <string name="relay_monitor_rtt_read">படி</string>
+    <string name="relay_monitor_rtt_write">எழுது</string>
+    <string name="relay_monitor_network">நெட்வொர்க்</string>
+    <string name="relay_monitor_relay_type">வகை</string>
+    <string name="relay_monitor_requirements">தேவைகள்</string>
+    <string name="relay_monitor_supported_nips">ஆதரிக்கப்படும் NIPs</string>
+    <string name="relay_discovery_accepted_kinds">ஏற்றுக்கொள்ளப்படும் வகைகள்</string>
+    <string name="relay_discovery_geohash">இடம்</string>
 </resources>

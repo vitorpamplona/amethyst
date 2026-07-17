@@ -28,4 +28,13 @@
     <string name="road_event_speed_camera">速度カメラ</string>
     <string name="road_event_traffic_jam">渋滞</string>
     <string name="road_event_unknown">道路上のイベント</string>
+    <string name="relay_monitor_rtt_open">オープン</string>
+    <string name="relay_monitor_rtt_read">読み取り</string>
+    <string name="relay_monitor_rtt_write">書き込み</string>
+    <string name="relay_monitor_network">ネットワーク</string>
+    <string name="relay_monitor_relay_type">タイプ</string>
+    <string name="relay_monitor_requirements">要件</string>
+    <string name="relay_monitor_supported_nips">対応 NIP</string>
+    <string name="relay_discovery_accepted_kinds">受け入れ種別</string>
+    <string name="relay_discovery_geohash">場所</string>
 </resources>

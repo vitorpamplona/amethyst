@@ -1325,15 +1325,6 @@
     <string name="not_available_acronym">H/P</string>
     <string name="relay_error_messages">Hitilafu na Notisi kutoka kwa Relay Hii</string>
     <string name="relay_monitor_reports">Ripoti za Msimamizi wa Relay</string>
-    <string name="relay_monitor_rtt_open">Fungua</string>
-    <string name="relay_monitor_rtt_read">Soma</string>
-    <string name="relay_monitor_rtt_write">Andika</string>
-    <string name="relay_monitor_network">Mtandao</string>
-    <string name="relay_monitor_relay_type">Aina</string>
-    <string name="relay_monitor_supported_nips">NIPs Zinazosaidiwa</string>
-    <string name="relay_monitor_requirements">Mahitaji</string>
-    <string name="relay_discovery_accepted_kinds">Aina Zinazokubaliwa</string>
-    <string name="relay_discovery_geohash">Eneo</string>
     <string name="relay_active_subscriptions">Usajili Unaofanya Kazi</string>
     <string name="relay_req_subscriptions">Usajili wa REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Usajili wa COUNT (%1$d)</string>

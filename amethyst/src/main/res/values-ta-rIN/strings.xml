@@ -1328,15 +1328,6 @@
     <string name="about_legal">பற்றி &amp; சட்டம்</string>
     <string name="relay_error_messages">இந்த Relay இலிருந்து பிழைகளும் அறிவிப்புகளும்</string>
     <string name="relay_monitor_reports">Relay கண்காணிப்பு அறிக்கைகள்</string>
-    <string name="relay_monitor_rtt_open">திற</string>
-    <string name="relay_monitor_rtt_read">படி</string>
-    <string name="relay_monitor_rtt_write">எழுது</string>
-    <string name="relay_monitor_network">நெட்வொர்க்</string>
-    <string name="relay_monitor_relay_type">வகை</string>
-    <string name="relay_monitor_supported_nips">ஆதரிக்கப்படும் NIPs</string>
-    <string name="relay_monitor_requirements">தேவைகள்</string>
-    <string name="relay_discovery_accepted_kinds">ஏற்றுக்கொள்ளப்படும் வகைகள்</string>
-    <string name="relay_discovery_geohash">இடம்</string>
     <string name="relay_active_subscriptions">செயலில் உள்ள சந்தாக்கள்</string>
     <string name="relay_req_subscriptions">REQ சந்தாக்கள் (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT சந்தாக்கள் (%1$d)</string>

@@ -1333,15 +1333,6 @@
     <string name="about_legal">সম্পর্কে &amp; আইনি</string>
     <string name="relay_error_messages">এই Relay থেকে ত্রুটি ও নোটিশ</string>
     <string name="relay_monitor_reports">Relay মনিটর রিপোর্ট</string>
-    <string name="relay_monitor_rtt_open">খুলুন</string>
-    <string name="relay_monitor_rtt_read">পড়ুন</string>
-    <string name="relay_monitor_rtt_write">লিখুন</string>
-    <string name="relay_monitor_network">নেটওয়ার্ক</string>
-    <string name="relay_monitor_relay_type">ধরন</string>
-    <string name="relay_monitor_supported_nips">সমর্থিত NIPs</string>
-    <string name="relay_monitor_requirements">প্রয়োজনীয়তা</string>
-    <string name="relay_discovery_accepted_kinds">গৃহীত ধরনসমূহ</string>
-    <string name="relay_discovery_geohash">অবস্থান</string>
     <string name="relay_active_subscriptions">সক্রিয় সাবস্ক্রিপশন</string>
     <string name="relay_req_subscriptions">REQ সাবস্ক্রিপশন (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT সাবস্ক্রিপশন (%1$d)</string>

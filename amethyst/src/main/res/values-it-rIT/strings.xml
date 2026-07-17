@@ -1305,15 +1305,6 @@
     <string name="not_available_acronym">N/D</string>
     <string name="relay_error_messages">Errori e avvisi da questo relay</string>
     <string name="relay_monitor_reports">Report del monitor relay</string>
-    <string name="relay_monitor_rtt_open">Apri</string>
-    <string name="relay_monitor_rtt_read">Lettura</string>
-    <string name="relay_monitor_rtt_write">Scrittura</string>
-    <string name="relay_monitor_network">Rete</string>
-    <string name="relay_monitor_relay_type">Tipo</string>
-    <string name="relay_monitor_supported_nips">NIP supportati</string>
-    <string name="relay_monitor_requirements">Requisiti</string>
-    <string name="relay_discovery_accepted_kinds">Kind accettati</string>
-    <string name="relay_discovery_geohash">Posizione</string>
     <string name="relay_active_subscriptions">Sottoscrizioni attive</string>
     <string name="relay_req_subscriptions">Sottoscrizioni REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Sottoscrizioni COUNT (%1$d)</string>

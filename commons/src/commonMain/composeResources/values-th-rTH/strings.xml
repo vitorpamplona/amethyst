@@ -28,4 +28,13 @@
     <string name="road_event_speed_camera">กล้องจับความเร็ว</string>
     <string name="road_event_traffic_jam">การจราจรติดขัด</string>
     <string name="road_event_unknown">เหตุการณ์บนถนน</string>
+    <string name="relay_monitor_rtt_open">เปิด</string>
+    <string name="relay_monitor_rtt_read">อ่าน</string>
+    <string name="relay_monitor_rtt_write">เขียน</string>
+    <string name="relay_monitor_network">เครือข่าย</string>
+    <string name="relay_monitor_relay_type">ประเภท</string>
+    <string name="relay_monitor_requirements">ข้อกำหนด</string>
+    <string name="relay_monitor_supported_nips">NIP ที่รองรับ</string>
+    <string name="relay_discovery_accepted_kinds">ประเภทที่ยอมรับ</string>
+    <string name="relay_discovery_geohash">ตำแหน่งที่ตั้ง</string>
 </resources>

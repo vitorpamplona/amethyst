@@ -1303,15 +1303,6 @@
     <string name="about_legal">Giới thiệu &amp; Pháp lý</string>
     <string name="relay_error_messages">Lỗi và thông báo từ relay này</string>
     <string name="relay_monitor_reports">Báo cáo giám sát relay</string>
-    <string name="relay_monitor_rtt_open">Mở</string>
-    <string name="relay_monitor_rtt_read">Đọc</string>
-    <string name="relay_monitor_rtt_write">Ghi</string>
-    <string name="relay_monitor_network">Mạng</string>
-    <string name="relay_monitor_relay_type">Loại</string>
-    <string name="relay_monitor_supported_nips">NIP được hỗ trợ</string>
-    <string name="relay_monitor_requirements">Yêu cầu</string>
-    <string name="relay_discovery_accepted_kinds">Loại được chấp nhận</string>
-    <string name="relay_discovery_geohash">Vị trí</string>
     <string name="relay_active_subscriptions">Đăng ký đang hoạt động</string>
     <string name="relay_filter_authors">%1$d tác giả</string>
     <string name="relay_filter_ids">%1$d id</string>

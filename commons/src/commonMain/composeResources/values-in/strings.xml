@@ -28,4 +28,14 @@
     <string name="road_event_speed_camera">Kamera kecepatan</string>
     <string name="road_event_traffic_jam">Kemacetan</string>
     <string name="road_event_unknown">Kejadian jalan</string>
+    <string name="relay_monitor_rtt_open">Buka</string>
+    <string name="relay_monitor_rtt_read">Baca</string>
+    <string name="relay_monitor_rtt_write">Tulis</string>
+    <string name="relay_monitor_network">Jaringan</string>
+    <string name="relay_monitor_relay_type">Tipe</string>
+    <string name="relay_monitor_requirements">Persyaratan</string>
+    <string name="relay_monitor_supported_nips">NIP yang Didukung</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Jenis yang Diterima</string>
+    <string name="relay_discovery_geohash">Lokasi</string>
 </resources>

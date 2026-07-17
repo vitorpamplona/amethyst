@@ -38,4 +38,14 @@
     <string name="road_event_speed_camera">كاميرا سرعة</string>
     <string name="road_event_traffic_jam">ازدحام مروري</string>
     <string name="road_event_unknown">حدث على الطريق</string>
+    <string name="relay_monitor_rtt_open">فتح</string>
+    <string name="relay_monitor_rtt_read">قراءة</string>
+    <string name="relay_monitor_rtt_write">كتابة</string>
+    <string name="relay_monitor_network">الشبكة</string>
+    <string name="relay_monitor_relay_type">النوع</string>
+    <string name="relay_monitor_requirements">المتطلبات</string>
+    <string name="relay_monitor_supported_nips">NIPs المدعومة</string>
+    <string name="relay_monitor_ms">%1$d مللي ثانية</string>
+    <string name="relay_discovery_accepted_kinds">الأنواع المقبولة</string>
+    <string name="relay_discovery_geohash">الموقع</string>
 </resources>

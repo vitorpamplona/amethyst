@@ -1321,15 +1321,6 @@
     <string name="not_available_acronym">Δ/Υ</string>
     <string name="relay_error_messages">Σφάλματα και ειδοποιήσεις από αυτό το Relay</string>
     <string name="relay_monitor_reports">Αναφορές παρακολούθησης Relay</string>
-    <string name="relay_monitor_rtt_open">Άνοιγμα</string>
-    <string name="relay_monitor_rtt_read">Ανάγνωση</string>
-    <string name="relay_monitor_rtt_write">Εγγραφή</string>
-    <string name="relay_monitor_network">Δίκτυο</string>
-    <string name="relay_monitor_relay_type">Τύπος</string>
-    <string name="relay_monitor_supported_nips">Υποστηριζόμενα NIPs</string>
-    <string name="relay_monitor_requirements">Απαιτήσεις</string>
-    <string name="relay_discovery_accepted_kinds">Αποδεκτοί τύποι</string>
-    <string name="relay_discovery_geohash">Τοποθεσία</string>
     <string name="relay_active_subscriptions">Ενεργές συνδρομές</string>
     <string name="relay_req_subscriptions">REQ Συνδρομές (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Συνδρομές (%1$d)</string>

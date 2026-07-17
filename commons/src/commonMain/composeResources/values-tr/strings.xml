@@ -30,4 +30,14 @@
     <string name="road_event_speed_camera">Hız kamerası</string>
     <string name="road_event_traffic_jam">Trafik sıkışıklığı</string>
     <string name="road_event_unknown">Yol olayı</string>
+    <string name="relay_monitor_rtt_open">Aç</string>
+    <string name="relay_monitor_rtt_read">Oku</string>
+    <string name="relay_monitor_rtt_write">Yaz</string>
+    <string name="relay_monitor_network">Ağ</string>
+    <string name="relay_monitor_relay_type">Tür</string>
+    <string name="relay_monitor_requirements">Gereksinimler</string>
+    <string name="relay_monitor_supported_nips">Desteklenen NIP\'ler</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Kabul Edilen Türler</string>
+    <string name="relay_discovery_geohash">Konum</string>
 </resources>

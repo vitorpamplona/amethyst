@@ -34,4 +34,14 @@
     <string name="road_event_speed_camera">Камера контроля скорости</string>
     <string name="road_event_traffic_jam">Пробка</string>
     <string name="road_event_unknown">Дорожное событие</string>
+    <string name="relay_monitor_rtt_open">Открытие</string>
+    <string name="relay_monitor_rtt_read">Чтение</string>
+    <string name="relay_monitor_rtt_write">Запись</string>
+    <string name="relay_monitor_network">Сеть</string>
+    <string name="relay_monitor_relay_type">Тип</string>
+    <string name="relay_monitor_requirements">Требования</string>
+    <string name="relay_monitor_supported_nips">Поддерживаемые NIP</string>
+    <string name="relay_monitor_ms">%1$d мс</string>
+    <string name="relay_discovery_accepted_kinds">Принимаемые типы</string>
+    <string name="relay_discovery_geohash">Местоположение</string>
 </resources>

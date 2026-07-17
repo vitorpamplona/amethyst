@@ -1759,16 +1759,6 @@
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Erros e Avisos deste Relé</string>
     <string name="relay_monitor_reports">Relatórios do Monitor de Relay</string>
-    <string name="relay_monitor_rtt_open">Abrir</string>
-    <string name="relay_monitor_rtt_read">Leitura</string>
-    <string name="relay_monitor_rtt_write">Escrita</string>
-    <string name="relay_monitor_network">Rede</string>
-    <string name="relay_monitor_relay_type">Tipo</string>
-    <string name="relay_monitor_supported_nips">NIPs Suportados</string>
-    <string name="relay_monitor_requirements">Requisitos</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Tipos Aceitos</string>
-    <string name="relay_discovery_geohash">Localização</string>
     <string name="relay_active_subscriptions">Assinaturas Ativas</string>
     <string name="relay_req_subscriptions">Assinaturas REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Assinaturas COUNT (%1$d)</string>

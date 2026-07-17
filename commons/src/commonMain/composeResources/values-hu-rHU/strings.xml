@@ -43,4 +43,14 @@
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
+    <string name="relay_monitor_rtt_open">Megnyitás</string>
+    <string name="relay_monitor_rtt_read">Olvasás </string>
+    <string name="relay_monitor_rtt_write">Írás</string>
+    <string name="relay_monitor_network">Hálózat</string>
+    <string name="relay_monitor_relay_type">Típus</string>
+    <string name="relay_monitor_requirements">Követelmények</string>
+    <string name="relay_monitor_supported_nips">Támogatott NIP-ek</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Elfogadott típusok</string>
+    <string name="relay_discovery_geohash">Helyszín</string>
 </resources>

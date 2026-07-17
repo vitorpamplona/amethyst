@@ -28,4 +28,14 @@
     <string name="road_event_speed_camera">测速照相</string>
     <string name="road_event_traffic_jam">塞车</string>
     <string name="road_event_unknown">道路事件</string>
+    <string name="relay_monitor_rtt_open">打开</string>
+    <string name="relay_monitor_rtt_read">读取</string>
+    <string name="relay_monitor_rtt_write">写入</string>
+    <string name="relay_monitor_network">网络</string>
+    <string name="relay_monitor_relay_type">类型</string>
+    <string name="relay_monitor_requirements">要求</string>
+    <string name="relay_monitor_supported_nips">支持的 NIPs</string>
+    <string name="relay_monitor_ms">%1$d 毫秒</string>
+    <string name="relay_discovery_accepted_kinds">接受的类型</string>
+    <string name="relay_discovery_geohash">位置信息</string>
 </resources>

@@ -78,6 +78,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_ms
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_network
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_relay_type
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_requirements
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_open
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_read
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_rtt_write
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -137,6 +145,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.map
+import org.jetbrains.compose.resources.stringResource
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -1386,13 +1395,13 @@ private fun RelayMonitorReportCard(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     rttOpen?.let {
-                        RttChip(stringRes(R.string.relay_monitor_rtt_open), it)
+                        RttChip(stringResource(Res.string.relay_monitor_rtt_open), it)
                     }
                     rttRead?.let {
-                        RttChip(stringRes(R.string.relay_monitor_rtt_read), it)
+                        RttChip(stringResource(Res.string.relay_monitor_rtt_read), it)
                     }
                     rttWrite?.let {
-                        RttChip(stringRes(R.string.relay_monitor_rtt_write), it)
+                        RttChip(stringResource(Res.string.relay_monitor_rtt_write), it)
                     }
                 }
             }
@@ -1402,7 +1411,7 @@ private fun RelayMonitorReportCard(
             if (networkTypes.isNotEmpty()) {
                 InfoRow(
                     MaterialSymbols.Language,
-                    stringRes(R.string.relay_monitor_network),
+                    stringResource(Res.string.relay_monitor_network),
                     networkTypes.joinToString { it.code },
                 )
             }
@@ -1412,7 +1421,7 @@ private fun RelayMonitorReportCard(
             if (relayTypes.isNotEmpty()) {
                 InfoRow(
                     MaterialSymbols.Dns,
-                    stringRes(R.string.relay_monitor_relay_type),
+                    stringResource(Res.string.relay_monitor_relay_type),
                     relayTypes.joinToString(),
                 )
             }
@@ -1422,7 +1431,7 @@ private fun RelayMonitorReportCard(
             if (requirements.isNotEmpty()) {
                 InfoRow(
                     MaterialSymbols.Lock,
-                    stringRes(R.string.relay_monitor_requirements),
+                    stringResource(Res.string.relay_monitor_requirements),
                     requirements.joinToString { req ->
                         if (req.negated) "!${req.value}" else req.value
                     },
@@ -1454,7 +1463,7 @@ private fun RttChip(
             color = color.copy(alpha = 0.15f),
         ) {
             Text(
-                text = stringRes(R.string.relay_monitor_ms, ms.toInt()),
+                text = stringResource(Res.string.relay_monitor_ms, ms.toInt()),
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,

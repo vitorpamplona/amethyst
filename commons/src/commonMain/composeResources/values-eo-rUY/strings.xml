@@ -30,4 +30,13 @@
     <string name="road_event_speed_camera">Rapideca fotilo</string>
     <string name="road_event_traffic_jam">Trafika ŝtopado</string>
     <string name="road_event_unknown">Voja evento</string>
+    <string name="relay_monitor_rtt_open">Malfermi</string>
+    <string name="relay_monitor_rtt_read">Legi</string>
+    <string name="relay_monitor_rtt_write">Skribi</string>
+    <string name="relay_monitor_network">Reto</string>
+    <string name="relay_monitor_relay_type">Tipo</string>
+    <string name="relay_monitor_requirements">Postuloj</string>
+    <string name="relay_monitor_supported_nips">Subtenataj NIPs</string>
+    <string name="relay_discovery_accepted_kinds">Akceptataj Tipoj</string>
+    <string name="relay_discovery_geohash">Loko</string>
 </resources>

@@ -1322,15 +1322,6 @@
     <string name="about_legal">Tietoja &amp; oikeudelliset</string>
     <string name="relay_error_messages">Virheet ja ilmoitukset tältä relaylta</string>
     <string name="relay_monitor_reports">Relay-monitorin raportit</string>
-    <string name="relay_monitor_rtt_open">Avaa</string>
-    <string name="relay_monitor_rtt_read">Lue</string>
-    <string name="relay_monitor_rtt_write">Kirjoita</string>
-    <string name="relay_monitor_network">Verkko</string>
-    <string name="relay_monitor_relay_type">Tyyppi</string>
-    <string name="relay_monitor_supported_nips">Tuetut NIPit</string>
-    <string name="relay_monitor_requirements">Vaatimukset</string>
-    <string name="relay_discovery_accepted_kinds">Hyväksytyt tyypit</string>
-    <string name="relay_discovery_geohash">Sijainti</string>
     <string name="relay_active_subscriptions">Aktiiviset tilaukset</string>
     <string name="relay_req_subscriptions">REQ-tilaukset (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-tilaukset (%1$d)</string>

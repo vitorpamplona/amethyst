@@ -1721,11 +1721,8 @@
     
 <string name="not_available_acronym">N/A</string>
     
-<string name="relay_monitor_network">Réseau</string>
     
-<string name="relay_monitor_relay_type">Type</string>
     
-<string name="relay_monitor_supported_nips">NIPs supportés</string>
     
 <string name="relay_active_subscriptions">Abonnements actifs</string>
     
@@ -3426,19 +3423,12 @@
     
 <string name="relay_monitor_reports">Rapports du moniteur de relais</string>
     
-<string name="relay_monitor_rtt_open">Ouvrir</string>
     
-<string name="relay_monitor_rtt_read">Lire</string>
     
-<string name="relay_monitor_rtt_write">Écrire</string>
     
-<string name="relay_monitor_requirements">Conditions requises</string>
     
-<string name="relay_monitor_ms">%1$d ms</string>
     
-<string name="relay_discovery_accepted_kinds">Kinds acceptés</string>
     
-<string name="relay_discovery_geohash">Localisation</string>
     
 <string name="relay_outbox_events">Événements sortants (%1$d)</string>
     

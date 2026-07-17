@@ -1330,15 +1330,6 @@
     <string name="about_legal">Hakkında &amp; Yasal</string>
     <string name="relay_error_messages">Bu Relay\'den Gelen Hatalar ve Bildirimler</string>
     <string name="relay_monitor_reports">Relay İzleme Raporları</string>
-    <string name="relay_monitor_rtt_open">Aç</string>
-    <string name="relay_monitor_rtt_read">Oku</string>
-    <string name="relay_monitor_rtt_write">Yaz</string>
-    <string name="relay_monitor_network">Ağ</string>
-    <string name="relay_monitor_relay_type">Tür</string>
-    <string name="relay_monitor_supported_nips">Desteklenen NIP\'ler</string>
-    <string name="relay_monitor_requirements">Gereksinimler</string>
-    <string name="relay_discovery_accepted_kinds">Kabul Edilen Türler</string>
-    <string name="relay_discovery_geohash">Konum</string>
     <string name="relay_active_subscriptions">Etkin Abonelikler</string>
     <string name="relay_req_subscriptions">REQ Abonelikleri (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Abonelikleri (%1$d)</string>

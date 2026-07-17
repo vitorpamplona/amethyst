@@ -30,4 +30,13 @@
     <string name="road_event_speed_camera">Nopeusvalvontakamera</string>
     <string name="road_event_traffic_jam">Ruuhka</string>
     <string name="road_event_unknown">Tietapahtuma</string>
+    <string name="relay_monitor_rtt_open">Avaa</string>
+    <string name="relay_monitor_rtt_read">Lue</string>
+    <string name="relay_monitor_rtt_write">Kirjoita</string>
+    <string name="relay_monitor_network">Verkko</string>
+    <string name="relay_monitor_relay_type">Tyyppi</string>
+    <string name="relay_monitor_requirements">Vaatimukset</string>
+    <string name="relay_monitor_supported_nips">Tuetut NIPit</string>
+    <string name="relay_discovery_accepted_kinds">Hyväksytyt tyypit</string>
+    <string name="relay_discovery_geohash">Sijainti</string>
 </resources>

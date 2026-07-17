@@ -43,4 +43,14 @@
     <string name="podcast_value_zap_split_hint">Zaps hiervoor worden verdeeld over:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
+    <string name="relay_monitor_rtt_open">Open</string>
+    <string name="relay_monitor_rtt_read">Lezen</string>
+    <string name="relay_monitor_rtt_write">Schrijven</string>
+    <string name="relay_monitor_network">Netwerk</string>
+    <string name="relay_monitor_relay_type">Type</string>
+    <string name="relay_monitor_requirements">Vereisten</string>
+    <string name="relay_monitor_supported_nips">Ondersteunde NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Geaccepteerde kinds</string>
+    <string name="relay_discovery_geohash">Locatie</string>
 </resources>

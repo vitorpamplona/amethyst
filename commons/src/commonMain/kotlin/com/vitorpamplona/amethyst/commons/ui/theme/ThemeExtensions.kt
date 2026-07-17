@@ -51,3 +51,11 @@ val ColorScheme.placeholderText: Color
  */
 val ColorScheme.grayText: Color
     get() = onSurface.copy(alpha = 0.52f)
+
+/** Green "all good / healthy" status color. Mirrors the Android app's allGoodColor. */
+val ColorScheme.allGoodColor: Color
+    get() = if (isLight) Color(0xFF339900) else Color(0xFF99CC33)
+
+/** Amber "warning / degraded" status color. Mirrors the Android app's warningColor. */
+val ColorScheme.warningColor: Color
+    get() = if (isLight) Color(0xFFFFCC00) else Color(0xFFF8DE22)

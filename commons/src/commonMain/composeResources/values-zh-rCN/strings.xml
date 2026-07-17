@@ -40,4 +40,14 @@
     <string name="podcast_value_zap_split_hint">对此的Zaps 在以下对象间分割：</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
+    <string name="relay_monitor_rtt_open">打开</string>
+    <string name="relay_monitor_rtt_read">读取</string>
+    <string name="relay_monitor_rtt_write">写入</string>
+    <string name="relay_monitor_network">网络</string>
+    <string name="relay_monitor_relay_type">类型</string>
+    <string name="relay_monitor_requirements">要求</string>
+    <string name="relay_monitor_supported_nips">支持的 NIPs</string>
+    <string name="relay_monitor_ms">%1$d 毫秒</string>
+    <string name="relay_discovery_accepted_kinds">接受的类型</string>
+    <string name="relay_discovery_geohash">位置信息</string>
 </resources>

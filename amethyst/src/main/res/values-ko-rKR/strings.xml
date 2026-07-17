@@ -1313,15 +1313,6 @@
     <string name="not_available_acronym">해당 없음</string>
     <string name="relay_error_messages">이 relay의 오류 및 알림</string>
     <string name="relay_monitor_reports">Relay 모니터 보고서</string>
-    <string name="relay_monitor_rtt_open">열기</string>
-    <string name="relay_monitor_rtt_read">읽기</string>
-    <string name="relay_monitor_rtt_write">쓰기</string>
-    <string name="relay_monitor_network">네트워크</string>
-    <string name="relay_monitor_relay_type">유형</string>
-    <string name="relay_monitor_supported_nips">지원되는 NIP</string>
-    <string name="relay_monitor_requirements">요구 사항</string>
-    <string name="relay_discovery_accepted_kinds">허용된 종류</string>
-    <string name="relay_discovery_geohash">위치</string>
     <string name="relay_active_subscriptions">활성 구독</string>
     <string name="relay_req_subscriptions">REQ 구독 (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT 구독 (%1$d)</string>

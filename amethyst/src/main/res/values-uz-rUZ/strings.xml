@@ -1331,15 +1331,6 @@
     <string name="not_available_acronym">M/Y</string>
     <string name="relay_error_messages">Bu Relay\'dan Xatolar va Bildirishnomalar</string>
     <string name="relay_monitor_reports">Relay Monitor Hisobotlari</string>
-    <string name="relay_monitor_rtt_open">Ochish</string>
-    <string name="relay_monitor_rtt_read">O\'qish</string>
-    <string name="relay_monitor_rtt_write">Yozish</string>
-    <string name="relay_monitor_network">Tarmoq</string>
-    <string name="relay_monitor_relay_type">Turi</string>
-    <string name="relay_monitor_supported_nips">Qo\'llab-quvvatlanadigan NIPlar</string>
-    <string name="relay_monitor_requirements">Talablar</string>
-    <string name="relay_discovery_accepted_kinds">Qabul Qilingan Turlar</string>
-    <string name="relay_discovery_geohash">Joylashuv</string>
     <string name="relay_active_subscriptions">Faol Obunalar</string>
     <string name="relay_req_subscriptions">REQ Obunalar (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Obunalar (%1$d)</string>

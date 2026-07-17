@@ -48,4 +48,14 @@
     <string name="podcast_value_zap_split_hint">Zaps do tego są podzielone między:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Wartość-za-wartość</string>
+    <string name="relay_monitor_rtt_open">Otwórz</string>
+    <string name="relay_monitor_rtt_read">Odczyt</string>
+    <string name="relay_monitor_rtt_write">Zapis</string>
+    <string name="relay_monitor_network">Sieć</string>
+    <string name="relay_monitor_relay_type">Typ</string>
+    <string name="relay_monitor_requirements">Wymagania</string>
+    <string name="relay_monitor_supported_nips">Obsługiwane Nipy</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Dopuszczalne typy</string>
+    <string name="relay_discovery_geohash">Lokalizacja</string>
 </resources>

@@ -30,4 +30,13 @@
     <string name="road_event_speed_camera">Kamera ya kasi</string>
     <string name="road_event_traffic_jam">Msongamano wa magari</string>
     <string name="road_event_unknown">Tukio la barabara</string>
+    <string name="relay_monitor_rtt_open">Fungua</string>
+    <string name="relay_monitor_rtt_read">Soma</string>
+    <string name="relay_monitor_rtt_write">Andika</string>
+    <string name="relay_monitor_network">Mtandao</string>
+    <string name="relay_monitor_relay_type">Aina</string>
+    <string name="relay_monitor_requirements">Mahitaji</string>
+    <string name="relay_monitor_supported_nips">NIPs Zinazosaidiwa</string>
+    <string name="relay_discovery_accepted_kinds">Aina Zinazokubaliwa</string>
+    <string name="relay_discovery_geohash">Eneo</string>
 </resources>

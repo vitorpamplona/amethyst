@@ -28,4 +28,13 @@
     <string name="road_event_speed_camera">Camera tốc độ</string>
     <string name="road_event_traffic_jam">Tắc đường</string>
     <string name="road_event_unknown">Sự cố đường bộ</string>
+    <string name="relay_monitor_rtt_open">Mở</string>
+    <string name="relay_monitor_rtt_read">Đọc</string>
+    <string name="relay_monitor_rtt_write">Ghi</string>
+    <string name="relay_monitor_network">Mạng</string>
+    <string name="relay_monitor_relay_type">Loại</string>
+    <string name="relay_monitor_requirements">Yêu cầu</string>
+    <string name="relay_monitor_supported_nips">NIP được hỗ trợ</string>
+    <string name="relay_discovery_accepted_kinds">Loại được chấp nhận</string>
+    <string name="relay_discovery_geohash">Vị trí</string>
 </resources>

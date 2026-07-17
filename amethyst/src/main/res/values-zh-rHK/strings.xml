@@ -1329,16 +1329,6 @@
     <string name="about_legal">关于 &amp; 法律</string>
     <string name="relay_error_messages">该中继的错误和通知</string>
     <string name="relay_monitor_reports">中继监视器报告</string>
-    <string name="relay_monitor_rtt_open">打开</string>
-    <string name="relay_monitor_rtt_read">读取</string>
-    <string name="relay_monitor_rtt_write">写入</string>
-    <string name="relay_monitor_network">网络</string>
-    <string name="relay_monitor_relay_type">类型</string>
-    <string name="relay_monitor_supported_nips">支持的 NIPs</string>
-    <string name="relay_monitor_requirements">要求</string>
-    <string name="relay_monitor_ms">%1$d 毫秒</string>
-    <string name="relay_discovery_accepted_kinds">接受的类型</string>
-    <string name="relay_discovery_geohash">位置信息</string>
     <string name="relay_active_subscriptions">活跃订阅</string>
     <string name="relay_req_subscriptions">请求订阅(%1$d)</string>
     <string name="relay_count_subscriptions">计算订数 (%1$d)</string>

@@ -1339,15 +1339,6 @@
     <string name="about_legal">Par &amp; juridiski</string>
     <string name="relay_error_messages">Kļūdas un paziņojumi no šī relay</string>
     <string name="relay_monitor_reports">Relay monitora ziņojumi</string>
-    <string name="relay_monitor_rtt_open">Atvērt</string>
-    <string name="relay_monitor_rtt_read">Lasīt</string>
-    <string name="relay_monitor_rtt_write">Rakstīt</string>
-    <string name="relay_monitor_network">Tīkls</string>
-    <string name="relay_monitor_relay_type">Tips</string>
-    <string name="relay_monitor_supported_nips">Atbalstītie NIP</string>
-    <string name="relay_monitor_requirements">Prasības</string>
-    <string name="relay_discovery_accepted_kinds">Pieņemtie veidi</string>
-    <string name="relay_discovery_geohash">Atrašanās vieta</string>
     <string name="relay_active_subscriptions">Aktīvie abonementi</string>
     <string name="relay_req_subscriptions">REQ abonementi (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT abonementi (%1$d)</string>

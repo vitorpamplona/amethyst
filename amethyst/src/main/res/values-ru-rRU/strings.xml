@@ -1359,16 +1359,6 @@
     <string name="not_available_acronym">Н/Д</string>
     <string name="relay_error_messages">Ошибки и уведомления от этого relay</string>
     <string name="relay_monitor_reports">Отчёты мониторинга relay</string>
-    <string name="relay_monitor_rtt_open">Открытие</string>
-    <string name="relay_monitor_rtt_read">Чтение</string>
-    <string name="relay_monitor_rtt_write">Запись</string>
-    <string name="relay_monitor_network">Сеть</string>
-    <string name="relay_monitor_relay_type">Тип</string>
-    <string name="relay_monitor_supported_nips">Поддерживаемые NIP</string>
-    <string name="relay_monitor_requirements">Требования</string>
-    <string name="relay_monitor_ms">%1$d мс</string>
-    <string name="relay_discovery_accepted_kinds">Принимаемые типы</string>
-    <string name="relay_discovery_geohash">Местоположение</string>
     <string name="relay_active_subscriptions">Активные подписки</string>
     <string name="relay_req_subscriptions">REQ-подписки (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-подписки (%1$d)</string>

@@ -32,4 +32,13 @@
     <string name="road_event_speed_camera">Radar</string>
     <string name="road_event_traffic_jam">Saobraćajna gužva</string>
     <string name="road_event_unknown">Saobraćajni događaj</string>
+    <string name="relay_monitor_rtt_open">Otvori</string>
+    <string name="relay_monitor_rtt_read">Čitaj</string>
+    <string name="relay_monitor_rtt_write">Piši</string>
+    <string name="relay_monitor_network">Mreža</string>
+    <string name="relay_monitor_relay_type">Tip</string>
+    <string name="relay_monitor_requirements">Zahtevi</string>
+    <string name="relay_monitor_supported_nips">Podržani NIPs</string>
+    <string name="relay_discovery_accepted_kinds">Prihvaćene vrste</string>
+    <string name="relay_discovery_geohash">Lokacija</string>
 </resources>

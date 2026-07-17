@@ -49,4 +49,14 @@
     <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
+    <string name="relay_monitor_rtt_open">Otevření</string>
+    <string name="relay_monitor_rtt_read">Čtení</string>
+    <string name="relay_monitor_rtt_write">Zápis</string>
+    <string name="relay_monitor_network">Síť</string>
+    <string name="relay_monitor_relay_type">Typ</string>
+    <string name="relay_monitor_requirements">Požadavky</string>
+    <string name="relay_monitor_supported_nips">Podporované NIP</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Přijímané druhy</string>
+    <string name="relay_discovery_geohash">Poloha</string>
 </resources>

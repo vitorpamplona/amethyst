@@ -1288,14 +1288,6 @@
     <string name="about_legal">À propos &amp; Légal</string>
     <string name="relay_error_messages">Erreurs et Notifications de ce Relais</string>
     <string name="relay_monitor_reports">Rapports du moniteur de relais</string>
-    <string name="relay_monitor_rtt_open">Ouvrir</string>
-    <string name="relay_monitor_rtt_read">Lire</string>
-    <string name="relay_monitor_rtt_write">Écrire</string>
-    <string name="relay_monitor_network">Réseau</string>
-    <string name="relay_monitor_supported_nips">NIPs supportés</string>
-    <string name="relay_monitor_requirements">Conditions requises</string>
-    <string name="relay_discovery_accepted_kinds">Kinds acceptés</string>
-    <string name="relay_discovery_geohash">Localisation</string>
     <string name="relay_active_subscriptions">Abonnements actifs</string>
     <string name="relay_req_subscriptions">Abonnements REQ (%1$d)</string>
     <string name="relay_count_subscriptions">Abonnements COUNT (%1$d)</string>

@@ -30,4 +30,14 @@
     <string name="road_event_speed_camera">Blitzer</string>
     <string name="road_event_traffic_jam">Stau</string>
     <string name="road_event_unknown">Straßenereignis</string>
+    <string name="relay_monitor_rtt_open">Öffnen</string>
+    <string name="relay_monitor_rtt_read">Lesen</string>
+    <string name="relay_monitor_rtt_write">Schreiben</string>
+    <string name="relay_monitor_network">Netzwerk</string>
+    <string name="relay_monitor_relay_type">Typ</string>
+    <string name="relay_monitor_requirements">Anforderungen</string>
+    <string name="relay_monitor_supported_nips">Unterstützte NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
+    <string name="relay_discovery_accepted_kinds">Akzeptierte Arten</string>
+    <string name="relay_discovery_geohash">Standort</string>
 </resources>

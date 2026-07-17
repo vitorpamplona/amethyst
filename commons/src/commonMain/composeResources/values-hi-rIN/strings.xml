@@ -43,4 +43,14 @@
     <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
     <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
     <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
+    <string name="relay_monitor_rtt_open">खोलें</string>
+    <string name="relay_monitor_rtt_read">पढें</string>
+    <string name="relay_monitor_rtt_write">लिखें</string>
+    <string name="relay_monitor_network">जाल</string>
+    <string name="relay_monitor_relay_type">प्रकार</string>
+    <string name="relay_monitor_requirements">आवश्यकताएँ</string>
+    <string name="relay_monitor_supported_nips">अवलम्बन किए हुए निप॰ सूची</string>
+    <string name="relay_monitor_ms">%1$d सहस्रतमसेकण्ड</string>
+    <string name="relay_discovery_accepted_kinds">स्वीकृत प्रकार</string>
+    <string name="relay_discovery_geohash">स्थान</string>
 </resources>

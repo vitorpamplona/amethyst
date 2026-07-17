@@ -1617,16 +1617,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Napake in obvestila s tega releja</string>
     <string name="relay_monitor_reports">Poročila o delovanju relejev</string>
-    <string name="relay_monitor_rtt_open">Odprto</string>
-    <string name="relay_monitor_rtt_read">Branje</string>
-    <string name="relay_monitor_rtt_write">Pisanje</string>
-    <string name="relay_monitor_network">Omrežje</string>
-    <string name="relay_monitor_relay_type">Vrsta</string>
-    <string name="relay_monitor_supported_nips">Podprti NIP-i</string>
-    <string name="relay_monitor_requirements">Zahteve</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Sprejeti tipi (kind)</string>
-    <string name="relay_discovery_geohash">Lokacija</string>
     <string name="relay_active_subscriptions">Aktivne naročnine</string>
     <string name="relay_req_subscriptions">REQ Naročnine (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT Naročnine (%1$d)</string>

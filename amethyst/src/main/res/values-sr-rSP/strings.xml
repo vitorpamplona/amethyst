@@ -1328,15 +1328,6 @@
     <string name="about_legal">O nama &amp; Pravno</string>
     <string name="relay_error_messages">Greške i obaveštenja sa ovog relay-a</string>
     <string name="relay_monitor_reports">Izveštaji monitora relay-a</string>
-    <string name="relay_monitor_rtt_open">Otvori</string>
-    <string name="relay_monitor_rtt_read">Čitaj</string>
-    <string name="relay_monitor_rtt_write">Piši</string>
-    <string name="relay_monitor_network">Mreža</string>
-    <string name="relay_monitor_relay_type">Tip</string>
-    <string name="relay_monitor_supported_nips">Podržani NIPs</string>
-    <string name="relay_monitor_requirements">Zahtevi</string>
-    <string name="relay_discovery_accepted_kinds">Prihvaćene vrste</string>
-    <string name="relay_discovery_geohash">Lokacija</string>
     <string name="relay_active_subscriptions">Aktivne pretplate</string>
     <string name="relay_req_subscriptions">REQ pretplate (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT pretplate (%1$d)</string>

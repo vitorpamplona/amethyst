@@ -1391,16 +1391,6 @@
     <string name="not_available_acronym">غ/م</string>
     <string name="relay_error_messages">الأخطاء والإشعارات من هذا المرحل</string>
     <string name="relay_monitor_reports">تقارير مراقب relay</string>
-    <string name="relay_monitor_rtt_open">فتح</string>
-    <string name="relay_monitor_rtt_read">قراءة</string>
-    <string name="relay_monitor_rtt_write">كتابة</string>
-    <string name="relay_monitor_network">الشبكة</string>
-    <string name="relay_monitor_relay_type">النوع</string>
-    <string name="relay_monitor_supported_nips">NIPs المدعومة</string>
-    <string name="relay_monitor_requirements">المتطلبات</string>
-    <string name="relay_monitor_ms">%1$d مللي ثانية</string>
-    <string name="relay_discovery_accepted_kinds">الأنواع المقبولة</string>
-    <string name="relay_discovery_geohash">الموقع</string>
     <string name="relay_active_subscriptions">الاشتراكات النشطة</string>
     <string name="relay_req_subscriptions">اشتراكات REQ (%1$d)</string>
     <string name="relay_count_subscriptions">اشتراكات COUNT (%1$d)</string>

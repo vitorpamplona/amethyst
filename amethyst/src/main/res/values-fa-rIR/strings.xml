@@ -1339,15 +1339,6 @@
     <string name="about_legal">درباره &amp; قانونی</string>
     <string name="relay_error_messages">خطاها و هشدارهای از این رله</string>
     <string name="relay_monitor_reports">گزارش‌های مانیتور relay</string>
-    <string name="relay_monitor_rtt_open">باز</string>
-    <string name="relay_monitor_rtt_read">خواندن</string>
-    <string name="relay_monitor_rtt_write">نوشتن</string>
-    <string name="relay_monitor_network">شبکه</string>
-    <string name="relay_monitor_relay_type">نوع</string>
-    <string name="relay_monitor_supported_nips">NIPهای پشتیبانی شده</string>
-    <string name="relay_monitor_requirements">الزامات</string>
-    <string name="relay_discovery_accepted_kinds">انواع پذیرفته شده</string>
-    <string name="relay_discovery_geohash">موقعیت مکانی</string>
     <string name="relay_active_subscriptions">اشتراک‌های فعال</string>
     <string name="relay_req_subscriptions">اشتراک‌های REQ (%1$d)</string>
     <string name="relay_count_subscriptions">اشتراک‌های COUNT (%1$d)</string>

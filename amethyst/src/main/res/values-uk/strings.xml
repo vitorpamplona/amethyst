@@ -1166,25 +1166,15 @@
     
     <string name="relay_monitor_reports">Звіти монітора relay</string>
     
-    <string name="relay_monitor_rtt_open">Відкрити</string>
     
-    <string name="relay_monitor_rtt_read">Читати</string>
     
-    <string name="relay_monitor_rtt_write">Писати</string>
     
-    <string name="relay_monitor_network">Мережа</string>
     
-    <string name="relay_monitor_relay_type">Тип</string>
     
-    <string name="relay_monitor_supported_nips">Підтримувані NIP</string>
     
-    <string name="relay_monitor_requirements">Вимоги</string>
     
-    <string name="relay_monitor_ms">%1$d мс</string>
     
-    <string name="relay_discovery_accepted_kinds">Прийняті типи</string>
     
-    <string name="relay_discovery_geohash">Місцезнаходження</string>
     
     <string name="relay_active_subscriptions">Активні підписки</string>
     

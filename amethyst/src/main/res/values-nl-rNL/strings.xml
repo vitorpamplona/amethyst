@@ -1525,16 +1525,6 @@
     <string name="not_available_acronym">N.v.t.</string>
     <string name="relay_error_messages">Fouten en meldingen van deze relay</string>
     <string name="relay_monitor_reports">Relay-monitorrapporten</string>
-    <string name="relay_monitor_rtt_open">Open</string>
-    <string name="relay_monitor_rtt_read">Lezen</string>
-    <string name="relay_monitor_rtt_write">Schrijven</string>
-    <string name="relay_monitor_network">Netwerk</string>
-    <string name="relay_monitor_relay_type">Type</string>
-    <string name="relay_monitor_supported_nips">Ondersteunde NIPs</string>
-    <string name="relay_monitor_requirements">Vereisten</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Geaccepteerde kinds</string>
-    <string name="relay_discovery_geohash">Locatie</string>
     <string name="relay_active_subscriptions">Actieve abonnementen</string>
     <string name="relay_req_subscriptions">REQ-abonnementen (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT-abonnementen (%1$d)</string>

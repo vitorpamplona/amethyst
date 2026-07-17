@@ -30,4 +30,13 @@
     <string name="road_event_speed_camera">স্পিড ক্যামেরা</string>
     <string name="road_event_traffic_jam">যানজট</string>
     <string name="road_event_unknown">রাস্তার ঘটনা</string>
+    <string name="relay_monitor_rtt_open">খুলুন</string>
+    <string name="relay_monitor_rtt_read">পড়ুন</string>
+    <string name="relay_monitor_rtt_write">লিখুন</string>
+    <string name="relay_monitor_network">নেটওয়ার্ক</string>
+    <string name="relay_monitor_relay_type">ধরন</string>
+    <string name="relay_monitor_requirements">প্রয়োজনীয়তা</string>
+    <string name="relay_monitor_supported_nips">সমর্থিত NIPs</string>
+    <string name="relay_discovery_accepted_kinds">গৃহীত ধরনসমূহ</string>
+    <string name="relay_discovery_geohash">অবস্থান</string>
 </resources>

@@ -1808,16 +1808,6 @@
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Chyby a upozornění z tohoto relé</string>
     <string name="relay_monitor_reports">Zprávy monitoru relé</string>
-    <string name="relay_monitor_rtt_open">Otevření</string>
-    <string name="relay_monitor_rtt_read">Čtení</string>
-    <string name="relay_monitor_rtt_write">Zápis</string>
-    <string name="relay_monitor_network">Síť</string>
-    <string name="relay_monitor_relay_type">Typ</string>
-    <string name="relay_monitor_supported_nips">Podporované NIP</string>
-    <string name="relay_monitor_requirements">Požadavky</string>
-    <string name="relay_monitor_ms">%1$d ms</string>
-    <string name="relay_discovery_accepted_kinds">Přijímané druhy</string>
-    <string name="relay_discovery_geohash">Poloha</string>
     <string name="relay_active_subscriptions">Aktivní odběry</string>
     <string name="relay_req_subscriptions">REQ odběry (%1$d)</string>
     <string name="relay_count_subscriptions">COUNT odběry (%1$d)</string>

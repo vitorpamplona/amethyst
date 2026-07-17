@@ -30,4 +30,13 @@
     <string name="road_event_speed_camera">Κάμερα ταχύτητας</string>
     <string name="road_event_traffic_jam">Κυκλοφοριακή συμφόρηση</string>
     <string name="road_event_unknown">Οδικό συμβάν</string>
+    <string name="relay_monitor_rtt_open">Άνοιγμα</string>
+    <string name="relay_monitor_rtt_read">Ανάγνωση</string>
+    <string name="relay_monitor_rtt_write">Εγγραφή</string>
+    <string name="relay_monitor_network">Δίκτυο</string>
+    <string name="relay_monitor_relay_type">Τύπος</string>
+    <string name="relay_monitor_requirements">Απαιτήσεις</string>
+    <string name="relay_monitor_supported_nips">Υποστηριζόμενα NIPs</string>
+    <string name="relay_discovery_accepted_kinds">Αποδεκτοί τύποι</string>
+    <string name="relay_discovery_geohash">Τοποθεσία</string>
 </resources>
