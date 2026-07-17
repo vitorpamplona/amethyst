@@ -79,12 +79,16 @@ fun RenderHighlight(
 ) {
     val noteEvent = note.event as? HighlightEvent ?: return
 
+    val selector = noteEvent.textQuoteSelector()
+
     DisplayHighlight(
         comment = noteEvent.comment(),
         highlight = noteEvent.quote(),
-        context = noteEvent.context(),
+        context = noteEvent.contextOrReconstructed(),
         authorHex = noteEvent.author(),
         url = noteEvent.inUrl(),
+        textFragmentPrefix = selector?.prefix,
+        textFragmentSuffix = selector?.suffix,
         postAddress = noteEvent.inPostAddress(),
         postVersion = noteEvent.inPostVersion(),
         makeItShort = makeItShort,
@@ -152,6 +156,8 @@ fun DisplayHighlight(
     context: String?,
     authorHex: String?,
     url: String?,
+    textFragmentPrefix: String? = null,
+    textFragmentSuffix: String? = null,
     postAddress: Address?,
     postVersion: ETag?,
     makeItShort: Boolean,
@@ -220,6 +226,8 @@ fun DisplayHighlight(
             highlightQuote = highlight,
             authorHex = authorHex,
             baseUrl = url,
+            textFragmentPrefix = textFragmentPrefix,
+            textFragmentSuffix = textFragmentSuffix,
             postAddress = postAddress,
             postVersion = postVersion,
             accountViewModel = accountViewModel,
@@ -228,11 +236,53 @@ fun DisplayHighlight(
     }
 }
 
+private const val FRAGMENT_EDGE_WORDS = 4
+
+/**
+ * Builds a URL with a Text Fragment (`#:~:text=`) directive that scrolls the source page
+ * to the highlighted text. When a W3C `textquoteselector` supplies surrounding prefix/suffix
+ * text, a few words of each are added as `prefix-,` / `,-suffix` disambiguators so the browser
+ * lands on the correct occurrence even when the quote repeats on the page.
+ *
+ * See https://wicg.github.io/scroll-to-text-fragment/
+ */
+private fun buildTextFragmentUrl(
+    baseUrl: String,
+    exact: String,
+    prefix: String?,
+    suffix: String?,
+): String {
+    val separator = if (baseUrl.contains("#")) "&" else "#"
+
+    val prefixPart = trimToFragmentEdge(prefix, keepStart = false)?.let { "${Uri.encode(it)}-," } ?: ""
+    val suffixPart = trimToFragmentEdge(suffix, keepStart = true)?.let { ",-${Uri.encode(it)}" } ?: ""
+
+    return "$baseUrl$separator:~:text=$prefixPart${Uri.encode(exact)}$suffixPart"
+}
+
+/**
+ * Keeps only the [FRAGMENT_EDGE_WORDS] words nearest the highlight (the last words when
+ * [keepStart] is false, for a prefix; the first words when true, for a suffix) and collapses
+ * whitespace so newlines from the selector don't break Text Fragment matching.
+ */
+private fun trimToFragmentEdge(
+    text: String?,
+    keepStart: Boolean,
+): String? {
+    if (text == null) return null
+    val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (words.isEmpty()) return null
+    val slice = if (keepStart) words.take(FRAGMENT_EDGE_WORDS) else words.takeLast(FRAGMENT_EDGE_WORDS)
+    return slice.joinToString(" ")
+}
+
 @Composable
 private fun DisplayQuoteAuthor(
     highlightQuote: String,
     authorHex: String?,
     baseUrl: String?,
+    textFragmentPrefix: String? = null,
+    textFragmentSuffix: String? = null,
     postAddress: Address?,
     postVersion: ETag?,
     accountViewModel: AccountViewModel,
@@ -292,7 +342,10 @@ private fun DisplayQuoteAuthor(
         }
 
         baseUrl != null -> {
-            val url = "$baseUrl${if (baseUrl.contains("#")) "&" else "#"}:~:text=${Uri.encode(highlightQuote)}"
+            val url =
+                remember(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix) {
+                    buildTextFragmentUrl(baseUrl, highlightQuote, textFragmentPrefix, textFragmentSuffix)
+                }
 
             DisplayEntryForAUrl(url, userBase, accountViewModel, nav)
         }

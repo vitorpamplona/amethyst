@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
+import com.vitorpamplona.quartz.nip84Highlights.tags.TextQuoteSelectorTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -122,6 +123,23 @@ class HighlightEvent(
     fun comment() = tags.firstNotNullOfOrNull(CommentTag::parse)
 
     fun context() = tags.firstNotNullOfOrNull(ContextTag::parse)
+
+    fun textQuoteSelector() = tags.firstNotNullOfOrNull(TextQuoteSelectorTag::parse)
+
+    /**
+     * The paragraph-level context surrounding the highlight, preferring an explicit
+     * NIP-84 `context` tag and falling back to reconstructing it from a W3C
+     * `textquoteselector`'s prefix/suffix (as web highlighter clients emit) so the
+     * in-context rendering still works when no `context` tag is present.
+     */
+    fun contextOrReconstructed(): String? {
+        context()?.let { return it }
+
+        val selector = textQuoteSelector() ?: return null
+        if (selector.prefix == null && selector.suffix == null) return null
+
+        return (selector.prefix ?: "") + content + (selector.suffix ?: "")
+    }
 
     fun inPost() = firstTaggedATag()
 
