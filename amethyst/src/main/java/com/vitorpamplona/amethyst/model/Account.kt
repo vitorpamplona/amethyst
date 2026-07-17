@@ -1594,12 +1594,26 @@ class Account(
         hash: HexKey,
         size: Long,
         alt: String,
-    ) = blossomServers.createBlossomUploadAuth(hash, size, alt)
+        servers: List<String> = emptyList(),
+    ) = blossomServers.createBlossomUploadAuth(hash, size, alt, servers)
+
+    suspend fun createBlossomMediaAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+        servers: List<String> = emptyList(),
+    ) = blossomServers.createBlossomMediaAuth(hash, size, alt, servers)
 
     suspend fun createBlossomDeleteAuth(
         hash: HexKey,
         alt: String,
-    ) = blossomServers.createBlossomDeleteAuth(hash, alt)
+        servers: List<String> = emptyList(),
+    ) = blossomServers.createBlossomDeleteAuth(hash, alt, servers)
+
+    suspend fun createBlossomListAuth(
+        alt: String,
+        servers: List<String> = emptyList(),
+    ) = blossomServers.createBlossomListAuth(alt, servers)
 
     suspend fun boost(note: Note) {
         val powDifficulty = powDifficultyFor(RepostEvent.KIND)

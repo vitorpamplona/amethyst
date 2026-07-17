@@ -24,6 +24,7 @@ import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -211,27 +213,75 @@ class UploadOrchestrator {
                         sensitiveContent = contentWarningReason,
                         serverBaseUrl = serverBaseUrl,
                         okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        // Scope the upload token to the target server (BUD-11) so it can't be replayed elsewhere.
                         httpAuth =
                             if (forcedSigner != null) {
-                                { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner) }
+                                { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner, listOf(serverBaseUrl)) }
                             } else {
-                                account::createBlossomUploadAuth
+                                { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt, listOf(serverBaseUrl)) }
                             },
                         context = context,
                     )
 
-            verifyHeader(
-                uploadResult = result,
-                localContentType = contentType,
-                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                originalHash = originalHash,
-                originalContentType = contentTypeForResult,
-            )
+            val finalState =
+                verifyHeader(
+                    uploadResult = result,
+                    localContentType = contentType,
+                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                    originalHash = originalHash,
+                    originalContentType = contentTypeForResult,
+                )
+
+            // BUD-04: replicate the blob to the user's other Blossom servers for redundancy.
+            // Best-effort — a mirror failure never fails the upload the user already completed.
+            if (finalState is UploadingState.Finished && forcedSigner == null) {
+                mirrorToOtherServers(result, serverBaseUrl, account)
+            }
+
+            finalState
         } catch (_: SignerExceptions.ReadOnlyException) {
             error(R.string.login_with_a_private_key_to_be_able_to_upload)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    /**
+     * BUD-04 mirror fan-out: asks every *other* Blossom server in the account's
+     * kind-10063 list to pull the freshly-uploaded blob from [result]'s URL. Runs
+     * after the primary upload is confirmed, so the user's post is never delayed by
+     * a slow/offline mirror; failures are swallowed per-server. Requires the blob's
+     * sha256 (to scope the mirror auth and let server B verify the download).
+     */
+    private suspend fun mirrorToOtherServers(
+        result: MediaUploadResult,
+        primaryServerBaseUrl: String,
+        account: Account,
+    ) {
+        val sourceUrl = result.url ?: return
+        val hash = result.sha256 ?: sourceUrl.substringAfterLast('/').substringBefore('.')
+        if (hash.length != 64) return
+
+        val primaryDomain = BlossomServerUrl.domain(primaryServerBaseUrl)
+        val targets =
+            account.blossomServers.hostNameFlow.value
+                .filter { it.type == ServerType.Blossom && BlossomServerUrl.domain(it.baseUrl) != primaryDomain }
+                .map { it.baseUrl }
+                .distinct()
+
+        if (targets.isEmpty()) return
+
+        updateState(0.95, UploadingState.ServerProcessing)
+        targets.forEach { target ->
+            try {
+                val auth = account.createBlossomUploadAuth(hash, result.size ?: 0L, "Mirror $hash", listOf(target)).toAuthorizationHeader()
+                BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
+                    .mirror(sourceUrl, target, auth)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("UploadOrchestrator", "Failed to mirror $hash to $target", e)
+            }
         }
     }
 

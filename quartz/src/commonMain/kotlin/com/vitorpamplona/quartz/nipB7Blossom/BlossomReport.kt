@@ -21,32 +21,31 @@
 package com.vitorpamplona.quartz.nipB7Blossom
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.serialization.Serializable
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
+import com.vitorpamplona.quartz.nip56Reports.hash
+import com.vitorpamplona.quartz.nip56Reports.user
+import com.vitorpamplona.quartz.utils.TimeUtils
 
-@Serializable
-data class BlossomUploadResult(
-    // A publicly accessible URL to the BUD-01 GET /<sha256> endpoint (optionally with a file extension)
-    val url: String?,
-    // The sha256 hash of the blob
-    val sha256: HexKey? = null,
-    // The size of the blob in bytes
-    val size: Long? = null,
-    // (optional) The MIME type of the blob
-    val type: String? = null,
-    // upload time
-    val uploaded: Long? = null,
-    // (BUD-05) The sha256 hash of the *original* blob, before server-side
-    // optimization. Only returned by the `/media` endpoint when the server
-    // transforms the file (so sha256 != ox).
-    val ox: HexKey? = null,
-    // magnet link
-    val magnet: String? = null,
-    // info hash
-    val infohash: String? = null,
-    // ipfs link
-    val ipfs: String? = null,
-    // (BUD-08) Optional NIP-94 file-metadata tags describing this blob, so a
-    // client gets standardized metadata (dimensions, blurhash, alt, …) without
-    // a separate request. Each entry is a NIP-94 tag: [name, value, …].
-    val nip94: List<List<String>>? = null,
-)
+/**
+ * BUD-09 blob report: a NIP-56 (kind 1984) report event scoped to a blob by its
+ * sha256 (`x` tag) rather than to a nostr event. The signed event is PUT to a
+ * server's `/report` endpoint so the operator can review problematic content.
+ *
+ * Reuses the shared NIP-56 tag builders ([hash], [user]) so a blob report is a
+ * regular [ReportEvent] — clients that already parse kind 1984 pick up the
+ * reported hash via `HashSha256Tag`.
+ */
+object BlossomReport {
+    fun build(
+        blobHash: HexKey,
+        type: ReportType,
+        uploader: HexKey? = null,
+        comment: String = "",
+        createdAt: Long = TimeUtils.now(),
+    ) = eventTemplate(ReportEvent.KIND, comment, createdAt) {
+        hash(blobHash, type)
+        uploader?.let { user(it, type) }
+    }
+}

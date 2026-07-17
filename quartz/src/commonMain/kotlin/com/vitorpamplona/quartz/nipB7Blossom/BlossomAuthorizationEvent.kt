@@ -57,29 +57,47 @@ class BlossomAuthorizationEvent(
             hash: HexKey,
             alt: String,
             signer: NostrSigner,
+            servers: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-        ) = createAuth("get", hash, null, alt, signer, createdAt)
+        ) = createAuth("get", hash, null, alt, signer, servers, createdAt)
 
         suspend fun createListAuth(
             signer: NostrSigner,
             alt: String,
+            servers: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-        ) = createAuth("list", null, null, alt, signer, createdAt)
+        ) = createAuth("list", null, null, alt, signer, servers, createdAt)
 
         suspend fun createDeleteAuth(
             hash: HexKey,
             alt: String,
             signer: NostrSigner,
+            servers: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-        ) = createAuth("delete", hash, null, alt, signer, createdAt)
+        ) = createAuth("delete", hash, null, alt, signer, servers, createdAt)
 
         suspend fun createUploadAuth(
             hash: HexKey,
             size: Long,
             alt: String,
             signer: NostrSigner,
+            servers: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
-        ) = createAuth("upload", hash, size, alt, signer, createdAt)
+        ) = createAuth("upload", hash, size, alt, signer, servers, createdAt)
+
+        /**
+         * BUD-05 media-optimization auth (`t=media`). The [hash] is the sha256 of
+         * the *original* bytes the client sends to `PUT /media`; the server returns
+         * a descriptor whose hash is the optimized blob's.
+         */
+        suspend fun createMediaAuth(
+            hash: HexKey,
+            size: Long,
+            alt: String,
+            signer: NostrSigner,
+            servers: List<String> = emptyList(),
+            createdAt: Long = TimeUtils.now(),
+        ) = createAuth("media", hash, size, alt, signer, servers, createdAt)
 
         private suspend fun createAuth(
             type: String,
@@ -87,15 +105,26 @@ class BlossomAuthorizationEvent(
             fileSize: Long?,
             alt: String,
             signer: NostrSigner,
+            servers: List<String> = emptyList(),
             createdAt: Long = TimeUtils.now(),
         ): BlossomAuthorizationEvent {
+            // BUD-11 `server` tags scope the token to specific domains so an upload
+            // or delete token can't be replayed against another server. The value
+            // MUST be the lowercase bare domain (no scheme/port/path).
+            val serverTags =
+                servers
+                    .map { BlossomServerUrl.domain(it) }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .map { arrayOf("server", it) }
+
             val tags =
                 listOfNotNull(
                     arrayOf("t", type),
                     arrayOf("expiration", TimeUtils.oneHourAhead().toString()),
                     fileSize?.let { arrayOf("size", it.toString()) },
                     hash?.let { arrayOf("x", it) },
-                )
+                ) + serverTags
 
             return signer.sign(createdAt, KIND, tags.toTypedArray(), alt)
         }

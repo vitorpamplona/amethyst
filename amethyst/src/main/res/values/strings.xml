@@ -1545,6 +1545,15 @@
 
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
 
+    <string name="manage_stored_files">Manage stored files</string>
+    <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
+    <string name="blossom_mirror_to_missing">Mirror to missing</string>
+    <string name="blossom_delete_from">Delete from…</string>
+    <string name="blossom_report">Report</string>
+    <string name="blossom_report_title">Report blob</string>
+    <string name="blossom_report_comment_hint">Reason (optional)</string>
+    <string name="blossom_send">Send</string>
+
     <string name="recommended_media_servers">Recommended Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
     <string name="use_default_servers">Use Default List</string>
