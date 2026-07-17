@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.graperank
 
+import com.vitorpamplona.quartz.experimental.graperank.GrapeRankPublisher.ScoredCard
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -64,7 +65,7 @@ class GrapeRankPublisherTest {
             val c = hexKey(0xC)
 
             // First run: every card is new.
-            val r1 = publisher.reconcileLocal(signer, provider, listOf(a to 50, b to 10), createdAt = 1_000L)
+            val r1 = publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, 50), ScoredCard(b, 10)), createdAt = 1_000L)
             assertEquals(2, r1.signed)
             assertEquals(0, r1.unchanged)
             assertEquals(0, r1.retracted)
@@ -76,7 +77,7 @@ class GrapeRankPublisherTest {
                     .toSet()
 
             // Same ranks again: nothing is re-signed, no event id churns.
-            val r2 = publisher.reconcileLocal(signer, provider, listOf(a to 50, b to 10), createdAt = 2_000L)
+            val r2 = publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, 50), ScoredCard(b, 10)), createdAt = 2_000L)
             assertEquals(0, r2.signed)
             assertEquals(2, r2.unchanged)
             assertEquals(0, r2.retracted)
@@ -88,7 +89,7 @@ class GrapeRankPublisherTest {
             assertEquals(firstIds, secondIds)
 
             // a's rank moved, b dropped out, c is new: a + c signed, b retracted.
-            val r3 = publisher.reconcileLocal(signer, provider, listOf(a to 60, c to 5), createdAt = 3_000L)
+            val r3 = publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, 60), ScoredCard(c, 5)), createdAt = 3_000L)
             assertEquals(2, r3.signed)
             assertEquals(0, r3.unchanged)
             assertEquals(1, r3.retracted)
@@ -113,15 +114,53 @@ class GrapeRankPublisherTest {
 
             val a = hexKey(0xA)
 
-            publisher.reconcileLocal(signer, provider, listOf(a to 40), createdAt = 1_000L)
+            publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, 40)), createdAt = 1_000L)
             publisher.reconcileLocal(signer, provider, emptyList(), createdAt = 2_000L)
             assertEquals(emptyMap(), cardsByTarget(store, provider))
 
             // A NEWER card outranks the older kind:5 (NIP-09 deletions only cover
             // versions up to their created_at), so the target comes back cleanly.
-            val r = publisher.reconcileLocal(signer, provider, listOf(a to 45), createdAt = 3_000L)
+            val r = publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, 45)), createdAt = 3_000L)
             assertEquals(1, r.signed)
             assertEquals(mapOf(a to 45), cardsByTarget(store, provider))
+
+            store.close()
+        }
+
+    @Test
+    fun writesFollowerAndHopTagsAndReSignsWhenTheyMove() =
+        runBlocking {
+            val store = EventStore(null)
+            val signer = NostrSignerInternal(KeyPair())
+            val provider = signer.pubKey
+            val publisher = GrapeRankPublisher(store)
+
+            val a = hexKey(0xA)
+
+            suspend fun cardFor(target: String): ContactCardEvent =
+                store
+                    .query<Event>(Filter(kinds = listOf(ContactCardEvent.KIND), authors = listOf(provider)))
+                    .filterIsInstance<ContactCardEvent>()
+                    .first { it.aboutUser() == target }
+
+            // A card carrying rank + followers + hops persists all three tags.
+            publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, rank = 50, followers = 7, hops = 2)), createdAt = 1_000L)
+            cardFor(a).let {
+                assertEquals(50, it.rank())
+                assertEquals(7, it.followerCount())
+                assertEquals(2, it.hops())
+            }
+
+            // Rank unchanged but the follower count moved → the card re-signs.
+            val moved = publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, rank = 50, followers = 9, hops = 2)), createdAt = 2_000L)
+            assertEquals(1, moved.signed)
+            assertEquals(0, moved.unchanged)
+            assertEquals(9, cardFor(a).followerCount())
+
+            // Everything identical → no re-sign.
+            val same = publisher.reconcileLocal(signer, provider, listOf(ScoredCard(a, rank = 50, followers = 9, hops = 2)), createdAt = 3_000L)
+            assertEquals(0, same.signed)
+            assertEquals(1, same.unchanged)
 
             store.close()
         }

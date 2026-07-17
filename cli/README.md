@@ -389,7 +389,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy profile show [USER]` | Print kind:0 metadata. USER accepts npub/nprofile/hex/NIP-05; defaults to self. |
 | `amy profile edit --name … --about … --picture URL …` | Patch and re-publish your kind:0. |
 | `amy follow USER` / `amy unfollow USER` | Add/remove USER from your kind:3 contact list (fetches the freshest list first). |
-| `amy graperank [OBSERVER] [--offline] [--min-rank N]` | Crawl + score: compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph, then persist the result. Exhaustively crawls each user's kind:10002 outbox for their latest kind:3/10000/1984 until every discovered user is checked (no user cap), dropping reports the author retracted via NIP-09. **Every score run persists its result locally**: the ranks (cutoff `--min-rank`, default 2) are reconciled into the shared store as NIP-85 kind:30382 cards signed by a per-observer **service key** — changed ranks re-signed, unchanged skipped (no event-id churn), dropped targets retracted (kind:5). `--offline` skips the crawl. |
+| `amy graperank [OBSERVER] [--offline] [--min-rank N]` | Crawl + score: compute GrapeRank web-of-trust scores (0..1) over the follow/mute/report graph, then persist the result. Exhaustively crawls each user's kind:10002 outbox for their latest kind:3/10000/1984 until every discovered user is checked (no user cap), dropping reports the author retracted via NIP-09. **Every score run persists its result locally**: the cards (rank cutoff `--min-rank`, default 2) are reconciled into the shared store as NIP-85 kind:30382 cards signed by a per-observer **service key** — each carries `rank`, `followers` (trusted-follower count, cutoff `--followers-threshold`, default 0.02) and `hops` (follow distance from the observer); changed cards re-signed, unchanged skipped (no event-id churn), dropped targets retracted (kind:5). `--offline` skips the crawl. |
 | `amy graperank crawl [OBSERVER] [--max-hops N] [--no-preconnect]` | Pipeline stage 1 — network only: crawl the follow/mute/report graph (kind 3/10000/1984/10002) into the local store, no scoring. Idempotent and cumulative: run it a few times to load everything, then `score`. |
 | `amy graperank score [OBSERVER]` | Pipeline stage 2 — local only: score from the store and persist the cards (identical to bare `--offline`; same scoring flags). No network, so re-run with different `--rigor`/`--attenuation`/`--min-rank` without re-crawling. |
 | `amy graperank publish [OBSERVER] [--relay URL[,URL…]]` | Pipeline stage 3 — transport only: make the operator relay(s) converge to the locally persisted card set — one NIP-77 up-only reconcile per relay over the service key's kind:30382 + kind:5 (nothing is re-scored or re-signed; a relay that can't reconcile gets the full set published instead). Also refreshes the observer's kind:10040 pointer when we hold their key. |
@@ -420,12 +420,16 @@ means re-signing **replaces** a target's card instead of orphaning it — and
 losing everything but the master seed still re-derives every key.
 
 **Every score run persists its cards.** After scoring, Amy reconciles the result
-into the local store: new or changed ranks (≥ `--min-rank`, default 2) are
-signed; unchanged ranks are skipped (no new event id); and any card whose target
+into the local store: new or changed cards (rank ≥ `--min-rank`, default 2) are
+signed; unchanged cards are skipped (no new event id); and any card whose target
 dropped out of the graph or fell below the cutoff is **retracted** with a kind:5
-(the store applies it; the tombstone is kept). The local store is the source of
-truth — `graperank rank USER` reads it offline, and `graperank publish` mirrors
-it out:
+(the store applies it; the tombstone is kept). Each card carries three public
+tags: `rank` (`round(score*100)`), `followers` — the number of the target's
+followers whose own score clears `--followers-threshold` (default 0.02, matching
+Brainstorm's trusted-follower cutoff) — and `hops`, the shortest follow-graph
+distance from the observer (1 = a direct follow). A change to *any* of the three
+re-signs the card. The local store is the source of truth — `graperank rank USER`
+reads it offline, and `graperank publish` mirrors it out:
 
 ```bash
 amy graperank operator relay wss://relay.example.com   # where all cards live

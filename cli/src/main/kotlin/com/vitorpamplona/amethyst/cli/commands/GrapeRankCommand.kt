@@ -146,6 +146,10 @@ object GrapeRankCommand {
 
     private const val PROBE_TIMEOUT_MS = 2000
 
+    // Default score cutoff for counting a follower as "trusted" (the `followers`
+    // tag). Matches NosFabrica Brainstorm's verifiedFollowersInfluenceCutoff.
+    private const val DEFAULT_FOLLOWERS_THRESHOLD = 0.02
+
     // args.bool on a mistyped flag silently returns false, so the one flag read from
     // three different functions goes through a compile-time-checked name.
     private const val NO_REACHABILITY_CACHE_FLAG = "no-reachability-cache"
@@ -248,6 +252,10 @@ object GrapeRankCommand {
         // retracted. Rank is round(score*100), so 2 drops the ~0.015-and-below
         // barely-trusted tail.
         val minRank = args.intFlag("min-rank", 2)
+        // A "trusted follower" (the `followers` tag) is a follower whose own score is
+        // at or above this. Mirrors Brainstorm's verifiedFollowersInfluenceCutoff
+        // (0.02), which is the same 0.02 score == rank 2 line as the default min-rank.
+        val followersThreshold = args.flag("followers-threshold")?.toDoubleOrNull() ?: DEFAULT_FOLLOWERS_THRESHOLD
 
         val params =
             GrapeRankParams(
@@ -327,6 +335,14 @@ object GrapeRankCommand {
             val scoringMs = (System.nanoTime() - scoreStart) / 1_000_000
             System.err.println("[graperank] scored ${rankedIds.size} users in $scoringMs ms")
 
+            // Two derived per-user metrics persisted alongside the rank on each card:
+            //  - trusted-follower count: how many of a user's followers score at or
+            //    above the cutoff (Brainstorm's trustedFollowers).
+            //  - hops: shortest follow-graph distance from the observer (1 = direct
+            //    follow). Both are pure functions over the same graph + scores.
+            val followerCounts = graph.trustedFollowerCounts(scores, followersThreshold)
+            val hops = graph.hopsFrom(observer)
+
             val hopHistogram = crawlStats?.hopHistogram.orEmpty()
             val result =
                 linkedMapOf<String, Any?>(
@@ -352,9 +368,16 @@ object GrapeRankCommand {
                     "graph_build_ms" to buildMs,
                     "scoring_ms" to scoringMs,
                     "scoring_sweeps" to sweeps,
+                    "followers_threshold" to followersThreshold,
                     "scores" to
                         rankedIds.take(limit).map {
-                            mapOf("pubkey" to graph.pubkeyOf(it), "score" to scores[it], "rank" to rankOf(scores[it]))
+                            mapOf(
+                                "pubkey" to graph.pubkeyOf(it),
+                                "score" to scores[it],
+                                "rank" to rankOf(scores[it]),
+                                "followers" to followerCounts[it],
+                                "hops" to hops[it],
+                            )
                         },
                 )
 
@@ -372,7 +395,16 @@ object GrapeRankCommand {
             val desiredCards =
                 rankedIds
                     .filter { rankOf(scores[it]) >= minRank }
-                    .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
+                    .map { id ->
+                        GrapeRankPublisher.ScoredCard(
+                            target = graph.pubkeyOf(id),
+                            rank = rankOf(scores[id]),
+                            followers = followerCounts[id],
+                            // A scored user always has a follow path from the observer,
+                            // so hops is ≥ 1; guard the UNREACHABLE sentinel just in case.
+                            hops = hops[id].takeIf { it >= 1 },
+                        )
+                    }
 
             val cardsStart = System.nanoTime()
             val local =
@@ -908,6 +940,8 @@ object GrapeRankCommand {
                             linkedMapOf<String, Any?>(
                                 "provider" to card.pubKey,
                                 "rank" to card.rank(),
+                                "followers" to card.followerCount(),
+                                "hops" to card.hops(),
                                 "observer" to providerToObserver[card.pubKey],
                                 "created_at" to card.createdAt,
                                 "event_id" to card.id,

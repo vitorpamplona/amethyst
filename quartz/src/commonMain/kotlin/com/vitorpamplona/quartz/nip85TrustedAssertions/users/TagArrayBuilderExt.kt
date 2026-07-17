@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEnd
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.HopsTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PostCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
@@ -44,6 +45,8 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountSentTa
 fun TagArrayBuilder<ContactCardEvent>.rank(rank: Int) = addUnique(RankTag.assemble(rank))
 
 fun TagArrayBuilder<ContactCardEvent>.followers(count: Int) = addUnique(FollowerCountTag.assemble(count))
+
+fun TagArrayBuilder<ContactCardEvent>.hops(hops: Int) = addUnique(HopsTag.assemble(hops))
 
 fun TagArrayBuilder<ContactCardEvent>.firstCreatedAt(timestamp: Long) = addUnique(FirstCreatedAtTag.assemble(timestamp))
 
