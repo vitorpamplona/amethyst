@@ -41,6 +41,15 @@ jobs:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
+      # crowdin/github-action runs in a Docker container as root, so any file or
+      # directory it downloads (especially a brand-new locale folder like
+      # values-en-rGB/) ends up owned by root. The unprivileged runner user in
+      # the create-pull-request step below then can't unlink those files, which
+      # aborts its branch checkout with "unable to unlink ... Permission denied".
+      # Reclaim ownership of the whole working tree before touching git.
+      - name: Fix ownership after Crowdin Docker action
+        run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+
       # Keep docs/changelog/translators.json seeded with everyone who has translated
       # recently, so the per-release `## Translations` credits (scripts/translators.sh)
       # can resolve them to npubs. Only adds rows when a genuinely new contributor
