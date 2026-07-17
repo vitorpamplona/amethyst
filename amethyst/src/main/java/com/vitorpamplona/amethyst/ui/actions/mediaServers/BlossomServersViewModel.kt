@@ -123,12 +123,17 @@ class BlossomServersViewModel : ViewModel() {
     }
 
     fun addServerList(serverList: List<String>) {
-        serverList.forEach { serverUrl ->
-            addServer(serverUrl)
-        }
+        var added = false
+        serverList.forEach { if (addServerInternal(it)) added = true }
+        if (added) persist()
     }
 
     fun addServer(serverUrl: String) {
+        if (addServerInternal(serverUrl)) persist()
+    }
+
+    /** Adds a server to the in-memory list (no persist). Returns true if it was new. */
+    private fun addServerInternal(serverUrl: String): Boolean {
         val normalizedUrl =
             try {
                 Rfc3986.normalize(serverUrl.trim())
@@ -147,15 +152,12 @@ class BlossomServersViewModel : ViewModel() {
                 normalizedUrl,
                 ServerType.Blossom,
             )
-        if (_fileServers.value.contains(serverRef)) {
-            return
-        } else {
-            _fileServers.update {
-                it.plus(serverRef)
-            }
-            probeServer(serverRef.baseUrl)
-        }
+        if (_fileServers.value.contains(serverRef)) return false
+
+        _fileServers.update { it.plus(serverRef) }
+        probeServer(serverRef.baseUrl)
         isModified = true
+        return true
     }
 
     fun removeServer(
@@ -176,21 +178,22 @@ class BlossomServersViewModel : ViewModel() {
             }
             pruneHealth()
             isModified = true
+            persist()
         }
     }
 
-    fun removeAllServers() {
-        _fileServers.update { emptyList() }
-        isModified = true
-    }
+    /**
+     * Publishes any pending change. Called after each discrete edit (add/remove) and,
+     * for a reorder, once the drag gesture completes — so a drag doesn't publish a
+     * kind-10063 event on every intermediate swap.
+     */
+    fun persistPending() = persist()
 
-    fun saveFileServers() {
-        if (isModified) {
-            accountViewModel.launchSigner {
-                val serverList = _fileServers.value.map { it.baseUrl }
-                account.sendBlossomServersList(serverList)
-                refresh()
-            }
+    private fun persist() {
+        if (!isModified) return
+        isModified = false
+        accountViewModel.launchSigner {
+            account.sendBlossomServersList(_fileServers.value.map { it.baseUrl })
         }
     }
 

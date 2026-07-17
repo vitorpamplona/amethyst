@@ -1557,6 +1557,7 @@
     <string name="media_servers_priority_section">Upload priority</string>
     <string name="media_servers_add_section">Add a server</string>
     <string name="media_servers_recommended_label">Recommended</string>
+    <string name="media_servers_add_url_label">Or paste a server address</string>
     <string name="media_servers_cache_section">On-device cache</string>
     <string name="media_server_primary_badge">Primary</string>
     <string name="media_server_added">Added</string>

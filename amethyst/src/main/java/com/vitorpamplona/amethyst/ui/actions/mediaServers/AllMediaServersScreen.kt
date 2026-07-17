@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +52,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -72,9 +71,7 @@ fun AllMediaServersScreen(
         blossomServersViewModel.load()
     }
 
-    MediaServersScaffold(blossomServersViewModel, accountViewModel) {
-        nav.popBack()
-    }
+    MediaServersScaffold(blossomServersViewModel, accountViewModel, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,20 +79,13 @@ fun AllMediaServersScreen(
 fun MediaServersScaffold(
     blossomServersViewModel: BlossomServersViewModel,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
+    nav: INav,
 ) {
     Scaffold(
         topBar = {
-            SavingTopBar(
-                titleRes = R.string.media_servers,
-                onCancel = {
-                    blossomServersViewModel.refresh()
-                    onClose()
-                },
-                onPost = {
-                    blossomServersViewModel.saveFileServers()
-                    onClose()
-                },
+            TopBarWithBackButton(
+                caption = stringRes(id = R.string.media_servers),
+                nav = nav,
             )
         },
     ) { padding ->
@@ -132,8 +122,8 @@ fun MediaCacheSection(accountViewModel: AccountViewModel) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),

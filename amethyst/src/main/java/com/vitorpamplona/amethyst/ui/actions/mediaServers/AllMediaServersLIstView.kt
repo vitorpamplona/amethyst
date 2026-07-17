@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,24 +102,21 @@ fun AllMediaBody(
             itemCount = { blossomServersState.size },
         )
 
+    // Auto-save the reordering once the drag finishes, rather than on every intermediate swap.
+    LaunchedEffect(dragState.isDragging) {
+        if (!dragState.isDragging) blossomServersViewModel.persistPending()
+    }
+
     LazyColumn(
         modifier = modifier,
         contentPadding = FeedPadding,
         userScrollEnabled = !dragState.isDragging,
     ) {
         item {
-            Text(
-                text = stringRes(id = R.string.set_preferred_media_servers),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.grayText,
-                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-            )
-        }
-
-        item {
             SectionLabel(
                 title = stringRes(id = R.string.media_servers_priority_section),
                 caption = stringRes(id = R.string.media_servers_reorder_hint),
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
 
@@ -289,10 +287,9 @@ private fun AddServerSection(
 ) {
     SectionLabel(title = stringRes(id = R.string.media_servers_add_section))
 
-    MediaServerEditField(R.string.add_a_blossom_server) { onAddServer(it) }
-
+    // Recommended servers first — one tap adds a known-good host.
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -323,6 +320,15 @@ private fun AddServerSection(
             )
         }
     }
+
+    // ...or paste any server address.
+    Text(
+        text = stringRes(id = R.string.media_servers_add_url_label),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+    )
+    MediaServerEditField(R.string.add_a_blossom_server) { onAddServer(it) }
 }
 
 /** A recommended server as a tappable pill. Once added it reads as done and stops responding. */
