@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * REQ for the user's joined geohash location channels: for each cell, subscribe
@@ -39,18 +40,25 @@ fun filterFollowingGeohashChats(
 ): List<RelayBasedFilter>? {
     if (geohashes.isEmpty()) return null
 
-    return geohashes.flatMap { geohash ->
-        GeohashRelays.closestRelays(geohash).map { relay ->
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = listOf(GeohashChatEvent.KIND),
-                        tags = mapOf("g" to listOf(geohash)),
-                        limit = 100,
-                        since = since?.get(relay)?.time,
-                    ),
-            )
+    // Group cells by their nearest relays, so cells that share a relay collapse into a single filter
+    // (g = [all those cells]) instead of one REQ per (cell, relay).
+    val cellsByRelay = LinkedHashMap<NormalizedRelayUrl, MutableList<String>>()
+    geohashes.forEach { geohash ->
+        GeohashRelays.closestRelays(geohash).forEach { relay ->
+            cellsByRelay.getOrPut(relay) { mutableListOf() }.add(geohash)
         }
+    }
+
+    return cellsByRelay.map { (relay, cells) ->
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = listOf(GeohashChatEvent.KIND),
+                    tags = mapOf("g" to cells),
+                    limit = 100,
+                    since = since?.get(relay)?.time,
+                ),
+        )
     }
 }

@@ -168,7 +168,13 @@ private fun GeohashChatRoom(
     val isTeleported =
         remember(deviceLocation, geohash, teleported) {
             when (val loc = deviceLocation) {
-                is LocationState.LocationResult.Success -> !loc.geoHash.toString().startsWith(geohash)
+                is LocationState.LocationResult.Success -> {
+                    // Compare on the common prefix: the device fix is fixed-precision (8 chars), so a
+                    // finer (longer) cell can never be a prefix of it — treat a shared prefix as "here".
+                    val device = loc.geoHash.toString()
+                    val prefix = minOf(device.length, geohash.length)
+                    device.take(prefix) != geohash.take(prefix)
+                }
                 else -> teleported
             }
         }

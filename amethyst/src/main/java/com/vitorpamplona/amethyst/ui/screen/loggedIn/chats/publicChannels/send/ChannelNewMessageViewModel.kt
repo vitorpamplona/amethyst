@@ -339,6 +339,10 @@ open class ChannelNewMessageViewModel :
         val template = createTemplate() ?: return
         val channelRelays = channel?.relays() ?: emptySet()
 
+        // A geohash cell with no resolvable relays has nowhere to publish. Bail before cancel() clears
+        // the composer, so the user keeps their text (and draft) to retry rather than losing it silently.
+        if (channel is GeohashChatChannel && channelRelays.isEmpty()) return
+
         val draftToDelete = draftNote
         cancel()
 

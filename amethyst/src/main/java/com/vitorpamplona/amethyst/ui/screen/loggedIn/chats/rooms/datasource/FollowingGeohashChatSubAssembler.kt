@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -55,12 +56,13 @@ class FollowingGeohashChatSubAssembler(
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
 
-    val userJobMap = mutableMapOf<User, List<Job>>()
+    private val userJobMap = ConcurrentHashMap<User, List<Job>>()
 
     @OptIn(FlowPreview::class)
     override fun newSub(key: ChatroomListState): Subscription {
-        userJobMap[key.account.userProfile()]?.forEach { it.cancel() }
-        userJobMap[key.account.userProfile()] =
+        val user = key.account.userProfile()
+        userJobMap.remove(user)?.forEach { it.cancel() }
+        userJobMap[user] =
             listOf(
                 // Rebuild when the joined set changes.
                 key.account.scope.launch(Dispatchers.IO) {
@@ -82,6 +84,6 @@ class FollowingGeohashChatSubAssembler(
         subId: String,
     ) {
         super.endSub(key, subId)
-        userJobMap[key]?.forEach { it.cancel() }
+        userJobMap.remove(key)?.forEach { it.cancel() }
     }
 }

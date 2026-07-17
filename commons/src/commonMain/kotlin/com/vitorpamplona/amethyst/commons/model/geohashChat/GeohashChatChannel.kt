@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.concurrent.Volatile
 
 /**
  * A public geohash location chat channel (Bitchat-interoperable), keyed by the
@@ -49,7 +50,22 @@ class GeohashChatChannel(
      * cell has a well-defined relay set derived from its coordinates, so the
      * subscription layer can reach it even before the first message arrives.
      */
-    override fun relays(): Set<NormalizedRelayUrl> = GeoRelayDirectory.shared.closestRelays(geohash).toSet()
+    @Volatile private var cachedRelays: Set<NormalizedRelayUrl>? = null
+
+    @Volatile private var cachedRelaysVersion: Int = -1
+
+    override fun relays(): Set<NormalizedRelayUrl> {
+        val dir = GeoRelayDirectory.shared
+        val v = dir.version
+        // The closest-relays computation is a full sort of the ~370-relay directory; memoize it and
+        // recompute only when the directory changes (its version token moves). Two threads racing on a
+        // cold cache just both compute the same deterministic result, so no lock is needed.
+        cachedRelays?.let { if (cachedRelaysVersion == v) return it }
+        val computed = dir.closestRelays(geohash).toSet()
+        cachedRelays = computed
+        cachedRelaysVersion = v
+        return computed
+    }
 
     fun anyNameStartsWith(prefix: String): Boolean = geohash.contains(prefix, true)
 

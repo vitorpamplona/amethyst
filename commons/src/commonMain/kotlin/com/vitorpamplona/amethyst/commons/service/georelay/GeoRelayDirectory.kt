@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.service.georelay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import kotlin.concurrent.Volatile
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.min
@@ -48,11 +49,21 @@ import kotlin.math.sqrt
 class GeoRelayDirectory(
     initial: List<GeoRelay> = FALLBACK,
 ) {
-    private var relays: List<GeoRelay> = initial
+    // Read from subscription/UI threads, replaced by the CSV-loader coroutine — @Volatile so the
+    // refresh is actually visible to readers (otherwise they can keep seeing FALLBACK forever).
+    @Volatile private var relays: List<GeoRelay> = initial
+
+    // Bumped whenever the directory contents change, so cheap consumers (e.g. GeohashChatChannel) can
+    // memoize a derived relay set and recompute only when this token moves.
+    @Volatile var version: Int = 0
+        private set
 
     /** Replace the directory contents (e.g. after a successful CSV refresh). No-op on empty input. */
     fun setRelays(list: List<GeoRelay>) {
-        if (list.isNotEmpty()) relays = list
+        if (list.isNotEmpty()) {
+            relays = list
+            version++
+        }
     }
 
     fun snapshot(): List<GeoRelay> = relays
@@ -90,8 +101,11 @@ class GeoRelayDirectory(
             count: Int = DEFAULT_COUNT,
         ): List<NormalizedRelayUrl> =
             relays
-                .sortedWith(compareBy({ haversineKm(lat, lon, it.latitude, it.longitude) }, { it.host }))
-                .map { it.relay }
+                // Compute the great-circle distance once per relay; folding it into the comparator
+                // selector instead would re-run the trig on every comparison (O(n log n) times).
+                .map { it to haversineKm(lat, lon, it.latitude, it.longitude) }
+                .sortedWith(compareBy({ it.second }, { it.first.host }))
+                .map { it.first.relay }
                 // The directory lists some hosts both bare and with an explicit :443 (the
                 // wss default) — those collapse to one relay, so drop the duplicate before
                 // taking count and never spend two of the N slots on the same endpoint.
