@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEnd
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursStartTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FirstCreatedAtTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.HopsTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PetNameTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.PostCountTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
@@ -45,6 +46,8 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ZapCountSentTa
 fun TagArray.rank() = fastFirstNotNullOfOrNull(RankTag::parse)
 
 fun TagArray.followerCount() = fastFirstNotNullOfOrNull(FollowerCountTag::parse)
+
+fun TagArray.hops() = fastFirstNotNullOfOrNull(HopsTag::parse)
 
 fun TagArray.firstCreatedAt() = fastFirstNotNullOfOrNull(FirstCreatedAtTag::parse)
 

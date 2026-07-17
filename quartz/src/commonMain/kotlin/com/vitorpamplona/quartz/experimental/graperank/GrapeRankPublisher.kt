@@ -31,6 +31,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.followerCount
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.hops
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.rank
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.FollowerCountTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.HopsTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.RankTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +67,21 @@ class GrapeRankPublisher(
     private val store: IEventStore,
     private val log: (String) -> Unit = {},
 ) {
+    /**
+     * One desired kind:30382 card: the GrapeRank result for [target] the caller
+     * wants persisted. [rank] (`round(score*100)`) is always written; [followers]
+     * (trusted-follower count) and [hops] (follow-graph distance from the observer)
+     * are optional — a `null` omits that tag, so a caller that only knows the rank
+     * still produces a valid card, and older cards missing those tags reconcile
+     * cleanly against a run that now supplies them.
+     */
+    class ScoredCard(
+        val target: HexKey,
+        val rank: Int,
+        val followers: Int? = null,
+        val hops: Int? = null,
+    )
+
     /** Outcome of one [reconcileLocal]: what was signed, retracted, and left alone. */
     class LocalResult(
         /** New or rank-changed cards signed and inserted into the store. */
@@ -73,25 +93,27 @@ class GrapeRankPublisher(
     )
 
     /**
-     * Reconcile the desired [scored] `(target, rank)` set (the caller has already
-     * applied any rank cutoff) into the local store, signed by [providerSigner]:
-     * upsert the changed cards, retract the stale ones, skip the unchanged rest.
-     * Every card and retraction is stamped [createdAt], so a replacement is
-     * strictly newer than what it displaces.
+     * Reconcile the desired [scored] card set (the caller has already applied any
+     * rank cutoff) into the local store, signed by [providerSigner]: upsert the
+     * changed cards, retract the stale ones, skip the unchanged rest. Every card and
+     * retraction is stamped [createdAt], so a replacement is strictly newer than what
+     * it displaces.
      */
     suspend fun reconcileLocal(
         providerSigner: NostrSigner,
         providerPubkey: HexKey,
-        scored: List<Pair<HexKey, Int>>,
+        scored: List<ScoredCard>,
         createdAt: Long = TimeUtils.now(),
     ): LocalResult {
         val existing = existingCards(providerPubkey)
-        val desiredTargets = scored.mapTo(HashSet()) { it.first }
+        val desiredTargets = scored.mapTo(HashSet()) { it.target }
 
-        // Upsert targets whose rank tag STRING would change (or that have no card
-        // yet). RankTag.assemble writes rank.toString(), so we diff that exact
-        // string — an unchanged score never produces a new signature.
-        val changed = scored.filter { (target, rank) -> existing[target]?.let(::rankTagValue) != rank.toString() }
+        // Upsert targets whose card values would change (or that have no card yet).
+        // We diff every tag we write — rank, follower count, and hops — so a card
+        // re-signs when any of them moves, but an all-unchanged run never churns an
+        // event id. A card predating the follower/hops tags reads null for them and
+        // so re-signs once to pick them up.
+        val changed = scored.filter { card -> existing[card.target]?.let(::cardValues) != desiredValues(card) }
 
         // Retract cards whose target is no longer desired — it dropped out of the
         // graph, or fell below the caller's cutoff. No stale assertion is left standing.
@@ -203,15 +225,15 @@ class GrapeRankPublisher(
             }.toMap()
 
     /**
-     * The raw `rank` tag value string on a card — exactly what a client diffs, so an
-     * unchanged score never produces a new signature. Our cards carry only a `rank`
-     * tag (plus the d-tag target), so this one value decides whether a re-sign
-     * would differ.
+     * The (rank, followers, hops) triple stored on an existing card — the values a
+     * re-sign would overwrite. Compared against [desiredValues] so an unchanged run
+     * produces no new signature; a missing tag reads null and so differs from a
+     * desired non-null value (the one-time migration onto the new tags).
      */
-    private fun rankTagValue(card: ContactCardEvent): String? =
-        card.tags.firstNotNullOfOrNull { tag ->
-            if (tag.size > 1 && tag[0] == RankTag.TAG_NAME) tag[1] else null
-        }
+    private fun cardValues(card: ContactCardEvent): Triple<Int?, Int?, Int?> = Triple(card.rank(), card.followerCount(), card.hops())
+
+    /** The (rank, followers, hops) triple a [ScoredCard] would write. */
+    private fun desiredValues(card: ScoredCard): Triple<Int?, Int?, Int?> = Triple(card.rank, card.followers, card.hops)
 
     /**
      * Build + sign one kind:30382 card per (target, rank) — fanned out on
@@ -221,7 +243,7 @@ class GrapeRankPublisher(
      */
     private suspend fun signAndInsertCards(
         signer: NostrSigner,
-        cards: List<Pair<HexKey, Int>>,
+        cards: List<ScoredCard>,
         createdAt: Long,
     ): Int {
         if (cards.isEmpty()) return 0
@@ -230,13 +252,17 @@ class GrapeRankPublisher(
             val signedBatch =
                 coroutineScope {
                     batch
-                        .map { (target, rank) ->
+                        .map { card ->
                             async(Dispatchers.Default) {
                                 ContactCardEvent.create(
-                                    targetUser = target,
+                                    targetUser = card.target,
                                     signer = signer,
                                     createdAt = createdAt,
-                                    publicInitializer = { add(RankTag.assemble(rank)) },
+                                    publicInitializer = {
+                                        add(RankTag.assemble(card.rank))
+                                        card.followers?.let { add(FollowerCountTag.assemble(it)) }
+                                        card.hops?.let { add(HopsTag.assemble(it)) }
+                                    },
                                 )
                             }
                         }.awaitAll()

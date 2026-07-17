@@ -108,20 +108,24 @@ class TrustGraphBuilder {
             inPacked[inCursor[t]++] = edgeSourcesPacked.get(i)
         }
 
-        // Outgoing CSR (by source).
+        // Outgoing CSR (by source). Each entry packs the target id + relation code
+        // in the same layout as the incoming CSR, so a forward walk (e.g. the
+        // follow-only BFS in TrustGraph.hopsFrom) can filter edges by relation.
         val outOffsets = IntArray(n + 1)
         for (i in 0 until m) {
             val s = edgeSourcesPacked.get(i) and TrustGraph.SOURCE_MASK
             outOffsets[s + 1]++
         }
         for (i in 1..n) outOffsets[i] += outOffsets[i - 1]
-        val outTargets = IntArray(m)
+        val outPacked = IntArray(m)
         val outCursor = outOffsets.copyOf()
         for (i in 0 until m) {
-            val s = edgeSourcesPacked.get(i) and TrustGraph.SOURCE_MASK
-            outTargets[outCursor[s]++] = edgeTargets.get(i)
+            val packedSource = edgeSourcesPacked.get(i)
+            val s = packedSource and TrustGraph.SOURCE_MASK
+            val relationCode = packedSource ushr TrustGraph.SOURCE_BITS
+            outPacked[outCursor[s]++] = edgeTargets.get(i) or (relationCode shl TrustGraph.SOURCE_BITS)
         }
 
-        return TrustGraph(n, pubkeys.toTypedArray(), ids, inOffsets, inPacked, outOffsets, outTargets)
+        return TrustGraph(n, pubkeys.toTypedArray(), ids, inOffsets, inPacked, outOffsets, outPacked)
     }
 }

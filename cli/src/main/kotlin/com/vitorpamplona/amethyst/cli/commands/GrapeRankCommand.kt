@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.quartz.experimental.graperank.FollowerCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRank
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankCrawler
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankParams
@@ -146,6 +147,10 @@ object GrapeRankCommand {
 
     private const val PROBE_TIMEOUT_MS = 2000
 
+    // Default score cutoff for counting a follower as "trusted" (the `followers`
+    // tag). Matches NosFabrica Brainstorm's verifiedFollowersInfluenceCutoff.
+    private const val DEFAULT_FOLLOWERS_THRESHOLD = 0.02
+
     // args.bool on a mistyped flag silently returns false, so the one flag read from
     // three different functions goes through a compile-time-checked name.
     private const val NO_REACHABILITY_CACHE_FLAG = "no-reachability-cache"
@@ -209,6 +214,7 @@ object GrapeRankCommand {
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
             "operator" -> operator(dataDir, tail.drop(1).toTypedArray())
             "crawl" -> crawl(dataDir, tail.drop(1).toTypedArray())
+            "followers" -> followers(dataDir, tail.drop(1).toTypedArray())
             "status" -> status(dataDir)
             // The relay census outgrew graperank (it feeds the shared NIP-66
             // reachability cache every command reads) and moved to `amy relay
@@ -248,6 +254,10 @@ object GrapeRankCommand {
         // retracted. Rank is round(score*100), so 2 drops the ~0.015-and-below
         // barely-trusted tail.
         val minRank = args.intFlag("min-rank", 2)
+        // A "trusted follower" (the `followers` tag) is a follower whose own score is
+        // at or above this. Mirrors Brainstorm's verifiedFollowersInfluenceCutoff
+        // (0.02), which is the same 0.02 score == rank 2 line as the default min-rank.
+        val followersThreshold = args.flag("followers-threshold")?.toDoubleOrNull() ?: DEFAULT_FOLLOWERS_THRESHOLD
 
         val params =
             GrapeRankParams(
@@ -255,8 +265,15 @@ object GrapeRankCommand {
                 rigor = args.flag("rigor")?.toDoubleOrNull() ?: GrapeRankParams().rigor,
             )
 
-        Context.open(dataDir).use { ctx ->
+        // Crawl never signs and score signs cards with the machine-level operator
+        // key (`~/.amy/operator/`, independent of any account), so neither needs a
+        // personal account — run anonymously when there is none, requiring an
+        // explicit observer since there's no logged-in user to default to.
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
+            if (ctx.anonymous && observerArg == null) {
+                return Output.error("bad_args", "no account — pass an OBSERVER (npub / hex / nprofile / NIP-05)")
+            }
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
 
             // Contact lists stream straight into a compact int-CSR structure as the
@@ -327,6 +344,14 @@ object GrapeRankCommand {
             val scoringMs = (System.nanoTime() - scoreStart) / 1_000_000
             System.err.println("[graperank] scored ${rankedIds.size} users in $scoringMs ms")
 
+            // Two derived per-user metrics persisted alongside the rank on each card:
+            //  - trusted-follower count: how many of a user's followers score at or
+            //    above the cutoff (Brainstorm's trustedFollowers).
+            //  - hops: shortest follow-graph distance from the observer (1 = direct
+            //    follow). Both are pure functions over the same graph + scores.
+            val followerCounts = graph.trustedFollowerCounts(scores, followersThreshold)
+            val hops = graph.hopsFrom(observer)
+
             val hopHistogram = crawlStats?.hopHistogram.orEmpty()
             val result =
                 linkedMapOf<String, Any?>(
@@ -352,9 +377,16 @@ object GrapeRankCommand {
                     "graph_build_ms" to buildMs,
                     "scoring_ms" to scoringMs,
                     "scoring_sweeps" to sweeps,
+                    "followers_threshold" to followersThreshold,
                     "scores" to
                         rankedIds.take(limit).map {
-                            mapOf("pubkey" to graph.pubkeyOf(it), "score" to scores[it], "rank" to rankOf(scores[it]))
+                            mapOf(
+                                "pubkey" to graph.pubkeyOf(it),
+                                "score" to scores[it],
+                                "rank" to rankOf(scores[it]),
+                                "followers" to followerCounts[it],
+                                "hops" to hops[it],
+                            )
                         },
                 )
 
@@ -372,7 +404,16 @@ object GrapeRankCommand {
             val desiredCards =
                 rankedIds
                     .filter { rankOf(scores[it]) >= minRank }
-                    .map { graph.pubkeyOf(it) to rankOf(scores[it]) }
+                    .map { id ->
+                        GrapeRankPublisher.ScoredCard(
+                            target = graph.pubkeyOf(id),
+                            rank = rankOf(scores[id]),
+                            followers = followerCounts[id],
+                            // A scored user always has a follow path from the observer,
+                            // so hops is ≥ 1; guard the UNREACHABLE sentinel just in case.
+                            hops = hops[id].takeIf { it >= 1 },
+                        )
+                    }
 
             val cardsStart = System.nanoTime()
             val local =
@@ -524,8 +565,13 @@ object GrapeRankCommand {
     ): Int {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
-        Context.open(dataDir).use { ctx ->
+        // Crawl never signs, so no account is needed — run anonymously when there is
+        // none, requiring an explicit observer (no logged-in user to default to).
+        Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
+            if (ctx.anonymous && observerArg == null) {
+                return Output.error("bad_args", "no account — pass an OBSERVER (npub / hex / nprofile / NIP-05)")
+            }
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             // Persist-only crawl: no in-memory graph (null builder); every event
             // still lands in the store for a later `score`.
@@ -552,6 +598,131 @@ object GrapeRankCommand {
             )
         }
         return 0
+    }
+
+    /**
+     * `amy graperank followers [OBSERVER] [flags]` — the reverse crawl: find every
+     * user who FOLLOWS the observer and persist their kind:3 contact lists.
+     *
+     * The outbox model (what `crawl` uses) walks follows *outward* and can't find
+     * followers — you don't know a follower exists until you've seen their list, so
+     * you can't route to their outbox first. This casts a wide net instead: it asks
+     * as many relays as possible for kind:3 events that `#p`-tag the observer, paging
+     * each relay past its per-REQ cap. The relay universe is "all possible relays":
+     * the reachability-cache live set + every kind:10002 read/write relay and every
+     * kind:30166 monitored relay in the store + the index/aggregator relays that hold
+     * reverse-follow data for the network. Proven-dead relays are skipped
+     * (`--no-reachability-cache` to query them anyway).
+     *
+     * Each follower's list lands in the store, so it also enriches the graph a later
+     * `graperank score` builds — every follower becomes a FOLLOW edge into the
+     * observer. Idempotent and cumulative; run it a few times for completeness.
+     *
+     * Flags: `--relay URL[,URL…]` (query only these instead of the whole universe),
+     * `--max N` (cap followers pulled per relay; default: pull every follower each
+     * relay holds), `--timeout SECS` (per-page EOSE watchdog, default 15),
+     * `--relay-concurrency N` (relays paged at once, default 16), `--insert-batch N`
+     * (events per store commit, default 500).
+     */
+    private suspend fun followers(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val observerArg = args.positionalOrNull(0)
+        val relayArg = args.flag("relay")
+        val relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 16))
+
+        // Read-only + never signs, so it runs anonymously — but then an OBSERVER
+        // positional is required (there's no account to default to).
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+            if (ctx.anonymous && observerArg == null) {
+                return Output.error("bad_args", "usage: amy graperank followers OBSERVER [flags] (no account — pass an observer)")
+            }
+            val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
+
+            val relays =
+                relayArg
+                    ?.split(",")
+                    ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+                    ?.toSet()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: allKnownRelays(ctx, args)
+
+            if (relays.isEmpty()) {
+                return Output.error("no_relays", "no relays to query — run `amy relay probe` / `amy graperank crawl` first, or pass --relay")
+            }
+
+            System.err.println("[followers] querying ${relays.size} relays for kind:3 #p=${observer.take(8)}…")
+            val crawler =
+                FollowerCrawler(
+                    client = ctx.client,
+                    store = ctx.store,
+                    config =
+                        FollowerCrawler.Config(
+                            relays = relays,
+                            // Default null → pull EVERY follower each relay holds; --max
+                            // N caps the total per relay for a quick spot check.
+                            maxPerRelay = args.flag("max")?.toIntOrNull(),
+                            timeoutMs = args.longFlag("timeout", 15L) * 1000,
+                            maxConcurrentRelays = relayConcurrency,
+                            insertBatchSize = args.intFlag("insert-batch", 500),
+                        ),
+                    log = { System.err.println(it) },
+                )
+            val stats = crawler.crawl(observer)
+
+            Output.emit(
+                linkedMapOf<String, Any?>(
+                    "observer" to observer,
+                    "relays_queried" to stats.relaysQueried,
+                    "relays_answered" to stats.relaysAnswered,
+                    "followers_found" to stats.followersFound,
+                    "events_stored" to stats.eventsStored,
+                    "download_ms" to stats.downloadMs,
+                ),
+            )
+        }
+        return 0
+    }
+
+    /**
+     * "All possible relays" for the follower crawl: the reachability-cache live set,
+     * every kind:10002 read/write relay and every kind:30166 monitored relay the
+     * store knows, and the index/aggregator relays that hold reverse-follow data —
+     * minus the ones a prior probe proved dead (unless `--no-reachability-cache`).
+     */
+    private suspend fun allKnownRelays(
+        ctx: Context,
+        args: Args,
+    ): Set<NormalizedRelayUrl> {
+        // Read the reachability records (kind:30166) with a throwaway signer, NOT
+        // ctx.reachability — the latter derives the monitor key and would CREATE the
+        // operator master (a passphrase prompt) purely to read a cache. The follower
+        // crawl never signs, so keep it truly account-and-key-free. snapshot() only
+        // reads; the signer is used solely for writes. Same trick as `status`.
+        val reach = RelayReachabilityStore(store = ctx.store, signer = NostrSignerInternal(KeyPair())).snapshot()
+        val relays = LinkedHashSet<NormalizedRelayUrl>()
+        relays.addAll(reach.live)
+        // Every advertised outbox/inbox relay in the store — the homes of the users
+        // whose followers we're hunting are exactly where those followers publish too.
+        for (event in ctx.store.query<Event>(Filter(kinds = listOf(AdvertisedRelayListEvent.KIND)))) {
+            if (event is AdvertisedRelayListEvent) relays.addAll(event.relaysNorm())
+        }
+        // Relays a NIP-66 monitor has ever seen (kind:30166) — the widest census.
+        for (event in ctx.store.query<Event>(Filter(kinds = listOf(RelayDiscoveryEvent.KIND)))) {
+            if (event is RelayDiscoveryEvent) event.relay()?.let { relays.add(it) }
+        }
+        // Aggregators/indexers hold reverse-follow data for users whose own outbox
+        // we've never learned — the biggest completeness lever for followers.
+        relays.addAll(CONTENT_AGGREGATOR_RELAYS)
+        relays.addAll(EXTRA_DISCOVERY_RELAYS)
+        relays.addAll(ctx.bootstrapRelays())
+        relays.addAll(Constants.eventFinderRelays)
+
+        if (!args.bool(NO_REACHABILITY_CACHE_FLAG)) relays.removeAll(reach.dead)
+        return relays
     }
 
     /**
@@ -908,6 +1079,8 @@ object GrapeRankCommand {
                             linkedMapOf<String, Any?>(
                                 "provider" to card.pubKey,
                                 "rank" to card.rank(),
+                                "followers" to card.followerCount(),
+                                "hops" to card.hops(),
                                 "observer" to providerToObserver[card.pubKey],
                                 "created_at" to card.createdAt,
                                 "event_id" to card.id,

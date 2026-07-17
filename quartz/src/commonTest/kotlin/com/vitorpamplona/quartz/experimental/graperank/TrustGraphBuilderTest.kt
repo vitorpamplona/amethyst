@@ -104,4 +104,76 @@ class TrustGraphBuilderTest {
         assertEquals(3, graph.nodeCount, "alice, bob, carol interned once each")
         assertEquals(3, graph.edgeCount())
     }
+
+    private fun TrustGraph.hop(
+        observer: HexKey,
+        target: HexKey,
+    ): Int {
+        val id = idOf(target)
+        return if (id < 0) TrustGraph.UNREACHABLE else hopsFrom(observer)[id]
+    }
+
+    @Test
+    fun hopsCountFollowDistanceFromTheObserver() {
+        val b = TrustGraphBuilder()
+        b.addFollows(alice, listOf(bob)) // alice -> bob (1 hop)
+        b.addFollows(bob, listOf(carol)) // bob -> carol (2 hops)
+        b.addFollows(carol, listOf(dave)) // carol -> dave (3 hops)
+        val graph = b.build()
+
+        assertEquals(0, graph.hop(alice, alice), "the observer is 0 hops from itself")
+        assertEquals(1, graph.hop(alice, bob), "a direct follow is 1 hop")
+        assertEquals(2, graph.hop(alice, carol))
+        assertEquals(3, graph.hop(alice, dave))
+    }
+
+    @Test
+    fun hopsTakeTheShortestFollowPath() {
+        val b = TrustGraphBuilder()
+        b.addFollows(alice, listOf(bob, dave)) // dave is also a direct follow…
+        b.addFollows(bob, listOf(carol))
+        b.addFollows(carol, listOf(dave)) // …as well as reachable at 3 hops
+        val graph = b.build()
+        assertEquals(1, graph.hop(alice, dave), "BFS keeps the shortest of two follow paths")
+    }
+
+    @Test
+    fun hopsIgnoreMuteAndReportEdges() {
+        val b = TrustGraphBuilder()
+        b.addMutes(alice, listOf(bob)) // a mute is not reachability
+        b.addReports(alice, listOf(carol)) // neither is a report
+        val graph = b.build()
+        assertEquals(TrustGraph.UNREACHABLE, graph.hop(alice, bob), "a muted user is not reachable by follows")
+        assertEquals(TrustGraph.UNREACHABLE, graph.hop(alice, carol), "a reported user is not reachable by follows")
+    }
+
+    @Test
+    fun hopsAreUnreachableWithNoFollowPath() {
+        val b = TrustGraphBuilder()
+        b.addFollows(alice, listOf(bob))
+        b.addFollows(carol, listOf(dave)) // a separate island
+        val graph = b.build()
+        assertEquals(TrustGraph.UNREACHABLE, graph.hop(alice, dave))
+    }
+
+    @Test
+    fun trustedFollowerCountsOnlyCountFollowersAboveTheThreshold() {
+        val b = TrustGraphBuilder()
+        // carol is followed by alice, bob and dave (three follow edges in).
+        b.addFollows(alice, listOf(carol))
+        b.addFollows(bob, listOf(carol))
+        b.addFollows(dave, listOf(carol))
+        // dave also MUTES carol — a mute must never count as a follower.
+        b.addMutes(dave, listOf(carol))
+        val graph = b.build()
+
+        val carolId = graph.idOf(carol)
+        val scores = DoubleArray(graph.nodeCount)
+        scores[graph.idOf(alice)] = 0.9 // trusted
+        scores[graph.idOf(bob)] = 0.01 // below the 0.02 cutoff
+        scores[graph.idOf(dave)] = 0.5 // trusted
+
+        val counts = graph.trustedFollowerCounts(scores, minScore = 0.02)
+        assertEquals(2, counts[carolId], "only alice and dave clear the cutoff; bob is too low and dave's mute doesn't count")
+    }
 }

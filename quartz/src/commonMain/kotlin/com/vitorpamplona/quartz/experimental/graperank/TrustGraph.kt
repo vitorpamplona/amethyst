@@ -60,9 +60,11 @@ class TrustGraph internal constructor(
     // each packing source id (low 29 bits) + relation code (top bits).
     internal val inOffsets: IntArray,
     internal val inPacked: IntArray,
-    // CSR by source: out-neighbour targets of node s are outTargets[outOffsets[s] until outOffsets[s+1]].
+    // CSR by source: out-edges of node s are outPacked[outOffsets[s] until outOffsets[s+1]],
+    // each packing the neighbour (target) id (low 29 bits) + relation code (top bits) —
+    // same layout as inPacked, so a forward walk can filter by relation.
     internal val outOffsets: IntArray,
-    internal val outTargets: IntArray,
+    internal val outPacked: IntArray,
 ) {
     /** Node id for [pubkey], or `-1` if it never appeared in the graph. */
     fun idOf(pubkey: HexKey): Int = ids[pubkey] ?: -1
@@ -72,10 +74,87 @@ class TrustGraph internal constructor(
 
     fun edgeCount(): Int = inPacked.size
 
+    /**
+     * Hop distance from [observer] to every node along **FOLLOW edges only** — a
+     * plain BFS over the follow graph (mutes/reports are not reachability). Indexed
+     * by node id: the observer is `0`, a user the observer follows directly is `1`,
+     * a user followed by a 1-hop user is `2`, and so on. A node with no follow path
+     * from the observer stays [UNREACHABLE]. Returns an all-[UNREACHABLE] array (bar
+     * a missing observer's own 0) when the observer isn't in the graph.
+     *
+     * BFS over the compact int-CSR: an `IntArray` ring queue and the distance array
+     * itself as the visited set, so a whole-network graph costs one int per node
+     * plus the queue — no boxed collections.
+     */
+    fun hopsFrom(observer: HexKey): IntArray {
+        val hops = IntArray(nodeCount) { UNREACHABLE }
+        val observerId = idOf(observer)
+        if (observerId < 0) return hops
+
+        hops[observerId] = 0
+        // Ring buffer sized to the node count — BFS enqueues each node at most once.
+        val queue = IntArray(nodeCount)
+        var head = 0
+        var tail = 0
+        queue[tail++] = observerId
+        while (head < tail) {
+            val node = queue[head++]
+            val nextHop = hops[node] + 1
+            var i = outOffsets[node]
+            val end = outOffsets[node + 1]
+            while (i < end) {
+                val packed = outPacked[i]
+                if ((packed ushr SOURCE_BITS) == TrustRelation.FOLLOW.code) {
+                    val target = packed and SOURCE_MASK
+                    if (hops[target] == UNREACHABLE) {
+                        hops[target] = nextHop
+                        queue[tail++] = target
+                    }
+                }
+                i++
+            }
+        }
+        return hops
+    }
+
+    /**
+     * For every node, how many of its **followers** score at or above [minScore] in
+     * [scores] — the "trusted follower" count Brainstorm records on its `ScoreCard`
+     * (its `verifiedFollowersInfluenceCutoff` defaults to 0.02). A follower is the
+     * source of an incoming FOLLOW edge; mutes/reports don't count. Indexed by node
+     * id. [scores] must be the array [GrapeRank.compute] returned for this graph.
+     */
+    fun trustedFollowerCounts(
+        scores: DoubleArray,
+        minScore: Double,
+    ): IntArray {
+        val counts = IntArray(nodeCount)
+        var target = 0
+        while (target < nodeCount) {
+            var count = 0
+            var i = inOffsets[target]
+            val end = inOffsets[target + 1]
+            while (i < end) {
+                val packed = inPacked[i]
+                if ((packed ushr SOURCE_BITS) == TrustRelation.FOLLOW.code) {
+                    val source = packed and SOURCE_MASK
+                    if (scores[source] >= minScore) count++
+                }
+                i++
+            }
+            counts[target] = count
+            target++
+        }
+        return counts
+    }
+
     companion object {
         const val SOURCE_BITS = 29
         const val SOURCE_MASK = (1 shl SOURCE_BITS) - 1
         const val MAX_NODES = SOURCE_MASK // ids must fit in the low 29 bits
+
+        /** [hopsFrom] distance for a node with no follow path from the observer. */
+        const val UNREACHABLE = -1
     }
 }
 

@@ -61,6 +61,8 @@ class ContactCardEvent(
 
     fun followerCount() = tags.followerCount()
 
+    fun hops() = tags.hops()
+
     fun firstCreatedAt() = tags.firstCreatedAt()
 
     fun postCount() = tags.postCount()
