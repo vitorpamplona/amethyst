@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -57,10 +58,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -84,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.contentColorOnAccent
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.previewColor
+import com.vitorpamplona.amethyst.ui.theme.toFontFamily
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableList
@@ -164,6 +169,10 @@ fun SettingsScreen(
  * A [SettingsBlockTile] whose control is a full-width [SingleChoiceSegmentedButtonRow].
  * This is the in-screen replacement for the old dropdown ([TextSpinner]) rows: every
  * option is visible and one tap away. Best for 2–4 mutually-exclusive options.
+ *
+ * [optionTextStyle] lets each option render its own label preview — e.g. the font tiles
+ * draw each label in the very typeface / size it selects, so the row demonstrates the
+ * choices instead of only naming them.
  */
 @Composable
 private fun <T> SegmentedChoiceTile(
@@ -174,6 +183,7 @@ private fun <T> SegmentedChoiceTile(
     labelRes: (T) -> Int,
     selected: T,
     onSelect: (T) -> Unit,
+    optionTextStyle: (@Composable (T) -> TextStyle)? = null,
 ) {
     SettingsBlockTile(
         icon = icon,
@@ -191,6 +201,7 @@ private fun <T> SegmentedChoiceTile(
                         text = stringRes(labelRes(option)),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        style = optionTextStyle?.invoke(option) ?: LocalTextStyle.current,
                     )
                 }
             }
@@ -245,6 +256,8 @@ private fun FontFamilyTile(sharedPrefs: UiSettingsFlow) {
         labelRes = { it.resourceId },
         selected = fontFamily,
         onSelect = { sharedPrefs.fontFamily.tryEmit(it) },
+        // Draw each option's name in the very typeface it selects.
+        optionTextStyle = { LocalTextStyle.current.copy(fontFamily = it.toFontFamily() ?: FontFamily.Default) },
     )
 }
 
@@ -259,6 +272,8 @@ private fun FontSizeTile(sharedPrefs: UiSettingsFlow) {
         labelRes = { it.resourceId },
         selected = fontSize,
         onSelect = { sharedPrefs.fontSize.tryEmit(it) },
+        // Scale each option's label to the size it selects, so Small looks small and Huge huge.
+        optionTextStyle = { LocalTextStyle.current.copy(fontSize = 15.sp * it.scale) },
     )
 }
 
