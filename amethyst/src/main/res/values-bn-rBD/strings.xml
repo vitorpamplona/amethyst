@@ -1427,9 +1427,11 @@
     <string name="connectivity_type_always">সবসময়</string>
     <string name="connectivity_type_unmetered_wifi_only">আনমিটার্ড WiFi</string>
     <string name="connectivity_type_never">কখনো না</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">সম্পূর্ণ</string>
     <string name="ui_feature_set_type_simplified">সরলীকৃত</string>
     <string name="ui_feature_set_type_performance">পারফরম্যান্স</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">ক্লাসিক</string>
     <string name="gallery_type_modern">আধুনিক</string>
     <string name="system">সিস্টেম</string>
@@ -1438,6 +1440,7 @@
     <string name="application_preferences">অ্যাপ্লিকেশনের পছন্দসমূহ</string>
     <string name="language">ভাষা</string>
     <string name="theme">থিম</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">ছবির পূর্বরূপ</string>
     <string name="automatically_play_videos">ভিডিও প্লেব্যাক</string>
     <string name="autoplay_videos">ভিডিও স্বয়ংক্রিয়ভাবে চালান</string>

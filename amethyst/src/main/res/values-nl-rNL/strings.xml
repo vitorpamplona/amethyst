@@ -1624,9 +1624,11 @@
     <string name="connectivity_type_always">Altijd</string>
     <string name="connectivity_type_unmetered_wifi_only">Alleen onbeperkt wifi</string>
     <string name="connectivity_type_never">Nooit</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Volledig</string>
     <string name="ui_feature_set_type_simplified">Vereenvoudigd</string>
     <string name="ui_feature_set_type_performance">Prestaties</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klassiek</string>
     <string name="gallery_type_modern">Modern</string>
     <string name="system">Systeem</string>
@@ -1650,6 +1652,7 @@
     <string name="font_family_sans_serif">Schreefloos</string>
     <string name="font_family_serif">Met schreef</string>
     <string name="font_family_monospace">Monospace</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="font_size">Tekstgrootte</string>
     <string name="font_size_description">Schaal de tekstgrootte in de hele app</string>
     <string name="font_size_small">Klein</string>

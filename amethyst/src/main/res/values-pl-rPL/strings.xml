@@ -1792,9 +1792,11 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="connectivity_type_always">Zawsze</string>
     <string name="connectivity_type_unmetered_wifi_only">Nielimitowany Wi-Fi</string>
     <string name="connectivity_type_never">Nigdy</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Kompletny</string>
     <string name="ui_feature_set_type_simplified">Uproszczony</string>
     <string name="ui_feature_set_type_performance">Dynamiczny</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasyczny</string>
     <string name="gallery_type_modern">Nowoczesny</string>
     <string name="system">Automatyczny</string>
@@ -1818,6 +1820,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="font_family_sans_serif">Sans Serif</string>
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">Monospace</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="font_size">Rozmiar czcionki</string>
     <string name="font_size_description">Dostosuj rozmiar tekstu w całej aplikacji</string>
     <string name="font_size_small">Mały</string>

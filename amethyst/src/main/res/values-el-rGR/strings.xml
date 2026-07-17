@@ -1412,9 +1412,11 @@
     <string name="connectivity_type_always">Πάντα</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi χωρίς μετρητή</string>
     <string name="connectivity_type_never">Ποτέ</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Πλήρης</string>
     <string name="ui_feature_set_type_simplified">Απλοποιημένη</string>
     <string name="ui_feature_set_type_performance">Απόδοση</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Κλασική</string>
     <string name="gallery_type_modern">Σύγχρονη</string>
     <string name="system">Σύστημα</string>
@@ -1423,6 +1425,7 @@
     <string name="application_preferences">Ρυθμίσεις Εφαρμογής</string>
     <string name="language">Γλώσσα</string>
     <string name="theme">Θέμα</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Προεπισκόπηση Εικόνας</string>
     <string name="automatically_play_videos">Αναπαραγωγή Βίντεο</string>
     <string name="autoplay_videos">Αυτόματη αναπαραγωγή βίντεο</string>

@@ -1406,9 +1406,11 @@
     <string name="connectivity_type_always">항상</string>
     <string name="connectivity_type_unmetered_wifi_only">무제한 WiFi</string>
     <string name="connectivity_type_never">사용 안 함</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">전체</string>
     <string name="ui_feature_set_type_simplified">간소화</string>
     <string name="ui_feature_set_type_performance">성능</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">클래식</string>
     <string name="gallery_type_modern">모던</string>
     <string name="system">시스템</string>
@@ -1417,6 +1419,7 @@
     <string name="application_preferences">애플리케이션 설정</string>
     <string name="language">언어</string>
     <string name="theme">테마</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">이미지 미리보기</string>
     <string name="automatically_play_videos">동영상 재생</string>
     <string name="autoplay_videos">동영상 자동 재생</string>

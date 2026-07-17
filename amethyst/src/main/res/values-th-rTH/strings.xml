@@ -1392,9 +1392,11 @@
     <string name="connectivity_type_always">ตลอดเวลา</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
     <string name="connectivity_type_never">ไม่ต้องแสดง</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">เสร็จสมบูรณ์</string>
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_performance">Performance</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">คลาสสิก</string>
     <string name="gallery_type_modern">ทันสมัย</string>
     <string name="system">ระบบ(ค่าพื้นฐาน)</string>
@@ -1403,6 +1405,7 @@
     <string name="application_preferences">การตั้งค่าแอปพลิเคชัน</string>
     <string name="language">ภาษา</string>
     <string name="theme">ธีม</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">ภาพตัวอย่าง</string>
     <string name="automatically_play_videos">การเล่นวิดีโอ</string>
     <string name="autoplay_videos">เล่นวิดีโออัตโนมัติ</string>

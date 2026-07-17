@@ -1488,9 +1488,11 @@
     <string name="connectivity_type_always">دائماً</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi غير المحدودة</string>
     <string name="connectivity_type_never">ابداً</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">كامل</string>
     <string name="ui_feature_set_type_simplified">مبسّط</string>
     <string name="ui_feature_set_type_performance">أداء</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">كلاسيكي</string>
     <string name="gallery_type_modern">حديث</string>
     <string name="system">النظام</string>
@@ -1500,6 +1502,7 @@
     <string name="wallet_connect">ربط المحفظة</string>
     <string name="language">اللغة</string>
     <string name="theme">المظهر</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">معاينة الصورة</string>
     <string name="automatically_play_videos">تشغيل الفيديو</string>
     <string name="autoplay_videos">تشغيل الفيديو تلقائيًا</string>

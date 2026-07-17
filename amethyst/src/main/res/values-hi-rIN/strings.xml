@@ -13,8 +13,8 @@
         <item quantity="other">इस पत्र मे %1$d से अधिक विषयसूचक हैं</item>
     </plurals>
     <plurals name="nip82_assets_count">
-        <item quantity="one">%1$d संसाधन समाविष्ट</item>
-        <item quantity="other">%1$d संसाधन समाविष्ट</item>
+        <item quantity="one">%1$d सम्पत्ति समावेशित</item>
+        <item quantity="other">%1$d सम्पत्ति समावेशित</item>
     </plurals>
     <plurals name="thread_collapsed_reply_count">
         <item quantity="one">सं॰%1$d\n उत्तर</item>
@@ -299,7 +299,7 @@
     <string name="concord_redeeming_invite">आमन्त्रण चुकाव…</string>
     <string name="concord_invite_failed">आमन्त्रण अप्राप्त। सम्भाव्यतः योजक निष्क्रिय है अथवा इसके पुनःप्रसारक अनभिगम्य।</string>
     <string name="concord_invite_failed_invalid">यह आमन्त्रण योजक अमान्य है अथवा इस लेखा द्वारा खोला नहीं जा सकता।</string>
-    <string name="concord_invite_failed_incompatible">यह आमन्त्रण बनाया गया एक नवीनतर क्रमक संस्करण से तथा यहाँ नहीं खोला जा सकता अभी। एक अद्यतनकृत योजक के लिए पूछें अथवा अद्यतन पश्चात पुनःप्रयास करें।</string>
+    <string name="concord_invite_failed_incompatible">इस आमन्त्रण को खोला नहीं जा सकता। सम्भावना है कि यह पुराना हो चुका है अथवा नवीनतर द्वारा प्रतिस्थापित अथवा एक नवीनतर क्रमक संस्करण द्वारा बनाया गया। एक नए आमन्त्रण योजक के लिए पूछें।</string>
     <string name="concord_invite_failed_revoked">यह आमन्त्रण योजक निराकृत है तथा अनुपयुक्तव्य। नए के लिए पूछें।</string>
     <string name="concord_home_title">कोंकोर्ड॰ प्रणाली</string>
     <string name="concord_home_empty">आप किसी भी कोंकोर्ड प्रणाली से जुडे नहीं अब तक। एक बनाएँ अथवा आमन्त्रण योजक खोलें।</string>
@@ -409,7 +409,7 @@
     तथा इसीलिए समय के साथ चर्चा सन्देश अदृश्य हो जाते हैं</string>
     <string name="public_chat">सार्वजनिक चर्चा</string>
     <string name="new_public_chat">नयी सार्वजनिक चर्चा बनाएँ</string>
-    <string name="marmot_group">एमएलएस॰ समूह</string>
+    <string name="marmot_group">मार्मोट॰ समूह</string>
     <string name="marmot_group_no_messages_yet">अभी तक कोई सन्देश नहीं</string>
     <string name="public_chat_title">सार्वजनिक चर्चा उपतथ्य</string>
     <string name="public_chat_explainer">सार्वजनिक चर्चाएँ सबके लिए दृश्यमान हैं नोस्टर पर तथा सभी
@@ -521,7 +521,7 @@
     <string name="block_only">बाधित करें</string>
     <string name="manual_zaps">मनुष्यकृत ज्साप विभाजन</string>
     <string name="bookmarks">स्मर्तव्य</string>
-    <string name="bookmarks_title">बुकमार्क</string>
+    <string name="bookmarks_title">स्मर्त्तव्यसूची</string>
     <string name="bookmarks_explainer">आपका मूलविकल्प स्मर्त्तव्य सूची जिसका अवलम्बन अनेक ग्राहक करते हैं</string>
     <string name="old_bookmarks_title">पुराने स्मर्त्तव्यचिह्न</string>
     <string name="old_bookmarks_explainer">आपके पुराने स्मर्त्तव्यचिह्न</string>
@@ -610,7 +610,7 @@
     <string name="new_community_relay_marker_requests">अनुरोध</string>
     <string name="new_community_relay_marker_approvals">स्वीकृतियाँ</string>
     <string name="new_community_rules_section">सत्यापन सम्भव नियम (विकल्पात्मक)</string>
-    <string name="new_community_rules_hint">एक यन्त्र पठनशक्य नियम अभिलेख (निप॰९ए) का प्रकाशन करता है समुदाय के पार्श्व में। ग्राहक जो इसका आलम्बन करते हैं उन पत्रों को भेजने से पहले बाधित करते हैं जो इसके अनुकूल नहीं।</string>
+    <string name="new_community_rules_hint">एक यन्त्र पठनशक्य नियम अभिलेख (निप॰९बी) का प्रकाशन करता है समुदाय के पार्श्व में। ग्राहक जो इसका आलम्बन करते हैं उन पत्रों को भेजने से पहले बाधित करते हैं जो इसके अनुकूल नहीं।</string>
     <string name="new_community_rules_kinds_section">अनुमत घटना प्रकार</string>
     <string name="new_community_rules_kinds_hint">एक प्रकार को अनुमति देने के लिए दबाएँ। एक प्रकार को दीर्घ दबाएँ प्रति घटना आकार अथवा दैनिक पत्र प्रकाशन संख्या सीमाओं को स्थापित करने के लिए।</string>
     <string name="new_community_rules_kind_short_text">छोटा लेख (१)</string>
@@ -693,7 +693,7 @@
     <string name="workout_distance">दूरी</string>
     <string name="workout_pace">गति</string>
     <string name="workout_speed">गति</string>
-    <string name="workout_elevation">ऊँचाई</string>
+    <string name="workout_elevation">ऊँचाई वृद्धि</string>
     <string name="workout_elevation_loss">ऊँचाई घटाव</string>
     <string name="workout_calories">उष्ममान</string>
     <string name="workout_steps">पद</string>
@@ -727,47 +727,47 @@
     <string name="exercise_circuit">परिक्रम</string>
     <string name="exercise_emom">प्रति मिनट प्रत्येक मिनट पर</string>
     <string name="exercise_amrap">जितनी बार हो सके</string>
-    <string name="software_apps">क्रमक</string>
-    <string name="route_software_apps">क्रमक</string>
+    <string name="software_apps">क्रमक विपणि</string>
+    <string name="route_software_apps">क्रमक विपणि</string>
     <string name="napplets">नोस्टर संलग्नक्रमक</string>
     <string name="nsites">नोस्टरस्थान</string>
     <string name="nsite_none_found">कोई नोस्टरस्थान प्राप्त नहीं अब तक।</string>
-    <string name="browser">ब्राउज़र</string>
-    <string name="browser_reload">पुनः लोड करें</string>
-    <string name="browser_tor_on">Tor पर लोड हो रहा है। खुले वेब उपयोग करने के लिए टैप करें।</string>
-    <string name="browser_tor_off">खुले वेब पर लोड हो रहा है। Tor उपयोग करने के लिए टैप करें।</string>
-    <string name="browser_unsupported">इन-ऐप ब्राउज़र के लिए Android 11 या नया संस्करण आवश्यक है।</string>
-    <string name="embedded_tab_load_failed">यह ऐप लोड नहीं हो सका।</string>
+    <string name="browser">जालवीक्षक</string>
+    <string name="browser_reload">पुनःआवहन</string>
+    <string name="browser_tor_on">टोर॰ पर आवहन हो रहा है। खुले जाल का उपयोग करने के लिए दबाएँ।</string>
+    <string name="browser_tor_off">खुले जाल पर आवहन हो रहा है। टोर॰ का उपयोग करने के लिए दबाएँ।</string>
+    <string name="browser_unsupported">क्रमकाभ्यन्तर जालवीक्षक के लिए आण्ड्रोइड ग्यारह अथवा नवीनतर आवश्यक।</string>
+    <string name="embedded_tab_load_failed">इस क्रमक का आवहन असफल।</string>
     <string name="browser_go">खोलें</string>
-    <string name="browser_clear">साफ़ करें</string>
-    <string name="browser_favorites">पसंदीदा</string>
+    <string name="browser_clear">रिक्त करें</string>
+    <string name="browser_favorites">इष्टसूची</string>
     <string name="browser_suggested">जाल क्रमक आविष्करण</string>
     <string name="browser_discover_nsites">आपके द्वारा अनुचरित लोगों के स्थल</string>
     <string name="browser_discover_napplets">आपके द्वारा अनुचरित लोगों के क्रमक</string>
     <string name="browser_recent_options">विकल्प</string>
     <string name="browser_recent_remove">इतिहास से हटाएँ</string>
-    <string name="favorite_apps">पसंदीदा ऐप्स</string>
-    <string name="favorite_apps_empty">अभी तक कोई पसंदीदा ऐप नहीं। कोई वेब क्लाइंट या nsite खोलें और यहाँ पिन करने के लिए स्टार टैप करें।</string>
-    <string name="favorite_app_add">पसंदीदा में जोड़ें</string>
-    <string name="favorite_app_remove">पसंदीदा से हटाएँ</string>
-    <string name="favorite_app_open_window">अपनी विंडो में खोलें</string>
+    <string name="favorite_apps">जालक्रमक</string>
+    <string name="favorite_apps_empty">यहाँ कुछ नहीं अब तक। एक जालक्रमक अथवा नोस्टरसंलग्नक्रमक अथवा नोस्टरस्थान खोलें तथा ताराचिह्न दबाएँ यहाँ रखने के लिए।</string>
+    <string name="favorite_app_add">इष्टसूची में जोडें</string>
+    <string name="favorite_app_remove">इष्टसूची में से हटाएँ</string>
+    <string name="favorite_app_open_window">अपने गवाक्ष में खोलें</string>
     <string name="favorite_app_access_title">इस क्रमक के लिए क्या अभिगम्य है</string>
     <string name="favorite_app_access_static">पृथक्कृत पर्यावरण में चलता है। आपके लेखा तक कोई विशेष अभिगमन अधिकार नहीं।</string>
     <string name="favorite_app_access_show">इसके लिए क्या अभिगम्य है</string>
-    <string name="favorite_app_network_tor">Tor पर लोड होता है।</string>
-    <string name="favorite_app_network_open">खुले वेब पर लोड होता है।</string>
-    <string name="favorite_app_unavailable">यह ऐप अभी लोड नहीं हुआ है। इसके कार्ड से खोलें, या कुछ देर बाद फिर प्रयास करें।</string>
-    <string name="favorite_notice_published">रिले पर प्रकाशित किया गया</string>
-    <string name="favorite_notice_uploaded">फ़ाइल अपलोड की गई</string>
+    <string name="favorite_app_network_tor">टोर॰ पर आवहन होता है।</string>
+    <string name="favorite_app_network_open">खुले जाल पर आवहन होता है।</string>
+    <string name="favorite_app_unavailable">इस क्रमक का आवहन अभी नहीं हुआ है। इसे इसके पत्रक से खोलें अथवा कुछ क्षण पश्चात पुनःप्रयास करें।</string>
+    <string name="favorite_notice_published">पुनःप्रसारकों पर प्रकाशित किया गया</string>
+    <string name="favorite_notice_uploaded">अभिलेख का आरोहण सम्पन्न</string>
     <string name="favorite_notice_paid">भुगतान किया गया</string>
-    <string name="favorite_app_still_loading">वह ऐप अभी लोड नहीं हुआ है। कुछ देर बाद फिर प्रयास करें।</string>
-    <string name="favorite_app_recent">हाल के</string>
+    <string name="favorite_app_still_loading">उस क्रमक का आवहन अभी नहीं हुआ है। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
+    <string name="favorite_app_recent">निकटकाल</string>
     <string name="napplet_permissions">नोस्टर संलग्नक्रमक अनुमतियाँ</string>
     <string name="napplet_manage_permissions">अनुमतियाँ प्रबन्धन</string>
     <string name="napplet_permissions_empty">कोई नोस्टर संलग्नक्रमक अनुमतियाँ नहीं अब तक</string>
     <string name="napplet_permissions_empty_subtitle">नोस्टर संलग्नक्रमकों को आपके द्वारा दिए गए अनुमतियाँ यहाँ दिखेंगे।</string>
     <string name="napplet_permissions_forget">इस नोस्टर संलग्नक्रमक को भूल जाएँ</string>
-    <string name="napplet_permissions_blocked">बाधित</string>
+    <string name="napplet_permissions_blocked">प्रति उपयोग अनुमति आवश्यक</string>
     <string name="napplet_permissions_revoke">निराकरण</string>
     <string name="napplet_permissions_ask_each_time">प्रत्येक बार मुझसे पूछें</string>
     <string name="napplet_none_found">कोई नोस्टर संलग्नक्रमक प्राप्त नहीं अब तक।</string>
@@ -871,7 +871,7 @@
     <!-- Relay Authentication (NIP-42) settings -->
     <string name="relay_auth_settings_title">पुनःप्रसारक प्रमाणीकरण</string>
     <string name="relay_auth_search_keywords">प्रमाण प्रमाणीकरण पुनःप्रसारक हस्ताक्षरण सत्यापन निप॰४२ परिचय</string>
-    <string name="relay_auth_global_policy">वैश्विक नीति</string>
+    <string name="relay_auth_global_policy">प्रमाणीकरण कब करना चाहिए</string>
     <string name="relay_auth_custom_section">किसमें प्रवेशांकन करना है</string>
     <string name="relay_auth_policy_always">सर्वदा प्रमाणीकरण</string>
     <string name="relay_auth_policy_always_desc">प्रमाणीकरण चुनौतियों को हस्ताक्षर प्रत्येक पुनःप्रसारक के लिए जो इसका अनुरोध करता है</string>
@@ -882,7 +882,7 @@
     <string name="relay_auth_toggle_my_relays">मेरे पुनःप्रसारक तथा आयोजन स्थल</string>
     <string name="relay_auth_toggle_my_relays_desc">प्रवेशांकन करें आपके अपने पुनःप्रसारक तथा सार्वजनिक चर्चाएँ तथा समुदाय तथा वर्तमानप्रवाहों को जिनसे आप जुडे हैं अथवा प्रियचिह्नित किए हैं।</string>
     <string name="relay_auth_toggle_read_follows">मेरे द्वारा अनुचरित लोगों के पत्र पढें</string>
-    <string name="relay_auth_toggle_read_follows_desc">अनुचरित के पुनःप्रसारकों में प्रवेशांकन करें उनके पत्र प्राप्त करने के लिए।</string>
+    <string name="relay_auth_toggle_read_follows_desc">अनुचरित के पुनःप्रसारकों में प्रवेशांकन करें उनके परिचय जानकारी पत्रों तथा प्रतिक्रियाओं का अवरोहण करने के लिए।</string>
     <string name="relay_auth_toggle_message_follows">मेरे द्वारा अनुचरित लोगों को सन्देश भेजें</string>
     <string name="relay_auth_toggle_message_follows_desc">अनुचरित के पुनःप्रसारकों में प्रवेशांकन करें सीधेसन्देश तथा प्रत्युत्तर तथा सूचनाएँ भेजने के लिए।</string>
     <string name="relay_auth_toggle_message_strangers">किसी को भी सन्देश भेजें</string>
@@ -916,7 +916,7 @@
     <string name="relay_auth_per_relay_overrides">प्रति पुनःप्रसारक आवरक आदेश</string>
     <string name="relay_auth_forget">भूल जाएँ</string>
     <string name="relay_auth_last_used">पूर्व प्रयुक्त %1$s पहले</string>
-    <string name="relay_auth_no_overrides">कोई प्रति पुनःप्रसारक आवरक आदेश नहीं। वैश्विक नीति सर्वत्र लागू</string>
+    <string name="relay_auth_no_overrides">यहाँ कुछ नहीं अब तक। आपकी वैश्विक नीति सभी पुनःप्रसारक पर लागू।</string>
     <string name="relay_auth_decision_allow">अनुमत</string>
     <string name="relay_auth_decision_deny">अस्वीकार</string>
     <string name="nip82_repository_label">स्रोत : %1$s</string>
@@ -933,9 +933,10 @@
     <string name="nip82_older_releases_hide">पुराने संस्करण छिपाएँ</string>
     <string name="shorts">लघु चलचित्र</string>
     <string name="public_chats">सार्वजनिक चर्चा</string>
+    <string name="location_channels">स्थानीय प्रणालियाँ</string>
     <string name="follow_packs">अनुचरण पोटलियाँ</string>
     <string name="live_streams">वर्तमानप्रवाह</string>
-    <string name="nests">ध्वनि शाला</string>
+    <string name="nests">निलय</string>
     <string name="meeting_room_in_space">%1$s में</string>
     <string name="meeting_room_in_space_unknown">एक निलय</string>
     <string name="nest_stage">मंच</string>
@@ -1236,7 +1237,7 @@
     <string name="add_hashtag_label_explainer">सार्वजनिक रूप से इस पत्र के साथ विषयसूचक (निप॰३२ चिप्पी) जोडें। जो लोग आपका अनुचरण करते हैं उस विषयसूचक की सूचनावली में इस पत्र को देखेंगे।</string>
     <string name="add_hashtag_label_field">विषयसूचक</string>
     <string name="add_hashtag_label_confirm">जोडें</string>
-    <string name="hashtag_label_added_by">द्वारा जोड़ा</string>
+    <string name="hashtag_label_added_by">इन्होंने जोडा</string>
     <string name="pinned_notes">टँके गए टीकाएँ</string>
     <string name="pinned_notes_explainer">आपके टँके गए टीकाएँ</string>
     <string name="pin_to_profile">परिचय के साथ जोडें</string>
@@ -1439,7 +1440,7 @@
     <string name="follow_set_empty_label2">रिक्त</string>
     <string name="follow_set_absence_indicator2">%1$s एक सदस्य नहीं</string>
     <string name="follow_set_man_dialog_title2">आपके सूचियाँ तथा %1$s</string>
-    <string name="follow_set_creation_dialog_title">नई फ़ॉलो सूची</string>
+    <string name="follow_set_creation_dialog_title">नयी अनुचरण सूची</string>
     <string name="follow_pack_creation_dialog_title">नव्य अनुचरण पोटली</string>
     <string name="follow_set_copy_dialog_title">अनुचरण सूची की अनुकृति करें</string>
     <string name="follow_set_desc_modify_label">विवरण का संशोधन करें</string>
@@ -1490,7 +1491,7 @@
     <string name="tor_off">निष्क्रिय</string>
     <string name="tor_when_needed">मूलभूत</string>
     <string name="tor_default">मूलविकल्प</string>
-    <string name="tor_small_payloads">मीडिया छोड़कर सभी</string>
+    <string name="tor_small_payloads">ध्वनिदृश्याभिलेख के अतिरिक्त सभी</string>
     <string name="tor_full_privacy">सम्पूर्णतः गुप्त</string>
     <string name="tor_custom">विशिष्ट</string>
     <string name="tor_when_needed_explainer">सेवासंगणक की आवश्यकता होने पर टोर का प्रयोग करें</string>
@@ -1590,6 +1591,12 @@
     <string name="always_on_notif_connecting">आगतपेटिका पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
     <string name="always_on_notif_setting_title">सदैव सक्रिय सूचना सेवा</string>
     <string name="always_on_notif_setting_description">अनवरत संयोजन बनाए रखता है आपके आगतपेटिका पुनःप्रसारकों के साथ तत्काल सूचना वितरण के लिए। एक स्थायी सूचना दिखाता है। विद्युत्कोष का अधिक उपयोग करता है पर निश्चित करता है कि आप कभी भी सन्देश नहीं खोएँगे।</string>
+    <string name="always_on_notif_tile_label">सूचना सेवा</string>
+    <string name="always_on_notif_tile_subtitle_on">सक्रिय</string>
+    <string name="always_on_notif_tile_subtitle_off">निष्क्रिय</string>
+    <string name="notification_service_master_title">पृष्ठभूत सूचना सेवा</string>
+    <string name="notification_service_accounts_title">पृष्ठभूत सक्रिय लेखाएँ</string>
+    <string name="notification_service_participation_title">इस लेखा को पृष्ठभूत सक्रिय रखें</string>
     <string name="split_notifications_setting_title">सूचनाएँ विभाजित करें अनुचरित के अनुसार</string>
     <string name="split_notifications_setting_description">दो सूचना पृष्ठसूचक दिखाएँ। अनुचरित (लोग जिनका आप अनुचरण करते हैं) तथा सभी। अपठित संकेतक चमकता है केवल आपके द्वारा अनुचरित लोगों के गतिविधियों के लिए।</string>
     <string name="show_messages_in_notifications_setting_title">सन्देशों को दिखाएँ</string>
@@ -1612,7 +1619,7 @@
     <string name="add_client_tag_title">मेरे घटनाओं में ग्राहक सूचक जोडें</string>
     <string name="add_client_tag_explainer">जब सक्षम अमेथिस्ट निप॰८९ ग्राहक सूचक जोडेगा आपके द्वारा प्रकाशित घटनाओं में।</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">सूचनाएँ प्राप्त होने पर चेतावनी दें</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र 5 अथवा अधिक बार सूचित हो आपके द्वारा अनुचरित लेखाओं से</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">चेतावनी सन्देश दिखाता है जब पत्र अथवा परिचय सूचित हों आपके द्वारा अनुचरित लेखाओं से</string>
     <string name="report_warning_threshold_title">चेतावनी सीमा सूचना</string>
     <string name="report_warning_threshold_explainer">चेतावनी देती है जब पत्र अथवा लेखाओं पर इतने सूचनाएँ प्राप्त होते हैं आपके द्वारा अनुचरित व्यक्तियें से</string>
     <string name="show_sensitive_content_title">संवेदनशील विषयवस्तु दिखाएँ</string>
@@ -1620,7 +1627,7 @@
     <string name="max_hashtag_limit_title">अधिकतम विषयसूचक प्रति पत्र</string>
     <string name="max_hashtag_limit_explainer">इससे अधिक विषयसूचक युक्त पत्रों को नहीं दिखाता। शून्य रखें अक्षम करने के लिए</string>
     <string name="hide_community_rules_violations_title">समुदाय नियमों का उल्लंघन करनेवाले पत्रों को छुपाएँ</string>
-    <string name="hide_community_rules_violations_explainer">समुदाय सूचनावलियों से पत्र हटाएँ जब समदाय द्वारा निप॰९ए नियम अभिलेख प्रकाशित है तथा घटना उसका उल्लंघन करेगा। कोई प्रभाव नहीं जब समुदाय के कोई व्यवस्थित नियम नहीं।</string>
+    <string name="hide_community_rules_violations_explainer">समुदाय सूचनावलियों से पत्र हटाया जाता है जब समुदाय द्वारा निप॰९बी नियम अभिलेख प्रकाशित है तथा घटना उसका उल्लंघन करेगा। कोई प्रभाव नहीं जब समुदाय के कोई व्यवस्थित नियम नहीं।</string>
     <string name="security_section_filtering_preferences">छलनी आद्यताएँ</string>
     <string name="security_section_blocked_content">बाधित विषयवस्तु</string>
     <string name="security_unlimited">असीमित</string>
@@ -1709,7 +1716,7 @@
     <string name="cashu">काशयू अक्षरराशि</string>
     <string name="cashu_mint_label">टकसाल : %1$s</string>
     <string name="cashu_redeem">चुकाएँ</string>
-    <string name="cashu_copy_token">Token कॉपी करें</string>
+    <string name="cashu_copy_token">अक्षरराशि की अनुकृति</string>
     <string name="quick_actions_open_in_another_app">अन्य क्रमक में खोलें</string>
     <string name="no_lightning_address_set">कोई लैटनिंग पता स्थापित नहीं</string>
     <string name="live_stream_live_tag">वर्तमान</string>
@@ -1764,15 +1771,24 @@
     <string name="connectivity_type_always">सर्वदा</string>
     <string name="connectivity_type_unmetered_wifi_only">मात्रांकन रहित वैफै॰</string>
     <string name="connectivity_type_never">कभी नहीं</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">वैफै॰</string>
     <string name="ui_feature_set_type_complete">सम्पूर्ण</string>
     <string name="ui_feature_set_type_simplified">सरलीकृत</string>
     <string name="ui_feature_set_type_performance">वेगवान</string>
+    <!-- Compact labels for the segmented control. -->
+    <string name="ui_feature_set_type_complete_short">पूर्ण</string>
+    <string name="ui_feature_set_type_simplified_short">सरल</string>
+    <string name="ui_feature_set_type_performance_short">द्रुत</string>
     <string name="gallery_type_classic">प्राचीन</string>
     <string name="gallery_type_modern">आधुनिक</string>
     <string name="system">यन्त्रव्यवस्था</string>
     <string name="light">प्रकाशवान</string>
     <string name="dark">अन्धकारमय</string>
     <string name="application_preferences">क्रमक आद्यताएँ</string>
+    <string name="settings_section_appearance">स्वरूप</string>
+    <string name="settings_section_media">ध्वनिदृश्य तथा जानकारी</string>
+    <string name="settings_section_general">सामान्य</string>
     <string name="wallet_connect">धनकोष संयोजन</string>
     <string name="language">भाषा</string>
     <string name="theme">प्रदर्शनशैली</string>
@@ -1790,6 +1806,11 @@
     <string name="font_family_sans_serif">रेखारहित</string>
     <string name="font_family_serif">सरेखा</string>
     <string name="font_family_monospace">समविस्तार</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
+    <string name="font_family_system_short">व्यवस्था</string>
+    <string name="font_family_sans_serif_short">रेखारहित</string>
+    <string name="font_family_serif_short">सरेखा</string>
+    <string name="font_family_monospace_short">समविस्तार</string>
     <string name="font_size">अक्षर आकार</string>
     <string name="font_size_description">क्रमक में सर्वत्र लेख आकार वर्धन</string>
     <string name="font_size_small">छोटा</string>
@@ -1959,6 +1980,7 @@
     <string name="relay_group_members_title">सदस्य सूची</string>
     <string name="relay_group_make_admin">प्रशासक बनाएँ</string>
     <string name="relay_group_make_moderator">नियामक बनाएँ</string>
+    <string name="relay_group_assign_role">भूमिका सौंपें : %1$s</string>
     <string name="relay_group_demote_member">पद हटाएँ</string>
     <string name="relay_group_remove_user">समूह से हटाएँ</string>
     <string name="relay_group_remove_user_confirm">क्या %1$s को इस समूह से हटाएँ। वे अभिगमन अधिकार खो देंगे पुनः जुडने अथवा आमन्त्रित होने तक।</string>
@@ -1994,6 +2016,7 @@
     <string name="relay_group_field_topics_hint">द्व्यंकरूप्य नोस्टर कला इत्यादि</string>
     <string name="relay_group_field_geohash">स्थान (भूविभेदक)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_section_structure">संरचना</string>
     <string name="relay_group_section_permissions">अनुमतियाँ</string>
     <string name="relay_group_flag_private">निजी</string>
     <string name="relay_group_flag_private_desc">केवल सदस्य सन्देशों को पढ सकते हैं।</string>
@@ -2070,7 +2093,7 @@
     <string name="copy_nprofile_to_clipboard">टाँकाफलक में एन॰परिचय की अनुकृति करें</string>
     <string name="copy_npub_to_clipboard">टाँकाफलक में एनपुब॰ की अनुकृति करें</string>
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
-    <string name="share_target_as_dm">DM के रूप में भेजें</string>
+    <string name="share_target_as_dm">सीधेसन्देश के रूप में भेजें</string>
     <string name="share_to_dm_title">को भेजें…</string>
     <string name="share_to_dm_start_new">नया सन्देश</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
@@ -2147,7 +2170,7 @@
     <string name="notification_channel_status_silent">मौन</string>
     <string name="notification_channel_status_off">निष्क्रिय</string>
     <string name="select_push_server">संयुक्तप्रेषण क्रमक का चयन करें</string>
-    <string name="push_server_title">प्रेषित सूचना</string>
+    <string name="push_server_title">प्रेषण प्रदाता</string>
     <string name="push_server_explainer">एक संयुक्तप्रेषण क्रमक का चयन करें सूचनाओं को भेजने के लिए जब अमेथिस्ट आवृत हो।</string>
     <string name="push_server_none">कुछ भी नहीं</string>
     <string name="push_server_none_explainer">प्रेषित सूचनाएँ अक्षम करता है</string>
@@ -2225,7 +2248,7 @@
     <string name="metadata_strip_failed_upload_cancelled">अभिलेख से निजी परितथ्य हटाने में असफल। आरोहण निरस्त।</string>
     <string name="upload_cancelled">आरोहण निरस्त</string>
     <string name="avif_metadata_strip_failed">एविफ॰ से परितथ्य नहीं मिटा सके : %1$s</string>
-    <string name="edit_draft">ड्राफ्ट संपादित करें</string>
+    <string name="edit_draft">पाण्डुलिपि सम्पादन</string>
     <string name="login_with_qr_code">क्यूआर॰ क्रमचित्र के साथ प्रवेशांकन करें</string>
     <string name="route_home">घर</string>
     <string name="route_discover">आविष्करण</string>
@@ -2319,7 +2342,7 @@
     <string name="cashu_p2pk_explainer">एक पृथक निजी कुंचिका केवल निप॰६१ नटज्साप प्राप्त करने के लिए। आपकी नोस्टर लेखा बद्ध कुंचिका नहीं।</string>
     <string name="cashu_p2pk_autogen">एक नयी कुंचिका बनाएँ</string>
     <string name="cashu_p2pk_manual_label">पीटूपीके॰ निजी कुंचिका (षोडशांक)</string>
-    <string name="wallet_edit_cashu_title">काशयू॰ धनकोष सम्पादन</string>
+    <string name="wallet_edit_cashu_title">टकसालों का सम्पादन</string>
     <string name="wallet_save_changes">परिवर्तनों का अभिलेखन</string>
     <string name="cashu_mint_no_recs">कोई अनुशंसाएँ नहीं अब तक</string>
     <string name="cashu_mint_recommended_by">इनके द्वारा अनुशंसित</string>
@@ -2348,8 +2371,8 @@
     <string name="cashu_history_incoming">प्राप्त</string>
     <string name="cashu_history_outgoing">भेजा गया</string>
     <string name="cashu_settings_title">काशयू॰ धनकोष स्थापना विकल्प</string>
-    <string name="cashu_settings_edit_wallet">धनकोष विवरण सम्पादन</string>
-    <string name="cashu_settings_edit_wallet_subtitle">टकसाल तथा नटज्साप कुंचिका</string>
+    <string name="cashu_settings_edit_wallet">मेरे टकसाल</string>
+    <string name="cashu_settings_edit_wallet_subtitle">आपके धनकोष द्वारा उपयुक्त टकसाल जोडें अथवा हटाएँ।</string>
     <string name="cashu_settings_my_recommendations">मेरे टकसाल अनुशंसाएँ</string>
     <string name="cashu_settings_recommendations_subtitle">सार्वजनिक रूप से समर्थन करें उन टकसालों का जिन पर आप विश्वास करते हैं तथा अनुशम्साएँ हटाएँ।</string>
     <string name="cashu_settings_no_recommendations">आपने किसी भी टकसाल की अनुशंसा नहीं की अब तक। अंगूठाऊपरचिह्न दबाएँ किसी टकसाल के आगे उसका समर्थन सार्वजनिक रूप से करने के लिए।</string>
@@ -2635,7 +2658,7 @@
     <string name="onchain_zap_pending">पुष्टिकरण की प्रतीक्षा</string>
     <string name="change_reaction">शीघ्र प्रतिक्रियाओं का परिवर्तन करें</string>
     <string name="bottom_bar_settings">निचली मार्गदर्शन पट्टी</string>
-    <string name="bottom_bar_settings_description">क्रम पुनःव्यवस्थित करने के लिए खींचें। विकल्पान्तरण करें वस्तु को जोडने अथवा हटाने के लिए निचली पट्टी से। शून्य वस्तु हो तो निचली पट्टी अदृश्य रहेगी।</string>
+    <string name="bottom_bar_settings_description">टँकित वस्तुओं को खींचें पुनःव्यवस्थित करने के लिए। नीचे एक श्रेणी खोलें तथा एक वस्तु का विकल्पान्तरण करें उसे जोडने अथवा हटाने के लिए। जालवीक्षक खोलें अथवा एक चर्चा प्रकार प्रियचिह्नित अथवा समूह विशेष को टाँकने के लिए। शून्य वस्तु हो तो निचली पट्टी अदृश्य रहेगी।</string>
     <string name="bottom_bar_settings_available">उपलब्ध</string>
     <string name="bottom_bar_settings_pinned">आपकी निचली पट्टी</string>
     <string name="bottom_bar_settings_pinned_empty">कोई वस्तु टँकित नहीं। निचली पट्टी अदृश्य रहेगा जब तक कि आप न्यूनतम एक को जोडते नहीं।</string>
@@ -2907,7 +2930,7 @@
     <string name="git_repo_settings_topics">विषय (अल्पविराम विभाजित)</string>
     <string name="git_repo_settings_save">अभिलेखन</string>
     <string name="git_repositories">गिट क्रमलेखकोश</string>
-    <string name="nsite_title">स्थिर जालस्थान : %1$s</string>
+    <string name="nsite_title">नोस्टरस्थान : %1$s</string>
     <string name="napplet_card_title">नोस्टर संलग्नक्रमक : %1$s</string>
     <string name="napplet_card_permissions">अनुमतियाँ :</string>
     <string name="profile_tab_apps">क्रमक तथा स्थान</string>
@@ -2996,7 +3019,7 @@
     <string name="add_dvm_to_favorites">सूचनावली कलनविधि जोडें इष्टसूची में</string>
     <string name="remove_dvm_from_favorites">इष्टसूची में से हटाएँ</string>
     <string name="favorite_dvms_title">इष्ट सूचनावली कलनविधियाँ</string>
-    <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिनहें आपने यहाँ ताराचिह्नित किए मूल सूचनावली पर छलनी खण्डों के जैसे दिखेंगे। खोज पटल खोलें अधिक जोडने के लिए।</string>
+    <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिन्हें आप ताराचिह्नित किए यहाँ दिखेंगे तथा मुख्य सूचनावली पर छलनी खण्डों के रूप में दिखेंगे।</string>
     <string name="favorite_dvms_empty_headline">आपके इष्ट कलनविधियाँ अटकाएँ</string>
     <string name="favorite_dvms_empty_step1">नीचे \"%1$s\" दबाएँ कलनविधियों का वीक्षण करने के लिए।</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
@@ -3249,8 +3272,8 @@
     <string name="kind_old_bookmark_list">पुरानी स्मर्त्तव्यचिह्न सूची</string>
     <string name="kind_day_appointment">दिवस नियुक्ति</string>
     <string name="kind_calendar">दिनदर्शिका</string>
-    <string name="kind_appointment">नियुक्ति</string>
-    <string name="kind_appt_rsvp">अपॉइंटमेंट RSVP</string>
+    <string name="kind_appointment">समयनियुक्ति</string>
+    <string name="kind_appt_rsvp">समयनियुक्ति प्रत्युत्तर अपेक्षित</string>
     <string name="kind_chess_games">चतुरंग खेल</string>
     <string name="kind_chess_auth">चतुरंग प्रमाणीकरण</string>
     <string name="kind_favorite_relays">इष्ट पुनःप्रसारक</string>
@@ -3679,11 +3702,11 @@
     <string name="relay_management_remove">हटाएँ</string>
     <string name="relay_management_allow">अनुमत</string>
     <string name="relay_management_ban">प्रतिबन्ध</string>
-    <string name="relay_management_ban_pubkey">Pubkey प्रतिबंध</string>
+    <string name="relay_management_ban_pubkey">ख्याप्यकुंचिका प्रतिबन्धित करें</string>
     <string name="relay_management_allow_pubkey">ख्याप्य कुंचिका को अनुमति दें</string>
     <string name="relay_management_ban_event">घटना प्रतिबन्धित करें</string>
     <string name="relay_management_allow_kind">प्रकार को अनुमति दें</string>
-    <string name="relay_management_block_ip">IP ब्लॉक करें</string>
+    <string name="relay_management_block_ip">अंकीय जालपता बाधित करें</string>
     <string name="relay_management_event_id_hex">घटना विभेदक (षोडशांक)</string>
     <string name="relay_management_kind_number">प्रकार संख्या</string>
     <string name="relay_management_ip_address">अंकीय जालपता</string>
@@ -3807,7 +3830,7 @@
     <string name="ai_writing_use_this">इसका प्रयोग करें</string>
     <string name="ai_writing_dismiss">हटाएँ</string>
     <string name="ai_tone_correct">सम्यक</string>
-    <string name="ai_tone_rephrase">फिर से लिखें</string>
+    <string name="ai_tone_rephrase">वाक्याम्श पुनः लिखें</string>
     <string name="ai_tone_shorter">सूक्ष्मतर</string>
     <string name="ai_tone_elaborate">विस्तार</string>
     <string name="ai_tone_friendly">मित्रतापूर्ण</string>
@@ -3956,4 +3979,9 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s से लाए गए चालान के जेसोन॰ परखनें में अपक्रम। उपयोगकर्ता की लैटनिंग स्थापना की जाँच करें</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">लैटनिंग चालान नहीं बना पाए। %1$s से संदेश : %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s से लैटनिंग चालान नहीं बना पाए। परिणाम जेसोन॰ में pr अम्श उपलब्ध नहीं।</string>
+    <string name="geohash_chat_open">स्थानीय चर्चा खोलें</string>
+    <string name="geohash_chat">स्थानीय चर्चा</string>
+    <string name="new_conversation_location_title">स्थानीय प्रणाली</string>
+    <string name="new_conversation_location_chip">स्थानीय</string>
+    <string name="new_conversation_location_cta">स्थान का चयन करें</string>
 </resources>

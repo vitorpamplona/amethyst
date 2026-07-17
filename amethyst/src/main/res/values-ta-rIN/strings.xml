@@ -1421,9 +1421,11 @@
     <string name="connectivity_type_always">எப்போதும்</string>
     <string name="connectivity_type_unmetered_wifi_only">அளவிடா WiFi</string>
     <string name="connectivity_type_never">ஒருபோதும் இல்லை</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">முழுமை</string>
     <string name="ui_feature_set_type_simplified">எளிமைப்படுத்தப்பட்ட</string>
     <string name="ui_feature_set_type_performance">செயல்திறன்</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">கிளாசிக்</string>
     <string name="gallery_type_modern">நவீன</string>
     <string name="system">கணினி</string>
@@ -1432,6 +1434,7 @@
     <string name="application_preferences">பயன்பாட்டு விருப்பங்கள்</string>
     <string name="language">மொழி</string>
     <string name="theme">தீம்</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">படம் முன்னோட்டம்</string>
     <string name="automatically_play_videos">வீடியோ இயக்கம்</string>
     <string name="autoplay_videos">வீடியோக்களை தானாக இயக்கு</string>

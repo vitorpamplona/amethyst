@@ -1422,9 +1422,11 @@
     <string name="connectivity_type_always">Uvek</string>
     <string name="connectivity_type_unmetered_wifi_only">Neograničeni WiFi</string>
     <string name="connectivity_type_never">Nikad</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Potpuno</string>
     <string name="ui_feature_set_type_simplified">Pojednostavljeno</string>
     <string name="ui_feature_set_type_performance">Performanse</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasično</string>
     <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistem</string>
@@ -1433,6 +1435,7 @@
     <string name="application_preferences">Podešavanja aplikacije</string>
     <string name="language">Jezik</string>
     <string name="theme">Tema</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Pregled slika</string>
     <string name="automatically_play_videos">Reprodukcija videa</string>
     <string name="autoplay_videos">Automatska reprodukcija videa</string>

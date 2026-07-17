@@ -29,6 +29,9 @@
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <!-- Compact labels for the segmented control. -->
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Onchain zap send dialog -->

@@ -1380,8 +1380,10 @@
     <string name="connectivity_type_always">Toujours</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi illimité</string>
     <string name="connectivity_type_never">Jamais</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Complet</string>
     <string name="ui_feature_set_type_simplified">Simplifié</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Classique</string>
     <string name="gallery_type_modern">Moderne</string>
     <string name="system">Système</string>
@@ -1390,6 +1392,7 @@
     <string name="application_preferences">Préférences de l\'application</string>
     <string name="language">Langage</string>
     <string name="theme">Thème</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Prévisualisation des images</string>
     <string name="automatically_play_videos">Lecture vidéo</string>
     <string name="autoplay_videos">Lecture automatique des vidéos</string>

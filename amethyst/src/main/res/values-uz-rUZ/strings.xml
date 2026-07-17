@@ -1423,9 +1423,11 @@
     <string name="connectivity_type_always">Doimo</string>
     <string name="connectivity_type_unmetered_wifi_only">Hisoblanmagan WiFi</string>
     <string name="connectivity_type_never">Hech qachon</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">To\'liq</string>
     <string name="ui_feature_set_type_simplified">Soddalashtirilgan</string>
     <string name="ui_feature_set_type_performance">Unumdorlik</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klassik</string>
     <string name="gallery_type_modern">Zamonaviy</string>
     <string name="system">Tizim</string>
@@ -1434,6 +1436,7 @@
     <string name="application_preferences">Ilova sozlamalari</string>
     <string name="language">Til</string>
     <string name="theme">Mavzu</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Rasm ko\'rinishi</string>
     <string name="automatically_play_videos">Video ijro etish</string>
     <string name="autoplay_videos">Videolarni avtomatik ijro etish</string>

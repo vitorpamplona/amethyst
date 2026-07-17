@@ -1424,9 +1424,11 @@
     <string name="connectivity_type_always">Her Zaman</string>
     <string name="connectivity_type_unmetered_wifi_only">Ölçümsüz WiFi</string>
     <string name="connectivity_type_never">Hiçbir Zaman</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Tam</string>
     <string name="ui_feature_set_type_simplified">Basitleştirilmiş</string>
     <string name="ui_feature_set_type_performance">Performans</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasik</string>
     <string name="system">Sistem</string>
     <string name="light">Açık</string>
@@ -1434,6 +1436,7 @@
     <string name="application_preferences">Uygulama Tercihleri</string>
     <string name="language">Dil</string>
     <string name="theme">Tema</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Görsel Önizleme</string>
     <string name="automatically_play_videos">Video Oynatma</string>
     <string name="autoplay_videos">Videoları Otomatik Oynat</string>

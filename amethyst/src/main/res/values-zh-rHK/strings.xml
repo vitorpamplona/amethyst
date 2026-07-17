@@ -1425,9 +1425,11 @@
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_unmetered_wifi_only">未计量的 WiFi</string>
     <string name="connectivity_type_never">从不</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">简化版</string>
     <string name="ui_feature_set_type_performance">极速版</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">经典</string>
     <string name="gallery_type_modern">现代</string>
     <string name="system">系统</string>
@@ -1437,6 +1439,7 @@
     <string name="wallet_connect">钱包绑定</string>
     <string name="language">语言</string>
     <string name="theme">主题</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">图像预览</string>
     <string name="automatically_play_videos">视频播放</string>
     <string name="autoplay_videos">自动播放视频</string>
