@@ -105,4 +105,9 @@
     <string name="git_status_merged">Merged</string>
     <string name="git_status_closed">Closed</string>
     <string name="git_status_draft">Draft</string>
+    <string name="git_diff_binary">Binary file not shown.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d file changed</item>
+        <item quantity="other">%1$d files changed</item>
+    </plurals>
 </resources>

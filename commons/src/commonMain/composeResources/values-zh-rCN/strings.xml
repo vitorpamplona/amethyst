@@ -4,4 +4,8 @@
     <string name="git_status_merged">已合并</string>
     <string name="git_status_closed">已关闭</string>
     <string name="git_status_draft">草稿</string>
+    <string name="git_diff_binary">二进制文件未显示。</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="other">%1$d 个文件已更改</item>
+    </plurals>
 </resources>

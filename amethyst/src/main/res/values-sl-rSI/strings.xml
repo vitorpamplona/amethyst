@@ -2777,13 +2777,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
         <item quantity="few">%1$d elementi</item>
         <item quantity="other">%1$d elementov</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d datoteka spremenjena</item>
-        <item quantity="two">%1$d datoteki spremenjeni</item>
-        <item quantity="few">%1$d datoteke spremenjene</item>
-        <item quantity="other">%1$d datotek spremenjenih</item>
-    </plurals>
-    <string name="git_diff_binary">Binarna datoteka ni prikazana.</string>
     <string name="git_new_issue_button">Nov</string>
     <string name="git_new_issue_title">Prijavi težavo</string>
     <string name="git_new_issue_subject">Naslov</string>

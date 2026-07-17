@@ -2905,11 +2905,6 @@
         <item quantity="one">%1$d वस्तु</item>
         <item quantity="other">%1$d वस्तुएँ</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d अभिलेख परिवर्तित</item>
-        <item quantity="other">%1$d अभिलेख परिवर्तित</item>
-    </plurals>
-    <string name="git_diff_binary">अंकीय अभिलेख नहीं दर्शाया गया।</string>
     <string name="git_new_issue_button">नव्य</string>
     <string name="git_new_issue_title">नया विषय</string>
     <string name="git_new_issue_subject">शीर्षक</string>

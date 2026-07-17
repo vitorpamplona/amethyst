@@ -4,4 +4,9 @@
     <string name="git_status_merged">Samengevoegd</string>
     <string name="git_status_closed">Gesloten</string>
     <string name="git_status_draft">Concept</string>
+    <string name="git_diff_binary">Binair bestand niet getoond.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d bestand gewijzigd</item>
+        <item quantity="other">%1$d bestanden gewijzigd</item>
+    </plurals>
 </resources>

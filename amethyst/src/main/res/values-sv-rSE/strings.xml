@@ -2989,11 +2989,6 @@
         <item quantity="one">%1$d objekt</item>
         <item quantity="other">%1$d objekt</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d fil ändrad</item>
-        <item quantity="other">%1$d filer ändrade</item>
-    </plurals>
-    <string name="git_diff_binary">Binär fil visas inte.</string>
     <string name="git_new_issue_button">Ny</string>
     <string name="git_new_issue_title">Nytt ärende</string>
     <string name="git_new_issue_subject">Titel</string>

@@ -4,4 +4,11 @@
     <string name="git_status_merged">Združeno</string>
     <string name="git_status_closed">Zaključeno</string>
     <string name="git_status_draft">Osnutek</string>
+    <string name="git_diff_binary">Binarna datoteka ni prikazana.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d datoteka spremenjena</item>
+        <item quantity="two">%1$d datoteki spremenjeni</item>
+        <item quantity="few">%1$d datoteke spremenjene</item>
+        <item quantity="other">%1$d datotek spremenjenih</item>
+    </plurals>
 </resources>

@@ -3075,13 +3075,6 @@
         <item quantity="many">%1$d položky</item>
         <item quantity="other">%1$d položek</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d soubor změněn</item>
-        <item quantity="few">%1$d soubory změněny</item>
-        <item quantity="many">%1$d souboru změněno</item>
-        <item quantity="other">%1$d souborů změněno</item>
-    </plurals>
-    <string name="git_diff_binary">Binární soubor se nezobrazuje.</string>
     <string name="git_new_issue_button">Nový</string>
     <string name="git_new_issue_title">Nový problém</string>
     <string name="git_new_issue_subject">Název</string>

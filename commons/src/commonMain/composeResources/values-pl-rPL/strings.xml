@@ -4,4 +4,11 @@
     <string name="git_status_merged">Połączone</string>
     <string name="git_status_closed">Zamknięte</string>
     <string name="git_status_draft">Szkic</string>
+    <string name="git_diff_binary">Plik binarny nie jest wyświetlany.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">Plik %1$d zmieniony</item>
+        <item quantity="few">Plików %1$d zmienionych</item>
+        <item quantity="many">Plików %1$d zmienionych</item>
+        <item quantity="other">%1$d pliki zostały zmienione</item>
+    </plurals>
 </resources>

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -56,12 +55,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.CodeHighlighter
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.git_diff_binary
+import com.vitorpamplona.amethyst.commons.resources.git_diff_files_changed
 import com.vitorpamplona.quartz.nip34Git.patch.CharSpan
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffFile
 import com.vitorpamplona.quartz.nip34Git.patch.GitDiffLine
@@ -70,6 +70,8 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitFileChange
 import com.vitorpamplona.quartz.nip34Git.patch.IntralineDiff
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import dev.snipme.highlights.model.SyntaxLanguage
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 private val AddColor = Color(0xFF1F883D)
 private val DeleteColor = Color(0xFFCF222E)
@@ -110,7 +112,7 @@ private fun DiffStatSummary(parsed: ParsedPatch) {
     ) {
         val fileCount = parsed.files.size
         Text(
-            text = pluralStringResource(R.plurals.git_diff_files_changed, fileCount, fileCount),
+            text = pluralStringResource(Res.plurals.git_diff_files_changed, fileCount, fileCount),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
@@ -171,7 +173,7 @@ private fun DiffFileCard(
         if (expanded) {
             if (file.isBinary) {
                 Text(
-                    text = stringRes(R.string.git_diff_binary),
+                    text = stringResource(Res.string.git_diff_binary),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp),

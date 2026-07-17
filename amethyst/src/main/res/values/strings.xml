@@ -3311,11 +3311,6 @@
         <item quantity="one">%1$d item</item>
         <item quantity="other">%1$d items</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d file changed</item>
-        <item quantity="other">%1$d files changed</item>
-    </plurals>
-    <string name="git_diff_binary">Binary file not shown.</string>
     <string name="git_new_issue_button">New</string>
     <string name="git_new_issue_title">New issue</string>
     <string name="git_new_issue_subject">Title</string>

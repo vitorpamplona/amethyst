@@ -4,4 +4,9 @@
     <string name="git_status_merged">विलीन</string>
     <string name="git_status_closed">आवृत</string>
     <string name="git_status_draft">पाण्डुलिपि</string>
+    <string name="git_diff_binary">अंकीय अभिलेख नहीं दर्शाया गया।</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d अभिलेख परिवर्तित</item>
+        <item quantity="other">%1$d अभिलेख परिवर्तित</item>
+    </plurals>
 </resources>

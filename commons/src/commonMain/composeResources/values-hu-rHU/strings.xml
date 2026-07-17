@@ -4,4 +4,9 @@
     <string name="git_status_merged">Beolvasztva</string>
     <string name="git_status_closed">Lezárva</string>
     <string name="git_status_draft">Vázlat</string>
+    <string name="git_diff_binary">Nem jeleníthető meg a bináris fájl tartalma.</string>
+    <plurals name="git_diff_files_changed">
+        <item quantity="one">%1$d fájl módosult</item>
+        <item quantity="other">%1$d fájl módosult</item>
+    </plurals>
 </resources>

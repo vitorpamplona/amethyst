@@ -2989,11 +2989,6 @@
         <item quantity="one">%1$d iten</item>
         <item quantity="other">%1$d itens</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="one">%1$d arquivo alterado</item>
-        <item quantity="other">%1$d arquivos alterados</item>
-    </plurals>
-    <string name="git_diff_binary">Arquivo binário não exibido.</string>
     <string name="git_new_issue_button">Nova</string>
     <string name="git_new_issue_title">Nova issue</string>
     <string name="git_new_issue_subject">Título</string>

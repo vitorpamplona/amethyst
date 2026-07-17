@@ -2867,10 +2867,6 @@
     <plurals name="git_repo_item_count">
         <item quantity="other">%1$d 个项目</item>
     </plurals>
-    <plurals name="git_diff_files_changed">
-        <item quantity="other">%1$d 个文件已更改</item>
-    </plurals>
-    <string name="git_diff_binary">二进制文件未显示。</string>
     <string name="git_new_issue_button">新建</string>
     <string name="git_new_issue_title">新工单</string>
     <string name="git_new_issue_subject">标题</string>
