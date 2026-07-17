@@ -29,9 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -41,15 +39,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
@@ -58,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -95,8 +96,7 @@ fun AllSettingsScreen(
     val scrollState = rememberScrollState()
     val hasPrivateKey = accountViewModel.account.settings.keyPair.privKey != null
 
-    val searchState = rememberTextFieldState()
-    val query = searchState.text.toString()
+    var query by rememberSaveable { mutableStateOf("") }
 
     // The catalog is structurally stable for the screen's lifetime, so it is rebuilt only when
     // an input actually changes — not on every keystroke. `onResetMarmot` reads the volatile
@@ -135,13 +135,17 @@ fun AllSettingsScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             SettingsSearchField(
-                state = searchState,
+                query = query,
+                onQueryChange = { query = it },
+                onClear = { query = "" },
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
             )
 
+            // Filtering happens in place: the list below is the search result. A blank query
+            // yields the whole catalog, narrowing as the user types.
             if (filtered.isEmpty()) {
                 SettingsSearchEmptyState(
                     query = query,
@@ -190,15 +194,24 @@ fun AllSettingsScreen(
     }
 }
 
+/**
+ * Persistent, pill-shaped search field styled after the Material 3 search bar. It filters the
+ * settings list in place rather than opening a results dropdown — appropriate for an in-page
+ * filter (see the Android system Settings app).
+ */
 @Composable
 private fun SettingsSearchField(
-    state: TextFieldState,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedThinPaddingTextField(
-        state = state,
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
         modifier = modifier,
         singleLine = true,
+        shape = CircleShape,
         placeholder = { Text(stringRes(R.string.settings_search_placeholder)) },
         leadingIcon = {
             Icon(
@@ -209,9 +222,9 @@ private fun SettingsSearchField(
             )
         },
         trailingIcon =
-            if (state.text.isNotEmpty()) {
+            if (query.isNotEmpty()) {
                 {
-                    IconButton(onClick = { state.clearText() }) {
+                    IconButton(onClick = onClear) {
                         Icon(
                             symbol = MaterialSymbols.Close,
                             contentDescription = stringRes(R.string.clear),
@@ -223,6 +236,16 @@ private fun SettingsSearchField(
             } else {
                 null
             },
+        colors =
+            TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                errorIndicatorColor = Color.Transparent,
+            ),
     )
 }
 
