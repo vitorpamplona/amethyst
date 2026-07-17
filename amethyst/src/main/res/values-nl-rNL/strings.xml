@@ -3132,15 +3132,6 @@
     <string name="goal_progress">%1$s gefinancierd van %2$s sats doel</string>
     <string name="fundraiser_ends">Eindigt %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain donatie</string>
-    <string name="bird_detection_title">Vogeldetectie</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d soorten</item>
-        <item quantity="other">Birdex · %1$d soorten</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d meer</item>
-        <item quantity="other">%1$s +%2$d meer</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <string name="ps1_save_title">PS1 memory card-save</string>
     <string name="ps1_save_block">blok %1$d</string>

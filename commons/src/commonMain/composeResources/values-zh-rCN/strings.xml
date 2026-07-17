@@ -8,4 +8,11 @@
     <plurals name="git_diff_files_changed">
         <item quantity="other">%1$d 个文件已更改</item>
     </plurals>
+    <string name="bird_detection_title">鸟类检测</string>
+    <plurals name="birdex_species_count">
+        <item quantity="other">Birdex · %1$d 个物种</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="other">%1$s + 另%2$d</item>
+    </plurals>
 </resources>

@@ -2729,12 +2729,6 @@
     <string name="goal_progress">%2$s sats 목표 중 %1$s 달성</string>
     <string name="fundraiser_ends">%1$s 종료</string>
     <string name="fundraiser_onchain_donation">온체인 기부</string>
-    <plurals name="birdex_species_count">
-        <item quantity="other">Birdex · %1$d종</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="other">%1$s 외 %2$d개 더</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">경찰</string>

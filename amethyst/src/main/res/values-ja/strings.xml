@@ -3893,13 +3893,7 @@
     
     <string name="fundraiser_onchain_donation">オンチェーン寄付</string>
     
-    <plurals name="birdex_species_count">
-    <item quantity="other">Birdex · %1$d 種</item>
-</plurals>
     
-    <plurals name="birdex_species_preview_more">
-    <item quantity="other">%1$s 他 %2$d 件</item>
-</plurals>
     
     <string name="road_event_police">警察</string>
     

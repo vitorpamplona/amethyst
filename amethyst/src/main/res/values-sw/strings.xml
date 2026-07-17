@@ -2767,14 +2767,6 @@
     <string name="goal_progress">%1$s imefadhiliwa kati ya lengo la %2$s sats</string>
     <string name="fundraiser_ends">Inaisha %1$s</string>
     <string name="fundraiser_onchain_donation">Mchango wa on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · spishi %1$d</item>
-        <item quantity="other">Birdex · spishi %1$d</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d zaidi</item>
-        <item quantity="other">%1$s +%2$d zaidi</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">Polisi</string>

@@ -3794,18 +3794,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="goal_progress">Sfinansowano %1$s z %2$s satoszów</string>
     <string name="fundraiser_ends">Kończy się %1$s</string>
     <string name="fundraiser_onchain_donation">Darowizna on-chain</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d gatunek</item>
-        <item quantity="few">Birdex · %1$d gatunków</item>
-        <item quantity="many">Birdex · %1$d gatunków</item>
-        <item quantity="other">Birdex · %1$d gatunki</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d więcej</item>
-        <item quantity="few">%1$s +%2$d więcej</item>
-        <item quantity="many">%1$s +%2$d więcej</item>
-        <item quantity="other">%1$s +%2$d więcej</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <string name="ps1_save_title">Zapis karty pamięci PS1</string>
     <string name="ps1_save_block">blok %1$d</string>

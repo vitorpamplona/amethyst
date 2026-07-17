@@ -4,4 +4,12 @@
     <string name="git_status_merged">Fusionado</string>
     <string name="git_status_closed">Cerrado</string>
     <string name="git_status_draft">Borrador</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d especie</item>
+        <item quantity="other">Birdex · %1$d especies</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d más</item>
+        <item quantity="other">%1$s +%2$d más</item>
+    </plurals>
 </resources>

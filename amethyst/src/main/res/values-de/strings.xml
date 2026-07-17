@@ -4417,15 +4417,7 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="fundraiser_onchain_donation">On-Chain-Spende</string>
     
-<plurals name="birdex_species_count">
-    <item quantity="one">Birdex · %1$d Art</item>
-    <item quantity="other">Birdex · %1$d Arten</item>
-</plurals>
     
-<plurals name="birdex_species_preview_more">
-    <item quantity="one">%1$s +%2$d weitere</item>
-    <item quantity="other">%1$s +%2$d weitere</item>
-</plurals>
     
     
 <string name="goal_amount_label">Zielbetrag (Sats)</string>

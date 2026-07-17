@@ -4,4 +4,12 @@
     <string name="git_status_merged">இணைக்கப்பட்ட</string>
     <string name="git_status_closed">மூடப்பட்ட</string>
     <string name="git_status_draft">வரைவு</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d இனம்</item>
+        <item quantity="other">Birdex · %1$d இனங்கள்</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d மேலும்</item>
+        <item quantity="other">%1$s +%2$d மேலும்</item>
+    </plurals>
 </resources>

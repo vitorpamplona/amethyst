@@ -5294,13 +5294,7 @@
     
 <string name="fundraiser_onchain_donation">链上捐助</string>
     
-<plurals name="birdex_species_count">
-    <item quantity="other">Birdex · %1$d 个物种</item>
-</plurals>
     
-<plurals name="birdex_species_preview_more">
-    <item quantity="other">%1$s + 另%2$d</item>
-</plurals>
     
     
 <string name="road_event_police">警察</string>

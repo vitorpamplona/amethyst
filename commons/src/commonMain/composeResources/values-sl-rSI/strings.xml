@@ -11,4 +11,17 @@
         <item quantity="few">%1$d datoteke spremenjene</item>
         <item quantity="other">%1$d datotek spremenjenih</item>
     </plurals>
+    <string name="bird_detection_title">Zaznana ptica</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d vrsta</item>
+        <item quantity="two">Birdex · %1$d vrsti</item>
+        <item quantity="few">Birdex · %1$d vrste</item>
+        <item quantity="other">Birdex · %1$d vrst</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s in še %2$d druga</item>
+        <item quantity="two">%1$s in še %2$d drugi</item>
+        <item quantity="few">%1$s in še %2$d druge</item>
+        <item quantity="other">%1$s in še %2$d drugih</item>
+    </plurals>
 </resources>

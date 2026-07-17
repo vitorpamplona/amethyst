@@ -4,4 +4,12 @@
     <string name="git_status_merged">Συγχωνευμένο</string>
     <string name="git_status_closed">Κλειστό</string>
     <string name="git_status_draft">Πρόχειρο</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d είδος</item>
+        <item quantity="other">Birdex · %1$d είδη</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d ακόμη</item>
+        <item quantity="other">%1$s +%2$d ακόμη</item>
+    </plurals>
 </resources>

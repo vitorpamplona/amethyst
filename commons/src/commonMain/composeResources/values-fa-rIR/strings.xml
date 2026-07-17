@@ -4,4 +4,12 @@
     <string name="git_status_merged">ادغام شده</string>
     <string name="git_status_closed">بسته</string>
     <string name="git_status_draft">پیش‌نویس</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d گونه</item>
+        <item quantity="other">Birdex · %1$d گونه</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s و %2$d مورد بیشتر</item>
+        <item quantity="other">%1$s و %2$d مورد بیشتر</item>
+    </plurals>
 </resources>

@@ -3048,14 +3048,6 @@
         <item quantity="one">நீங்கள் பயன்படுத்தாத %1$d mint-ல் நிதி உள்ளது</item>
         <item quantity="other">நீங்கள் பயன்படுத்தாத %1$d mints-ல் நிதி உள்ளது</item>
     </plurals>
-<plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d இனம்</item>
-        <item quantity="other">Birdex · %1$d இனங்கள்</item>
-    </plurals>
-<plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d மேலும்</item>
-        <item quantity="other">%1$s +%2$d மேலும்</item>
-    </plurals>
 <plurals name="marmot_message_count">
         <item quantity="one">%1$d செய்தி</item>
         <item quantity="other">%1$d செய்திகள்</item>

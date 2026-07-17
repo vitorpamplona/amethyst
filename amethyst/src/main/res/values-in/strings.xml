@@ -3804,13 +3804,7 @@
     
     <string name="fundraiser_onchain_donation">Donasi on-chain</string>
     
-    <plurals name="birdex_species_count">
-    <item quantity="other">Birdex · %1$d spesies</item>
-</plurals>
     
-    <plurals name="birdex_species_preview_more">
-    <item quantity="other">%1$s +%2$d lainnya</item>
-</plurals>
     
     <string name="road_event_police">Polisi</string>
     

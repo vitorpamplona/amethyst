@@ -4,4 +4,14 @@
     <string name="git_status_merged">Sapludināts</string>
     <string name="git_status_closed">Slēgts</string>
     <string name="git_status_draft">Melnraksts</string>
+    <plurals name="birdex_species_count">
+        <item quantity="zero">Birdex · %1$d sugas</item>
+        <item quantity="one">Birdex · %1$d suga</item>
+        <item quantity="other">Birdex · %1$d sugas</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="zero">%1$s +%2$d vairāk</item>
+        <item quantity="one">%1$s +%2$d vairāk</item>
+        <item quantity="other">%1$s +%2$d vairāk</item>
+    </plurals>
 </resources>

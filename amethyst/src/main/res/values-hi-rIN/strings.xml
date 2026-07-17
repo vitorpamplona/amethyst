@@ -3605,15 +3605,6 @@
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
     <string name="fundraiser_ends">समाप्ति %1$s</string>
     <string name="fundraiser_onchain_donation">खण्डश्रृंखलाबद्ध दान</string>
-    <string name="bird_detection_title">पक्षी खोज</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
-        <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s सं॰ %2$d अधिक</item>
-        <item quantity="other">%1$s सं॰ %2$d अधिक</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <string name="ps1_save_title">पीएस१ स्मृति पत्रक अभिलेखन</string>
     <string name="ps1_save_block">खण्ड %1$d</string>

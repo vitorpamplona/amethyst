@@ -4,4 +4,10 @@
     <string name="git_status_merged">Digabungkan</string>
     <string name="git_status_closed">Ditutup</string>
     <string name="git_status_draft">Draft</string>
+    <plurals name="birdex_species_count">
+        <item quantity="other">Birdex · %1$d spesies</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="other">%1$s +%2$d lainnya</item>
+    </plurals>
 </resources>

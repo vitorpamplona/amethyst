@@ -4,4 +4,20 @@
     <string name="git_status_merged">مدمج</string>
     <string name="git_status_closed">مغلق</string>
     <string name="git_status_draft">مسودة</string>
+    <plurals name="birdex_species_count">
+        <item quantity="zero">Birdex · لا أنواع</item>
+        <item quantity="one">Birdex · نوع واحد</item>
+        <item quantity="two">Birdex · نوعان</item>
+        <item quantity="few">Birdex · %1$d أنواع</item>
+        <item quantity="many">Birdex · %1$d نوعًا</item>
+        <item quantity="other">Birdex · %1$d نوع</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="zero">%1$s</item>
+        <item quantity="one">%1$s +%2$d آخر</item>
+        <item quantity="two">%1$s +%2$d آخران</item>
+        <item quantity="few">%1$s +%2$d أخرى</item>
+        <item quantity="many">%1$s +%2$d آخرين</item>
+        <item quantity="other">%1$s +%2$d آخرين</item>
+    </plurals>
 </resources>

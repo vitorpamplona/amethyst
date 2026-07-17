@@ -3395,19 +3395,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="goal_progress">Zbranih %1$s od ciljnih %2$s satov</string>
     <string name="fundraiser_ends">Izteče se: %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain donacija</string>
-    <string name="bird_detection_title">Zaznana ptica</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d vrsta</item>
-        <item quantity="two">Birdex · %1$d vrsti</item>
-        <item quantity="few">Birdex · %1$d vrste</item>
-        <item quantity="other">Birdex · %1$d vrst</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s in še %2$d druga</item>
-        <item quantity="two">%1$s in še %2$d drugi</item>
-        <item quantity="few">%1$s in še %2$d druge</item>
-        <item quantity="other">%1$s in še %2$d drugih</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <string name="ps1_save_title">Shrani na pomnilniško kartico PS1</string>
     <string name="ps1_save_block">%1$d blok</string>

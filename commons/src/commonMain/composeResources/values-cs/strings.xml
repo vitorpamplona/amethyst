@@ -11,4 +11,17 @@
         <item quantity="many">%1$d souboru změněno</item>
         <item quantity="other">%1$d souborů změněno</item>
     </plurals>
+    <string name="bird_detection_title">Detekce ptáků</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d druh</item>
+        <item quantity="few">Birdex · %1$d druhy</item>
+        <item quantity="many">Birdex · %1$d druhů</item>
+        <item quantity="other">Birdex · %1$d druhů</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d další</item>
+        <item quantity="few">%1$s +%2$d další</item>
+        <item quantity="many">%1$s +%2$d dalších</item>
+        <item quantity="other">%1$s +%2$d dalších</item>
+    </plurals>
 </resources>

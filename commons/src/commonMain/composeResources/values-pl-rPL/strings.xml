@@ -11,4 +11,16 @@
         <item quantity="many">Plików %1$d zmienionych</item>
         <item quantity="other">%1$d pliki zostały zmienione</item>
     </plurals>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d gatunek</item>
+        <item quantity="few">Birdex · %1$d gatunków</item>
+        <item quantity="many">Birdex · %1$d gatunków</item>
+        <item quantity="other">Birdex · %1$d gatunki</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d więcej</item>
+        <item quantity="few">%1$s +%2$d więcej</item>
+        <item quantity="many">%1$s +%2$d więcej</item>
+        <item quantity="other">%1$s +%2$d więcej</item>
+    </plurals>
 </resources>

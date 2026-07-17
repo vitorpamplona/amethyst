@@ -4,4 +4,10 @@
     <string name="git_status_merged">병합됨</string>
     <string name="git_status_closed">닫힘</string>
     <string name="git_status_draft">초안</string>
+    <plurals name="birdex_species_count">
+        <item quantity="other">Birdex · %1$d종</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="other">%1$s 외 %2$d개 더</item>
+    </plurals>
 </resources>

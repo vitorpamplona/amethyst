@@ -3648,19 +3648,7 @@
     <string name="fundraiser_onchain_donation">Пожертвование on-chain</string>
 
     
-    <plurals name="birdex_species_count">
-    <item quantity="one">Birdex · %1$d вид</item>
-    <item quantity="few">Birdex · %1$d вида</item>
-    <item quantity="many">Birdex · %1$d видов</item>
-    <item quantity="other">Birdex · %1$d вида</item>
-</plurals>
     
-    <plurals name="birdex_species_preview_more">
-    <item quantity="one">%1$s +%2$d ещё</item>
-    <item quantity="few">%1$s +%2$d ещё</item>
-    <item quantity="many">%1$s +%2$d ещё</item>
-    <item quantity="other">%1$s +%2$d ещё</item>
-</plurals>
 
     
     <string name="road_event_police">Полиция</string>

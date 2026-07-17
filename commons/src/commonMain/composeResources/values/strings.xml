@@ -110,4 +110,13 @@
         <item quantity="one">%1$d file changed</item>
         <item quantity="other">%1$d files changed</item>
     </plurals>
+    <string name="bird_detection_title">Bird detection</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d species</item>
+        <item quantity="other">Birdex · %1$d species</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d more</item>
+        <item quantity="other">%1$s +%2$d more</item>
+    </plurals>
 </resources>

@@ -9,4 +9,13 @@
         <item quantity="one">%1$d अभिलेख परिवर्तित</item>
         <item quantity="other">%1$d अभिलेख परिवर्तित</item>
     </plurals>
+    <string name="bird_detection_title">पक्षी खोज</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
+        <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s सं॰ %2$d अधिक</item>
+        <item quantity="other">%1$s सं॰ %2$d अधिक</item>
+    </plurals>
 </resources>

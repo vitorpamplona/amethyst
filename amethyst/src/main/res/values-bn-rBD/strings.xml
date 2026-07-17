@@ -2784,14 +2784,6 @@
     <string name="goal_progress">%2$s sats লক্ষ্যমাত্রার মধ্যে %1$s সংগ্রহ হয়েছে</string>
     <string name="fundraiser_ends">%1$s-এ শেষ হবে</string>
     <string name="fundraiser_onchain_donation">অন-চেইন দান</string>
-    <plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d প্রজাতি</item>
-        <item quantity="other">Birdex · %1$d প্রজাতি</item>
-    </plurals>
-    <plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d টি আরও</item>
-        <item quantity="other">%1$s +%2$d টি আরও</item>
-    </plurals>
     <!-- PS1 memory-card saves over nostr (kind 38192). "PS1" is the PlayStation 1, do not translate. -->
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="road_event_police">পুলিশ</string>

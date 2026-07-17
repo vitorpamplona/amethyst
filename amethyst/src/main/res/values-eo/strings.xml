@@ -3048,14 +3048,6 @@
         <item quantity="one">Financoj konservitaj ĉe %1$d monfarejo, kiun vi ne uzas</item>
         <item quantity="other">Financoj konservitaj ĉe %1$d monfarioj, kiujn vi ne uzas</item>
     </plurals>
-<plurals name="birdex_species_count">
-        <item quantity="one">Birdex · %1$d specio</item>
-        <item quantity="other">Birdex · %1$d specioj</item>
-    </plurals>
-<plurals name="birdex_species_preview_more">
-        <item quantity="one">%1$s +%2$d plia</item>
-        <item quantity="other">%1$s +%2$d pliaj</item>
-    </plurals>
 <plurals name="marmot_message_count">
         <item quantity="one">%1$d msg</item>
         <item quantity="other">%1$d msgs</item>

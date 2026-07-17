@@ -4,4 +4,12 @@
     <string name="git_status_merged">Birleştirildi</string>
     <string name="git_status_closed">Kapalı</string>
     <string name="git_status_draft">Taslak</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d tür</item>
+        <item quantity="other">Birdex · %1$d tür</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d daha</item>
+        <item quantity="other">%1$s +%2$d daha</item>
+    </plurals>
 </resources>

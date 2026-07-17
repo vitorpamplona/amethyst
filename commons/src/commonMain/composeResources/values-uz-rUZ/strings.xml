@@ -4,4 +4,12 @@
     <string name="git_status_merged">Birlashtirilgan</string>
     <string name="git_status_closed">Yopiq</string>
     <string name="git_status_draft">Qoralama</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d tur</item>
+        <item quantity="other">Birdex · %1$d tur</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d ta ko\'proq</item>
+        <item quantity="other">%1$s +%2$d ta ko\'proq</item>
+    </plurals>
 </resources>

@@ -4,4 +4,12 @@
     <string name="git_status_merged">Yhdistetty</string>
     <string name="git_status_closed">Suljettu</string>
     <string name="git_status_draft">Luonnos</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d laji</item>
+        <item quantity="other">Birdex · %1$d lajia</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d lisää</item>
+        <item quantity="other">%1$s +%2$d lisää</item>
+    </plurals>
 </resources>

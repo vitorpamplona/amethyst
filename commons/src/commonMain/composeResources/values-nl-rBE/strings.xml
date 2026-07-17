@@ -4,4 +4,12 @@
     <string name="git_status_merged">Samengevoegd</string>
     <string name="git_status_closed">Gesloten</string>
     <string name="git_status_draft">Concept</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d soorten</item>
+        <item quantity="other">Birdex · %1$d soorten</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d meer</item>
+        <item quantity="other">%1$s +%2$d meer</item>
+    </plurals>
 </resources>

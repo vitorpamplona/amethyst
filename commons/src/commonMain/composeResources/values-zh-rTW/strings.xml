@@ -4,4 +4,10 @@
     <string name="git_status_merged">已合併</string>
     <string name="git_status_closed">已關閉</string>
     <string name="git_status_draft">草稿</string>
+    <plurals name="birdex_species_count">
+        <item quantity="other">Birdex · %1$d 個物種</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="other">%1$s 還有 %2$d 個</item>
+    </plurals>
 </resources>
