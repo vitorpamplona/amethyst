@@ -1415,9 +1415,11 @@
     <string name="connectivity_type_always">Aina</string>
     <string name="connectivity_type_unmetered_wifi_only">Ei-mitattu WiFi</string>
     <string name="connectivity_type_never">Ei koskaan</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Täydellinen</string>
     <string name="ui_feature_set_type_simplified">Yksinkertaistettu</string>
     <string name="ui_feature_set_type_performance">Suorituskyky</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klassinen</string>
     <string name="gallery_type_modern">Moderni</string>
     <string name="system">Järjestelmä</string>
@@ -1426,6 +1428,7 @@
     <string name="application_preferences">Sovelluksen asetukset</string>
     <string name="language">Kieli</string>
     <string name="theme">Teema</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Kuvan esikatselu</string>
     <string name="automatically_play_videos">Videon toisto</string>
     <string name="autoplay_videos">Toista videot automaattisesti</string>

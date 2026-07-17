@@ -1433,9 +1433,11 @@
     <string name="connectivity_type_always">Vienmēr</string>
     <string name="connectivity_type_unmetered_wifi_only">Nemērīts WiFi</string>
     <string name="connectivity_type_never">Nekad</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Pilns</string>
     <string name="ui_feature_set_type_simplified">Vienkāršots</string>
     <string name="ui_feature_set_type_performance">Veiktspēja</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasiskais</string>
     <string name="gallery_type_modern">Modernais</string>
     <string name="system">Sistēma</string>
@@ -1444,6 +1446,7 @@
     <string name="application_preferences">@string/preferences</string>
     <string name="language">Valoda</string>
     <string name="theme">Motīvs</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Attēlu priekšskatījums</string>
     <string name="automatically_play_videos">Video atskaņošana</string>
     <string name="autoplay_videos">Automātiska video atskaņošana</string>

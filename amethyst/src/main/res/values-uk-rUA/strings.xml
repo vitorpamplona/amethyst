@@ -1450,9 +1450,11 @@
     <string name="connectivity_type_always">Завжди</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi без ліміту</string>
     <string name="connectivity_type_never">Ніколи</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Повний</string>
     <string name="ui_feature_set_type_simplified">Спрощений</string>
     <string name="ui_feature_set_type_performance">Продуктивність</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Класичний</string>
     <string name="gallery_type_modern">Сучасний</string>
     <string name="system">Система</string>
@@ -1461,6 +1463,7 @@
     <string name="application_preferences">Налаштування додатку</string>
     <string name="language">Мова</string>
     <string name="theme">Оформлення</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Попередній перегляд</string>
     <string name="automatically_play_videos">Відтворення відео</string>
     <string name="autoplay_videos">Автовідтворення відео</string>

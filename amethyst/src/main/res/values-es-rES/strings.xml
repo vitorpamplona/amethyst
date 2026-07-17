@@ -1458,9 +1458,11 @@
     <string name="connectivity_type_always">Siempre</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi sin medición</string>
     <string name="connectivity_type_never">Nunca</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Completo</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
     <string name="ui_feature_set_type_performance">Rendimiento</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Clásico</string>
     <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistema</string>
@@ -1472,6 +1474,7 @@
     <string name="theme">Tema</string>
     <string name="accent_color">Color de acento</string>
     <string name="accent_color_description">Color principal en botones y enlaces</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Vista previa de imagen</string>
     <string name="automatically_play_videos">Reproducción de vídeo</string>
     <string name="autoplay_videos">Reproducción automática de vídeos</string>

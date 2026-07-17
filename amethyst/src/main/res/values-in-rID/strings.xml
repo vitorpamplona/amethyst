@@ -1386,9 +1386,11 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="connectivity_type_always">Selalu</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi Tanpa Kuota</string>
     <string name="connectivity_type_never">Jangan pernah</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Lengkap</string>
     <string name="ui_feature_set_type_simplified">Disederhanakan</string>
     <string name="ui_feature_set_type_performance">Performa</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasik</string>
     <string name="system">Sistem</string>
     <string name="light">Terang</string>
@@ -1396,6 +1398,7 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="application_preferences">Preferensi Aplikasi</string>
     <string name="language">Bahasa</string>
     <string name="theme">Tema</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Pratinjau Gambar</string>
     <string name="automatically_play_videos">Pemutaran Video</string>
     <string name="autoplay_videos">Putar Otomatis Video</string>

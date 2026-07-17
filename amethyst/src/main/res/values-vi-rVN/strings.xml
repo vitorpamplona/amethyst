@@ -1393,9 +1393,11 @@
     <string name="connectivity_type_always">Luôn luôn</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi không giới hạn</string>
     <string name="connectivity_type_never">Không bao giờ</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Đầy đủ</string>
     <string name="ui_feature_set_type_simplified">Đơn giản</string>
     <string name="ui_feature_set_type_performance">Hiệu năng</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Cổ điển</string>
     <string name="gallery_type_modern">Hiện đại</string>
     <string name="system">Hệ thống</string>
@@ -1404,6 +1406,7 @@
     <string name="application_preferences">Tùy chỉnh ứng dụng</string>
     <string name="language">Ngôn ngữ</string>
     <string name="theme">Giao diện</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Xem trước hình ảnh</string>
     <string name="automatically_play_videos">Phát video</string>
     <string name="autoplay_videos">Tự động phát video</string>

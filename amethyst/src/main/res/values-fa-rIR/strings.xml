@@ -1433,9 +1433,11 @@
     <string name="connectivity_type_always">همیشه</string>
     <string name="connectivity_type_unmetered_wifi_only">وای فای بی اندازه</string>
     <string name="connectivity_type_never">هرگز</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">کامل</string>
     <string name="ui_feature_set_type_simplified">ساده</string>
     <string name="ui_feature_set_type_performance">عملکرد</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">کلاسیک</string>
     <string name="gallery_type_modern">مدرن</string>
     <string name="system">سیستم</string>
@@ -1445,6 +1447,7 @@
     <string name="wallet_connect">اتصال کیف پول</string>
     <string name="language">زبان</string>
     <string name="theme">پوسته</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">پیش نمایش تصویر</string>
     <string name="automatically_play_videos">پخش ویدئو</string>
     <string name="autoplay_videos">پخش خودکار ویدیو</string>

@@ -1414,9 +1414,11 @@
     <string name="connectivity_type_always">常に</string>
     <string name="connectivity_type_unmetered_wifi_only">従量制なし WiFi</string>
     <string name="connectivity_type_never">なし</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">完全</string>
     <string name="ui_feature_set_type_simplified">シンプル</string>
     <string name="ui_feature_set_type_performance">パフォーマンス</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">クラシック</string>
     <string name="gallery_type_modern">モダン</string>
     <string name="system">システム</string>
@@ -1425,6 +1427,7 @@
     <string name="application_preferences">アプリ設定</string>
     <string name="language">言語</string>
     <string name="theme">テーマ</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">自動的に画像/GIFを読み込み</string>
     <string name="automatically_play_videos">自動的に動画を再生</string>
     <string name="autoplay_videos">動画の自動再生</string>

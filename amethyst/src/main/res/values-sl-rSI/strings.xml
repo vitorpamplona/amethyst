@@ -1716,9 +1716,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="connectivity_type_always">Vedno</string>
     <string name="connectivity_type_unmetered_wifi_only">Samo z WiFi</string>
     <string name="connectivity_type_never">Nikoli</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Celovit</string>
     <string name="ui_feature_set_type_simplified">Poenostavljen</string>
     <string name="ui_feature_set_type_performance">Optimiziran</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasično</string>
     <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistemska</string>
@@ -1742,6 +1744,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="font_family_sans_serif">Sans Serif</string>
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">Monospace</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="font_size">Velikost pisave</string>
     <string name="font_size_description">Prilagoditev velikosti besedila v aplikaciji</string>
     <string name="font_size_small">Majhno</string>

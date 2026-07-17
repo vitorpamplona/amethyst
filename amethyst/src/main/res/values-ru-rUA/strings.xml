@@ -1438,9 +1438,11 @@
     <string name="connectivity_type_always">Всегда</string>
     <string name="connectivity_type_unmetered_wifi_only">Безлимитный Wi-Fi</string>
     <string name="connectivity_type_never">Никогда</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Полный</string>
     <string name="ui_feature_set_type_simplified">Упрощённый</string>
     <string name="ui_feature_set_type_performance">Производительный</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Классический</string>
     <string name="gallery_type_modern">Современный</string>
     <string name="system">Системная</string>
@@ -1449,6 +1451,7 @@
     <string name="application_preferences">Настройки приложения</string>
     <string name="language">Язык</string>
     <string name="theme">Тема</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Предпросмотр изображений</string>
     <string name="automatically_play_videos">Воспроизведение видео</string>
     <string name="autoplay_videos">Автовоспроизведение видео</string>

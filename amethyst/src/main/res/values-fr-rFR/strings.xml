@@ -1585,9 +1585,11 @@
     <string name="connectivity_type_always">Toujours</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi illimité</string>
     <string name="connectivity_type_never">Jamais</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Complet</string>
     <string name="ui_feature_set_type_simplified">Simplifié</string>
     <string name="ui_feature_set_type_performance">Performance</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Classique</string>
     <string name="gallery_type_modern">Moderne</string>
     <string name="system">Système</string>
@@ -1611,6 +1613,7 @@
     <string name="font_family_sans_serif">Sans serif</string>
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">Monospace</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="font_size">Taille de police</string>
     <string name="font_size_description">Mettre à l\'échelle la taille du texte dans l\'application</string>
     <string name="font_size_small">Petit</string>

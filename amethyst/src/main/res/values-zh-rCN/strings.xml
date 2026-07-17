@@ -1570,6 +1570,13 @@
     <string name="always_on_notif_connecting">正在连接到收件箱中继\u2026</string>
     <string name="always_on_notif_setting_title">“始终显示通知”服务</string>
     <string name="always_on_notif_setting_description">保持与收件箱中继的持续连接以便即时发送通知。 显示正在进行的通知。使用更多电量，但确保您永远不会错过消息。</string>
+    <string name="always_on_notif_tile_label">通知服务</string>
+    <string name="always_on_notif_tile_subtitle_on">开</string>
+    <string name="always_on_notif_tile_subtitle_off">关</string>
+    <string name="notification_service_master_title">后台通知服务</string>
+    <string name="notification_service_master_description">实时后台通知总开关。关闭以节省电量——就像飞行模式。 关闭时，没有账户在后台保持连接，它一直处于关闭状态(重启不会改变)，直到您重新开启。</string>
+    <string name="notification_service_accounts_title">在后台活跃的账户</string>
+    <string name="notification_service_participation_title">保持该账户在后台活跃</string>
     <string name="split_notifications_setting_title">根据关注拆分通知</string>
     <string name="split_notifications_setting_description">显示两个通知选项卡 — — 关注(你关注的人) 和所有人。未读的指示器只为你关注的人的活动发出微光。</string>
     <string name="show_messages_in_notifications_setting_title">显示消息</string>
@@ -1744,9 +1751,11 @@
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_unmetered_wifi_only">未计量的 WiFi</string>
     <string name="connectivity_type_never">从不</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">简化版</string>
     <string name="ui_feature_set_type_performance">极速版</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">经典</string>
     <string name="gallery_type_modern">现代</string>
     <string name="system">系统</string>
@@ -1770,6 +1779,7 @@
     <string name="font_family_sans_serif">Sans Serif</string>
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">等宽字体</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="font_size">字体大小</string>
     <string name="font_size_description">在整个应用程序缩放文本大小</string>
     <string name="font_size_small">小</string>

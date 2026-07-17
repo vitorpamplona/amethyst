@@ -1417,9 +1417,11 @@
     <string name="connectivity_type_always">始終</string>
     <string name="connectivity_type_unmetered_wifi_only">未計量的 WiFi</string>
     <string name="connectivity_type_never">永不</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">簡化版</string>
     <string name="ui_feature_set_type_performance">效能</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">經典</string>
     <string name="gallery_type_modern">現代</string>
     <string name="system">系統</string>
@@ -1428,6 +1430,7 @@
     <string name="application_preferences">應用程式首選項</string>
     <string name="language">語言</string>
     <string name="theme">主題</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">圖像預覽</string>
     <string name="automatically_play_videos">視頻播放</string>
     <string name="autoplay_videos">自動播放影片</string>

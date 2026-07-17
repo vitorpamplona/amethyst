@@ -1433,9 +1433,11 @@
     <string name="connectivity_type_always">Ĉiam</string>
     <string name="connectivity_type_unmetered_wifi_only">Senmezura WiFi</string>
     <string name="connectivity_type_never">Neniam</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Kompleta</string>
     <string name="ui_feature_set_type_simplified">Simpligita</string>
     <string name="ui_feature_set_type_performance">Rendimento</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasika</string>
     <string name="gallery_type_modern">Moderna</string>
     <string name="system">Sistemo</string>
@@ -1444,6 +1446,7 @@
     <string name="application_preferences">Preferoj de Apo</string>
     <string name="language">Lingvo</string>
     <string name="theme">Etoso</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Antaŭrigardo de Bildo</string>
     <string name="automatically_play_videos">Ludado de Video</string>
     <string name="autoplay_videos">Aŭtomata Videoludado</string>

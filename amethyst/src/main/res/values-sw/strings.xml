@@ -1418,9 +1418,11 @@
     <string name="connectivity_type_always">Daima</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi Isiyo na Kipimo</string>
     <string name="connectivity_type_never">Kamwe</string>
+    <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
     <string name="ui_feature_set_type_complete">Kamili</string>
     <string name="ui_feature_set_type_simplified">Iliyorahisishwa</string>
     <string name="ui_feature_set_type_performance">Utendaji</string>
+    <!-- Compact labels for the segmented control. -->
     <string name="gallery_type_classic">Klasiki</string>
     <string name="gallery_type_modern">Ya Kisasa</string>
     <string name="system">Mfumo</string>
@@ -1429,6 +1431,7 @@
     <string name="application_preferences">Mapendeleo ya Programu</string>
     <string name="language">Lugha</string>
     <string name="theme">Mandhari</string>
+    <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <string name="automatically_load_images_gifs">Onesha Picha</string>
     <string name="automatically_play_videos">Cheza Video</string>
     <string name="autoplay_videos">Cheza Video Kiotomatiki</string>
