@@ -87,5 +87,19 @@ class ConcurrentLruCache<K : Any, V : Any>(
         }
     }
 
+    /**
+     * Evicts the oldest entries until at most [maxItems] remain. Used to shed
+     * memory on pressure (e.g. `onTrimMemory`). A [maxItems] of 0 or less clears
+     * the cache; values above the current size are a no-op.
+     */
+    fun trimToSize(maxItems: Int) {
+        synchronized(writeLock) {
+            while (order.size > maxItems) {
+                val oldest = order.removeFirstOrNull() ?: break
+                map.remove(oldest)
+            }
+        }
+    }
+
     fun size(): Int = map.size
 }

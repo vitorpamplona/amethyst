@@ -18,21 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.richtext
 
-import android.util.LruCache
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
-import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
 
+/**
+ * The shared, cross-platform cache in front of [RichTextParser]. Both Amethyst
+ * Android and Amethyst Desktop render the same parsed [RichTextViewerState] from
+ * one place, so the same content quoted in multiple notes is only parsed once.
+ *
+ * Lives in `jvmAndroid` because it depends on [ConcurrentLruCache] (a JCA-free,
+ * lock-free-read LRU that is not in `commonMain`). iOS/`commonMain` callers use
+ * the uncached [RichTextParser] directly until a KMP cache is available.
+ */
 object CachedRichTextParser {
     // Global across every feed. Sized to hold the active feed's visible + prefetched
-    // (see PrefetchFeedMedia) working set plus a few other feeds' recent entries, so
-    // pre-parsed bodies survive until the render reads them and feed switches don't
-    // thrash. Each entry is one note's parsed segments — typically single-digit KB.
-    private val richTextCache = LruCache<Int, RichTextViewerState>(500)
-    private val isMarkdownCache = LruCache<Int, Boolean>(200)
+    // working set plus a few other feeds' recent entries, so pre-parsed bodies survive
+    // until the render reads them and feed switches don't thrash. Each entry is one
+    // note's parsed segments — typically single-digit KB.
+    private val richTextCache = ConcurrentLruCache<Int, RichTextViewerState>(500)
+    private val isMarkdownCache = ConcurrentLruCache<Int, Boolean>(200)
 
     private fun hashCodeCache(
         content: String,
@@ -69,7 +75,7 @@ object CachedRichTextParser {
         tags: ImmutableListOfLists<String>,
         callbackUri: String? = null,
         authorPubKey: String? = null,
-    ): RichTextViewerState? = richTextCache[hashCodeCache(content, tags, callbackUri, authorPubKey)]
+    ): RichTextViewerState? = richTextCache.get(hashCodeCache(content, tags, callbackUri, authorPubKey))
 
     fun parseText(
         content: String,
@@ -78,13 +84,13 @@ object CachedRichTextParser {
         authorPubKey: String? = null,
     ): RichTextViewerState {
         val key = hashCodeCache(content, tags, callbackUri, authorPubKey)
-        val cached = richTextCache[key]
+        val cached = richTextCache.get(key)
         return if (cached != null) {
             cached
         } else {
-            val newUrls = RichTextParser().parseText(content, tags, callbackUri, authorPubKey)
-            richTextCache.put(key, newUrls)
-            newUrls
+            val newState = RichTextParser().parseText(content, tags, callbackUri, authorPubKey)
+            richTextCache.put(key, newState)
+            newState
         }
     }
 
@@ -92,7 +98,7 @@ object CachedRichTextParser {
     // notes only pays for the scan once. The decision is purely a function of `content`.
     fun isMarkdown(content: String): Boolean {
         val key = content.hashCode()
-        isMarkdownCache[key]?.let { return it }
+        isMarkdownCache.get(key)?.let { return it }
         val result = computeIsMarkdown(content)
         isMarkdownCache.put(key, result)
         return result
@@ -296,15 +302,15 @@ object CachedRichTextParser {
 }
 
 object CachedUrlParser {
-    private val parsedUrlsCache = LruCache<Int, List<String>>(10)
+    private val parsedUrlsCache = ConcurrentLruCache<Int, List<String>>(10)
 
-    fun cachedParseValidUrls(content: String): List<String> = parsedUrlsCache[content.hashCode()]
+    fun cachedParseValidUrls(content: String): List<String>? = parsedUrlsCache.get(content.hashCode())
 
     fun parseValidUrls(content: String): List<String> {
         if (content.isEmpty()) return emptyList()
 
         val key = content.hashCode()
-        val cached = parsedUrlsCache[key]
+        val cached = parsedUrlsCache.get(key)
         return if (cached != null) {
             cached
         } else {

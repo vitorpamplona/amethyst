@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
