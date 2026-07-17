@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -192,9 +194,10 @@ private fun SectionLabel(
 }
 
 /**
- * A draggable, ranked server row. Position in the list is the upload/fallback priority
- * (row #1 is tried first), so each row carries a rank badge and a drag handle wired into
- * the shared [RelayDragState], plus a monogram and a live reachability dot.
+ * A draggable, ranked server card. Position in the list is the upload/fallback priority
+ * (row #1 is tried first), so each card carries its rank on the monogram and a drag handle
+ * wired into the shared [RelayDragState], plus a live reachability dot. The primary target
+ * (#1) is called out with an accent border, tint, and badge.
  */
 @Composable
 fun MediaServerRow(
@@ -204,12 +207,26 @@ fun MediaServerRow(
     dragState: RelayDragState,
     onDelete: (serverUrl: String) -> Unit,
 ) {
+    val isPrimary = index == 0
+    val shape = RoundedCornerShape(16.dp)
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .padding(vertical = 5.dp)
                 .draggableRelayItem(index, dragState)
-                .padding(vertical = 7.dp),
+                .clip(shape)
+                .background(
+                    if (isPrimary) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+                    } else {
+                        Color.Transparent
+                    },
+                ).border(
+                    width = if (isPrimary) 1.5.dp else 1.dp,
+                    color = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                    shape = shape,
+                ).padding(start = 6.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -219,14 +236,12 @@ fun MediaServerRow(
             tint = MaterialTheme.colorScheme.grayText,
         )
 
-        RankBadge(rank = index + 1)
+        Spacer(Modifier.size(8.dp))
 
-        Spacer(Modifier.size(10.dp))
-
-        ServerMonogram(name = serverEntry.name, size = 32.dp)
+        ServerAvatar(name = serverEntry.name, rank = index + 1, isPrimary = isPrimary)
 
         Column(
-            modifier = Modifier.weight(1f).padding(start = 11.dp),
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -236,7 +251,7 @@ fun MediaServerRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                if (index == 0) {
+                if (isPrimary) {
                     Spacer(Modifier.size(6.dp))
                     PrimaryBadge()
                 }
@@ -378,35 +393,56 @@ private fun ServerMonogram(
     }
 }
 
-/** Rounded rank badge. The primary target (#1) is filled with the accent color. */
+/**
+ * The server's monogram with its priority rank as a small corner badge — one visual unit
+ * for identity + position. The rank chip is accent-filled for the primary target (#1).
+ */
 @Composable
-private fun RankBadge(rank: Int) {
-    val isPrimary = rank == 1
-    Box(
-        modifier =
-            Modifier
-                .size(22.dp)
-                .clip(RoundedCornerShape(7.dp))
-                .background(
-                    if (isPrimary) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = rank.toString(),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color =
-                if (isPrimary) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-        )
+private fun ServerAvatar(
+    name: String,
+    rank: Int,
+    isPrimary: Boolean,
+) {
+    Box(modifier = Modifier.size(40.dp)) {
+        ServerMonogram(name = name, size = 36.dp)
+
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(1.5.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(
+                            if (isPrimary) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = rank.toString(),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color =
+                        if (isPrimary) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                )
+            }
+        }
     }
 }
 

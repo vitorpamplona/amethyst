@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
@@ -50,10 +51,15 @@ enum class ServerHealth {
 }
 
 /**
- * A one-shot, lightweight reachability check for a Blossom server. Issues a
- * `HEAD /` to the server's base URL and classifies the outcome by round-trip
- * time. Any HTTP response — even 404/405 — counts as reachable; only
+ * A one-shot, lightweight reachability check for a Blossom server. Issues a `HEAD` to
+ * the server's `/upload` endpoint (BUD-01/BUD-02) and classifies the outcome by
+ * round-trip time. Any HTTP response — even 401/404/405 — counts as reachable; only
  * connection-level failures map to [ServerHealth.Offline].
+ *
+ * The `/upload` path is probed rather than the bare root because CDN-fronted hosts
+ * (e.g. cdn.satellite.earth) don't answer `/` at all and would time out, wrongly
+ * reading as offline even though uploads work. `/upload` is the endpoint that
+ * actually matters for a media upload target.
  *
  * Mirrors the timeout/short-circuit shape of
  * [com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe],
@@ -110,14 +116,14 @@ object MediaServerHealthProbe {
             val request =
                 Request
                     .Builder()
-                    .url(baseUrl)
+                    .url(BlossomServerUrl.upload(baseUrl))
                     .head()
                     .build()
 
             val startedAt = TimeUtils.nowMillis()
             client.newCall(request).executeAsync().use {
-                // The status code doesn't matter — a Blossom root often answers 404/405.
-                // Getting any response back proves the host is reachable.
+                // The status code doesn't matter — /upload commonly answers 401/404/405
+                // without auth. Getting any response back proves the host is reachable.
                 val elapsed = TimeUtils.nowMillis() - startedAt
                 if (elapsed > SLOW_THRESHOLD_MS) ServerHealth.Slow else ServerHealth.Online
             }
