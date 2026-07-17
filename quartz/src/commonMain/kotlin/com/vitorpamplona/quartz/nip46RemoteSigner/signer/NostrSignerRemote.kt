@@ -70,6 +70,31 @@ class NostrSignerRemote(
      */
     val onAuthUrl: ((String) -> Unit)? = null,
 ) : NostrSigner(signer.pubKey) {
+    // The user's real identity, resolved from the bunker via `get_public_key`. The constructor
+    // `signer` is the ephemeral NIP-46 TRANSPORT keypair, NOT the user — so until this is bound,
+    // `pubKey` falls back to the transport key. Every self-encryption / self-authorship site keys
+    // off `pubKey`, so leaving it as the transport key silently breaks private NIP-51 lists, NIP-37
+    // drafts, Concord list decryption, etc. for bunker accounts. Bound either eagerly from a saved
+    // identity ([bindUserPubkey]) or lazily by the first [getPublicKey] call.
+    private var resolvedUserPubkey: HexKey? = null
+
+    /**
+     * The account identity. Returns the bunker-resolved user key once known, else the transport
+     * key. Internal NIP-46 transport (the response-subscription `p` filter, request addressing)
+     * deliberately uses `signer.pubKey`/`remotePubkey` directly and is unaffected by this.
+     */
+    override val pubKey: HexKey
+        get() = resolvedUserPubkey ?: signer.pubKey
+
+    /**
+     * Bind the user's identity pubkey when it is already known (e.g. a persisted bunker account
+     * reloaded from disk, or the CLI's stored identity) so `pubKey` is correct without a
+     * `get_public_key` round-trip.
+     */
+    fun bindUserPubkey(userPubkey: HexKey) {
+        resolvedUserPubkey = userPubkey
+    }
+
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private val manager =
@@ -292,6 +317,8 @@ class NostrSignerRemote(
             )
 
         if (result is SignerResult.RequestAddressed.Successful<PublicKeyResult>) {
+            // Cache it so `pubKey` reflects the real identity from here on (self-encryption etc.).
+            resolvedUserPubkey = result.result.pubkey
             return result.result.pubkey
         }
 

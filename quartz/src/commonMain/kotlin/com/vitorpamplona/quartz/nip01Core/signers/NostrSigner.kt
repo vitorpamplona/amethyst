@@ -27,8 +27,15 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
 abstract class NostrSigner(
-    val pubKey: HexKey,
+    pubKey: HexKey,
 ) {
+    /**
+     * The account's own identity pubkey. `open` because a NIP-46 remote signer resolves it
+     * from the bunker (`get_public_key`) rather than from a local key it holds — see
+     * `NostrSignerRemote`, whose transport keypair is deliberately NOT the user identity.
+     */
+    open val pubKey: HexKey = pubKey
+
     abstract fun isWriteable(): Boolean
 
     suspend fun <T : Event> sign(ev: EventTemplate<T>): T = sign(ev.createdAt, ev.kind, ev.tags, ev.content)
