@@ -25,6 +25,11 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonTransformingSerializer
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * A CORD-02 §6 **encrypted-media** pointer (community/channel icon or banner). The media host stores
@@ -58,4 +63,21 @@ data class ImagePointer(
         if (sha256(plaintext).toHexKey() != hash.lowercase()) return null
         return plaintext
     }
+}
+
+/**
+ * Decodes an [ImagePointer] that may arrive on the wire as either the canonical object
+ * `{"url":…,"key":…,"nonce":…,"hash":…}` or as a bare URL string. Some reference clients
+ * (e.g. relayop.xyz) emit a plain public URL for an unencrypted icon; a bare string is
+ * lifted to `ImagePointer(url=<string>)` (empty key/nonce/hash → [ImagePointer.isResolvable]
+ * is false, so it is treated as a plaintext image rather than an encrypted blob). Serialization
+ * is unchanged — we always emit the object form to stay Concord-v2 compliant.
+ */
+object LenientImagePointerSerializer : JsonTransformingSerializer<ImagePointer>(ImagePointer.serializer()) {
+    override fun transformDeserialize(element: JsonElement): JsonElement =
+        if (element is JsonPrimitive && element.isString) {
+            buildJsonObject { put("url", element.content) }
+        } else {
+            element
+        }
 }

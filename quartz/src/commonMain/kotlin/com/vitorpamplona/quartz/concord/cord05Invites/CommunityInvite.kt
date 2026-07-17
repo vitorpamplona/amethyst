@@ -21,14 +21,21 @@
 package com.vitorpamplona.quartz.concord.cord05Invites
 
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.concord.cord02Community.LenientImagePointerSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** A channel grant carried in an invite: its id, delivered [key], [epoch], and [name]. */
+/**
+ * A channel grant carried in an invite: its id, delivered [key], [epoch], and [name].
+ *
+ * [key] defaults to empty: a public channel (e.g. an unencrypted `general`) carries no
+ * delivered grant key, and some reference clients omit the field entirely. Treat an empty
+ * [key] as "no grant" rather than rejecting the whole bundle.
+ */
 @Serializable
 class InviteChannel(
     val id: String,
-    val key: String,
+    val key: String = "",
     val epoch: Long,
     val name: String = "",
 )
@@ -54,7 +61,7 @@ class CommunityInvite(
     val channels: List<InviteChannel> = emptyList(),
     val relays: List<String> = emptyList(),
     val name: String = "",
-    val icon: ImagePointer? = null,
+    @Serializable(with = LenientImagePointerSerializer::class) val icon: ImagePointer? = null,
     @SerialName("expires_at") val expiresAt: Long? = null,
     @SerialName("creator_npub") val creatorNpub: String? = null,
     val label: String? = null,
