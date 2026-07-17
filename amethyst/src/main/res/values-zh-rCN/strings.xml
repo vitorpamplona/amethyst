@@ -296,7 +296,7 @@
     <string name="concord_redeeming_invite">兑换邀请中…</string>
     <string name="concord_invite_failed">无法获取此邀请。链接可能已过期或其中继不可访问。</string>
     <string name="concord_invite_failed_invalid">此邀请链接无效或无法用此账户打开。</string>
-    <string name="concord_invite_failed_incompatible">此邀请是用新版本的应用创建，尚无法在此处打开。 请求已更新的链接，或在更新后重试。</string>
+    <string name="concord_invite_failed_incompatible">此邀请是用新版本的应用创建，尚无法在此处打开。 请求新的邀请链接。</string>
     <string name="concord_invite_failed_revoked">此邀请链接已被撤销，不能再使用。请求新链接。</string>
     <string name="concord_home_title">Concord 频道</string>
     <string name="concord_home_empty">您尚未加入任何Concord频道。创建一个频道，或者打开一个邀请链接。</string>
@@ -850,6 +850,7 @@
     <string name="napplet_decision_ask">询问</string>
     <string name="napplet_decision_deny">拒绝</string>
     <string name="napplet_connected_apps_search_keywords">应用程序权限签名者napplet nsite webapp 信任已连接</string>
+    <!-- NIP-46 remote signer (bunker) -->
     <string name="napplet_connected_app_trust_level">签署信任级别</string>
     <string name="napplet_connected_app_capabilities">功能</string>
     <string name="napplet_connected_app_forget">忘记这个应用</string>
@@ -920,6 +921,7 @@
     <string name="nip82_older_releases_hide">隐藏旧版本</string>
     <string name="shorts">短视频</string>
     <string name="public_chats">公共聊天</string>
+    <string name="location_channels">位置频道</string>
     <string name="follow_packs">关注包</string>
     <string name="live_streams">直播</string>
     <string name="nests">音频室</string>
@@ -1752,16 +1754,23 @@
     <string name="connectivity_type_unmetered_wifi_only">未计量的 WiFi</string>
     <string name="connectivity_type_never">从不</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">简化版</string>
     <string name="ui_feature_set_type_performance">极速版</string>
     <!-- Compact labels for the segmented control. -->
+    <string name="ui_feature_set_type_complete_short">完整</string>
+    <string name="ui_feature_set_type_simplified_short">简单</string>
+    <string name="ui_feature_set_type_performance_short">快速</string>
     <string name="gallery_type_classic">经典</string>
     <string name="gallery_type_modern">现代</string>
     <string name="system">系统</string>
     <string name="light">浅色</string>
     <string name="dark">深色</string>
     <string name="application_preferences">应用程序首选项</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_section_media">媒体 &amp; 数据</string>
+    <string name="settings_section_general">常规</string>
     <string name="wallet_connect">钱包绑定</string>
     <string name="language">语言</string>
     <string name="theme">主题</string>
@@ -1780,6 +1789,10 @@
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">等宽字体</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
+    <string name="font_family_system_short">系统</string>
+    <string name="font_family_sans_serif_short">Sans</string>
+    <string name="font_family_serif_short">衬线字体</string>
+    <string name="font_family_monospace_short">等宽</string>
     <string name="font_size">字体大小</string>
     <string name="font_size_description">在整个应用程序缩放文本大小</string>
     <string name="font_size_small">小</string>
@@ -3912,4 +3925,14 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">从 %1$s 的闪电发票获取解析JSON 发生错误。请检查用户的闪电设置</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">无法创建闪电发票。来自 %1$s 的消息：%2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">无法从 %1$s 创建闪电发票：在生成的 JSON 中找不到付款要求元素。</string>
+    <string name="geohash_chat_open">开启位置聊天</string>
+    <string name="geohash_chat">位置聊天</string>
+    <string name="new_conversation_location_title">位置频道</string>
+    <string name="new_conversation_location_tagline">根据Geohash与任何在某个地方附近的人聊天。</string>
+    <string name="new_conversation_location_chip">本地</string>
+    <string name="new_conversation_location_best">最适合与身处某地周围的人交谈——你的街区、城市或区域。</string>
+    <string name="new_conversation_location_cta">选择一个位置</string>
+    <string name="new_conversation_location_pro_1">匿名−−每个区域的一次性身份，永远不会透露你的 npub。</string>
+    <string name="new_conversation_location_pro_2">Bitchat-兼容；接触同一中继上的附近用户。</string>
+    <string name="new_conversation_location_con_1">公开和临时——没有历史记录，房间里的任何人都可以阅读。</string>
 </resources>

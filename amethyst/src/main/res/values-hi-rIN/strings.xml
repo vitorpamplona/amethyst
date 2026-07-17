@@ -863,6 +863,7 @@
     <string name="napplet_decision_ask">पूछें</string>
     <string name="napplet_decision_deny">अस्वीकार</string>
     <string name="napplet_connected_apps_search_keywords">क्रमक अनुमतियाँ हस्ताक्षरकर्ता नोस्टरसंलग्नक्रमक नोस्टरस्थल जालक्रमक विश्वास संयोजित</string>
+    <!-- NIP-46 remote signer (bunker) -->
     <string name="napplet_connected_app_trust_level">हस्ताक्षरण विश्वास स्तर</string>
     <string name="napplet_connected_app_capabilities">क्षमताएँ</string>
     <string name="napplet_connected_app_forget">इस क्रमक को भूल जाएँ</string>
@@ -1411,7 +1412,7 @@
     <string name="uploading_state_uploading">आरोहण चल रहा है</string>
     <string name="uploading_state_server_processing">प्रक्रिया चल रही है</string>
     <string name="uploading_state_downloading">अवरोहण चल रहा है</string>
-    <string name="uploading_state_hashing">विभेदकोत्पादन प्रक्रिया चल रही है</string>
+    <string name="uploading_state_hashing">वस्तुसूचक उत्पादन प्रक्रिया चल रही है</string>
     <string name="uploading_state_finished">हो गया</string>
     <string name="uploading_state_error">अपक्रम</string>
     <string name="privacy_options">गोपनीयता विकल्प</string>
@@ -1595,6 +1596,7 @@
     <string name="always_on_notif_tile_subtitle_on">सक्रिय</string>
     <string name="always_on_notif_tile_subtitle_off">निष्क्रिय</string>
     <string name="notification_service_master_title">पृष्ठभूत सूचना सेवा</string>
+    <string name="notification_service_master_description">मुख्य विकल्पस्थापक वास्तविकसमय पृष्ठभूत सूचनाओं के लिए। निष्क्रिय करें विद्युतकोष बचाने के लिए। जैसे विमान अवस्था में। जब निष्क्रिय कोई लेखा संयोजित नहीं पृष्ठतल में। तथा निष्क्रिय रहता है (पुनःआरम्भों के पश्चात भी) तब तक कि आप इसे सक्रिय नहीं करते।</string>
     <string name="notification_service_accounts_title">पृष्ठभूत सक्रिय लेखाएँ</string>
     <string name="notification_service_participation_title">इस लेखा को पृष्ठभूत सक्रिय रखें</string>
     <string name="split_notifications_setting_title">सूचनाएँ विभाजित करें अनुचरित के अनुसार</string>
@@ -1787,7 +1789,7 @@
     <string name="dark">अन्धकारमय</string>
     <string name="application_preferences">क्रमक आद्यताएँ</string>
     <string name="settings_section_appearance">स्वरूप</string>
-    <string name="settings_section_media">ध्वनिदृश्य तथा जानकारी</string>
+    <string name="settings_section_media">ध्वनिदृश्याभिलेख तथा जानकारी</string>
     <string name="settings_section_general">सामान्य</string>
     <string name="wallet_connect">धनकोष संयोजन</string>
     <string name="language">भाषा</string>
@@ -1841,7 +1843,7 @@
     <string name="default_relays">मूलविकल्प</string>
     <string name="default_relays_longer">मूलविकल्प पुनःस्थापित करें</string>
     <string name="geohash_title">स्थान अनावृत करें ऐसे </string>
-    <string name="geohash_explainer">आपका भूगोलिक स्थान विभेदक जोडता है पत्र में। जनता जान जाएगी कि आप वर्तमान स्थान से ५ कि॰मे॰ (३ मी॰) की दूरी के अन्दर हैं</string>
+    <string name="geohash_explainer">आपका भूभागसूचक जोडता है पत्र में। जनता जान जाएँगे कि आप वर्तमान स्थान से ५ कि॰मे॰ (३ मी॰) की दूरी के अन्दर हैं</string>
     <string name="geohash_exclusive">स्थल विशेष पत्र</string>
     <string name="geohash_exclusive_explainer">स्थल के अनुचर ही देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
     <string name="hashtag_exclusive">विषयसूचक विशेष पत्र</string>
@@ -2014,9 +2016,17 @@
     <string name="relay_group_section_discovery_desc">लोगों का सहयोग करें इस समूह को ढूँढने में। विषयसूची तथा स्थान से अनुकूल आविष्करण छलनियों द्वारा यह प्राप्त होगा (यदि निवास पुनःप्रसारक उनका अवलम्बन करें तो)।</string>
     <string name="relay_group_field_topics">विषय सूची</string>
     <string name="relay_group_field_topics_hint">द्व्यंकरूप्य नोस्टर कला इत्यादि</string>
-    <string name="relay_group_field_geohash">स्थान (भूविभेदक)</string>
+    <string name="relay_group_field_geohash">स्थान (भूभागसूचक)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
     <string name="relay_group_section_structure">संरचना</string>
+    <string name="relay_group_parent_desc">इस समूह को एक अभिभावक के नीचे रखें वर्गानुक्रम बनाने के लिए।</string>
+    <string name="relay_group_parent_label">अभिभावक समूह</string>
+    <string name="relay_group_parent_none">उच्चस्तर समूह</string>
+    <string name="relay_group_parent_pick_title">अभिभावक समूह चयन</string>
+    <string name="relay_group_parent_search">समूह ढूँढें</string>
+    <string name="relay_group_parent_top_level_option">कोई अभिभावक नहीं (ऊपरी स्तर)</string>
+    <string name="relay_group_parent_none_desc">यह समूह ऊपरी स्तर पर रहता है</string>
+    <string name="relay_group_parent_empty">कोई अन्य समूह नहीं इस पुनःप्रसारक पर अब तक</string>
     <string name="relay_group_section_permissions">अनुमतियाँ</string>
     <string name="relay_group_flag_private">निजी</string>
     <string name="relay_group_flag_private_desc">केवल सदस्य सन्देशों को पढ सकते हैं।</string>
@@ -3102,7 +3112,7 @@
     <string name="resource_usage_worker_runs">पृष्ठभूत कार्य चलाए गए</string>
     <string name="resource_usage_reconnects">पुनःप्रसारक पुनःसंयोजन (असफल)</string>
     <string name="resource_usage_http_requests">जाल अनुरोध</string>
-    <string name="resource_usage_radio_bursts">विकिरणसंचार जाग उठना अवरोहणों के लिए (अनुमान)</string>
+    <string name="resource_usage_radio_bursts">विकिरणेन्द्रिय जाग उठना अवरोहणों के लिए (अनुमान)</string>
     <string name="resource_usage_http_active">सक्रिय स्थानान्तरण समय</string>
     <string name="resource_usage_media_play">ध्वनिदृश्याभिलेख चलन समय</string>
     <string name="resource_usage_verifies">हस्ताक्षर सत्यापित</string>
@@ -3311,7 +3321,7 @@
     <string name="kind_medical_data">चिकित्सा अभिलेख</string>
     <string name="kind_follow_packs">अनुचरण पोटलियाँ</string>
     <string name="kind_reposts_16">पुनःप्रकाशन (१६)</string>
-    <string name="kind_geohash_follows">स्थलविभेदक अनुचरित</string>
+    <string name="kind_geohash_follows">भूभागसूचक अनुचरित</string>
     <string name="kind_gift_wraps">उपहारकोष</string>
     <string name="kind_git_issue">गिट समस्या</string>
     <string name="kind_git_patch">गिट परिहार</string>
@@ -3982,6 +3992,11 @@
     <string name="geohash_chat_open">स्थानीय चर्चा खोलें</string>
     <string name="geohash_chat">स्थानीय चर्चा</string>
     <string name="new_conversation_location_title">स्थानीय प्रणाली</string>
+    <string name="new_conversation_location_tagline">चर्चा करें किसी से भी जो एक स्थल के निकट हो भूभागसूचक अनुसार।</string>
     <string name="new_conversation_location_chip">स्थानीय</string>
+    <string name="new_conversation_location_best">सब से अच्छा लोगों से बात करने के लिए जो एक स्थान के आसपास हैं। आपका विभाग नगर अथवा क्षेत्र।</string>
     <string name="new_conversation_location_cta">स्थान का चयन करें</string>
+    <string name="new_conversation_location_pro_1">नामरहित। एक अस्थायी परिचय प्रति क्षेत्र। आपका एनपुब॰ कभी नहीं।</string>
+    <string name="new_conversation_location_pro_2">बिटचाट॰ अनुकूल। निकटस्थ प्रयोक्ता अभिगम्य जो समान पुनःप्रसारकों पर हों।</string>
+    <string name="new_conversation_location_con_1">सार्वजनिक तथा अस्थायी। इतिहास रहित। प्रसारक्षेत्र में सभी पढ सकेंगे।</string>
 </resources>

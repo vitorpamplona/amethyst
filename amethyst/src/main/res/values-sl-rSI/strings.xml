@@ -805,6 +805,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="napplet_decision_ask">Vprašaj</string>
     <string name="napplet_decision_deny">Zavrni</string>
     <string name="napplet_connected_apps_search_keywords">Aplikacije, dovoljenja, podpisovalnik, napplet, nsite, spletna aplikacije zaupnik povezan.</string>
+    <!-- NIP-46 remote signer (bunker) -->
     <string name="napplet_connected_app_trust_level">Podpisujem stopnjo zaupanja</string>
     <string name="napplet_connected_app_capabilities">Zmogljivosti</string>
     <string name="napplet_connected_app_forget">Pozabi to aplikacijo</string>
