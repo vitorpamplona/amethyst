@@ -70,6 +70,12 @@ class ConcordCommunitySessionTest {
             assertTrue(session.channelAddresses().contains(priorGeneral.publicKeyHex), "historical plane not subscribed")
             assertTrue(session.streamKeys().any { it.publicKeyHex == priorGeneral.publicKeyHex }, "historical stream key not AUTHed")
 
+            // The history pager asks for every epoch's plane at once: current + prior.
+            val currentGeneral = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch)
+            val allEpochPlanes = session.channelPlaneAddressesAllEpochs(community.generalChannelIdHex)
+            assertTrue(allEpochPlanes.contains(currentGeneral.publicKeyHex), "current plane missing from all-epochs")
+            assertTrue(allEpochPlanes.contains(priorGeneral.publicKeyHex), "prior plane missing from all-epochs")
+
             // A message authored on the prior-epoch plane, bound to the prior epoch, decrypts + emits.
             val oldMsg = ConcordActions.buildChannelMessage(owner, priorGeneral, community.generalChannelIdHex, priorEpoch, "gm from the old epoch", 2L)
             assertEquals(ConcordIngestOutcome.NON_STRUCTURAL, session.ingest(oldMsg))

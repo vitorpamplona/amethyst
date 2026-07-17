@@ -200,6 +200,20 @@ class ConcordCommunitySession(
     /** The Chat Plane stream address for [channelIdHex], once this community has folded that channel (else null). */
     fun channelPlaneAddress(channelIdHex: HexKey): HexKey? = lock.withLock { channelKeysByAddress.entries.firstOrNull { it.value.first == channelIdHex }?.key }
 
+    /**
+     * Every Chat Plane stream address for [channelIdHex] across epochs: the current one plus each
+     * prior-epoch plane we hold a root for. Used by the history pager as the REQ `authors` set so a
+     * single backward `until` sweep walks the channel's whole cross-Refounding timeline (older
+     * messages have smaller `created_at` regardless of epoch), and "All caught up" means every epoch
+     * is drained — not just the current one. Empty until the Control Plane folds the channel.
+     */
+    fun channelPlaneAddressesAllEpochs(channelIdHex: HexKey): List<HexKey> =
+        lock.withLock {
+            val current = channelKeysByAddress.entries.firstOrNull { it.value.first == channelIdHex }?.key
+            val historical = historicalChannelKeysByAddress.entries.filter { it.value.first == channelIdHex }.map { it.key }
+            (listOfNotNull(current) + historical)
+        }
+
     /** The base-rotation rekey [GroupKey] a member opens an inbound Refounding under. */
     fun nextBaseRekeyKey(): GroupKey = nextBaseRekeyKey
 
