@@ -391,6 +391,10 @@ dependencies {
     implementation(project(":commons"))
     implementation(project(":nestsClient"))
     implementation(project(":nappletHost"))
+    // Compose Multiplatform resources runtime, so app-side screens that share a
+    // string with a commons renderer can read commons' generated `Res` directly
+    // instead of duplicating the key in the Android res tree.
+    implementation(libs.jetbrains.compose.components.resources)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
 

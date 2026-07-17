@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.podcasts.RecipientDraft
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_value_split_percent
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -63,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Editor for a Podcasting-2.0 value-for-value split. Recipients are added the Amethyst-native way —
@@ -186,7 +189,7 @@ private fun RecipientShell(
         Row(verticalAlignment = Alignment.CenterVertically) {
             content()
             Text(
-                text = stringRes(R.string.podcast_value_split_percent, percent),
+                text = stringResource(Res.string.podcast_value_split_percent, percent),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -254,7 +257,7 @@ private fun ManualRecipientCard(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringRes(R.string.podcast_value_split_percent, percent),
+                text = stringResource(Res.string.podcast_value_split_percent, percent),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,

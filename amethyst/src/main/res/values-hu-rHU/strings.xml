@@ -1099,7 +1099,6 @@
     <string name="podcast_transcript">Átírás</string>
     <string name="podcast_chapters">Fejezetek</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_hosts_and_guests">Házigazdák és vendégek</string>
     <string name="podcast_top_supporters">Legfőbb támogatók</string>
     <plurals name="podcast_chapters_count">

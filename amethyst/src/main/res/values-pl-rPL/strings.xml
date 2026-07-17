@@ -1222,7 +1222,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="podcast_transcript">Transkrypcja</string>
     <string name="podcast_chapters">Rozdziały</string>
     <string name="podcast_value_for_value">Wartość-za-wartość</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_hosts_and_guests">Gospodarze &amp; Goście</string>
     <string name="podcast_top_supporters">Najwięksi darczyńcy</string>
     <plurals name="podcast_chapters_count">
