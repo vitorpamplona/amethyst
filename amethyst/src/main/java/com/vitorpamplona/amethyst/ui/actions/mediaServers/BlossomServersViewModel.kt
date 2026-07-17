@@ -77,6 +77,7 @@ class BlossomServersViewModel : ViewModel() {
                 }
             }
         }
+        pruneHealth()
     }
 
     /** Moves a server to a new position; list order is the upload/fallback priority. */
@@ -91,18 +92,34 @@ class BlossomServersViewModel : ViewModel() {
         isModified = true
     }
 
-    /** Re-probes every server currently in the list. */
+    /** Re-probes every server currently in the list. Fresh cached results are reused. */
     fun checkAllHealth() {
         _fileServers.value.forEach { probeServer(it.baseUrl) }
     }
 
     private fun probeServer(serverUrl: String) {
         val builder = httpClientBuilder ?: return
+
+        // A probe is already in flight for this URL — don't launch a duplicate.
+        if (_health.value[serverUrl] == ServerHealth.Checking) return
+
+        // Reuse a still-fresh cached status instead of hitting the network again.
+        MediaServerHealthProbe.cached(serverUrl)?.let { cachedStatus ->
+            _health.update { it + (serverUrl to cachedStatus) }
+            return
+        }
+
         _health.update { it + (serverUrl to ServerHealth.Checking) }
         viewModelScope.launch(Dispatchers.IO) {
             val result = MediaServerHealthProbe.probe(serverUrl, builder::okHttpClientForPreview)
             _health.update { it + (serverUrl to result) }
         }
+    }
+
+    /** Drops health entries for servers no longer in the list so the map can't grow unbounded. */
+    private fun pruneHealth() {
+        val liveUrls = _fileServers.value.mapTo(HashSet()) { it.baseUrl }
+        _health.update { statuses -> statuses.filterKeys { it in liveUrls } }
     }
 
     fun addServerList(serverList: List<String>) {
@@ -157,6 +174,7 @@ class BlossomServersViewModel : ViewModel() {
                     ServerName(serverName, serverUrl, ServerType.Blossom),
                 )
             }
+            pruneHealth()
             isModified = true
         }
     }

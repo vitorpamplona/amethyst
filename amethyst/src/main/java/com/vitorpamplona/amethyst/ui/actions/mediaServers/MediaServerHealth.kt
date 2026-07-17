@@ -25,6 +25,7 @@ import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
@@ -63,7 +64,37 @@ object MediaServerHealthProbe {
     const val SLOW_THRESHOLD_MS: Long = 1_000L
     private const val PROBE_TIMEOUT_MS: Long = 5_000L
 
+    /**
+     * How long a probe result is reused before the server is re-checked. The cache is
+     * process-wide (this is a singleton) so results survive the screen's ViewModel being
+     * recreated on each open, mirroring [com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe].
+     */
+    private const val CACHE_TTL_MS: Long = 60_000L
+
+    private class CachedResult(
+        val status: ServerHealth,
+        val atMs: Long,
+    )
+
+    private val cache = ConcurrentHashMap<String, CachedResult>()
+
+    /** The cached status for [baseUrl] if still within [CACHE_TTL_MS], else null. */
+    fun cached(baseUrl: String): ServerHealth? {
+        val entry = cache[baseUrl] ?: return null
+        return if (TimeUtils.nowMillis() - entry.atMs < CACHE_TTL_MS) entry.status else null
+    }
+
     suspend fun probe(
+        baseUrl: String,
+        clientForUrl: (String) -> OkHttpClient,
+    ): ServerHealth {
+        cached(baseUrl)?.let { return it }
+        val result = runProbe(baseUrl, clientForUrl)
+        cache[baseUrl] = CachedResult(result, TimeUtils.nowMillis())
+        return result
+    }
+
+    private suspend fun runProbe(
         baseUrl: String,
         clientForUrl: (String) -> OkHttpClient,
     ): ServerHealth =

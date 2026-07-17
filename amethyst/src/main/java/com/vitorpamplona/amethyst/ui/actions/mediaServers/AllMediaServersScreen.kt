@@ -42,7 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,11 +108,18 @@ fun MediaServersScaffold(
                     ).consumeWindowInsets(padding)
                     .imePadding(),
         ) {
-            var selectedTab by remember { mutableIntStateOf(TAB_SERVERS) }
+            var selectedTab by rememberSaveable { mutableIntStateOf(TAB_SERVERS) }
             val tabs = listOf(R.string.media_servers_tab_servers, R.string.media_servers_tab_cache)
 
+            Text(
+                text = stringRes(id = R.string.set_preferred_media_servers),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
+                modifier = Modifier.padding(top = 10.dp),
+            )
+
             SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp),
             ) {
                 tabs.forEachIndexed { index, labelRes ->
                     SegmentedButton(
