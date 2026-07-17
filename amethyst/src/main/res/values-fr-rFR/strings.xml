@@ -956,7 +956,6 @@
     <string name="podcast_chapters">Chapitres</string>
     <string name="podcast_value_for_value">Valeur-pour-valeur</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_zap_split_hint">Les zaps sont divisés entre :</string>
     <string name="podcast_hosts_and_guests">Hôtes &amp; invités</string>
     <string name="podcast_top_supporters">Meilleurs supporters</string>
     <plurals name="podcast_chapters_count">

@@ -39,4 +39,5 @@
     <string name="road_event_speed_camera">Fartkamera</string>
     <string name="road_event_traffic_jam">Trafikstockning</string>
     <string name="road_event_unknown">Väghändelse</string>
+    <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
 </resources>

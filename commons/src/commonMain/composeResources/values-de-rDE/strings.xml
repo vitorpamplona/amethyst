@@ -40,4 +40,5 @@
     <string name="road_event_speed_camera">Blitzer</string>
     <string name="road_event_traffic_jam">Stau</string>
     <string name="road_event_unknown">Straßenereignis</string>
+    <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
 </resources>

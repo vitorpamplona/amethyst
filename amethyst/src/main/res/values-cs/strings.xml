@@ -1223,7 +1223,6 @@
     <string name="podcast_chapters">Kapitoly</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
     <string name="podcast_hosts_and_guests">Moderátoři a hosté</string>
     <string name="podcast_top_supporters">Nejlepší podporovatelé</string>
     <plurals name="podcast_chapters_count">

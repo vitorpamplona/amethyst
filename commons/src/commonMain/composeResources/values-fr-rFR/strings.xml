@@ -30,4 +30,7 @@
     <string name="road_event_speed_camera">Radar</string>
     <string name="road_event_traffic_jam">Embouteillage</string>
     <string name="road_event_unknown">Événement routier</string>
+    <string name="podcast_value_zap_split_hint">Les zaps sont divisés entre :</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Valeur-pour-valeur</string>
 </resources>

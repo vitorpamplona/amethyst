@@ -37,4 +37,7 @@
     <string name="road_event_speed_camera">测速照相</string>
     <string name="road_event_traffic_jam">塞车</string>
     <string name="road_event_unknown">道路事件</string>
+    <string name="podcast_value_zap_split_hint">对此的Zaps 在以下对象间分割：</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
 </resources>

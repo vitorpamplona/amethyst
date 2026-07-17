@@ -45,4 +45,7 @@
     <string name="road_event_speed_camera">Fotoradar</string>
     <string name="road_event_traffic_jam">Korek</string>
     <string name="road_event_unknown">Wydarzenie drogowe</string>
+    <string name="podcast_value_zap_split_hint">Zaps do tego są podzielone między:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Wartość-za-wartość</string>
 </resources>

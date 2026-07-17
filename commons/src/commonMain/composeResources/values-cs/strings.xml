@@ -46,4 +46,7 @@
     <string name="road_event_speed_camera">Rychlostní radar</string>
     <string name="road_event_traffic_jam">Dopravní zácpa</string>
     <string name="road_event_unknown">Silniční událost</string>
+    <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
 </resources>

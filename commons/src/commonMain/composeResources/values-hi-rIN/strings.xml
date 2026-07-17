@@ -40,4 +40,7 @@
     <string name="road_event_speed_camera">गति चित्रग्राहक</string>
     <string name="road_event_traffic_jam">यातायात अचलता</string>
     <string name="road_event_unknown">मार्ग घटना</string>
+    <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
+    <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
+    <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
 </resources>

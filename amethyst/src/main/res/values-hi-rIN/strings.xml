@@ -1100,7 +1100,6 @@
     <string name="podcast_chapters">अध्याय</string>
     <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
     <string name="podcast_value_split_percent">%1$d प्रतिशतप्रतिशत</string>
-    <string name="podcast_value_zap_split_hint">इसको ज्साप इनमें विभाजित :</string>
     <string name="podcast_hosts_and_guests">निमन्त्रक तथा अभ्यागत</string>
     <string name="podcast_top_supporters">ऊर्ध्वतम समर्थक</string>
     <plurals name="podcast_chapters_count">

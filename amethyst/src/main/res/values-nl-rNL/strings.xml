@@ -963,7 +963,6 @@
     <string name="podcast_chapters">Hoofdstukken</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_zap_split_hint">Zaps hiervoor worden verdeeld over:</string>
     <string name="podcast_hosts_and_guests">Hosts &amp; gasten</string>
     <string name="podcast_top_supporters">Topsupporters</string>
     <plurals name="podcast_chapters_count">

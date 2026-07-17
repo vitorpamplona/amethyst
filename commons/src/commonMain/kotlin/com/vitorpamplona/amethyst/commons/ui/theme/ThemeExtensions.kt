@@ -44,3 +44,10 @@ val ColorScheme.onBackgroundColorFilter: ColorFilter
  */
 val ColorScheme.placeholderText: Color
     get() = onSurface.copy(alpha = 0.42f)
+
+/**
+ * Slightly stronger de-emphasized text color than [placeholderText]. Matches the
+ * Android app's grayText, the palette's onSurface at 52%.
+ */
+val ColorScheme.grayText: Color
+    get() = onSurface.copy(alpha = 0.52f)

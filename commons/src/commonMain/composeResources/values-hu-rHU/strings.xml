@@ -40,4 +40,7 @@
     <string name="road_event_speed_camera">Sebességmérő kamera</string>
     <string name="road_event_traffic_jam">Forgalmi dugó</string>
     <string name="road_event_unknown">Útesemény</string>
+    <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Értéket az értékért</string>
 </resources>
