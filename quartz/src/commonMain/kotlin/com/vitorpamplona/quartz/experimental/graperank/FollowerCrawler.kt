@@ -68,15 +68,19 @@ class FollowerCrawler(
      * @param relays the relay universe to query — "all possible relays" is the
      *   caller's policy (reachability-cache live set + every kind:10002 relay in the
      *   store + the index/aggregator relays). Empty means nothing to do.
-     * @param pageLimit per-page `limit` handed to each relay's paged REQ; the cursor
-     *   walks past it, so this only bounds one page, not the total.
+     * @param maxPerRelay TOTAL cap on followers pulled from each relay, or `null`
+     *   (default) to pull **every** follower a relay holds. This is NOT a page size:
+     *   [fetchAllPages] treats a filter's `limit` as the total across all pages and
+     *   stops paging once it's reached, so a non-null value cuts the crawl short at
+     *   that many per relay. Leave it null for completeness; set it only to bound a
+     *   spot check. The per-page size is the relay's own default either way.
      * @param timeoutMs per-page EOSE timeout for a relay before its next page fires.
      * @param maxConcurrentRelays how many relays page at once (a global fan-out cap).
      * @param insertBatchSize verified events group-committed per [IEventStore.batchInsert].
      */
     class Config(
         val relays: Set<NormalizedRelayUrl>,
-        val pageLimit: Int = 500,
+        val maxPerRelay: Int? = null,
         val timeoutMs: Long = 15_000,
         val maxConcurrentRelays: Int = 16,
         val insertBatchSize: Int = 500,
@@ -105,7 +109,9 @@ class FollowerCrawler(
             if (config.relays.isEmpty()) return@withContext Stats(0, 0, 0, 0L, 0L)
 
             val mark = TimeSource.Monotonic.markNow()
-            val filter = Filter(kinds = FOLLOW_KINDS, tags = mapOf("p" to listOf(observer)), limit = config.pageLimit)
+            // No limit by default → fetchAllPages walks the whole result set page by
+            // page; a non-null maxPerRelay caps the total per relay (see Config).
+            val filter = Filter(kinds = FOLLOW_KINDS, tags = mapOf("p" to listOf(observer)), limit = config.maxPerRelay)
             val perRelay = config.relays.associateWith { listOf(filter) }
 
             // These three are read/written ONLY by the verifier's single drain

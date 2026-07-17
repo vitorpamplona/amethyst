@@ -607,9 +607,10 @@ object GrapeRankCommand {
      * observer. Idempotent and cumulative; run it a few times for completeness.
      *
      * Flags: `--relay URL[,URL…]` (query only these instead of the whole universe),
-     * `--page-limit N` (per-page REQ limit, default 500), `--timeout SECS` (per-page
-     * EOSE watchdog, default 15), `--relay-concurrency N` (relays paged at once,
-     * default 16), `--insert-batch N` (events per store commit, default 500).
+     * `--max N` (cap followers pulled per relay; default: pull every follower each
+     * relay holds), `--timeout SECS` (per-page EOSE watchdog, default 15),
+     * `--relay-concurrency N` (relays paged at once, default 16), `--insert-batch N`
+     * (events per store commit, default 500).
      */
     private suspend fun followers(
         dataDir: DataDir,
@@ -649,7 +650,9 @@ object GrapeRankCommand {
                     config =
                         FollowerCrawler.Config(
                             relays = relays,
-                            pageLimit = args.intFlag("page-limit", 500),
+                            // Default null → pull EVERY follower each relay holds; --max
+                            // N caps the total per relay for a quick spot check.
+                            maxPerRelay = args.flag("max")?.toIntOrNull(),
                             timeoutMs = args.longFlag("timeout", 15L) * 1000,
                             maxConcurrentRelays = relayConcurrency,
                             insertBatchSize = args.intFlag("insert-batch", 500),
