@@ -28,18 +28,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -101,22 +107,44 @@ fun MediaServersScaffold(
                         bottom = padding.calculateBottomPadding(),
                     ).consumeWindowInsets(padding)
                     .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.Top),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringRes(id = R.string.set_preferred_media_servers),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 10.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.grayText,
-            )
+            var selectedTab by remember { mutableIntStateOf(TAB_SERVERS) }
+            val tabs = listOf(R.string.media_servers_tab_servers, R.string.media_servers_tab_cache)
 
-            LocalBlossomCacheToggle(accountViewModel)
-            HorizontalDivider()
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+            ) {
+                tabs.forEachIndexed { index, labelRes ->
+                    SegmentedButton(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
+                    ) {
+                        Text(text = stringRes(id = labelRes))
+                    }
+                }
+            }
 
-            AllMediaBody(blossomServersViewModel)
+            when (selectedTab) {
+                TAB_SERVERS -> AllMediaBody(blossomServersViewModel, Modifier.weight(1f))
+                else -> LocalBlossomCacheTab(accountViewModel, Modifier.weight(1f))
+            }
         }
+    }
+}
+
+private const val TAB_SERVERS = 0
+
+@Composable
+private fun LocalBlossomCacheTab(
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        LocalBlossomCacheToggle(accountViewModel)
     }
 }
 

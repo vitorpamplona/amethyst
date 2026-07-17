@@ -1553,6 +1553,14 @@
     <string name="use_default_servers">Use Default List</string>
     <string name="add_media_server">Add media server</string>
     <string name="delete_media_server">Delete media server</string>
+    <string name="media_servers_tab_servers">Servers</string>
+    <string name="media_servers_tab_cache">Local cache</string>
+    <string name="media_servers_reorder_hint">Drag to reorder. Uploads try each server from the top down.</string>
+    <string name="media_server_reorder">Reorder server</string>
+    <string name="media_server_status_online">Online</string>
+    <string name="media_server_status_slow">Slow</string>
+    <string name="media_server_status_offline">Offline</string>
+    <string name="media_server_status_checking">Checking…</string>
     <string name="payment_targets">Payment Targets</string>
     <string name="payment_targets_explainer">Publish your payment addresses so others can send you funds directly.</string>
     <string name="payment_targets_section_explainer">Add payment addresses for different networks (e.g. bitcoin, lightning, ethereum).</string>

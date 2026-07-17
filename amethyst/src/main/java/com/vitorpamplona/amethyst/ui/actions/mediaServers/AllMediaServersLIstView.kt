@@ -20,15 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +42,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -44,6 +53,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategoryWithButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.draggableRelayItem
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relayDragHandle
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
@@ -51,16 +64,28 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 
 @Composable
-fun AllMediaBody(blossomServersViewModel: BlossomServersViewModel) {
+fun AllMediaBody(
+    blossomServersViewModel: BlossomServersViewModel,
+    modifier: Modifier = Modifier,
+) {
     val blossomServersState by blossomServersViewModel.fileServers.collectAsStateWithLifecycle()
+    val healthState by blossomServersViewModel.health.collectAsStateWithLifecycle()
+
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> blossomServersViewModel.moveServer(from, to) },
+            itemCount = { blossomServersState.size },
+        )
 
     LazyColumn(
-        verticalArrangement = Arrangement.SpaceAround,
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
         contentPadding = FeedPadding,
+        userScrollEnabled = !dragState.isDragging,
     ) {
         item {
             SettingsCategory(
@@ -70,52 +95,70 @@ fun AllMediaBody(blossomServersViewModel: BlossomServersViewModel) {
             )
         }
 
-        renderMediaServerList(
-            mediaServersState = blossomServersState,
-            keyType = "blossom",
-            editLabel = R.string.add_a_blossom_server,
-            emptyLabel = R.string.no_blossom_server_message,
-            onAddServer = { server ->
-                blossomServersViewModel.addServer(server)
-            },
-            onDeleteServer = {
-                blossomServersViewModel.removeServer(serverUrl = it)
-            },
-        )
-
-        DEFAULT_MEDIA_SERVERS.let {
+        if (blossomServersState.isEmpty()) {
             item {
-                SettingsCategoryWithButton(
-                    title = R.string.recommended_media_servers,
-                    description = R.string.built_in_servers_description,
-                    modifier = SettingsCategorySpacingModifier,
+                Text(
+                    text = stringRes(id = R.string.no_blossom_server_message),
+                    modifier = DoubleVertPadding,
+                )
+            }
+        } else {
+            item {
+                Text(
+                    text = stringRes(id = R.string.media_servers_reorder_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                )
+            }
+
+            itemsIndexed(
+                blossomServersState,
+                key = { _, server -> "blossom" + server.baseUrl },
+            ) { index, entry ->
+                MediaServerRow(
+                    index = index,
+                    serverEntry = entry,
+                    health = healthState[entry.baseUrl] ?: ServerHealth.Unknown,
+                    dragState = dragState,
+                    onDelete = { blossomServersViewModel.removeServer(serverUrl = it) },
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = StdVertSpacer)
+            MediaServerEditField(R.string.add_a_blossom_server) {
+                blossomServersViewModel.addServer(it)
+            }
+        }
+
+        item {
+            SettingsCategoryWithButton(
+                title = R.string.recommended_media_servers,
+                description = R.string.built_in_servers_description,
+                modifier = SettingsCategorySpacingModifier,
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        blossomServersViewModel.addServerList(
+                            DEFAULT_MEDIA_SERVERS.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
+                        )
+                    },
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            blossomServersViewModel.addServerList(
-                                it.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
-                            )
-                        },
-                    ) {
-                        Text(text = stringRes(id = R.string.use_default_servers))
-                    }
+                    Text(text = stringRes(id = R.string.use_default_servers))
                 }
             }
-            itemsIndexed(
-                it,
-                key = { _: Int, server: ServerName ->
-                    "Proposed" + server.baseUrl
-                },
-            ) { _, server ->
-                MediaServerEntry(
-                    serverEntry = server,
-                    isAmethystDefault = true,
-                    onAddOrDelete = { serverUrl ->
-                        if (server.type == ServerType.Blossom) {
-                            blossomServersViewModel.addServer(serverUrl)
-                        }
-                    },
-                )
+        }
+
+        itemsIndexed(
+            DEFAULT_MEDIA_SERVERS,
+            key = { _, server -> "Proposed" + server.baseUrl },
+        ) { _, server ->
+            RecommendedServerRow(serverEntry = server) {
+                if (server.type == ServerType.Blossom) {
+                    blossomServersViewModel.addServer(server.baseUrl)
+                }
             }
         }
 
@@ -125,97 +168,186 @@ fun AllMediaBody(blossomServersViewModel: BlossomServersViewModel) {
     }
 }
 
-fun LazyListScope.renderMediaServerList(
-    mediaServersState: List<ServerName>,
-    keyType: String,
-    editLabel: Int,
-    emptyLabel: Int,
-    onAddServer: (String) -> Unit,
-    onDeleteServer: (String) -> Unit,
+/**
+ * A draggable, ranked server row. Position in the list is the upload/fallback
+ * priority (row #1 is tried first), so each row carries a rank badge and a drag
+ * handle wired into the shared [RelayDragState].
+ */
+@Composable
+fun MediaServerRow(
+    index: Int,
+    serverEntry: ServerName,
+    health: ServerHealth,
+    dragState: RelayDragState,
+    onDelete: (serverUrl: String) -> Unit,
 ) {
-    if (mediaServersState.isEmpty()) {
-        item {
-            Text(
-                text = stringRes(id = emptyLabel),
-                modifier = DoubleVertPadding,
-            )
-        }
-    } else {
-        itemsIndexed(
-            mediaServersState,
-            key = { _: Int, server: ServerName ->
-                keyType + server.baseUrl
-            },
-        ) { _, entry ->
-            MediaServerEntry(
-                serverEntry = entry,
-                onAddOrDelete = {
-                    onDeleteServer(it)
-                },
-            )
-        }
-    }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .draggableRelayItem(index, dragState)
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.DragIndicator,
+            contentDescription = stringRes(id = R.string.media_server_reorder),
+            modifier = Modifier.size(24.dp).relayDragHandle(index, dragState),
+            tint = MaterialTheme.colorScheme.grayText,
+        )
 
-    item {
-        Spacer(modifier = StdVertSpacer)
-        MediaServerEditField(editLabel) {
-            onAddServer(it)
+        RankBadge(rank = index + 1)
+
+        Column(
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
+        ) {
+            Text(
+                text = serverEntry.name.replaceFirstChar(Char::titlecase),
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = StdVertSpacer)
+            Text(
+                text = serverEntry.baseUrl,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        HealthIndicator(health)
+
+        IconButton(onClick = { onDelete(serverEntry.baseUrl) }) {
+            Icon(
+                symbol = MaterialSymbols.Delete,
+                contentDescription = stringRes(id = R.string.delete_media_server),
+                tint = MaterialTheme.colorScheme.grayText,
+            )
         }
     }
 }
 
+/** A recommended default server, added on tap of the trailing "+". */
 @Composable
-fun MediaServerEntry(
-    modifier: Modifier = Modifier,
+fun RecommendedServerRow(
     serverEntry: ServerName,
-    isAmethystDefault: Boolean = false,
-    onAddOrDelete: (serverUrl: String) -> Unit,
+    onAdd: (serverUrl: String) -> Unit,
 ) {
     Row(
         modifier =
-            modifier
+            Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
+                .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceAround,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f),
-        ) {
-            serverEntry.let {
-                Text(
-                    text = it.name.replaceFirstChar(Char::titlecase),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Spacer(modifier = StdVertSpacer)
-                Text(
-                    text = it.baseUrl,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.grayText,
-                )
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = serverEntry.name.replaceFirstChar(Char::titlecase),
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = StdVertSpacer)
+            Text(
+                text = serverEntry.baseUrl,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
 
-        Row(
-            horizontalArrangement = Arrangement.End,
-        ) {
-            IconButton(
-                onClick = {
-                    onAddOrDelete(serverEntry.baseUrl)
-                },
-            ) {
-                Icon(
-                    symbol = if (isAmethystDefault) MaterialSymbols.Add else MaterialSymbols.Delete,
-                    contentDescription =
-                        if (isAmethystDefault) {
-                            stringRes(id = R.string.add_media_server)
-                        } else {
-                            stringRes(id = R.string.delete_media_server)
-                        },
-                )
-            }
+        IconButton(onClick = { onAdd(serverEntry.baseUrl) }) {
+            Icon(
+                symbol = MaterialSymbols.Add,
+                contentDescription = stringRes(id = R.string.add_media_server),
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
+    }
+}
+
+/** Rounded rank badge. The primary target (#1) is filled with the accent color. */
+@Composable
+private fun RankBadge(rank: Int) {
+    val isPrimary = rank == 1
+    Box(
+        modifier =
+            Modifier
+                .size(26.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    if (isPrimary) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = rank.toString(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color =
+                if (isPrimary) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+        )
+    }
+}
+
+/** Colored reachability dot + label, or a spinner while a probe is in flight. */
+@Composable
+private fun HealthIndicator(health: ServerHealth) {
+    if (health == ServerHealth.Unknown) return
+
+    if (health == ServerHealth.Checking) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(14.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+        return
+    }
+
+    val color: Color
+    val label: Int
+    when (health) {
+        ServerHealth.Online -> {
+            color = MaterialTheme.colorScheme.allGoodColor
+            label = R.string.media_server_status_online
+        }
+        ServerHealth.Slow -> {
+            color = MaterialTheme.colorScheme.warningColor
+            label = R.string.media_server_status_slow
+        }
+        else -> {
+            color = MaterialTheme.colorScheme.error
+            label = R.string.media_server_status_offline
+        }
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(color),
+        )
+        Text(
+            text = stringRes(id = label),
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            maxLines = 1,
+        )
     }
 }
