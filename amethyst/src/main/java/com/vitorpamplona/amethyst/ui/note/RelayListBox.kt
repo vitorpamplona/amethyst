@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +56,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ShowMoreRelaysButtonBoxModifer
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.noteComposeRelayBox
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.FlowPreview
@@ -66,26 +64,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
-
-@Composable
-fun RelayBadges(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val expanded = remember { mutableStateOf(false) }
-
-    CrossfadeIfEnabled(expanded.value, modifier = noteComposeRelayBox, label = "RelayBadges", accountViewModel = accountViewModel) {
-        if (it) {
-            RenderAllRelayList(baseNote, Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav)
-        } else {
-            Column {
-                RenderClosedRelayList(baseNote, Modifier.fillMaxWidth(), accountViewModel = accountViewModel, nav = nav)
-                ShouldShowExpandButton(baseNote, accountViewModel) { ShowMoreRelaysButton { expanded.value = true } }
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalLayoutApi::class, FlowPreview::class)
 @Composable

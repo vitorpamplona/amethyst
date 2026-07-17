@@ -54,8 +54,6 @@ private data class NoteLayoutPx(
     val authorWidth: Int,
     /** Horizontal gap between author column and content column: 10dp */
     val authorContentGap: Int,
-    /** Vertical gap between author picture and relay badges: 5dp */
-    val authorBadgeGap: Int,
     /** Vertical spacer between header rows and note content: 4dp */
     val contentSpacer: Int,
     /** Left padding for the content area: 12dp */
@@ -86,9 +84,6 @@ private fun NoteComposeLayoutPreviewCard() {
                     .clip(CircleShape)
                     .background(Color(0xFF9575CD)),
             )
-        },
-        relayBadges = {
-            Text("R1  R2  R3", fontSize = 10.sp, color = Color.Gray)
         },
         firstRow = {
             Text(
@@ -127,7 +122,6 @@ private fun NoteComposeLayoutBoostedPreview() {
             addPadding = false,
             showAuthorColumn = false,
             authorPicture = {},
-            relayBadges = {},
             firstRow = {
                 Text("Bob boosted  2h  ...")
             },
@@ -157,10 +151,8 @@ private fun NoteComposeLayoutBoostedPreview() {
  * │ │author│  gap  │ firstRow                   │ │
  * │ │ 55dp │       │ secondRow (optional)       │ │
  * │ │      │       │ 4dp spacer (optional)      │ │
- * │ ├──────┤ 5dp   │ noteContent                │ │
- * │ │relay │  gap  │                            │ │
- * │ │badges│       │                            │ │
- * │ └──────┘       └────────────────────────────┘ │
+ * │ └──────┘       │ noteContent                │ │
+ * │                └────────────────────────────┘ │
  * ├───────────────────────────────────────────────┤
  * │ reactionsRow (full width, no side padding)    │
  * └───────────────────────────────────────────────┘
@@ -200,11 +192,10 @@ private fun NoteComposeLayoutBoostedPreview() {
  *
  * The `contents` list and `allMeasurables` indices are:
  * - 0: [authorPicture] - 0 or 1 measurables
- * - 1: [relayBadges] - 0 or 1 measurables
- * - 2: [firstRow] - exactly 1 measurable
- * - 3: [secondRow] - 0 or 1 measurables
- * - 4: [noteContent] - 1+ measurables (stacked vertically)
- * - 5: [reactionsRow] - 0+ measurables (stacked vertically)
+ * - 1: [firstRow] - exactly 1 measurable
+ * - 2: [secondRow] - 0 or 1 measurables
+ * - 3: [noteContent] - 1+ measurables (stacked vertically)
+ * - 4: [reactionsRow] - 0+ measurables (stacked vertically)
  *
  * ## Performance
  *
@@ -212,7 +203,7 @@ private fun NoteComposeLayoutBoostedPreview() {
  * - Eliminates 3 layout node levels (Row, author Column, content Column)
  * - Eliminates Row's two-pass measurement (measure author first, then content)
  * - Pre-computes all pixel dimensions once via [remember], cached across recompositions
- * - Remaining per-frame allocations: ~48 bytes for `listOf(6 lambdas)` +
+ * - Remaining per-frame allocations: ~40 bytes for `listOf(5 lambdas)` +
  *   ~24 bytes per `arrayOfNulls` for multi-child slots
  *
  * The caller should use `drawBehind { drawRect(color) }` instead of
@@ -231,8 +222,6 @@ private fun NoteComposeLayoutBoostedPreview() {
  *   note content. False for repost events.
  * @param authorPicture Slot for the author's profile picture (55x55dp area).
  *   Should emit nothing when [showAuthorColumn] is false to skip composition.
- * @param relayBadges Slot for relay indicator icons below the author picture.
- *   Should emit nothing when [showAuthorColumn] is false.
  * @param firstRow Slot for the primary header: author name, time, more options.
  *   Always present.
  * @param secondRow Slot for the secondary header: NIP-05, location, PoW, OTS.
@@ -250,7 +239,6 @@ fun NoteComposeLayout(
     showSecondRow: Boolean = false,
     showContentSpacer: Boolean = true,
     authorPicture: @Composable () -> Unit,
-    relayBadges: @Composable () -> Unit,
     firstRow: @Composable () -> Unit,
     secondRow: @Composable () -> Unit,
     noteContent: @Composable () -> Unit,
@@ -263,7 +251,6 @@ fun NoteComposeLayout(
                 NoteLayoutPx(
                     authorWidth = Size55dp.roundToPx(),
                     authorContentGap = 10.dp.roundToPx(),
-                    authorBadgeGap = 5.dp.roundToPx(),
                     contentSpacer = 4.dp.roundToPx(),
                     padStart = 12.dp.roundToPx(),
                     padEnd = 12.dp.roundToPx(),
@@ -277,11 +264,10 @@ fun NoteComposeLayout(
         contents =
             listOf(
                 authorPicture, // 0
-                relayBadges, // 1
-                firstRow, // 2
-                secondRow, // 3
-                noteContent, // 4
-                reactionsRow, // 5
+                firstRow, // 1
+                secondRow, // 2
+                noteContent, // 3
+                reactionsRow, // 4
             ),
         modifier = modifier,
     ) { allMeasurables, constraints ->
@@ -308,14 +294,13 @@ fun NoteComposeLayout(
         // Single-child slots: firstOrNull() returns null for empty slots (hidden),
         // skipping measurement entirely.
         val authorPlaceable = allMeasurables[0].firstOrNull()?.measure(authorConstraints)
-        val relayPlaceable = allMeasurables[1].firstOrNull()?.measure(authorConstraints)
 
-        val firstRowPlaceable = allMeasurables[2].firstOrNull()?.measure(contentConstraints)
+        val firstRowPlaceable = allMeasurables[1].firstOrNull()?.measure(contentConstraints)
         val secondRowPlaceable =
-            if (showSecondRow) allMeasurables[3].firstOrNull()?.measure(contentConstraints) else null
+            if (showSecondRow) allMeasurables[2].firstOrNull()?.measure(contentConstraints) else null
 
         // Multi-child slots: measured into pre-sized arrays to avoid List allocation.
-        val contentMeasurables = allMeasurables[4]
+        val contentMeasurables = allMeasurables[3]
         val contentPlaceables = arrayOfNulls<Placeable>(contentMeasurables.size)
         var contentStackHeight = 0
         for (i in contentMeasurables.indices) {
@@ -324,7 +309,7 @@ fun NoteComposeLayout(
             contentStackHeight += placeable.height
         }
 
-        val reactionsMeasurables = allMeasurables[5]
+        val reactionsMeasurables = allMeasurables[4]
         val reactionsPlaceables = arrayOfNulls<Placeable>(reactionsMeasurables.size)
         var reactionsHeight = 0
         for (i in reactionsMeasurables.indices) {
@@ -344,7 +329,7 @@ fun NoteComposeLayout(
 
         val authorColumnHeight =
             if (showAuthorColumn && authorPlaceable != null) {
-                authorPlaceable.height + px.authorBadgeGap + (relayPlaceable?.height ?: 0)
+                authorPlaceable.height
             } else {
                 0
             }
@@ -357,10 +342,6 @@ fun NoteComposeLayout(
             // Author column (inside padding area)
             if (showAuthorColumn) {
                 authorPlaceable?.placeRelative(padStart, padTop)
-                relayPlaceable?.placeRelative(
-                    padStart,
-                    padTop + (authorPlaceable?.height ?: 0) + px.authorBadgeGap,
-                )
             }
 
             // Content column (to the right of author, inside padding area)
