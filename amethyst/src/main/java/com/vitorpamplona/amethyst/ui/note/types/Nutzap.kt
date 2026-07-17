@@ -30,6 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityAmountRow
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityBadge
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityCardFrame
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityHeaderRow
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
