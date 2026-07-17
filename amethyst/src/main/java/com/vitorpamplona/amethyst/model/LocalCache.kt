@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
@@ -60,6 +61,7 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -359,6 +361,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
+    val geohashChannels = LargeCache<String, GeohashChatChannel>()
     val relayGroupChannels = LargeCache<GroupId, RelayGroupChannel>()
     val concordChannels = LargeCache<ConcordChannelId, ConcordChannel>()
 
@@ -634,6 +637,8 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
 
+    fun getGeohashChannelIfExists(geohash: String): GeohashChatChannel? = geohashChannels.get(geohash)
+
     fun getRelayGroupChannelIfExists(key: GroupId): RelayGroupChannel? = relayGroupChannels.get(key)
 
     /** Every relay group we know of that is hosted on [relay] (its channel directory). */
@@ -726,6 +731,8 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
 
     fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
+
+    fun getOrCreateGeohashChannel(geohash: String): GeohashChatChannel = geohashChannels.getOrCreate(geohash) { GeohashChatChannel(geohash) }
 
     fun getOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = relayGroupChannels.getOrCreate(key) { RelayGroupChannel(key) }
 
@@ -1488,6 +1495,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             is LiveActivitiesChatMessageEvent -> noteEvent.activityAddress()?.let { getLiveActivityChannelIfExists(it) }
             is LiveActivitiesEvent -> getLiveActivityChannelIfExists(noteEvent.address())
             is EphemeralChatEvent -> noteEvent.roomId()?.let { getEphemeralChatChannelIfExists(it) }
+            is GeohashChatEvent -> noteEvent.geohash()?.let { getGeohashChannelIfExists(it) }
             else -> null
         }
 
@@ -1847,6 +1855,30 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (new) {
             val note = getOrCreateNote(event.id)
             val channel = getOrCreateEphemeralChannel(roomId)
+            channel.addNote(note, relay)
+        }
+
+        return new
+    }
+
+    /**
+     * Public geohash chat message (kind 20000). Routes into the cell's
+     * [GeohashChatChannel]. Presence (kind 20001) is deliberately NOT consumed
+     * here — it is an empty-content heartbeat handled by the live chat screen, so
+     * it never becomes a room's "last message".
+     */
+    fun consume(
+        event: GeohashChatEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val geohash = event.geohash() ?: return false
+
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
+        if (new) {
+            val note = getOrCreateNote(event.id)
+            val channel = getOrCreateGeohashChannel(geohash)
             channel.addNote(note, relay)
         }
 
@@ -2940,6 +2972,10 @@ object LocalCache : ILocalCache, ICacheProvider {
             pruneHiddenMessagesChannel(channel, account)
         }
 
+        geohashChannels.forEach { _, channel ->
+            pruneHiddenMessagesChannel(channel, account)
+        }
+
         liveChatChannels.forEach { _, channel ->
             pruneHiddenMessagesChannel(channel, account)
         }
@@ -2990,6 +3026,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         checkNotInMainThread()
 
         ephemeralChannels.forEach { _, channel ->
+            pruneOldMessagesChannel(channel)
+        }
+
+        geohashChannels.forEach { _, channel ->
             pruneOldMessagesChannel(channel)
         }
 
@@ -3873,6 +3913,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is EphemeralChatEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is GeohashChatEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

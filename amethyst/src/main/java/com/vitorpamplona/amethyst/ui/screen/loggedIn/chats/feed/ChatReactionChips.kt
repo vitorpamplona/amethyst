@@ -140,6 +140,10 @@ fun ChatReactionChips(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // A geohash chat provides these so reactions stay under its anonymous per-cell identity
+    // (react + own-highlight); null (every other chat) keeps the standard account behavior.
+    val onReact = LocalChatReactOverride.current
+    val myIdentities = LocalChatActingIdentities.current
     // Deliberate cost: this observes reactions/zaps for EVERY visible message
     // (the ids fold into the batched EventFinder relay filters — one shared REQ,
     // not one per note), which is exactly what ReactionsRow already does for
@@ -148,13 +152,19 @@ fun ChatReactionChips(
     val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
     val chips by
-        remember(reactionsState) {
+        remember(reactionsState, myIdentities) {
             derivedStateOf {
                 val note = reactionsState?.note ?: baseNote
                 val me = accountViewModel.userProfile()
                 note.reactions
                     .map { (type, reactors) ->
-                        ReactionChip(type, reactors.size, reactors.any { it.author == me })
+                        val mine =
+                            if (myIdentities != null) {
+                                reactors.any { it.author?.pubkeyHex in myIdentities }
+                            } else {
+                                reactors.any { it.author == me }
+                            }
+                        ReactionChip(type, reactors.size, mine)
                     }.sortedByDescending { it.count }
                     .toImmutableList()
             }
@@ -194,7 +204,7 @@ fun ChatReactionChips(
             // Once the receipt's amount arrives the real sats chip takes over, so the
             // pending chip only shows while the amount is still blank.
             isZapping = isZapping && zapAmount.isBlank(),
-            onToggleReaction = { accountViewModel.reactToOrDelete(baseNote, it) },
+            onToggleReaction = { onReact?.invoke(baseNote, it) ?: accountViewModel.reactToOrDelete(baseNote, it) },
             onOpenDetails = { showDetails = true },
             onOpenMinichat = { nav.nav(Route.ChatMinichat(baseNote.idHex)) },
         )

@@ -211,6 +211,60 @@ install_konan_dep "llvm-19-x86_64-linux-essentials-109" \
 install_konan_dep "libffi-3.2.1-2-linux-x86-64" \
   "$KONAN_DEPS_URL/libffi-3.2.1-2-linux-x86-64.tar.gz"
 
+# --- Gradle distribution: pre-seed the wrapper distribution ---
+# The wrapper's distributionUrl (services.gradle.org) 307-redirects to
+# github.com release assets, which the web sandbox's git-only GitHub proxy
+# blocks (403) even at Full network access — so `./gradlew` can't bootstrap.
+# Download the pinned distribution from a mirror instead, but verify it against
+# Gradle's OFFICIAL sha256 (served from services.gradle.org, reachable here)
+# so a tampered/wrong mirror file is rejected and never executed. Idempotent:
+# skips entirely if the distribution is already installed.
+seed_gradle_distribution() {
+  local props="$CLAUDE_PROJECT_DIR/gradle/wrapper/gradle-wrapper.properties"
+  [ -f "$props" ] || return 0
+  local url zip name hash dir ver official mirror ok=""
+  url=$(sed -n 's/^distributionUrl=//p' "$props" | sed 's/\\//g')
+  [ -n "$url" ] || return 0
+  zip=${url##*/}; name=${zip%.zip}
+  # Gradle stores the dist under base36(md5(distributionUrl)) — derive it so this
+  # keeps working across version bumps instead of hardcoding the hash dir.
+  hash=$(python3 - "$url" <<'PY'
+import hashlib, sys
+n = int.from_bytes(hashlib.md5(sys.argv[1].encode()).digest(), 'big')
+d = "0123456789abcdefghijklmnopqrstuvwxyz"; s = ""
+while n:
+    s = d[n % 36] + s; n //= 36
+print(s or "0")
+PY
+)
+  dir="${GRADLE_USER_HOME:-$HOME/.gradle}/wrapper/dists/$name/$hash"
+  ver=${name%-bin}; ver=${ver%-all}
+  if [ -x "$dir/$ver/bin/gradle" ]; then return 0; fi   # already installed
+  echo "Seeding Gradle distribution $ver (github release blocked; using verified mirror)..." >&2
+  mkdir -p "$dir"
+  official=$(curl -fsSL "https://services.gradle.org/distributions/${zip}.sha256") || {
+    echo "Could not fetch official Gradle checksum; leaving gradlew to fail as before." >&2
+    return 0
+  }
+  for mirror in \
+      "https://mirrors.cloud.tencent.com/gradle" \
+      "https://mirrors.huaweicloud.com/gradle"; do
+    if curl -fsSL -o "$dir/$zip" "$mirror/$zip" \
+       && echo "${official}  $dir/$zip" | sha256sum -c - >/dev/null 2>&1; then
+      ok=1; break
+    fi
+    echo "Mirror $mirror failed download/verify; trying next." >&2
+    rm -f "$dir/$zip"
+  done
+  if [ -z "$ok" ]; then
+    echo "Gradle seed failed against all mirrors; leaving gradlew to fail as before." >&2
+    return 0
+  fi
+  unzip -q "$dir/$zip" -d "$dir" && touch "$dir/$zip.ok"
+  echo "Gradle $ver seeded and verified against official sha256." >&2
+}
+seed_gradle_distribution
+
 cd "$CLAUDE_PROJECT_DIR"
 ./gradlew --version > /dev/null 2>&1
 

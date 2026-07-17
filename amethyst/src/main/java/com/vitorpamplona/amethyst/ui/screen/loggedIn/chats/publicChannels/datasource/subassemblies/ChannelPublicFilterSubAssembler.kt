@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datas
 
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
@@ -42,6 +43,10 @@ class ChannelPublicFilterSubAssembler(
         when (val channel = key.channel) {
             is EphemeralChatChannel -> {
                 filterMessagesToEphemeralChat(channel, since)
+            }
+
+            is GeohashChatChannel -> {
+                filterMessagesToGeohashChat(channel, since)
             }
 
             is PublicChatChannel -> {

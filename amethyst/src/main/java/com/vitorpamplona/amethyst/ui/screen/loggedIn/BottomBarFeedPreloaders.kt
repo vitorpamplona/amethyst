@@ -156,6 +156,10 @@ private fun PreloadFor(
         // Covered by AccountFilterAssemblerSubscription (always-on).
         NavBarItem.NOTIFICATIONS -> Unit
 
+        // Anonymous location channels — the pinned avatar carries no metadata, and the cell's
+        // message subscription opens from the chat screen itself, so there's nothing to preload.
+        NavBarItem.GEOHASH_CHATS -> Unit
+
         // No relay feed to preload (loaded by the destination screen on demand).
         NavBarItem.PROFILE,
         NavBarItem.MY_LISTS,

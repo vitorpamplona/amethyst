@@ -81,6 +81,7 @@ private val ColorConcord = Color(0xFF0F766E)
 private val ColorPublic = Color(0xFFB45309)
 private val ColorRelay = Color(0xFF2563EB)
 private val ColorEphemeral = Color(0xFFC2410C)
+private val ColorLocation = Color(0xFF0891B2)
 
 /**
  * One selectable conversation type. Collapsed, a row shows only the icon, name, a short tagline, and
@@ -199,6 +200,18 @@ private val conversationSections =
                         pros = listOf(R.string.new_conversation_ephemeral_pro_1, R.string.new_conversation_ephemeral_pro_2),
                         cons = listOf(R.string.new_conversation_ephemeral_con_1, R.string.new_conversation_ephemeral_con_2),
                         route = Route.NewEphemeralChat,
+                    ),
+                    ConversationType(
+                        icon = MaterialSymbols.LocationOn,
+                        color = ColorLocation,
+                        title = R.string.new_conversation_location_title,
+                        tagline = R.string.new_conversation_location_tagline,
+                        chip = R.string.new_conversation_location_chip,
+                        bestFor = R.string.new_conversation_location_best,
+                        cta = R.string.new_conversation_location_cta,
+                        pros = listOf(R.string.new_conversation_location_pro_1, R.string.new_conversation_location_pro_2),
+                        cons = listOf(R.string.new_conversation_location_con_1),
+                        route = Route.NewGeohashChat,
                     ),
                 ),
         ),

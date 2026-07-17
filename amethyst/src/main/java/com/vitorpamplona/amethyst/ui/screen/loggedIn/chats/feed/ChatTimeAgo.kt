@@ -74,11 +74,17 @@ fun ChatTimeAgo(baseNote: Note) {
  * row) while still surfacing these per-message details that used to live in the
  * tap-to-expand "complete UI" detail row.
  */
-fun chatFooterHasMeta(note: Note): Boolean {
+fun chatFooterHasMeta(
+    note: Note,
+    // The location room's own cell, when open. A message whose only metadata is this geohash carries
+    // no footer-worthy detail (the room header already says where we are), so it doesn't force a row.
+    suppressGeohash: String? = null,
+): Boolean {
     val event = note.event ?: return false
+    val geo = event.geoHashOrScope()
     return event is PrivateDmEvent ||
         event.expiration() != null ||
-        event.geoHashOrScope() != null ||
+        (geo != null && geo != suppressGeohash) ||
         event.strongPoWOrNull() != null ||
         note.isPinnedInRelayGroup()
 }
@@ -102,7 +108,10 @@ fun ChatMessageFooter(
     nav: INav,
 ) {
     val event = note.event
-    val geo = remember(event) { event?.geoHashOrScope() }
+    val geoRaw = remember(event) { event?.geoHashOrScope() }
+    // Hide the room's own cell (repeated on every message here); keep any other geohash.
+    val suppressGeohash = LocalChatSuppressGeohash.current
+    val geo = if (geoRaw != null && geoRaw != suppressGeohash) geoRaw else null
     val pow = remember(event) { event?.strongPoWOrNull() }
 
     Row(verticalAlignment = Alignment.CenterVertically) {

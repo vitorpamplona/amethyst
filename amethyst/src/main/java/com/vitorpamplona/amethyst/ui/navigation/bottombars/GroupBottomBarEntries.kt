@@ -170,6 +170,21 @@ fun rememberConcordEntryDisplay(
 }
 
 /**
+ * A pinned geohash location channel. Anonymous by design — no metadata REQ; the row is a location
+ * pin robohash keyed by the cell, labelled with the geohash, opening the location chat.
+ */
+@Composable
+fun rememberGeohashEntryDisplay(entry: BottomBarEntry.Geohash): GroupEntryDisplay =
+    remember(entry.geohash) {
+        GroupEntryDisplay(
+            label = "#${entry.geohash}",
+            robotSeed = entry.geohash,
+            model = null,
+            route = Route.GeohashChat(entry.geohash),
+        )
+    }
+
+/**
  * Resolves any chat/group entry to its live display, or null for a non-group entry. [subscribe] is
  * forwarded to the channel observers: true (the default) keeps a relay REQ open — used by the live
  * bar/rail; false reads only cached metadata — used by the settings picker (see [observeChannelMetadata]).
@@ -184,6 +199,7 @@ fun rememberGroupEntryDisplay(
         is BottomBarEntry.PublicChat -> rememberPublicChatEntryDisplay(entry, accountViewModel, subscribe)
         is BottomBarEntry.RelayGroup -> rememberRelayGroupEntryDisplay(entry, accountViewModel, subscribe)
         is BottomBarEntry.Concord -> rememberConcordEntryDisplay(entry, accountViewModel)
+        is BottomBarEntry.Geohash -> rememberGeohashEntryDisplay(entry)
         is BottomBarEntry.BuiltIn -> null
         is BottomBarEntry.Favorite -> null
     }

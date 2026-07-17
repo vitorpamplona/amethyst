@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
@@ -67,13 +68,18 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
@@ -85,6 +91,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
@@ -111,6 +118,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Stable
 open class ChannelNewMessageViewModel :
@@ -186,6 +194,12 @@ open class ChannelNewMessageViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
+
+    // Geohash location chat (Bitchat interop): messages are signed with an anonymous per-cell
+    // identity (unless posting as self) and carry a small NIP-13 PoW + the n/t tags.
+    var geohashNickname by mutableStateOf("")
+    var geohashTeleported by mutableStateOf(false)
+    var geohashPostAsSelf by mutableStateOf(false)
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
@@ -325,8 +339,22 @@ open class ChannelNewMessageViewModel :
         val template = createTemplate() ?: return
         val channelRelays = channel?.relays() ?: emptySet()
 
+        // A geohash cell with no resolvable relays has nowhere to publish. Bail before cancel() clears
+        // the composer, so the user keeps their text (and draft) to retry rather than losing it silently.
+        if (channel is GeohashChatChannel && channelRelays.isEmpty()) return
+
         val draftToDelete = draftNote
         cancel()
+
+        val currentChannel = channel
+        if (currentChannel is GeohashChatChannel) {
+            // Geohash chat: sign with the anonymous per-cell identity (or the account when posting
+            // as self) and mine the fixed 8-bit Bitchat PoW for that pubkey, instead of the account
+            // signer + PUBLIC_CHAT PoW category.
+            sendGeohashMined(template, currentChannel.geohash, channelRelays.toSet())
+            accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
+            return
+        }
 
         // Kinds 42/1311 are the PUBLIC_CHAT PoW category: route through the
         // mining gate (a no-op when the category is off). Draft deletion runs
@@ -338,6 +366,37 @@ open class ChannelNewMessageViewModel :
             }
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
+    }
+
+    private suspend fun sendGeohashMined(
+        template: EventTemplate<out Event>,
+        geohash: String,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        if (relays.isEmpty()) return
+        val account = accountViewModel.account
+        val signer: NostrSigner
+        val pubKeyHex: String
+        if (geohashPostAsSelf) {
+            signer = account.signer
+            pubKeyHex = account.signer.pubKey
+        } else {
+            val keyPair = withContext(Dispatchers.IO) { account.geohashIdentity.keyPair(geohash) }
+            signer = NostrSignerInternal(keyPair)
+            pubKeyHex = keyPair.pubKey.toHexKey()
+        }
+
+        val mined =
+            withContext(Dispatchers.Default) {
+                // Bitchat mines 8 bits by default; cap the effort so a slow device still sends.
+                val deadline = System.nanoTime() + 2_000_000_000L
+                val threads = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+                runCatching {
+                    PoWMiner.mine(template, pubKeyHex, 8, threads) { System.nanoTime() < deadline }
+                }.getOrDefault(template)
+            }
+
+        runCatching { account.signWithAndSendPrivately(mined, signer, relays) }
     }
 
     suspend fun sendDraftSync() {
@@ -583,6 +642,28 @@ open class ChannelNewMessageViewModel :
 
                     emojis(emojis)
                     imetas(usedAttachments)
+                }
+            }
+
+            channel is GeohashChatChannel -> {
+                // Bitchat kind-20000: same mention/hashtag/quote/emoji enrichment as any message,
+                // plus the g/n/t tags. Signed + PoW-mined with the per-cell identity in sendPostSync.
+                GeohashChatEvent.build(
+                    tagger.message,
+                    channel.geohash,
+                    nickname = geohashNickname.ifBlank { null },
+                    teleported = geohashTeleported,
+                ) {
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+
+                    replyTo.value?.idHex?.let { add(arrayOf("e", it, "", "reply")) }
                 }
             }
 

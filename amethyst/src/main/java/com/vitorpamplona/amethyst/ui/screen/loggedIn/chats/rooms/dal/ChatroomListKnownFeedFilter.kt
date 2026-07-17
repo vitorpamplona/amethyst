@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
+import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -32,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.isConcordTimelineMessage
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -91,6 +93,18 @@ class ChatroomListKnownFeedFilter(
                         .sortedByDefaultFeedOrder()
                         .firstOrNull()
                 }
+
+        // Joined geohash location channels (kind 10081 list). Ephemeral, so a quiet
+        // cell has no stored message — show a placeholder row until one arrives, the
+        // same way just-joined NIP-29/Marmot groups do.
+        val geohashChannels =
+            account.geohashList.flow.value.map { geohash ->
+                val channel = LocalCache.getOrCreateGeohashChannel(geohash)
+                channel.notes
+                    .filter { _, it -> account.isAcceptable(it) && it.event != null }
+                    .sortedByDefaultFeedOrder()
+                    .firstOrNull() ?: channel.placeholderNote()
+            }
 
         val marmotGroups =
             account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
@@ -161,7 +175,7 @@ class ChatroomListKnownFeedFilter(
                     }
             }
 
-        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups + relayGroups + concordChannels).toSet())
+        return sort((privateMessages + publicChannels + ephemeralChats + geohashChannels + marmotGroups + relayGroups + concordChannels).toSet())
     }
 
     override fun updateListWith(
@@ -173,6 +187,7 @@ class ChatroomListKnownFeedFilter(
         // Gets the latest message by channel from the new items.
         val newRelevantPublicMessages = filterRelevantPublicMessages(newItems, account)
         val newRelevantEphemeralChats = filterRelevantEphemeralChats(newItems, account)
+        val newRelevantGeohashChats = filterRelevantGeohashChats(newItems, account)
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
@@ -182,6 +197,7 @@ class ChatroomListKnownFeedFilter(
         if (newRelevantPrivateMessages.isEmpty() &&
             newRelevantPublicMessages.isEmpty() &&
             newRelevantEphemeralChats.isEmpty() &&
+            newRelevantGeohashChats.isEmpty() &&
             newRelevantRelayGroups.isEmpty() &&
             newRelevantConcord.isEmpty()
         ) {
@@ -211,6 +227,21 @@ class ChatroomListKnownFeedFilter(
             oldList.forEach { oldNote ->
                 val noteEvent = (oldNote.event as? EphemeralChatEvent)?.roomId()
                 if (newNotePair.key == noteEvent) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
+                        myNewList = myNewList.replace(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
+        newRelevantGeohashChats.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                if (newNotePair.key == oldNote.geohashRowKey()) {
                     hasUpdated = true
                     if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
@@ -276,6 +307,7 @@ class ChatroomListKnownFeedFilter(
         // Gets the latest message by channel from the new items.
         val newRelevantPublicMessages = filterRelevantPublicMessages(newItems, account)
         val newRelevantEphemeralChats = filterRelevantEphemeralChats(newItems, account)
+        val newRelevantGeohashChats = filterRelevantGeohashChats(newItems, account)
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
@@ -285,6 +317,7 @@ class ChatroomListKnownFeedFilter(
         return if (newRelevantPrivateMessages.isEmpty() &&
             newRelevantPublicMessages.isEmpty() &&
             newRelevantEphemeralChats.isEmpty() &&
+            newRelevantGeohashChats.isEmpty() &&
             newRelevantRelayGroups.isEmpty() &&
             newRelevantConcord.isEmpty()
         ) {
@@ -294,10 +327,34 @@ class ChatroomListKnownFeedFilter(
                 newRelevantPrivateMessages.values +
                     newRelevantPublicMessages.values +
                     newRelevantEphemeralChats.values +
+                    newRelevantGeohashChats.values +
                     newRelevantRelayGroups.values +
                     newRelevantConcord.values
             ).toSet()
         }
+    }
+
+    /** The geohash a Messages row belongs to — from a real kind-20000 note or a placeholder's channel gatherer. */
+    private fun Note.geohashRowKey(): String? =
+        (event as? GeohashChatEvent)?.geohash()
+            ?: inGatherers?.firstNotNullOfOrNull { (it as? GeohashChatChannel)?.geohash }
+
+    private fun filterRelevantGeohashChats(
+        newItems: Set<Note>,
+        account: Account,
+    ): MutableMap<String, Note> {
+        val joined = account.geohashList.flow.value
+        val newRelevant = mutableMapOf<String, Note>()
+        newItems.forEach { newNote ->
+            val geohash = (newNote.event as? GeohashChatEvent)?.geohash()
+            if (geohash != null && geohash in joined && account.isAcceptable(newNote)) {
+                val lastNote = newRelevant[geohash]
+                if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
+                    newRelevant[geohash] = newNote
+                }
+            }
+        }
+        return newRelevant
     }
 
     /**
