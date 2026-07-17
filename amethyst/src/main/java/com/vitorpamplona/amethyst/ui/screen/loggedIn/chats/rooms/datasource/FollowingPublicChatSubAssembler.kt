@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -41,10 +43,14 @@ class FollowingPublicChatSubAssembler(
         key: ChatroomListState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
-        listOfNotNull(
-            filterLastMessageFollowingPublicChats(key.account.publicChatList.flowSet.value, since),
-            filterFollowingPublicChatsCreationEvent(key.account.publicChatList.flowSet.value, since),
-        ).flatten()
+        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP28)) {
+            emptyList()
+        } else {
+            listOfNotNull(
+                filterLastMessageFollowingPublicChats(key.account.publicChatList.flowSet.value, since),
+                filterFollowingPublicChatsCreationEvent(key.account.publicChatList.flowSet.value, since),
+            ).flatten()
+        }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
 
@@ -60,6 +66,7 @@ class FollowingPublicChatSubAssembler(
                         invalidateFilters()
                     }
                 },
+                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP28) { invalidateFilters() },
             )
 
         return super.newSub(key)

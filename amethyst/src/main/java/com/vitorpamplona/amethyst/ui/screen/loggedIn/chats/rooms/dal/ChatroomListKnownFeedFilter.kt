@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -54,6 +56,11 @@ class ChatroomListKnownFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
+    private fun isEnabled(type: ChatFeedType): Boolean = type in account.settings.enabledChatFeeds.value
+
+    /** A room note is NIP-04 when its event is a [PrivateDmEvent], otherwise it is a NIP-17 message. */
+    private fun isDmEnabled(note: Note): Boolean = isEnabled(if (note.event is PrivateDmEvent) ChatFeedType.NIP04 else ChatFeedType.NIP17)
+
     // returns the last Note of each user.
     override fun feed(): List<Note> {
         val chatList = account.chatroomList
@@ -61,57 +68,76 @@ class ChatroomListKnownFeedFilter(
 
         val privateMessages =
             chatList.rooms.mapNotNull { key, chatroom ->
-                if ((chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
+                val newest = chatroom.newestMessage
+                if (newest != null &&
+                    isDmEnabled(newest) &&
+                    (chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
                     !account.isAllHidden(key.users)
                 ) {
-                    chatroom.newestMessage
+                    newest
                 } else {
                     null
                 }
             }
 
         val publicChannels =
-            account
-                .publicChatList.flowSet.value
-                .mapNotNull { channelId ->
-                    LocalCache
-                        .getOrCreatePublicChatChannel(channelId)
-                        .notes
-                        .filter { _, it -> account.isAcceptable(it) && it.event != null }
-                        .sortedByDefaultFeedOrder()
-                        .firstOrNull()
-                }
+            if (!isEnabled(ChatFeedType.NIP28)) {
+                emptyList()
+            } else {
+                account
+                    .publicChatList.flowSet.value
+                    .mapNotNull { channelId ->
+                        LocalCache
+                            .getOrCreatePublicChatChannel(channelId)
+                            .notes
+                            .filter { _, it -> account.isAcceptable(it) && it.event != null }
+                            .sortedByDefaultFeedOrder()
+                            .firstOrNull()
+                    }
+            }
 
         val ephemeralChats =
-            account
-                .ephemeralChatList.liveEphemeralChatList.value
-                .mapNotNull { it ->
-                    LocalCache
-                        .getOrCreateEphemeralChannel(it)
-                        .notes
-                        .filter { _, it -> account.isAcceptable(it) && it.event != null }
-                        .sortedByDefaultFeedOrder()
-                        .firstOrNull()
-                }
+            if (!isEnabled(ChatFeedType.EPHEMERAL)) {
+                emptyList()
+            } else {
+                account
+                    .ephemeralChatList.liveEphemeralChatList.value
+                    .mapNotNull { it ->
+                        LocalCache
+                            .getOrCreateEphemeralChannel(it)
+                            .notes
+                            .filter { _, it -> account.isAcceptable(it) && it.event != null }
+                            .sortedByDefaultFeedOrder()
+                            .firstOrNull()
+                    }
+            }
 
         // Joined geohash location channels (kind 10081 list). Ephemeral, so a quiet
         // cell has no stored message — show a placeholder row until one arrives, the
         // same way just-joined NIP-29/Marmot groups do.
         val geohashChannels =
-            account.geohashList.flow.value.map { geohash ->
-                val channel = LocalCache.getOrCreateGeohashChannel(geohash)
-                channel.notes
-                    .filter { _, it -> account.isAcceptable(it) && it.event != null }
-                    .sortedByDefaultFeedOrder()
-                    .firstOrNull() ?: channel.placeholderNote()
+            if (!isEnabled(ChatFeedType.GEOHASH)) {
+                emptyList()
+            } else {
+                account.geohashList.flow.value.map { geohash ->
+                    val channel = LocalCache.getOrCreateGeohashChannel(geohash)
+                    channel.notes
+                        .filter { _, it -> account.isAcceptable(it) && it.event != null }
+                        .sortedByDefaultFeedOrder()
+                        .firstOrNull() ?: channel.placeholderNote()
+                }
             }
 
         val marmotGroups =
-            account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
-                if (chatroom.isKnown(followingKeySet)) {
-                    chatroom.newestMessage ?: chatroom.placeholderNote()
-                } else {
-                    null
+            if (!isEnabled(ChatFeedType.MARMOT)) {
+                emptyList()
+            } else {
+                account.marmotGroupList.rooms.mapNotNull { _, chatroom ->
+                    if (chatroom.isKnown(followingKeySet)) {
+                        chatroom.newestMessage ?: chatroom.placeholderNote()
+                    } else {
+                        null
+                    }
                 }
             }
 
@@ -120,30 +146,34 @@ class ChatroomListKnownFeedFilter(
         // to a single relay row positioned by that relay's newest message. Both interleave with the
         // rest of the Messages list by recency.
         val relayGroups =
-            when (account.settings.relayGroupViewMode.value) {
-                RelayGroupViewMode.INLINE ->
-                    account.relayGroupList.liveRelayGroupList.value.mapNotNull { groupTag ->
-                        val relay = RelayUrlNormalizer.normalizeOrNull(groupTag.relayUrl) ?: return@mapNotNull null
-                        val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(groupTag.groupId, relay))
-                        // Newest loaded chat message, or a placeholder row so a just-joined group shows
-                        // up on Messages before its first kind-9 arrives (mirrors the Marmot-group path
-                        // above). Content kinds only — never a reaction/deletion as the "last message".
-                        channel.newestChatNote(account) ?: channel.placeholderNote()
-                    }
-
-                RelayGroupViewMode.GROUPED ->
-                    // One row per host relay (never duplicated), carrying the newest chat across ALL of
-                    // that relay's joined groups so it lands in the newest-message spot among the DMs.
-                    account.relayGroupList.liveRelayGroupList.value
-                        .groupBy { it.relayUrl }
-                        .mapNotNull { (relayUrl, tags) ->
-                            val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
-                            val newest =
-                                tags
-                                    .mapNotNull { LocalCache.getOrCreateRelayGroupChannel(GroupId(it.groupId, relay)).newestChatNote(account) }
-                                    .maxByOrNull { it.createdAt() ?: 0L }
-                            RelayGroupServerRoomNote(relay, newest)
+            if (!isEnabled(ChatFeedType.NIP29)) {
+                emptyList()
+            } else {
+                when (account.settings.relayGroupViewMode.value) {
+                    RelayGroupViewMode.INLINE ->
+                        account.relayGroupList.liveRelayGroupList.value.mapNotNull { groupTag ->
+                            val relay = RelayUrlNormalizer.normalizeOrNull(groupTag.relayUrl) ?: return@mapNotNull null
+                            val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(groupTag.groupId, relay))
+                            // Newest loaded chat message, or a placeholder row so a just-joined group shows
+                            // up on Messages before its first kind-9 arrives (mirrors the Marmot-group path
+                            // above). Content kinds only — never a reaction/deletion as the "last message".
+                            channel.newestChatNote(account) ?: channel.placeholderNote()
                         }
+
+                    RelayGroupViewMode.GROUPED ->
+                        // One row per host relay (never duplicated), carrying the newest chat across ALL of
+                        // that relay's joined groups so it lands in the newest-message spot among the DMs.
+                        account.relayGroupList.liveRelayGroupList.value
+                            .groupBy { it.relayUrl }
+                            .mapNotNull { (relayUrl, tags) ->
+                                val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
+                                val newest =
+                                    tags
+                                        .mapNotNull { LocalCache.getOrCreateRelayGroupChannel(GroupId(it.groupId, relay)).newestChatNote(account) }
+                                        .maxByOrNull { it.createdAt() ?: 0L }
+                                RelayGroupServerRoomNote(relay, newest)
+                            }
+                }
             }
 
         // Concord Channels the user joined (kind 13302 list → folded Control Plane). In INLINE view
@@ -153,26 +183,30 @@ class ChatroomListKnownFeedFilter(
         // positioned by that community's newest message. Concord groups by community exactly as
         // NIP-29 groups by host relay above; both interleave with the rest of Messages by recency.
         val concordChannels =
-            when (account.settings.concordViewMode.value) {
-                ConcordViewMode.INLINE ->
-                    account.concordSessions.sessions().flatMap { session ->
-                        val state = session.state.value ?: return@flatMap emptyList<Note>()
-                        state.channels.keys.map { channelIdHex ->
-                            val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
-                            channel.newestConcordNote(account) ?: channel.placeholderNote()
+            if (!isEnabled(ChatFeedType.CONCORD)) {
+                emptyList()
+            } else {
+                when (account.settings.concordViewMode.value) {
+                    ConcordViewMode.INLINE ->
+                        account.concordSessions.sessions().flatMap { session ->
+                            val state = session.state.value ?: return@flatMap emptyList<Note>()
+                            state.channels.keys.map { channelIdHex ->
+                                val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
+                                channel.newestConcordNote(account) ?: channel.placeholderNote()
+                            }
                         }
-                    }
 
-                ConcordViewMode.GROUPED ->
-                    // One row per joined community, carrying the newest message across ALL its channels.
-                    account.concordSessions.sessions().mapNotNull { session ->
-                        val state = session.state.value ?: return@mapNotNull null
-                        val newest =
-                            state.channels.keys
-                                .mapNotNull { LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, it)).newestConcordNote(account) }
-                                .maxByOrNull { it.createdAt() ?: 0L }
-                        ConcordServerRoomNote(session.entry.id, newest)
-                    }
+                    ConcordViewMode.GROUPED ->
+                        // One row per joined community, carrying the newest message across ALL its channels.
+                        account.concordSessions.sessions().mapNotNull { session ->
+                            val state = session.state.value ?: return@mapNotNull null
+                            val newest =
+                                state.channels.keys
+                                    .mapNotNull { LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, it)).newestConcordNote(account) }
+                                    .maxByOrNull { it.createdAt() ?: 0L }
+                            ConcordServerRoomNote(session.entry.id, newest)
+                        }
+                }
             }
 
         return sort((privateMessages + publicChannels + ephemeralChats + geohashChannels + marmotGroups + relayGroups + concordChannels).toSet())
@@ -343,6 +377,7 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<String, Note> {
+        if (!isEnabled(ChatFeedType.GEOHASH)) return mutableMapOf()
         val joined = account.geohashList.flow.value
         val newRelevant = mutableMapOf<String, Note>()
         newItems.forEach { newNote ->
@@ -385,6 +420,7 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<String, Note> {
+        if (!isEnabled(ChatFeedType.CONCORD)) return mutableMapOf()
         // Newest new message per channel (INLINE) or per community (GROUPED).
         val grouped = account.settings.concordViewMode.value == ConcordViewMode.GROUPED
         val newestPerKey = mutableMapOf<String, Note>()
@@ -406,6 +442,7 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<String, Note> {
+        if (!isEnabled(ChatFeedType.NIP28)) return mutableMapOf()
         val followingChannels = account.publicChatList.flowSet.value
         val newRelevantPublicMessages = mutableMapOf<String, Note>()
         newItems
@@ -429,6 +466,7 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<RoomId, Note> {
+        if (!isEnabled(ChatFeedType.EPHEMERAL)) return mutableMapOf()
         val followingEphemeralChats = account.ephemeralChatList.liveEphemeralChatList.value
         val newRelevantEphemeralChats = mutableMapOf<RoomId, Note>()
         newItems
@@ -493,6 +531,7 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<String, Note> {
+        if (!isEnabled(ChatFeedType.NIP29)) return mutableMapOf()
         val joined = account.relayGroupList.liveRelayGroupList.value
         if (joined.isEmpty()) return mutableMapOf()
 
@@ -545,6 +584,7 @@ class ChatroomListKnownFeedFilter(
         val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
         newItems
             .forEach { newNote ->
+                if (!isDmEnabled(newNote)) return@forEach
                 val roomKey = (newNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
                 if (roomKey != null) {
                     val room = account.chatroomList.rooms.get(roomKey)

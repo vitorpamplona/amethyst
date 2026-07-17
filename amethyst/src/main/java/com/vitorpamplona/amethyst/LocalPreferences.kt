@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
@@ -174,6 +175,10 @@ private object PrefKeys {
     const val DEFAULT_RELAY_AUTH_POLICY = "default_relay_auth_policy"
     const val RELAY_GROUP_VIEW_MODE = "relay_group_view_mode"
     const val CONCORD_VIEW_MODE = "concord_view_mode"
+
+    // Stores the DISABLED chat feed types (comma-joined codes) so absence = all-on and any newly
+    // added type defaults enabled for accounts that customized before it existed.
+    const val DISABLED_CHAT_FEEDS = "disabled_chat_feeds"
     const val RELAY_AUTH_TRUST_MY_RELAYS = "relay_auth_trust_my_relays_and_venues"
     const val RELAY_AUTH_TRUST_READ_FOLLOWS = "relay_auth_trust_read_follows"
     const val RELAY_AUTH_TRUST_MESSAGE_FOLLOWS = "relay_auth_trust_message_follows"
@@ -568,6 +573,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, settings.defaultRelayAuthPolicy.value.name)
                     putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
                     putString(PrefKeys.CONCORD_VIEW_MODE, settings.concordViewMode.value.name)
+                    putString(PrefKeys.DISABLED_CHAT_FEEDS, ChatFeedType.encode(ChatFeedType.ALL - settings.enabledChatFeeds.value))
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, settings.relayAuthTrustMyRelaysAndVenues.value)
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, settings.relayAuthTrustReadFollows.value)
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, settings.relayAuthTrustMessageFollows.value)
@@ -698,6 +704,7 @@ object LocalPreferences {
                             ?: RelayAuthPolicy.CUSTOM
                     val relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null))
                     val concordViewMode = ConcordViewMode.fromName(getString(PrefKeys.CONCORD_VIEW_MODE, null))
+                    val enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(getString(PrefKeys.DISABLED_CHAT_FEEDS, null))
                     val relayAuthTrustMyRelays = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, true)
                     val relayAuthTrustReadFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, true)
                     val relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true)
@@ -916,6 +923,7 @@ object LocalPreferences {
                         defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
                         relayGroupViewMode = MutableStateFlow(relayGroupViewMode),
                         concordViewMode = MutableStateFlow(concordViewMode),
+                        enabledChatFeeds = MutableStateFlow(enabledChatFeeds),
                         relayAuthTrustMyRelaysAndVenues = MutableStateFlow(relayAuthTrustMyRelays),
                         relayAuthTrustReadFollows = MutableStateFlow(relayAuthTrustReadFollows),
                         relayAuthTrustMessageFollows = MutableStateFlow(relayAuthTrustMessageFollows),

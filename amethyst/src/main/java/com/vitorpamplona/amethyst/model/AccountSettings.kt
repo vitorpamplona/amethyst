@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordListRepository
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
@@ -310,6 +311,9 @@ class AccountSettings(
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.CUSTOM),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
     val concordViewMode: MutableStateFlow<ConcordViewMode> = MutableStateFlow(ConcordViewMode.DEFAULT),
+    // Which conversation protocols the Messages inbox loads and shows. A disabled type is both hidden
+    // from the inbox and dropped from the always-on downloading routes. Defaults to everything on.
+    val enabledChatFeeds: MutableStateFlow<Set<ChatFeedType>> = MutableStateFlow(ChatFeedType.ALL),
     // The per-situation toggles applied under RelayAuthPolicy.CUSTOM.
     val relayAuthTrustMyRelaysAndVenues: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val relayAuthTrustReadFollows: MutableStateFlow<Boolean> = MutableStateFlow(true),
@@ -342,6 +346,20 @@ class AccountSettings(
     fun updateConcordViewMode(mode: ConcordViewMode) {
         if (concordViewMode.value != mode) {
             concordViewMode.tryEmit(mode)
+            saveAccountSettings()
+        }
+    }
+
+    fun isChatFeedEnabled(type: ChatFeedType): Boolean = type in enabledChatFeeds.value
+
+    fun setChatFeedEnabled(
+        type: ChatFeedType,
+        enabled: Boolean,
+    ) {
+        val current = enabledChatFeeds.value
+        val next = if (enabled) current + type else current - type
+        if (next != current) {
+            enabledChatFeeds.tryEmit(next)
             saveAccountSettings()
         }
     }

@@ -22,12 +22,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordPlaneSub
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import kotlinx.coroutines.Job
 
 /** One screen's request to keep the user's joined Concord Channels live. */
 class ConcordChannelQueryState(
@@ -69,6 +73,7 @@ class ConcordChannelSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val account = key.account
+        if (!account.settings.isChatFeedEnabled(ChatFeedType.CONCORD)) return null
         val entries = account.concordChannelList.liveCommunities.value
         if (entries.isEmpty()) return null
 
@@ -96,4 +101,21 @@ class ConcordChannelSubAssembler(
     }
 
     override fun id(key: ConcordChannelQueryState) = key.account
+
+    private val toggleJobs = mutableMapOf<Account, Job>()
+
+    override fun newSub(key: ConcordChannelQueryState): Subscription {
+        toggleJobs.remove(key.account)?.cancel()
+        toggleJobs[key.account] =
+            key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.CONCORD) { invalidateFilters() }
+        return super.newSub(key)
+    }
+
+    override fun endSub(
+        key: Account,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        toggleJobs.remove(key)?.cancel()
+    }
 }

@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
@@ -34,6 +37,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import kotlinx.coroutines.Job
 
 /** One screen's request to keep the roster of the user's joined groups fresh. */
 class RelayGroupMyJoinedGroupsQueryState(
@@ -106,6 +110,7 @@ class RelayGroupMyJoinedGroupsSubAssembler(
         key: RelayGroupMyJoinedGroupsQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
+        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP29)) return null
         val joined = key.account.relayGroupList.liveRelayGroupList.value
         if (joined.isEmpty()) return null
 
@@ -149,4 +154,21 @@ class RelayGroupMyJoinedGroupsSubAssembler(
     }
 
     override fun id(key: RelayGroupMyJoinedGroupsQueryState) = key.account
+
+    private val toggleJobs = mutableMapOf<Account, Job>()
+
+    override fun newSub(key: RelayGroupMyJoinedGroupsQueryState): Subscription {
+        toggleJobs.remove(key.account)?.cancel()
+        toggleJobs[key.account] =
+            key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP29) { invalidateFilters() }
+        return super.newSub(key)
+    }
+
+    override fun endSub(
+        key: Account,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        toggleJobs.remove(key)?.cancel()
+    }
 }

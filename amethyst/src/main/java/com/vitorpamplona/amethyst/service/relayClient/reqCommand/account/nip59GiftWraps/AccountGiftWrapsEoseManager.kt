@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
@@ -27,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -63,7 +65,7 @@ class AccountGiftWrapsEoseManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        if (!key.account.isWriteable()) {
+        if (!key.account.isWriteable() || !key.account.settings.isChatFeedEnabled(ChatFeedType.NIP17)) {
             windowLoad.setExpectedRelays(emptySet())
             return emptyList()
         }
@@ -90,6 +92,7 @@ class AccountGiftWrapsEoseManager(
                     key.account.dmRelays.flow
                         .collectLatest { invalidateFilters() }
                 },
+                key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP17) { invalidateFilters() },
             )
 
         return requestNewSubscription(

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.model.Account
@@ -66,6 +67,7 @@ class ChatroomListNip04HistorySubAssembler(
     ): List<RelayBasedFilter>? {
         val user = user(key)
         if (!key.account.isWriteable()) return emptyList()
+        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP04)) return emptyList()
         val homeRelays = key.account.homeRelays.flow.value
         val dmRelays = key.account.dmRelays.flow.value
         val armed = pager.armedRelays((homeRelays + dmRelays).toSet())

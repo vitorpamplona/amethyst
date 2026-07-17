@@ -2246,7 +2246,25 @@
     <string name="relay_group_server_label">Relay groups</string>
     <string name="relay_groups_button">Groups</string>
     <string name="messages_settings">Messages</string>
-    <string name="messages_settings_search_keywords" translatable="false">messages, chats, groups, nip-29, relay, inline, dm</string>
+    <string name="messages_settings_search_keywords" translatable="false">messages, chats, groups, nip-29, relay, inline, dm, nip-04, nip-17, nip-28, concord, marmot, geohash, ephemeral, load</string>
+    <string name="messages_load_types_title">Conversations to load</string>
+    <string name="messages_load_types_desc">Pick which kinds of chats appear in your Messages inbox. Turning one off hides it here and stops downloading it from your relays.</string>
+    <string name="chat_type_nip17_title">Private messages</string>
+    <string name="chat_type_nip17_desc">End-to-end encrypted, gift-wrapped direct messages (NIP-17).</string>
+    <string name="chat_type_nip04_title">Legacy DMs</string>
+    <string name="chat_type_nip04_desc">Older, less-private encrypted direct messages (NIP-04).</string>
+    <string name="chat_type_nip28_title">Public channels</string>
+    <string name="chat_type_nip28_desc">Open, public chat rooms anyone can read and join (NIP-28).</string>
+    <string name="chat_type_nip29_title">Relay groups</string>
+    <string name="chat_type_nip29_desc">Relay-managed group chats with rosters and moderation (NIP-29).</string>
+    <string name="chat_type_marmot_title">Encrypted groups</string>
+    <string name="chat_type_marmot_desc">MLS end-to-end encrypted group chats (Marmot).</string>
+    <string name="chat_type_concord_title">Concord communities</string>
+    <string name="chat_type_concord_desc">Encrypted communities with multiple channels (Concord).</string>
+    <string name="chat_type_geohash_title">Location chats</string>
+    <string name="chat_type_geohash_desc">Public geohash-scoped chat for a place (Geolocation).</string>
+    <string name="chat_type_ephemeral_title">Ephemeral chats</string>
+    <string name="chat_type_ephemeral_desc">Lightweight, relay-scoped rooms that don\'t persist history.</string>
     <string name="relay_group_create_title">Create a group</string>
     <string name="relay_group_relay_no_nip29">This relay doesn\'t advertise support for NIP-29 relay groups. A group created here won\'t work — its name, members and messages won\'t be managed by the relay. Pick a relay that supports relay-based groups.</string>
     <string name="relay_group_create_name">Group name</string>
