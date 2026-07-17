@@ -25,16 +25,18 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -50,7 +52,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +82,7 @@ import com.vitorpamplona.amethyst.model.FontFamilyType
 import com.vitorpamplona.amethyst.model.FontSizeType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -196,6 +201,9 @@ private fun <T> SegmentedChoiceTile(
                     selected = option == selected,
                     onClick = { onSelect(option) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    // Drop the default check icon: the fill already signals selection, and the icon
+                    // steals ~24dp that the label needs in a 3–4-up row.
+                    icon = {},
                 ) {
                     Text(
                         text = stringRes(labelRes(option)),
@@ -245,6 +253,33 @@ private fun ThemeTile(sharedPrefs: UiSettingsFlow) {
     )
 }
 
+// Compact labels for the connectivity segmented rows — "Unmetered WiFi" does not fit a 3-up
+// segment, so it collapses to "Wi-Fi"; the others are already short.
+@StringRes
+private fun ConnectivityType.shortLabelRes(): Int =
+    when (this) {
+        ConnectivityType.ALWAYS -> R.string.connectivity_type_always
+        ConnectivityType.WIFI_ONLY -> R.string.connectivity_type_unmetered_wifi_only_short
+        ConnectivityType.NEVER -> R.string.connectivity_type_never
+    }
+
+@StringRes
+private fun FontFamilyType.shortLabelRes(): Int =
+    when (this) {
+        FontFamilyType.SYSTEM -> R.string.font_family_system_short
+        FontFamilyType.SANS_SERIF -> R.string.font_family_sans_serif_short
+        FontFamilyType.SERIF -> R.string.font_family_serif_short
+        FontFamilyType.MONOSPACE -> R.string.font_family_monospace_short
+    }
+
+@StringRes
+private fun FeatureSetType.shortLabelRes(): Int =
+    when (this) {
+        FeatureSetType.COMPLETE -> R.string.ui_feature_set_type_complete_short
+        FeatureSetType.SIMPLIFIED -> R.string.ui_feature_set_type_simplified_short
+        FeatureSetType.PERFORMANCE -> R.string.ui_feature_set_type_performance_short
+    }
+
 @Composable
 private fun FontFamilyTile(sharedPrefs: UiSettingsFlow) {
     val fontFamily by sharedPrefs.fontFamily.collectAsState()
@@ -253,7 +288,7 @@ private fun FontFamilyTile(sharedPrefs: UiSettingsFlow) {
         title = R.string.font_family,
         description = R.string.font_family_description,
         options = FontFamilyType.entries,
-        labelRes = { it.resourceId },
+        labelRes = { it.shortLabelRes() },
         selected = fontFamily,
         onSelect = { sharedPrefs.fontFamily.tryEmit(it) },
         // Draw each option's name in the very typeface it selects.
@@ -272,8 +307,9 @@ private fun FontSizeTile(sharedPrefs: UiSettingsFlow) {
         labelRes = { it.resourceId },
         selected = fontSize,
         onSelect = { sharedPrefs.fontSize.tryEmit(it) },
-        // Scale each option's label to the size it selects, so Small looks small and Huge huge.
-        optionTextStyle = { LocalTextStyle.current.copy(fontSize = 15.sp * it.scale) },
+        // Scale each label to preview its size — Small looks small, Huge looks huge. A small 13sp
+        // base keeps the spread gentle (~11–17sp) so the row stays tidy instead of lurching taller.
+        optionTextStyle = { LocalTextStyle.current.copy(fontSize = 13.sp * it.scale) },
     )
 }
 
@@ -285,7 +321,7 @@ private fun UiModeTile(sharedPrefs: UiSettingsFlow) {
         title = R.string.ui_style,
         description = R.string.ui_style_description,
         options = FeatureSetType.entries,
-        labelRes = { it.resourceId },
+        labelRes = { it.shortLabelRes() },
         selected = featureSet,
         onSelect = { sharedPrefs.featureSet.tryEmit(it) },
     )
@@ -299,7 +335,7 @@ private fun ImagePreviewTile(sharedPrefs: UiSettingsFlow) {
         title = R.string.automatically_load_images_gifs,
         description = R.string.automatically_load_images_gifs_description,
         options = ConnectivityType.entries,
-        labelRes = { it.resourceId },
+        labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowImages.tryEmit(it) },
     )
@@ -313,7 +349,7 @@ private fun VideoPlaybackTile(sharedPrefs: UiSettingsFlow) {
         title = R.string.automatically_play_videos,
         description = R.string.automatically_play_videos_description,
         options = ConnectivityType.entries,
-        labelRes = { it.resourceId },
+        labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyStartPlayback.tryEmit(it) },
     )
@@ -327,7 +363,7 @@ private fun UrlPreviewTile(sharedPrefs: UiSettingsFlow) {
         title = R.string.automatically_show_url_preview,
         description = R.string.automatically_show_url_preview_description,
         options = ConnectivityType.entries,
-        labelRes = { it.resourceId },
+        labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowUrlPreview.tryEmit(it) },
     )
@@ -341,7 +377,7 @@ private fun ProfilePictureTile(sharedPrefs: UiSettingsFlow) {
         title = R.string.automatically_show_profile_picture,
         description = R.string.automatically_show_profile_picture_description,
         options = ConnectivityType.entries,
-        labelRes = { it.resourceId },
+        labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowProfilePictures.tryEmit(it) },
     )
@@ -367,6 +403,7 @@ private fun ImmersiveScrollingTile(sharedPrefs: UiSettingsFlow) {
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AccentColorTile(sharedPrefs: UiSettingsFlow) {
     val accent by sharedPrefs.accentColor.collectAsState()
@@ -377,9 +414,12 @@ private fun AccentColorTile(sharedPrefs: UiSettingsFlow) {
         title = stringRes(R.string.accent_color),
         description = stringRes(R.string.accent_color_description),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        // FlowRow so every swatch stays visible (wraps to a second line on narrow screens) instead
+        // of scrolling the last ones off-edge with no affordance.
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             AccentColorType.entries.forEach { option ->
                 AccentColorSwatch(
@@ -393,6 +433,9 @@ private fun AccentColorTile(sharedPrefs: UiSettingsFlow) {
     }
 }
 
+// Language can't be a segmented row (50+ locales), so it reads as a disclosure row — icon + title +
+// the current language on the right + a chevron — and tapping anywhere opens the picker dialog. That
+// matches the app's other "opens a picker" rows instead of leaving a lone text-field dropdown here.
 @Composable
 private fun LanguageTile(sharedPrefs: UiSettingsFlow) {
     val context = LocalContext.current
@@ -402,19 +445,42 @@ private fun LanguageTile(sharedPrefs: UiSettingsFlow) {
 
     val language by sharedPrefs.preferredLanguage.collectAsState()
     val languageIndex = getLanguageIndex(languageEntries, language)
+    val currentLabel = languageList.getOrNull(languageIndex)?.title ?: ""
 
-    SettingsBlockTile(
+    var showPicker by remember { mutableStateOf(false) }
+
+    SettingsControlRow(
         icon = MaterialSymbols.Language,
         title = stringRes(R.string.language),
         description = stringRes(R.string.language_description),
+        onClick = { showPicker = true },
     ) {
-        TextSpinner(
-            label = "",
-            placeholder = languageList.getOrNull(languageIndex)?.title ?: "",
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = currentLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 140.dp),
+            )
+            Icon(
+                symbol = MaterialSymbols.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp).size(20.dp),
+            )
+        }
+    }
+
+    if (showPicker) {
+        SpinnerSelectionDialog(
             options = languageList,
-            onSelect = { sharedPrefs.preferredLanguage.tryEmit(languageEntries[languageList[it].title]) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+            onDismiss = { showPicker = false },
+        ) { index ->
+            showPicker = false
+            sharedPrefs.preferredLanguage.tryEmit(languageEntries[languageList[index].title])
+        }
     }
 }
 
