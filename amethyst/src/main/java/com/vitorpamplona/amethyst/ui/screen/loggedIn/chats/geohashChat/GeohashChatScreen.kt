@@ -87,6 +87,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.E
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
@@ -142,6 +144,13 @@ private fun GeohashChatRoom(
     val newMessageModel: ChannelNewMessageViewModel = viewModel(key = "geohash:${geohash}NewMessage")
     newMessageModel.init(accountViewModel)
     newMessageModel.load(channel)
+
+    // The nickname lives on-device (the throwaway key has no kind-0 profile, and kind-20000 messages
+    // are ephemeral), so restore the account's saved global handle into the composer on open.
+    LaunchedEffect(newMessageModel) {
+        val saved = withContext(Dispatchers.IO) { accountViewModel.account.geohashIdentity.nickname() }
+        if (saved.isNotBlank()) newMessageModel.geohashNickname = saved
+    }
 
     // Teleport is a fact, not a per-message choice: the app decides whether the sender is physically
     // in this cell. When the device's location is known we compare it to the channel cell (objective);
@@ -277,7 +286,7 @@ private fun GeohashIdentityAvatar(
 ) {
     var showNickname by remember { mutableStateOf(false) }
     if (showNickname) {
-        GeohashNicknameDialog(model) { showNickname = false }
+        GeohashNicknameDialog(model, accountViewModel) { showNickname = false }
     }
 
     val postAsSelf = model.geohashPostAsSelf
@@ -342,6 +351,7 @@ private fun GeohashIdentityAvatar(
 @Composable
 private fun GeohashNicknameDialog(
     model: ChannelNewMessageViewModel,
+    accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
     var text by remember { mutableStateOf(model.geohashNickname) }
@@ -349,7 +359,10 @@ private fun GeohashNicknameDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
-                model.geohashNickname = text.trim()
+                val trimmed = text.trim()
+                model.geohashNickname = trimmed
+                // Persist the global handle so it survives app restarts (see GeohashChatIdentityState).
+                accountViewModel.account.geohashIdentity.setNickname(trimmed)
                 onDismiss()
             }) { Text("Save") }
         },

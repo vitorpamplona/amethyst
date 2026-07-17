@@ -58,6 +58,34 @@ class GeohashChatIdentityState(
 
     @Volatile private var cachedDeviceSeed: ByteArray? = null
 
+    @Volatile private var cachedNickname: String? = null
+
+    /**
+     * The user's display handle for location chats: a single global nickname, persisted per account.
+     * Bitchat carries this as the per-message `["n", …]` tag rather than a kind-0 profile, and kind-20000
+     * messages are ephemeral (relays needn't store them), so the only durable home for it is the device.
+     * Kept in this account's encrypted storage, so it survives restarts and switches with the account.
+     * Empty string means "no nickname set". Reads touch disk on first call — invoke off the main thread.
+     */
+    fun nickname(): String {
+        cachedNickname?.let { return it }
+        synchronized(lock) {
+            cachedNickname?.let { return it }
+            val value = Amethyst.instance.encryptedStorage(signer.pubKey).getString(PREF_NICKNAME, "") ?: ""
+            cachedNickname = value
+            return value
+        }
+    }
+
+    /** Persists the global location-chat nickname (trimmed) for this account. */
+    fun setNickname(value: String) {
+        val trimmed = value.trim()
+        synchronized(lock) {
+            cachedNickname = trimmed
+            Amethyst.instance.encryptedStorage(signer.pubKey).edit { putString(PREF_NICKNAME, trimmed) }
+        }
+    }
+
     /** The Nostr key pair to use inside [geohash]. Derivation is cheap but cached; call off the main thread. */
     fun keyPair(geohash: String): KeyPair =
         synchronized(lock) {
@@ -90,5 +118,6 @@ class GeohashChatIdentityState(
 
     companion object {
         private const val PREF_KEY = "geohash_chat_device_seed"
+        private const val PREF_NICKNAME = "geohash_chat_nickname"
     }
 }
