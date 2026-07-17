@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -34,11 +34,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_play_soundbite
 import com.vitorpamplona.quartz.podcasts.PodcastSoundbite
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The episode's Podcasting-2.0 `podcast:soundbite` highlight clips as "jump to the good part" chips.
@@ -71,7 +72,7 @@ fun PodcastSoundbites(
                 leadingIcon = {
                     Icon(
                         symbol = MaterialSymbols.PlayArrow,
-                        contentDescription = stringRes(R.string.podcast_play_soundbite),
+                        contentDescription = stringResource(Res.string.podcast_play_soundbite),
                         modifier = Modifier.size(AssistChipDefaults.IconSize),
                         tint = MaterialTheme.colorScheme.primary,
                     )

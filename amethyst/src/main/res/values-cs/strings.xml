@@ -1225,7 +1225,6 @@
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
     <string name="podcast_hosts_and_guests">Moderátoři a hosté</string>
-    <string name="podcast_play_soundbite">Přehrát ukázku</string>
     <string name="podcast_top_supporters">Nejlepší podporovatelé</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d kapitola</item>

@@ -1187,7 +1187,6 @@
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
     <string name="podcast_hosts_and_guests">Värdar &amp; gäster</string>
-    <string name="podcast_play_soundbite">Spela höjdpunkt</string>
     <string name="podcast_top_supporters">Främsta supportrar</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d kapitel</item>

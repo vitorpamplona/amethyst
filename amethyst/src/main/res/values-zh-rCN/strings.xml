@@ -1088,7 +1088,6 @@
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">对此的Zaps 在以下对象间分割：</string>
     <string name="podcast_hosts_and_guests">主播 &amp; 客串</string>
-    <string name="podcast_play_soundbite">播放精彩片段</string>
     <string name="podcast_top_supporters">顶级支持者</string>
     <plurals name="podcast_chapters_count">
         <item quantity="other">%1$d 章</item>

@@ -18,4 +18,5 @@
     <string name="ps1_save_title">PS1 内存卡保存</string>
     <string name="ps1_save_block">块 %1$d</string>
     <string name="ps1_save_empty_slot">空槽位</string>
+    <string name="podcast_play_soundbite">播放精彩片段</string>
 </resources>

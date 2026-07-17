@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.types
+package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
  * episode number, …). Shared by the show and episode renderers so they read as one design.
  */
 @Composable
-internal fun PodcastBadge(
+fun PodcastBadge(
     label: String,
     symbol: MaterialSymbol?,
     container: Color,
@@ -79,7 +79,7 @@ internal fun PodcastBadge(
 
 /** A clickable pill that opens an external resource (a website, a transcript, chapters, …). */
 @Composable
-internal fun PodcastLinkChip(
+fun PodcastLinkChip(
     label: String,
     symbol: MaterialSymbol,
     onClick: () -> Unit,

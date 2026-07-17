@@ -27,4 +27,5 @@
     <string name="ps1_save_title">Shrani na pomnilniško kartico PS1</string>
     <string name="ps1_save_block">%1$d blok</string>
     <string name="ps1_save_empty_slot">Prazen prostor</string>
+    <string name="podcast_play_soundbite">Predvajaj vrhunec</string>
 </resources>

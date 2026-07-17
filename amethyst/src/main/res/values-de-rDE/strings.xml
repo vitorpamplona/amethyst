@@ -1189,7 +1189,6 @@
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
     <string name="podcast_hosts_and_guests">Hosts &amp; Gäste</string>
-    <string name="podcast_play_soundbite">Highlight abspielen</string>
     <string name="podcast_top_supporters">Top-Unterstützer</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d Kapitel</item>

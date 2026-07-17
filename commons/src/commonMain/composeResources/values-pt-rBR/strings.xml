@@ -21,4 +21,5 @@
     <string name="ps1_save_title">Salvamento em cartão de memória PS1</string>
     <string name="ps1_save_block">bloco %1$d</string>
     <string name="ps1_save_empty_slot">Espaço vazio</string>
+    <string name="podcast_play_soundbite">Reproduzir destaque</string>
 </resources>

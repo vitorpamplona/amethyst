@@ -20,4 +20,5 @@
     </plurals>
     <string name="ps1_save_title">PS1-minneskortsparning</string>
     <string name="ps1_save_empty_slot">Tom plats</string>
+    <string name="podcast_play_soundbite">Spela höjdpunkt</string>
 </resources>

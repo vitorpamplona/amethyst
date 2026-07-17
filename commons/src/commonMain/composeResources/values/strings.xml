@@ -122,4 +122,5 @@
     <string name="ps1_save_title">PS1 memory card save</string>
     <string name="ps1_save_block">block %1$d</string>
     <string name="ps1_save_empty_slot">Empty slot</string>
+    <string name="podcast_play_soundbite">Play highlight</string>
 </resources>

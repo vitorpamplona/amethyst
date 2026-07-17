@@ -1102,7 +1102,6 @@
     <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
     <string name="podcast_hosts_and_guests">Házigazdák és vendégek</string>
-    <string name="podcast_play_soundbite">Kiemelés lejátszása</string>
     <string name="podcast_top_supporters">Legfőbb támogatók</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d. fejezet</item>
