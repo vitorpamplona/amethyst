@@ -38,4 +38,10 @@
     <string name="relay_monitor_ms">%1$d 毫秒</string>
     <string name="relay_discovery_accepted_kinds">接受的種類</string>
     <string name="relay_discovery_geohash">位置</string>
+    <string name="calendar_rsvp_going">出席</string>
+    <string name="calendar_rsvp_maybe">也許</string>
+    <string name="calendar_rsvp_not_going">無法出席</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">%1$d 個活動</item>
+    </plurals>
 </resources>

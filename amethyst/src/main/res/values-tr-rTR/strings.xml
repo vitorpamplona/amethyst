@@ -1980,14 +1980,7 @@
     <string name="calendar_collection_title">Başlık</string>
     <string name="calendar_collection_description">Açıklama</string>
     <string name="calendar_collection_invalid">Başlık zorunludur.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d etkinlik</item>
-        <item quantity="other">%1$d etkinlik</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Bu takvimde henüz etkinlik yok.</string>
-    <string name="calendar_rsvp_going">Katılıyorum</string>
-    <string name="calendar_rsvp_maybe">Belki</string>
-    <string name="calendar_rsvp_not_going">Katılamıyorum</string>
     <string name="calendar_rsvp_section">RSVP\'ler (%1$d)</string>
     <string name="calendar_rsvp_none">Henüz RSVP yok.</string>
     <string name="calendar_participants_section">Katılımcılar (%1$d)</string>

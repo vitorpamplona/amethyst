@@ -1976,14 +1976,7 @@
     <string name="calendar_collection_title">Sarlavha</string>
     <string name="calendar_collection_description">Tavsif</string>
     <string name="calendar_collection_invalid">Sarlavha talab qilinadi.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d tadbir</item>
-        <item quantity="other">%1$d tadbir</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Bu kalendarda hali hodisalar yo\'q.</string>
-    <string name="calendar_rsvp_going">Boraman</string>
-    <string name="calendar_rsvp_maybe">Ehtimol</string>
-    <string name="calendar_rsvp_not_going">Bora olmayman</string>
     <string name="calendar_rsvp_section">RSVPlar (%1$d)</string>
     <string name="calendar_rsvp_none">Hali RSVPlar yo\'q.</string>
     <string name="calendar_participants_section">Ishtirokchilar (%1$d)</string>

@@ -1973,14 +1973,7 @@
     <string name="calendar_collection_title">Kichwa</string>
     <string name="calendar_collection_description">Maelezo</string>
     <string name="calendar_collection_invalid">Kichwa kinahitajika.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">tukio %1$d</item>
-        <item quantity="other">matukio %1$d</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Hakuna matukio katika kalenda hii bado.</string>
-    <string name="calendar_rsvp_going">Naenda</string>
-    <string name="calendar_rsvp_maybe">Labda</string>
-    <string name="calendar_rsvp_not_going">Siwezi kwenda</string>
     <string name="calendar_rsvp_none">Hakuna RSVPs bado.</string>
     <string name="calendar_participants_section">Washiriki (%1$d)</string>
     <string name="calendar_event_in_calendars">Katika kalenda (%1$d)</string>

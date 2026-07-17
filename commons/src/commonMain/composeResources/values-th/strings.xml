@@ -38,4 +38,10 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">ประเภทที่ยอมรับ</string>
     <string name="relay_discovery_geohash">ตำแหน่งที่ตั้ง</string>
+    <string name="calendar_rsvp_going">ไป</string>
+    <string name="calendar_rsvp_maybe">อาจไป</string>
+    <string name="calendar_rsvp_not_going">ไม่ได้</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">%1$d กิจกรรม</item>
+    </plurals>
 </resources>

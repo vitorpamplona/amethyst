@@ -39,4 +39,11 @@
     <string name="relay_monitor_supported_nips">NIPs Suportados</string>
     <string name="relay_discovery_accepted_kinds">Tipos Aceitos</string>
     <string name="relay_discovery_geohash">Localização</string>
+    <string name="calendar_rsvp_going">Vou</string>
+    <string name="calendar_rsvp_maybe">Talvez</string>
+    <string name="calendar_rsvp_not_going">Não vou</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d evento</item>
+        <item quantity="other">%1$d eventos</item>
+    </plurals>
 </resources>

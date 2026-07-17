@@ -38,4 +38,10 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Jenis yang Diterima</string>
     <string name="relay_discovery_geohash">Lokasi</string>
+    <string name="calendar_rsvp_going">Hadir</string>
+    <string name="calendar_rsvp_maybe">Mungkin</string>
+    <string name="calendar_rsvp_not_going">Tidak bisa hadir</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">%1$d acara</item>
+    </plurals>
 </resources>

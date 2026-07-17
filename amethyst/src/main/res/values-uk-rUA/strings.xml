@@ -2025,16 +2025,7 @@
     <string name="calendar_collection_title">Назва</string>
     <string name="calendar_collection_description">Опис</string>
     <string name="calendar_collection_invalid">Назва є обов\'язковою.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d подія</item>
-        <item quantity="few">%1$d події</item>
-        <item quantity="many">%1$d подій</item>
-        <item quantity="other">%1$d подій</item>
-    </plurals>
     <string name="calendar_collection_empty_members">У цьому календарі ще немає подій.</string>
-    <string name="calendar_rsvp_going">Піду</string>
-    <string name="calendar_rsvp_maybe">Можливо</string>
-    <string name="calendar_rsvp_not_going">Не зможу</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Відповідей ще немає.</string>
     <string name="calendar_participants_section">Учасники (%1$d)</string>

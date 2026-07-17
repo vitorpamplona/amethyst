@@ -53,4 +53,11 @@
     <string name="relay_monitor_ms">%1$d सहस्रतमसेकण्ड</string>
     <string name="relay_discovery_accepted_kinds">स्वीकृत प्रकार</string>
     <string name="relay_discovery_geohash">स्थान</string>
+    <string name="calendar_rsvp_going">जाना निश्चित</string>
+    <string name="calendar_rsvp_maybe">सम्भाव्य</string>
+    <string name="calendar_rsvp_not_going">नहीं जा सकते</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d घटना</item>
+        <item quantity="other">%1$d घटनाएँ</item>
+    </plurals>
 </resources>

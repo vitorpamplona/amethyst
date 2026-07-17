@@ -1992,14 +1992,7 @@
     <string name="calendar_collection_title">عنوان</string>
     <string name="calendar_collection_description">توضیحات</string>
     <string name="calendar_collection_invalid">عنوان الزامی است.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d رویداد</item>
-        <item quantity="other">%1$d رویداد</item>
-    </plurals>
     <string name="calendar_collection_empty_members">هنوز هیچ رویدادی در این تقویم نیست.</string>
-    <string name="calendar_rsvp_going">می‌آیم</string>
-    <string name="calendar_rsvp_maybe">شاید</string>
-    <string name="calendar_rsvp_not_going">نمی‌توانم بیایم</string>
     <string name="calendar_rsvp_section">پاسخ‌ها (%1$d)</string>
     <string name="calendar_rsvp_none">هنوز پاسخی نیست.</string>
     <string name="calendar_participants_section">شرکت‌کنندگان (%1$d)</string>

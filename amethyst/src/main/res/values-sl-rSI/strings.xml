@@ -2464,16 +2464,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="calendar_collection_title">Naslov</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Naslov je zahtevan.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d dogodek</item>
-        <item quantity="two">%1$d dogodka</item>
-        <item quantity="few">%1$d dogodki</item>
-        <item quantity="other">%1$d dogodkov</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Ta koledar je še brez dogodkov.</string>
-    <string name="calendar_rsvp_going">Grem</string>
-    <string name="calendar_rsvp_maybe">Mogoče</string>
-    <string name="calendar_rsvp_not_going">Ne morem</string>
     <string name="calendar_rsvp_section">Odzivi (%1$d)</string>
     <string name="calendar_rsvp_none">Še ni odzivov</string>
     <string name="calendar_participants_section">Sodelujoči (%1$d)</string>

@@ -41,4 +41,12 @@
     <string name="relay_monitor_supported_nips">Podržani NIPs</string>
     <string name="relay_discovery_accepted_kinds">Prihvaćene vrste</string>
     <string name="relay_discovery_geohash">Lokacija</string>
+    <string name="calendar_rsvp_going">Idem</string>
+    <string name="calendar_rsvp_maybe">Možda</string>
+    <string name="calendar_rsvp_not_going">Ne mogu ići</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d događaj</item>
+        <item quantity="few">%1$d događaja</item>
+        <item quantity="other">%1$d događaja</item>
+    </plurals>
 </resources>

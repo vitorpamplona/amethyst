@@ -53,4 +53,11 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Elfogadott típusok</string>
     <string name="relay_discovery_geohash">Helyszín</string>
+    <string name="calendar_rsvp_going">Ott leszek</string>
+    <string name="calendar_rsvp_maybe">Talán</string>
+    <string name="calendar_rsvp_not_going">Nem leszek ott</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d esemény</item>
+        <item quantity="other">%1$d esemény</item>
+    </plurals>
 </resources>

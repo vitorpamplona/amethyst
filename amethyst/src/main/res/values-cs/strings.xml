@@ -2738,16 +2738,7 @@
     <string name="calendar_collection_title">Název</string>
     <string name="calendar_collection_description">Popis</string>
     <string name="calendar_collection_invalid">Název je povinný.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d událost</item>
-        <item quantity="few">%1$d události</item>
-        <item quantity="many">%1$d událostí</item>
-        <item quantity="other">%1$d událostí</item>
-    </plurals>
     <string name="calendar_collection_empty_members">V tomto kalendáři zatím nejsou žádné události.</string>
-    <string name="calendar_rsvp_going">Účastním se</string>
-    <string name="calendar_rsvp_maybe">Možná</string>
-    <string name="calendar_rsvp_not_going">Nemůžu</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Zatím žádné RSVP.</string>
     <string name="calendar_participants_section">Účastníci (%1$d)</string>

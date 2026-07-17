@@ -40,4 +40,11 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">ஏற்றுக்கொள்ளப்படும் வகைகள்</string>
     <string name="relay_discovery_geohash">இடம்</string>
+    <string name="calendar_rsvp_going">செல்கிறேன்</string>
+    <string name="calendar_rsvp_maybe">ஒருவேளை</string>
+    <string name="calendar_rsvp_not_going">செல்ல முடியாது</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d நிகழ்வு</item>
+        <item quantity="other">%1$d நிகழ்வுகள்</item>
+    </plurals>
 </resources>

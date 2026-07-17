@@ -40,4 +40,11 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Kabul Edilen Türler</string>
     <string name="relay_discovery_geohash">Konum</string>
+    <string name="calendar_rsvp_going">Katılıyorum</string>
+    <string name="calendar_rsvp_maybe">Belki</string>
+    <string name="calendar_rsvp_not_going">Katılamıyorum</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d etkinlik</item>
+        <item quantity="other">%1$d etkinlik</item>
+    </plurals>
 </resources>

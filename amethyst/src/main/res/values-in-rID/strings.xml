@@ -1925,13 +1925,7 @@ Seharusnya %3$s</string>
     <string name="calendar_collection_title">Judul</string>
     <string name="calendar_collection_description">Deskripsi</string>
     <string name="calendar_collection_invalid">Judul diperlukan.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d acara</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Belum ada acara dalam kalender ini.</string>
-    <string name="calendar_rsvp_going">Hadir</string>
-    <string name="calendar_rsvp_maybe">Mungkin</string>
-    <string name="calendar_rsvp_not_going">Tidak bisa hadir</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Belum ada RSVP.</string>
     <string name="calendar_participants_section">Peserta (%1$d)</string>

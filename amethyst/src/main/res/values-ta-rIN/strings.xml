@@ -1976,14 +1976,7 @@
     <string name="calendar_collection_title">தலைப்பு</string>
     <string name="calendar_collection_description">விளக்கம்</string>
     <string name="calendar_collection_invalid">ஒரு தலைப்பு தேவை.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d நிகழ்வு</item>
-        <item quantity="other">%1$d நிகழ்வுகள்</item>
-    </plurals>
     <string name="calendar_collection_empty_members">இந்த நாட்காட்டியில் இன்னும் நிகழ்வுகள் இல்லை.</string>
-    <string name="calendar_rsvp_going">செல்கிறேன்</string>
-    <string name="calendar_rsvp_maybe">ஒருவேளை</string>
-    <string name="calendar_rsvp_not_going">செல்ல முடியாது</string>
     <string name="calendar_rsvp_section">RSVP கள் (%1$d)</string>
     <string name="calendar_rsvp_none">இன்னும் RSVP கள் இல்லை.</string>
     <string name="calendar_participants_section">பங்கேற்பாளர்கள் (%1$d)</string>

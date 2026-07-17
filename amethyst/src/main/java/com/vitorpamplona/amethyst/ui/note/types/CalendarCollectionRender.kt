@@ -20,31 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.CalendarCollectionCard
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 
+/**
+ * Entry for a NIP-52 calendar collection: decodes the [Note] and renders the shared commons
+ * [CalendarCollectionCard]. Draws only from the event's own tags, so the entry keeps the
+ * dispatcher signature without touching the account or nav.
+ */
 @Composable
 fun RenderCalendarCollectionEvent(
     note: Note,
@@ -53,46 +40,5 @@ fun RenderCalendarCollectionEvent(
 ) {
     val event = note.event as? CalendarEvent ?: return
 
-    Column(MaterialTheme.colorScheme.replyModifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                symbol = MaterialSymbols.CalendarMonth,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(
-                text = event.title() ?: "—",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        if (event.content.isNotBlank()) {
-            Spacer(modifier = StdVertSpacer)
-            Text(
-                text = event.content,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        Spacer(modifier = StdVertSpacer)
-        val eventCount = event.calendarEventAddresses().size
-        Text(
-            text = pluralStringResource(R.plurals.calendar_collection_count, eventCount, eventCount),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 12.dp),
-        )
-    }
+    CalendarCollectionCard(event)
 }

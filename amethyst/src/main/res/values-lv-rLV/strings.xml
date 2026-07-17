@@ -1996,15 +1996,7 @@
     <string name="calendar_collection_title">Virsraksts</string>
     <string name="calendar_collection_description">Apraksts</string>
     <string name="calendar_collection_invalid">Ir nepieciešams nosaukums.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="zero">%1$d notikumu</item>
-        <item quantity="one">%1$d notikums</item>
-        <item quantity="other">%1$d notikumi</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Šajā kalendārā vēl nav notikumu.</string>
-    <string name="calendar_rsvp_going">Iešu</string>
-    <string name="calendar_rsvp_maybe">Varbūt</string>
-    <string name="calendar_rsvp_not_going">Nevarēšu ierasties</string>
     <string name="calendar_rsvp_section">Atbildes (%1$d)</string>
     <string name="calendar_rsvp_none">Vēl nav atbilžu.</string>
     <string name="calendar_participants_section">Dalībnieki (%1$d)</string>

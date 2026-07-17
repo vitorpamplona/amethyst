@@ -1959,14 +1959,7 @@
     <string name="calendar_collection_title">Título</string>
     <string name="calendar_collection_description">Descrição</string>
     <string name="calendar_collection_invalid">Um título é obrigatório.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventos</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Nenhum evento neste calendário ainda.</string>
-    <string name="calendar_rsvp_going">Vou</string>
-    <string name="calendar_rsvp_maybe">Talvez</string>
-    <string name="calendar_rsvp_not_going">Não vou</string>
     <string name="calendar_rsvp_section">Confirmações (%1$d)</string>
     <string name="calendar_rsvp_none">Sem RSVPs ainda.</string>
     <string name="calendar_participants_section">Participantes (%1$d)</string>

@@ -2020,14 +2020,7 @@
     <string name="calendar_collection_title">Título</string>
     <string name="calendar_collection_description">Descripción</string>
     <string name="calendar_collection_invalid">Se requiere un título.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventos</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Aún no hay eventos en este calendario.</string>
-    <string name="calendar_rsvp_going">Asistiré</string>
-    <string name="calendar_rsvp_maybe">Tal vez</string>
-    <string name="calendar_rsvp_not_going">No puedo ir</string>
     <string name="calendar_rsvp_section">Confirmaciones (%1$d)</string>
     <string name="calendar_rsvp_none">Sin RSVPs aún.</string>
     <string name="calendar_participants_section">Participantes (%1$d)</string>

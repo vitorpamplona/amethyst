@@ -39,4 +39,11 @@
     <string name="relay_monitor_supported_nips">NIPs Zinazosaidiwa</string>
     <string name="relay_discovery_accepted_kinds">Aina Zinazokubaliwa</string>
     <string name="relay_discovery_geohash">Eneo</string>
+    <string name="calendar_rsvp_going">Naenda</string>
+    <string name="calendar_rsvp_maybe">Labda</string>
+    <string name="calendar_rsvp_not_going">Siwezi kwenda</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">tukio %1$d</item>
+        <item quantity="other">matukio %1$d</item>
+    </plurals>
 </resources>

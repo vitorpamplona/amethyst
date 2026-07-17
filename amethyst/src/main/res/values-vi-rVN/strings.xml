@@ -1940,13 +1940,7 @@
     <string name="calendar_collection_title">Tiêu đề</string>
     <string name="calendar_collection_description">Mô tả</string>
     <string name="calendar_collection_invalid">Tiêu đề là bắt buộc.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d sự kiện</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Chưa có sự kiện nào trong lịch này.</string>
-    <string name="calendar_rsvp_going">Sẽ tham dự</string>
-    <string name="calendar_rsvp_maybe">Có thể</string>
-    <string name="calendar_rsvp_not_going">Không thể đến</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Chưa có RSVP nào.</string>
     <string name="calendar_participants_section">Người tham gia (%1$d)</string>

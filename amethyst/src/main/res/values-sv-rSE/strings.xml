@@ -2661,14 +2661,7 @@
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beskrivning</string>
     <string name="calendar_collection_invalid">En titel krävs.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d händelse</item>
-        <item quantity="other">%1$d händelser</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Inga händelser i denna kalender än.</string>
-    <string name="calendar_rsvp_going">Kommer</string>
-    <string name="calendar_rsvp_maybe">Kanske</string>
-    <string name="calendar_rsvp_not_going">Kommer inte</string>
     <string name="calendar_rsvp_section">OSA (%1$d)</string>
     <string name="calendar_rsvp_none">Inga OSA än.</string>
     <string name="calendar_participants_section">Deltagare (%1$d)</string>

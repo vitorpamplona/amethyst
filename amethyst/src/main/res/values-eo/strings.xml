@@ -1868,9 +1868,6 @@
 <string name="calendar_collection_description">Priskribo</string>
 <string name="calendar_collection_invalid">Titolo estas postulata.</string>
 <string name="calendar_collection_empty_members">Ankoraŭ neniuj eventoj en ĉi tiu kalendaro.</string>
-<string name="calendar_rsvp_going">Iras</string>
-<string name="calendar_rsvp_maybe">Eble</string>
-<string name="calendar_rsvp_not_going">Ne povas iri</string>
 <string name="calendar_rsvp_section">RSVP-oj (%1$d)</string>
 <string name="calendar_rsvp_none">Ankoraŭ neniuj RSVP-oj.</string>
 <string name="calendar_participants_section">Partoprenantoj (%1$d)</string>
@@ -2971,10 +2968,6 @@
 <plurals name="calendar_day_a11y_events">
         <item quantity="one">%1$s, %2$d evento</item>
         <item quantity="other">%1$s, %2$d eventoj</item>
-    </plurals>
-<plurals name="calendar_collection_count">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventoj</item>
     </plurals>
 <plurals name="calendar_reminder_body">
         <item quantity="one">Komenciĝas post %1$d minuto</item>

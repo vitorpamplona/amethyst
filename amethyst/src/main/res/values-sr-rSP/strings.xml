@@ -1986,15 +1986,7 @@
     <string name="calendar_collection_title">Naslov</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Naslov je obavezan.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d događaj</item>
-        <item quantity="few">%1$d događaja</item>
-        <item quantity="other">%1$d događaja</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Još nema događaja u ovom kalendaru.</string>
-    <string name="calendar_rsvp_going">Idem</string>
-    <string name="calendar_rsvp_maybe">Možda</string>
-    <string name="calendar_rsvp_not_going">Ne mogu ići</string>
     <string name="calendar_rsvp_section">RSVP-ovi (%1$d)</string>
     <string name="calendar_rsvp_none">Još nema RSVP-ova.</string>
     <string name="calendar_participants_section">Učesnici (%1$d)</string>

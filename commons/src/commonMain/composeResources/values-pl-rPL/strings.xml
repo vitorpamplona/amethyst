@@ -58,4 +58,13 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Dopuszczalne typy</string>
     <string name="relay_discovery_geohash">Lokalizacja</string>
+    <string name="calendar_rsvp_going">Będę</string>
+    <string name="calendar_rsvp_maybe">Może</string>
+    <string name="calendar_rsvp_not_going">Nie mogę iść</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d wydarzenie</item>
+        <item quantity="few">%1$d wydarzeń</item>
+        <item quantity="many">%1$d wydarzeń</item>
+        <item quantity="other">%1$d wydarzeń</item>
+    </plurals>
 </resources>

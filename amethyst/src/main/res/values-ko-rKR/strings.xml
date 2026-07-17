@@ -1950,13 +1950,7 @@
     <string name="calendar_collection_title">제목</string>
     <string name="calendar_collection_description">설명</string>
     <string name="calendar_collection_invalid">제목을 입력해야 합니다.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d개 이벤트</item>
-    </plurals>
     <string name="calendar_collection_empty_members">이 캘린더에 아직 이벤트가 없습니다.</string>
-    <string name="calendar_rsvp_going">참석</string>
-    <string name="calendar_rsvp_maybe">미정</string>
-    <string name="calendar_rsvp_not_going">불참</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">아직 RSVP가 없습니다.</string>
     <string name="calendar_participants_section">참가자 (%1$d)</string>

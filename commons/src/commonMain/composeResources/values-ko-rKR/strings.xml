@@ -37,4 +37,10 @@
     <string name="relay_monitor_supported_nips">지원되는 NIP</string>
     <string name="relay_discovery_accepted_kinds">허용된 종류</string>
     <string name="relay_discovery_geohash">위치</string>
+    <string name="calendar_rsvp_going">참석</string>
+    <string name="calendar_rsvp_maybe">미정</string>
+    <string name="calendar_rsvp_not_going">불참</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">%1$d개 이벤트</item>
+    </plurals>
 </resources>

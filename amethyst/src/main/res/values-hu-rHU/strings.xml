@@ -2548,14 +2548,7 @@
     <string name="calendar_collection_title">Cím</string>
     <string name="calendar_collection_description">Leírás</string>
     <string name="calendar_collection_invalid">A cím megadása kötelező.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d esemény</item>
-        <item quantity="other">%1$d esemény</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Ebben a naptárban még nincsenek események.</string>
-    <string name="calendar_rsvp_going">Ott leszek</string>
-    <string name="calendar_rsvp_maybe">Talán</string>
-    <string name="calendar_rsvp_not_going">Nem leszek ott</string>
     <string name="calendar_rsvp_section">Visszajelzések (%1$d)</string>
     <string name="calendar_rsvp_none">Még nincsenek visszajelzések.</string>
     <string name="calendar_participants_section">Résztvevők (%1$d)</string>

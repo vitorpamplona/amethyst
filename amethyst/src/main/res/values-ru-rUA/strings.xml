@@ -2014,16 +2014,7 @@
     <string name="calendar_collection_title">Название</string>
     <string name="calendar_collection_description">Описание</string>
     <string name="calendar_collection_invalid">Необходимо указать название.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d событие</item>
-        <item quantity="few">%1$d события</item>
-        <item quantity="many">%1$d событий</item>
-        <item quantity="other">%1$d события</item>
-    </plurals>
     <string name="calendar_collection_empty_members">В этом календаре пока нет событий.</string>
-    <string name="calendar_rsvp_going">Пойду</string>
-    <string name="calendar_rsvp_maybe">Возможно</string>
-    <string name="calendar_rsvp_not_going">Не смогу</string>
     <string name="calendar_rsvp_section">Ответы (%1$d)</string>
     <string name="calendar_rsvp_none">Ответов пока нет.</string>
     <string name="calendar_participants_section">Участники (%1$d)</string>

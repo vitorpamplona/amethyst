@@ -2576,14 +2576,7 @@
     <string name="calendar_collection_title">शीर्षक</string>
     <string name="calendar_collection_description">विवरण</string>
     <string name="calendar_collection_invalid">शीर्षक अनिवार्य।</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d घटना</item>
-        <item quantity="other">%1$d घटनाएँ</item>
-    </plurals>
     <string name="calendar_collection_empty_members">इस दिनदर्शिका में कोई घटनाएँ नहीं अब तक।</string>
-    <string name="calendar_rsvp_going">जाना निश्चित</string>
-    <string name="calendar_rsvp_maybe">सम्भाव्य</string>
-    <string name="calendar_rsvp_not_going">नहीं जा सकते</string>
     <string name="calendar_rsvp_section">शीघ्रप्रत्युत्तर (%1$d)</string>
     <string name="calendar_rsvp_none">कोई शीघ्रप्रत्युत्तर नहीं अब तक।</string>
     <string name="calendar_participants_section">सहभागी (%1$d)</string>

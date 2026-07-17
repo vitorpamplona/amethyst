@@ -1959,13 +1959,7 @@
     <string name="calendar_collection_title">タイトル</string>
     <string name="calendar_collection_description">説明</string>
     <string name="calendar_collection_invalid">タイトルは必須です。</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$dイベント</item>
-    </plurals>
     <string name="calendar_collection_empty_members">このカレンダーにはまだイベントがありません。</string>
-    <string name="calendar_rsvp_going">参加する</string>
-    <string name="calendar_rsvp_maybe">未定</string>
-    <string name="calendar_rsvp_not_going">参加できない</string>
     <string name="calendar_rsvp_section">RSVP（%1$d件）</string>
     <string name="calendar_rsvp_none">まだRSVPがありません。</string>
     <string name="calendar_participants_section">参加者（%1$d人）</string>

@@ -1938,13 +1938,7 @@
     <string name="calendar_collection_title">ชื่อเรื่อง</string>
     <string name="calendar_collection_description">คำอธิบาย</string>
     <string name="calendar_collection_invalid">ต้องระบุชื่อเรื่อง</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d กิจกรรม</item>
-    </plurals>
     <string name="calendar_collection_empty_members">ยังไม่มีกิจกรรมในปฏิทินนี้</string>
-    <string name="calendar_rsvp_going">ไป</string>
-    <string name="calendar_rsvp_maybe">อาจไป</string>
-    <string name="calendar_rsvp_not_going">ไม่ได้</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">ยังไม่มี RSVP</string>
     <string name="calendar_participants_section">ผู้เข้าร่วม (%1$d)</string>

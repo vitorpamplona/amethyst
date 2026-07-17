@@ -1944,14 +1944,7 @@
     <string name="calendar_collection_title">Titolo</string>
     <string name="calendar_collection_description">Descrizione</string>
     <string name="calendar_collection_invalid">È necessario un titolo.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventi</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Nessun evento in questo calendario ancora.</string>
-    <string name="calendar_rsvp_going">Partecipo</string>
-    <string name="calendar_rsvp_maybe">Forse</string>
-    <string name="calendar_rsvp_not_going">Non posso</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">Nessun RSVP ancora.</string>
     <string name="calendar_participants_section">Partecipanti (%1$d)</string>

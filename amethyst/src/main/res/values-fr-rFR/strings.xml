@@ -2205,14 +2205,7 @@
     <string name="calendar_collection_title">Titre</string>
     <string name="calendar_collection_description">Description</string>
     <string name="calendar_collection_invalid">Un titre est requis.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d événement</item>
-        <item quantity="other">%1$d événements</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Aucun événement dans ce calendrier pour l\'instant.</string>
-    <string name="calendar_rsvp_going">Présent</string>
-    <string name="calendar_rsvp_maybe">Peut-être</string>
-    <string name="calendar_rsvp_not_going">Absent</string>
     <string name="calendar_rsvp_none">Aucun RSVP pour l\'instant.</string>
     <string name="calendar_participants_section">Participants (%1$d)</string>
     <string name="calendar_event_in_calendars">Dans les calendriers (%1$d)</string>

@@ -37,4 +37,10 @@
     <string name="relay_monitor_supported_nips">NIP được hỗ trợ</string>
     <string name="relay_discovery_accepted_kinds">Loại được chấp nhận</string>
     <string name="relay_discovery_geohash">Vị trí</string>
+    <string name="calendar_rsvp_going">Sẽ tham dự</string>
+    <string name="calendar_rsvp_maybe">Có thể</string>
+    <string name="calendar_rsvp_not_going">Không thể đến</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">%1$d sự kiện</item>
+    </plurals>
 </resources>

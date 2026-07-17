@@ -1969,14 +1969,7 @@
     <string name="calendar_collection_title">Τίτλος</string>
     <string name="calendar_collection_description">Περιγραφή</string>
     <string name="calendar_collection_invalid">Απαιτείται τίτλος.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d συμβάν</item>
-        <item quantity="other">%1$d συμβάντα</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Δεν υπάρχουν συμβάντα σε αυτό το ημερολόγιο ακόμα.</string>
-    <string name="calendar_rsvp_going">Πηγαίνω</string>
-    <string name="calendar_rsvp_maybe">Ίσως</string>
-    <string name="calendar_rsvp_not_going">Δεν μπορώ να πάω</string>
     <string name="calendar_rsvp_none">Δεν υπάρχουν RSVPs ακόμα.</string>
     <string name="calendar_participants_section">Συμμετέχοντες (%1$d)</string>
     <string name="calendar_event_in_calendars">Σε ημερολόγια (%1$d)</string>

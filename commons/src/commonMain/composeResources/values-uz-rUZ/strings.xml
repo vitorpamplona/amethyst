@@ -39,4 +39,11 @@
     <string name="relay_monitor_supported_nips">Qo\'llab-quvvatlanadigan NIPlar</string>
     <string name="relay_discovery_accepted_kinds">Qabul Qilingan Turlar</string>
     <string name="relay_discovery_geohash">Joylashuv</string>
+    <string name="calendar_rsvp_going">Boraman</string>
+    <string name="calendar_rsvp_maybe">Ehtimol</string>
+    <string name="calendar_rsvp_not_going">Bora olmayman</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d tadbir</item>
+        <item quantity="other">%1$d tadbir</item>
+    </plurals>
 </resources>

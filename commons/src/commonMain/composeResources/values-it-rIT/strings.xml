@@ -39,4 +39,11 @@
     <string name="relay_monitor_supported_nips">NIP supportati</string>
     <string name="relay_discovery_accepted_kinds">Kind accettati</string>
     <string name="relay_discovery_geohash">Posizione</string>
+    <string name="calendar_rsvp_going">Partecipo</string>
+    <string name="calendar_rsvp_maybe">Forse</string>
+    <string name="calendar_rsvp_not_going">Non posso</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d evento</item>
+        <item quantity="other">%1$d eventi</item>
+    </plurals>
 </resources>

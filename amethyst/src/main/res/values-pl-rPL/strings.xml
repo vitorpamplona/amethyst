@@ -2739,16 +2739,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_collection_title">Tytuł</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Tytuł jest wymagany.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d wydarzenie</item>
-        <item quantity="few">%1$d wydarzeń</item>
-        <item quantity="many">%1$d wydarzeń</item>
-        <item quantity="other">%1$d wydarzeń</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Brak wydarzeń w tym kalendarzu.</string>
-    <string name="calendar_rsvp_going">Będę</string>
-    <string name="calendar_rsvp_maybe">Może</string>
-    <string name="calendar_rsvp_not_going">Nie mogę iść</string>
     <string name="calendar_rsvp_section">Potwierdzeń (%1$d)</string>
     <string name="calendar_rsvp_none">Brak potwierdzeń.</string>
     <string name="calendar_participants_section">Uczestnicy (%1$d)</string>

@@ -48,4 +48,15 @@
     <string name="relay_monitor_ms">%1$d مللي ثانية</string>
     <string name="relay_discovery_accepted_kinds">الأنواع المقبولة</string>
     <string name="relay_discovery_geohash">الموقع</string>
+    <string name="calendar_rsvp_going">سأحضر</string>
+    <string name="calendar_rsvp_maybe">ربما</string>
+    <string name="calendar_rsvp_not_going">لن أتمكن من الحضور</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="zero">%1$d أحداث</item>
+        <item quantity="one">%1$d حدث</item>
+        <item quantity="two">%1$d حدثان</item>
+        <item quantity="few">%1$d أحداث</item>
+        <item quantity="many">%1$d حدثًا</item>
+        <item quantity="other">%1$d حدث</item>
+    </plurals>
 </resources>

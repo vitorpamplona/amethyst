@@ -2831,18 +2831,11 @@
     
 <string name="calendar_collection_invalid">Een titel is verplicht.</string>
     
-<plurals name="calendar_collection_count">
-    <item quantity="one">%1$d evenement</item>
-    <item quantity="other">%1$d evenementen</item>
-</plurals>
     
 <string name="calendar_collection_empty_members">Nog geen evenementen in deze agenda.</string>
     
-<string name="calendar_rsvp_going">Ga</string>
     
-<string name="calendar_rsvp_maybe">Misschien</string>
     
-<string name="calendar_rsvp_not_going">Kan niet</string>
     
 <string name="calendar_rsvp_none">Nog geen RSVPs.</string>
     

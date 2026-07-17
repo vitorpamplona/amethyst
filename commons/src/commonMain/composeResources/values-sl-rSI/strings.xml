@@ -59,4 +59,13 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Sprejeti tipi (kind)</string>
     <string name="relay_discovery_geohash">Lokacija</string>
+    <string name="calendar_rsvp_going">Grem</string>
+    <string name="calendar_rsvp_maybe">Mogoče</string>
+    <string name="calendar_rsvp_not_going">Ne morem</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d dogodek</item>
+        <item quantity="two">%1$d dogodka</item>
+        <item quantity="few">%1$d dogodki</item>
+        <item quantity="other">%1$d dogodkov</item>
+    </plurals>
 </resources>

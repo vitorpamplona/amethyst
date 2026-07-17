@@ -2663,14 +2663,7 @@
     <string name="calendar_collection_title">Titel</string>
     <string name="calendar_collection_description">Beschreibung</string>
     <string name="calendar_collection_invalid">Ein Titel ist erforderlich.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d Termin</item>
-        <item quantity="other">%1$d Termine</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Noch keine Termine in diesem Kalender.</string>
-    <string name="calendar_rsvp_going">Komme</string>
-    <string name="calendar_rsvp_maybe">Vielleicht</string>
-    <string name="calendar_rsvp_not_going">Komme nicht</string>
     <string name="calendar_rsvp_section">RSVPs (%1$d)</string>
     <string name="calendar_rsvp_none">Noch keine Antworten.</string>
     <string name="calendar_participants_section">Teilnehmer (%1$d)</string>

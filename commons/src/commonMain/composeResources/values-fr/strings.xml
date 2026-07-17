@@ -40,4 +40,11 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Kinds acceptés</string>
     <string name="relay_discovery_geohash">Localisation</string>
+    <string name="calendar_rsvp_going">Présent</string>
+    <string name="calendar_rsvp_maybe">Peut-être</string>
+    <string name="calendar_rsvp_not_going">Absent</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d événement</item>
+        <item quantity="other">%1$d événements</item>
+    </plurals>
 </resources>

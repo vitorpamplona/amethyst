@@ -2542,13 +2542,7 @@
     <string name="calendar_collection_title">标题</string>
     <string name="calendar_collection_description">描述</string>
     <string name="calendar_collection_invalid">标题是必需的。</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d 个活动</item>
-    </plurals>
     <string name="calendar_collection_empty_members">此日历中尚无活动。</string>
-    <string name="calendar_rsvp_going">参加</string>
-    <string name="calendar_rsvp_maybe">可能</string>
-    <string name="calendar_rsvp_not_going">去不了</string>
     <string name="calendar_rsvp_section">RSVP(%1$d)</string>
     <string name="calendar_rsvp_none">暂无RSVP。</string>
     <string name="calendar_participants_section">参与者 (%1$d)</string>

@@ -41,4 +41,12 @@
     <string name="relay_monitor_supported_nips">Atbalstītie NIP</string>
     <string name="relay_discovery_accepted_kinds">Pieņemtie veidi</string>
     <string name="relay_discovery_geohash">Atrašanās vieta</string>
+    <string name="calendar_rsvp_going">Iešu</string>
+    <string name="calendar_rsvp_maybe">Varbūt</string>
+    <string name="calendar_rsvp_not_going">Nevarēšu ierasties</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="zero">%1$d notikumu</item>
+        <item quantity="one">%1$d notikums</item>
+        <item quantity="other">%1$d notikumi</item>
+    </plurals>
 </resources>

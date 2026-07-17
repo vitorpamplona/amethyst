@@ -39,4 +39,11 @@
     <string name="relay_monitor_supported_nips">Subtenataj NIPs</string>
     <string name="relay_discovery_accepted_kinds">Akceptataj Tipoj</string>
     <string name="relay_discovery_geohash">Loko</string>
+    <string name="calendar_rsvp_going">Iras</string>
+    <string name="calendar_rsvp_maybe">Eble</string>
+    <string name="calendar_rsvp_not_going">Ne povas iri</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d evento</item>
+        <item quantity="other">%1$d eventoj</item>
+    </plurals>
 </resources>

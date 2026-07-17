@@ -59,4 +59,13 @@
     <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Přijímané druhy</string>
     <string name="relay_discovery_geohash">Poloha</string>
+    <string name="calendar_rsvp_going">Účastním se</string>
+    <string name="calendar_rsvp_maybe">Možná</string>
+    <string name="calendar_rsvp_not_going">Nemůžu</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d událost</item>
+        <item quantity="few">%1$d události</item>
+        <item quantity="many">%1$d událostí</item>
+        <item quantity="other">%1$d událostí</item>
+    </plurals>
 </resources>

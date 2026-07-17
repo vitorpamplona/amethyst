@@ -1983,14 +1983,7 @@
     <string name="calendar_collection_title">শিরোনাম</string>
     <string name="calendar_collection_description">বিবরণ</string>
     <string name="calendar_collection_invalid">একটি শিরোনাম আবশ্যক।</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d টি ইভেন্ট</item>
-        <item quantity="other">%1$d টি ইভেন্ট</item>
-    </plurals>
     <string name="calendar_collection_empty_members">এই ক্যালেন্ডারে এখনো কোনো ইভেন্ট নেই।</string>
-    <string name="calendar_rsvp_going">যাচ্ছি</string>
-    <string name="calendar_rsvp_maybe">হয়তো</string>
-    <string name="calendar_rsvp_not_going">যেতে পারব না</string>
     <string name="calendar_rsvp_section">RSVP (%1$d)</string>
     <string name="calendar_rsvp_none">এখনো কোনো RSVP নেই।</string>
     <string name="calendar_participants_section">অংশগ্রহণকারী (%1$d)</string>

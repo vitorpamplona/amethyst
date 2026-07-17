@@ -44,4 +44,13 @@
     <string name="relay_monitor_ms">%1$d мс</string>
     <string name="relay_discovery_accepted_kinds">Прийняті типи</string>
     <string name="relay_discovery_geohash">Місцезнаходження</string>
+    <string name="calendar_rsvp_going">Піду</string>
+    <string name="calendar_rsvp_maybe">Можливо</string>
+    <string name="calendar_rsvp_not_going">Не зможу</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d подія</item>
+        <item quantity="few">%1$d події</item>
+        <item quantity="many">%1$d подій</item>
+        <item quantity="other">%1$d подій</item>
+    </plurals>
 </resources>

@@ -2086,18 +2086,7 @@
     <string name="calendar_collection_title">العنوان</string>
     <string name="calendar_collection_description">الوصف</string>
     <string name="calendar_collection_invalid">العنوان مطلوب.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="zero">%1$d أحداث</item>
-        <item quantity="one">%1$d حدث</item>
-        <item quantity="two">%1$d حدثان</item>
-        <item quantity="few">%1$d أحداث</item>
-        <item quantity="many">%1$d حدثًا</item>
-        <item quantity="other">%1$d حدث</item>
-    </plurals>
     <string name="calendar_collection_empty_members">لا توجد أحداث في هذا التقويم بعد.</string>
-    <string name="calendar_rsvp_going">سأحضر</string>
-    <string name="calendar_rsvp_maybe">ربما</string>
-    <string name="calendar_rsvp_not_going">لن أتمكن من الحضور</string>
     <string name="calendar_rsvp_section">التأكيدات (%1$d)</string>
     <string name="calendar_rsvp_none">لا توجد تأكيدات حضور بعد.</string>
     <string name="calendar_participants_section">المشاركون (%1$d)</string>

@@ -1955,13 +1955,7 @@
     <string name="calendar_collection_title">標題</string>
     <string name="calendar_collection_description">描述</string>
     <string name="calendar_collection_invalid">標題為必填項目。</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d 個活動</item>
-    </plurals>
     <string name="calendar_collection_empty_members">此行事曆尚無活動。</string>
-    <string name="calendar_rsvp_going">出席</string>
-    <string name="calendar_rsvp_maybe">也許</string>
-    <string name="calendar_rsvp_not_going">無法出席</string>
     <string name="calendar_rsvp_section">回覆（%1$d）</string>
     <string name="calendar_rsvp_none">尚無回覆。</string>
     <string name="calendar_participants_section">參與者（%1$d）</string>

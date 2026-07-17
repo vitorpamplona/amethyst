@@ -1971,14 +1971,7 @@
     <string name="calendar_collection_title">Otsikko</string>
     <string name="calendar_collection_description">Kuvaus</string>
     <string name="calendar_collection_invalid">Otsikko on pakollinen.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="one">%1$d tapahtuma</item>
-        <item quantity="other">%1$d tapahtumaa</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Ei vielä tapahtumia tässä kalenterissa.</string>
-    <string name="calendar_rsvp_going">Osallistun</string>
-    <string name="calendar_rsvp_maybe">Ehkä</string>
-    <string name="calendar_rsvp_not_going">En pääse</string>
     <string name="calendar_rsvp_section">RSVP:t (%1$d)</string>
     <string name="calendar_rsvp_none">Ei vielä RSVP:itä.</string>
     <string name="calendar_participants_section">Osallistujat (%1$d)</string>
