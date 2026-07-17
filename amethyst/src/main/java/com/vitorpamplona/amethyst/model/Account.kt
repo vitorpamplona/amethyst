@@ -2075,6 +2075,11 @@ class Account(
      * both explain what went wrong and decide whether a retry could ever help — a
      * bundle we can't open (e.g. minted by a newer client) must not strand the user
      * on a spinner that retries forever.
+     *
+     * If the resolved community is already in the joined list, this returns
+     * [ConcordInviteResult.Joined] without re-following or re-announcing a Guestbook
+     * JOIN, so reopening an old invite for a community you're already in simply takes
+     * you to it.
      */
     suspend fun joinConcordViaInvite(url: String): ConcordInviteResult {
         if (!isWriteable()) return ConcordInviteResult.InvalidLink
@@ -2097,6 +2102,14 @@ class Account(
                 InviteBundleStatus.Unreadable -> return ConcordInviteResult.Incompatible
                 InviteBundleStatus.Absent -> return ConcordInviteResult.NotReachable
             }
+
+        // Already a member? Just take the user to the community. Re-following and re-announcing a
+        // Guestbook JOIN (kind 3306) would spam the community relays with a fresh join every time an
+        // old invite is reopened, so short-circuit to Joined — the screen forwards to the community
+        // either way ("take me there", not "join again").
+        if (concordChannelList.liveCommunities.value.any { it.id == bundle.communityId }) {
+            return ConcordInviteResult.Joined(bundle.communityId)
+        }
 
         val entry =
             ConcordCommunityListEntry(

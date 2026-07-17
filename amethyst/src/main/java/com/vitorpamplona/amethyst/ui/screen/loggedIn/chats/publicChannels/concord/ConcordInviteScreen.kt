@@ -95,7 +95,10 @@ fun ConcordInviteScreen(
 
     LaunchedEffect(state) {
         (state as? RedeemState.Done)?.let { done ->
-            nav.newStack(Route.ConcordServer(done.communityId))
+            // Replace this invite screen with the community, dropping it from the back stack. If it
+            // stayed, Back from the community would land on the auto-redeeming spinner, which would
+            // immediately re-join and forward here again — trapping the user in a Back→forward loop.
+            nav.popUpTo(Route.ConcordServer(done.communityId), Route.ConcordInvite::class)
         }
     }
 
