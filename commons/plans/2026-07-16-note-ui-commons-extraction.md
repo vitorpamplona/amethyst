@@ -1,7 +1,7 @@
 ---
 title: "refactor(commons): extract note-type rendering to commons"
 type: refactor
-status: proposed
+status: in-progress
 date: 2026-07-16
 owner: commons
 consumers: amethyst, desktopApp, cli
@@ -9,12 +9,94 @@ consumers: amethyst, desktopApp, cli
 
 # refactor(commons): extract `ui.note` rendering into commons
 
-> **Status:** review / proposal. No code moved yet. This is the study
-> requested on branch `claude/amethyst-note-ui-refactor` — a per-event
-> generalization plan for pulling the *rendering* half of
-> `com.vitorpamplona.amethyst.ui.note` down into `commons`, leaving only the
+> **Status:** in progress. The Tier 0 sweep plus the first clean Tier 1
+> renderers have landed on `claude/event-renderers-commons-7pttym` (13 event
+> kinds), along with the two enabling infrastructure pieces the plan did not
+> originally scope — commons i18n and app-side `Res` access. See
+> **§0.1 Progress & findings** for what's built and what the extraction
+> actually required in practice. The design below (§1–§8) still holds; §0.1 is
+> the amendment. _Authored 2026-07-16; progress appended 2026-07-17._
+
+## 0.1 Progress & findings (2026-07-17)
+
+**Landed (each: `:commons` + `:amethyst` compile, spotless, static analysis,
+full pre-push test suite, pushed):**
+
+| Batch | Event kind(s) → commons | Seam mechanic proven |
+|-------|-------------------------|----------------------|
+| 1 | CodeSnippet, EcashMint | pure package move + shared `NoteBorders` theme |
+| 2 | GitStatusPill | Render→Display split (entry reads `GitStatusIndex`) |
+| 3 | GitDiffView | plural i18n migration |
+| 4 | Birdstar Birdex / detection | commons `ClickableUrl` reuse |
+| 5 | PS1 memory-card save | **opaque `@Composable` slot** for an Android-`Bitmap` icon |
+| 6 | Podcast badge / link / soundbite atoms | `internal`→public atom extraction + consumer re-point |
+| 7 | ActivityCard building blocks | string-free slot atoms + shared `Sizes` theme |
+| 8 | Roadstr road-event | **typed slot** (`RoadEventMap`) for the native map |
+| 9 | PodcastValueSplits | forced one-string duplication (Android-int toast) |
+| 10 | *(infra)* gate #1 | amethyst reads commons `Res` — de-dups shared strings |
+| 11 | RelayDiscovery | first shared-string renderer via gate #1 |
+| 12 | NIP-52 calendar collection + RSVP | shared string/plural across 3 native call sites |
+
+Shared theme now in commons: `NoteBorders.kt` (`QuoteBorder`, `SmallBorder`,
+`StdHorzSpacer`, `StdVertSpacer`, `subtleBorder`, `replyModifier`), `Sizes.kt`
+(`Size5dp`, `Size16Modifier`), and `ThemeExtensions.kt` additions (`grayText`,
+`allGoodColor`, `warningColor`). These mirror the Android `ui/theme` values;
+the Android copies become dead code as the last consumer of each moves.
+
+**Finding A — i18n was an unscoped prerequisite, not a mechanical string swap.**
+§3c framed strings as "migrate + swap `R.string`→`Res.string`". In reality
+commons had **no translation pipeline** — `crowdin.yml` synced only the Android
+app — so a naive migration would drop every translation and remove the key from
+future syncs. Fixed once, in batch 2: `crowdin.yml` now lists
+`commons/composeResources` as a second Android source with the same
+language mapping, and each migrated key carries all 56 locale files across via
+`scratchpad/migrate_strings.py` (handles `<string>` and `<plurals>`, deletes the
+app copy). No locale regresses. **Do this migration for every string-bearing
+renderer; it is the single biggest mechanical cost, exactly as §3c warned, plus
+the pipeline wiring §3c missed.**
+
+**Finding B — gate #1: app-side `Res` access is the real unblock for Tier 1.**
+Most Tier 1 renderers share strings with a still-native screen
+(RelayDiscovery↔RelayInformationScreen, the calendar renderers↔detail/list
+screens). Until batch 10, amethyst could not reference commons' generated `Res`
+(the compose-resources runtime was not on its classpath, even though commons
+already sets `publicResClass = true`). That forced string *duplication*. Batch
+10 adds `libs.jetbrains.compose.components.resources` to `amethyst` — now a
+native screen switches its `stringResource(R.string.x)` →
+`stringResource(Res.string.x)` in the same commit, so the key lives in exactly
+one place. **The one exception that still duplicates: a string consumed by an
+Android-int API with no Compose form — e.g. `ResourceToastMsg(titleResId: Int)`
+in the V4V editor keeps `podcast_value_for_value` app-side.**
+
+**Finding C — "unused seam" is the cleanest Tier 1 signal.** Several renderers
+*declare* `accountViewModel`/`nav` for dispatcher uniformity but never call
+them (NIP90Status, RelayDiscovery, the calendar pair, Thread, …). These are
+pure value-in: move the body to a commons `XxxCard(event)`, keep the entry with
+its original signature. Grep for renderers that declare the seam but never
+dot-call it — they need no callback design at all.
+
+**Finding D — commonMain bans Jackson.** A renderer backed by a Jackson model
+(MedicalData → `MiniFhir.kt`) cannot move to `commonMain` as-is; the build
+rule routes JVM-only Jackson away from common code. Either rewrite the model on
+kotlinx.serialization first or leave the renderer app-side. Not attempted.
+
+**Finding E — platform leaves become slots, and it works cleanly.** The plan's
+slot idea (§3e/§4) held up for real Android-only leaves: PS1's animated
+`Bitmap` icon (opaque `(@Composable () -> Unit)?` slot) and Roadstr's tile map
+(a *typed* `RoadEventMap` slot carrying lat/lon/color). The commons card owns
+all layout + logic; the entry supplies the one native composable.
+
+**Still ahead (unchanged from §5–§6):** the remaining Tier 1 / Tier 2 renderers
+are gated on **Phase 0 (§3f), the rich-text restructure** — the load-bearing
+PR that lets `Display*` bodies call the rich-text core directly instead of
+routing through the native `TranslatableRichTextViewer`. Tier 3 (signer/dialog
+flows) stays app-side per §7. The two trivial leftovers (NIP90Status = one
+`Text`; Thread) are not worth their own batch.
+
+> **Original study header (2026-07-16):** review / proposal, no code moved yet;
+> the per-event generalization for pulling the *rendering* half of
+> `com.vitorpamplona.amethyst.ui.note` into `commons`, leaving the
 > nav/AccountViewModel-bound *entry* composables in the Android app.
-> _Authored 2026-07-16._
 
 ## 0. Goal (as requested)
 
@@ -313,12 +395,22 @@ PodcastValueSplits, Ps1Save, RoadEvent`.
 These are already value-in/Compose-out. Mostly just an `R.string` sweep + a
 package move. **Ideal pilots** — several are also self-contained cards (no rich
 text, no loaders).
+> **Status (2026-07-17):** ✅ done — ActivityCard, Birdex, CodeSnippet,
+> EcashMint, GitDiffView, GitStatusPill, PodcastChips, PodcastSoundbites,
+> PodcastValueSplits, Ps1Save, RoadEvent. **Left:** `ImetaContent` /
+> `MusicFormatting` are pure non-UI util helpers used by Tier-2 parents — they
+> ride along when Chat / MusicTrack move, not worth a standalone batch.
 
 ### Tier 1 — decode-only, no loaders, no rich text
 Read-only renderers that only need `nav` callbacks + `R.string` (e.g. relay/list
 cards, badge display, goal/fundraiser headers, calendar/road cards). Split is
 mechanical: decode in entry, pass primitives + `onClick*` down. Bulk of the
 value.
+> **Status (2026-07-17):** started — RelayDiscovery and the NIP-52 calendar
+> collection + RSVP cards done via gate #1 (§0.1 Finding B). The cleanest next
+> targets are the "unused seam" renderers (§0.1 Finding C). Note in practice
+> most Tier-1 strings are **shared with a native screen**, so each move also
+> switches that screen to commons `Res` in the same commit.
 
 ### Tier 2 — need recursive content slots (rich text and/or embedded note/user)
 23 use `TranslatableRichTextViewer`; 23 use `LoadNote/LoadUser/observe*`:
