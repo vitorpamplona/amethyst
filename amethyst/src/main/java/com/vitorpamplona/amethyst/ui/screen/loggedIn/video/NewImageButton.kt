@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -144,7 +143,7 @@ fun NewImageButton(
                         symbol = MaterialSymbols.CameraAlt,
                         contentDescription = stringRes(id = R.string.take_a_picture),
                         modifier = Modifier.size(26.dp),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
 
@@ -163,7 +162,7 @@ fun NewImageButton(
                         symbol = MaterialSymbols.Videocam,
                         contentDescription = stringRes(id = R.string.record_a_video),
                         modifier = Modifier.size(26.dp),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
 
@@ -182,7 +181,7 @@ fun NewImageButton(
                         symbol = MaterialSymbols.AddPhotoAlternate,
                         contentDescription = stringRes(id = R.string.upload_image),
                         modifier = Modifier.size(26.dp),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
 
@@ -207,7 +206,7 @@ fun NewImageButton(
                     symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(id = R.string.new_short),
                     modifier = Size26Modifier,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
 
@@ -220,7 +219,7 @@ fun NewImageButton(
                     painter = painterRes(R.drawable.ic_compose, 5),
                     contentDescription = stringRes(id = R.string.new_short),
                     modifier = Size26Modifier,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }

@@ -37,7 +37,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -74,7 +73,7 @@ fun NewCalendarButton(nav: INav) {
                         // string is ambiguous out of context.
                         contentDescription = stringRes(R.string.calendar_fab_new_collection),
                         modifier = Size26Modifier,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
 
@@ -93,7 +92,7 @@ fun NewCalendarButton(nav: INav) {
                         symbol = MaterialSymbols.Add,
                         contentDescription = stringRes(R.string.calendar_fab_new_event),
                         modifier = Size26Modifier,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
 
@@ -116,7 +115,7 @@ fun NewCalendarButton(nav: INav) {
                     symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(R.string.calendar_fab_toggle),
                     modifier = Size26Modifier,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
 
@@ -130,7 +129,7 @@ fun NewCalendarButton(nav: INav) {
                     // Top FAB toggles the sub-FABs in/out — describe that, not the sub-action.
                     contentDescription = stringRes(R.string.calendar_fab_toggle),
                     modifier = Size26Modifier,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }

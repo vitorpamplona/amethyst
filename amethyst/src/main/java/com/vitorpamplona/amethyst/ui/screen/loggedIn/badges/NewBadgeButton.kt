@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -63,7 +62,7 @@ fun NewBadgeButton(accountViewModel: AccountViewModel) {
             painter = painterRes(R.drawable.ic_compose, 5),
             contentDescription = stringRes(id = R.string.new_badge),
             modifier = Size26Modifier,
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

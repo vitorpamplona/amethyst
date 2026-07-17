@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.commons.icons.Following
 import com.vitorpamplona.amethyst.commons.icons.Like
 import com.vitorpamplona.amethyst.commons.icons.Liked
 import com.vitorpamplona.amethyst.commons.icons.Reply
@@ -43,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.icons.following
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleButton
 
@@ -66,8 +67,15 @@ fun AmethystIcon(iconSize: Dp) {
 
 @Composable
 fun FollowingIcon(modifier: Modifier) {
+    // Deep, saturated accent shield + white figure, like the original #7F2EFF badge. Use the accent's
+    // deep tone (its light-theme primary) in both themes: dark-theme `primary` is a pale pastel, so
+    // the shield would read washed out — inversePrimary carries the deep tone in the dark scheme,
+    // while `primary` already is it in light.
+    val scheme = MaterialTheme.colorScheme
+    val shield = if (scheme.isLight) scheme.primary else scheme.inversePrimary
+    val icon = remember(shield) { following(shield, Color.White) }
     Icon(
-        imageVector = Following,
+        imageVector = icon,
         contentDescription = stringRes(id = R.string.following),
         modifier = modifier,
         tint = Color.Unspecified,

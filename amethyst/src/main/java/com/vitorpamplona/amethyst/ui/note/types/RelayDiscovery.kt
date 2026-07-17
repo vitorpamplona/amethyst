@@ -38,7 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,6 +51,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 
@@ -215,8 +216,8 @@ private fun RttMetricChip(
 ) {
     val color =
         when {
-            ms < 200 -> Color(0xFF4CAF50)
-            ms < 500 -> Color(0xFFFFC107)
+            ms < 200 -> MaterialTheme.colorScheme.allGoodColor
+            ms < 500 -> MaterialTheme.colorScheme.warningColor
             else -> MaterialTheme.colorScheme.error
         }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
