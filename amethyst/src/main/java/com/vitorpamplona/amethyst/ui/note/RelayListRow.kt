@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -128,15 +129,17 @@ fun RenderRelay(
     relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     nav: INav,
+    boxSize: Dp = Size17dp,
+    iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
     val relayInfo by loadRelayInfo(relay)
 
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val clickableModifier =
-        remember(relay) {
+        remember(relay, boxSize) {
             Modifier
-                .size(Size17dp)
+                .size(boxSize)
                 .combinedClickable(
                     indication = ripple24dp,
                     interactionSource = MutableInteractionSource(),
@@ -159,6 +162,7 @@ fun RenderRelay(
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             pingInMs = 0,
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            iconModifier = iconModifier,
         )
     }
 }

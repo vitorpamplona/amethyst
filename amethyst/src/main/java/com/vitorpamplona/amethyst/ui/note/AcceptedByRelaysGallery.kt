@@ -41,7 +41,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -116,7 +118,14 @@ private fun RelayGallery(
     Column(modifier = StdStartPadding) {
         FlowRow {
             relays.forEach { relay ->
-                RenderRelay(relay, accountViewModel, nav)
+                // Match the 35dp author pictures of the sibling zap/boost/reaction lines.
+                RenderRelay(
+                    relay = relay,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    boxSize = Size35dp,
+                    iconModifier = MediumRelayIconModifier,
+                )
             }
         }
     }
