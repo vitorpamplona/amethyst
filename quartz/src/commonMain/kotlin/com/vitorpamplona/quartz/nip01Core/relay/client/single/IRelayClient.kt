@@ -32,6 +32,24 @@ interface IRelayClient {
 
     fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean = false)
 
+    /**
+     * Forgets the accumulated reconnect backoff without touching the socket.
+     *
+     * Call when the conditions that produced the failures no longer apply — the
+     * device moved to a different network, or the relay's transport changed (Tor
+     * came up, or the user re-classified this relay). Past failures were measured
+     * against an environment that no longer exists, so holding a relay at a 5-minute
+     * delay would keep it dark for minutes on a network that might reach it instantly.
+     *
+     * Unlike [disconnect] this leaves a live connection alone: it only clears the
+     * penalty a *disconnected* relay would otherwise have to wait out.
+     *
+     * No-op by default: only transports that actually throttle reconnects (see
+     * [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient])
+     * have anything to forget.
+     */
+    fun resetBackoff() { }
+
     fun isConnected(): Boolean
 
     fun sendOrConnectAndSync(cmd: Command)

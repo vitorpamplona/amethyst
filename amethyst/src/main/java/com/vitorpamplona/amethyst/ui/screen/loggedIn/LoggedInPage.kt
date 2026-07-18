@@ -52,6 +52,8 @@ import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -94,6 +96,12 @@ fun LoggedInPage(
     // derived stream keys, so the always-on DM tail can't pick them up) — so communities fold, and
     // their channels/metadata/icon appear, without waiting for a Concord screen to be opened.
     ConcordChannelPreload(accountViewModel)
+
+    // Keeps joined NIP-29 groups' relay-signed state (metadata/roster/roles/pins) always current, and
+    // their recent chat live for Messages-list previews — app-wide, so opening a group lands on cached
+    // content. See amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md.
+    RelayGroupJoinedStatePreload(accountViewModel)
+    RelayGroupJoinedChatTailPreload(accountViewModel)
 
     // Foreground-only loaders: follows-outbox finder + random-relay notifications.
     // Pauses on ON_STOP, resumes on ON_START.

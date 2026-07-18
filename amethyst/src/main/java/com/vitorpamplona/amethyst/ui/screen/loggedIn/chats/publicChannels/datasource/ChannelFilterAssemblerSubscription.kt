@@ -61,7 +61,7 @@ fun ChannelFilterAssemblerSubscription(
     }
 
     // Relay groups: when the kind-39005 pin list changes, re-invalidate so the id-based back-fill
-    // for pinned message bodies (see filterMetadataToRelayGroup) picks up the new ids. Keyed on the
+    // for pinned message bodies (see filterRelayGroupState) picks up the new ids. Keyed on the
     // pin list alone, so unrelated roster/metadata churn doesn't force a re-subscribe.
     if (channel is RelayGroupChannel) {
         val metadataState by channel

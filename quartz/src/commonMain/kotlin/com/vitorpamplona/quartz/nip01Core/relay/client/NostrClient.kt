@@ -208,6 +208,12 @@ class NostrClient(
         refreshConnection.tryEmit(Reconnect(onlyIfChanged, ignoreRetryDelays))
     }
 
+    override fun resetBackoff() {
+        // Applied eagerly rather than through refreshConnection: that flow debounces,
+        // so a reconnect emitted within 200ms would replace this one and lose the reset.
+        relayPool.resetBackoff()
+    }
+
     override fun subscribe(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,

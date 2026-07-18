@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
@@ -54,6 +55,22 @@ import kotlinx.coroutines.flow.StateFlow
 class RelayGroupChannel(
     val groupId: GroupId,
 ) : Channel() {
+    /**
+     * Per-relay backward-pagination cursors for this group's chat history. The live tail
+     * (RelayGroupOpenChatTailSubAssembler) holds the recent window; this pages older kind-9/poll
+     * messages by `until`+`limit` on the host relay, the NIP-29 analog of the per-conversation
+     * NIP-04 / Concord history. Held here so the cursors share the channel's cache lifetime.
+     */
+    val history = RelayLoadingCursors()
+
+    /**
+     * Per-relay backward-pagination cursors for this group's **Threads** tab (kind-11 roots + kind-1111
+     * comments), kept apart from [history] so paging the forum doesn't move the chat's cursor. The Threads
+     * live tail holds the recent window; this pages older thread content by `until`+`limit` on the host relay
+     * so a group with more threads than the relay's default result cap doesn't silently hide the older ones.
+     */
+    val threadsHistory = RelayLoadingCursors()
+
     /** The latest relay-signed kind 39000 metadata event, when known. */
     var event: GroupMetadataEvent? = null
 
@@ -129,6 +146,20 @@ class RelayGroupChannel(
     }
 
     fun threadCount(): Int = threadNotes.size()
+
+    /**
+     * Whether this channel has received any relay-signed state — metadata, roster, roles or pins. Only the
+     * group's **host** relay signs those (via the `isRelaySignedGroupEvent`-gated consume paths), so this is
+     * true only for a confirmed host channel and never for a "phantom" one minted from a stray content event
+     * that arrived from a non-host relay. Used to redirect such strays back to the real host (see
+     * `LocalCache.attachToRelayGroupIfScoped` / the serving-relay hazard).
+     */
+    fun hasRelaySignedState(): Boolean =
+        event != null ||
+            members.isNotEmpty() ||
+            admins.isNotEmpty() ||
+            supportedRoles.isNotEmpty() ||
+            pinnedEventIds.isNotEmpty()
 
     /** A relay group lives on exactly one relay: its host. */
     override fun relays() = setOf(groupId.relayUrl)

@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -111,7 +111,7 @@ private fun RelayGroupMembers(
     // standalone screen is open. observeChannel alone does NOT do this for a relay group
     // (its finder only handles public-chat / live-activity channels), so without this the
     // screen would only show whatever the chat screen happened to cache.
-    RelayGroupWarmupSubscription(baseChannel, accountViewModel.dataSources().relayGroupWarmup, accountViewModel)
+    RelayGroupCardWarmupSubscription(baseChannel, accountViewModel.dataSources().relayGroupCardWarmup, accountViewModel)
 
     // Recompose when the relay-signed roster (39001/39002) changes.
     val channelState by observeChannel(baseChannel, accountViewModel)

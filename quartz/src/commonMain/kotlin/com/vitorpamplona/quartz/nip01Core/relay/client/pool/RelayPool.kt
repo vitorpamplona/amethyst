@@ -79,6 +79,13 @@ class RelayPool(
             decoder = decoder,
         )
 
+    /** Clears every relay's reconnect backoff. See [IRelayClient.resetBackoff]. */
+    fun resetBackoff() {
+        relays.forEach { url, relay ->
+            relay.resetBackoff()
+        }
+    }
+
     fun reconnectIfNeedsTo(ignoreRetryDelays: Boolean = false) {
         relays.forEach { url, relay ->
             if (relay.isConnected()) {

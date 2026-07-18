@@ -79,8 +79,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.toGroupConstraints
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -119,9 +118,8 @@ fun RelayGroupDiscoveryScreen(
     WatchLifecycleAndUpdateModel(feedContentState)
     WatchAccountForRelayGroupDiscovery(feedContentState, accountViewModel)
     RelayGroupsDiscoveryFilterAssemblerSubscription(accountViewModel)
-    // Keep the joined groups' metadata + rosters live so the "My Groups" filter can list them
-    // (their host relays aren't fetched by the discovery filter set).
-    RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
+    // The joined groups' metadata + rosters are kept live by the always-on state sub (mounted at
+    // LoggedInPage), so the "My Groups" filter can list them without a per-screen subscription.
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -279,7 +277,7 @@ private fun RelayGroupDiscoveryRow(
     // Prefetch the group's recent content so opening the card lands on a populated screen. The
     // metadata/rosters are already streaming from the directory subscription, so only ask for
     // content here (contentOnly) instead of re-requesting 39000-39003 per visible row.
-    RelayGroupWarmupSubscription(baseChannel, accountViewModel.dataSources().relayGroupWarmup, accountViewModel, contentOnly = true)
+    RelayGroupCardWarmupSubscription(baseChannel, accountViewModel.dataSources().relayGroupCardWarmup, accountViewModel, contentOnly = true)
 
     val channelState by baseChannel
         .flow()

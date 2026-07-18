@@ -2006,9 +2006,20 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (note.event == null) return
 
         if (relay != null) {
-            // Normal arrival: the group only exists on its host relay and the
-            // filters are host-pinned, so the serving relay is the group's key.
-            getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addNote(note, relay)
+            val exact = GroupId(groupId, relay)
+            val existing = getRelayGroupChannelIfExists(exact)
+            if (existing != null) {
+                // Normal arrival: the group's host-pinned filters served it, so the serving relay IS the
+                // group's key and its channel already exists. Fast O(1) path — no scan.
+                existing.addNote(note, relay)
+            } else {
+                // No channel keyed to the serving relay: this may be a stray from a NON-host relay (e.g. a
+                // quoted kind-9 resolved by id). Redirect it to the group's single confirmed host rather
+                // than mint a phantom channel the group's screens never read (the serving-relay hazard);
+                // fall back to the serving-relay key when there is no single host (new/ambiguous group).
+                val target = redirectStrayRelayGroupContent(relayGroupCandidatesFor(groupId)) ?: exact
+                getOrCreateRelayGroupChannel(target).addNote(note, relay)
+            }
         } else {
             // Our own optimistic send has no provenance relay, so we can't build the (groupId,
             // relay) key. Attach only when a SINGLE open channel has this group id (the room being
@@ -2021,6 +2032,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                 ?.addNote(note, null)
         }
     }
+
+    /** Candidate group channels for the [redirectStrayRelayGroupContent] slow path — one scan by group id. */
+    private fun relayGroupCandidatesFor(groupId: String): List<RelayGroupTargetCandidate> =
+        relayGroupChannels
+            .filter { key, _ -> key.id == groupId }
+            .map { RelayGroupTargetCandidate(it.groupId, it.hasRelaySignedState()) }
 
     /**
      * Same routing as [attachToRelayGroupIfScoped] but for kind-11 threads, which
@@ -2036,7 +2053,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (note.event == null) return
 
         if (relay != null) {
-            getOrCreateRelayGroupChannel(GroupId(groupId, relay)).addThread(note)
+            val exact = GroupId(groupId, relay)
+            val existing = getRelayGroupChannelIfExists(exact)
+            if (existing != null) {
+                existing.addThread(note)
+            } else {
+                // Same serving-relay hazard as the chat path: prefer the single confirmed host over a phantom.
+                val target = redirectStrayRelayGroupContent(relayGroupCandidatesFor(groupId)) ?: exact
+                getOrCreateRelayGroupChannel(target).addThread(note)
+            }
         } else {
             // See attachToRelayGroupIfScoped: only attach when the group id is unambiguous.
             relayGroupChannels

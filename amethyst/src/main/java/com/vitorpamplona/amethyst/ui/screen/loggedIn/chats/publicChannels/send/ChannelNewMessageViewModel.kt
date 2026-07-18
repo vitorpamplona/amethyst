@@ -213,6 +213,13 @@ open class ChannelNewMessageViewModel :
     fun user(): User = account.userProfile()
 
     open fun init(accountVM: AccountViewModel) {
+        // The channel screens call this straight from their composable body, so it runs on the main
+        // thread on every recomposition of that body. Guard against re-running the allocating setup
+        // (new UserSuggestionState/EmojiSuggestionState/ChatFileUploadState) when nothing changed:
+        // only (re)initialize when the account actually differs. Beyond the wasted allocations, a
+        // blind re-init would also reset `uploadState` mid-upload, discarding in-flight progress.
+        if (::accountViewModel.isInitialized && this.accountViewModel === accountVM) return
+
         this.accountViewModel = accountVM
         this.account = accountVM.account
         this.canAddInvoice = hasLnAddress()
