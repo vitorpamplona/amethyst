@@ -1,17 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
+    <string name="login_title">Vítejte v Amethystu</string>
+    <string name="login_subtitle">Přihlaste se ke svému účtu Nostr</string>
+    <string name="login_subtitle_desktop">Klient Nostr pro počítač</string>
+    <string name="login_card_title">Přihlaste se svým klíčem Nostr</string>
+    <string name="login_card_subtitle">nsec pro plný přístup, bunker:// pro vzdáleného podepisovatele nebo npub pouze pro čtení</string>
+    <string name="login_with_key">Přihlásit se klíčem</string>
+    <string name="login_button">Přihlásit se</string>
+    <string name="login_generate_new">Vygenerovat nový klíč</string>
+    <string name="login_generate_button">Vygenerovat nový</string>
+    <string name="login_key_hint">Zadejte svůj soukromý klíč (nsec) nebo veřejný klíč (npub)</string>
+    <string name="login_key_label">nsec, bunker:// nebo npub</string>
+    <string name="login_show_key">Zobrazit klíč</string>
+    <string name="login_hide_key">Skrýt klíč</string>
     <!-- New Key Warning -->
+    <string name="new_key_warning_title">DŮLEŽITÉ: Uložte si klíče!</string>
+    <string name="new_key_warning_message">Váš tajný klíč (nsec) je JEDINÝ způsob přístupu k vašemu účtu. Pokud jej ztratíte, váš účet je navždy ztracen. Uložte jej na bezpečné místo!</string>
+    <string name="new_key_public_label">Veřejný klíč (lze sdílet):</string>
+    <string name="new_key_secret_label">Tajný klíč (NIKDY jej nesdílejte!):</string>
+    <string name="new_key_continue_button">Uložil jsem si klíče, pokračovat</string>
     <!-- Common Actions -->
+    <string name="action_copy">Kopírovat</string>
+    <string name="action_paste">Vložit</string>
+    <string name="action_cancel">Zrušit</string>
+    <string name="action_save">Uložit</string>
+    <string name="action_delete">Smazat</string>
+    <string name="action_share">Sdílet</string>
     <!-- Errors -->
+    <string name="error_invalid_key">Neplatný formát klíče. Zkontrolujte jej prosím a zkuste to znovu.</string>
+    <string name="error_network">Chyba sítě. Zkontrolujte prosím připojení.</string>
+    <string name="error_generic">Došlo k chybě. Zkuste to prosím znovu.</string>
     <!-- Loading & Empty States -->
+    <string name="action_refresh">Obnovit</string>
+    <string name="action_try_again">Zkusit znovu</string>
+    <string name="feed_empty">Kanál je prázdný</string>
+    <string name="error_loading_feed">Chyba při načítání kanálu: %s</string>
     <!-- Placeholder Screens -->
+    <string name="screen_search_title">Hledat</string>
+    <string name="screen_search_description">Vyhledávejte uživatele, poznámky a hashtagy.</string>
+    <string name="screen_messages_title">Zprávy</string>
+    <string name="screen_messages_description">Zde se zobrazí vaše šifrované přímé zprávy.</string>
+    <string name="screen_notifications_title">Oznámení</string>
+    <string name="screen_notifications_description">Zde se zobrazí zmínky, odpovědi a reakce.</string>
     <!-- Accessibility -->
+    <string name="accessibility_user_avatar">Avatar uživatele</string>
+    <string name="accessibility_navigate">Přejít</string>
     <!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">Načítání:</string>
+    <string name="chats_history_fully_loaded_label">Plně načteno:</string>
+    <string name="chats_history_fully_loaded">(plně načteno)</string>
+    <string name="chats_history_by_relay">Historie podle relaye</string>
+    <string name="chats_history_stalled_retry">Zkusí to znovu, až tuto obrazovku znovu otevřete</string>
+    <string name="chats_history_older">Starší zprávy %1$s</string>
+    <string name="chats_history_all_caught_up">Vše načteno</string>
+    <string name="chats_history_reached_start">Dosáhli jste začátku zpráv %1$s</string>
+    <string name="chats_history_subtitle">%1$s · %2$s · načteno od %3$s</string>
+    <string name="chats_history_waiting">čeká se na %1$s</string>
+    <string name="chats_history_incomplete">Některé relaye neodpověděly</string>
+    <string name="chats_history_incomplete_sub">%1$s nedostupných · klepnutím zobrazíte které</string>
+    <string name="chats_history_relays_title">%1$s · historie podle relaye</string>
+    <string name="chats_history_relay_since">od %1$s</string>
+    <string name="action_dismiss">Zavřít</string>
     <!-- Notes & Replies -->
+    <string name="replying_to">odpovídá na </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">Statický web: %1$s</string>
+    <string name="napplet_card_permissions">K čemu má přístup</string>
+    <string name="nsite_root_site">Kořenový web</string>
+    <string name="nsite_source">Zdroj:</string>
+    <string name="nsite_servers">Servery:</string>
+    <string name="nsite_open">Otevřít</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Použít přímou URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">Přezdívka</string>
+    <string name="nickname_dialog_explainer">Zobrazí se vám místo jména tohoto uživatele všude v aplikaci. Ukládá se zašifrovaně ve vaší kartě kontaktu: přečíst jej můžete jen vy. Napsáním : použijete vlastní emoji.</string>
+    <string name="nickname_label">Přezdívka</string>
+    <string name="nickname_summary_label">Soukromá poznámka o tomto uživateli</string>
+    <string name="nickname_save">Uložit</string>
+    <string name="nickname_cancel">Zrušit</string>
     <string name="git_status_open">Otevřeno</string>
     <string name="git_status_merged">Sloučeno</string>
     <string name="git_status_closed">Uzavřeno</string>
@@ -76,79 +144,5 @@
         <item quantity="few">%1$d události</item>
         <item quantity="many">%1$d událostí</item>
         <item quantity="other">%1$d událostí</item>
-    </plurals>
-    <string name="accessibility_navigate">Přejít</string>
-    <string name="accessibility_user_avatar">Avatar uživatele</string>
-    <string name="action_cancel">Zrušit</string>
-    <string name="action_copy">Kopírovat</string>
-    <string name="action_delete">Smazat</string>
-    <string name="action_dismiss">Zavřít</string>
-    <string name="action_paste">Vložit</string>
-    <string name="action_refresh">Obnovit</string>
-    <string name="action_save">Uložit</string>
-    <string name="action_share">Sdílet</string>
-    <string name="action_try_again">Zkusit znovu</string>
-    <string name="chats_history_all_caught_up">Vše načteno</string>
-    <string name="chats_history_by_relay">Historie podle relaye</string>
-    <string name="chats_history_fully_loaded">(plně načteno)</string>
-    <string name="chats_history_fully_loaded_label">Plně načteno:</string>
-    <string name="chats_history_incomplete">Některé relaye neodpověděly</string>
-    <string name="chats_history_incomplete_sub">%1$s nedostupných · klepnutím zobrazíte které</string>
-    <string name="chats_history_loading_label">Načítání:</string>
-    <string name="chats_history_older">Starší zprávy %1$s</string>
-    <string name="chats_history_reached_start">Dosáhli jste začátku zpráv %1$s</string>
-    <string name="chats_history_relay_since">od %1$s</string>
-    <string name="chats_history_relays_title">%1$s · historie podle relaye</string>
-    <string name="chats_history_stalled_retry">Zkusí to znovu, až tuto obrazovku znovu otevřete</string>
-    <string name="chats_history_subtitle">%1$s · %2$s · načteno od %3$s</string>
-    <string name="chats_history_waiting">čeká se na %1$s</string>
-    <string name="error_generic">Došlo k chybě. Zkuste to prosím znovu.</string>
-    <string name="error_invalid_key">Neplatný formát klíče. Zkontrolujte jej prosím a zkuste to znovu.</string>
-    <string name="error_loading_feed">Chyba při načítání kanálu: %s</string>
-    <string name="error_network">Chyba sítě. Zkontrolujte prosím připojení.</string>
-    <string name="feed_empty">Kanál je prázdný</string>
-    <string name="login_button">Přihlásit se</string>
-    <string name="login_card_subtitle">nsec pro plný přístup, bunker:// pro vzdáleného podepisovatele nebo npub pouze pro čtení</string>
-    <string name="login_card_title">Přihlaste se svým klíčem Nostr</string>
-    <string name="login_generate_button">Vygenerovat nový</string>
-    <string name="login_generate_new">Vygenerovat nový klíč</string>
-    <string name="login_hide_key">Skrýt klíč</string>
-    <string name="login_key_hint">Zadejte svůj soukromý klíč (nsec) nebo veřejný klíč (npub)</string>
-    <string name="login_key_label">nsec, bunker:// nebo npub</string>
-    <string name="login_show_key">Zobrazit klíč</string>
-    <string name="login_subtitle">Přihlaste se ke svému účtu Nostr</string>
-    <string name="login_subtitle_desktop">Klient Nostr pro počítač</string>
-    <string name="login_title">Vítejte v Amethystu</string>
-    <string name="login_with_key">Přihlásit se klíčem</string>
-    <string name="napplet_card_permissions">K čemu má přístup</string>
-    <string name="new_key_continue_button">Uložil jsem si klíče, pokračovat</string>
-    <string name="new_key_public_label">Veřejný klíč (lze sdílet):</string>
-    <string name="new_key_secret_label">Tajný klíč (NIKDY jej nesdílejte!):</string>
-    <string name="new_key_warning_message">Váš tajný klíč (nsec) je JEDINÝ způsob přístupu k vašemu účtu. Pokud jej ztratíte, váš účet je navždy ztracen. Uložte jej na bezpečné místo!</string>
-    <string name="new_key_warning_title">DŮLEŽITÉ: Uložte si klíče!</string>
-    <string name="nickname_cancel">Zrušit</string>
-    <string name="nickname_dialog_explainer">Zobrazí se vám místo jména tohoto uživatele všude v aplikaci. Ukládá se zašifrovaně ve vaší kartě kontaktu: přečíst jej můžete jen vy. Napsáním : použijete vlastní emoji.</string>
-    <string name="nickname_dialog_title">Přezdívka</string>
-    <string name="nickname_label">Přezdívka</string>
-    <string name="nickname_save">Uložit</string>
-    <string name="nickname_summary_label">Soukromá poznámka o tomto uživateli</string>
-    <string name="nsite_open">Otevřít</string>
-    <string name="nsite_root_site">Kořenový web</string>
-    <string name="nsite_servers">Servery:</string>
-    <string name="nsite_source">Zdroj:</string>
-    <string name="nsite_title">Statický web: %1$s</string>
-    <string name="replying_to">odpovídá na </string>
-    <string name="screen_messages_description">Zde se zobrazí vaše šifrované přímé zprávy.</string>
-    <string name="screen_messages_title">Zprávy</string>
-    <string name="screen_notifications_description">Zde se zobrazí zmínky, odpovědi a reakce.</string>
-    <string name="screen_notifications_title">Oznámení</string>
-    <string name="screen_search_description">Vyhledávejte uživatele, poznámky a hashtagy.</string>
-    <string name="screen_search_title">Hledat</string>
-    <string name="use_direct_url">Použít přímou URL</string>
-    <plurals name="chats_history_relays">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="few">%1$d relaye</item>
-        <item quantity="many">%1$d relaye</item>
-        <item quantity="other">%1$d relayů</item>
     </plurals>
 </resources>
