@@ -17,6 +17,10 @@ sourceSets {
         kotlin.srcDir("src/main/kotlin")
         resources.srcDir("src/main/resources")
     }
+    test {
+        kotlin.srcDir("src/test/kotlin")
+        resources.srcDir("src/test/resources")
+    }
 }
 
 dependencies {
@@ -32,6 +36,11 @@ dependencies {
     implementation(libs.okhttpCoroutines)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.slf4j.nop)
+
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlinx.coroutines.test)
+    // The JVM secp256k1 JNI binding so tests can exercise real signing/verification.
+    testImplementation(libs.secp256k1.kmp.jni.jvm)
 }
 
 // amy is headless. It compiles against zero Compose UI (the Compose deps are

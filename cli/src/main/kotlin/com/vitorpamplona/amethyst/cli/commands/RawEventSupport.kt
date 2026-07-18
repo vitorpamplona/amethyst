@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
+import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -50,14 +51,35 @@ object RawEventSupport {
         }
     }
 
-    /** Parse a `--relay a,b,c` flag into normalized relay URLs (silently drops un-normalizable entries). */
+    /** Parse a `--relay a,b,c` flag into normalized relay URLs; an un-normalizable entry is a `bad_args` failure. */
     fun relayFlag(args: Args): Set<NormalizedRelayUrl> =
         args
             .flag("relay")
             ?.split(',')
-            ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-            ?.toSet()
+            ?.map { raw ->
+                RelayUrlNormalizer.normalizeOrNull(raw.trim())
+                    ?: throw IllegalArgumentException("invalid relay url: ${raw.trim()}")
+            }?.toSet()
             .orEmpty()
+
+    /**
+     * The exit decision after a publish: `null` when at least one relay (or
+     * no relay at all — a deliberately local-only build) accepted the event,
+     * or a non-zero exit code after reporting `rejected` when every targeted
+     * relay refused it. Callers use `publishGuard(ack, event.id)?.let { return it }`
+     * so a total rejection stops a `set -e` script instead of exiting 0.
+     */
+    fun publishGuard(
+        ack: Map<NormalizedRelayUrl, Boolean>,
+        eventId: String,
+    ): Int? {
+        if (ack.isEmpty() || ack.any { it.value }) return null
+        return Output.error(
+            "rejected",
+            "no relay accepted event $eventId",
+            extra = mapOf("event_id" to eventId, "rejected_by" to ack.keys.map { it.url }),
+        )
+    }
 
     /**
      * Resolve where to publish: the explicit `--relay` set when given,
@@ -91,27 +113,38 @@ object RawEventSupport {
      *   --search TEXT     NIP-50
      *
      * Author/id decoding is local (no NIP-05 round-trip) — pass hex or a
-     * bech32 entity. Unparseable entries are dropped.
+     * bech32 entity. An unparseable entry is a `bad_args` failure: silently
+     * dropping it would run the query with a *weaker* filter than the user
+     * asked for and return silently-wrong results.
      */
     fun buildFilter(args: Args): Filter {
         val kinds =
             args
                 .flag("kind")
                 ?.split(',')
-                ?.mapNotNull { it.trim().toIntOrNull() }
-                ?.takeIf { it.isNotEmpty() }
+                ?.map { raw ->
+                    raw.trim().toIntOrNull()
+                        ?: throw IllegalArgumentException("--kind expects a number, got '${raw.trim()}'")
+                }?.takeIf { it.isNotEmpty() }
         val authors =
             args
                 .flag("author")
                 ?.split(',')
-                ?.mapNotNull { decodePublicKeyAsHexOrNull(it.trim()) }
-                ?.takeIf { it.isNotEmpty() }
+                ?.map { raw ->
+                    decodePublicKeyAsHexOrNull(raw.trim())
+                        ?: throw IllegalArgumentException(
+                            "--author expects npub/nprofile/64-hex, got '${raw.trim()}' " +
+                                "(NIP-05 names need a network round-trip — resolve first with `amy profile show`)",
+                        )
+                }?.takeIf { it.isNotEmpty() }
         val ids =
             args
                 .flag("id")
                 ?.split(',')
-                ?.mapNotNull { decodeEventIdAsHexOrNull(it.trim()) }
-                ?.takeIf { it.isNotEmpty() }
+                ?.map { raw ->
+                    decodeEventIdAsHexOrNull(raw.trim())
+                        ?: throw IllegalArgumentException("--id expects note/nevent/naddr/64-hex, got '${raw.trim()}'")
+                }?.takeIf { it.isNotEmpty() }
         val tags =
             args
                 .flag("tag")
@@ -127,9 +160,9 @@ object RawEventSupport {
             authors = authors,
             kinds = kinds,
             tags = tags,
-            since = args.flag("since")?.toLongOrNull(),
-            until = args.flag("until")?.toLongOrNull(),
-            limit = args.flag("limit")?.toIntOrNull(),
+            since = args.flag("since")?.let { it.toLongOrNull() ?: throw IllegalArgumentException("--since expects unix seconds, got '$it'") },
+            until = args.flag("until")?.let { it.toLongOrNull() ?: throw IllegalArgumentException("--until expects unix seconds, got '$it'") },
+            limit = args.flag("limit")?.let { it.toIntOrNull() ?: throw IllegalArgumentException("--limit expects a number, got '$it'") },
             search = args.flag("search"),
         )
     }

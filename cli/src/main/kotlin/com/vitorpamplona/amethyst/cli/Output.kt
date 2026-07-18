@@ -60,6 +60,12 @@ object Output {
         }
     }
 
+    /**
+     * Report a failure and return the exit code the process should end with.
+     * The code string picks the exit code — `bad_args` → 2, `timeout` → 124,
+     * everything else → 1 — so `return Output.error(…)` always honours the
+     * documented exit-code contract without per-site bookkeeping.
+     */
     fun error(
         code: String,
         detail: String? = null,
@@ -83,7 +89,11 @@ object Output {
                 System.err.println(base + suffix)
             }
         }
-        return 1
+        return when (code) {
+            "bad_args" -> 2
+            "timeout" -> 124
+            else -> 1
+        }
     }
 
     /**

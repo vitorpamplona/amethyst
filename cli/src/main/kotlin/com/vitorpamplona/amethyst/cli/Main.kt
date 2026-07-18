@@ -106,6 +106,16 @@ import kotlin.system.exitProcess
  * shape is not. Diagnostic logs always go to stderr.
  */
 fun main(argv: Array<String>) {
+    exitProcess(runCli(argv))
+}
+
+/**
+ * Everything [main] does except the process exit — the seam the JVM test
+ * suite drives (`exitProcess` would kill the test JVM). Note the shared
+ * mutable bits ([Output.mode], [Log.minLevel]) persist across calls; tests
+ * reset them between invocations.
+ */
+fun runCli(argv: Array<String>): Int {
     // Force AWT headless before any class load that might touch ImageIO,
     // Toolkit, or Graphics2D (image upload pulls in BufferedImage via
     // commons MediaMetadataReader / ImageReencoder). The Gradle launcher
@@ -137,7 +147,7 @@ fun main(argv: Array<String>) {
             Output.error("runtime", "${e::class.simpleName}: ${e.message}")
             1
         }
-    exitProcess(code)
+    return code
 }
 
 class AwaitTimeout(
@@ -181,7 +191,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
         i += consumed.tokensConsumed
     }
     if (filteredArgs.isEmpty()) {
-        printUsage()
+        Output.error("bad_args", "no subcommand given")
+        printVerbList()
         return 2
     }
 
@@ -305,11 +316,35 @@ private suspend fun dispatch(argv: Array<String>): Int {
         }
         "concord" -> ConcordCommands.dispatch(dataDir, tail)
         else -> {
-            System.err.println("unknown subcommand: $head")
-            printUsage()
+            Output.error("bad_args", "unknown subcommand: $head")
+            printVerbList()
             2
         }
     }
+}
+
+/**
+ * The one-screen alternative to the full usage dump: shown on an unknown or
+ * missing subcommand so the error stays readable. `amy --help` still prints
+ * the full reference.
+ */
+private fun printVerbList() {
+    System.err.println(
+        """
+        |
+        |Commands (see `amy --help` for the full reference, `amy <cmd> --help` for one group):
+        |  identity:    init create login logoff whoami use status
+        |  primitives:  decode encode verify key filter nip kind pow namecoin
+        |  events:      event publish fetch subscribe count sync encrypt decrypt gift
+        |  social:      notes profile follow unfollow search zap dm outbox
+        |  groups:      marmot relaygroup concord geochat
+        |  relays:      relay admin serve store
+        |  trust:       graperank fof
+        |  media/sites: blossom nsite napplet podcast podcast20 git
+        |  payments:    cashu offer debit
+        |  signing:     bunker
+        """.trimMargin(),
+    )
 }
 
 private suspend fun marmotDispatch(
@@ -680,15 +715,15 @@ private fun printUsage() {
         |CLINK Offers:
         |  offer info NOFFER                          decode a noffer1… pointer (local, no network)
         |  offer request NOFFER [--amount SATS]       kind:21001 round-trip: ask the service for a
-        |    [--timeout MS]                            fresh BOLT11 (amount required for spontaneous
+        |    [--timeout SECS]                            fresh BOLT11 (amount required for spontaneous
         |                                              offers; defaults to the pointer's fixed price)
         |
         |CLINK Debits:
         |  debit info NDEBIT                          decode an ndebit1… pointer (local, no network)
         |  debit pay NDEBIT BOLT11 [--amount SATS]    kind:21002 round-trip: ask the wallet to pay the
-        |    [--timeout MS]                            invoice; prints the preimage or a GFY error
+        |    [--timeout SECS]                            invoice; prints the preimage or a GFY error
         |  debit budget NDEBIT --amount SATS          authorize a spending budget; omit --frequency
-        |    [--frequency day|week|month] [--timeout MS] for a one-time budget
+        |    [--frequency day|week|month] [--timeout SECS] for a one-time budget
         |
         |Search (NIP-50):
         |  search user QUERY [--limit N]              search kind:0 profiles
