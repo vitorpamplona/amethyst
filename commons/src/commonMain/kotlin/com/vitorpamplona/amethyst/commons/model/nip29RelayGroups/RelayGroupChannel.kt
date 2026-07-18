@@ -139,6 +139,20 @@ class RelayGroupChannel(
 
     fun threadCount(): Int = threadNotes.size()
 
+    /**
+     * Whether this channel has received any relay-signed state — metadata, roster, roles or pins. Only the
+     * group's **host** relay signs those (via the `isRelaySignedGroupEvent`-gated consume paths), so this is
+     * true only for a confirmed host channel and never for a "phantom" one minted from a stray content event
+     * that arrived from a non-host relay. Used to redirect such strays back to the real host (see
+     * `LocalCache.attachToRelayGroupIfScoped` / the serving-relay hazard).
+     */
+    fun hasRelaySignedState(): Boolean =
+        event != null ||
+            members.isNotEmpty() ||
+            admins.isNotEmpty() ||
+            supportedRoles.isNotEmpty() ||
+            pinnedEventIds.isNotEmpty()
+
     /** A relay group lives on exactly one relay: its host. */
     override fun relays() = setOf(groupId.relayUrl)
 

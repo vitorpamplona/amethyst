@@ -152,16 +152,15 @@ class RelayGroupHistoryPagingRelayTest : RelayClientTest() {
     // tests that feed it synthetic callbacks (RelayLoadingCursorsTest / BackwardRelayPagerTest).
 
     /**
-     * Steps the production [RelayLoadingCursors] backward over one group's `#h` chat until it reports done,
-     * exactly as the history assembler does: advance → REQ at the requested `until` → feed each event and
-     * the EOSE back in → advance again. Returns every id delivered.
+     * One backward drain of the production [cursors] over [groupId] until it reports done — exactly as the
+     * history assembler steps it: advance → REQ at the requested `until` → feed each event and the EOSE back
+     * in → advance again. Returns every id delivered.
      */
-    private suspend fun driveCursorsToBottom(
+    private suspend fun drainFrom(
+        cursors: RelayLoadingCursors,
         groupId: String,
         now: Long,
     ): Set<String> {
-        val cursors = RelayLoadingCursors()
-        cursors.floor = now
         val relay = defaultRelayUrl
         val seen = mutableSetOf<String>()
         cursors.advance(relay, start = now)
@@ -175,9 +174,41 @@ class RelayGroupHistoryPagingRelayTest : RelayClientTest() {
             if (eose) cursors.onEose(relay)
             cursors.advance(relay, start = now)
         }
-        assertTrue(cursors.isDone(relay), "the production cursors must reach the bottom (empty page + EOSE)")
         return seen
     }
+
+    private suspend fun driveCursorsToBottom(
+        groupId: String,
+        now: Long,
+    ): Set<String> {
+        val cursors = RelayLoadingCursors().apply { floor = now }
+        val seen = drainFrom(cursors, groupId, now)
+        assertTrue(cursors.isDone(defaultRelayUrl), "the production cursors must reach the bottom (empty page + EOSE)")
+        return seen
+    }
+
+    @Test
+    fun aCachePruneBelowTheWindowReloadsTheDroppedBandWithNoGap() =
+        runBlocking {
+            // groupChat seeds createdAt == id seed, so hexId(k) is the event at createdAt k.
+            defaultRelay.preload(groupChat(idBase = 1, count = TOTAL, groupId = "g1"))
+            val now = 10_000L
+            val cursors = RelayLoadingCursors().apply { floor = now }
+
+            val firstPass = drainFrom(cursors, "g1", now)
+            assertEquals(TOTAL, firstPass.size)
+            assertTrue(cursors.isDone(defaultRelayUrl), "precondition: the first walk reached the bottom")
+
+            // The cache evicts everything at or below createdAt 150 out of the window. rewindTo pulls the
+            // reached cursor just above the newest pruned event so the next advance re-requests that band —
+            // without it, a done relay whose cursor already sits below the hole would skip it forever.
+            cursors.rewindTo(mapOf(defaultRelayUrl to 150L))
+
+            val reload = drainFrom(cursors, "g1", now)
+            // The re-walk must re-fetch the entire pruned band (createdAt 1..150) — no gap, no skipped id.
+            assertEquals((1..150).map { SyntheticEvents.hexId(it) }.toSet(), reload)
+            assertTrue(cursors.isDone(defaultRelayUrl), "the re-walk terminates on an empty page")
+        }
 
     @Test
     fun productionCursorsWalkOneGroupToTheBottomOverTheWire() =

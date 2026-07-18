@@ -169,7 +169,7 @@ is buggy** — both are needed before trusting "loads correctly" in the wild.
 - **No double-download on reconnect** (C9/D8).
 - **Retirement left no gap:** with `RelayGroupMyJoinedGroups` deleted and `ChannelPublic`/`ChannelFromUser` relay-group content removed, D1/D2/D3 still load — proving the tail+pager replaced them.
 - **CardWarmup joined-skip** (Tier B #6 / D5): a joined card issues no warmup REQ.
-- **Serving-relay hazard (known open item):** quote a group message fetched from a **non-host** relay (`filterMissingEvents`) and confirm whether it appears in the group (`GroupId(G, hostR)`) or is filed under `GroupId(G, otherR)` and lost. Documents the plan's §2 follow-up; expected to **fail** until that fix lands.
+- **Serving-relay hazard (FIXED):** a group message fetched from a **non-host** relay (e.g. `filterMissingEvents` quote resolution) used to be filed under `GroupId(G, otherR)` and lost. `LocalCache.attachToRelayGroupIfScoped`/`attachThreadToRelayGroupIfScoped` now redirect a stray (no channel for the serving relay) to the group's single confirmed **host** channel via `redirectStrayRelayGroupContent`, keyed off `RelayGroupChannel.hasRelaySignedState()` (a phantom never has relay-signed state, so the redirect only ever lands on a real host — strictly safe, the common host-pinned path is an untouched O(1) fast path). Covered by `RelayGroupContentRoutingTest`. **Device-untested:** the pure router + channel signal are unit-tested; the LocalCache wiring is a guarded fast-path/slow-path swap that still needs a device pass (Tier D) to confirm end-to-end.
 
 ## Exit criteria
 - Tier A green; Tier B all assertions pass; Tier C1–C9 pass (esp. **C3**).
