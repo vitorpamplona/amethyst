@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <!-- Nicknames (NIP-85 contact cards) -->
+</resources>

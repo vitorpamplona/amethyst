@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Login & Auth -->
+    <!-- New Key Warning -->
+    <!-- Common Actions -->
+    <!-- Errors -->
+    <!-- Loading & Empty States -->
+    <!-- Placeholder Screens -->
+    <!-- Accessibility -->
+    <!-- Relay history paging (shared feed markers + status card) -->
+    <!-- Notes & Replies -->
+    <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <!-- Custom emoji suggestions (NIP-30) -->
+    <!-- Nicknames (NIP-85 contact cards) -->
     <string name="git_status_open">打开</string>
     <string name="git_status_merged">已合并</string>
     <string name="git_status_closed">已关闭</string>
@@ -38,8 +50,6 @@
     <string name="road_event_traffic_jam">塞车</string>
     <string name="road_event_unknown">道路事件</string>
     <string name="podcast_value_zap_split_hint">对此的Zaps 在以下对象间分割：</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="relay_monitor_rtt_open">打开</string>
     <string name="relay_monitor_rtt_read">读取</string>
     <string name="relay_monitor_rtt_write">写入</string>

@@ -1186,7 +1186,6 @@
     <string name="podcast_transcript">Transkript</string>
     <string name="podcast_chapters">Kapitel</string>
     <string name="podcast_value_for_value">Value-for-Value</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_hosts_and_guests">Hosts &amp; Gäste</string>
     <string name="podcast_top_supporters">Top-Unterstützer</string>
     <plurals name="podcast_chapters_count">

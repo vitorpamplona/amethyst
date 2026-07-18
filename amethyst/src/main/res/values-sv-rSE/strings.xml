@@ -1184,7 +1184,6 @@
     <string name="podcast_transcript">Transkription</string>
     <string name="podcast_chapters">Kapitel</string>
     <string name="podcast_value_for_value">Värde -för-värde</string>
-    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_hosts_and_guests">Värdar &amp; gäster</string>
     <string name="podcast_top_supporters">Främsta supportrar</string>
     <plurals name="podcast_chapters_count">
