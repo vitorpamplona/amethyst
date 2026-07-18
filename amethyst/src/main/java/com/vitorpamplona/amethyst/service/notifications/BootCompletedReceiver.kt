@@ -50,11 +50,23 @@ class BootCompletedReceiver : BroadcastReceiver() {
             "android.intent.action.QUICKBOOT_POWERON",
             Intent.ACTION_MY_PACKAGE_REPLACED,
             -> {
-                Log.d(TAG) { "Received ${intent.action}, checking if notification service should start" }
-                if (NotificationRelayService.isEnabled(context)) {
-                    Log.d(TAG, "Starting notification relay service")
-                    NotificationRelayService.start(context)
-                }
+                // isEnabled() reads plain SharedPreferences (a synchronous disk read, by
+                // design — see LocalPreferences.globalSettingsPrefs) and scans the accounts
+                // cache. onReceive runs on the main thread, so hop off it via goAsync() to
+                // avoid a StrictMode DiskReadViolation while keeping the receiver alive until
+                // the work finishes.
+                val pending = goAsync()
+                Thread {
+                    try {
+                        Log.d(TAG) { "Received ${intent.action}, checking if notification service should start" }
+                        if (NotificationRelayService.isEnabled(context)) {
+                            Log.d(TAG, "Starting notification relay service")
+                            NotificationRelayService.start(context)
+                        }
+                    } finally {
+                        pending.finish()
+                    }
+                }.start()
             }
         }
     }
