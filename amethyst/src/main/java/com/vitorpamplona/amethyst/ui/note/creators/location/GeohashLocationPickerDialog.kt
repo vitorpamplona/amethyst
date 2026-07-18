@@ -87,7 +87,9 @@ import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import org.osmdroid.util.GeoPoint
+import kotlin.math.abs
 
 /** Zoom the map animates to after a search hit or a "use my location" tap. */
 private const val RECENTER_ZOOM = 14.0
@@ -97,6 +99,19 @@ private const val SEEDED_ZOOM = 13.0
 
 /** How far out to start when the picker opens with nothing selected yet. */
 private const val WORLD_ZOOM = 2.5
+
+/** Neutral starting center (mid-Atlantic) when the picker opens with no seed. */
+private const val WORLD_CENTER_LAT = 20.0
+private const val WORLD_CENTER_LON = 0.0
+
+/**
+ * Minimum center shift (degrees) from the opening center that counts as a real pan,
+ * so an initial osmdroid layout-scroll at the opening center is not mistaken for a pick.
+ */
+private const val SELECT_MOVE_EPS = 0.0005
+
+/** Give up waiting for a GPS fix after this long so the button never spins forever. */
+private const val GPS_FIX_TIMEOUT_MS = 20_000L
 
 /**
  * A full-screen, map-first location picker dialog that produces a geohash string.
@@ -160,18 +175,25 @@ fun GeohashLocationPickerContent(
     val seed = remember(initialGeohash) { initialGeohash?.takeIf { it.isNotBlank() }?.let { GeoHash.decode(it) } }
     val seedLen = initialGeohash?.trim()?.length ?: 0
 
+    // The map opens centered here. Without a seed there is no real selection yet — and
+    // osmdroid can emit an initial scroll at this exact center, which must NOT be treated
+    // as a pick (else the picker would auto-select the mid-Atlantic and enable Confirm).
+    val initialLat = seed?.centerLat ?: WORLD_CENTER_LAT
+    val initialLon = seed?.centerLon ?: WORLD_CENTER_LON
+
     var pickedLat by remember { mutableStateOf(seed?.centerLat) }
     var pickedLon by remember { mutableStateOf(seed?.centerLon) }
+    var hasSelection by remember { mutableStateOf(seed != null) }
     var level by remember {
         mutableStateOf(GeohashChannelLevel.forChars(seedLen) ?: GeohashChannelLevel.CITY)
     }
     var recenter by remember { mutableStateOf<GeoPoint?>(null) }
 
     val cell =
-        remember(pickedLat, pickedLon, level) {
+        remember(pickedLat, pickedLon, level, hasSelection) {
             val lat = pickedLat
             val lon = pickedLon
-            if (lat != null && lon != null) GeoHash.encode(lat, lon, level.chars).toString() else null
+            if (hasSelection && lat != null && lon != null) GeoHash.encode(lat, lon, level.chars).toString() else null
         }
 
     // Debounce the reverse-geocode: panning changes [cell] constantly, and we don't
@@ -207,11 +229,18 @@ fun GeohashLocationPickerContent(
     }
     LaunchedEffect(wantsMyLocation) {
         if (wantsMyLocation) {
-            val fix = locationManager.preciseGeohashStateFlow.first { it is LocationState.LocationResult.Success }
-            val hash = (fix as LocationState.LocationResult.Success).geoHash
-            recenter = GeoPoint(hash.centerLat, hash.centerLon)
-            pickedLat = hash.centerLat
-            pickedLon = hash.centerLon
+            // Wait for the first real fix, but bail on a timeout so the button never spins
+            // forever (permission granted yet location off, indoors, emulator with no fix…).
+            val fix =
+                withTimeoutOrNull(GPS_FIX_TIMEOUT_MS) {
+                    locationManager.preciseGeohashStateFlow.first { it is LocationState.LocationResult.Success }
+                } as? LocationState.LocationResult.Success
+            if (fix != null) {
+                recenter = GeoPoint(fix.geoHash.centerLat, fix.geoHash.centerLon)
+                pickedLat = fix.geoHash.centerLat
+                pickedLon = fix.geoHash.centerLon
+                hasSelection = true
+            }
             wantsMyLocation = false
         }
     }
@@ -248,6 +277,7 @@ fun GeohashLocationPickerContent(
         recenter = GeoPoint(hit.latitude, hit.longitude)
         pickedLat = hit.latitude
         pickedLon = hit.longitude
+        hasSelection = true
         results = emptyList()
         query = ""
         keyboard?.hide()
@@ -266,11 +296,16 @@ fun GeohashLocationPickerContent(
                 onCenterChanged = { lat, lon ->
                     pickedLat = lat
                     pickedLon = lon
+                    // A pan/zoom away from the opening center is the user's first real pick.
+                    if (!hasSelection && (abs(lat - initialLat) > SELECT_MOVE_EPS || abs(lon - initialLon) > SELECT_MOVE_EPS)) {
+                        hasSelection = true
+                    }
                 },
                 onPick = { lat, lon ->
                     recenter = GeoPoint(lat, lon)
                     pickedLat = lat
                     pickedLon = lon
+                    hasSelection = true
                 },
                 modifier = Modifier.fillMaxSize(),
             )

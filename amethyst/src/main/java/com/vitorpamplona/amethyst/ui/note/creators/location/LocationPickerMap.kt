@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.creators.location
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -84,6 +85,10 @@ fun LocationPickerMap(
     // same [recenter] doesn't yank the map back while the user is panning.
     val lastRecenter = remember { arrayOfNulls<GeoPoint>(1) }
 
+    // Tracks the last marker point so we only rebuild the marker overlay (and invalidate)
+    // when it actually changes — not on every scroll-driven recomposition.
+    val lastMarker = remember { arrayOfNulls<GeoPoint>(1) }
+
     val mapView =
         remember(context) {
             Configuration.getInstance().userAgentValue = context.packageName
@@ -141,6 +146,13 @@ fun LocationPickerMap(
         }
     }
 
+    // Follow the app theme: dim the bright MAPNIK tiles in dark mode (matching the
+    // display-only LocationPreviewMap). Applied only when the theme flips, not per frame.
+    LaunchedEffect(mapView, darkTheme) {
+        mapView.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else null)
+        mapView.invalidate()
+    }
+
     AndroidView(
         modifier = modifier,
         factory = { mapView },
@@ -154,22 +166,24 @@ fun LocationPickerMap(
                 }
             }
 
-            // Follow the app theme: dim the bright MAPNIK tiles in dark mode, matching
-            // the display-only LocationPreviewMap.
-            map.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else null)
-
-            map.overlays.removeAll { it is Marker }
-            if (pickedLatitude != null && pickedLongitude != null) {
-                val point = GeoPoint(pickedLatitude, pickedLongitude)
-                val marker =
-                    Marker(map).apply {
-                        position = point
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        setInfoWindow(null)
-                    }
-                map.overlays.add(marker)
+            // Only rebuild the marker overlay when the picked point actually changes. The
+            // update block runs on every scroll-driven recomposition, so unconditionally
+            // clearing/re-adding the marker and invalidating would be per-frame waste.
+            val marker = if (pickedLatitude != null && pickedLongitude != null) GeoPoint(pickedLatitude, pickedLongitude) else null
+            if (marker != lastMarker[0]) {
+                lastMarker[0] = marker
+                map.overlays.removeAll { it is Marker }
+                if (marker != null) {
+                    map.overlays.add(
+                        Marker(map).apply {
+                            position = marker
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            setInfoWindow(null)
+                        },
+                    )
+                }
+                map.invalidate()
             }
-            map.invalidate()
         },
     )
 }
