@@ -7,13 +7,65 @@ description: Use when comparing Android strings.xml locale files to find untrans
 
 ## Overview
 
-Extract string resource keys from the default `values/strings.xml` that are absent in a target locale's `strings.xml`, excluding non-translatable entries. Outputs missing keys and offers to translate them.
+Extract string resource keys from a default `values/strings.xml` that are absent in a target locale's `strings.xml`, excluding non-translatable entries. Outputs missing keys and offers to translate them.
+
+The repo now has **two independent Crowdin-managed resource trees** — you must scan **both** (see "Resource trees" below).
 
 ## When to Use
 
 - Need to find untranslated strings for a specific locale
 - Preparing a batch of strings for a translator
 - Checking translation coverage after adding new features
+
+## Resource trees (scan BOTH)
+
+There are two separate `strings.xml` trees, each with its own default `values/` and per-locale `values-<locale>/` files, each wired into `crowdin.yml` independently:
+
+| Tree | Default file | Per-locale file |
+|------|--------------|-----------------|
+| **amethyst** (Android app) | `amethyst/src/main/res/values/strings.xml` | `amethyst/src/main/res/values-<locale>/strings.xml` |
+| **commons** (KMP Compose resources, shared by Android + Desktop) | `commons/src/commonMain/composeResources/values/strings.xml` | `commons/src/commonMain/composeResources/values-<locale>/strings.xml` |
+
+The `commons` tree appeared when shared event-renderer composables were extracted out of `amethyst/` into `commons/` (Compose Multiplatform `stringResource`). It is **not** a copy of the amethyst tree — the vast majority of its keys are commons-only; only a small handful overlap. Every diff/count/translate command below works on either tree by swapping the base path — **run the whole technique once per tree** and report them separately (each maps to its own Crowdin file, so the counts should reconcile against two different Crowdin UI numbers).
+
+**Locale-qualifier caveat:** `commons` uses the same region-qualified locale dirs as amethyst for our four targets (`values-cs`, `values-de-rDE`, `values-sv-rSE`, `values-pt-rBR`), but the *full* set of locale dirs differs between trees. Enumerate `values-*` under each tree's own base rather than assuming they match.
+
+**Overlap (copy — but only after checking the English matches):** a few `commons` keys share a *name* with a key in the amethyst tree. For such a key already translated in the amethyst locale file you may **copy the existing approved translation verbatim** — but **only if the two English source values are byte-identical.** A shared key name does **not** guarantee a shared meaning.
+
+> ⚠️ **Mistake we actually made (2026-07-18):** `napplet_card_permissions` exists in *both* trees with the *same key name* but *different English* — commons = `"What it can access"`, amethyst = `"Permissions:"`. Copying the amethyst translation by key name produced the wrong string in commons (it said "Permissions:" where the UI reads "What it can access"). **Always diff the English values, not just the key names.** When the English differs, translate the commons value fresh — or, better, find the amethyst key whose *value* matches (here `favorite_app_access_show` = "What it can access") and copy *that* approved translation.
+
+Detect name-overlap **and flag value mismatches** in one pass:
+
+```bash
+cdef=commons/src/commonMain/composeResources/values/strings.xml
+adef=amethyst/src/main/res/values/strings.xml
+comm -12 \
+  <(grep '<string name=' "$cdef" | sed 's/.*name="\([^"]*\)".*/\1/' | sort -u) \
+  <(grep '<string name=' "$adef" | grep -v 'translatable="false"' | sed 's/.*name="\([^"]*\)".*/\1/' | sort -u) \
+| while read -r k; do
+    cv=$(grep -m1 "name=\"$k\"" "$cdef" | sed 's/.*>\(.*\)<\/string>/\1/')
+    av=$(grep -m1 "name=\"$k\"" "$adef" | sed 's/.*>\(.*\)<\/string>/\1/')
+    [ "$cv" = "$av" ] && echo "SAFE-COPY   $k" || echo "VALUE-DIFFERS $k  commons=\"$cv\"  amethyst=\"$av\""
+  done
+```
+
+Only `SAFE-COPY` keys may be copied verbatim. For `VALUE-DIFFERS`, translate the commons English fresh (or copy from the amethyst key that has the *matching value*).
+
+**Whitespace-quote convention differs between trees.** Android string resources use surrounding double-quotes to preserve leading/trailing whitespace (`"replying to "`). The **commons Compose-resources tree does NOT use this convention** — it authors trailing/leading spaces raw and unquoted (`replying to `). So when copying/translating a commons string with edge whitespace, **match the commons source: raw spaces, no wrapping quotes.** (Mistake we made: we copied amethyst's quoted `"replying to "` into commons, where the quotes would render literally.) A quick check for stray quote-wrapping you introduced:
+
+```bash
+grep -nE '<string name="[^"]*">"' commons/src/commonMain/composeResources/values-*/strings.xml
+# The commons English tree has zero quote-wrapped values — any hit in a locale file is almost certainly a bad copy from amethyst.
+```
+
+**Why two catalogs exist — the duplication is NOT a bug to "fix" (don't ask again).** You will see the same English text (`Cancel`, `Save`, `Delete`, `Open`, …) defined *many* times across the amethyst tree under per-feature keys **and** once more in commons under generic keys (`action_cancel`, `action_save`, …). This is **required architecture, not an error:**
+
+- The two trees are **different resource systems**: amethyst uses Android `R.string`; commons uses Compose-Multiplatform `Res.string` (`com.vitorpamplona.amethyst.commons.resources.Res`).
+- **`commons` cannot depend on `amethyst`** (amethyst depends on commons — the reverse would be circular). So a composable extracted *into* commons physically cannot reference `R.string.cancel`; it needs its own string, hence the generic `action_*` keys. That is the only way an extracted shared composable can render "Cancel."
+- The scattered amethyst per-feature duplicates (`nip46_signer_cancel`, `nest_create_cancel`, …) are **pre-existing tech debt**; the commons keys did not create them.
+- Both catalogs are Crowdin-managed **independently**, and Crowdin's translation memory pre-fills repeats, so translating the same word in both trees is **not** wasted effort.
+
+**Do not** treat the value-overlap as something to deduplicate during a translation pass. Migrating amethyst's own screens onto the shared `action_*` strings is a *separate, optional* refactor and a maintainer call — out of scope for this skill. Just translate each tree correctly and independently.
 
 ## Background: Crowdin strip-identical behavior
 
@@ -53,9 +105,25 @@ The default set of locales (unless the user specifies otherwise):
 
 ### 1. Identify files
 
+Do this for **each** resource tree (see "Resource trees" above). The examples below use the amethyst base path; repeat every step with the commons base path swapped in.
+
 ```
+# amethyst tree
 Default:  amethyst/src/main/res/values/strings.xml
 Target:   amethyst/src/main/res/values-<locale>/strings.xml
+
+# commons tree
+Default:  commons/src/commonMain/composeResources/values/strings.xml
+Target:   commons/src/commonMain/composeResources/values-<locale>/strings.xml
+```
+
+A convenient way to run the whole technique twice is to loop over the two base dirs:
+
+```bash
+for base in amethyst/src/main/res commons/src/commonMain/composeResources; do
+  echo "########## tree: $base ##########"
+  # ... run the diff/count/value-extraction commands with $base/values[...] ...
+done
 ```
 
 ### 2. Find missing keys using cs as reference
@@ -153,8 +221,10 @@ Flag and offer to fix:
 ```bash
 # Scan every locale's strings.xml for <item quantity="one"> entries that
 # hardcode "1" (or other literal digits) instead of using a placeholder.
-# Looks at default + all values-* locales.
-for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml; do
+# Looks at default + all values-* locales, in BOTH resource trees.
+for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml \
+         commons/src/commonMain/composeResources/values/strings.xml \
+         commons/src/commonMain/composeResources/values-*/strings.xml; do
   awk -v file="$f" '
     /<plurals/ { in_plurals = 1; name = $0; sub(/.*name="/, "", name); sub(/".*/, "", name) }
     in_plurals && /quantity="one"/ {
@@ -173,7 +243,9 @@ done
 Then scan for dead `quantity="zero"` entries. CLDR's `zero` category is integer-bearing only in **Arabic (`ar`)** and **Welsh (`cy`)**. In every other locale, count=0 falls through to `other`, so a `<item quantity="zero">` entry is dead and likely a translator/author bug (or it silently never fires):
 
 ```bash
-for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml; do
+for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml \
+         commons/src/commonMain/composeResources/values/strings.xml \
+         commons/src/commonMain/composeResources/values-*/strings.xml; do
   # Skip Arabic and Welsh — they natively use the zero category.
   case "$f" in
     *values-ar*|*values-cy*) continue ;;
@@ -263,6 +335,10 @@ When adding translated strings to locale files:
 
 ## Common Mistakes
 
+- **Scanning only the amethyst tree** — there are now **two** Crowdin-managed `strings.xml` trees (`amethyst/src/main/res` and `commons/src/commonMain/composeResources`). A key extracted into `commons/` will never show up in the amethyst diff. Run the whole technique once per tree (see "Resource trees") and report each separately.
+- **Copying an overlapping `commons` translation by key name alone** — a shared key name does NOT mean shared English. `napplet_card_permissions` is "What it can access" in commons but "Permissions:" in amethyst; copying by name produced the wrong string. Diff the English *values* first; copy verbatim only when they're byte-identical, else translate fresh (see "Overlap" in Resource trees).
+- **Applying amethyst's `"…"` whitespace-quote convention to a commons string** — the commons Compose-resources tree authors edge whitespace raw and unquoted; wrapping quotes copied from amethyst render literally there. Match the commons source format.
+- **Trying to "dedupe" the amethyst↔commons value-overlap** — it's required architecture (commons can't depend on amethyst, so shared composables need their own `Res.string` catalog), not an error. Don't fold consolidation into a translation pass.
 - **Forgetting `translatable="false"`** — these should never appear in locale files
 - **Diffing only `<string name=`** — `<plurals>` is a separate resource type; a source `<plurals>` missing from a locale will never show up in a `<string>` diff. Always run the diff twice (once per resource type) as shown in Step 2. The same goes for `<string-array>` if the project uses it.
 - **Trusting a git "sync-timestamp" heuristic to pre-filter the list** — this skill used to skip keys added before the last `New Crowdin translations` commit, on the theory that Crowdin had already "decided" them. It was dropped: a key added shortly before an export that translators hadn't reached yet is genuinely missing, so the heuristic silently dropped real work. Use the raw on-disk diff and reconcile against the Crowdin web UI's untranslated count instead.
