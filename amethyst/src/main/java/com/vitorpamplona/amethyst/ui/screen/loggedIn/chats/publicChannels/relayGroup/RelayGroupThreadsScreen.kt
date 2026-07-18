@@ -30,7 +30,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -38,11 +40,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +63,8 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsHistorySubAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -65,6 +72,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 /**
  * A group's forum-style threads (kind 11) — the secondary content type kept out of
@@ -93,9 +103,19 @@ private fun RelayGroupThreads(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Recent live tail + on-demand backward history, the Threads analog of the chat stack. Without the
+    // pager a group with more threads than the relay's default result cap would silently hide the older ones.
     RelayGroupOpenThreadsSubscription(channel, accountViewModel.dataSources().relayGroupOpenThreads, accountViewModel)
+    val historySource = accountViewModel.dataSources().relayGroupOpenThreadsHistory
+    RelayGroupOpenThreadsHistorySubscription(channel.groupId, historySource, accountViewModel)
 
     val threads by channel.threads.collectAsStateWithLifecycle()
+    val history = remember(historySource) { historySource.history }
+    val loadingOlder by history.loadingMore.collectAsStateWithLifecycle()
+    val status by history.status.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+
+    RelayGroupThreadsPaging(threadCount = { threads.size }, listState = listState, history = history)
 
     // Only members can post a thread (the relay rejects a non-member's kind-11), so the
     // compose FAB is hidden for everyone else.
@@ -156,16 +176,78 @@ private fun RelayGroupThreads(
                 )
             }
         } else {
-            LazyColumn(modifier = Modifier.padding(padding)) {
+            LazyColumn(state = listState, modifier = Modifier.padding(padding)) {
                 itemsIndexed(threads, key = { _, thread -> thread.idHex }) { index, thread ->
                     if (index > 0) {
                         HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
                     ThreadRow(thread, accountViewModel, nav) { nav.nav(Route.Note(thread.idHex)) }
                 }
+                item(key = "threads-history-footer") {
+                    RelayGroupThreadsHistoryFooter(loadingOlder, status.exhausted)
+                }
             }
         }
     }
+}
+
+/** How many threads to eagerly backfill on open before paging goes demand-driven, and the scroll lead. */
+private const val RELAY_GROUP_THREADS_TARGET = 30
+private const val RELAY_GROUP_THREADS_PREFETCH_AHEAD = 5
+
+/**
+ * Drives the Threads backward pager: eagerly backfill to a window on open (so a group with deep history
+ * doesn't show just its last few threads), then page older content demand-driven as the list nears its end.
+ * Mirrors the chat screen's `RelayGroupBackfillHistoryToWindow` + reach sentinels, on the plain thread list.
+ */
+@Composable
+private fun RelayGroupThreadsPaging(
+    threadCount: () -> Int,
+    listState: LazyListState,
+    history: RelayGroupOpenThreadsHistorySubAssembler,
+) {
+    LaunchedEffect(history) {
+        combine(snapshotFlow { threadCount() }, history.loadingMore, history.status) { count, loading, s ->
+            count < RELAY_GROUP_THREADS_TARGET && !loading && !s.exhausted
+        }.distinctUntilChanged()
+            .filter { it }
+            .collect { history.advanceAll() }
+    }
+    LaunchedEffect(history, listState) {
+        snapshotFlow {
+            val last =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: 0
+            val total = threadCount()
+            total > 0 && last >= total - RELAY_GROUP_THREADS_PREFETCH_AHEAD
+        }.distinctUntilChanged()
+            .filter { it }
+            .collect {
+                if (!history.status.value.exhausted && !history.loadingMore.value) history.advanceAll()
+            }
+    }
+}
+
+/** A quiet footer at the bottom of the thread list: what the pager is doing, or nothing when idle. */
+@Composable
+private fun RelayGroupThreadsHistoryFooter(
+    loadingOlder: Boolean,
+    exhausted: Boolean,
+) {
+    val text =
+        when {
+            loadingOlder -> stringRes(R.string.relay_group_threads_loading_older)
+            exhausted -> stringRes(R.string.relay_group_threads_all_caught_up)
+            else -> return
+        }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+    )
 }
 
 @Composable

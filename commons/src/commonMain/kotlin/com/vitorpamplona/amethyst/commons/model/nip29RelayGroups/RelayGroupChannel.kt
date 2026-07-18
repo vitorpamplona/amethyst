@@ -63,6 +63,14 @@ class RelayGroupChannel(
      */
     val history = RelayLoadingCursors()
 
+    /**
+     * Per-relay backward-pagination cursors for this group's **Threads** tab (kind-11 roots + kind-1111
+     * comments), kept apart from [history] so paging the forum doesn't move the chat's cursor. The Threads
+     * live tail holds the recent window; this pages older thread content by `until`+`limit` on the host relay
+     * so a group with more threads than the relay's default result cap doesn't silently hide the older ones.
+     */
+    val threadsHistory = RelayLoadingCursors()
+
     /** The latest relay-signed kind 39000 metadata event, when known. */
     var event: GroupMetadataEvent? = null
 

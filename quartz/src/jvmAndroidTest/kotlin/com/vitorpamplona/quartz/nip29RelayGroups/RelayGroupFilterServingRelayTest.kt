@@ -280,6 +280,41 @@ class RelayGroupFilterServingRelayTest : RelayClientTest() {
             assertEquals(setOf("g1", "g2"), metadataGroups, "the directory lists both groups the relay hosts")
         }
 
+    // --- Threads history: a backward #h + thread-kinds walk covers every thread exactly once ---
+
+    @Test
+    fun threadsHistoryFilterPagesEveryThreadBackwardExactlyOnce() =
+        runBlocking {
+            // 120 thread roots (older than any window), paged backward by #h + kind-11/1111, limit 50 — the
+            // shape the RelayGroupOpenThreadsHistory pager puts on the wire. Proves no older thread is lost
+            // to the relay's default result cap.
+            defaultRelay.preload((1..120).map { content(it, ThreadEvent.KIND, "g1", at = it.toLong()) })
+
+            val seen = mutableSetOf<String>()
+            var until: Long? = null
+            var pages = 0
+            while (pages < 10) {
+                val (events, eose) =
+                    client.collectUntilEose(
+                        defaultRelayUrl,
+                        Filter(
+                            kinds = listOf(ThreadEvent.KIND, CommentEvent.KIND),
+                            tags = mapOf(GroupIdTag.TAG_NAME to listOf("g1")),
+                            until = until,
+                            limit = 50,
+                        ),
+                    )
+                assertTrue(eose)
+                if (events.isEmpty()) break
+                pages++
+                events.forEach { seen.add(it.id) }
+                until = events.minOf { it.createdAt } - 1
+            }
+
+            assertEquals(120, seen.size, "the threads pager must cover every thread exactly once")
+            assertEquals(3, pages) // 50 + 50 + 20, then an empty page stops the walk
+        }
+
     private fun Event.groupTag(): String? = tags.firstOrNull { it.size >= 2 && it[0] == GroupIdTag.TAG_NAME }?.get(1)
 
     private fun Event.dTagValue(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "d" }?.get(1)

@@ -145,6 +145,28 @@ class RelayGroupFilterBuildersTest {
         assertEquals(7L, f.filter.since)
     }
 
+    // --- Threads history (backward pager): only armed relays, each at its own until, over thread kinds ---
+
+    @Test
+    fun `threads history emits only armed relays at their until over thread kinds`() {
+        val untilByRelay = mapOf(relayA to 300L) // relayB not armed → no cursor
+        val filters = buildRelayGroupThreadsHistoryFilters(g1OnA, listOf(relayA, relayB), { untilByRelay[it] }, 40)
+
+        val f = filters.single()
+        assertEquals(relayA, f.relay)
+        assertEquals(threadKinds, f.filter.kinds)
+        assertEquals(300L, f.filter.until)
+        assertEquals(40, f.filter.limit)
+        assertEquals(listOf("g1"), f.filter.tags!!["h"])
+        assertNull("backward paging is until-anchored, not since", f.filter.since)
+        assertNull(f.filter.authors)
+    }
+
+    @Test
+    fun `threads history with nothing armed builds no filters`() {
+        assertTrue(buildRelayGroupThreadsHistoryFilters(g1OnA, emptyList(), { 1L }, 40).isEmpty())
+    }
+
     // --- Directory (browse a relay): kinds 39000-39003, no d/h scope, limit 500 ---
 
     @Test

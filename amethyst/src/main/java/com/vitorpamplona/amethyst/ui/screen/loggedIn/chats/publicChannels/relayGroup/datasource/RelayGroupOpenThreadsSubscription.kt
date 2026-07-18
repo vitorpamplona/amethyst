@@ -25,8 +25,9 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
-/** Mount on a group's Threads screen to stream its kind-11 threads + 1111 comments. */
+/** Mount on a group's Threads screen to stream its kind-11 threads + 1111 comments (the recent live tail). */
 @Composable
 fun RelayGroupOpenThreadsSubscription(
     channel: RelayGroupChannel,
@@ -38,5 +39,20 @@ fun RelayGroupOpenThreadsSubscription(
             RelayGroupOpenThreadsQueryState(channel)
         }
 
+    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+}
+
+/**
+ * Mount on a group's Threads screen to keep its backward-history pager bound and armed (older kind-11/1111
+ * by `until`+`limit` on the host relay), the Threads analog of [RelayGroupOpenChatHistorySubscription].
+ */
+@Composable
+fun RelayGroupOpenThreadsHistorySubscription(
+    groupId: GroupId,
+    dataSource: RelayGroupOpenThreadsHistoryFilterAssembler,
+    accountViewModel: AccountViewModel,
+) {
+    val account = accountViewModel.account
+    val state = remember(account, groupId) { RelayGroupOpenThreadsHistoryQueryState(account, groupId) }
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }

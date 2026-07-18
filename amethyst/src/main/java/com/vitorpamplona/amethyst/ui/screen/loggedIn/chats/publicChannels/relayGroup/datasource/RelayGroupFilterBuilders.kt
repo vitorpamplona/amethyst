@@ -191,6 +191,31 @@ fun buildRelayGroupDirectoryFilter(
             ),
     )
 
+/**
+ * Backward-history page(s) for a group's **Threads** tab: one `#h` filter per **armed** relay at its own
+ * `until`, capped by [limit], over the thread kinds (11/1111). The forum analog of
+ * [buildRelayGroupHistoryFilters]; a parked relay (no requested `until`) contributes nothing.
+ */
+fun buildRelayGroupThreadsHistoryFilters(
+    groupId: GroupId,
+    armedRelays: Collection<NormalizedRelayUrl>,
+    untilForRelay: (NormalizedRelayUrl) -> Long?,
+    limit: Int,
+): List<RelayBasedFilter> =
+    armedRelays.mapNotNull { relay ->
+        val until = untilForRelay(relay) ?: return@mapNotNull null
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = RELAY_GROUP_THREAD_KINDS,
+                    tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
+                    until = until,
+                    limit = limit,
+                ),
+        )
+    }
+
 /** The Threads-tab feed for a single open group: kind-11/1111 `#h`-scoped on the host relay. */
 fun buildRelayGroupThreadsFilter(
     groupId: GroupId,
