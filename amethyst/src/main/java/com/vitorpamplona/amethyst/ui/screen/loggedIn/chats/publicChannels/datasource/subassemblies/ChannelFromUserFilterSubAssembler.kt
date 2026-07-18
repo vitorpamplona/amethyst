@@ -43,7 +43,11 @@ class ChannelFromUserFilterSubAssembler(
             is EphemeralChatChannel -> filterMyMessagesToEphemeralChat(channel, userHex(key), since)
             is PublicChatChannel -> filterMyMessagesToPublicChat(channel, user(key).pubkeyHex, since)
             is LiveActivitiesChannel -> filterMyMessagesToLiveActivities(channel, userHex(key), since)
-            is RelayGroupChannel -> filterMyMessagesToRelayGroup(channel, userHex(key), since)
+            // A relay group's timeline is served by the group content tail + history pager (both
+            // all-authors `#h` on the single host relay), which already return my own messages — so a
+            // dedicated `authors=[me]` reconciliation filter is redundant here. See
+            // amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md.
+            is RelayGroupChannel -> emptyList()
             else -> null
         }
 

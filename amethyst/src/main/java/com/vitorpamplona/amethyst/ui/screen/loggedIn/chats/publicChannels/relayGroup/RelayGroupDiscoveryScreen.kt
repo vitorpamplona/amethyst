@@ -79,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.toGroupConstraints
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -119,9 +118,8 @@ fun RelayGroupDiscoveryScreen(
     WatchLifecycleAndUpdateModel(feedContentState)
     WatchAccountForRelayGroupDiscovery(feedContentState, accountViewModel)
     RelayGroupsDiscoveryFilterAssemblerSubscription(accountViewModel)
-    // Keep the joined groups' metadata + rosters live so the "My Groups" filter can list them
-    // (their host relays aren't fetched by the discovery filter set).
-    RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
+    // The joined groups' metadata + rosters are kept live by the always-on state sub (mounted at
+    // LoggedInPage), so the "My Groups" filter can list them without a per-screen subscription.
 
     DisappearingScaffold(
         isInvertedLayout = false,

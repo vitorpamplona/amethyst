@@ -39,7 +39,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistoryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupChatHistoryFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupChatTailFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupPreviewTailFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupStateFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadFeedFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssembler
@@ -126,10 +129,16 @@ class RelaySubscriptionsCoordinator(
     // assembler above (same as NIP-28 public chats), so only the group-specific surfaces get their
     // own here.
     val relayGroupsOnRelay = RelayGroupsOnRelayFilterAssembler(client) // browsing one relay's channel list
-    val relayGroupMyJoinedGroups = RelayGroupMyJoinedGroupsFilterAssembler(client) // metadata+rosters of groups I've joined
     val relayGroupThreadFeed = RelayGroupThreadFeedFilterAssembler(client) // a group's forum-threads tab
     val relayGroupWarmup = RelayGroupWarmupFilterAssembler(client) // prefetching a group before it's opened
     val relayGroupsDiscovery = RelayGroupsDiscoveryFilterAssembler(client) // the cross-relay Discover feed
+
+    // NIP-29 chat, split state-vs-content like the DM / Concord stacks (see
+    // amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md).
+    val relayGroupState = RelayGroupStateFilterAssembler(client) // always-on: joined groups' metadata/roster/roles/pins
+    val relayGroupPreviewTail = RelayGroupPreviewTailFilterAssembler(client) // always-on: batched #h recent-tail for Messages previews
+    val relayGroupChatTail = RelayGroupChatTailFilterAssembler(client) // the open group's recent chat (covers non-joined)
+    val relayGroupChatHistory = RelayGroupChatHistoryFilterAssembler(client) // the open group's on-demand backward history pager
 
     // Concord Channels (encrypted communities). One assembler keeps every joined community's
     // control + channel planes live (kind-1059 by derived stream address).
@@ -201,10 +210,13 @@ class RelaySubscriptionsCoordinator(
     val all =
         listOf(
             relayGroupsOnRelay,
-            relayGroupMyJoinedGroups,
             relayGroupThreadFeed,
             relayGroupWarmup,
             relayGroupsDiscovery,
+            relayGroupState,
+            relayGroupPreviewTail,
+            relayGroupChatTail,
+            relayGroupChatHistory,
             concordChannels,
             concordChannelHistory,
             account,

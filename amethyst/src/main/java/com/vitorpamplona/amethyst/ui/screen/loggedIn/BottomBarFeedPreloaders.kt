@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.Article
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupMyJoinedGroupsSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource.CommunitiesListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
@@ -133,7 +132,10 @@ private fun PreloadFor(
 
         NavBarItem.PUBLIC_CHATS -> PublicChatsFilterAssemblerSubscription(accountViewModel)
 
-        NavBarItem.RELAY_GROUPS -> RelayGroupMyJoinedGroupsSubscription(accountViewModel.dataSources().relayGroupMyJoinedGroups, accountViewModel)
+        // Joined groups' state + recent-chat previews are kept live app-wide by the always-on
+        // RelayGroupStatePreload + RelayGroupPreviewTailPreload (mounted at LoggedInPage), so pinning
+        // this tab needs no extra preload.
+        NavBarItem.RELAY_GROUPS -> Unit
 
         NavBarItem.CONCORD -> ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
 
