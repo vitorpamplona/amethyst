@@ -53,11 +53,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,10 +69,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -95,11 +100,25 @@ import kotlin.math.abs
 /** Zoom the map animates to after a search hit or a "use my location" tap. */
 private const val RECENTER_ZOOM = 14.0
 
-/** How close to zoom in when the picker opens already holding a location. */
-private const val SEEDED_ZOOM = 13.0
-
 /** How far out to start when the picker opens with nothing selected yet. */
 private const val WORLD_ZOOM = 2.5
+
+/**
+ * A starting zoom so a seeded geohash cell roughly fills the view: a coarse cell
+ * (few chars → large area) opens zoomed out, a fine cell zoomed in. Without this a
+ * region-level seed would open uselessly tight and a building-level seed too loose.
+ */
+private fun zoomForGeohashLength(length: Int): Double =
+    when {
+        length <= 1 -> 2.0
+        length == 2 -> 4.0
+        length == 3 -> 6.5
+        length == 4 -> 9.0
+        length == 5 -> 12.0
+        length == 6 -> 14.0
+        length == 7 -> 16.0
+        else -> 17.5
+    }
 
 /** Neutral starting center (mid-Atlantic) when the picker opens with no seed. */
 private const val WORLD_CENTER_LAT = 20.0
@@ -291,7 +310,7 @@ fun GeohashLocationPickerContent(
                 longitude = seed?.centerLon ?: 0.0,
                 pickedLatitude = null,
                 pickedLongitude = null,
-                zoom = if (seed != null) SEEDED_ZOOM else WORLD_ZOOM,
+                zoom = if (seed != null) zoomForGeohashLength(seedLen) else WORLD_ZOOM,
                 recenter = recenter,
                 recenterZoom = RECENTER_ZOOM,
                 onCenterChanged = { lat, lon ->
@@ -516,6 +535,15 @@ private fun SearchField(
                 } else {
                     null
                 },
+            // The pill comes from the wrapping Surface; hide the text field's own
+            // rectangular outline so its square corners don't poke through the pill.
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    disabledBorderColor = Color.Transparent,
+                    errorBorderColor = Color.Transparent,
+                ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             modifier = Modifier.fillMaxWidth(),
@@ -580,17 +608,21 @@ private fun PickerBottomBar(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                GeohashChannelLevel.ordered.forEach { lvl ->
-                    FilterChip(
-                        selected = lvl == level,
-                        onClick = { onLevel(lvl) },
-                        label = { Text("${lvl.label()} · ${lvl.areaSize()}") },
-                    )
+            // Drop the 48dp minimum touch-target so wrapped chip rows sit 8dp apart
+            // (matching the horizontal gap) instead of ~24dp apart.
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    GeohashChannelLevel.ordered.forEach { lvl ->
+                        FilterChip(
+                            selected = lvl == level,
+                            onClick = { onLevel(lvl) },
+                            label = { Text("${lvl.label()} · ${lvl.areaSize()}") },
+                        )
+                    }
                 }
             }
 
