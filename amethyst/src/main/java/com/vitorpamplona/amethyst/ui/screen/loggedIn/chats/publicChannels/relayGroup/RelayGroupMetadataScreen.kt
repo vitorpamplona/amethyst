@@ -39,12 +39,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -71,10 +77,14 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
+import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**
@@ -370,17 +380,8 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
         placeholder = { Text(stringRes(R.string.relay_group_field_topics_hint)) },
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
-    OutlinedTextField(
-        value = viewModel.geohash.value,
-        onValueChange = {
-            viewModel.geohash.value = it
-            viewModel.markTouched()
-        },
-        singleLine = true,
-        label = { Text(stringRes(R.string.relay_group_field_geohash)) },
-        placeholder = { Text(stringRes(R.string.relay_group_field_geohash_hint)) },
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-    )
+    Spacer(Modifier.height(8.dp))
+    GroupLocationField(viewModel)
 
     Spacer(Modifier.height(12.dp))
     Text(
@@ -420,6 +421,185 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
     ) {
         viewModel.isHidden = it
         viewModel.markTouched()
+    }
+}
+
+/**
+ * The group's discovery location. Map-first: an inviting card opens a full-screen
+ * map picker ([GeohashLocationPickerDialog]) that turns a tapped/searched place
+ * into the geohash the ViewModel already stores. A collapsed "enter manually"
+ * field keeps the paste-a-known-geohash path for power users. The geohash text in
+ * [RelayGroupMetadataViewModel.geohash] stays the single source of truth.
+ */
+@Composable
+private fun GroupLocationField(viewModel: RelayGroupMetadataViewModel) {
+    var showPicker by remember { mutableStateOf(false) }
+    var showManual by remember { mutableStateOf(false) }
+
+    val geohash =
+        viewModel.geohash.value.text
+            .trim()
+
+    if (geohash.isNotBlank()) {
+        SelectedLocationCard(
+            geohash = geohash,
+            onEdit = { showPicker = true },
+            onClear = {
+                viewModel.geohash.value = TextFieldValue("")
+                viewModel.markTouched()
+            },
+        )
+    } else {
+        AddLocationCard(onClick = { showPicker = true })
+    }
+
+    TextButton(
+        onClick = { showManual = !showManual },
+        modifier = Modifier.padding(top = 2.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Edit,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = stringRes(R.string.relay_group_location_manual),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(start = 6.dp),
+        )
+    }
+    if (showManual) {
+        OutlinedTextField(
+            value = viewModel.geohash.value,
+            onValueChange = {
+                viewModel.geohash.value = it
+                viewModel.markTouched()
+            },
+            singleLine = true,
+            label = { Text(stringRes(R.string.relay_group_field_geohash)) },
+            placeholder = { Text(stringRes(R.string.relay_group_field_geohash_hint)) },
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
+    }
+
+    if (showPicker) {
+        GeohashLocationPickerDialog(
+            initialGeohash = geohash.ifBlank { null },
+            onDismiss = { showPicker = false },
+            onConfirm = { cell ->
+                viewModel.geohash.value = TextFieldValue(cell)
+                viewModel.markTouched()
+                showPicker = false
+            },
+        )
+    }
+}
+
+/** Empty-state call to action inviting the user to pin the group on a map. */
+@Composable
+private fun AddLocationCard(onClick: () -> Unit) {
+    OutlinedCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = stringRes(R.string.relay_group_location_add),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = stringRes(R.string.relay_group_location_add_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.ArrowForwardIos,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+/** Filled-state card: a themed map thumbnail + the resolved place name and geohash. */
+@Composable
+private fun SelectedLocationCard(
+    geohash: String,
+    onEdit: () -> Unit,
+    onClear: () -> Unit,
+) {
+    val decoded = remember(geohash) { GeoHash.decode(geohash) }
+
+    Card(
+        onClick = onEdit,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        if (decoded != null) {
+            LocationPreviewMap(
+                latitude = decoded.centerLat,
+                longitude = decoded.centerLon,
+                zoom = 12.0,
+                aspectRatio = 2.4f,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.LocationOn,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+            Column(Modifier.weight(1f)) {
+                LoadCityName(geohashStr = geohash) { cityName ->
+                    Text(
+                        text = cityName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                    )
+                }
+                Text(
+                    text = "#$geohash",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onClear) {
+                Icon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = stringRes(R.string.relay_group_location_clear),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
     }
 }
 

@@ -107,6 +107,7 @@ fun LocationPreviewMap(
     longitude: Double,
     modifier: Modifier = Modifier,
     zoom: Double = DEFAULT_ZOOM,
+    aspectRatio: Float = 1f,
     pinColor: Color? = null,
     pinEmoji: String? = null,
     pinAlpha: Float = 1f,
@@ -166,7 +167,7 @@ fun LocationPreviewMap(
     }
 
     AndroidView(
-        modifier = modifier.fillMaxWidth().aspectRatio(1f),
+        modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio),
         factory = { mapView },
         update = { map ->
             val point = GeoPoint(latitude, longitude)

@@ -33,6 +33,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
@@ -47,6 +50,14 @@ import org.osmdroid.views.overlay.Marker
  *
  * Shares the tile/User-Agent/lifecycle setup with [LocationPreviewMap]; unlike
  * that display-only map, this one installs a [MapEventsOverlay] for tap picking.
+ *
+ * Two optional hooks power a "move the map under a fixed center pin" experience
+ * (the modern picker style) without breaking the tap-to-drop callers:
+ * - [onCenterChanged] fires whenever the map is scrolled or zoomed, reporting the
+ *   new map center — pair it with a Compose crosshair drawn over the map's center.
+ * - [recenter] animates the map to a new point when its value changes (e.g. after
+ *   a place search or a "use my location" tap). Passing the same value twice is a
+ *   no-op, so it is safe to hoist in state.
  */
 @Composable
 fun LocationPickerMap(
@@ -56,11 +67,19 @@ fun LocationPickerMap(
     pickedLongitude: Double?,
     modifier: Modifier = Modifier,
     zoom: Double = 4.0,
+    recenter: GeoPoint? = null,
+    recenterZoom: Double? = null,
+    onCenterChanged: ((Double, Double) -> Unit)? = null,
     onPick: (Double, Double) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnPick by rememberUpdatedState(onPick)
+    val currentOnCenterChanged by rememberUpdatedState(onCenterChanged)
+
+    // Tracks the last point we animated to, so a recomposition that re-supplies the
+    // same [recenter] doesn't yank the map back while the user is panning.
+    val lastRecenter = remember { arrayOfNulls<GeoPoint>(1) }
 
     val mapView =
         remember(context) {
@@ -86,6 +105,20 @@ fun LocationPickerMap(
                         }
                     }
                 overlays.add(0, MapEventsOverlay(receiver))
+
+                addMapListener(
+                    object : MapListener {
+                        override fun onScroll(event: ScrollEvent?): Boolean {
+                            mapCenter.let { currentOnCenterChanged?.invoke(it.latitude, it.longitude) }
+                            return false
+                        }
+
+                        override fun onZoom(event: ZoomEvent?): Boolean {
+                            mapCenter.let { currentOnCenterChanged?.invoke(it.latitude, it.longitude) }
+                            return false
+                        }
+                    },
+                )
             }
         }
 
@@ -109,6 +142,15 @@ fun LocationPickerMap(
         modifier = modifier,
         factory = { mapView },
         update = { map ->
+            if (recenter != null && recenter != lastRecenter[0]) {
+                lastRecenter[0] = recenter
+                if (recenterZoom != null) {
+                    map.controller.animateTo(recenter, recenterZoom, 800L)
+                } else {
+                    map.controller.animateTo(recenter)
+                }
+            }
+
             map.overlays.removeAll { it is Marker }
             if (pickedLatitude != null && pickedLongitude != null) {
                 val point = GeoPoint(pickedLatitude, pickedLongitude)
