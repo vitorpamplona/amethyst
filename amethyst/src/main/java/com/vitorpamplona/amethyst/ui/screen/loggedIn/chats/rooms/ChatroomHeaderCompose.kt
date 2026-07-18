@@ -87,8 +87,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordCommunityHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupChannelLastReadRoute
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupServerHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServerRoomNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -460,6 +464,11 @@ private fun RelayGroupRoomCompose(
             relayInfo.icon?.ifBlank { null }
         }
 
+    // Unread dot: the newest chat is newer than the last time I opened this group. Same last-read
+    // route the open group's feed advances (relayGroupChannelLastReadRoute), so opening clears it.
+    // A placeholder row (no messages yet) has a null createdAt and never lights the dot.
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(relayGroupChannelLastReadRoute(channel.groupId)).collectAsStateWithLifecycle()
+
     ChannelName(
         channelIdHex = channel.groupId.id,
         channelPicture = channelPicture,
@@ -481,7 +490,7 @@ private fun RelayGroupRoomCompose(
         },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
-        hasNewMessages = false,
+        hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -513,6 +522,14 @@ private fun ConcordRoomCompose(
             channel.communityName ?: stringRes(R.string.relay_group_no_messages_yet)
         }
 
+    // Unread dot: the newest timeline message is newer than the last time I opened this channel.
+    // Same last-read route the open channel's feed advances (concordChannelLastReadRoute), so
+    // opening clears it. `lastMessage` is already the newest timeline note (or a null-timestamp
+    // placeholder), so this stays in step with the badges on the Concord channel-list screen.
+    val lastReadTime by accountViewModel.account
+        .loadLastReadFlow(concordChannelLastReadRoute(channel.channelId.communityId, channel.channelId.channelId))
+        .collectAsStateWithLifecycle()
+
     ChannelName(
         channelIdHex = channel.channelId.channelId,
         channelPicture = rememberConcordImageModel(channel.communityIcon, accountViewModel),
@@ -538,7 +555,7 @@ private fun ConcordRoomCompose(
         },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
-        hasNewMessages = false,
+        hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -570,13 +587,18 @@ private fun RelayGroupServerRoomCompose(
             stringRes(R.string.relay_group_no_messages_yet)
         }
 
+    // Collapsed relay row: light the dot when ANY joined group on this relay has unread chat.
+    val hasNewMessages by remember(relay) {
+        relayGroupServerHasUnreadFlow(accountViewModel.account, relay)
+    }.collectAsStateWithLifecycle(false)
+
     ChannelName(
         channelIdHex = relay.url,
         channelPicture = relayInfo.icon,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Dns, R.string.relay_group_server_label, modifier) },
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
-        hasNewMessages = false,
+        hasNewMessages = hasNewMessages,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -616,13 +638,18 @@ private fun ConcordServerRoomCompose(
             stringRes(R.string.relay_group_no_messages_yet)
         }
 
+    // Collapsed community row: light the dot when ANY channel in this community has unread messages.
+    val hasNewMessages by remember(row.communityId) {
+        concordCommunityHasUnreadFlow(accountViewModel.account, row.communityId)
+    }.collectAsStateWithLifecycle(false)
+
     ChannelName(
         channelIdHex = row.communityId,
         channelPicture = rememberConcordImageModel(metadata?.icon, accountViewModel),
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(name, MaterialSymbols.Group, R.string.concord_server_label, modifier) },
         channelLastTime = row.newestMessage?.createdAt(),
         channelLastContent = lastContent,
-        hasNewMessages = false,
+        hasNewMessages = hasNewMessages,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =

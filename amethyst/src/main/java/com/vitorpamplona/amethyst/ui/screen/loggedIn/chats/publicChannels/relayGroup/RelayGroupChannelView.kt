@@ -168,7 +168,7 @@ private fun ChannelView(
                 feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                routeForLastRead = "RelayGroup/${channel.groupId.toKey()}",
+                routeForLastRead = relayGroupChannelLastReadRoute(channel.groupId),
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
