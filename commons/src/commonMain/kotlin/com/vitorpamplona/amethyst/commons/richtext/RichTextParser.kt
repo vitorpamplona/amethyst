@@ -60,9 +60,9 @@ class RichTextParser {
 
         val contentType = frags[MimeTypeTag.TAG_NAME] ?: tags[MimeTypeTag.TAG_NAME]?.firstOrNull()
 
-        val isImage: Boolean
-        val isVideo: Boolean
-        val isPdf: Boolean
+        var isImage = false
+        var isVideo = false
+        var isPdf = false
 
         if (contentType != null) {
             isImage = contentType.startsWith("image/")
@@ -77,7 +77,17 @@ class RichTextParser {
             isImage = fullUrl.startsWith("data:image/")
             isVideo = fullUrl.startsWith("data:video/") || fullUrl.startsWith("data:audio/")
             isPdf = fullUrl.startsWith("data:application/pdf")
-        } else {
+        }
+
+        // Fall back to file-extension detection when the type is still unknown. This covers both
+        // the no-MIME case and a *malformed* imeta MIME — e.g. Primal iOS emits `m jpeg` instead
+        // of `m image/jpeg`, which matches none of the `startsWith` prefixes above. Without this
+        // fallback such a URL returns null and drops to a plain link: that discards the imeta
+        // `dim`/blurhash (so the loading placeholder can't reserve the image's height and the
+        // feed jumps once the bitmap arrives) and forces a needless URL-preview network
+        // round-trip just to rediscover the type the imeta already declared. `data:` URIs carry
+        // their type in the prefix, so a miss there is genuine — don't extension-probe them.
+        if (!isImage && !isVideo && !isPdf && !fullUrl.startsWith("data:")) {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
             isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
             isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
