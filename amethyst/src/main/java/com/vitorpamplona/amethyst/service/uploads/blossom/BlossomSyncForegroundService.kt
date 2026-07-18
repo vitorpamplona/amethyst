@@ -46,16 +46,6 @@ class BlossomSyncForegroundService : FlowProgressForegroundService<BlossomSyncSt
     override val cancelAction = ACTION_CANCEL
     override val cancelLabelRes = R.string.blossom_sync_cancel
 
-    override fun onCreate() {
-        super.onCreate()
-        running = true
-    }
-
-    override fun onDestroy() {
-        running = false
-        super.onDestroy()
-    }
-
     override fun state() = Amethyst.instance.blossomMirrorQueue.state
 
     override fun isActive(value: BlossomSyncState?) = value?.running == true
@@ -81,12 +71,13 @@ class BlossomSyncForegroundService : FlowProgressForegroundService<BlossomSyncSt
         private const val NOTIFICATION_ID = 0x424C4F // "BLO"
         private const val ACTION_CANCEL = "com.vitorpamplona.amethyst.blossom.SYNC_CANCEL"
 
-        @Volatile
-        private var running = false
-
-        /** Started when a sweep begins (from the foreground); stops itself when it finishes. */
+        /**
+         * Started when a sweep begins (from the foreground); stops itself when it finishes.
+         * No `running` de-dup: a sweep starts this exactly once (via [BlossomMirrorQueue.onActive]),
+         * and a redundant start would just route to a cheap onStartCommand — whereas a stale
+         * "already running" flag could leave a fresh sweep with no foreground protection.
+         */
         fun start(context: Context) {
-            if (running) return
             FlowProgressForegroundService.start(context, BlossomSyncForegroundService::class.java, TAG)
         }
     }

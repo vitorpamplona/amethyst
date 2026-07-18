@@ -37,6 +37,7 @@ import okhttp3.Response
 import okio.BufferedSink
 import okio.source
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Thrown when a Blossom server answers with `402 Payment Required` (BUD-07). The
@@ -198,6 +199,8 @@ open class BlossomClient(
                     .build()
             try {
                 okHttpClient.newCall(request).execute().use { it.isSuccessful }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 false
             }

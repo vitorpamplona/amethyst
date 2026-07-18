@@ -116,7 +116,12 @@ object BlossomCommands {
         val args = Args(rest)
         val server = args.flag("server") ?: return Output.error("bad_args", "blossom mirror requires --server URL")
         val sourceUrl = args.positional(0, "source-url")
-        val hash = sourceUrl.substringAfterLast('/').substringBefore('.')
+        val hash =
+            sourceUrl
+                .substringBefore('?')
+                .substringBefore('#')
+                .substringAfterLast('/')
+                .substringBefore('.')
         if (hash.length != 64 || hash.any { it !in "0123456789abcdef" }) {
             return Output.error("bad_args", "could not extract a sha256 from the source url '$sourceUrl'")
         }

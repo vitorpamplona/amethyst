@@ -40,13 +40,18 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Whether one of the user's servers holds a blob, or an operation on it is in flight. */
 enum class PresenceState {
@@ -147,19 +152,27 @@ class BlossomBlobManagerViewModel : ViewModel() {
         account.blossomServers.flow.value
             .distinct()
 
+    private var refreshJob: Job? = null
+
     fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                loadMatrix()
-            } catch (e: Exception) {
-                Log.w("BlossomBlobManager", "Failed to load blob list", e)
-                _error.value = e.message?.ifBlank { null } ?: e.javaClass.simpleName
-            } finally {
-                _isLoading.value = false
+        // Cancel any in-flight load so two quick refreshes can't interleave their writes
+        // or fight over _isLoading.
+        refreshJob?.cancel()
+        refreshJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                _isLoading.value = true
+                _error.value = null
+                try {
+                    loadMatrix()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("BlossomBlobManager", "Failed to load blob list", e)
+                    _error.value = e.message?.ifBlank { null } ?: e.javaClass.simpleName
+                } finally {
+                    _isLoading.value = false
+                }
             }
-        }
     }
 
     private suspend fun loadMatrix() {
@@ -225,15 +238,18 @@ class BlossomBlobManagerViewModel : ViewModel() {
         _blobs.value = rows()
         _isLoading.value = false
 
-        // Phase 2 — HEAD-probe ONLY the non-list servers, for the known hashes, in parallel.
+        // Phase 2 — HEAD-probe ONLY the non-list servers, for the known hashes. Bounded so a
+        // user with hundreds of blobs on a non-/list server doesn't spawn hundreds of probes
+        // at once; OkHttp still caps per-host, this caps the coroutine/allocation breadth.
         val nonListServers = servers.filter { it !in listCapable }
         if (nonListServers.isNotEmpty() && allHashes.isNotEmpty()) {
+            val limiter = Semaphore(MAX_HEAD_PROBES)
             val head =
                 coroutineScope {
                     nonListServers
                         .flatMap { server ->
                             allHashes.map { hash ->
-                                async { (server to hash) to clientFor(server).has(hash, server) }
+                                async { limiter.withPermit { (server to hash) to clientFor(server).has(hash, server) } }
                             }
                         }.awaitAll()
                 }.toMap()
@@ -248,14 +264,18 @@ class BlossomBlobManagerViewModel : ViewModel() {
         server: String,
         state: PresenceState,
     ) {
-        _blobs.value =
-            _blobs.value.map { row ->
+        // Atomic read-modify-write: the app-level sync results collector (Main) and the
+        // per-row delete/mirror actions (IO) both mutate _blobs concurrently, so a plain
+        // `_blobs.value = _blobs.value.map{}` would lose updates.
+        _blobs.update { list ->
+            list.map { row ->
                 if (row.hash != hash) {
                     row
                 } else {
                     row.copy(servers = row.servers.map { if (it.server == server) it.copy(state = state) else it })
                 }
             }
+        }
     }
 
     /** BUD-02 delete: remove [hash] from a single [server]; the pill spins then goes grey. */
@@ -275,9 +295,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                 }
             setServerState(hash, server, if (ok) PresenceState.MISSING else PresenceState.PRESENT)
             // Drop the row entirely once it's gone from every server.
-            if (currentRow(hash)?.hasPresent == false) {
-                _blobs.value = _blobs.value.filter { it.hash != hash }
-            }
+            _blobs.update { list -> if (list.firstOrNull { it.hash == hash }?.hasPresent == false) list.filter { it.hash != hash } else list }
         }
     }
 
@@ -322,14 +340,15 @@ class BlossomBlobManagerViewModel : ViewModel() {
                 .map { BlossomMirrorQueue.Task(it.hash, it.url!!, it.size, it.missingServers) }
         if (tasks.isEmpty()) return
 
-        _blobs.value =
-            _blobs.value.map { row ->
+        _blobs.update { list ->
+            list.map { row ->
                 if (!row.hasMissing) {
                     row
                 } else {
                     row.copy(servers = row.servers.map { if (it.state == PresenceState.MISSING) it.copy(state = PresenceState.PENDING) else it })
                 }
             }
+        }
         Amethyst.instance.blossomMirrorQueue.start(account, tasks)
     }
 
@@ -400,4 +419,9 @@ class BlossomBlobManagerViewModel : ViewModel() {
         val size: Long?,
         val type: String?,
     )
+
+    companion object {
+        /** Cap on concurrent HEAD probes during the /list backfill. */
+        private const val MAX_HEAD_PROBES = 8
+    }
 }

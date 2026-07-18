@@ -41,7 +41,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,6 +55,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -65,6 +70,11 @@ fun DisplayBlossomSyncProgress() {
     val queue = Amethyst.instance.blossomMirrorQueue
     val state by queue.state.collectAsStateWithLifecycle()
 
+    // Retain the last non-null value so the slide-out exit still has content to draw when
+    // state clears to null on cancel/dismiss.
+    var lastShown by remember { mutableStateOf<BlossomSyncState?>(null) }
+    LaunchedEffect(state) { state?.let { lastShown = it } }
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         AnimatedVisibility(
             visible = state != null,
@@ -76,7 +86,7 @@ fun DisplayBlossomSyncProgress() {
                     .padding(start = 12.dp, end = 12.dp, bottom = 116.dp)
                     .widthIn(max = 560.dp),
         ) {
-            val s = state ?: return@AnimatedVisibility
+            val s = lastShown ?: return@AnimatedVisibility
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
