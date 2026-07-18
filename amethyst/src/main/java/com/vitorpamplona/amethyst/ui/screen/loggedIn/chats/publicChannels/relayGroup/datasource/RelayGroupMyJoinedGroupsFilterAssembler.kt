@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -31,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -114,7 +116,10 @@ class RelayGroupMyJoinedGroupsSubAssembler(
         val joined = key.account.relayGroupList.liveRelayGroupList.value
         if (joined.isEmpty()) return null
 
-        // Group the joined group ids by their host relay: one #d-scoped roster filter each.
+        // Group the joined group ids by their host relay: one #d-scoped roster filter each. Roster
+        // kinds are a handful of small replaceable events per group, so the shared per-relay `since`
+        // is fine here — on a reconnect the relay just re-confirms nothing changed instead of
+        // replaying a page of chat.
         val idsByRelay = joined.groupBy({ it.relayUrl }, { it.groupId })
 
         val rosterFilters =
@@ -135,9 +140,34 @@ class RelayGroupMyJoinedGroupsSubAssembler(
         // newest chat and opening the group lands on cached messages. A group's #d roster id and
         // its #h message id are the same string, but #d and #h can't be merged into one filter and
         // a limit is per-filter, so this stays one bounded filter per group.
+        //
+        // `since` handling is per-group, sourced from the cache — NOT the raw shared per-relay EOSE.
+        // This subassembler is keyed by account, so [since] is a single per-relay map shared across
+        // every joined group on that relay. Applying it blindly gated a group joined (or first
+        // surfaced) after that relay's EOSE advanced: it would only ever fetch events newer than that
+        // timestamp, so its history never prefetched and the list showed just the newest message
+        // while opening waited on a full relay round-trip. But dropping `since` entirely is just as
+        // wrong: the pool re-sends every REQ on each reconnect (which happens constantly), so a
+        // `since`-less filter would replay the whole page for every group on every reconnect.
+        //
+        // So we gate the shared `since` on whether we already hold a full page of this group's
+        // preview content (kept in the Channel's strong-ref notes cache, so it survives the session):
+        //   - < LIMIT cached  → cold/newly-joined/thinly-scattered: fetch the full page (no `since`).
+        //                       Once the page lands it flips to the incremental branch on its own.
+        //   - >= LIMIT cached → already backfilled: use the shared `since` so reconnects fetch only
+        //                       the tail. `since` being shared across groups is safe here — the group
+        //                       already has its history, this only bounds incremental top-ups.
+        // A group with genuinely fewer than LIMIT total events stays on the no-`since` branch and
+        // re-pulls its (sub-page, cheap) content on reconnect — an acceptable cost for guaranteeing
+        // the backfill, and far less than replaying a full page for every group.
         val contentFilters =
             joined.mapNotNull { group ->
                 val relay = RelayUrlNormalizer.normalizeOrNull(group.relayUrl) ?: return@mapNotNull null
+                val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(group.groupId, relay))
+                val alreadyBackfilled =
+                    channel.notes.count { _, note ->
+                        note.event?.kind?.let { it in RELAY_GROUP_PREVIEW_CONTENT_KINDS } ?: false
+                    } >= RELAY_GROUP_JOINED_PREVIEW_LIMIT
                 RelayBasedFilter(
                     relay = relay,
                     filter =
@@ -145,7 +175,7 @@ class RelayGroupMyJoinedGroupsSubAssembler(
                             kinds = RELAY_GROUP_PREVIEW_CONTENT_KINDS,
                             tags = mapOf(GroupIdTag.TAG_NAME to listOf(group.groupId)),
                             limit = RELAY_GROUP_JOINED_PREVIEW_LIMIT,
-                            since = since?.get(relay)?.time,
+                            since = if (alreadyBackfilled) since?.get(relay)?.time else null,
                         ),
                 )
             }
