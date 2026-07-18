@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
 import android.Manifest
+import android.location.Address
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +32,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -40,10 +44,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -142,6 +148,14 @@ fun GeohashLocationPickerDialog(
         settledCell = cell
     }
 
+    // Lift the center pin briefly whenever the target point moves, for tactile feedback.
+    var pinLifted by remember { mutableStateOf(false) }
+    LaunchedEffect(pickedLat, pickedLon) {
+        pinLifted = true
+        delay(220)
+        pinLifted = false
+    }
+
     // "Use my location": tapping either fires the fetch (permission already granted) or
     // asks for it; [awaitingPermission] carries the intent across the system dialog so a
     // grant auto-starts the fetch, while a denial simply drops the request (no stuck spinner).
@@ -176,28 +190,33 @@ fun GeohashLocationPickerDialog(
         }
     }
 
-    // Forward-geocode search.
+    // Forward-geocode search. Results are shown as a pick list; choosing one flies there.
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
     var searchMissed by remember { mutableStateOf(false) }
+    var results by remember { mutableStateOf<List<Address>>(emptyList()) }
     val runSearch = {
         val q = query.trim()
         if (q.isNotEmpty()) {
             keyboard?.hide()
             searching = true
             searchMissed = false
+            results = emptyList()
             ForwardGeolocation.execute(q, context) { addresses ->
                 searching = false
-                val hit = addresses?.firstOrNull()
-                if (hit != null) {
-                    recenter = GeoPoint(hit.latitude, hit.longitude)
-                    pickedLat = hit.latitude
-                    pickedLon = hit.longitude
-                } else {
-                    searchMissed = true
-                }
+                val hits = addresses.orEmpty().filter { it.hasLatitude() && it.hasLongitude() }
+                results = hits
+                searchMissed = hits.isEmpty()
             }
         }
+    }
+    val selectResult: (Address) -> Unit = { hit ->
+        recenter = GeoPoint(hit.latitude, hit.longitude)
+        pickedLat = hit.latitude
+        pickedLon = hit.longitude
+        results = emptyList()
+        query = ""
+        keyboard?.hide()
     }
 
     Dialog(
@@ -229,23 +248,33 @@ fun GeohashLocationPickerDialog(
                         modifier = Modifier.fillMaxSize(),
                     )
 
-                    CenterPin(Modifier.align(Alignment.Center))
+                    CenterPin(lifted = pinLifted, modifier = Modifier.align(Alignment.Center))
 
-                    SearchField(
-                        query = query,
-                        onQueryChange = {
-                            query = it
-                            searchMissed = false
-                        },
-                        onSearch = runSearch,
-                        searching = searching,
-                        missed = searchMissed,
-                        modifier =
-                            Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                    )
+                    Column(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                    ) {
+                        SearchField(
+                            query = query,
+                            onQueryChange = {
+                                query = it
+                                searchMissed = false
+                            },
+                            onSearch = runSearch,
+                            searching = searching,
+                            missed = searchMissed,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (results.isNotEmpty()) {
+                            SearchResults(
+                                results = results,
+                                onSelect = selectResult,
+                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                            )
+                        }
+                    }
 
                     MyLocationButton(
                         loading = wantsMyLocation || awaitingPermission,
@@ -292,7 +321,7 @@ private fun PickerHeader(onClose: () -> Unit) {
                 )
             }
             Text(
-                text = stringRes(R.string.relay_group_location_picker_title),
+                text = stringRes(R.string.location_picker_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp),
@@ -301,11 +330,22 @@ private fun PickerHeader(onClose: () -> Unit) {
     }
 }
 
-/** The fixed pin that hovers over the map center; the point under its tip is the selection. */
+/**
+ * The fixed pin hovering over the map center; the point under its tip is the selection.
+ * While [lifted] (the target is moving) the pin rises off the map and its shadow dot
+ * widens, for the tactile "dropping a pin" feel of a modern place picker.
+ */
 @Composable
-private fun CenterPin(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.size(48.dp), contentAlignment = Alignment.Center) {
-        // The pin's tip sits at the map center; lift the whole glyph up by half its height.
+private fun CenterPin(
+    lifted: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val lift by animateDpAsState(targetValue = if (lifted) 8.dp else 0.dp, label = "pinLift")
+    val dot by animateDpAsState(targetValue = if (lifted) 10.dp else 7.dp, label = "pinDot")
+
+    Box(modifier = modifier.size(56.dp), contentAlignment = Alignment.Center) {
+        // The pin's tip sits at the map center; lift the whole glyph up by half its height
+        // plus the animated hover offset.
         Icon(
             symbol = MaterialSymbols.LocationOn,
             contentDescription = null,
@@ -313,15 +353,56 @@ private fun CenterPin(modifier: Modifier = Modifier) {
             modifier =
                 Modifier
                     .size(46.dp)
-                    .offset(y = (-20).dp),
+                    .offset(y = -20.dp - lift),
         )
-        // A small anchor dot marking the exact center point.
+        // A shadow/anchor dot marking the exact center point; it spreads as the pin lifts.
         Box(
             Modifier
-                .size(7.dp)
-                .shadow(2.dp, CircleShape)
+                .size(dot)
+                .shadow(if (lifted) 4.dp else 2.dp, CircleShape)
                 .background(MaterialTheme.colorScheme.primary, CircleShape),
         )
+    }
+}
+
+/** A tappable list of forward-geocode candidates shown under the search field. */
+@Composable
+private fun SearchResults(
+    results: List<Address>,
+    onSelect: (Address) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.shadow(6.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+    ) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 240.dp).verticalScroll(rememberScrollState())) {
+            results.forEachIndexed { index, address ->
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(address) }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = address.displayLine(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -343,7 +424,7 @@ private fun SearchField(
             value = query,
             onValueChange = onQueryChange,
             singleLine = true,
-            placeholder = { Text(stringRes(R.string.relay_group_location_search_hint)) },
+            placeholder = { Text(stringRes(R.string.location_picker_search_hint)) },
             leadingIcon = {
                 Icon(
                     symbol = MaterialSymbols.Search,
@@ -369,7 +450,7 @@ private fun SearchField(
             isError = missed,
             supportingText =
                 if (missed) {
-                    { Text(stringRes(R.string.relay_group_location_search_empty)) }
+                    { Text(stringRes(R.string.location_picker_search_empty)) }
                 } else {
                     null
                 },
@@ -401,7 +482,7 @@ private fun MyLocationButton(
         } else {
             Icon(
                 symbol = MaterialSymbols.MyLocation,
-                contentDescription = stringRes(R.string.relay_group_location_use_mine),
+                contentDescription = stringRes(R.string.location_picker_use_mine),
                 modifier = Modifier.size(24.dp),
             )
         }
@@ -431,7 +512,7 @@ private fun PickerBottomBar(
                 .padding(16.dp),
         ) {
             Text(
-                text = stringRes(R.string.relay_group_location_precision),
+                text = stringRes(R.string.location_picker_area),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -446,14 +527,14 @@ private fun PickerBottomBar(
                     FilterChip(
                         selected = lvl == level,
                         onClick = { onLevel(lvl) },
-                        label = { Text(lvl.label()) },
+                        label = { Text("${lvl.label()} · ${lvl.areaSize()}") },
                     )
                 }
             }
 
             if (cell == null) {
                 Text(
-                    text = stringRes(R.string.relay_group_location_picker_hint),
+                    text = stringRes(R.string.location_picker_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -500,8 +581,29 @@ private fun PickerBottomBar(
                 enabled = cell != null,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.relay_group_location_confirm), fontWeight = FontWeight.SemiBold)
+                Text(stringRes(R.string.location_picker_confirm), fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
+
+/**
+ * A human, one-line label for a geocoder result: its most specific name, then the
+ * enclosing locality/region/country, de-duplicated. Falls back to the full address line.
+ */
+private fun Address.displayLine(): String {
+    val primary = featureName ?: locality ?: subAdminArea ?: adminArea ?: getAddressLine(0)
+    val context = listOfNotNull(locality, adminArea, countryName).distinct().filter { it != primary }
+    return listOfNotNull(primary, context.joinToString(", ").ifBlank { null }).joinToString(", ")
+}
+
+/** A rough physical size for a geohash cell at this precision, for the chip subtitle. */
+private fun GeohashChannelLevel.areaSize(): String =
+    when (this) {
+        GeohashChannelLevel.REGION -> "~1250 km"
+        GeohashChannelLevel.PROVINCE -> "~39 km"
+        GeohashChannelLevel.CITY -> "~5 km"
+        GeohashChannelLevel.NEIGHBORHOOD -> "~1.2 km"
+        GeohashChannelLevel.BLOCK -> "~150 m"
+        GeohashChannelLevel.BUILDING -> "~38 m"
+    }

@@ -57,7 +57,7 @@ private const val DEFAULT_ZOOM = 16.0
  * unlike a plain colour invert (forests → magenta) or a desaturating invert
  * (everything → black).
  */
-private val NIGHT_TILE_FILTER: ColorFilter =
+internal val NIGHT_TILE_FILTER: ColorFilter =
     ColorMatrixColorFilter(
         floatArrayOf(
             0.574f,

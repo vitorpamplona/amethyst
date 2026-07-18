@@ -2362,13 +2362,14 @@
     <string name="relay_group_location_edit">Change location</string>
     <string name="relay_group_location_clear">Remove location</string>
     <string name="relay_group_location_manual">Enter a geohash manually</string>
-    <string name="relay_group_location_picker_title">Choose location</string>
-    <string name="relay_group_location_picker_hint">Move the map, search for a place, or use your current location.</string>
-    <string name="relay_group_location_search_hint">Search for a city or address</string>
-    <string name="relay_group_location_search_empty">No matching place found.</string>
-    <string name="relay_group_location_use_mine">Use my current location</string>
-    <string name="relay_group_location_precision">Area size</string>
-    <string name="relay_group_location_confirm">Use this location</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
+    <string name="location_picker_title">Choose location</string>
+    <string name="location_picker_hint">Move the map, search for a place, or use your current location.</string>
+    <string name="location_picker_search_hint">Search for a city or address</string>
+    <string name="location_picker_search_empty">No matching place found.</string>
+    <string name="location_picker_use_mine">Use my current location</string>
+    <string name="location_picker_area">Area size</string>
+    <string name="location_picker_confirm">Use this location</string>
     <string name="relay_group_section_structure">Structure</string>
     <string name="relay_group_parent_desc">Nest this group under a parent to build a hierarchy.</string>
     <string name="relay_group_parent_label">Parent group</string>

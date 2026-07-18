@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vitorpamplona.amethyst.ui.theme.isLight
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.events.MapListener
@@ -76,6 +78,7 @@ fun LocationPickerMap(
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnPick by rememberUpdatedState(onPick)
     val currentOnCenterChanged by rememberUpdatedState(onCenterChanged)
+    val darkTheme = !MaterialTheme.colorScheme.isLight
 
     // Tracks the last point we animated to, so a recomposition that re-supplies the
     // same [recenter] doesn't yank the map back while the user is panning.
@@ -150,6 +153,10 @@ fun LocationPickerMap(
                     map.controller.animateTo(recenter)
                 }
             }
+
+            // Follow the app theme: dim the bright MAPNIK tiles in dark mode, matching
+            // the display-only LocationPreviewMap.
+            map.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else null)
 
             map.overlays.removeAll { it is Marker }
             if (pickedLatitude != null && pickedLongitude != null) {
