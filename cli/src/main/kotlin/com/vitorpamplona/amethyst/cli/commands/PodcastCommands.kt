@@ -40,6 +40,20 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
  * `PodcastEpisodeEvent`).
  */
 object PodcastCommands {
+    val USAGE: String =
+        """
+        |Podcasts (NIP-F4):
+        |  podcast metadata --title T --image URL        publish kind:10154 show metadata
+        |      --description D [--website URL[,URL]]
+        |      [--relay URL[,URL…]]
+        |  podcast publish --title T --description D     publish a kind:54 episode
+        |      --audio URL[,URL] [--audio-type MIME]
+        |      [--image URL] [--content MARKDOWN]
+        |      [--relay URL[,URL…]]
+        |  podcast list [USER] [--limit N]              list a user's metadata + episodes
+        |      [--relay URL[,URL…]]
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -48,11 +62,13 @@ object PodcastCommands {
             "podcast",
             tail,
             "podcast <metadata|publish|list>",
-            mapOf(
-                "metadata" to { rest -> metadata(dataDir, rest) },
-                "publish" to { rest -> publish(dataDir, rest) },
-                "list" to { rest -> list(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "metadata" to { rest -> metadata(dataDir, rest) },
+                    "publish" to { rest -> publish(dataDir, rest) },
+                    "list" to { rest -> list(dataDir, rest) },
+                ),
         )
 
     private suspend fun metadata(
@@ -70,11 +86,13 @@ object PodcastCommands {
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() }
                 .orEmpty()
+        args.rejectUnknown("relay")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val signed = ctx.signer.sign(PodcastMetadataEvent.build(title, image, description, websites))
             val ack = ctx.publish(signed, RawEventSupport.publishTargets(ctx, args))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
@@ -115,8 +133,10 @@ object PodcastCommands {
                     markdownContent = args.flag("content", "") ?: "",
                     image = args.flag("image"),
                 )
+            args.rejectUnknown("relay")
             val signed = ctx.signer.sign(template)
             val ack = ctx.publish(signed, RawEventSupport.publishTargets(ctx, args))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
@@ -136,6 +156,7 @@ object PodcastCommands {
     ): Int {
         val args = Args(rest)
         val limit = args.intFlag("limit", 50)
+        args.rejectUnknown("relay")
         // Read-only: runs anonymously when there is no account (pass a USER to
         // list someone else's podcasts).
         Context.openOrAnonymous(dataDir).use { ctx ->

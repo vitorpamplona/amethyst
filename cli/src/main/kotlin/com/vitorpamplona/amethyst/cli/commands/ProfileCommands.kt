@@ -42,6 +42,24 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * [MetadataEvent.updateFromPast]).
  */
 object ProfileCommands {
+    val USAGE: String =
+        """
+        |Profile (NIP-01 kind:0):
+        |  profile show [USER] [--refresh]             fetch latest kind:0 metadata
+        |               [--timeout SECS]                (USER: npub|nprofile|hex|name@domain;
+        |                                                cache-first, --refresh forces a drain)
+        |  profile edit [--name NAME]                  patch kind:0; unset flags keep prior values,
+        |               [--display-name N]             blank values delete the field
+        |               [--about TEXT]
+        |               [--picture URL] [--banner URL]
+        |               [--website URL] [--nip05 ID]
+        |               [--lud16 X] [--lud06 X]
+        |               [--pronouns P]
+        |               [--twitter H] [--mastodon H] [--github H]
+        |               [--clink-offer NOFFER]
+        |               [--timeout SECS]
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -50,10 +68,12 @@ object ProfileCommands {
             "profile",
             tail,
             "profile <show|edit> …",
-            mapOf(
-                "show" to { rest -> show(dataDir, rest) },
-                "edit" to { rest -> edit(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "show" to { rest -> show(dataDir, rest) },
+                    "edit" to { rest -> edit(dataDir, rest) },
+                ),
         )
 
     private suspend fun show(
@@ -63,6 +83,7 @@ object ProfileCommands {
         val args = Args(rest)
         val refresh = args.bool("refresh")
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
         // Read-only: runs anonymously when there is no account (an explicit
         // USER is then required, since there is no "own" profile to default to).
         Context.openOrAnonymous(dataDir).use { ctx ->
@@ -143,6 +164,7 @@ object ProfileCommands {
         val github = args.flag("github")
         val clinkOffer = args.flag("clink-offer")
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         // A non-blank --clink-offer must be a real noffer; pass "" to clear the field.
         if (!clinkOffer.isNullOrBlank() && ClinkPointerParser.parse(clinkOffer.trim()) !is NOffer) {
@@ -212,6 +234,7 @@ object ProfileCommands {
 
             val signed = ctx.signer.sign(template)
             val ack = ctx.publish(signed, targets)
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
 
             Output.emit(
                 mapOf(

@@ -66,13 +66,14 @@ object StaticSitePublish {
         val servers = StaticSiteFetch.commaList(args.flag("server"))
         if (servers.isEmpty()) return Output.error("bad_args", "publish requires --server <blossom-url> (comma-separated for mirrors)")
 
-        val identifier = args.flag("d")
+        val identifier = args.flag("d") ?: args.flag("identifier")
         val requires = StaticSiteFetch.commaList(args.flag("requires"))
         val title = args.flag("title")
         val description = args.flag("description")
         val sourceUrl = args.flag("source")
         val icon = args.flag("icon")
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -95,6 +96,7 @@ object StaticSitePublish {
                     .ifEmpty { ctx.bootstrapRelays() }
 
             val ack = ctx.publish(signed, relays)
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
 
             Output.emit(
                 mapOf(
@@ -110,7 +112,7 @@ object StaticSitePublish {
                         result.uploaded.map {
                             mapOf("path" to it.path, "sha256" to it.sha256, "size" to it.size, "url" to it.url)
                         },
-                    "accepted_by" to ack.filterValues { it }.keys.map { it.url },
+                    "published_to" to ack.filterValues { it }.keys.map { it.url },
                 ),
             )
             return 0

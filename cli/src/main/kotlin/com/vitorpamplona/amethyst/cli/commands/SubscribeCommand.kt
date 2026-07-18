@@ -45,13 +45,33 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Each event is signature-verified before printing; bad ones are dropped.
  */
 object SubscribeCommand {
+    val USAGE: String =
+        """
+        |amy subscribe — live stream: print each event as it arrives
+        |
+        |  subscribe [--kind K[,K]] [--author U[,U]]   same filter flags as fetch. Does not stop
+        |         [--id ID[,ID]] [--tag e=ID,p=PK,…]    at EOSE; streams until --timeout SECS
+        |         [--since TS] [--until TS] [--limit N]  elapse or the process is interrupted.
+        |         [--search TEXT] [--relay URL[,URL…]]
+        |         [--timeout SECS]
+        |
+        |  Under --json the output is an NDJSON stream: one raw signed-event
+        |  JSON object per line on stdout, in arrival order (not a single
+        |  wrapping object). Bad-signature events are dropped.
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
         val filter = RawEventSupport.buildFilter(args)
+        args.rejectUnknown("relay")
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()

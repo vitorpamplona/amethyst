@@ -52,6 +52,27 @@ import java.util.UUID
  * `Podcasting20TrailerEvent`, `Podcasting20PodcastMetadata`).
  */
 object Podcast20Commands {
+    val USAGE: String =
+        """
+        |Podcasts (Podcasting 2.0 / podstr):
+        |  podcast20 metadata --title T                 publish kind:30078 show metadata (JSON body)
+        |      [--description D] [--author A] [--email E] [--image URL] [--language L]
+        |      [--categories A,B] [--funding URL,URL] [--website URL]
+        |      [--copyright C] [--type episodic|serial] [--explicit] [--complete]
+        |      [--locked] [--guid G] [--value-json JSON] [--relay URL[,URL…]]
+        |  podcast20 episode --title T --audio URL[,URL]  publish a kind:30054 episode
+        |      [--d ID] [--audio-type MIME] [--description D] [--image URL]
+        |      [--duration SECS] [--video URL] [--video-type MIME]
+        |      [--episode N] [--season N] [--transcript URL] [--chapters URL]
+        |      [--value-json JSON] [--topic A,B] [--content MARKDOWN] [--pubdate RFC2822]
+        |      [--relay URL[,URL…]]                      (--identifier is an alias for --d)
+        |  podcast20 trailer --title T --url URL          publish a kind:30055 trailer
+        |      [--d ID] [--type MIME] [--length BYTES] [--season N] [--pubdate RFC2822]
+        |      [--relay URL[,URL…]]
+        |  podcast20 list [USER] [--limit N]            list a creator's metadata + episodes + trailers
+        |      [--relay URL[,URL…]]
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -60,12 +81,14 @@ object Podcast20Commands {
             "podcast20",
             tail,
             "podcast20 <metadata|episode|trailer|list>",
-            mapOf(
-                "metadata" to { rest -> metadata(dataDir, rest) },
-                "episode" to { rest -> episode(dataDir, rest) },
-                "trailer" to { rest -> trailer(dataDir, rest) },
-                "list" to { rest -> list(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "metadata" to { rest -> metadata(dataDir, rest) },
+                    "episode" to { rest -> episode(dataDir, rest) },
+                    "trailer" to { rest -> trailer(dataDir, rest) },
+                    "list" to { rest -> list(dataDir, rest) },
+                ),
         )
 
     private suspend fun metadata(
@@ -98,11 +121,13 @@ object Podcast20Commands {
                 guid = args.flag("guid"),
                 value = value,
             )
+        args.rejectUnknown("relay")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val signed = ctx.signer.sign(Podcasting20PodcastMetadata.build(content))
             val ack = ctx.publish(signed, RawEventSupport.publishTargets(ctx, args))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
@@ -137,7 +162,7 @@ object Podcast20Commands {
                 return Output.error("bad_args", "podcast20 episode --value-json is not valid JSON")
             }
 
-        val dTag = args.flag("d") ?: generateDTag("episode")
+        val dTag = args.flag("d") ?: args.flag("identifier") ?: generateDTag("episode")
         val video = args.flag("video")?.let { PodcastAudio(it, args.flag("video-type")) }
 
         Context.open(dataDir).use { ctx ->
@@ -160,8 +185,10 @@ object Podcast20Commands {
                     topics = listFlag(args, "topic"),
                     markdownContent = args.flag("content", "") ?: "",
                 )
+            args.rejectUnknown("relay")
             val signed = ctx.signer.sign(template)
             val ack = ctx.publish(signed, RawEventSupport.publishTargets(ctx, args))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
@@ -183,7 +210,7 @@ object Podcast20Commands {
         val args = Args(rest)
         val title = args.flag("title") ?: return Output.error("bad_args", "podcast20 trailer requires --title")
         val url = args.flag("url") ?: return Output.error("bad_args", "podcast20 trailer requires --url")
-        val dTag = args.flag("d") ?: generateDTag("trailer")
+        val dTag = args.flag("d") ?: args.flag("identifier") ?: generateDTag("trailer")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -197,8 +224,10 @@ object Podcast20Commands {
                     mimeType = args.flag("type"),
                     season = args.flag("season")?.toIntOrNull(),
                 )
+            args.rejectUnknown("relay")
             val signed = ctx.signer.sign(template)
             val ack = ctx.publish(signed, RawEventSupport.publishTargets(ctx, args))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
@@ -219,6 +248,7 @@ object Podcast20Commands {
     ): Int {
         val args = Args(rest)
         val limit = args.intFlag("limit", 50)
+        args.rejectUnknown("relay")
         // Read-only: runs anonymously when there is no account (pass a USER to
         // list someone else's episodes).
         Context.openOrAnonymous(dataDir).use { ctx ->

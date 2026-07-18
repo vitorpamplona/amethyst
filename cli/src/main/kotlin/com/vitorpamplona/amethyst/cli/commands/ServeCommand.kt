@@ -42,10 +42,25 @@ import kotlinx.coroutines.awaitCancellation
  * adds more (comma-separated npub/hex). Blocks until interrupted.
  */
 object ServeCommand {
+    val USAGE: String =
+        """
+        |amy serve — run a Nostr relay (embeds geode, incl. NIP-86 admin + NIP-77 Negentropy)
+        |
+        |  serve [--host H] [--port N] [--path P]      in-memory by default (ephemeral); --db FILE
+        |        [--db FILE] [--admin NPUBS]            for a persistent SQLite store. The account's
+        |                                               pubkey is always an admin; --admin adds more
+        |                                               (comma-separated npub/hex). Blocks until
+        |                                               interrupted. Defaults: 127.0.0.1:7447/
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val host = args.flag("host") ?: "127.0.0.1"
         val port = args.intFlag("port", 7447)
@@ -58,6 +73,7 @@ object ServeCommand {
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() }
                 .orEmpty()
+        args.rejectUnknown()
 
         // Resolve admin pubkeys (self + --admin) up front, then drop the
         // Context — the embedded relay owns its own store and needs no account.

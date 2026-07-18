@@ -35,14 +35,28 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  * miss (or always with `--refresh`).
  */
 object OutboxCommand {
+    val USAGE: String =
+        """
+        |amy outbox — show a user's NIP-65 (kind:10002) outbox-model relays
+        |
+        |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
+        |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain; cache-first,
+        |                                  --refresh forces a relay drain; default timeout 8s)
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val user = args.positional(0, "user")
         val refresh = args.bool("refresh")
         val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()

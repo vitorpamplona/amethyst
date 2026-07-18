@@ -55,6 +55,18 @@ object PowCommands {
     // long jobs. Still bounded well under the miner's hard 256-bit limit.
     private const val MAX_DIFFICULTY = 64
 
+    val USAGE: String =
+        """
+        |NIP-13 proof of work:
+        |  pow check EVENT-JSON|-       leading-zero bits, committed target,
+        |                                effective PoW (capped at the commitment)
+        |  pow mine --target N [--pubkey HEX] [--timeout SECS] [--threads N] TEMPLATE-JSON|-
+        |                               mine an UNSIGNED template (delegated PoW:
+        |                                ids don't commit to sigs, so amy can mine
+        |                                for any pubkey); exit 124 on timeout
+        |  pow bench                    hash rate + expected seconds at 16/20/24/28 bits
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -63,11 +75,13 @@ object PowCommands {
             "pow",
             tail,
             "pow <check|mine|bench> …",
-            mapOf(
-                "check" to { rest -> check(rest) },
-                "mine" to { rest -> mine(dataDir, rest) },
-                "bench" to { rest -> bench() },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "check" to { rest -> check(rest) },
+                    "mine" to { rest -> mine(dataDir, rest) },
+                    "bench" to { rest -> bench() },
+                ),
         )
 
     /**
@@ -81,7 +95,7 @@ object PowCommands {
             try {
                 Event.fromJson(json)
             } catch (e: Exception) {
-                return Output.error("bad_event", e.message)
+                return Output.error("invalid_event", e.message)
             }
 
         val commitment = event.tags.commitedPoW()
@@ -110,7 +124,7 @@ object PowCommands {
         val args = Args(rest)
         val usage = "pow mine --target N [--pubkey HEX] [--timeout SECS] [--threads N] <template-json | ->"
 
-        val target = args.flags["target"]?.toIntOrNull() ?: return Output.error("bad_args", usage)
+        val target = args.flag("target")?.toIntOrNull() ?: return Output.error("bad_args", usage)
         if (target < 1 || target > MAX_DIFFICULTY) {
             return Output.error("bad_args", "--target must be between 1 and $MAX_DIFFICULTY")
         }
@@ -125,7 +139,7 @@ object PowCommands {
             try {
                 EventTemplate.fromJson(json)
             } catch (e: Exception) {
-                return Output.error("bad_template", e.message)
+                return Output.error("invalid_event", e.message)
             }
 
         // normalized to lowercase: the pubkey is serialized verbatim into the
@@ -133,7 +147,7 @@ object PowCommands {
         // pubkey would mine an id that never matches the signed event.
         val pubKey =
             (
-                args.flags["pubkey"]
+                args.flag("pubkey")
                     ?: try {
                         Context.open(dataDir).use { it.signer.pubKey }
                     } catch (e: Exception) {
@@ -144,8 +158,9 @@ object PowCommands {
             return Output.error("bad_args", "--pubkey must be 64 hex characters")
         }
 
-        val timeoutSec = args.flags["timeout"]?.toLongOrNull()
+        val timeoutSec = args.flag("timeout")?.toLongOrNull()
         val deadlineNanos = timeoutSec?.let { System.nanoTime() + it * 1_000_000_000L }
+        args.rejectUnknown()
 
         System.err.println("mining $target bits for ${pubKey.take(8)}… ($threads threads)")
         val startedAt = System.nanoTime()
@@ -158,7 +173,7 @@ object PowCommands {
                     }
                 }
             } catch (e: CancellationException) {
-                Output.error("pow_timeout", "did not reach $target bits within ${timeoutSec}s")
+                Output.error("timeout", "pow: did not reach $target bits within ${timeoutSec}s")
                 return 124
             }
 
@@ -176,7 +191,7 @@ object PowCommands {
 
         Output.emit(
             mapOf(
-                "id" to id,
+                "event_id" to id,
                 "pubkey" to pubKey,
                 "pow" to PoWRankEvaluator.calculatePowRankOf(id),
                 "pow_target" to target,

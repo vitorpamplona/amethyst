@@ -49,7 +49,18 @@ import java.io.File
  * sync cursors that tell catch-up commands where they left off.
  */
 object StatusCommand {
+    val USAGE: String =
+        """
+        |amy status — read-only overview of every account, signer type, local
+        |Marmot/Cashu state, and the shared event store (no keychain prompt,
+        |no network). Takes no arguments.
+        """.trimMargin()
+
     fun run(tail: Array<String>): Int {
+        if (tail.firstOrNull() == "--help" || tail.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         // `status` takes no positional args; tolerate an accidental one
         // rather than erroring — it's a read-only inspection command.
         val rootBase = DataDir.DEFAULT_ROOT

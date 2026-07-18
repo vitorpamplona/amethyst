@@ -40,7 +40,8 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
  *     matches [query] — useful for resolving a partial display name to
  *     an npub before a follow / DM.
  *   * `search note <query>` drains kind:1 short text notes matching
- *     [query]. Use `--kinds 1,30023` to widen to long-form articles.
+ *     [query]. Use `--kind 1,30023` to widen to long-form articles
+ *     (`--kinds` is kept as a silent alias).
  *
  * Output is the raw relay-side hit set deduped by event id and sorted
  * by `created_at` descending. Client-side pseudo-kind filters
@@ -49,6 +50,18 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
  * are not exposed here yet.
  */
 object SearchCommand {
+    val USAGE: String =
+        """
+        |Search (NIP-50):
+        |  search user QUERY [--limit N]              search kind:0 profiles (default limit 50)
+        |                    [--timeout SECS]
+        |  search note QUERY [--limit N]              search event content
+        |                    [--kind K[,K…]]           (default kind:1; e.g. 1,30023;
+        |                    [--timeout SECS]           --kinds is accepted as an alias)
+        |                                              uses your kind:10007 search-relay
+        |                                              list, falls back to Amethyst defaults
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -57,10 +70,12 @@ object SearchCommand {
             "search",
             tail,
             "search <user|note> <query> [--limit N] [--timeout SECS]",
-            mapOf(
-                "user" to { rest -> searchUsers(dataDir, rest) },
-                "note" to { rest -> searchNotes(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "user" to { rest -> searchUsers(dataDir, rest) },
+                    "note" to { rest -> searchNotes(dataDir, rest) },
+                ),
         )
 
     private suspend fun searchUsers(
@@ -70,8 +85,9 @@ object SearchCommand {
         if (rest.isEmpty()) return Output.error("bad_args", "search user <query> [--limit N] [--timeout SECS]")
         val query = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
-        val limit = args.longFlag("limit", 20L).toInt()
+        val limit = args.longFlag("limit", 50L).toInt()
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        args.rejectUnknown()
 
         val filter =
             SearchActions.searchProfilesFilter(query, limit)
@@ -107,17 +123,19 @@ object SearchCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", "search note <query> [--limit N] [--timeout SECS] [--kinds K[,K…]]")
+        if (rest.isEmpty()) return Output.error("bad_args", "search note <query> [--limit N] [--timeout SECS] [--kind K[,K…]]")
         val query = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val limit = args.longFlag("limit", 50L).toInt()
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        // `--kind` is canonical (matching fetch/subscribe); `--kinds` stays a silent alias.
         val kindList =
-            args.flags["kinds"]
+            (args.flag("kind") ?: args.flag("kinds"))
                 ?.split(',')
                 ?.mapNotNull { it.trim().toIntOrNull() }
                 ?.takeIf { it.isNotEmpty() }
                 ?: SearchActions.DEFAULT_NOTE_KINDS
+        args.rejectUnknown()
 
         val filter =
             SearchActions.searchNotesFilter(query, kinds = kindList, limit = limit)

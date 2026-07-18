@@ -86,11 +86,21 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutc
 object NamecoinCommand {
     private val DEFAULT_TIMEOUT_SECS = 20L
 
+    val USAGE: String =
+        """
+        |Namecoin (stateless — no account, talks to ElectrumX over TLS):
+        |  namecoin resolve IDENT       resolve a Namecoin identifier (.bit, d/, id/, alice@x.bit)
+        |    [--server URL[,URL]]         to a Nostr pubkey + relays via the Namecoin blockchain
+        |    [--timeout SECS]             (--server: host:port[:tcp] entries; default timeout 20s)
+        |  namecoin servers             print the default ElectrumX server list
+        """.trimMargin()
+
     suspend fun dispatch(rest: Array<String>): Int =
         route(
             name = "namecoin",
             tail = rest,
             usage = "namecoin <resolve|servers> …",
+            help = USAGE,
             routes =
                 mapOf(
                     "resolve" to { tail -> resolve(tail) },
@@ -118,6 +128,7 @@ object NamecoinCommand {
         }
 
         val timeoutFlag = args.flag("timeout")
+        args.rejectUnknown()
         val timeoutSecs =
             if (timeoutFlag != null) {
                 timeoutFlag.toLongOrNull()
@@ -177,6 +188,7 @@ object NamecoinCommand {
         // No positional/flags today — but reject unknown ones so future
         // additions don't silently break.
         val args = Args(rest)
+        args.rejectUnknown()
         if (args.positionalOrNull(0) != null) {
             return Output.error("bad_args", "namecoin servers takes no arguments")
         }

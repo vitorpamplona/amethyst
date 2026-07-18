@@ -50,22 +50,28 @@ object PostCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", "post <text> [--relay URL …] [--pow BITS [--pow-timeout SECS]]")
-        val text = rest[0]
+        // Args first, then the positional — so flags may appear anywhere
+        // (`amy notes post --relay X "hi"` posts "hi", not "--relay").
+        val args = Args(rest)
+        val text =
+            args.positionalOrNull(0)
+                ?: return Output.error("bad_args", "post <text> [--relay URL …] [--pow BITS [--pow-timeout SECS]]")
         if (text.isBlank()) return Output.error("bad_args", "post text must not be blank")
 
-        val args = Args(rest.drop(1).toTypedArray())
         val extraRelays =
-            args.flags["relay"]
+            args
+                .flag("relay")
                 ?.split(',')
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() } ?: emptyList()
 
-        val powTarget = args.flags["pow"]?.toIntOrNull()
-        if (args.flags.containsKey("pow") && (powTarget == null || powTarget < 1 || powTarget > MAX_DIFFICULTY)) {
+        val powRaw = args.flag("pow")
+        val powTarget = powRaw?.toIntOrNull()
+        if (powRaw != null && (powTarget == null || powTarget < 1 || powTarget > MAX_DIFFICULTY)) {
             return Output.error("bad_args", "--pow must be between 1 and $MAX_DIFFICULTY leading zero bits")
         }
-        val powTimeoutSec = args.flags["pow-timeout"]?.toLongOrNull()
+        val powTimeoutSec = args.flag("pow-timeout")?.toLongOrNull()
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -93,7 +99,7 @@ object PostCommand {
                                 }
                             }
                         } catch (e: CancellationException) {
-                            Output.error("pow_timeout", "did not reach $powTarget bits within ${powTimeoutSec}s; nothing was published")
+                            Output.error("timeout", "pow: did not reach $powTarget bits within ${powTimeoutSec}s; nothing was published")
                             return 124
                         }
                     powMillis = (System.nanoTime() - startedAt) / 1_000_000
@@ -105,6 +111,7 @@ object PostCommand {
 
             val signed = ctx.signer.sign(readyToSign)
             val ack = ctx.publish(signed, targets)
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
 
             Output.emit(
                 mapOf(

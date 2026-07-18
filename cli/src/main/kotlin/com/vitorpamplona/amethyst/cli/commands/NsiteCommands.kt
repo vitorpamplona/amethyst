@@ -50,6 +50,26 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
  * the byte fetch in commons (`BlossomClient.download`), shared via [StaticSiteFetch].
  */
 object NsiteCommands {
+    val USAGE: String =
+        """
+        |Static websites (NIP-5A kind:15128/35128):
+        |  nsite fetch AUTHOR [--d ID] [--path P]      resolve one path over Nostr + Blossom and
+        |        [--server URL[,URL]] [--relay URL[,URL]]  VERIFY it against the manifest's sha256 pin
+        |        [--out FILE] [--timeout SECS]          (AUTHOR: npub|nprofile|hex|name@domain;
+        |        [--max-inline-bytes N]                 --d selects a kind:35128 named site, else the
+        |                                                kind:15128 root site; --path defaults to /;
+        |                                                --identifier is an alias for --d)
+        |  nsite publish DIR --server URL[,URL]        upload a directory to Blossom and broadcast
+        |        [--d ID] [--relay URL[,URL]]            its NIP-5A manifest (kind:15128 root, or
+        |        [--title T] [--description D]           35128 named with --d); includes the x
+        |        [--source URL] [--icon URL]             aggregate hash so it is self-verifying
+        |  nsite serve AUTHOR [--d ID] [--port N]      fetch the manifest and serve it over a local
+        |        [--server URL[,URL]] [--relay URL[,URL]]  HTTP server (sha256-verified per request)
+        |        [--timeout SECS]                        so you can open it in a browser
+        |  nsite list AUTHOR [--relay URL[,URL]]       enumerate an author's sites: the root and
+        |        [--timeout SECS]                        every named one, latest per identifier
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -58,12 +78,14 @@ object NsiteCommands {
             "nsite",
             tail,
             "nsite <fetch|publish|serve|list> …",
-            mapOf(
-                "fetch" to { rest -> fetch(dataDir, rest) },
-                "publish" to { rest -> publish(dataDir, rest) },
-                "serve" to { rest -> serve(dataDir, rest) },
-                "list" to { rest -> list(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "fetch" to { rest -> fetch(dataDir, rest) },
+                    "publish" to { rest -> publish(dataDir, rest) },
+                    "serve" to { rest -> serve(dataDir, rest) },
+                    "list" to { rest -> list(dataDir, rest) },
+                ),
         )
 
     /**
@@ -78,6 +100,7 @@ object NsiteCommands {
         val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "nsite list <author> [--relay R] [--timeout S]")
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -139,11 +162,12 @@ object NsiteCommands {
     ): Int {
         val args = Args(rest)
         val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "nsite serve <author> [--d ID] [--port N] [--server S] [--relay R]")
-        val identifier = args.flag("d")
+        val identifier = args.flag("d") ?: args.flag("identifier")
         val port = args.intFlag("port", 8080)
         val extraServers = StaticSiteFetch.commaList(args.flag("server"))
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -195,13 +219,14 @@ object NsiteCommands {
     ): Int {
         val args = Args(rest)
         val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "nsite fetch <author> [--d ID] [--path P]")
-        val identifier = args.flag("d")
+        val identifier = args.flag("d") ?: args.flag("identifier")
         val requestPath = args.flag("path", "/")!!
         val outFile = args.flag("out")
         val timeoutSecs = args.longFlag("timeout", 8L)
         val maxInlineBytes = args.longFlag("max-inline-bytes", 65_536L)
         val extraServers = StaticSiteFetch.commaList(args.flag("server"))
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()

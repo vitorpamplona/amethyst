@@ -93,18 +93,19 @@ object RelayGroupModerationCommands {
 
             // A kind-9002 re-asserts the whole metadata, so omitted fields must be carried over
             // from the current 39000 — otherwise editing only a flag would wipe name/about/tags.
-            val signed =
-                ctx.signer.sign(
-                    EditMetadataEvent.build(
-                        groupId,
-                        name = args.flag("name") ?: meta?.name(),
-                        about = args.flag("about") ?: meta?.about(),
-                        status = groupStatus(isPrivate, isClosed),
-                        hashtags = meta?.hashtags() ?: emptyList(),
-                        geohashes = meta?.geohashes()?.maxByOrNull { it.length }?.let { listOf(it) } ?: emptyList(),
-                    ),
+            val template =
+                EditMetadataEvent.build(
+                    groupId,
+                    name = args.flag("name") ?: meta?.name(),
+                    about = args.flag("about") ?: meta?.about(),
+                    status = groupStatus(isPrivate, isClosed),
+                    hashtags = meta?.hashtags() ?: emptyList(),
+                    geohashes = meta?.geohashes()?.maxByOrNull { it.length }?.let { listOf(it) } ?: emptyList(),
                 )
+            args.rejectUnknown()
+            val signed = ctx.signer.sign(template)
             val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
@@ -125,7 +126,7 @@ object RelayGroupModerationCommands {
         rest: Array<String>,
     ): Int {
         val code = Args(rest).flag("code") ?: return Output.error("bad_args", "relaygroup invite RELAY GROUP_ID --code CODE")
-        return publishScoped(dataDir, rest, "relaygroup invite RELAY GROUP_ID --code CODE") { _, groupId, _ ->
+        return publishScoped(dataDir, rest, "relaygroup invite RELAY GROUP_ID --code CODE", allowedFlags = arrayOf("code")) { _, groupId, _ ->
             CreateInviteEvent.build(groupId, code)
         }
     }
@@ -147,12 +148,14 @@ object RelayGroupModerationCommands {
                 ?.split(',')
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() } ?: emptyList()
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = ctx.requireUserHex(user)
             val signed = ctx.signer.sign(PutUserEvent.build(groupId, listOf(pubkey to roles)))
             val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
@@ -178,12 +181,14 @@ object RelayGroupModerationCommands {
         val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
         val user = args.positionalOrNull(2) ?: return Output.error("bad_args", usage)
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val pubkey = ctx.requireUserHex(user)
             val signed = ctx.signer.sign(RemoveUserEvent.build(groupId, listOf(pubkey)))
             val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,

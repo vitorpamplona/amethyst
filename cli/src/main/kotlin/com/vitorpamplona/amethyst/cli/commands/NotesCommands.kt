@@ -28,6 +28,20 @@ import com.vitorpamplona.amethyst.cli.DataDir
  * shape mirrors the Amethyst UI: one subcommand group per event family.
  */
 object NotesCommands {
+    val USAGE: String =
+        """
+        |Notes (NIP-10 kind:1):
+        |  notes post TEXT [--relay URL]               publish a kind:1 short text note
+        |             [--pow BITS [--pow-timeout SECS]] mine a NIP-13 proof of work first
+        |                                              (exit 124 on timeout, nothing published)
+        |                                              (--relay accepts comma-separated extras)
+        |  notes feed [--author USER]                  fetch kind:1 notes
+        |             [--following]                    (default: own; --author: one user;
+        |             [--limit N]                       --following: every contact-list pubkey)
+        |             [--since TS] [--until TS]
+        |             [--timeout SECS]
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -36,9 +50,11 @@ object NotesCommands {
             "notes",
             tail,
             "notes <post|feed> …",
-            mapOf(
-                "post" to { rest -> PostCommand.run(dataDir, rest) },
-                "feed" to { rest -> FeedCommand.run(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "post" to { rest -> PostCommand.run(dataDir, rest) },
+                    "feed" to { rest -> FeedCommand.run(dataDir, rest) },
+                ),
         )
 }

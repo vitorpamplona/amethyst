@@ -49,6 +49,27 @@ import com.vitorpamplona.quartz.utils.RandomInstance
  * [RelayGroupModerationCommands].
  */
 object RelayGroupCommands {
+    val USAGE: String =
+        """
+        |Relay groups (NIP-29):
+        |  relaygroup list [--timeout S]              joined groups (from kind:10009)
+        |  relaygroup browse RELAY [--timeout S]      every group a relay hosts
+        |  relaygroup info RELAY GID [--timeout S]    a group's metadata + roster
+        |  relaygroup create RELAY --name NAME        create a group (publishes 9007+9002)
+        |    [--about A] [--private] [--closed]
+        |  relaygroup join RELAY GID [--code CODE]    request to join (kind 9021)
+        |    [--reason R]
+        |  relaygroup leave RELAY GID                 leave (kind 9022)
+        |  relaygroup message RELAY GID TEXT          post a kind-9 chat to the group
+        |  relaygroup edit RELAY GID [--name N]       edit metadata (kind 9002, admin);
+        |    [--about A] [--private|--public]         reads current visibility and only
+        |    [--closed|--open]                        changes the axis you specify
+        |  relaygroup invite RELAY GID --code CODE    mint an invite code (kind 9009)
+        |  relaygroup put-user RELAY GID PUBKEY       add/promote a user (kind 9000)
+        |    [--role admin|moderator]
+        |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -57,19 +78,21 @@ object RelayGroupCommands {
             "relaygroup",
             tail,
             "relaygroup <list|browse|info|create|join|leave|message|edit|invite|put-user|remove-user> …",
-            mapOf(
-                "list" to { rest -> RelayGroupReadCommands.list(dataDir, rest) },
-                "browse" to { rest -> RelayGroupReadCommands.browse(dataDir, rest) },
-                "info" to { rest -> RelayGroupReadCommands.info(dataDir, rest) },
-                "create" to { rest -> create(dataDir, rest) },
-                "join" to { rest -> join(dataDir, rest) },
-                "leave" to { rest -> leave(dataDir, rest) },
-                "message" to { rest -> message(dataDir, rest) },
-                "edit" to { rest -> RelayGroupModerationCommands.edit(dataDir, rest) },
-                "invite" to { rest -> RelayGroupModerationCommands.invite(dataDir, rest) },
-                "put-user" to { rest -> RelayGroupModerationCommands.putUser(dataDir, rest) },
-                "remove-user" to { rest -> RelayGroupModerationCommands.removeUser(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "list" to { rest -> RelayGroupReadCommands.list(dataDir, rest) },
+                    "browse" to { rest -> RelayGroupReadCommands.browse(dataDir, rest) },
+                    "info" to { rest -> RelayGroupReadCommands.info(dataDir, rest) },
+                    "create" to { rest -> create(dataDir, rest) },
+                    "join" to { rest -> join(dataDir, rest) },
+                    "leave" to { rest -> leave(dataDir, rest) },
+                    "message" to { rest -> message(dataDir, rest) },
+                    "edit" to { rest -> RelayGroupModerationCommands.edit(dataDir, rest) },
+                    "invite" to { rest -> RelayGroupModerationCommands.invite(dataDir, rest) },
+                    "put-user" to { rest -> RelayGroupModerationCommands.putUser(dataDir, rest) },
+                    "remove-user" to { rest -> RelayGroupModerationCommands.removeUser(dataDir, rest) },
+                ),
         )
 
     /** `relaygroup create RELAY --name NAME [--about A] [--private] [--closed]` → publishes 9007 + 9002. */
@@ -84,6 +107,7 @@ object RelayGroupCommands {
         val about = args.flag("about")
         val isPrivate = args.bool("private")
         val isClosed = args.bool("closed")
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -131,7 +155,10 @@ object RelayGroupCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val join = JoinRequestEvent.build(groupId, reason = args.flag("reason") ?: "", inviteCode = args.flag("code"))
-            val ack = ctx.publish(ctx.signer.sign(join), setOf(relay))
+            args.rejectUnknown()
+            val signed = ctx.signer.sign(join)
+            val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val listed = updateGroupList(ctx, relay, groupId, add = true)
             Output.emit(
                 mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it }, "listed" to listed),
@@ -153,10 +180,13 @@ object RelayGroupCommands {
         val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
         val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val ack = ctx.publish(ctx.signer.sign(LeaveRequestEvent.build(groupId)), setOf(relay))
+            val signed = ctx.signer.sign(LeaveRequestEvent.build(groupId))
+            val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val listed = updateGroupList(ctx, relay, groupId, add = false)
             Output.emit(
                 mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it }, "listed" to listed),
@@ -245,11 +275,14 @@ internal fun groupStatus(
  * Shared skeleton for the group-scoped write verbs: parse RELAY + GROUP_ID from
  * positionals 0/1, build a template pinned to that group, sign, publish to the
  * host relay, and emit the ack. The [build] lambda returns the event template.
+ * [allowedFlags] names flags a caller consumed on a *separate* [Args] instance
+ * (e.g. invite's `--code`), so [Args.rejectUnknown] doesn't flag them here.
  */
 internal suspend fun publishScoped(
     dataDir: DataDir,
     rest: Array<String>,
     usage: String,
+    allowedFlags: Array<String> = emptyArray(),
     build: (relay: NormalizedRelayUrl, groupId: String, args: Args) -> EventTemplate<out Event>,
 ): Int {
     val args = Args(rest)
@@ -259,8 +292,11 @@ internal suspend fun publishScoped(
 
     Context.open(dataDir).use { ctx ->
         ctx.prepare()
-        val signed = ctx.signer.sign(build(relay, groupId, args))
+        val template = build(relay, groupId, args)
+        args.rejectUnknown(*allowedFlags)
+        val signed = ctx.signer.sign(template)
         val ack = ctx.publish(signed, setOf(relay))
+        RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
         Output.emit(
             mapOf(
                 "event_id" to signed.id,

@@ -59,18 +59,37 @@ import okhttp3.OkHttpClient
  * default payment source; each recipient then also reports `paid` + `preimage`.
  */
 object ZapCommand {
+    val USAGE: String =
+        """
+        |Zaps (NIP-57):
+        |  zap user USER SATS               build a profile zap-request, fetch a BOLT11
+        |    [--comment X] [--anon|--private]  invoice from the recipient's LN service
+        |    [--with NDEBIT]                   (no auto-payment by default — paste the
+        |    [--timeout SECS]                   invoice into a wallet)
+        |  zap event EVENT-ID SATS           same, but attribute the zap to a specific
+        |    [--comment X] [--anon|--private]  event (must be in local store; zap splits
+        |    [--with NDEBIT]                   are honored, one invoice per recipient)
+        |    [--timeout SECS]
+        |
+        |  --with NDEBIT auto-pays each fetched invoice in-place through a CLINK
+        |  debit pointer (kind:21002); the output then also reports paid + preimage.
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
-    ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "zap <user|event> <target> <sats> [--comment X] [--anon] [--timeout SECS]")
-        val rest = tail.drop(1).toTypedArray()
-        return when (tail[0]) {
-            "user" -> zapUser(dataDir, rest)
-            "event" -> zapEvent(dataDir, rest)
-            else -> Output.error("bad_args", "zap ${tail[0]} — expected user|event")
-        }
-    }
+    ): Int =
+        route(
+            "zap",
+            tail,
+            "zap <user|event> <target> <sats> [--comment X] [--anon] [--with NDEBIT] [--timeout SECS]",
+            help = USAGE,
+            routes =
+                mapOf(
+                    "user" to { rest -> zapUser(dataDir, rest) },
+                    "event" to { rest -> zapEvent(dataDir, rest) },
+                ),
+        )
 
     private suspend fun zapUser(
         dataDir: DataDir,
@@ -93,6 +112,7 @@ object ZapCommand {
                 (ClinkPointerParser.parse(withFlag.trim()) as? NDebit)?.takeIf { it.relays.isNotEmpty() }
                     ?: return Output.error("bad_args", "--with must be a valid ndebit pointer with a relay")
             }
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -141,6 +161,7 @@ object ZapCommand {
                 (ClinkPointerParser.parse(withFlag.trim()) as? NDebit)?.takeIf { it.relays.isNotEmpty() }
                     ?: return Output.error("bad_args", "--with must be a valid ndebit pointer with a relay")
             }
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
