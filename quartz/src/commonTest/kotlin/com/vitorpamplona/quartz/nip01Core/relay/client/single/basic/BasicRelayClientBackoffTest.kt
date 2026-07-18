@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyConnection
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -63,6 +64,33 @@ class BasicRelayClientBackoffTest {
                 onConnectAttempt(builder.lastListener)
             }
         }
+    }
+
+    /**
+     * Ticks until the relay dials again, then stops immediately — leaving the clock
+     * parked right after a failed attempt. Anchors tests that need to reason about the
+     * remaining backoff window instead of landing at an arbitrary point in the cycle.
+     * Returns false if no attempt happened within [limitSeconds].
+     */
+    private fun tickUntilNextAttempt(
+        client: BasicRelayClient,
+        builder: FakeWebsocketBuilder,
+        clock: MutableClock,
+        limitSeconds: Long,
+        tickSeconds: Long = 3,
+        onConnectAttempt: (WebSocketListener) -> Unit,
+    ): Boolean {
+        val end = clock.now + limitSeconds
+        while (clock.now < end) {
+            clock.now += tickSeconds
+            val before = builder.connectAttempts
+            client.connectAndSyncFiltersIfDisconnected()
+            if (builder.connectAttempts > before) {
+                onConnectAttempt(builder.lastListener)
+                return true
+            }
+        }
+        return false
     }
 
     private fun newClient(
@@ -152,6 +180,78 @@ class BasicRelayClientBackoffTest {
         assertTrue(
             builder.connectAttempts > attemptsBefore,
             "Expected backoff to reset after a stable session: no reconnect within 15s of a clean close",
+        )
+    }
+
+    /**
+     * A relay that failed its way up to the 5-minute ceiling on one network must dial
+     * immediately once the device moves to another network — the failures were measured
+     * against an environment that no longer exists. Without [BasicRelayClient.resetBackoff]
+     * the relay stays dark for up to 5 more minutes on a network that may reach it instantly.
+     */
+    @Test
+    fun resetBackoffDialsImmediatelyAfterAMaxedOutBackoff() {
+        val builder = FakeWebsocketBuilder()
+        val clock = MutableClock()
+        val client = newClient(builder, clock)
+
+        // drive the backoff to its ceiling with an unreachable host.
+        client.connect()
+        builder.lastListener.onFailure(RuntimeException("Unable to resolve host"), null, null)
+        runTicks(client, builder, clock, totalSeconds = 60 * 60) { listener ->
+            listener.onFailure(RuntimeException("Unable to resolve host"), null, null)
+        }
+
+        // Tick until the next attempt actually fires, so the clock sits at a known point
+        // in the backoff cycle (right after a failure) rather than wherever the hour ended.
+        // Without this anchor the probe window below can straddle a legitimate retry.
+        val anchored =
+            tickUntilNextAttempt(client, builder, clock, limitSeconds = 20 * 60) { listener ->
+                listener.onFailure(RuntimeException("Unable to resolve host"), null, null)
+            }
+        assertTrue(anchored, "Test setup: expected a retry within 20 min to anchor the cycle")
+
+        // confirm it really is parked: a full minute of ticks buys no attempt.
+        val parkedAt = builder.connectAttempts
+        runTicks(client, builder, clock, totalSeconds = 60) { listener ->
+            listener.onFailure(RuntimeException("Unable to resolve host"), null, null)
+        }
+        assertEquals(
+            parkedAt,
+            builder.connectAttempts,
+            "Test setup: relay should be sitting on a long backoff",
+        )
+
+        // the network changed underneath us.
+        client.resetBackoff()
+
+        client.connectAndSyncFiltersIfDisconnected()
+        assertEquals(
+            parkedAt + 1,
+            builder.connectAttempts,
+            "Expected resetBackoff to let the relay dial at once on the new network",
+        )
+    }
+
+    /** resetBackoff is not a disconnect: a healthy session must survive it. */
+    @Test
+    fun resetBackoffLeavesALiveConnectionAlone() {
+        val builder = FakeWebsocketBuilder()
+        val clock = MutableClock()
+        val client = newClient(builder, clock)
+
+        client.connect()
+        builder.lastListener.onOpen(50, false)
+        assertTrue(client.isConnected(), "Test setup: relay should be connected")
+
+        val attemptsBefore = builder.connectAttempts
+        client.resetBackoff()
+
+        assertTrue(client.isConnected(), "Expected resetBackoff to leave the live socket untouched")
+        assertEquals(
+            attemptsBefore,
+            builder.connectAttempts,
+            "Expected resetBackoff not to dial a second socket for an already-connected relay",
         )
     }
 }

@@ -289,6 +289,14 @@ open class BasicRelayClient(
         }
     }
 
+    override fun resetBackoff() {
+        // Same two fields disconnect() clears, but deliberately not the socket: a relay
+        // that is currently connected must keep its session. This only forgives the wait
+        // a disconnected relay would otherwise serve out.
+        delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+        lastConnectTentativeInSeconds = 0L
+    }
+
     fun upRelayDelayToConnect() {
         if (delayToConnectInSeconds < TimeUtils.FIVE_MINUTES) {
             delayToConnectInSeconds = delayToConnectInSeconds * 2

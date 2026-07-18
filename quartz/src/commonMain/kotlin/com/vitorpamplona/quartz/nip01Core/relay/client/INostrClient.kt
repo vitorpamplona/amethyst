@@ -45,6 +45,17 @@ interface INostrClient : AutoCloseable {
         ignoreRetryDelays: Boolean = false,
     )
 
+    /**
+     * Clears the accumulated reconnect backoff of every relay in the pool, so the next
+     * [reconnect] dials immediately instead of serving out a penalty earned on a network
+     * or transport that is no longer in use. See [IRelayClient.resetBackoff].
+     *
+     * Kept separate from [reconnect] on purpose: implementations debounce reconnect
+     * requests, and folding this into a coalescing command would let a later request
+     * silently drop the reset.
+     */
+    fun resetBackoff() { }
+
     fun isActive(): Boolean
 
     /**
