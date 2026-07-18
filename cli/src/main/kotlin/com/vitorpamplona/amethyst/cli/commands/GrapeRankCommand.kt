@@ -116,6 +116,11 @@ import kotlin.math.roundToInt
  *  - `amy graperank providers [USER]` — list a user's trusted providers.
  */
 object GrapeRankCommand {
+    private const val FLAG_INSERT_BATCH = "insert-batch"
+    private const val FLAG_RELAY_CONCURRENCY = "relay-concurrency"
+    private const val FLAG_CONCURRENCY = "concurrency"
+    private const val INSERT_BATCH_DEFAULT = 500
+
     // Broad, big general relays that carry kind:10002 for many users, added to the
     // crawler's discovery set to raise the odds of resolving a stranger's outbox.
     private val EXTRA_DISCOVERY_RELAYS: Set<NormalizedRelayUrl> =
@@ -248,7 +253,7 @@ object GrapeRankCommand {
         // is read straight from args by [newCrawler]; only these two are surfaced in
         // the result JSON, so keep local copies for that.
         val parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000
-        val insertBatch = args.intFlag("insert-batch", 500)
+        val insertBatch = args.intFlag(FLAG_INSERT_BATCH, INSERT_BATCH_DEFAULT)
         // Card cutoff: only scores with rank >= this get a local kind:30382 card;
         // existing cards for targets below it (or gone from the graph) are
         // retracted. Rank is round(score*100), so 2 drops the ~0.015-and-below
@@ -496,7 +501,7 @@ object GrapeRankCommand {
                     timeoutMs = args.longFlag("timeout", 10L) * 1000,
                     parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000,
                     diagnose = args.bool("diagnose"),
-                    insertBatchSize = args.intFlag("insert-batch", 500),
+                    insertBatchSize = args.intFlag(FLAG_INSERT_BATCH, INSERT_BATCH_DEFAULT),
                     drainConcurrency = args.intFlag("drain-concurrency", 48),
                     timeoutEvictStrikes = args.intFlag("timeout-evict", 3),
                     // Cheap TCP reachability pre-probe (--no-probe to disable). No Tor
@@ -631,7 +636,7 @@ object GrapeRankCommand {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
         val relayArg = args.flag("relay")
-        val relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 16))
+        val relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 16))
 
         // Read-only + never signs, so it runs anonymously — but then an OBSERVER
         // positional is required (there's no account to default to).
@@ -667,7 +672,7 @@ object GrapeRankCommand {
                             maxPerRelay = args.flag("max")?.toIntOrNull(),
                             timeoutMs = args.longFlag("timeout", 15L) * 1000,
                             maxConcurrentRelays = relayConcurrency,
-                            insertBatchSize = args.intFlag("insert-batch", 500),
+                            insertBatchSize = args.intFlag(FLAG_INSERT_BATCH, INSERT_BATCH_DEFAULT),
                         ),
                     log = { System.err.println(it) },
                 )
@@ -848,7 +853,7 @@ object GrapeRankCommand {
                             down = downFlag || !upFlag,
                             up = upFlag || !downFlag,
                             syncDeletions = !args.bool("no-sync-deletions"),
-                            relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 4)),
+                            relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 4)),
                             authorChunk = args.intFlag("author-chunk", 500),
                             minAuthors = args.intFlag("min-authors", 1),
                             idleTimeoutMs = args.longFlag("timeout", 30L) * 1000,
@@ -933,7 +938,7 @@ object GrapeRankCommand {
         val relayArg = args.flag("relay")
         // --relay-concurrency is canonical for "relays worked at once" across the
         // graperank verbs; --concurrency is accepted everywhere as its alias.
-        val relayConcurrency = args.intFlag("relay-concurrency", args.intFlag("concurrency", 4))
+        val relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 4))
         // Idle watchdog per relay reconcile (not a total budget), like `refresh`.
         val idleTimeoutMs = args.longFlag("timeout", 30L) * 1000
 
