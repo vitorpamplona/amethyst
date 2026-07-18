@@ -1204,6 +1204,27 @@ class CashuWalletOps(
         existingSecrets: Set<String> = emptySet(),
     ): RestoreOutcome = publishRecoveredProofs(scanRecoverableProofs(mintUrl, seed, startCounter, existingSecrets))
 
+    /**
+     * [restoreFromMint], then bump the persisted NUT-13 counter past every
+     * slot the scan confirmed in use — via the [peekCashuCounter] /
+     * [reserveCashuCounters] hooks — so a later mint/swap can't reuse one of
+     * the recovered secrets. Same advance rule Android's
+     * `CashuWalletState.restoreFromMint` applies after its restore, shared
+     * here so every front end bumps identically. `reserveCashuCounters` is
+     * atomic, so two restores running concurrently can't collide.
+     */
+    suspend fun restoreFromMintAdvancingCounter(
+        mintUrl: String,
+        seed: ByteArray,
+        startCounter: Long = 0L,
+        existingSecrets: Set<String> = emptySet(),
+    ): RestoreOutcome {
+        val outcome = restoreFromMint(mintUrl, seed, startCounter, existingSecrets)
+        val delta = (outcome.nextCounterAfterScan - peekCashuCounter(outcome.keysetId)).coerceAtLeast(0L)
+        if (delta > 0) reserveCashuCounters(outcome.keysetId, delta.toInt())
+        return outcome
+    }
+
     companion object {
         /**
          * How far to rewind the persisted counter when looking for proofs
