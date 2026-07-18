@@ -20,34 +20,17 @@
  */
 package com.vitorpamplona.amethyst.service.pow
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
 import android.content.Context
-import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Build
-import android.os.IBinder
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
-import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -56,161 +39,72 @@ import kotlinx.coroutines.launch
  * finish mining even after the user backgrounds the app.
  *
  * Uses the Android 14+ `shortService` type — no special permission, but a
- * hard ~3 minute budget. On [onTimeout] the service exits cleanly; every
+ * hard ~3 minute budget. On `onTimeout` the service exits cleanly; every
  * persistable job is already checkpointed by [PowJobStore], so anything still
  * unmined resumes on the next app launch. Started on every enqueue (the app
  * is necessarily in the foreground then), stops itself when the queue drains.
  *
- * The notification is a live progress card ([NotificationCompat.ProgressStyle]):
- * one track segment per post, filling as jobs complete, indeterminate while a
- * single post mines, with a cancel-all action. On Android 16+ it renders as a
- * Live Updates chip; older versions fall back to a standard progress bar.
+ * The notification card (a live [androidx.core.app.NotificationCompat.ProgressStyle]) and all the
+ * service lifecycle live in [FlowProgressForegroundService]; this subclass only maps mining state
+ * to that card.
  */
-class PowMiningForegroundService : Service() {
-    private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
-    private var watchJob: Job? = null
+class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<PoWJobState>>() {
+    override val fgsType: Int = ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
+    override val channelId = CHANNEL_ID
+    override val channelNameRes = R.string.pow_notification_channel_name
+    override val channelDescRes = R.string.pow_notification_channel_description
+    override val notificationId = NOTIFICATION_ID
+    override val cancelAction = ACTION_CANCEL_ALL
+    override val cancelLabelRes = R.string.pow_notification_cancel_all
 
-    // Session totals so the progress track can show "done / enqueued since the
-    // service started" — the queue itself only knows what is still pending.
+    // clock-driven refresh for the time-left text and bar; the shortService budget (~3 min)
+    // caps this at a handful of updates.
+    override val refreshMs: Long = PROGRESS_REFRESH_MS
+
+    // Session totals so the progress track can show "done / enqueued since the service
+    // started" — the queue itself only knows what is still pending.
     private var sessionTotal = 0
     private var lastQueueSize = 0
 
-    // Benchmarked once per service run (~250 ms, cached by the estimator);
-    // read from the notification builder to compute expected durations.
+    // Benchmarked once per service run (~250 ms, cached by the estimator).
     @Volatile
     private var hashRate: Double? = null
-
-    // Built once per service instance: the intents never change, and
-    // buildNotification runs on every queue update.
-    private val tapIntent: PendingIntent by lazy {
-        PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-    }
-
-    private val cancelIntent: PendingIntent by lazy {
-        PendingIntent.getService(
-            this,
-            1,
-            Intent(this, PowMiningForegroundService::class.java).setAction(ACTION_CANCEL_ALL),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-    }
 
     override fun onCreate() {
         super.onCreate()
         running = true
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int,
-    ): Int {
-        // Android's contract: every onStartCommand after startForegroundService
-        // must call startForeground promptly, even on the stop path.
-        runCatching { startForegroundCompat(currentJobs()) }
-            .onFailure {
-                Log.w(TAG, "startForeground failed; mining continues without the service", it)
-                stopSelf()
-                return START_NOT_STICKY
-            }
-
-        if (intent?.action == ACTION_CANCEL_ALL) {
-            Amethyst.instance.powPublishQueue.cancelAll()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return START_NOT_STICKY
-        }
-
-        watchQueue()
-        return START_NOT_STICKY
-    }
-
-    /**
-     * The shortService budget (~3 min) is exhausted. Exit before the system
-     * ANRs us: persisted jobs are checkpointed and resume on next launch;
-     * in-memory jobs keep mining opportunistically until the process freezes.
-     */
-    override fun onTimeout(startId: Int) {
-        Log.d(TAG) { "shortService budget exhausted; ${currentJobs().size} job(s) left to resume later" }
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
     override fun onDestroy() {
         running = false
-        scope.cancel()
         super.onDestroy()
     }
 
-    private fun currentJobs(): ImmutableList<PoWJobState> = Amethyst.instance.powPublishQueue.jobs.value
+    override fun state() = Amethyst.instance.powPublishQueue.jobs
 
-    private fun watchQueue() {
-        if (watchJob != null) return
-        watchJob =
-            scope.launch {
-                Amethyst.instance.powPublishQueue.jobs.collect { jobs ->
-                    if (jobs.size > lastQueueSize) sessionTotal += jobs.size - lastQueueSize
-                    lastQueueSize = jobs.size
+    override fun isActive(value: ImmutableList<PoWJobState>) = value.isNotEmpty()
 
-                    if (jobs.isEmpty()) {
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                        stopSelf()
-                    } else {
-                        updateNotification(jobs)
-                    }
-                }
-            }
+    override fun cancelAll() = Amethyst.instance.powPublishQueue.cancelAll()
 
-        // the estimated-time-left figure and progress fraction only move with
-        // the clock, not with queue events: benchmark the hash rate once,
-        // then refresh the card periodically while something is mining.
-        scope.launch {
-            hashRate = PoWEstimator.hashesPerSecond()
-            while (true) {
-                val jobs = currentJobs()
-                if (jobs.any { it.isMining }) updateNotification(jobs)
-                delay(PROGRESS_REFRESH_MS)
-            }
-        }
+    override fun needsClockRefresh(value: ImmutableList<PoWJobState>) = value.any { it.isMining }
+
+    override fun onStarted() {
+        scope.launch { hashRate = PoWEstimator.hashesPerSecond() }
     }
 
-    private fun startForegroundCompat(jobs: ImmutableList<PoWJobState>) {
-        ensureChannel(this)
-        val notification = buildNotification(jobs)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+    override fun onEmission(value: ImmutableList<PoWJobState>) {
+        if (value.size > lastQueueSize) sessionTotal += value.size - lastQueueSize
+        lastQueueSize = value.size
     }
 
-    private fun updateNotification(jobs: ImmutableList<PoWJobState>) {
-        val manager = NotificationManagerCompat.from(this)
-        if (!manager.areNotificationsEnabled()) return
-        try {
-            manager.notify(NOTIFICATION_ID, buildNotification(jobs))
-        } catch (_: SecurityException) {
-            // POST_NOTIFICATIONS revoked mid-flight; the FGS keeps running.
-        }
-    }
+    override fun render(value: ImmutableList<PoWJobState>): Content {
+        val done = (sessionTotal - value.size).coerceAtLeast(0)
+        val total = (done + value.size).coerceAtLeast(1)
 
-    private fun buildNotification(jobs: ImmutableList<PoWJobState>): Notification {
-        val done = (sessionTotal - jobs.size).coerceAtLeast(0)
-        val total = (done + jobs.size).coerceAtLeast(1)
+        val current = value.firstOrNull { it.isMining } ?: value.firstOrNull()
 
-        val current = jobs.firstOrNull { it.isMining } ?: jobs.firstOrNull()
-
-        // expected duration for the job being mined right now, so the card can
-        // say "≈ 10 minutes left" and fill its bar toward a predictable end.
+        // expected duration for the job being mined right now, so the card can say
+        // "≈ 10 minutes left" and fill its bar toward a predictable end.
         val rate = hashRate
         val startedAt = current?.miningStartedAt
         val expectedSec = if (current != null && rate != null) PoWEstimator.estimateSeconds(current.difficulty, rate) else null
@@ -229,44 +123,23 @@ class PowMiningForegroundService : Service() {
 
         val fraction = if (expectedSec != null && elapsedSec != null) elapsedSec / expectedSec else null
 
-        val progressStyle: NotificationCompat.ProgressStyle =
-            if (total <= 1) {
-                // single post: fill toward the estimated duration; past the
-                // mean the search is memoryless, so sweep instead of lying.
-                if (fraction != null && fraction < 1.0) {
-                    NotificationCompat
-                        .ProgressStyle()
-                        .setProgressSegments(listOf(NotificationCompat.ProgressStyle.Segment(100)))
-                        .setProgress((fraction * 100).toInt())
-                } else {
-                    NotificationCompat.ProgressStyle().setProgressIndeterminate(true)
-                }
+        val title =
+            if (value.size > 1) {
+                pluralStringRes(this, R.plurals.pow_mining_progress, value.size, value.size)
             } else {
-                NotificationCompat
-                    .ProgressStyle()
-                    .setProgressSegments(List(total) { NotificationCompat.ProgressStyle.Segment(1) })
-                    .setProgress(done)
+                stringRes(this, R.string.pow_mining_title)
             }
 
-        return NotificationCompat
-            .Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.amethyst)
-            .setContentTitle(
-                if (jobs.size > 1) {
-                    pluralStringRes(this, R.plurals.pow_mining_progress, jobs.size, jobs.size)
-                } else {
-                    stringRes(this, R.string.pow_mining_title)
-                },
-            ).setContentText(text)
-            .setStyle(progressStyle)
-            .setContentIntent(tapIntent)
-            .addAction(0, stringRes(this, R.string.pow_notification_cancel_all), cancelIntent)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
+        val bar =
+            if (total <= 1) {
+                // single post: fill toward the estimated duration; past the mean the search is
+                // memoryless, so sweep instead of lying.
+                if (fraction != null && fraction < 1.0) Bar.Determinate(fraction) else Bar.Indeterminate
+            } else {
+                Bar.Segmented(total, done)
+            }
+
+        return Content(title, text, bar)
     }
 
     companion object {
@@ -275,45 +148,19 @@ class PowMiningForegroundService : Service() {
         private const val NOTIFICATION_ID = 0x504F57 // "POW"
         private const val ACTION_CANCEL_ALL = "com.vitorpamplona.amethyst.pow.CANCEL_ALL"
 
-        // clock-driven refresh cadence for the time-left text and bar; the
-        // shortService budget (~3 min) caps this at a handful of updates.
         private const val PROGRESS_REFRESH_MS = 30_000L
 
-        // Best-effort de-dup for start(): the queue calls it on EVERY enqueue,
-        // and each call otherwise round-trips through system_server. A stale
-        // false only costs one redundant startForegroundService (which Android
-        // routes to the existing instance's onStartCommand anyway).
+        // Best-effort de-dup for start(): the queue calls it on EVERY enqueue.
         @Volatile
         private var running = false
 
         /**
-         * Best-effort start: enqueue happens while the user is interacting
-         * with the app, so the foreground-start allowance normally holds. A
-         * restore during a cold background launch may be denied — mining then
-         * proceeds unprotected and the service starts on the next enqueue.
+         * Best-effort start: enqueue happens while the user is interacting with the app,
+         * so the foreground-start allowance normally holds.
          */
         fun start(context: Context) {
             if (running) return
-            try {
-                context.startForegroundService(Intent(context, PowMiningForegroundService::class.java))
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not start mining foreground service (backgrounded?); mining continues unprotected", e)
-            }
-        }
-
-        private fun ensureChannel(context: Context) {
-            val manager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    CHANNEL_ID,
-                    stringRes(context, R.string.pow_notification_channel_name),
-                    NotificationManager.IMPORTANCE_LOW,
-                ).apply {
-                    description = stringRes(context, R.string.pow_notification_channel_description)
-                    setShowBadge(false)
-                },
-            )
+            FlowProgressForegroundService.start(context, PowMiningForegroundService::class.java, TAG)
         }
     }
 }

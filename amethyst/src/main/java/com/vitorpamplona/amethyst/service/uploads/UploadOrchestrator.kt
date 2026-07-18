@@ -24,6 +24,8 @@ import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -34,10 +36,13 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
@@ -200,6 +205,9 @@ class UploadOrchestrator {
         context: Context,
     ): UploadingFinalState {
         updateState(0.2, UploadingState.Uploading)
+        // BUD-05: route through /media (optimize) when the user opted in. The forced-signer
+        // path (e.g. NIP-46 draft signing) always uses the bit-exact /upload.
+        val useMedia = forcedSigner == null && account.settings.optimizeMediaOnUpload.value
         return try {
             val result =
                 BlossomUploader()
@@ -211,27 +219,93 @@ class UploadOrchestrator {
                         sensitiveContent = contentWarningReason,
                         serverBaseUrl = serverBaseUrl,
                         okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        // Use a t=media token when optimizing via /media, otherwise a plain
+                        // t=upload token. Tokens are intentionally NOT server-scoped on the
+                        // upload path: some servers reject an upload whose auth carries a
+                        // `server` tag, and upload-token replay is not the threat scoping
+                        // guards against (delete tokens are — those stay scoped).
                         httpAuth =
-                            if (forcedSigner != null) {
-                                { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner) }
-                            } else {
-                                account::createBlossomUploadAuth
+                            when {
+                                forcedSigner != null -> { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner) }
+                                useMedia -> { hash, size, alt -> account.createBlossomMediaAuth(hash, size, alt) }
+                                else -> { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt) }
                             },
                         context = context,
+                        useMediaEndpoint = useMedia,
                     )
 
-            verifyHeader(
-                uploadResult = result,
-                localContentType = contentType,
-                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                originalHash = originalHash,
-                originalContentType = contentTypeForResult,
-            )
+            val finalState =
+                verifyHeader(
+                    uploadResult = result,
+                    localContentType = contentType,
+                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                    originalHash = originalHash,
+                    originalContentType = contentTypeForResult,
+                )
+
+            // BUD-04: replicate the blob to the user's other Blossom servers for redundancy.
+            // Fire-and-forget on the account scope AFTER the upload is finished: mirroring is
+            // pure background redundancy, so it must never delay, alter, or fail the upload the
+            // user already completed, and must not touch the on-screen progress state.
+            if (finalState is UploadingState.Finished && forcedSigner == null && account.settings.mirrorUploadsToAllServers.value) {
+                account.scope.launch(Dispatchers.IO) {
+                    try {
+                        mirrorToOtherServers(result, serverBaseUrl, account)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("UploadOrchestrator", "Background mirror failed", e)
+                    }
+                }
+            }
+
+            finalState
         } catch (_: SignerExceptions.ReadOnlyException) {
             error(R.string.login_with_a_private_key_to_be_able_to_upload)
+        } catch (e: BlossomPaymentException) {
+            // BUD-07: the server wants payment before it will store the blob.
+            error(R.string.blossom_payment_required, e.payment.reason ?: serverBaseUrl)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
+            error(R.string.failed_to_upload_media, e.message?.ifBlank { null } ?: e.javaClass.simpleName)
+        }
+    }
+
+    /**
+     * BUD-04 mirror fan-out: asks every *other* Blossom server in the account's
+     * kind-10063 list to pull the freshly-uploaded blob from [result]'s URL. Runs
+     * in the background after the upload is finished (see caller), so it never
+     * delays the user's post or touches the upload progress UI; per-server failures
+     * are swallowed. Requires the blob's sha256 so server B can verify the download.
+     */
+    private suspend fun mirrorToOtherServers(
+        result: MediaUploadResult,
+        primaryServerBaseUrl: String,
+        account: Account,
+    ) {
+        val sourceUrl = result.url ?: return
+        val hash = result.sha256 ?: sourceUrl.substringAfterLast('/').substringBefore('.')
+        if (hash.length != 64) return
+
+        // Only the user's *explicitly configured* kind-10063 servers (flow), NOT the
+        // DEFAULT_MEDIA_SERVERS fallback that hostNameFlow injects — we must never fan
+        // uploads out to public defaults the user never opted into.
+        val primaryDomain = BlossomServerUrl.domain(primaryServerBaseUrl)
+        val targets =
+            account.blossomServers.flow.value
+                .filter { BlossomServerUrl.domain(it) != primaryDomain }
+                .distinct()
+
+        if (targets.isEmpty()) return
+
+        targets.forEach { target ->
+            try {
+                val auth = account.createBlossomUploadAuth(hash, result.size ?: 0L, "Mirror $hash").toAuthorizationHeader()
+                BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
+                    .mirror(sourceUrl, target, auth)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("UploadOrchestrator", "Failed to mirror $hash to $target", e)
+            }
         }
     }
 

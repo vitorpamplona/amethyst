@@ -109,6 +109,8 @@ private object PrefKeys {
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
+    const val MIRROR_UPLOADS_TO_ALL_SERVERS = "mirrorUploadsToAllServers"
+    const val OPTIMIZE_MEDIA_ON_UPLOAD = "optimizeMediaOnUpload"
     const val HIDE_COMMUNITY_RULES_VIOLATIONS = "hideCommunityRulesViolations"
     const val NIP46_SIGNER_ENABLED = "nip46SignerEnabled"
     const val NIP46_BUNKER_SECRET = "nip46BunkerSecret"
@@ -473,6 +475,8 @@ object LocalPreferences {
                     putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
                     putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
+                    putBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, settings.mirrorUploadsToAllServers.value)
+                    putBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, settings.optimizeMediaOnUpload.value)
                     putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
                     putBoolean(PrefKeys.NIP46_SIGNER_ENABLED, settings.nip46SignerEnabled.value)
                     putString(PrefKeys.NIP46_BUNKER_SECRET, settings.nip46BunkerSecret.value)
@@ -688,6 +692,8 @@ object LocalPreferences {
                     val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
                     val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
                     val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
+                    val mirrorUploadsToAllServers = getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, true)
+                    val optimizeMediaOnUpload = getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
                     val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
                     val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
                     val nip46BunkerSecret = getString(PrefKeys.NIP46_BUNKER_SECRET, "") ?: ""
@@ -872,6 +878,8 @@ object LocalPreferences {
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
+                        mirrorUploadsToAllServers = MutableStateFlow(mirrorUploadsToAllServers),
+                        optimizeMediaOnUpload = MutableStateFlow(optimizeMediaOnUpload),
                         hideCommunityRulesViolations = MutableStateFlow(hideCommunityRulesViolations),
                         nip46SignerEnabled = MutableStateFlow(nip46SignerEnabled),
                         nip46BunkerSecret = MutableStateFlow(nip46BunkerSecret),

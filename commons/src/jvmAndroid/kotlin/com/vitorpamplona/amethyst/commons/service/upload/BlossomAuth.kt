@@ -30,7 +30,29 @@ object BlossomAuth {
         size: Long,
         alt: String,
         signer: NostrSigner,
-    ): String = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer).toAuthorizationHeader()
+        servers: List<String> = emptyList(),
+    ): String = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer, servers).toAuthorizationHeader()
+
+    suspend fun createMediaAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+        signer: NostrSigner,
+        servers: List<String> = emptyList(),
+    ): String = BlossomAuthorizationEvent.createMediaAuth(hash, size, alt, signer, servers).toAuthorizationHeader()
+
+    suspend fun createListAuth(
+        alt: String,
+        signer: NostrSigner,
+        servers: List<String> = emptyList(),
+    ): String = BlossomAuthorizationEvent.createListAuth(signer, alt, servers).toAuthorizationHeader()
+
+    suspend fun createDeleteAuth(
+        hash: HexKey,
+        alt: String,
+        signer: NostrSigner,
+        servers: List<String> = emptyList(),
+    ): String = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer, servers).toAuthorizationHeader()
 
     fun encodeAuthHeader(event: BlossomAuthorizationEvent): String = event.toAuthorizationHeader()
 }

@@ -49,6 +49,18 @@ A third, slimmer harness covers the NIP-17 DM surface:
   is shared with the Marmot harness's checkout at
   `marmot/state-headless/nostr-rs-relay/`).
 
+A harness covers Blossom blob storage (BUD-01/02/04/09) against **live**
+public servers rather than a loopback relay:
+
+- **`blossom/blossom-live.sh`** — drives the full `amy blossom` lifecycle
+  (upload → HEAD check → download-and-verify-hash → list → cross-server
+  mirror → delete) against a real Blossom server. Server-side write
+  rejections (whitelists, rate limits, payment) record as SKIP, not FAIL —
+  only a broken client contract (bad descriptor, hash mismatch) fails.
+  Defaults to `https://files.sovbit.host`; pass `--mirror-server URL` to
+  exercise BUD-04. Example:
+  `blossom/blossom-live.sh --server https://files.sovbit.host --mirror-server https://blossom.primal.net`.
+
 A fourth harness covers audio rooms (NIP-53 + moq-lite):
 
 - **`nests/nests-interop.sh`** — fully manual interop between Amethyst

@@ -1545,6 +1545,39 @@
 
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
 
+    <string name="media_servers_upload_section">Upload behaviour</string>
+    <string name="blossom_mirror_uploads">Mirror uploads</string>
+    <string name="blossom_mirror_uploads_caption">After uploading, copy the file to your other Blossom servers so it stays available if one goes offline.</string>
+    <string name="blossom_optimize_media">Optimize media on the server</string>
+    <string name="blossom_optimize_media_caption">Upload through the server\'s /media endpoint so it can strip metadata and compress the file. The stored file may differ from the original.</string>
+    <string name="manage_stored_files">Manage stored files</string>
+    <string name="my_blossom_data">My Blossom Files</string>
+    <string name="blossom_refresh">Refresh</string>
+    <string name="blossom_sync_all">Sync all</string>
+    <string name="blossom_sync_gaps">Some of your files aren\'t on all your servers yet.</string>
+    <string name="blossom_syncing">Copying your files across servers…</string>
+    <string name="blossom_sync_done">Sync complete</string>
+    <string name="blossom_sync_cancel">Cancel</string>
+    <string name="blossom_sync_channel_name">Blossom sync</string>
+    <string name="blossom_sync_channel_description">Shows progress while copying your files across your Blossom servers.</string>
+    <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
+    <string name="blossom_mirror_to_missing">Mirror to missing</string>
+    <string name="blossom_delete_from">Delete from…</string>
+    <string name="blossom_delete_from_host">Delete from %1$s</string>
+    <string name="blossom_report">Report</string>
+    <string name="blossom_open">Open</string>
+    <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
+    <string name="blossom_payment_title">Payment required</string>
+    <string name="blossom_payment_message">%1$s charges a lightning payment to store this file. Pay from your connected wallet to continue.</string>
+    <string name="blossom_pay">Pay</string>
+    <plurals name="blossom_pay_sats">
+        <item quantity="one">Pay %1$d sat</item>
+        <item quantity="other">Pay %1$d sats</item>
+    </plurals>
+    <string name="blossom_report_title">Report blob</string>
+    <string name="blossom_report_comment_hint">Reason (optional)</string>
+    <string name="blossom_send">Send</string>
+
     <string name="recommended_media_servers">Recommended Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
     <string name="use_default_servers">Use Default List</string>

@@ -465,6 +465,8 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
+    @Serializable object ManageBlossomBlobs : Route()
+
     @Serializable object EditNestsServers : Route()
 
     @Serializable object EditFavoriteAlgoFeeds : Route()

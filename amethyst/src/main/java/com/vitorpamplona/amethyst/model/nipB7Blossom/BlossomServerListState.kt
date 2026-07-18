@@ -120,12 +120,26 @@ class BlossomServerListState(
         hash: HexKey,
         size: Long,
         alt: String,
-    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer)
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer, servers)
+
+    suspend fun createBlossomMediaAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createMediaAuth(hash, size, alt, signer, servers)
 
     suspend fun createBlossomDeleteAuth(
         hash: HexKey,
         alt: String,
-    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer)
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer, servers)
+
+    suspend fun createBlossomListAuth(
+        alt: String,
+        servers: List<String> = emptyList(),
+    ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createListAuth(signer, alt, servers)
 }
 
 /**

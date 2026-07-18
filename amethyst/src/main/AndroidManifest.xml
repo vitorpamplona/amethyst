@@ -54,6 +54,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Phone calls -->
@@ -370,6 +371,15 @@
         <service
             android:name=".service.pow.PowMiningForegroundService"
             android:foregroundServiceType="shortService"
+            android:stopWithTask="false"
+            android:exported="false" />
+
+        <!-- Keeps the "sync all blobs to all servers" (BUD-04) sweep alive while backgrounded.
+             dataSync is the correct type for an upload/download/sync; it must be started from the
+             foreground, which "Sync all" (user-initiated in the manager) satisfies. -->
+        <service
+            android:name=".service.uploads.blossom.BlossomSyncForegroundService"
+            android:foregroundServiceType="dataSync"
             android:stopWithTask="false"
             android:exported="false" />
 

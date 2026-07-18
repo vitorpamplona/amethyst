@@ -46,6 +46,7 @@ enum class NavBarItem {
     DRAFTS,
     SCHEDULED_POSTS,
     INTEREST_SETS,
+    BLOSSOM_DATA,
     EMOJI_PACKS,
     WALLET,
     NOSTR_SIGNER,
@@ -181,6 +182,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.favorite_dvms_title,
                 icon = MaterialSymbols.AutoAwesome,
                 resolveRoute = { Route.EditFavoriteAlgoFeeds },
+            ),
+        NavBarItem.BLOSSOM_DATA to
+            NavBarItemDef(
+                id = NavBarItem.BLOSSOM_DATA,
+                labelRes = R.string.my_blossom_data,
+                icon = MaterialSymbols.Storage,
+                resolveRoute = { Route.ManageBlossomBlobs },
             ),
         NavBarItem.EMOJI_PACKS to
             NavBarItemDef(
@@ -449,6 +457,7 @@ val DrawerYouItems: List<NavBarItem> =
         NavBarItem.DRAFTS,
         NavBarItem.SCHEDULED_POSTS,
         NavBarItem.INTEREST_SETS,
+        NavBarItem.BLOSSOM_DATA,
         NavBarItem.EMOJI_PACKS,
         NavBarItem.WALLET,
         NavBarItem.NOSTR_SIGNER,
@@ -502,6 +511,7 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.SCHEDULED_POSTS,
                 NavBarItem.INTEREST_SETS,
                 NavBarItem.FAVORITE_ALGO_FEEDS,
+                NavBarItem.BLOSSOM_DATA,
                 NavBarItem.EMOJI_PACKS,
                 NavBarItem.WALLET,
                 NavBarItem.NOSTR_SIGNER,
