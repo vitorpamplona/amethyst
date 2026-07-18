@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.isGroupChatContent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
@@ -64,17 +65,18 @@ fun relayGroupServerHasUnreadFlow(
     account: Account,
     relay: NormalizedRelayUrl,
 ): Flow<Boolean> =
-    account.relayGroupList.liveRelayGroupList.flatMapLatest { tags ->
-        val groupIds =
-            tags.mapNotNull { tag ->
-                if (RelayUrlNormalizer.normalizeOrNull(tag.relayUrl) == relay) GroupId(tag.groupId, relay) else null
+    account.relayGroupList.liveRelayGroupList
+        .flatMapLatest { tags ->
+            val groupIds =
+                tags.mapNotNull { tag ->
+                    if (RelayUrlNormalizer.normalizeOrNull(tag.relayUrl) == relay) GroupId(tag.groupId, relay) else null
+                }
+            if (groupIds.isEmpty()) {
+                flowOf(false)
+            } else {
+                combine(groupIds.map { relayGroupChannelHasUnreadFlow(account, it) }) { perGroup -> perGroup.any { it } }
             }
-        if (groupIds.isEmpty()) {
-            flowOf(false)
-        } else {
-            combine(groupIds.map { relayGroupChannelHasUnreadFlow(account, it) }) { perGroup -> perGroup.any { it } }
-        }
-    }
+        }.distinctUntilChanged()
 
 /** Whether this group's message store holds any acceptable chat content created after [sinceSecs]. */
 private fun RelayGroupChannel.hasChatNewerThan(

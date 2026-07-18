@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
@@ -72,22 +73,29 @@ fun concordChannelUnreadCountFlow(
 fun concordCommunityHasUnreadFlow(
     account: Account,
     communityId: String,
-): Flow<Boolean> {
-    val session = account.concordSessions.sessionFor(communityId) ?: return flowOf(false)
-    return session.state.flatMapLatest { state ->
-        val channelKeys =
-            state
-                ?.channels
-                ?.keys
-                ?.toList()
-                .orEmpty()
-        if (channelKeys.isEmpty()) {
-            flowOf(false)
-        } else {
-            combine(channelKeys.map { concordChannelUnreadCountFlow(account, communityId, it) }) { counts -> counts.any { it > 0 } }
-        }
-    }
-}
+): Flow<Boolean> =
+    // Re-resolve the session on every revision tick rather than capturing it once. A Refounding
+    // rebuilds a still-joined community's session in place (same id, new object) and a fold changes
+    // the channel set — both bump `revision`; capturing the session once would leave the fan-in
+    // pointed at a dead session so the dot freezes. This mirrors how ConcordServerRoomCompose already
+    // re-reads the row's name/icon off `revision`.
+    account.concordSessions.revision
+        .flatMapLatest {
+            val channelKeys =
+                account.concordSessions
+                    .sessionFor(communityId)
+                    ?.state
+                    ?.value
+                    ?.channels
+                    ?.keys
+                    ?.toList()
+                    .orEmpty()
+            if (channelKeys.isEmpty()) {
+                flowOf(false)
+            } else {
+                combine(channelKeys.map { concordChannelUnreadCountFlow(account, communityId, it) }) { counts -> counts.any { it > 0 } }
+            }
+        }.distinctUntilChanged()
 
 /**
  * True for a note the Concord channel *timeline* actually renders — the same predicate as
