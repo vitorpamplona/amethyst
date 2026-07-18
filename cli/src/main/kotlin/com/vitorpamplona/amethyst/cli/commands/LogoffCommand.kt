@@ -61,10 +61,23 @@ import java.io.File
  * the command reports what it would delete and exits with code 2.
  */
 object LogoffCommand {
+    val USAGE: String =
+        """
+        |amy logoff — log off: delete this account's key, per-account state, and its
+        |events in the shared store
+        |
+        |  logoff [--yes] [--keep-events]   requires --yes; without it, prints a dry run
+        |                                    (exit 2). --keep-events skips the cache purge.
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
+        if (tail.firstOrNull() == "--help" || tail.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val confirmed = tail.any { it == "--yes" || it == "-y" }
         val keepEvents = tail.any { it == "--keep-events" }
 

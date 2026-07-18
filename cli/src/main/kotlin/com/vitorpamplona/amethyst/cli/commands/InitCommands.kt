@@ -27,10 +27,23 @@ import com.vitorpamplona.amethyst.cli.Identity
 import com.vitorpamplona.amethyst.cli.Output
 
 object InitCommands {
+    val USAGE: String =
+        """
+        |amy init — create or import a bare identity (no defaults published)
+        |
+        |  init [--nsec NSEC]           mint a fresh keypair, or import NSEC; idempotent
+        |                                on re-run (prints the existing identity).
+        """.trimMargin()
+
     suspend fun init(
         dataDir: DataDir,
         args: Args,
     ): Int {
+        if (args.help) {
+            System.err.println(USAGE)
+            return 0
+        }
+        args.rejectUnknown("nsec")
         // On re-run we return metadata only. Unlocking the stored secret here
         // would trigger a keychain prompt / passphrase dialog even though the
         // caller clearly already has the identity set up.

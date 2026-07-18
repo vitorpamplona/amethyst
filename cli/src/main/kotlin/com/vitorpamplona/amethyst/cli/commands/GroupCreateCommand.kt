@@ -35,6 +35,7 @@ object GroupCreateCommand {
     ): Int {
         val args = Args(rest)
         val name = args.flag("name", "")!!
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = RandomInstance.bytes(32).toHexKey()

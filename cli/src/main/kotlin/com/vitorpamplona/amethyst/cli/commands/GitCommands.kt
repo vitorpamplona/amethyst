@@ -48,6 +48,22 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
  * (`GitRepositoryEvent`, `GitIssueEvent`).
  */
 object GitCommands {
+    val USAGE: String =
+        """
+        |amy git — NIP-34 Nostr-native git repositories
+        |
+        |  git announce --name N [--description D]      publish a kind:30617 repo announcement
+        |      [--clone URL[,URL]] [--web URL[,URL]]     (--d / --identifier sets the identifier;
+        |      [--relay URL[,URL]] [--maintainer HEX[,]]  defaults to name)
+        |      [--hashtag T[,T]] [--earliest-commit C]
+        |      [--personal-fork] [--d ID | --identifier ID]
+        |  git list [USER] [--relay URL[,URL]]          list a user's repo announcements (default self)
+        |  git show NADDR|kind:pubkey:id                print one repo announcement
+        |      [--relay URL[,URL]]
+        |  git issue NADDR|coords --subject S [BODY]    publish a kind:1621 issue against a repo
+        |      [--hashtag T[,T]] [--relay URL[,URL]]     (BODY from arg or stdin)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -62,6 +78,7 @@ object GitCommands {
                 "show" to { rest -> show(dataDir, rest) },
                 "issue" to { rest -> issue(dataDir, rest) },
             ),
+            help = USAGE,
         )
 
     private suspend fun announce(
@@ -70,6 +87,8 @@ object GitCommands {
     ): Int {
         val args = Args(rest)
         val name = args.flag("name") ?: return Output.error("bad_args", "git announce requires --name")
+        // `--identifier` is the spelled-out alias of `--d` (the d-tag).
+        val identifier = args.flag("d") ?: args.flag("identifier") ?: name
         val csv = { key: String ->
             args
                 .flag(key)
@@ -92,15 +111,17 @@ object GitCommands {
                     hashtags = csv("hashtag"),
                     earliestUniqueCommit = args.flag("earliest-commit"),
                     personalFork = args.bool("personal-fork"),
-                    dTag = args.flag("d") ?: name,
+                    dTag = identifier,
                 )
             val signed = ctx.signer.sign(template)
             val targets = RawEventSupport.publishTargets(ctx, args)
+            args.rejectUnknown()
             val ack = ctx.publish(signed, targets)
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,
-                    "address" to Address.assemble(signed.kind, signed.pubKey, args.flag("d") ?: name),
+                    "address" to Address.assemble(signed.kind, signed.pubKey, identifier),
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
                 ),
             )
@@ -119,6 +140,7 @@ object GitCommands {
             ctx.prepare()
             val author = args.positionalOrNull(0)?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
             val relays = RawEventSupport.queryTargets(ctx, args)
+            args.rejectUnknown()
             val received = ctx.drain(relays.associateWith { listOf(Filter(kinds = listOf(GitRepositoryEvent.KIND), authors = listOf(author))) })
             val repos =
                 received
@@ -140,6 +162,8 @@ object GitCommands {
     ): Int {
         val args = Args(rest)
         val coord = args.positional(0, "naddr-or-coordinates")
+        // `--relay` is read later inside fetchRepo's queryTargets.
+        args.rejectUnknown("relay")
         val addr = resolveAddress(coord) ?: return Output.error("bad_args", "expected an naddr or kind:pubkey:identifier (or pubkey:identifier)")
         if (addr.kind != GitRepositoryEvent.KIND) {
             return Output.error("bad_args", "not a git repository address (expected kind ${GitRepositoryEvent.KIND}, got ${addr.kind})")
@@ -169,6 +193,8 @@ object GitCommands {
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() }
                 .orEmpty()
+        // `--relay` is read later (relayFlag + fetchRepo's queryTargets).
+        args.rejectUnknown("relay")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -186,6 +212,7 @@ object GitCommands {
             val repoRelays = repo.relays().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
             val targets = RawEventSupport.relayFlag(args).ifEmpty { repoRelays }.ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(signed, targets)
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to signed.id,

@@ -60,6 +60,7 @@ object FeedCommand {
         val since = args.flag("since")?.toLongOrNull()
         val until = args.flag("until")?.toLongOrNull()
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         // Read-only: runs anonymously when there is no account. `--author` /
         // `--following` still work; the bare "self" feed just has no self to

@@ -27,6 +27,14 @@ import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 
 object KeyPackageCommands {
+    val USAGE: String =
+        """
+        |amy marmot key-package — MLS KeyPackage publication + discovery (MIP-00)
+        |
+        |  marmot key-package publish                 publish a fresh KeyPackage
+        |  marmot key-package check NPUB              fetch NPUB's KeyPackage from relays
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -39,6 +47,7 @@ object KeyPackageCommands {
                 "publish" to { _ -> publish(dataDir) },
                 "check" to { rest -> check(dataDir, rest) },
             ),
+            help = USAGE,
         )
 
     private suspend fun publish(dataDir: DataDir): Int {
@@ -49,11 +58,12 @@ object KeyPackageCommands {
 
             val event = ctx.marmot.generateKeyPackageEvent(relays.toList())
             val ack = ctx.publish(event, relays)
+            RawEventSupport.publishGuard(ack, event.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to event.id,
                     "kind" to event.kind,
-                    "accepted_by" to ack.filterValues { it }.keys.map { it.url },
+                    "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
                 ),
             )

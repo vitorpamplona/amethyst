@@ -87,6 +87,7 @@ object GroupMetadataCommands {
         val gid = args.positional(0, "gid")
         val path = args.positional(1, "image-file")
         val server = args.flag("server")
+        args.rejectUnknown()
         val file = File(path)
         if (!file.isFile) return Output.error("bad_args", "no such file: $path")
 
@@ -151,6 +152,7 @@ object GroupMetadataCommands {
             val commit = ctx.marmot.updateGroupMetadata(gid, updated)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(commit.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, commit.signedEvent.id)?.let { return it }
 
             Output.emit(
                 mapOf(

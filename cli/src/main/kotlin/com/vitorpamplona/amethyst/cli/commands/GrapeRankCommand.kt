@@ -116,6 +116,48 @@ import kotlin.math.roundToInt
  *  - `amy graperank providers [USER]` — list a user's trusted providers.
  */
 object GrapeRankCommand {
+    val USAGE: String =
+        """
+        |amy graperank — GrapeRank web-of-trust: crawl + score + publish NIP-85 cards
+        |
+        |  graperank [OBSERVER]                       crawl + score: subjective trust (0..1) over the
+        |    [--min-rank N] [--offline]                follow/mute/report graph, then persist the result
+        |    [--limit N] [--min-score X]               as local NIP-85 kind:30382 cards (ranks >=
+        |    [--rigor X] [--attenuation X]             --min-rank, default 2). --offline skips the crawl.
+        |    [--max-hops N] [--diagnose]               OBSERVER: npub|nprofile|hex|name@domain (self).
+        |  graperank crawl [OBSERVER]                 network only: crawl the graph (kind 3/10000/1984/
+        |    [--max-hops N] [--max-rounds N]           10002) into the local store, no scoring.
+        |    [--no-preconnect] [--preconnect-cap N]    Idempotent — run a few times to load everything.
+        |  graperank followers [OBSERVER]             reverse crawl: pull kind:3 lists that #p-tag the
+        |    [--relay URL[,URL…]] [--max N]            observer from every relay the store knows, so
+        |    [--timeout SECS] [--relay-concurrency N]  every follower becomes a graph edge for `score`.
+        |    [--insert-batch N]
+        |  graperank score [OBSERVER]                 local only: score from the store + persist cards
+        |                                              (= bare --offline; same flags). No network.
+        |  graperank publish [OBSERVER]               push local cards to the operator relay(s) via a
+        |    [--relay URL[,URL…]] [--timeout SECS]     NIP-77 up-sync (nothing re-scored), and refresh
+        |    [--relay-concurrency N]                   the observer's kind:10040 when we hold their key.
+        |  graperank rank USER [--provider PUBKEY]    read the kind:30382 cards about USER, one rank per
+        |    [--refresh] [--timeout SECS]              provider; --refresh drains relays on a miss.
+        |  graperank status                           read-only local inventory: record counts, cache
+        |                                              freshness, operator state, cards per observer.
+        |  graperank refresh [--down] [--up]          re-sync known authors' records (kind 0/3/10002/
+        |    [--relay-concurrency N] [--author-chunk N] 1984) from their outboxes via NIP-77, so score
+        |    [--min-authors N] [--report-limit N]       runs on current data. (`update` is a deprecated
+        |    [--no-sync-deletions] [--timeout SECS]     alias.)
+        |  graperank register [PROVIDER]              declare a NIP-85 provider in your kind:10040
+        |    [--service KIND:TAG] [--relay URL]        (default: self as 30382:rank at your 1st outbox).
+        |    [--private]
+        |  graperank unregister PROVIDER              remove matching entries from your kind:10040;
+        |    [--service KIND:TAG] [--relay URL]        --service/--relay narrow, else all for that key.
+        |  graperank providers [USER] [--refresh]     list a user's declared NIP-85 providers.
+        |    [--timeout SECS]
+        |  graperank operator                         operator keys (~/.amy/operator/): `relay URL…`
+        |    [status | relay URL… | keys]              sets the publish target; `keys` maps observer
+        |                                              -> service-key. (default: status)
+        |  graperank probe                            deprecated alias for `relay probe` (relay census).
+        """.trimMargin()
+
     private const val FLAG_INSERT_BATCH = "insert-batch"
     private const val FLAG_RELAY_CONCURRENCY = "relay-concurrency"
     private const val FLAG_CONCURRENCY = "concurrency"
@@ -213,7 +255,13 @@ object GrapeRankCommand {
     ): Int =
         // Sub-verbs are explicit words; anything else (npub / hex / nprofile /
         // NIP-05, or nothing) is the OBSERVER positional for a score computation.
+        // The bare-positional default means route() can't be used here, so
+        // handle --help explicitly before the fall-through.
         when (tail.firstOrNull()) {
+            "--help", "-h", "help" -> {
+                System.err.println(USAGE)
+                0
+            }
             "register" -> register(dataDir, tail.drop(1).toTypedArray())
             "unregister" -> unregister(dataDir, tail.drop(1).toTypedArray())
             "providers" -> providers(dataDir, tail.drop(1).toTypedArray())
@@ -224,10 +272,17 @@ object GrapeRankCommand {
             // The relay census outgrew graperank (it feeds the shared NIP-66
             // reachability cache every command reads) and moved to `amy relay
             // probe`; this alias keeps the old spelling working.
-            "probe" -> RelayCommands.probe(dataDir, tail.drop(1).toTypedArray())
+            "probe" -> {
+                System.err.println("[amy] `graperank probe` is deprecated — use `relay probe` (the relay census).")
+                RelayCommands.probe(dataDir, tail.drop(1).toTypedArray())
+            }
             // `refresh` is canonical (it refreshes the WoT record kinds from each
             // author's outbox); `update` is the pre-rename back-compat alias.
-            "refresh", "update" -> refresh(dataDir, tail.drop(1).toTypedArray())
+            "refresh" -> refresh(dataDir, tail.drop(1).toTypedArray())
+            "update" -> {
+                System.err.println("[amy] `graperank update` is deprecated — use `graperank refresh`.")
+                refresh(dataDir, tail.drop(1).toTypedArray())
+            }
             "score" -> run(dataDir, tail.drop(1).toTypedArray(), forceOffline = true)
             "publish" -> publish(dataDir, tail.drop(1).toTypedArray())
             "rank" -> rank(dataDir, tail.drop(1).toTypedArray())
@@ -269,6 +324,21 @@ object GrapeRankCommand {
                 attenuation = args.flag("attenuation")?.toDoubleOrNull() ?: GrapeRankParams().attenuation,
                 rigor = args.flag("rigor")?.toDoubleOrNull() ?: GrapeRankParams().rigor,
             )
+        // Crawl-tuning flags are read later inside newCrawler/flushReachability
+        // (and only on the online path), so whitelist them here.
+        args.rejectUnknown(
+            "max-rounds",
+            "max-hops",
+            "timeout",
+            "diagnose",
+            "drain-concurrency",
+            "timeout-evict",
+            "no-probe",
+            "no-aggregators",
+            "no-preconnect",
+            "preconnect-cap",
+            NO_REACHABILITY_CACHE_FLAG,
+        )
 
         // Crawl never signs and score signs cards with the machine-level operator
         // key (`~/.amy/operator/`, independent of any account), so neither needs a
@@ -570,6 +640,23 @@ object GrapeRankCommand {
     ): Int {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
+        // Every crawl flag is read later inside newCrawler/flushReachability,
+        // so whitelist the full set up front.
+        args.rejectUnknown(
+            "max-rounds",
+            "max-hops",
+            "timeout",
+            "park-timeout",
+            "diagnose",
+            FLAG_INSERT_BATCH,
+            "drain-concurrency",
+            "timeout-evict",
+            "no-probe",
+            "no-aggregators",
+            "no-preconnect",
+            "preconnect-cap",
+            NO_REACHABILITY_CACHE_FLAG,
+        )
         // Crawl never signs, so no account is needed — run anonymously when there is
         // none, requiring an explicit observer (no logged-in user to default to).
         Context.openOrAnonymous(dataDir).use { ctx ->
@@ -637,6 +724,9 @@ object GrapeRankCommand {
         val observerArg = args.positionalOrNull(0)
         val relayArg = args.flag("relay")
         val relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 16))
+        // --max/--timeout/--insert-batch are read later inside the crawler
+        // Config; --no-reachability-cache inside allKnownRelays.
+        args.rejectUnknown("max", "timeout", FLAG_INSERT_BATCH, NO_REACHABILITY_CACHE_FLAG)
 
         // Read-only + never signs, so it runs anonymously — but then an OBSERVER
         // positional is required (there's no account to default to).
@@ -833,6 +923,16 @@ object GrapeRankCommand {
         // Default is bidirectional; a single --down/--up narrows to that direction.
         val downFlag = args.bool("down")
         val upFlag = args.bool("up")
+        // The remaining flags are read later inside the updater Config.
+        args.rejectUnknown(
+            "no-sync-deletions",
+            FLAG_RELAY_CONCURRENCY,
+            FLAG_CONCURRENCY,
+            "author-chunk",
+            "min-authors",
+            "timeout",
+            NO_REACHABILITY_CACHE_FLAG,
+        )
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -941,6 +1041,7 @@ object GrapeRankCommand {
         val relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 4))
         // Idle watchdog per relay reconcile (not a total budget), like `refresh`.
         val idleTimeoutMs = args.longFlag("timeout", 30L) * 1000
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -1036,6 +1137,7 @@ object GrapeRankCommand {
         val providerArg = args.flag("provider")
         val refresh = args.bool("refresh")
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -1196,6 +1298,7 @@ object GrapeRankCommand {
         val relayArg = args.flag("relay")
         val isPrivate = args.bool("private")
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        args.rejectUnknown()
 
         val service =
             serviceArg?.let {
@@ -1241,6 +1344,7 @@ object GrapeRankCommand {
                 }
 
             val ack = ctx.publish(event, outbox)
+            RawEventSupport.publishGuard(ack, event.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "service" to service.toValue(),
@@ -1280,6 +1384,7 @@ object GrapeRankCommand {
         val serviceArg = args.flag("service")
         val relayArg = args.flag("relay")
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        args.rejectUnknown()
 
         val service =
             serviceArg?.let {
@@ -1333,6 +1438,7 @@ object GrapeRankCommand {
             }
 
             val ack = ctx.publish(event, outbox)
+            RawEventSupport.publishGuard(ack, event.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "provider" to provider,
@@ -1364,6 +1470,7 @@ object GrapeRankCommand {
         val userArg = args.positionalOrNull(0)
         val refresh = args.bool("refresh")
         val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()

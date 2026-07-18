@@ -28,6 +28,17 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 object MessageCommands {
+    val USAGE: String =
+        """
+        |amy marmot message — MLS group messaging
+        |
+        |  marmot message send GID TEXT               publish kind:9 inner event into the group
+        |  marmot message list GID [--limit N]        dump decrypted inner events (default --limit 50;
+        |                                              --limit 0 = unlimited)
+        |  marmot message react GID EVENT_ID EMOJI    publish kind:7 reaction targeting an inner event
+        |  marmot message delete GID EVENT_ID…        publish kind:5 deletion targeting inner events
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -42,6 +53,7 @@ object MessageCommands {
                 "react" to { rest -> react(dataDir, rest) },
                 "delete" to { rest -> delete(dataDir, rest) },
             ),
+            help = USAGE,
         )
 
     private suspend fun send(
@@ -59,6 +71,7 @@ object MessageCommands {
             val bundle = ctx.marmot.buildTextMessage(gid, text)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
 
             Output.emit(
                 mapOf(
@@ -77,9 +90,12 @@ object MessageCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", "message list <gid>")
+        if (rest.isEmpty()) return Output.error("bad_args", "message list <gid> [--limit N]")
         val args = Args(rest.drop(1).toTypedArray())
-        val limit = args.intFlag("limit", Int.MAX_VALUE)
+        // Default 50 newest messages; `--limit 0` restores the old dump-everything.
+        val limitFlag = args.intFlag("limit", 50)
+        args.rejectUnknown()
+        val limit = if (limitFlag <= 0) Int.MAX_VALUE else limitFlag
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
@@ -127,6 +143,7 @@ object MessageCommands {
             val bundle = ctx.marmot.buildReactionMessage(gid, target, emoji)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
 
             Output.emit(
                 mapOf(
@@ -163,6 +180,7 @@ object MessageCommands {
             val bundle = ctx.marmot.buildDeletionMessage(gid, targets)
             val relays = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, relays)
+            RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }
 
             Output.emit(
                 mapOf(

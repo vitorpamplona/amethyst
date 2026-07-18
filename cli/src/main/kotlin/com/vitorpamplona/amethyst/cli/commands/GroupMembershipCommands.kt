@@ -39,11 +39,12 @@ object GroupMembershipCommands {
 
             val leafIndex =
                 ctx.marmot.leafIndexOf(gid, target)
-                    ?: return Output.error("not_in_group", target)
+                    ?: return Output.error("target_not_member", target)
 
             val outbound = ctx.marmot.removeMember(nostrGroupId = gid, targetLeafIndex = leafIndex)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(outbound.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, outbound.signedEvent.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "group_id" to gid,
