@@ -1554,11 +1554,12 @@
     <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
     <string name="blossom_mirror_to_missing">Mirror to missing</string>
     <string name="blossom_delete_from">Delete from…</string>
+    <string name="blossom_delete_from_host">Delete from %1$s</string>
     <string name="blossom_report">Report</string>
     <string name="blossom_open">Open</string>
     <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
     <string name="blossom_payment_title">Payment required</string>
-    <string name="blossom_payment_message">This server charges a lightning payment to store the file. Pay from your connected wallet to continue.</string>
+    <string name="blossom_payment_message">%1$s charges a lightning payment to store this file. Pay from your connected wallet to continue.</string>
     <string name="blossom_pay">Pay</string>
     <plurals name="blossom_pay_sats">
         <item quantity="one">Pay %1$d sat</item>
