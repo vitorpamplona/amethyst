@@ -92,6 +92,7 @@ fun MediaServersScaffold(
         AllMediaBody(
             blossomServersViewModel = blossomServersViewModel,
             accountViewModel = accountViewModel,
+            nav = nav,
             modifier =
                 Modifier
                     .fillMaxSize()

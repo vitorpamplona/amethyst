@@ -1545,6 +1545,11 @@
 
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
 
+    <string name="media_servers_upload_section">Upload behaviour</string>
+    <string name="blossom_mirror_uploads">Mirror uploads</string>
+    <string name="blossom_mirror_uploads_caption">After uploading, copy the file to your other Blossom servers so it stays available if one goes offline.</string>
+    <string name="blossom_optimize_media">Optimize media on the server</string>
+    <string name="blossom_optimize_media_caption">Upload through the server\'s /media endpoint so it can strip metadata and compress the file. The stored file may differ from the original.</string>
     <string name="manage_stored_files">Manage stored files</string>
     <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
     <string name="blossom_mirror_to_missing">Mirror to missing</string>

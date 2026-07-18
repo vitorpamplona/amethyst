@@ -40,8 +40,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,6 +62,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.draggableRelayItem
@@ -91,6 +95,7 @@ private val MonogramColors =
 fun AllMediaBody(
     blossomServersViewModel: BlossomServersViewModel,
     accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val blossomServersState by blossomServersViewModel.fileServers.collectAsStateWithLifecycle()
@@ -157,6 +162,11 @@ fun AllMediaBody(
         }
 
         item {
+            SectionLabel(title = stringRes(id = R.string.media_servers_upload_section))
+            UploadBehaviorSection(accountViewModel, nav)
+        }
+
+        item {
             SectionLabel(title = stringRes(id = R.string.media_servers_cache_section))
             MediaCacheSection(accountViewModel)
         }
@@ -164,6 +174,97 @@ fun AllMediaBody(
         item {
             Spacer(DoubleHorzSpacer)
         }
+    }
+}
+
+/**
+ * Upload-side Blossom controls: mirror uploads across the user's servers (BUD-04),
+ * optimize via `/media` (BUD-05), and a shortcut into the blob manager.
+ */
+@Composable
+private fun UploadBehaviorSection(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val mirror by accountViewModel.account.settings.mirrorUploadsToAllServers
+        .collectAsStateWithLifecycle()
+    val optimize by accountViewModel.account.settings.optimizeMediaOnUpload
+        .collectAsStateWithLifecycle()
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        UploadToggleRow(
+            title = stringRes(id = R.string.blossom_mirror_uploads),
+            caption = stringRes(id = R.string.blossom_mirror_uploads_caption),
+            checked = mirror,
+            onCheckedChange = { accountViewModel.account.settings.changeMirrorUploadsToAllServers(it) },
+        )
+
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 14.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
+
+        UploadToggleRow(
+            title = stringRes(id = R.string.blossom_optimize_media),
+            caption = stringRes(id = R.string.blossom_optimize_media_caption),
+            checked = optimize,
+            onCheckedChange = { accountViewModel.account.settings.changeOptimizeMediaOnUpload(it) },
+        )
+
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 14.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { nav.nav(Route.ManageBlossomBlobs) }
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringRes(id = R.string.manage_stored_files),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                symbol = MaterialSymbols.Storage,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UploadToggleRow(
+    title: String,
+    caption: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = caption,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

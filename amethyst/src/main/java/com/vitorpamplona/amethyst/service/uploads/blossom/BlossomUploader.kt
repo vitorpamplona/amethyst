@@ -79,6 +79,7 @@ class BlossomUploader {
         okHttpClient: (String) -> OkHttpClient,
         httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
+        useMediaEndpoint: Boolean = false,
         onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
         checkNotInMainThread()
@@ -115,6 +116,7 @@ class BlossomUploader {
                     okHttpClient,
                     httpAuth,
                     context,
+                    useMediaEndpoint,
                     onProgress,
                 )
             }.mergeLocalMetadata(localMetadata)
@@ -132,6 +134,7 @@ class BlossomUploader {
         okHttpClient: (String) -> OkHttpClient,
         httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
+        useMediaEndpoint: Boolean = false,
         onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
         checkNotInMainThread()
@@ -142,7 +145,8 @@ class BlossomUploader {
                 MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it)
             } ?: ""
 
-        val apiUrl = BlossomServerUrl.upload(serverBaseUrl)
+        // BUD-05: /media asks the server to optimize; /upload stores the exact bytes.
+        val apiUrl = if (useMediaEndpoint) BlossomServerUrl.media(serverBaseUrl) else BlossomServerUrl.upload(serverBaseUrl)
 
         val client = okHttpClient(apiUrl)
         val requestBuilder = Request.Builder()

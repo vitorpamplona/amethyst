@@ -187,6 +187,16 @@ class AccountSettings(
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
     /**
+     * BUD-04: after uploading a blob to the primary Blossom server, replicate it to
+     * the user's other configured servers (kind 10063) for redundancy.
+     */
+    val mirrorUploadsToAllServers: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    /**
+     * BUD-05: upload media through the server's `/media` endpoint so the server may
+     * strip metadata and optimize it, instead of the bit-exact `/upload`.
+     */
+    val optimizeMediaOnUpload: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    /**
      * NIP-46: when true, this account acts as a remote signer (a "bunker") for
      * other apps, listening on the user's inbox relays for kind:24133 requests.
      * See [com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState].
@@ -661,6 +671,20 @@ class AccountSettings(
     fun changeLocalBlossomCacheProfilePicturesOnly(enabled: Boolean) {
         if (localBlossomCacheProfilePicturesOnly.value != enabled) {
             localBlossomCacheProfilePicturesOnly.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeMirrorUploadsToAllServers(enabled: Boolean) {
+        if (mirrorUploadsToAllServers.value != enabled) {
+            mirrorUploadsToAllServers.tryEmit(enabled)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeOptimizeMediaOnUpload(enabled: Boolean) {
+        if (optimizeMediaOnUpload.value != enabled) {
+            optimizeMediaOnUpload.tryEmit(enabled)
             saveAccountSettings()
         }
     }

@@ -202,6 +202,9 @@ class UploadOrchestrator {
         context: Context,
     ): UploadingFinalState {
         updateState(0.2, UploadingState.Uploading)
+        // BUD-05: route through /media (optimize) when the user opted in. The forced-signer
+        // path (e.g. NIP-46 draft signing) always uses the bit-exact /upload.
+        val useMedia = forcedSigner == null && account.settings.optimizeMediaOnUpload.value
         return try {
             val result =
                 BlossomUploader()
@@ -213,14 +216,16 @@ class UploadOrchestrator {
                         sensitiveContent = contentWarningReason,
                         serverBaseUrl = serverBaseUrl,
                         okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        // Scope the upload token to the target server (BUD-11) so it can't be replayed elsewhere.
+                        // Scope the token to the target server (BUD-11) so it can't be replayed elsewhere,
+                        // and use a t=media token when optimizing via /media.
                         httpAuth =
-                            if (forcedSigner != null) {
-                                { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner, listOf(serverBaseUrl)) }
-                            } else {
-                                { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt, listOf(serverBaseUrl)) }
+                            when {
+                                forcedSigner != null -> { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner, listOf(serverBaseUrl)) }
+                                useMedia -> { hash, size, alt -> account.createBlossomMediaAuth(hash, size, alt, listOf(serverBaseUrl)) }
+                                else -> { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt, listOf(serverBaseUrl)) }
                             },
                         context = context,
+                        useMediaEndpoint = useMedia,
                     )
 
             val finalState =
@@ -234,7 +239,7 @@ class UploadOrchestrator {
 
             // BUD-04: replicate the blob to the user's other Blossom servers for redundancy.
             // Best-effort — a mirror failure never fails the upload the user already completed.
-            if (finalState is UploadingState.Finished && forcedSigner == null) {
+            if (finalState is UploadingState.Finished && forcedSigner == null && account.settings.mirrorUploadsToAllServers.value) {
                 mirrorToOtherServers(result, serverBaseUrl, account)
             }
 
