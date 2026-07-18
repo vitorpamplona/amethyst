@@ -29,27 +29,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import kotlinx.coroutines.Job
-
-/**
- * Relay-signed group *state*: metadata (39000) + admins (39001) + members (39002) + supported roles
- * (39003) + pins (39005). Small replaceable/addressable events — one per kind per group.
- */
-private val RELAY_GROUP_STATE_KINDS =
-    listOf(
-        GroupMetadataEvent.KIND,
-        GroupAdminsEvent.KIND,
-        GroupMembersEvent.KIND,
-        SupportedRolesEvent.KIND,
-        GroupPinnedEvent.KIND,
-    )
 
 /** One request to keep the relay-signed state of the user's joined groups live. */
 class RelayGroupJoinedStateQueryState(
@@ -93,19 +73,7 @@ class RelayGroupJoinedStateSubAssembler(
         val joined = key.account.relayGroupList.liveRelayGroupList.value
         if (joined.isEmpty()) return null
 
-        val idsByRelay = joined.groupBy({ it.relayUrl }, { it.groupId })
-        return idsByRelay.mapNotNull { (relayUrl, groupIds) ->
-            val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = RELAY_GROUP_STATE_KINDS,
-                        tags = mapOf("d" to groupIds.distinct()),
-                        since = since?.get(relay)?.time,
-                    ),
-            )
-        }
+        return buildRelayGroupStateFilters(joined) { since?.get(it)?.time }
     }
 
     override fun id(key: RelayGroupJoinedStateQueryState) = key.account

@@ -30,17 +30,10 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.StateFlow
-
-/** Timeline kinds shown in a group's chat — chat messages and polls. */
-private val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
 /** One open NIP-29 group whose recent chat the screen wants live. */
 class RelayGroupOpenChatTailQueryState(
@@ -82,19 +75,8 @@ class RelayGroupOpenChatTailSubAssembler(
         key: RelayGroupOpenChatTailQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val relay = key.groupId.relayUrl
-        windowLoad.setExpectedRelays(setOf(relay))
-        return listOf(
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = RELAY_GROUP_TIMELINE_KINDS,
-                        tags = mapOf(GroupIdTag.TAG_NAME to listOf(key.groupId.id)),
-                        since = DmHistoryTuning.recentBoundary(),
-                    ),
-            ),
-        )
+        windowLoad.setExpectedRelays(setOf(key.groupId.relayUrl))
+        return listOf(buildRelayGroupOpenChatTailFilter(key.groupId, DmHistoryTuning.recentBoundary()))
     }
 
     override fun id(key: RelayGroupOpenChatTailQueryState) = key.groupId

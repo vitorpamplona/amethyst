@@ -29,13 +29,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dataso
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
-import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /** One on-screen group card's request to warm a single group. */
 class RelayGroupCardWarmupQueryState(
@@ -46,10 +41,6 @@ class RelayGroupCardWarmupQueryState(
     /** How many recent content events to prefetch ahead of a tap. */
     val contentLimit: Int = RELAY_GROUP_WARMUP_LIMIT,
 )
-
-/** Newest content kinds we prefetch so opening the card lands on populated screens. */
-private val RELAY_GROUP_WARMUP_CONTENT_KINDS =
-    listOf(ChatEvent.KIND, PollEvent.KIND, ThreadEvent.KIND, CommentEvent.KIND)
 
 /**
  * Default number of recent events to pull ahead of a tap — enough to fill the first screen AND drive
@@ -95,8 +86,7 @@ class RelayGroupCardWarmupSubAssembler(
         // groups shown as cards that those don't cover — above all NON-joined groups (discovery, a relay's
         // channel list, member/metadata/parent screens). So skip a group we've already joined to avoid
         // re-fetching what's live everywhere. See amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md.
-        val joined = key.account.relayGroupList.liveRelayGroupList.value
-        if (joined.any { it.groupId == groupId.id && RelayUrlNormalizer.normalizeOrNull(it.relayUrl) == groupId.relayUrl }) {
+        if (isRelayGroupJoined(key.account.relayGroupList.liveRelayGroupList.value, groupId)) {
             return emptyList()
         }
         val metadata = if (key.contentOnly) emptyList() else filterRelayGroupState(key.channel, since)
@@ -105,7 +95,7 @@ class RelayGroupCardWarmupSubAssembler(
                 relay = groupId.relayUrl,
                 filter =
                     Filter(
-                        kinds = RELAY_GROUP_WARMUP_CONTENT_KINDS,
+                        kinds = RELAY_GROUP_CARD_WARMUP_KINDS,
                         tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                         limit = key.contentLimit,
                         since = since?.get(groupId.relayUrl)?.time,

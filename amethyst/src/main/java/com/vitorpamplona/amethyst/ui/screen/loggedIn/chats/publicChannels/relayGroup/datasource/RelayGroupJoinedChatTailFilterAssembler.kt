@@ -32,18 +32,10 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
-
-/** Timeline kinds shown in a group's chat — chat messages and polls. */
-private val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
 /** One screen's request to keep the user's joined groups' recent chat live. */
 class RelayGroupJoinedChatTailQueryState(
@@ -102,22 +94,7 @@ class RelayGroupJoinedChatTailSubAssembler(
 
         // One #h filter per host relay carrying every joined group id on it; bounded by the shared
         // recent-tail floor, so no per-group limit and no per-group re-subscribe on join.
-        val idsByRelay = joined.groupBy({ it.relayUrl }, { it.groupId })
-        val sinceTime = DmHistoryTuning.recentBoundary()
-
-        val filters =
-            idsByRelay.mapNotNull { (relayUrl, groupIds) ->
-                val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        Filter(
-                            kinds = RELAY_GROUP_TIMELINE_KINDS,
-                            tags = mapOf(GroupIdTag.TAG_NAME to groupIds.distinct()),
-                            since = sinceTime,
-                        ),
-                )
-            }
+        val filters = buildRelayGroupJoinedChatTailFilters(joined, DmHistoryTuning.recentBoundary())
         windowLoad.setExpectedRelays(filters.mapTo(mutableSetOf()) { it.relay })
         return filters
     }

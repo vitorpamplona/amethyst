@@ -26,10 +26,7 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 
 /** One threads-screen's request for a single group's kind-11 threads. */
 class RelayGroupOpenThreadsQueryState(
@@ -67,17 +64,7 @@ class RelayGroupOpenThreadsSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val groupId = key.channel.groupId
-        return listOf(
-            RelayBasedFilter(
-                relay = groupId.relayUrl,
-                filter =
-                    Filter(
-                        kinds = listOf(ThreadEvent.KIND, CommentEvent.KIND),
-                        tags = mapOf("h" to listOf(groupId.id)),
-                        since = since?.get(groupId.relayUrl)?.time,
-                    ),
-            ),
-        )
+        return listOf(buildRelayGroupThreadsFilter(groupId, since?.get(groupId.relayUrl)?.time))
     }
 
     override fun id(key: RelayGroupOpenThreadsQueryState) = key.channel.groupId

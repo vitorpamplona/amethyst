@@ -35,14 +35,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscriptio
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.StateFlow
-
-/** Timeline kinds paged in a NIP-29 group's chat — chat messages and polls. */
-private val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
 /** One open NIP-29 group whose older history the chat screen wants paged in. */
 class RelayGroupOpenChatHistoryQueryState(
@@ -106,19 +100,7 @@ class RelayGroupOpenChatHistorySubAssembler(
         // relay keeps no filter here, so re-assembly (a marker advancing) doesn't re-REQ a settled window.
         val armed = pager.armedRelays(relays)
         if (armed.isEmpty()) return emptyList()
-        return armed.mapNotNull { relay ->
-            val until = pager.requestedUntilFor(relay) ?: return@mapNotNull null
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = RELAY_GROUP_TIMELINE_KINDS,
-                        tags = mapOf(GroupIdTag.TAG_NAME to listOf(key.groupId.id)),
-                        until = until,
-                        limit = pager.pageLimit,
-                    ),
-            )
-        }
+        return buildRelayGroupHistoryFilters(key.groupId, armed, { pager.requestedUntilFor(it) }, pager.pageLimit)
     }
 
     /** Steps a single [relay] to its next, older page for the open group. Driven by its on-screen marker. */

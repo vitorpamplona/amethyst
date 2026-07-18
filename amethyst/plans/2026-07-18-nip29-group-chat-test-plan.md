@@ -4,6 +4,12 @@
 state-vs-content refactor (see `2026-07-18-nip29-group-chat-subscriptions.md`).
 **Question this answers:** *does the correct data load on every screen, and can we ever miss a message?*
 
+**Implemented on this branch so far:**
+- **Tier B** (filter shapes, assemblers 1–6 + card-warmup joined-skip): `amethyst/src/test/.../relayGroup/datasource/RelayGroupFilterBuildersTest.kt`, testing the pure `RelayGroupFilterBuilders.kt` the assemblers now delegate to.
+- **Tier C3 / E1** (can't-miss backward `#h` walk + same-relay group isolation, against the in-process `geode` relay): `quartz/src/jvmAndroidTest/.../paging/RelayGroupHistoryPagingRelayTest.kt`.
+
+Still to do: the remaining Tier B rows (7–10, reconnect stability), the wider Tier C `amy` integration set, Tier D device runs, and Tier E2 real-relay conformance.
+
 ## What is / isn't verifiable headless
 
 | Layer | Harness | Covers |
