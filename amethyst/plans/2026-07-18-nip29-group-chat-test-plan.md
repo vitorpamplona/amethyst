@@ -109,6 +109,45 @@ For **each screen**, the pass criteria:
 - **D9 Notifications (10):** with G *not* open, have another key post a message p-tagging me → it appears in notifications / unread.
 - **D10 Quiet group:** a group whose newest message is older than 7d → Messages row falls back to cached/placeholder (documented limitation), and opening it backfills via the pager.
 
+## Tier E — relay-behavior resilience & third-party conformance
+
+Tiers C/D run against geode/`amy serve` — a **compliant relay we control**. Real NIP-29 groups live on
+relays managed by other people, which have bugs and quirks. Two distinct concerns:
+
+### E1 — client resilience to a MISBEHAVING relay (deterministic, mock)
+Build a scriptable WebSocket relay (reuse the quartz relay-server + `RelayClientTestFakes`) that injects
+one fault per run; assert the tail/pager still **converge** — all messages ingested, no infinite
+`advance`, no hang, correct terminal state (`done` vs `stalled`), no duplicate rows:
+- ignores `since` (returns everything) → tail must **dedup**, not duplicate.
+- ignores / partial `until` → pager makes progress or marks done, **never loops**.
+- **short page** (returns < `limit` though more exist) → NOT exhaustion (only an *empty* page ends a relay).
+- **echoes the same newest events every page** → `RelayLoadingCursors.onEose` "not strictly older ⇒ done" fires.
+- out-of-order / duplicate events → cursor takes `min(createdAt)`; dedup by id.
+- EOSE before any event, or **no EOSE at all** → `WindowLoadTracker` idle/abs-cap; pager silence watchdog → `stalled`.
+- **AUTH-required → CLOSED("auth-required")** → relay `stalled`-but-kept; re-`advance` retries; **not silently dropped**.
+- mid-stream socket drop → resubscribe with `since`/`until`, **no full replay, no gap** (`rewindTo` on prune).
+- relay result cap below `limit` → treated like a short page.
+
+`UntilLimitPagingRelayTest` + `BackwardRelayPagerTest` already cover the empty-page / until-limit-walk /
+echo-newest cases for the **generic** pager. E1 is to (a) re-run them against the NIP-29 `#h` filter
+shapes and (b) add the not-yet-covered faults (ignore-since, out-of-order, AUTH-CLOSE, silence, reorder).
+
+### E2 — conformance against REAL NIP-29 relay implementations (surfaces THEIR bugs)
+geode / strfry / nostr-rs-relay are **generic** (store+serve by tag; no NIP-29 semantics), so they can't
+surface a real NIP-29 relay's bugs. Point the harness (reuse relayBench's `RelayUnderTest` adapter) at an
+actual NIP-29 relay (e.g. relay29, chorus, a self-hosted groups relay) in a **container**, seed a group
+via `amy relaygroup`, and run C1–C9 + E1's corpus. A failure is a **relay** bug or a client/relay
+mismatch — a NIP-29 conformance report the operator can act on. Cover the behaviors only a real NIP-29
+relay has:
+- **AUTH gating** on closed/private groups (39002 membership): does the client AUTH and then receive the `#h` timeline?
+- **relay-signed 39xxx** (the relay's own key) → the `isRelaySignedGroupEvent` gate.
+- **`previous`-tag fork rejection** on send (a relay rejecting an event whose `previous` refs it doesn't recognise).
+- the relay's actual **`since`/`until` inclusivity** and **result caps / rate limits** on the `#h` timeline.
+
+Public relays are non-deterministic (live data): use a containerized instance for CI, a public one only
+for exploratory runs. **E1 hardens our client against buggy relays; E2 tells us which third-party relay
+is buggy** — both are needed before trusting "loads correctly" in the wild.
+
 ## Cross-cutting invariants (assert throughout)
 
 - **No missed messages:** the union of tail + history + pins + notifications = the full timeline; C3 is the decisive test. Also exercise `RelayLoadingCursors.rewindTo` — trim the cache below the window, page again, confirm the pruned band re-loads.
