@@ -63,7 +63,7 @@ object KeyCommands {
             rest,
             "key <generate|public|encrypt|decrypt|validate>",
             mapOf(
-                "generate" to { _ -> generate() },
+                "generate" to { tail -> generate(tail) },
                 "public" to { tail -> public(tail) },
                 "encrypt" to { tail -> encrypt(tail) },
                 "decrypt" to { tail -> decrypt(tail) },
@@ -134,7 +134,8 @@ object KeyCommands {
         return 0
     }
 
-    private fun generate(): Int {
+    private fun generate(rest: Array<String>): Int {
+        Args(rest).rejectUnknown()
         val id = Identity.create()
         Output.emit(
             mapOf(

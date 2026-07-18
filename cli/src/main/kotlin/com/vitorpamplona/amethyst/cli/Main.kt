@@ -165,7 +165,7 @@ class AwaitTimeout(
 private val STRICT_ACCOUNT_VERBS = setOf("init", "create", "login", "logoff", "whoami")
 
 private suspend fun dispatch(argv: Array<String>): Int {
-    if (argv.isEmpty() || argv[0] == "--help" || argv[0] == "-h") {
+    if (argv.firstOrNull() == "--help" || argv.firstOrNull() == "-h") {
         printUsage()
         return 0
     }
