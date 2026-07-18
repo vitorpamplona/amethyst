@@ -36,17 +36,39 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomReport
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Whether one of the user's servers holds a blob, or an operation on it is in flight. */
+enum class PresenceState {
+    /** Confirmed present (green). */
+    PRESENT,
+
+    /** Confirmed absent (grey). */
+    MISSING,
+
+    /** An operation is in flight — first-load HEAD probe, a mirror, or a delete (spinner). */
+    PENDING,
+}
+
+@Immutable
+data class ServerPresence(
+    val server: String,
+    val host: String,
+    val state: PresenceState,
+)
+
 /**
- * One stored blob, plus which of the user's Blossom servers currently hold it —
- * the "seen files per server" view (BUD-01 HEAD / BUD-02 list). [serversPresent]
- * and [serversMissing] are server base URLs from the user's kind-10063 list.
+ * One stored blob, plus the state of each of the user's Blossom servers for it —
+ * the "seen files per server" view (BUD-01 HEAD / BUD-02 list).
  */
 @Immutable
 data class BlobRow(
@@ -54,25 +76,34 @@ data class BlobRow(
     val url: String?,
     val size: Long?,
     val type: String?,
-    val serversPresent: List<String>,
-    val serversMissing: List<String>,
-)
+    val servers: List<ServerPresence>,
+) {
+    val presentServers get() = servers.filter { it.state == PresenceState.PRESENT }.map { it.server }
+    val missingServers get() = servers.filter { it.state == PresenceState.MISSING }.map { it.server }
+    val hasPresent get() = servers.any { it.state == PresenceState.PRESENT }
+    val hasMissing get() = servers.any { it.state == PresenceState.MISSING }
+    val presentCount get() = servers.count { it.state == PresenceState.PRESENT }
+}
 
-/** A BUD-07 payment prompt raised while mirroring [row] to [target]. */
+/** A BUD-07 payment prompt raised while mirroring [hash] to [target]. */
 @Immutable
 data class PendingMirrorPayment(
-    val row: BlobRow,
+    val hash: HexKey,
+    val sourceUrl: String,
     val target: String,
+    val targetHost: String,
     val payment: BlossomPaymentRequired,
     val amountSats: Long?,
 )
 
 /**
  * Backs the Blossom blob-manager screen. For the active account it fans a
- * `GET /list/<pubkey>` (BUD-02) across every server in the user's kind-10063 list,
- * inverts the results into a per-blob presence matrix, and backfills servers that
- * don't implement `/list` with cheap `HEAD /<sha256>` probes (BUD-01). Exposes
- * delete (BUD-02), mirror-to-missing (BUD-04), and report (BUD-09) actions.
+ * `GET /list/<pubkey>` (BUD-02) across every server in the user's kind-10063 list
+ * in parallel, shows the result immediately, then backfills only the servers that
+ * do NOT implement `/list` with parallel `HEAD /<sha256>` probes (BUD-01) — a server
+ * that returned a list already reports its full holdings, so no probe is needed for
+ * it. Delete (BUD-02), mirror-to-missing (BUD-04) and report (BUD-09) update the
+ * affected pill in place (spinner → green/grey) instead of reloading the screen.
  */
 @Stable
 class BlossomBlobManagerViewModel : ViewModel() {
@@ -108,143 +139,194 @@ class BlossomBlobManagerViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                _blobs.value = loadMatrix()
+                loadMatrix()
             } catch (e: Exception) {
                 Log.w("BlossomBlobManager", "Failed to load blob list", e)
-                _error.value = e.message ?: e.javaClass.simpleName
+                _error.value = e.message?.ifBlank { null } ?: e.javaClass.simpleName
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    private suspend fun loadMatrix(): List<BlobRow> {
+    private suspend fun loadMatrix() {
         val pubkey = account.signer.pubKey
         val servers = servers()
-        if (servers.isEmpty()) return emptyList()
+        if (servers.isEmpty()) {
+            _blobs.value = emptyList()
+            return
+        }
 
-        // Per-server /list results, keyed by hash. Servers that don't implement
-        // /list (or error) contribute an empty holding and get HEAD-backfilled below.
-        val presence = mutableMapOf<HexKey, MutableSet<String>>()
-        val meta = mutableMapOf<HexKey, BlobMeta>()
-        val listCapable = mutableSetOf<String>()
+        // Phase 1 — /list every server in parallel. A null result means the server
+        // doesn't implement /list (or errored) and needs HEAD backfill in phase 2.
+        val listed: List<Pair<String, List<BlossomUploadResult>?>> =
+            coroutineScope {
+                servers
+                    .map { server ->
+                        async {
+                            server to
+                                try {
+                                    val auth = account.createBlossomListAuth("List blobs").toAuthorizationHeader()
+                                    clientFor(server).list(server, pubkey, auth)
+                                } catch (e: Exception) {
+                                    Log.w("BlossomBlobManager", "list failed on $server", e)
+                                    null
+                                }
+                        }
+                    }.awaitAll()
+            }
 
-        servers.forEach { server ->
-            try {
-                val auth = account.createBlossomListAuth("List blobs", listOf(server)).toAuthorizationHeader()
-                val blobs = clientFor(server).list(server, pubkey, auth)
+        val meta = HashMap<HexKey, BlobMeta>()
+        val hashesByServer = HashMap<String, Set<HexKey>>()
+        val listCapable = HashSet<String>()
+        listed.forEach { (server, blobs) ->
+            if (blobs != null) {
                 listCapable.add(server)
-                blobs.forEach { d ->
-                    val hash = d.sha256 ?: return@forEach
-                    presence.getOrPut(hash) { mutableSetOf() }.add(server)
-                    meta.putIfAbsent(hash, BlobMeta(d.url, d.size, d.type))
-                }
-            } catch (e: Exception) {
-                Log.w("BlossomBlobManager", "list failed on $server", e)
+                hashesByServer[server] = blobs.mapNotNull { it.sha256 }.toSet()
+                blobs.forEach { d -> d.sha256?.let { meta.putIfAbsent(it, BlobMeta(d.url, d.size, d.type)) } }
             }
         }
+        val allHashes = meta.keys.toList()
 
-        // BUD-01 backfill: for every known hash, HEAD-probe the servers that
-        // didn't (or couldn't) list it, so the presence matrix is complete.
-        val allHashes = presence.keys.toList()
-        servers.forEach { server ->
-            allHashes.forEach { hash ->
-                if (server !in presence[hash].orEmpty()) {
-                    if (clientFor(server).has(hash, server)) {
-                        presence.getOrPut(hash) { mutableSetOf() }.add(server)
-                    }
-                }
-            }
+        fun rows(head: Map<Pair<String, HexKey>, Boolean> = emptyMap()): List<BlobRow> =
+            allHashes
+                .map { hash ->
+                    val presences =
+                        servers.map { server ->
+                            val state =
+                                when {
+                                    server in listCapable ->
+                                        if (hash in hashesByServer[server].orEmpty()) PresenceState.PRESENT else PresenceState.MISSING
+                                    else ->
+                                        head[server to hash]?.let { if (it) PresenceState.PRESENT else PresenceState.MISSING }
+                                            ?: PresenceState.PENDING
+                                }
+                            ServerPresence(server, hostOf(server), state)
+                        }
+                    val m = meta[hash]
+                    BlobRow(hash, m?.url, m?.size, m?.type, presences)
+                }.sortedByDescending { it.presentCount }
+
+        // Show the /list result right away; the non-list servers appear as spinning
+        // pills until their HEAD probe lands.
+        _blobs.value = rows()
+        _isLoading.value = false
+
+        // Phase 2 — HEAD-probe ONLY the non-list servers, for the known hashes, in parallel.
+        val nonListServers = servers.filter { it !in listCapable }
+        if (nonListServers.isNotEmpty() && allHashes.isNotEmpty()) {
+            val head =
+                coroutineScope {
+                    nonListServers
+                        .flatMap { server ->
+                            allHashes.map { hash ->
+                                async { (server to hash) to clientFor(server).has(hash, server) }
+                            }
+                        }.awaitAll()
+                }.toMap()
+            _blobs.value = rows(head)
         }
-
-        return presence
-            .map { (hash, present) ->
-                val m = meta[hash]
-                BlobRow(
-                    hash = hash,
-                    url = m?.url,
-                    size = m?.size,
-                    type = m?.type,
-                    serversPresent = servers.filter { it in present },
-                    serversMissing = servers.filter { it !in present },
-                )
-            }.sortedByDescending { it.serversPresent.size }
     }
 
-    /** BUD-02 delete: remove [hash] from a single [server]. */
+    private fun currentRow(hash: HexKey) = _blobs.value.firstOrNull { it.hash == hash }
+
+    private fun setServerState(
+        hash: HexKey,
+        server: String,
+        state: PresenceState,
+    ) {
+        _blobs.value =
+            _blobs.value.map { row ->
+                if (row.hash != hash) {
+                    row
+                } else {
+                    row.copy(servers = row.servers.map { if (it.server == server) it.copy(state = state) else it })
+                }
+            }
+    }
+
+    /** BUD-02 delete: remove [hash] from a single [server]; the pill spins then goes grey. */
     fun delete(
         hash: HexKey,
         server: String,
-        onDone: (Boolean) -> Unit = {},
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            setServerState(hash, server, PresenceState.PENDING)
             val ok =
                 try {
-                    val auth = account.createBlossomDeleteAuth(hash, "Delete blob", listOf(server)).toAuthorizationHeader()
+                    val auth = account.createBlossomDeleteAuth(hash, "Delete blob").toAuthorizationHeader()
                     clientFor(server).delete(hash, server, auth)
                 } catch (e: Exception) {
                     Log.w("BlossomBlobManager", "delete failed on $server", e)
                     false
                 }
-            if (ok) refresh()
-            withContext(Dispatchers.Main) { onDone(ok) }
+            setServerState(hash, server, if (ok) PresenceState.MISSING else PresenceState.PRESENT)
+            // Drop the row entirely once it's gone from every server.
+            if (currentRow(hash)?.hasPresent == false) {
+                _blobs.value = _blobs.value.filter { it.hash != hash }
+            }
         }
     }
 
-    /** BUD-04: mirror a blob to every server in the user's list that doesn't have it yet. */
+    /** BUD-04: mirror a blob to every server that doesn't have it; each pill spins then turns green. */
     fun mirrorToMissing(row: BlobRow) {
         val source = row.url ?: return
+        val targets = currentRow(row.hash)?.missingServers ?: row.missingServers
+        if (targets.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
-            var mirrored = 0
-            for (target in row.serversMissing) {
+            for (target in targets) {
+                setServerState(row.hash, target, PresenceState.PENDING)
                 try {
-                    mirrorOne(source, row, target, null)
-                    mirrored++
+                    mirrorOne(source, row.hash, row.size, target, null)
+                    setServerState(row.hash, target, PresenceState.PRESENT)
                 } catch (e: BlossomPaymentException) {
-                    // BUD-07: this server wants payment. Pause and ask the user to confirm;
-                    // the rest of the servers are retried after they decide.
+                    setServerState(row.hash, target, PresenceState.MISSING)
                     if (BlossomPaymentHandler.canPay(account, e.payment)) {
-                        _pendingPayment.value = PendingMirrorPayment(row, target, e.payment, BlossomPaymentHandler.amountSats(e.payment))
+                        _pendingPayment.value =
+                            PendingMirrorPayment(row.hash, source, target, hostOf(target), e.payment, BlossomPaymentHandler.amountSats(e.payment))
                         return@launch
                     }
                     Log.w("BlossomBlobManager", "mirror to $target needs unsupported payment", e)
                 } catch (e: Exception) {
+                    setServerState(row.hash, target, PresenceState.MISSING)
                     Log.w("BlossomBlobManager", "mirror to $target failed", e)
                 }
             }
-            if (mirrored > 0) refresh()
         }
     }
 
     private suspend fun mirrorOne(
         source: String,
-        row: BlobRow,
+        hash: HexKey,
+        size: Long?,
         target: String,
         proof: BlossomPaymentProof?,
     ) {
-        val auth = account.createBlossomUploadAuth(row.hash, row.size ?: 0L, "Mirror ${row.hash}", listOf(target)).toAuthorizationHeader()
+        val auth = account.createBlossomUploadAuth(hash, size ?: 0L, "Mirror $hash").toAuthorizationHeader()
         clientFor(target).mirror(source, target, auth, proof)
     }
 
-    /** User confirmed the BUD-07 prompt: pay via the wallet, retry, then continue with the rest. */
+    /** User confirmed the BUD-07 prompt: pay via the wallet, retry that server, then continue. */
     fun confirmPendingPayment() {
         val pending = _pendingPayment.value ?: return
         _pendingPayment.value = null
-        val source = pending.row.url ?: return
         viewModelScope.launch(Dispatchers.IO) {
+            setServerState(pending.hash, pending.target, PresenceState.PENDING)
             val proof = BlossomPaymentHandler.pay(account, pending.payment)
             if (proof == null) {
+                setServerState(pending.hash, pending.target, PresenceState.MISSING)
                 _error.value = "Payment failed or was not confirmed by the wallet."
                 return@launch
             }
             try {
-                mirrorOne(source, pending.row, pending.target, proof)
+                mirrorOne(pending.sourceUrl, pending.hash, currentRow(pending.hash)?.size, pending.target, proof)
+                setServerState(pending.hash, pending.target, PresenceState.PRESENT)
             } catch (e: Exception) {
+                setServerState(pending.hash, pending.target, PresenceState.MISSING)
                 Log.w("BlossomBlobManager", "paid mirror to ${pending.target} failed", e)
             }
-            // Continue mirroring to any remaining servers (which may prompt again).
-            refresh()
-            mirrorToMissing(pending.row.copy(serversMissing = pending.row.serversMissing.filter { it != pending.target }))
+            // Continue with any remaining missing servers (which may prompt again).
+            currentRow(pending.hash)?.let { mirrorToMissing(it) }
         }
     }
 

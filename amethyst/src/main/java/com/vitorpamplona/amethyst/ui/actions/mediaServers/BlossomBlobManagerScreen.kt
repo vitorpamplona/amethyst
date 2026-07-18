@@ -43,7 +43,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -80,7 +79,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
@@ -104,7 +103,7 @@ fun BlossomBlobManagerScreen(
 
     pendingPayment?.let { pending ->
         BlossomPaymentDialog(
-            host = vm.hostOf(pending.target),
+            host = pending.targetHost,
             amountSats = pending.amountSats,
             reason = pending.payment.reason,
             onConfirm = { vm.confirmPendingPayment() },
@@ -113,16 +112,21 @@ fun BlossomBlobManagerScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.manage_stored_files), nav) },
-        floatingActionButton = {
-            if (blobs.isNotEmpty()) {
-                ExtendedFloatingActionButton(
-                    onClick = { vm.refresh() },
-                    icon = { Icon(symbol = MaterialSymbols.Sync, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                    text = { Text(stringRes(R.string.retry)) },
-                    expanded = !loading,
-                )
-            }
+        topBar = {
+            TopBarExtensibleWithBackButton(
+                title = { Text(stringRes(R.string.manage_stored_files)) },
+                showBackButton = nav.canPop(),
+                popBack = { nav.popBack() },
+                actions = {
+                    IconButton(onClick = { vm.refresh() }, enabled = !loading) {
+                        if (loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(symbol = MaterialSymbols.Sync, contentDescription = stringRes(R.string.blossom_refresh))
+                        }
+                    }
+                },
+            )
         },
     ) { padding ->
         Column(
@@ -165,7 +169,6 @@ fun BlossomBlobManagerScreen(
                         items(blobs, key = { it.hash }) { row ->
                             BlobCard(row, vm)
                         }
-                        item { Spacer(Modifier.height(72.dp)) }
                     }
             }
         }
@@ -259,7 +262,7 @@ private fun BlobCard(
                             },
                         )
                     }
-                    if (row.serversPresent.isNotEmpty()) {
+                    if (row.hasPresent) {
                         DropdownMenuItem(
                             text = { Text(stringRes(R.string.blossom_report)) },
                             leadingIcon = { MenuIcon(MaterialSymbols.Report) },
@@ -269,7 +272,7 @@ private fun BlobCard(
                             },
                         )
                         HorizontalDivider()
-                        row.serversPresent.forEach { server ->
+                        row.presentServers.forEach { server ->
                             DropdownMenuItem(
                                 text = { Text(stringRes(R.string.blossom_delete_from_host, vm.hostOf(server))) },
                                 leadingIcon = { MenuIcon(MaterialSymbols.Delete, MaterialTheme.colorScheme.error) },
@@ -284,14 +287,13 @@ private fun BlobCard(
             }
         }
 
-        // Per-server presence pills.
+        // Per-server presence pills (green = has it, grey = missing, spinner = working).
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            row.serversPresent.forEach { ServerPill(vm.hostOf(it), present = true) }
-            row.serversMissing.forEach { ServerPill(vm.hostOf(it), present = false) }
+            row.servers.forEach { ServerPill(it) }
         }
 
         // Primary CTA: fill the gaps.
-        if (row.serversMissing.isNotEmpty() && row.url != null) {
+        if (row.hasMissing && row.url != null) {
             FilledTonalButton(
                 onClick = { vm.mirrorToMissing(row) },
                 modifier = Modifier.fillMaxWidth(),
@@ -335,25 +337,29 @@ private fun BlobThumbnail(row: BlobRow) {
 }
 
 @Composable
-private fun ServerPill(
-    host: String,
-    present: Boolean,
-) {
-    val dot = if (present) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.grayText
+private fun ServerPill(presence: ServerPresence) {
+    val present = presence.state == PresenceState.PRESENT
+    val pending = presence.state == PresenceState.PENDING
+    val accent = MaterialTheme.colorScheme.allGoodColor
     val bg =
-        if (present) {
-            MaterialTheme.colorScheme.allGoodColor.copy(alpha = 0.12f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        }
+        if (present) accent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceContainerHighest
     Row(
         modifier = Modifier.clip(CircleShape).background(bg).padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(dot))
+        if (pending) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(9.dp),
+                strokeWidth = 1.5.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            val dot = if (present) accent else MaterialTheme.colorScheme.grayText
+            Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(dot))
+        }
         Text(
-            text = host,
+            text = presence.host,
             style = MaterialTheme.typography.labelMedium,
             color = if (present) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.grayText,
         )
@@ -425,7 +431,7 @@ private fun BlossomReportDialog(
     var typeMenuOpen by remember { mutableStateOf(false) }
     var type by remember { mutableStateOf(ReportType.OTHER) }
     // Report to the first server that actually holds the blob.
-    val server = row.serversPresent.firstOrNull() ?: return
+    val server = row.presentServers.firstOrNull() ?: return
 
     AlertDialog(
         onDismissRequest = onDismiss,
