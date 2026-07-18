@@ -70,7 +70,6 @@ class BlossomSyncForegroundService : FlowProgressForegroundService<BlossomSyncSt
         val text =
             buildString {
                 append("${value.done} / ${value.total}")
-                if (value.currentHost != null) append("  ·  ${value.currentHost}")
                 if (value.failed > 0) append("  ·  ${value.failed} failed")
             }
         return Content(stringRes(this, R.string.blossom_syncing), text, Bar.Determinate(value.fraction.toDouble()))

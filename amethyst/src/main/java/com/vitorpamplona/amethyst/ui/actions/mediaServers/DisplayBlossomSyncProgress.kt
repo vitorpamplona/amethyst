@@ -116,7 +116,6 @@ fun DisplayBlossomSyncProgress() {
                         text =
                             buildString {
                                 append("${s.done} / ${s.total}")
-                                if (s.running && s.currentHost != null) append("  ·  ${s.currentHost}")
                                 if (s.failed > 0) append("  ·  ${s.failed} failed")
                             },
                         style = MaterialTheme.typography.bodySmall,

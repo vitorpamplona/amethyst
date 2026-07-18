@@ -25,16 +25,18 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -45,7 +47,6 @@ data class BlossomSyncState(
     val done: Int,
     val failed: Int,
     val running: Boolean,
-    val currentHost: String? = null,
 ) {
     val succeeded get() = done - failed
     val fraction get() = if (total == 0) 0f else done.toFloat() / total
@@ -102,32 +103,43 @@ class BlossomMirrorQueue(
         _state.value = BlossomSyncState(total = work.size, done = 0, failed = 0, running = true)
         onActive()
 
+        // Parallelize ACROSS servers but stay serial WITHIN a server, so every server gets a
+        // steady one-at-a-time stream (no hammering / rate-limit storms) while all of the user's
+        // servers work at once. Wall-clock ≈ the slowest single server's queue, not the sum.
+        val byServer: Map<String, List<Task>> = work.groupBy({ it.second }, { it.first })
+
         job =
             scope.launch {
-                var done = 0
-                var failed = 0
-                for ((task, target) in work) {
-                    _state.value = _state.value?.copy(currentHost = BlossomServerUrl.domain(target))
-                    val ok =
-                        try {
-                            val auth = account.createBlossomUploadAuth(task.hash, task.size ?: 0L, "Mirror ${task.hash}").toAuthorizationHeader()
-                            BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
-                                .mirror(task.sourceUrl, target, auth)
-                            true
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Log.w("BlossomMirrorQueue", "mirror ${task.hash} -> $target failed", e)
-                            false
+                byServer
+                    .map { (target, serverTasks) ->
+                        async {
+                            for (task in serverTasks) {
+                                val ok = mirrorOne(account, task, target)
+                                _results.tryEmit(BlossomMirrorResult(task.hash, target, ok))
+                                _state.update { it?.copy(done = it.done + 1, failed = it.failed + if (ok) 0 else 1) }
+                            }
                         }
-                    _results.tryEmit(BlossomMirrorResult(task.hash, target, ok))
-                    done++
-                    if (!ok) failed++
-                    _state.value = _state.value?.copy(done = done, failed = failed)
-                }
-                _state.value = _state.value?.copy(running = false, currentHost = null)
+                    }.awaitAll()
+                _state.update { it?.copy(running = false) }
             }
     }
+
+    private suspend fun mirrorOne(
+        account: Account,
+        task: Task,
+        target: String,
+    ): Boolean =
+        try {
+            val auth = account.createBlossomUploadAuth(task.hash, task.size ?: 0L, "Mirror ${task.hash}").toAuthorizationHeader()
+            BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
+                .mirror(task.sourceUrl, target, auth)
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("BlossomMirrorQueue", "mirror ${task.hash} -> $target failed", e)
+            false
+        }
 
     /** Cancel a running sweep and clear the banner. */
     fun cancel() {
