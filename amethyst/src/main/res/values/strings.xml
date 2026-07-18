@@ -1555,6 +1555,8 @@
     <string name="blossom_mirror_to_missing">Mirror to missing</string>
     <string name="blossom_delete_from">Delete from…</string>
     <string name="blossom_report">Report</string>
+    <string name="blossom_open">Open</string>
+    <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
     <string name="blossom_report_title">Report blob</string>
     <string name="blossom_report_comment_hint">Reason (optional)</string>
     <string name="blossom_send">Send</string>

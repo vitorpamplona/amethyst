@@ -25,6 +25,7 @@ import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -246,6 +247,9 @@ class UploadOrchestrator {
             finalState
         } catch (_: SignerExceptions.ReadOnlyException) {
             error(R.string.login_with_a_private_key_to_be_able_to_upload)
+        } catch (e: BlossomPaymentException) {
+            // BUD-07: the server wants payment before it will store the blob.
+            error(R.string.blossom_payment_required, e.payment.reason ?: serverBaseUrl)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)

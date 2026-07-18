@@ -26,6 +26,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -204,6 +206,10 @@ class BlossomUploader {
                     response.body.use { body ->
                         convertToMediaResult(parseResults(body.string()))
                     }
+                } else if (response.code == 402) {
+                    // BUD-07: paid server. Surface the payment challenge so the caller can
+                    // tell the user (auto-settlement via the NIP-60 wallet is a follow-up).
+                    throw BlossomPaymentException(serverBaseUrl, BlossomPaymentRequired.fromHeaders { response.headers[it] })
                 } else {
                     val errorMessage = response.headers.get(BlossomServerUrl.REASON_HEADER)
 
