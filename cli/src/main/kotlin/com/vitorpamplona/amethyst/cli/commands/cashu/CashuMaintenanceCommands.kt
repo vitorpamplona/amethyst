@@ -31,6 +31,16 @@ import com.vitorpamplona.amethyst.cli.commands.route
  * all on the shared commons CashuWalletOps.
  */
 object CashuMaintenanceCommands {
+    val USAGE: String =
+        """
+        |Cashu wallet hygiene:
+        |  cashu maintenance scrub [--mint URL]             NUT-07 + NIP-09 prune of spent proofs
+        |  cashu maintenance restore MINT_URL               NUT-09 restore unspent proofs from the
+        |                                                    wallet seed
+        |  cashu maintenance migrate-keysets [--mint URL]   consolidate proofs onto each mint's
+        |                                                    active keyset
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -39,6 +49,7 @@ object CashuMaintenanceCommands {
             name = "cashu maintenance",
             tail = tail,
             usage = "cashu maintenance <scrub|restore|migrate-keysets>",
+            help = USAGE,
             routes =
                 mapOf(
                     "scrub" to { rest -> scrub(dataDir, rest) },
@@ -51,7 +62,9 @@ object CashuMaintenanceCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val mintFilter = Args(rest).flag("mint")?.trimEnd('/')
+        val args = Args(rest)
+        val mintFilter = args.flag("mint")?.trimEnd('/')
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val byMint =
@@ -79,7 +92,9 @@ object CashuMaintenanceCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val mint = Args(rest).positional(0, "mint-url").trimEnd('/')
+        val args = Args(rest)
+        val mint = args.positional(0, "mint-url").trimEnd('/')
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             return try {
@@ -103,7 +118,9 @@ object CashuMaintenanceCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val mintFilter = Args(rest).flag("mint")?.trimEnd('/')
+        val args = Args(rest)
+        val mintFilter = args.flag("mint")?.trimEnd('/')
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val byMint =

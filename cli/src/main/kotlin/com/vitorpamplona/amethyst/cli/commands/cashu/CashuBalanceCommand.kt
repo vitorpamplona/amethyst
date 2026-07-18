@@ -34,7 +34,9 @@ object CashuBalanceCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val mintFilter = Args(rest).flag("mint")?.trimEnd('/')
+        val args = Args(rest)
+        val mintFilter = args.flag("mint")?.trimEnd('/')
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             val snap = ctx.cashuSnapshot()
             val byMint =

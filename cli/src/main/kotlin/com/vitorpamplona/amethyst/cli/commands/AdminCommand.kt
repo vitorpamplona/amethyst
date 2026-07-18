@@ -48,16 +48,46 @@ import okhttp3.OkHttpClient
  *   admin wss://relay block-ip IP [--reason R] / unblock-ip IP / list-blocked-ips
  */
 object AdminCommand {
+    val USAGE: String =
+        """
+        |NIP-86 Relay Management (signs a NIP-98 request with the account key):
+        |  admin RELAY supported-methods              list the methods the relay implements
+        |  admin RELAY ban-pubkey HEX [--reason R]    ban a pubkey
+        |  admin RELAY unban-pubkey HEX [--reason R]  lift a pubkey ban
+        |  admin RELAY list-banned-pubkeys            list banned pubkeys
+        |  admin RELAY allow-pubkey HEX [--reason R]  allow-list a pubkey
+        |  admin RELAY unallow-pubkey HEX [--reason R] remove a pubkey from the allow-list
+        |  admin RELAY list-allowed-pubkeys           list allowed pubkeys
+        |  admin RELAY ban-event ID [--reason R]      ban an event id
+        |  admin RELAY allow-event ID [--reason R]    allow an event id
+        |  admin RELAY list-banned-events             list banned events
+        |  admin RELAY list-needing-moderation        list events flagged for moderation
+        |  admin RELAY change-name NAME               set the relay's name
+        |  admin RELAY change-description TEXT        set the relay's description
+        |  admin RELAY change-icon URL                set the relay's icon
+        |  admin RELAY allow-kind N                   allow an event kind
+        |  admin RELAY disallow-kind N                disallow an event kind
+        |  admin RELAY list-allowed-kinds             list allowed kinds
+        |  admin RELAY block-ip IP [--reason R]       block an IP address
+        |  admin RELAY unblock-ip IP                  unblock an IP address
+        |  admin RELAY list-blocked-ips               list blocked IPs
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val relayArg = args.positionalOrNull(0) ?: return Output.error("bad_args", "usage: admin RELAY METHOD [args]")
         val method = args.positionalOrNull(1) ?: return Output.error("bad_args", "missing method; e.g. supported-methods")
         val relay = RelayUrlNormalizer.normalizeOrNull(relayArg) ?: return Output.invalidRelayUrl(relayArg)
         val p2 = args.positionalOrNull(2)
         val reason = args.flag("reason")
+        args.rejectUnknown()
 
         fun needArg(name: String): String? =
             p2 ?: run {

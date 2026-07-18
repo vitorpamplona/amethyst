@@ -45,7 +45,9 @@ object ConcordModCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val handle = Args(rest).positional(0, "community")
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        args.rejectUnknown()
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -74,6 +76,7 @@ object ConcordModCommands {
         val name = args.positional(1, "name")
         val position = args.positional(2, "position").toLongOrNull() ?: return Output.error("bad_args", "position must be an integer").let { 2 }
         val permBits = args.positional.drop(3).mapNotNull { permByName(it) }
+        args.rejectUnknown()
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
 
         Context.open(dataDir).use { ctx ->
@@ -82,7 +85,9 @@ object ConcordModCommands {
             val roleId = RandomInstance.bytes(32)
             val role = RoleEntity(name = name, position = position, permissions = ConcordPermissions.of(*permBits.toIntArray()).toWire())
             val wrap = ConcordModeration.defineRole(ctx.signer, cp, roleId, role, editions, TimeUtils.now())
-            val acked = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc)).filterValues { it }.keys
+            val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+            val acked = ack.filterValues { it }.keys
             Output.emit(mapOf("role_id" to roleId.toHexKey(), "name" to name, "position" to position, "published_to" to acked.map { it.url }))
             return 0
         }
@@ -97,6 +102,7 @@ object ConcordModCommands {
         val handle = args.positional(0, "community")
         val userRef = args.positional(1, "user")
         val roleId = args.positional(2, "roleId")
+        args.rejectUnknown()
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
 
         Context.open(dataDir).use { ctx ->
@@ -104,7 +110,9 @@ object ConcordModCommands {
             val member = ctx.requireUserHex(userRef)
             val (cp, editions) = load(ctx, sc)
             val wrap = ConcordModeration.grant(ctx.signer, cp, sc.communityId.hexToByteArray(), member, listOf(roleId), editions, TimeUtils.now())
-            val acked = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc)).filterValues { it }.keys
+            val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+            val acked = ack.filterValues { it }.keys
             Output.emit(mapOf("member" to member, "roles" to listOf(roleId), "published_to" to acked.map { it.url }))
             return 0
         }
@@ -130,6 +138,7 @@ object ConcordModCommands {
         val args = Args(rest)
         val handle = args.positional(0, "community")
         val userRef = args.positional(1, "user")
+        args.rejectUnknown()
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
 
         Context.open(dataDir).use { ctx ->
@@ -143,7 +152,9 @@ object ConcordModCommands {
                 } else {
                     ConcordModeration.unban(ctx.signer, cp, cid, member, editions, TimeUtils.now())
                 }
-            val acked = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc)).filterValues { it }.keys
+            val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+            val acked = ack.filterValues { it }.keys
             Output.emit(mapOf("member" to member, "banned" to ban, "published_to" to acked.map { it.url }))
             return 0
         }

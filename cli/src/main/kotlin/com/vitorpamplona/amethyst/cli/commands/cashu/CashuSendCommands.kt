@@ -37,6 +37,16 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
  * "proofs already spent".
  */
 object CashuSendCommands {
+    val USAGE: String =
+        """
+        |Cashu outbound flows (NIP-60 / NIP-61; spends scrub the source mint first):
+        |  cashu send ln INVOICE [--mint URL]             melt proofs to pay a bolt11
+        |  cashu send token SATS [--mint URL] [--memo S]  export a cashuB… token of SATS
+        |  cashu send nutzap USER SATS                    send a P2PK-locked nutzap to USER
+        |        [--zapped EVENT_ID] [--message S]         (resolves their kind:10019; --zapped
+        |        [--mint URL]                              attributes the zap to an event)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -45,6 +55,7 @@ object CashuSendCommands {
             name = "cashu send",
             tail = tail,
             usage = "cashu send <ln|token|nutzap>",
+            help = USAGE,
             routes =
                 mapOf(
                     "ln" to { rest -> ln(dataDir, rest) },
@@ -64,6 +75,7 @@ object CashuSendCommands {
     ): Int {
         val args = Args(rest)
         val invoice = args.positional(0, "invoice").trim()
+        args.rejectUnknown("mint")
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val snap = ctx.cashuSnapshot()
@@ -103,6 +115,7 @@ object CashuSendCommands {
         val sats = args.positional(0, "sats").toLongOrNull() ?: return Output.error("bad_args", "sats must be a positive integer")
         if (sats <= 0) return Output.error("bad_args", "sats must be positive")
         val memo = args.flag("memo")
+        args.rejectUnknown("mint")
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val snap = ctx.cashuSnapshot()
@@ -143,6 +156,7 @@ object CashuSendCommands {
         if (sats <= 0) return Output.error("bad_args", "sats must be positive")
         val message = args.flag("message") ?: ""
         val zappedId = args.flag("zapped")
+        args.rejectUnknown("mint")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()

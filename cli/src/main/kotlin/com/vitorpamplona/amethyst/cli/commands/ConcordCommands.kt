@@ -41,6 +41,27 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * [Context]; secrets persist in `~/.amy/<account>/concord.json`.
  */
 object ConcordCommands {
+    val USAGE: String =
+        """
+        |Concord Channels (encrypted, serverless communities):
+        |  concord create --name NAME [--about T]      create an encrypted Concord community
+        |          [--relay wss://a,wss://b]            (--relays is accepted as an alias)
+        |  concord list                                list joined Concord communities
+        |  concord import                              fetch + decrypt this account's kind:13302
+        |                                               community list (carries heldRoots, CORD-06)
+        |  concord channels COMMUNITY                  list a community's channels
+        |  concord send COMMUNITY CHANNEL TEXT         post a message (CHANNEL = general|name|id)
+        |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages (default 50);
+        |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
+        |  concord invite COMMUNITY [--base URL]       mint + publish a shareable invite link
+        |  concord join URL                            redeem an invite link and save the community
+        |  concord roles COMMUNITY                     list live roles + current banlist (CORD-04)
+        |  concord role COMMUNITY NAME POSITION PERM…  define a role (perms by name, e.g. BAN KICK)
+        |  concord grant COMMUNITY USER ROLE-ID        grant a role to a member
+        |  concord ban COMMUNITY USER                  ban a member
+        |  concord unban COMMUNITY USER                unban a member
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -49,21 +70,23 @@ object ConcordCommands {
             "concord",
             tail,
             "concord <create|list|import|channels|send|read|invite|join|roles|role|grant|ban|unban>",
-            mapOf(
-                "create" to { rest -> create(dataDir, rest) },
-                "list" to { rest -> list(dataDir, rest) },
-                "import" to { rest -> import(dataDir, rest) },
-                "channels" to { rest -> ConcordChannelCommands.channels(dataDir, rest) },
-                "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
-                "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
-                "invite" to { rest -> invite(dataDir, rest) },
-                "join" to { rest -> join(dataDir, rest) },
-                "roles" to { rest -> ConcordModCommands.roles(dataDir, rest) },
-                "role" to { rest -> ConcordModCommands.defineRole(dataDir, rest) },
-                "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
-                "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
-                "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "create" to { rest -> create(dataDir, rest) },
+                    "list" to { rest -> list(dataDir, rest) },
+                    "import" to { rest -> import(dataDir, rest) },
+                    "channels" to { rest -> ConcordChannelCommands.channels(dataDir, rest) },
+                    "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
+                    "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
+                    "invite" to { rest -> invite(dataDir, rest) },
+                    "join" to { rest -> join(dataDir, rest) },
+                    "roles" to { rest -> ConcordModCommands.roles(dataDir, rest) },
+                    "role" to { rest -> ConcordModCommands.defineRole(dataDir, rest) },
+                    "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
+                    "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
+                    "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
+                ),
         )
 
     private suspend fun create(
@@ -73,7 +96,9 @@ object ConcordCommands {
         val args = Args(rest)
         val name = args.requireFlag("name")
         val about = args.flag("about")
-        val relayArg = parseRelays(args.flag("relays"))
+        // `--relay` is the canonical spelling; `--relays` stays as a silent alias.
+        val relayArg = parseRelays(args.flag("relay") ?: args.flag("relays"))
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -184,13 +209,16 @@ object ConcordCommands {
         val args = Args(rest)
         val handle = args.positional(0, "community")
         val base = args.flag("base", "https://vector.chat")!!
+        args.rejectUnknown()
 
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return notFound(handle)
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val invite = ConcordActions.inviteFor(sc.communityId, sc.owner, sc.ownerSalt, sc.root, sc.rootEpoch, sc.name, sc.relays)
             val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), sc.relays)
-            val acked = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc)).filterValues { it }.keys
+            val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
+            RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
+            val acked = ack.filterValues { it }.keys
 
             Output.emit(
                 mapOf(
@@ -210,6 +238,7 @@ object ConcordCommands {
     ): Int {
         val args = Args(rest)
         val url = args.positional(0, "url")
+        args.rejectUnknown()
         val parsed = ConcordActions.parseInviteLink(url) ?: return Output.error("bad_args", "not a valid invite link").let { 2 }
 
         Context.open(dataDir).use { ctx ->

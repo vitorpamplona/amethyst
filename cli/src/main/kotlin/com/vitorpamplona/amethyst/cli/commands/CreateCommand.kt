@@ -47,15 +47,29 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
  * and the on-relay shape matches the in-app flow byte-for-byte.
  */
 object CreateCommand {
+    val USAGE: String =
+        """
+        |Account provisioning:
+        |  create [--name NAME]    provision a full Amethyst-style account + publish the bootstrap
+        |                          events (kind:0/3/10002/10050/10051/…) to the default NIP-65
+        |                          relay set. Use `init` instead for a bare identity that
+        |                          publishes nothing.
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         if (dataDir.identityExists()) {
             return Output.error("exists", "identity already exists at ${dataDir.identityFile}")
         }
         val args = Args(rest)
         val name = args.flag("name")
+        args.rejectUnknown()
 
         // 1. Mint identity.
         val identity = Identity.create()
@@ -88,7 +102,7 @@ object CreateCommand {
                 "name" to (name ?: ""),
                 "data_dir" to dataDir.root.absolutePath,
                 "published_kinds" to bootstrap.all().map { it.kind },
-                "accepted_by" to accepted,
+                "published_to" to accepted,
                 "relays" to
                     mapOf(
                         "nip65" to DefaultNIP65List.map { it.relayUrl.url },

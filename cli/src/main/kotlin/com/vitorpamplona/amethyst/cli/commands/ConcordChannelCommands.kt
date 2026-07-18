@@ -39,7 +39,9 @@ object ConcordChannelCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val handle = Args(rest).positional(0, "community")
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        args.rejectUnknown()
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -68,6 +70,7 @@ object ConcordChannelCommands {
         val handle = args.positional(0, "community")
         val channelRef = args.positional(1, "channel")
         val text = args.positional(2, "text")
+        args.rejectUnknown()
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
 
         Context.open(dataDir).use { ctx ->
@@ -78,7 +81,9 @@ object ConcordChannelCommands {
             val relays = ConcordCommands.relaysFor(ctx, sc)
             // A relay that gates writes behind NIP-42 wants the wrap's author (the stream key) authenticated.
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
-            val acked = ctx.publish(wrap, relays).filterValues { it }.keys
+            val ack = ctx.publish(wrap, relays)
+            RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
+            val acked = ack.filterValues { it }.keys
             Output.emit(mapOf("event_id" to wrap.id, "channel" to channelId, "published_to" to acked.map { it.url }))
             return 0
         }
@@ -110,6 +115,7 @@ object ConcordChannelCommands {
                     .error("not_found", "no root known for epoch $epoch — pass --root <hex> or run `amy concord import` to load heldRoots")
                     .let { 1 }
         if (!HEX64.matches(rootHex)) return Output.error("bad_args", "--root must be a 64-char hex community_root").let { 2 }
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -126,7 +132,7 @@ object ConcordChannelCommands {
                     "epoch" to epoch,
                     "plane" to channel.publicKeyHex,
                     "count" to msgs.size,
-                    "messages" to msgs.map { mapOf("id" to it.id, "author" to it.author, "content" to it.content, "created_at" to it.createdAt) },
+                    "messages" to msgs.map { mapOf("event_id" to it.id, "author" to it.author, "content" to it.content, "created_at" to it.createdAt) },
                 ),
             )
             return 0
