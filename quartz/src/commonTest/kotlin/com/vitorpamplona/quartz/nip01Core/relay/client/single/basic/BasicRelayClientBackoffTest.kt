@@ -233,6 +233,63 @@ class BasicRelayClientBackoffTest {
         )
     }
 
+    /**
+     * A domain that does not resolve (tmp-relay.cesc.trade and friends: registration lapsed,
+     * whole zone gone) should not spend ten dials climbing to the ceiling it will certainly
+     * reach. It jumps straight there, like an HTTP upgrade rejection.
+     */
+    @Test
+    fun `an unresolvable host goes straight to the long backoff`() {
+        val builder = FakeWebsocketBuilder()
+        val clock = MutableClock()
+        val client = newClient(builder, clock)
+
+        client.connect()
+        builder.lastListener.onFailure(UnknownHostException("Unable to resolve host \"gone.example\""), null, null)
+
+        // A generic failure would sit at 2s here and dial ~10 more times over the next
+        // 10 minutes. A host that does not resolve gets one dial, at the 5-minute mark.
+        runTicks(client, builder, clock, totalSeconds = 4 * 60) { listener ->
+            listener.onFailure(UnknownHostException("Unable to resolve host \"gone.example\""), null, null)
+        }
+        assertEquals(
+            1,
+            builder.connectAttempts,
+            "Expected no retry inside the long backoff window for an unresolvable host",
+        )
+    }
+
+    /**
+     * The safety valve for the eager verdict above: DNS is a property of the network, not of
+     * the relay. A captive portal or a filtering resolver forges NXDOMAIN for hosts that are
+     * perfectly reachable elsewhere, and Tor resolves at the exit node rather than locally.
+     * So the moment the network or the transport changes, the verdict must be discarded.
+     */
+    @Test
+    fun `a network change clears the long backoff of an unresolvable host`() {
+        val builder = FakeWebsocketBuilder()
+        val clock = MutableClock()
+        val client = newClient(builder, clock)
+
+        client.connect()
+        builder.lastListener.onFailure(UnknownHostException("Unable to resolve host \"blocked.example\""), null, null)
+
+        runTicks(client, builder, clock, totalSeconds = 60) { listener ->
+            listener.onFailure(UnknownHostException(), null, null)
+        }
+        assertEquals(1, builder.connectAttempts, "Test setup: should be parked on the long backoff")
+
+        // moved to another network / Tor came up: the old resolver's answer means nothing here.
+        client.resetBackoff()
+        client.connectAndSyncFiltersIfDisconnected()
+
+        assertEquals(
+            2,
+            builder.connectAttempts,
+            "A host that only failed to resolve on the previous network must be retried at once",
+        )
+    }
+
     /** resetBackoff is not a disconnect: a healthy session must survive it. */
     @Test
     fun resetBackoffLeavesALiveConnectionAlone() {
@@ -255,3 +312,13 @@ class BasicRelayClientBackoffTest {
         )
     }
 }
+
+/**
+ * Stands in for `java.net.UnknownHostException`, which commonTest cannot reference. The
+ * production code classifies on the exception's simple name (message text is localized and
+ * platform-specific; the class name is not), so a same-named class exercises exactly the
+ * branch a real DNS failure would take.
+ */
+private class UnknownHostException(
+    message: String? = null,
+) : Exception(message)

@@ -222,7 +222,24 @@ open class BasicRelayClient(
                 // Failures disconnect the relay.
                 markConnectionAsClosed()
 
-                if (code != null || t.message?.endsWith("Host unreachable") == true) {
+                // A name that does not resolve is not a busy relay, it is very likely a relay
+                // whose domain is gone (lapsed registration, decommissioned host). Doubling
+                // from 1s wastes ~10 dials climbing to the ceiling it was always going to
+                // reach, so go there directly — same treatment as an HTTP upgrade rejection.
+                //
+                // Matching on the type name rather than the message because message text is
+                // localized and inconsistent across platforms ("Unable to resolve host ..."
+                // on Android, "nodename nor servname provided" on others), while the class is
+                // stable. This is why onCannotConnect appends it, see above.
+                //
+                // Safe to be this eager only because the verdict is cheap to revisit: a DNS
+                // answer is a property of the network, not of the relay (a captive portal or a
+                // filtering resolver forges NXDOMAIN; Tor resolves at the exit node instead),
+                // and both a network-identity change and a transport/Tor change clear the
+                // backoff outright — see IRelayClient.resetBackoff.
+                val unresolvedHost = typeName == "UnknownHostException"
+
+                if (code != null || unresolvedHost || t.message?.endsWith("Host unreachable") == true) {
                     dontTryAgainForALongTime()
                 }
 
