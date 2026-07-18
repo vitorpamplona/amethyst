@@ -72,7 +72,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePick
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
-import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
 import com.vitorpamplona.amethyst.ui.note.creators.pow.PowOverrideButton
@@ -330,7 +330,7 @@ private fun GenericCommentPostBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
-                        LocationAsHash(postViewModel)
+                        GeoHashPostSection(postViewModel)
                     }
                 }
 

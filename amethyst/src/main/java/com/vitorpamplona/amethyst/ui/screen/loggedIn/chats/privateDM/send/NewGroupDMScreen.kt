@@ -100,7 +100,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePick
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.NewPostInvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
-import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
@@ -250,7 +250,7 @@ fun GroupDMScreenContent(
                 }
 
                 if (postViewModel.wantsToAddGeoHash) {
-                    LocationAsHash(postViewModel)
+                    GeoHashPostSection(postViewModel)
                 }
 
                 if (postViewModel.wantsForwardZapTo) {

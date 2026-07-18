@@ -82,6 +82,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -242,6 +243,7 @@ open class CommentPostViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationState.LocationResult>? = null
 
     // ZapRaiser
@@ -510,6 +512,7 @@ open class CommentPostViewModel :
         replyingTo?.let { observeCommunityRules(it) }
 
         wantsToAddGeoHash = draftEvent.hasGeohashes()
+        pickedGeoHash = draftEvent.getGeoHash()
 
         notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
             draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
@@ -641,7 +644,7 @@ open class CommentPostViewModel :
             )
         tagger.run()
 
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val geoHash = (if (wantsToAddGeoHash) pickedGeoHash else null) ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
@@ -867,6 +870,7 @@ open class CommentPostViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
         wantsSecretEmoji = false
         wantsAnonymousPost = false
         anonymousSignerCache = null

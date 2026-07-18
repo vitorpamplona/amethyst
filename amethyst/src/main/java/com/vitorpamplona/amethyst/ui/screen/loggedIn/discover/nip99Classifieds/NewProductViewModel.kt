@@ -185,6 +185,7 @@ open class NewProductViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationState.LocationResult>? = null
 
     // ZapRaiser
@@ -284,6 +285,7 @@ open class NewProductViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
@@ -353,7 +355,7 @@ open class NewProductViewModel :
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
@@ -484,6 +486,7 @@ open class NewProductViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
         wantsSecretEmoji = false
 
         forwardZapTo.value = SplitBuilder()

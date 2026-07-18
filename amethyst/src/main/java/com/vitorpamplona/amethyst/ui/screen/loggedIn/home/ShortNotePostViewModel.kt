@@ -330,11 +330,7 @@ open class ShortNotePostViewModel :
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
 
-    /**
-     * A geohash the user picked on the map, which overrides the live GPS location at
-     * build time. Null means "use my current GPS location" (the default behavior).
-     */
-    var pickedGeoHash by mutableStateOf<String?>(null)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser

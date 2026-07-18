@@ -76,7 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePick
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.NewPostInvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
-import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
@@ -233,7 +233,7 @@ fun PublicMessageScreenContent(
                 }
 
                 if (postViewModel.wantsToAddGeoHash) {
-                    LocationAsHash(postViewModel)
+                    GeoHashPostSection(postViewModel)
                 }
 
                 if (postViewModel.wantsForwardZapTo) {
