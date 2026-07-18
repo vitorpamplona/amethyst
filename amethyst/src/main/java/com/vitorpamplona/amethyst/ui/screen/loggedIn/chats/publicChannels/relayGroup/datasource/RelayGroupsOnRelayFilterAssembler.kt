@@ -26,26 +26,13 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 
 /** One screen's request for the full channel directory of a single relay. */
 class RelayGroupsOnRelayQueryState(
     val relay: NormalizedRelayUrl,
     val account: Account,
 )
-
-private val RELAY_GROUP_DIRECTORY_KINDS =
-    listOf(
-        GroupMetadataEvent.KIND,
-        GroupAdminsEvent.KIND,
-        GroupMembersEvent.KIND,
-        SupportedRolesEvent.KIND,
-    )
 
 /**
  * Subscribes to the relay-signed directory (kinds 39000-39003) of a single relay,
@@ -76,18 +63,7 @@ class RelayGroupsOnRelaySubAssembler(
     override fun updateFilter(
         key: RelayGroupsOnRelayQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> =
-        listOf(
-            RelayBasedFilter(
-                relay = key.relay,
-                filter =
-                    Filter(
-                        kinds = RELAY_GROUP_DIRECTORY_KINDS,
-                        limit = 500,
-                        since = since?.get(key.relay)?.time,
-                    ),
-            ),
-        )
+    ): List<RelayBasedFilter> = listOf(buildRelayGroupDirectoryFilter(key.relay, since?.get(key.relay)?.time))
 
     override fun id(key: RelayGroupsOnRelayQueryState) = key.relay
 }

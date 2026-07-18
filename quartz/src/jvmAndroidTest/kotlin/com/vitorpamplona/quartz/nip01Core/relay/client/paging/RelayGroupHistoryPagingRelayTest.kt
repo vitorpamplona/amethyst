@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -142,6 +143,79 @@ class RelayGroupHistoryPagingRelayTest : RelayClientTest() {
         }
         return out.values.toList()
     }
+
+    // --- Tier E1: the PRODUCTION cursor state machine, driven over a real relay ---
+    //
+    // The walks above use a hand-rolled until loop; these drive the actual `RelayLoadingCursors` — the
+    // state machine `RelayGroupOpenChatHistorySubAssembler` runs in production — against the live in-process
+    // relay, so a regression in the real advance/onEvent/onEose logic surfaces here, not just in the unit
+    // tests that feed it synthetic callbacks (RelayLoadingCursorsTest / BackwardRelayPagerTest).
+
+    /**
+     * Steps the production [RelayLoadingCursors] backward over one group's `#h` chat until it reports done,
+     * exactly as the history assembler does: advance → REQ at the requested `until` → feed each event and
+     * the EOSE back in → advance again. Returns every id delivered.
+     */
+    private suspend fun driveCursorsToBottom(
+        groupId: String,
+        now: Long,
+    ): Set<String> {
+        val cursors = RelayLoadingCursors()
+        cursors.floor = now
+        val relay = defaultRelayUrl
+        val seen = mutableSetOf<String>()
+        cursors.advance(relay, start = now)
+        var guard = 0
+        while (!cursors.isDone(relay) && guard++ < SAFETY_CAP) {
+            val (events, eose) = client.collectUntilEose(defaultRelayUrl, hFilter(groupId, cursors.requestedUntilFor(relay)))
+            events.forEach {
+                seen.add(it.id)
+                cursors.onEvent(relay, it.createdAt)
+            }
+            if (eose) cursors.onEose(relay)
+            cursors.advance(relay, start = now)
+        }
+        assertTrue(cursors.isDone(relay), "the production cursors must reach the bottom (empty page + EOSE)")
+        return seen
+    }
+
+    @Test
+    fun productionCursorsWalkOneGroupToTheBottomOverTheWire() =
+        runBlocking {
+            defaultRelay.preload(groupChat(idBase = 1, count = TOTAL, groupId = "g1"))
+            defaultRelay.preload(groupChat(idBase = 1_000_000, count = 30, groupId = "g2")) // must not leak into g1's walk
+
+            val seen = driveCursorsToBottom("g1", now = 10_000L)
+            assertEquals(TOTAL, seen.size, "the production RelayLoadingCursors must fetch every g1 message exactly once")
+        }
+
+    @Test
+    fun cursorsTreatAShortPageAsMoreToComeAndOnlyAnEmptyPageAsTheBottom() =
+        runBlocking {
+            // A group with fewer messages than the page limit returns a short first page — the relay capping
+            // the response, NOT the bottom. Only a following empty page + EOSE ends the walk. This is the
+            // property that stops a short page from silently truncating a group's history.
+            defaultRelay.preload(groupChat(idBase = 1, count = 5, groupId = "g1"))
+            val cursors = RelayLoadingCursors()
+            val now = 10_000L
+            cursors.floor = now
+            val relay = defaultRelayUrl
+
+            cursors.advance(relay, start = now)
+            val (page1, eose1) = client.collectUntilEose(defaultRelayUrl, hFilter("g1", cursors.requestedUntilFor(relay)))
+            page1.forEach { cursors.onEvent(relay, it.createdAt) }
+            if (eose1) cursors.onEose(relay)
+            assertEquals(5, page1.size)
+            assertTrue(page1.size < LIMIT, "precondition: the first page is short")
+            assertFalse(cursors.isDone(relay), "a short page must NOT be treated as exhaustion")
+
+            cursors.advance(relay, start = now)
+            val (page2, eose2) = client.collectUntilEose(defaultRelayUrl, hFilter("g1", cursors.requestedUntilFor(relay)))
+            page2.forEach { cursors.onEvent(relay, it.createdAt) }
+            if (eose2) cursors.onEose(relay)
+            assertTrue(page2.isEmpty())
+            assertTrue(cursors.isDone(relay), "an empty page + EOSE is the bottom")
+        }
 
     private fun Event.isTaggedGroup(groupId: String) = tags.any { it.size >= 2 && it[0] == GroupIdTag.TAG_NAME && it[1] == groupId }
 

@@ -20,9 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.FiltersChanged
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -139,6 +145,31 @@ class RelayGroupFilterBuildersTest {
         assertEquals(7L, f.filter.since)
     }
 
+    // --- Directory (browse a relay): kinds 39000-39003, no d/h scope, limit 500 ---
+
+    @Test
+    fun `directory is an unscoped host filter over the four directory kinds`() {
+        val f = buildRelayGroupDirectoryFilter(relayA, 42L)
+        assertEquals(relayA, f.relay)
+        assertEquals(RELAY_GROUP_DIRECTORY_KINDS, f.filter.kinds)
+        assertEquals(RELAY_GROUP_DIRECTORY_LIMIT, f.filter.limit)
+        assertEquals(42L, f.filter.since)
+        assertNull("the directory lists every group, so it carries no d/h scope", f.filter.tags)
+        assertNull(f.filter.until)
+        assertNull(f.filter.authors)
+    }
+
+    @Test
+    fun `directory kinds are 39000-39003 and exclude the pin list`() {
+        assertEquals(
+            listOf(GroupMetadataEvent.KIND, GroupAdminsEvent.KIND, GroupMembersEvent.KIND, SupportedRolesEvent.KIND),
+            RELAY_GROUP_DIRECTORY_KINDS,
+        )
+        assertFalse("the directory doesn't fetch each group's pins", RELAY_GROUP_DIRECTORY_KINDS.contains(GroupPinnedEvent.KIND))
+        // The always-on state set DOES carry pins — the two kind sets must not be conflated.
+        assertTrue(RELAY_GROUP_STATE_KINDS.contains(GroupPinnedEvent.KIND))
+    }
+
     // --- Card warmup joined-skip: joined groups are covered always-on, so warmup must skip them ---
 
     @Test
@@ -156,5 +187,48 @@ class RelayGroupFilterBuildersTest {
     fun `empty joined set produces no filters`() {
         assertTrue(buildRelayGroupStateFilters(emptySet()) { null }.isEmpty())
         assertTrue(buildRelayGroupJoinedChatTailFilters(emptySet(), 1L).isEmpty())
+    }
+
+    // --- Reconnect stability: a `since`-only bump must NOT trigger a fresh REQ (no full replay) ---
+    //
+    // A RelayPool reconnect re-issues the current filter. If a post-EOSE `since` bump counted as a
+    // "changed" filter, every reconnect would replay the whole window. These pin that the always-on
+    // state + tail filters are reconnect-safe, while the backward pager's `until` step correctly IS a
+    // new request (each page is genuinely new data). This is the whole reason the refactor uses a shared
+    // time floor instead of a per-group `limit` + per-relay EOSE `since`.
+
+    @Test
+    fun `state gaining a since after EOSE is not a resend`() {
+        val firstLoad = buildRelayGroupStateFilters(joined) { null }.map { it.filter }
+        val afterEose = buildRelayGroupStateFilters(joined) { 500L }.map { it.filter }
+        assertEquals(firstLoad.size, afterEose.size)
+        firstLoad.zip(afterEose).forEach { (old, new) ->
+            assertFalse(
+                "adding a since once EOSE lands is a since-only change → no replay on reconnect",
+                FiltersChanged.needsToResendRequest(old, new),
+            )
+        }
+    }
+
+    @Test
+    fun `joined chat tail advancing its time floor is not a resend`() {
+        val earlier = buildRelayGroupJoinedChatTailFilters(joined, 1_000L).map { it.filter }
+        val later = buildRelayGroupJoinedChatTailFilters(joined, 2_000L).map { it.filter } // recentBoundary() crept forward
+        earlier.zip(later).forEach { (old, new) ->
+            assertFalse(
+                "a forward recent-tail floor bump is since-only → reconnect re-REQs the tail, not a full page",
+                FiltersChanged.needsToResendRequest(old, new),
+            )
+        }
+    }
+
+    @Test
+    fun `history stepping to an older until IS a resend`() {
+        val page1 = buildRelayGroupHistoryFilters(g1OnA, listOf(relayA), { 300L }, 50).single().filter
+        val page2 = buildRelayGroupHistoryFilters(g1OnA, listOf(relayA), { 200L }, 50).single().filter
+        assertTrue(
+            "each backward page moves until, which is genuinely new data and MUST re-REQ",
+            FiltersChanged.needsToResendRequest(page1, page2),
+        )
     }
 }

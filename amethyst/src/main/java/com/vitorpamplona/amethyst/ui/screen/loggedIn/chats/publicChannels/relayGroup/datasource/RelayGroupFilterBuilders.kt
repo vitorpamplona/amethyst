@@ -64,6 +64,22 @@ val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND)
 /** Content kinds a card warms ahead of a tap (chat + polls + threads + comments). */
 val RELAY_GROUP_CARD_WARMUP_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND, ThreadEvent.KIND, CommentEvent.KIND)
 
+/**
+ * A relay's whole-directory kinds — metadata + admins + members + roles (39000-39003), **no pins**.
+ * Narrower than [RELAY_GROUP_STATE_KINDS] on purpose: the directory lists groups, it doesn't need each
+ * group's pin list.
+ */
+val RELAY_GROUP_DIRECTORY_KINDS =
+    listOf(
+        GroupMetadataEvent.KIND,
+        GroupAdminsEvent.KIND,
+        GroupMembersEvent.KIND,
+        SupportedRolesEvent.KIND,
+    )
+
+/** How many directory entries to pull per relay when browsing its whole group list. */
+const val RELAY_GROUP_DIRECTORY_LIMIT = 500
+
 /** `d`-tag key of the relay-signed state events (39xxx are addressable by the group id). */
 private const val D_TAG = "d"
 
@@ -156,6 +172,24 @@ fun buildRelayGroupHistoryFilters(
                 ),
         )
     }
+
+/**
+ * The whole group directory a single [relay] hosts: kinds 39000-39003, unscoped by `d`/`h` (every group
+ * the relay signs), capped at [RELAY_GROUP_DIRECTORY_LIMIT]. Backs the "browse a relay's channels" screen.
+ */
+fun buildRelayGroupDirectoryFilter(
+    relay: NormalizedRelayUrl,
+    sinceEpoch: Long?,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = RELAY_GROUP_DIRECTORY_KINDS,
+                limit = RELAY_GROUP_DIRECTORY_LIMIT,
+                since = sinceEpoch,
+            ),
+    )
 
 /** The Threads-tab feed for a single open group: kind-11/1111 `#h`-scoped on the host relay. */
 fun buildRelayGroupThreadsFilter(

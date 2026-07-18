@@ -4,11 +4,20 @@
 state-vs-content refactor (see `2026-07-18-nip29-group-chat-subscriptions.md`).
 **Question this answers:** *does the correct data load on every screen, and can we ever miss a message?*
 
-**Implemented on this branch so far:**
-- **Tier B** (filter shapes, assemblers 1–6 + card-warmup joined-skip): `amethyst/src/test/.../relayGroup/datasource/RelayGroupFilterBuildersTest.kt`, testing the pure `RelayGroupFilterBuilders.kt` the assemblers now delegate to.
-- **Tier C3 / E1** (can't-miss backward `#h` walk + same-relay group isolation, against the in-process `geode` relay): `quartz/src/jvmAndroidTest/.../paging/RelayGroupHistoryPagingRelayTest.kt`.
+**Implemented on this branch (all headless-runnable tiers):**
+- **Tier B — filter shapes, every assembler.**
+  - Assemblers 1–6 + card-warmup joined-skip + reconnect stability (`needsToResendRequest`) + directory: `amethyst/src/test/.../relayGroup/datasource/RelayGroupFilterBuildersTest.kt` (tests the pure `RelayGroupFilterBuilders.kt` the assemblers now delegate to).
+  - #9 ChannelPublic relay-group branch (state+pins, no message window): `.../publicChannels/datasource/subassemblies/FilterRelayGroupStateTest.kt`.
+  - #10 group notifications (`#p`+`#h`): `.../service/relayClient/reqCommand/account/nip01Notifications/FilterGroupNotificationsToPubkeyTest.kt`.
+  - #8 discovery `#p` roster augmentation: `.../relayGroup/datasource/subassemblies/FilterRelayGroupsByAuthorsTest.kt`.
+- **Tier C — serves-the-shape, against the in-process `geode` relay** (`quartz/src/jvmAndroidTest/.../nip29RelayGroups/RelayGroupFilterServingRelayTest.kt`): C1 state `#d`, C2 batched preview tail, C5 threads, C6 pinned-body-below-window by id, C7 notification `#p`+`#h`, C8 directory.
+- **Tier C3 / E1 — can't-miss + resilience** (`quartz/src/jvmAndroidTest/.../paging/RelayGroupHistoryPagingRelayTest.kt`): backward `#h` walk covers every message once + stops on empty page; same-relay group isolation with overlapping `createdAt`; the **production `RelayLoadingCursors`** driven to the bottom over the wire; short-page-≠-exhaustion.
 
-Still to do: the remaining Tier B rows (7–10, reconnect stability), the wider Tier C `amy` integration set, Tier D device runs, and Tier E2 real-relay conformance.
+**Deliberately not duplicated (already covered generically at the unit level):** echo-newest→done and rewind/prune are in `RelayLoadingCursorsTest`; no-EOSE watchdog in `WindowLoadTrackerIdleTest`; auth-CLOSED/stall/cannot-connect in `BackwardRelayPagerTest`. E1's remaining hostile-relay faults (ignore-`since`, out-of-order, AUTH-CLOSE, silence) are those same state-machine paths — re-asserting them under NIP-29 naming adds no coverage since the cursor/pager never sees the `#h` filter, only `onEvent(createdAt)`/`onEose`.
+
+**Not headless-runnable in this environment (flagged for a human):**
+- **Tier D** (Android emulator/device, per screen) — needs a device; each row must be run and any unrun row flagged.
+- **Tier E2** (conformance against a *real* third-party NIP-29 relay in a container) — non-deterministic + needs a container image; geode/strfry are generic and can't surface a real NIP-29 relay's bugs.
 
 ## What is / isn't verifiable headless
 
