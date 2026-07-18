@@ -168,6 +168,7 @@ private fun PreloadFor(
         NavBarItem.DRAFTS,
         NavBarItem.SCHEDULED_POSTS,
         NavBarItem.INTEREST_SETS,
+        NavBarItem.BLOSSOM_DATA,
         NavBarItem.EMOJI_PACKS,
         NavBarItem.WALLET,
         NavBarItem.NOSTR_SIGNER,

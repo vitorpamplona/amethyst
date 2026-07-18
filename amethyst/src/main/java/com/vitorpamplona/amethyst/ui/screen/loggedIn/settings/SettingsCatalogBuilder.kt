@@ -66,7 +66,6 @@ fun buildSettingsCatalog(
                     symEntry(R.string.event_sync_title, MaterialSymbols.Sync, R.string.event_sync_search_keywords, Route.EventSync),
                     symEntry(R.string.route_import_follows, MaterialSymbols.GroupAdd, R.string.import_follows_search_keywords, Route.ImportFollowsSelectUser),
                     symEntry(R.string.media_servers, MaterialSymbols.CloudUpload, R.string.media_servers_search_keywords, Route.EditMediaServers),
-                    symEntry(R.string.manage_stored_files, MaterialSymbols.Storage, R.string.media_servers_search_keywords, Route.ManageBlossomBlobs),
                     symEntry(R.string.nests_servers_title, MaterialSymbols.CloudUpload, R.string.nests_servers_search_keywords, Route.EditNestsServers),
                     symEntry(R.string.reactions, MaterialSymbols.FavoriteBorder, R.string.reactions_search_keywords, Route.UpdateReactionType),
                     symEntry(R.string.zaps, MaterialSymbols.Bolt, R.string.zaps_search_keywords, Route.UpdateZapAmount()),

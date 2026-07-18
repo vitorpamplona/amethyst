@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScreen
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
@@ -351,6 +352,7 @@ fun AppNavigation(
         DisplayCrashMessages(accountViewModel, nav)
         DisplayResourceUsageAlert(accountViewModel, nav)
         DisplayBroadcastProgress(accountViewModel)
+        DisplayBlossomSyncProgress()
 
         ObserveIncomingCalls(accountViewModel)
     }

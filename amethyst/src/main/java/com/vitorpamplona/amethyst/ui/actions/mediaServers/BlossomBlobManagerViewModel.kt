@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomPaymentHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -121,8 +122,20 @@ class BlossomBlobManagerViewModel : ViewModel() {
     private val _pendingPayment = MutableStateFlow<PendingMirrorPayment?>(null)
     val pendingPayment = _pendingPayment.asStateFlow()
 
+    private var resultCollectorStarted = false
+
     fun init(accountViewModel: AccountViewModel) {
         this.account = accountViewModel.account
+        // Reflect the app-level sync sweep's per-server results onto the pills, so an
+        // open manager turns dots green live even though the work runs in the background.
+        if (!resultCollectorStarted) {
+            resultCollectorStarted = true
+            viewModelScope.launch {
+                Amethyst.instance.blossomMirrorQueue.results.collect { r ->
+                    setServerState(r.hash, r.server, if (r.ok) PresenceState.PRESENT else PresenceState.MISSING)
+                }
+            }
+        }
     }
 
     private fun clientFor(server: String) = BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(server))
@@ -293,6 +306,31 @@ class BlossomBlobManagerViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    /**
+     * BUD-04 sweep: hand the whole "fill every gap" job to the app-level
+     * [BlossomMirrorQueue] so it keeps running (with a floating progress banner) as
+     * the user navigates away. The pills we're about to fill go straight to a spinner;
+     * the queue's [results] stream (collected in [init]) flips each to green/grey as it
+     * lands, so an open manager stays in sync with the background sweep.
+     */
+    fun syncAll() {
+        val tasks =
+            _blobs.value
+                .filter { it.hasMissing && it.url != null }
+                .map { BlossomMirrorQueue.Task(it.hash, it.url!!, it.size, it.missingServers) }
+        if (tasks.isEmpty()) return
+
+        _blobs.value =
+            _blobs.value.map { row ->
+                if (!row.hasMissing) {
+                    row
+                } else {
+                    row.copy(servers = row.servers.map { if (it.state == PresenceState.MISSING) it.copy(state = PresenceState.PENDING) else it })
+                }
+            }
+        Amethyst.instance.blossomMirrorQueue.start(account, tasks)
     }
 
     private suspend fun mirrorOne(

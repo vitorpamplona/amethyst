@@ -114,7 +114,7 @@ fun BlossomBlobManagerScreen(
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text(stringRes(R.string.manage_stored_files)) },
+                title = { Text(stringRes(R.string.my_blossom_data)) },
                 showBackButton = nav.canPop(),
                 popBack = { nav.popBack() },
                 actions = {
@@ -166,6 +166,9 @@ fun BlossomBlobManagerScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        if (blobs.any { it.hasMissing }) {
+                            item { SyncAllBanner(onSyncAll = { vm.syncAll() }) }
+                        }
                         items(blobs, key = { it.hash }) { row ->
                             BlobCard(row, vm)
                         }
@@ -198,6 +201,28 @@ private fun StatusGlyph(
         contentAlignment = Alignment.Center,
     ) {
         Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(34.dp), tint = tint)
+    }
+}
+
+@Composable
+private fun SyncAllBanner(onSyncAll: () -> Unit) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(stringRes(R.string.blossom_sync_gaps), style = MaterialTheme.typography.bodyMedium)
+        }
+        FilledTonalButton(onClick = onSyncAll) {
+            Icon(symbol = MaterialSymbols.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.size(8.dp))
+            Text(stringRes(R.string.blossom_sync_all))
+        }
     }
 }
 

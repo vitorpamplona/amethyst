@@ -1551,7 +1551,12 @@
     <string name="blossom_optimize_media">Optimize media on the server</string>
     <string name="blossom_optimize_media_caption">Upload through the server\'s /media endpoint so it can strip metadata and compress the file. The stored file may differ from the original.</string>
     <string name="manage_stored_files">Manage stored files</string>
+    <string name="my_blossom_data">My Blossom Data</string>
     <string name="blossom_refresh">Refresh</string>
+    <string name="blossom_sync_all">Sync all</string>
+    <string name="blossom_sync_gaps">Some of your files aren\'t on all your servers yet.</string>
+    <string name="blossom_syncing">Copying your files across servers…</string>
+    <string name="blossom_sync_done">Sync complete</string>
     <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
     <string name="blossom_mirror_to_missing">Mirror to missing</string>
     <string name="blossom_delete_from">Delete from…</string>

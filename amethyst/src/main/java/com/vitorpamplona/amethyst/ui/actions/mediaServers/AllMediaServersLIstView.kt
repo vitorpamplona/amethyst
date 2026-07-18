@@ -231,7 +231,7 @@ private fun UploadBehaviorSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringRes(id = R.string.manage_stored_files),
+                text = stringRes(id = R.string.my_blossom_data),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
             )
