@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
+import android.view.MotionEvent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -99,6 +100,18 @@ fun LocationPickerMap(
                 zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 controller.setZoom(zoom)
                 controller.setCenter(GeoPoint(latitude, longitude))
+
+                // Ask ancestors (nav drawer, horizontal pager, feed) to stop intercepting
+                // touches while a finger is on the map, so a horizontal drag pans the map
+                // instead of opening the drawer or being stolen as a swipe. Mirrors
+                // LocationPreviewMap. Returning false lets the MapView still pan/zoom/tap.
+                setOnTouchListener { view, event ->
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> view.parent?.requestDisallowInterceptTouchEvent(true)
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
+                    }
+                    false
+                }
 
                 val receiver =
                     object : MapEventsReceiver {
