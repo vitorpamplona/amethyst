@@ -386,9 +386,7 @@ object GrapeRankOperator {
                     "changed" to true,
                     "event_id" to event.id,
                     "based_on" to latest?.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -478,9 +476,7 @@ object GrapeRankOperator {
                     "removed" to toRemove.map { mapOf("service" to it.service.toValue(), "relay" to it.relayUrl.url) },
                     "event_id" to event.id,
                     "based_on" to latest.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

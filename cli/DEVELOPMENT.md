@@ -223,12 +223,12 @@ object NoteCommands {
             val event = com.vitorpamplona.amethyst.commons.note.buildTextNote(ctx.signer, text)
             val ack = ctx.publish(event, relays.ifEmpty { ctx.outboxRelays() })
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }  // all-rejected → `rejected`, exit 1
-            Output.emit(mapOf(
-                "event_id" to event.id,
-                "kind" to event.kind,
-                "published_to" to ack.filterValues { it }.keys.map { it.url },
-                "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-            ))
+            Output.emit(
+                mapOf(
+                    "event_id" to event.id,
+                    "kind" to event.kind,
+                ) + RawEventSupport.ackFields(ack),  // published_to + rejected_by[{relay, reason}]
+            )
             return 0
         }
     }
@@ -270,15 +270,25 @@ contract.
 - Event IDs as hex strings (not npub-style).
 - Pubkeys as hex (`"pubkey":…`) **and** bech32 when the pubkey is the
   primary subject (`"npub":…`).
-- Relay URLs as strings, normalized, never objects.
-- Lists of events under a plural key (`"messages"`, `"members"`).
+- Relay URLs as strings, normalized. The one structured exception is
+  `rejected_by`: a list of `{relay, reason}` objects, because the relay's
+  NIP-01 OK reason (`blocked: …`, `rate-limited: …`, a connect error, or
+  `no response within timeout`) is the answer to "why didn't it post".
+- Lists of events under a plural key (`"messages"`, `"members"`); each
+  item converges on `event_id` / `author` / `created_at` / `content`
+  (+ domain extras). `author` is reserved for the key that signed an
+  event; `pubkey` for an identity being described.
+- Byte counts under `*_bytes` keys — the text renderer only
+  KiB/MiB-renders that suffix.
 - Errors via `Output.error("code","detail")` — single lower_snake
   code, free-form detail. The return value **is** the exit code
   (`bad_args` → 2, `timeout` → 124, else 1), so handlers
   `return Output.error(…)`.
-- Publish results use `published_to` (+ `rejected_by`) everywhere, and
-  freshly published/minted events report `event_id`. Don't invent
-  `accepted_by`-style variants.
+- Publish results use `RawEventSupport.ackFields(ack)` —
+  `published_to` (accepting relay URLs) + `rejected_by`
+  (`[{relay, reason}]`) everywhere — and freshly published/minted
+  events report `event_id`. Don't invent `accepted_by`-style variants
+  or hand-roll the projection.
 
 **Error codes — the canonical set.** The code string is part of the
 `--json` contract; reuse an existing code before minting a new one:

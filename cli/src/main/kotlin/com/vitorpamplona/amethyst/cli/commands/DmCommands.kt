@@ -307,10 +307,9 @@ object DmCommands {
                 mapOf(
                     "pubkey" to target,
                     "wrap_id" to wrap.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "relays_tried" to resolution.relays.map { it.url },
                     "relay_source" to resolution.source.name.lowercase(),
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
         }
         val out =
@@ -482,9 +481,9 @@ object DmCommands {
         override fun toJson(): Map<String, Any?> =
             mapOf(
                 "type" to "text",
-                "id" to id,
+                "event_id" to id,
                 "wrap_id" to wrapId,
-                "from" to from,
+                "author" to from,
                 "to" to to,
                 "content" to content,
                 "created_at" to createdAt,
@@ -516,9 +515,9 @@ object DmCommands {
             val out =
                 mutableMapOf<String, Any?>(
                     "type" to "file",
-                    "id" to id,
+                    "event_id" to id,
                     "wrap_id" to wrapId,
-                    "from" to from,
+                    "author" to from,
                     "to" to to,
                     "url" to url,
                     "created_at" to createdAt,

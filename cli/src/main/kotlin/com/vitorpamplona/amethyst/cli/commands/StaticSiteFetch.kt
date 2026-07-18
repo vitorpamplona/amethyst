@@ -106,7 +106,7 @@ internal object StaticSiteFetch {
                 "manifest_path" to resolved.path,
                 "sha256" to resolved.hash,
                 "content_type" to resolved.contentType,
-                "size" to resolved.bytes.size,
+                "size_bytes" to resolved.bytes.size,
                 "server" to resolved.server,
             )
         base.putAll(manifestFields)

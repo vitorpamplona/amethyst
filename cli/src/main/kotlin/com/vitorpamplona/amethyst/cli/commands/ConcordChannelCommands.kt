@@ -83,8 +83,7 @@ object ConcordChannelCommands {
             ctx.registerConcordStreamKeys(relays, listOf(channel.secretKey))
             val ack = ctx.publish(wrap, relays)
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
-            val acked = ack.filterValues { it }.keys
-            Output.emit(mapOf("event_id" to wrap.id, "channel" to channelId, "published_to" to acked.map { it.url }))
+            Output.emit(mapOf("event_id" to wrap.id, "channel" to channelId) + RawEventSupport.ackFields(ack))
             return 0
         }
     }

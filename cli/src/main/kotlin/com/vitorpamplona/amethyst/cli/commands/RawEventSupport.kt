@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -68,18 +69,37 @@ object RawEventSupport {
      * or a non-zero exit code after reporting `rejected` when every targeted
      * relay refused it. Callers use `publishGuard(ack, event.id)?.let { return it }`
      * so a total rejection stops a `set -e` script instead of exiting 0.
+     * The error carries each relay's own reason (the NIP-01 OK message, a
+     * connect error, or a timeout note) — the answer to "why didn't it post".
      */
     fun publishGuard(
-        ack: Map<NormalizedRelayUrl, Boolean>,
+        ack: Map<NormalizedRelayUrl, PublishResult>,
         eventId: String,
     ): Int? {
-        if (ack.isEmpty() || ack.any { it.value }) return null
+        if (ack.isEmpty() || ack.any { it.value.accepted }) return null
         return Output.error(
             "rejected",
             "no relay accepted event $eventId",
-            extra = mapOf("event_id" to eventId, "rejected_by" to ack.keys.map { it.url }),
+            extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
         )
     }
+
+    /**
+     * The canonical relay-ack projection every publishing command emits:
+     * `published_to` is the flat list of accepting relay URLs; `rejected_by`
+     * is a list of `{relay, reason}` objects so a partial failure explains
+     * itself. Use `Output.emit(mapOf(…) + RawEventSupport.ackFields(ack))`.
+     */
+    fun ackFields(ack: Map<NormalizedRelayUrl, PublishResult>): Map<String, Any?> =
+        mapOf(
+            "published_to" to ack.filterValues { it.accepted }.keys.map { it.url },
+            "rejected_by" to rejectedBy(ack),
+        )
+
+    private fun rejectedBy(ack: Map<NormalizedRelayUrl, PublishResult>): List<Map<String, String>> =
+        ack
+            .filterValues { !it.accepted }
+            .map { (relay, result) -> mapOf("relay" to relay.url, "reason" to result.message) }
 
     /**
      * Resolve where to publish: the explicit `--relay` set when given,

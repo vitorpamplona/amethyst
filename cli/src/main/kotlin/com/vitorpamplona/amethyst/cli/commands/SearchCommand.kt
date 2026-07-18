@@ -147,7 +147,7 @@ object SearchCommand {
                 .map { ev ->
                     mapOf(
                         "event_id" to ev.id,
-                        "pubkey" to ev.pubKey,
+                        "author" to ev.pubKey,
                         "kind" to ev.kind,
                         "created_at" to ev.createdAt,
                         "content" to ev.content,

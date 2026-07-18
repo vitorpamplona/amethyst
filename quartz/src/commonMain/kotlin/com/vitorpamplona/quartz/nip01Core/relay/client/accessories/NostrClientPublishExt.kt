@@ -35,9 +35,16 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
-class Result(
-    val relay: NormalizedRelayUrl,
-    val success: Boolean,
+/**
+ * One relay's verdict on a published event: [accepted] plus the reason the
+ * relay (or the transport) gave. For an accepted event [message] is whatever
+ * the relay put in the OK (usually empty); for a rejection it is the NIP-01
+ * machine-readable reason (`blocked: …`, `rate-limited: …`, `pow: …`), a
+ * connection error, or `"no response within timeout"`.
+ */
+class PublishResult(
+    val accepted: Boolean,
+    val message: String,
 )
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -45,19 +52,34 @@ suspend fun INostrClient.publishAndConfirm(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Boolean = publishAndConfirmDetailed(event, relayList, timeoutInSeconds).any { it.value }
+): Boolean = publishAndCollectResults(event, relayList, timeoutInSeconds).any { it.value.accepted }
 
 /**
  * Sends an event to the given relays and waits for OK responses.
  * Returns per-relay results: relay URL -> accepted (true/false).
+ * Prefer [publishAndCollectResults] when the caller can surface the
+ * relays' rejection reasons — this projection drops them.
  */
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndConfirmDetailed(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Map<NormalizedRelayUrl, Boolean> {
-    val resultChannel = Channel<Result>(UNLIMITED)
+): Map<NormalizedRelayUrl, Boolean> = publishAndCollectResults(event, relayList, timeoutInSeconds).mapValues { it.value.accepted }
+
+/**
+ * Sends an event to the given relays and waits for OK responses, keeping the
+ * per-relay reason alongside the verdict. Relays that never answered inside
+ * the timeout are present with `accepted = false, message = "no response
+ * within timeout"`, so the result always covers the full [relayList].
+ */
+@OptIn(DelicateCoroutinesApi::class)
+suspend fun INostrClient.publishAndCollectResults(
+    event: Event,
+    relayList: Set<NormalizedRelayUrl>,
+    timeoutInSeconds: Long = 15,
+): Map<NormalizedRelayUrl, PublishResult> {
+    val resultChannel = Channel<DetailedResult>(UNLIMITED)
 
     Log.d("publishAndConfirm") { "Waiting for ${relayList.size} responses" }
 
@@ -68,14 +90,14 @@ suspend fun INostrClient.publishAndConfirmDetailed(
                 errorMessage: String,
             ) {
                 if (relay.url in relayList) {
-                    resultChannel.trySend(Result(relay.url, false))
+                    resultChannel.trySend(DetailedResult(relay.url, false, "cannot connect: $errorMessage"))
                     Log.d("publishAndConfirm") { "Error from relay ${relay.url}: $errorMessage" }
                 }
             }
 
             override fun onDisconnected(relay: IRelayClient) {
                 if (relay.url in relayList) {
-                    resultChannel.trySend(Result(relay.url, false))
+                    resultChannel.trySend(DetailedResult(relay.url, false, "disconnected before OK"))
                     Log.d("publishAndConfirm") { "Disconnected from relay ${relay.url}" }
                 }
             }
@@ -90,7 +112,7 @@ suspend fun INostrClient.publishAndConfirmDetailed(
                 when (msg) {
                     is OkMessage -> {
                         if (msg.eventId == event.id) {
-                            resultChannel.trySend(Result(relay.url, msg.success))
+                            resultChannel.trySend(DetailedResult(relay.url, msg.success, msg.message))
                             Log.d("publishAndConfirm") { "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}" }
                         }
                     }
@@ -107,7 +129,7 @@ suspend fun INostrClient.publishAndConfirmDetailed(
                 coroutineScope {
                     val result =
                         async {
-                            val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
+                            val receivedResults = mutableMapOf<NormalizedRelayUrl, PublishResult>()
                             // The withTimeout block will cancel the coroutine if the loop takes too long
                             withTimeoutOrNull(timeoutInSeconds * 1000) {
                                 while (receivedResults.size < relayList.size) {
@@ -115,8 +137,8 @@ suspend fun INostrClient.publishAndConfirmDetailed(
 
                                     val currentResult = receivedResults[result.relay]
                                     // do not override a successful result.
-                                    if (currentResult == null || !currentResult) {
-                                        receivedResults[result.relay] = result.success
+                                    if (currentResult == null || !currentResult.accepted) {
+                                        receivedResults[result.relay] = PublishResult(result.success, result.message)
                                     }
                                 }
                             }
@@ -138,5 +160,15 @@ suspend fun INostrClient.publishAndConfirmDetailed(
 
     Log.d("publishAndConfirm") { "Finished with ${receivedResults.size} results" }
 
+    // Relays that never answered are still part of the verdict.
+    val silent = relayList - receivedResults.keys
+    silent.forEach { receivedResults[it] = PublishResult(false, "no response within timeout") }
+
     return receivedResults
 }
+
+private class DetailedResult(
+    val relay: NormalizedRelayUrl,
+    val success: Boolean,
+    val message: String,
+)

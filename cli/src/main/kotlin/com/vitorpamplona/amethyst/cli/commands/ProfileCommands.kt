@@ -27,9 +27,11 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
 /**
  * `amy profile <show|edit>` — read and update the current user's
@@ -116,6 +118,7 @@ object ProfileCommands {
                 Output.emit(
                     mapOf(
                         "pubkey" to pubKey,
+                        "npub" to pubKey.hexToByteArray().toNpub(),
                         "found" to false,
                         "source" to source,
                         "queried_relays" to queried.map { it.url },
@@ -132,6 +135,7 @@ object ProfileCommands {
             Output.emit(
                 mapOf(
                     "pubkey" to pubKey,
+                    "npub" to pubKey.hexToByteArray().toNpub(),
                     "found" to true,
                     "source" to source,
                     "event_id" to event.id,
@@ -243,9 +247,7 @@ object ProfileCommands {
                     "created_at" to signed.createdAt,
                     "based_on" to latest?.id,
                     "metadata" to Output.mapper.readTree(signed.content),
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

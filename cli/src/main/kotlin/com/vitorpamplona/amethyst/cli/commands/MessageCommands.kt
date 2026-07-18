@@ -66,7 +66,7 @@ object MessageCommands {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             val bundle = ctx.marmot.buildTextMessage(gid, text)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
@@ -79,8 +79,7 @@ object MessageCommands {
                     "inner_event_id" to bundle.innerEvent.id,
                     "outer_event_id" to bundle.outbound.signedEvent.id,
                     "kind" to bundle.innerEvent.kind,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -100,7 +99,7 @@ object MessageCommands {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             val raw = ctx.marmot.loadStoredMessages(gid)
             val items =
@@ -110,7 +109,7 @@ object MessageCommands {
                             @Suppress("UNCHECKED_CAST")
                             val obj = Output.mapper.readValue<Map<String, Any?>>(line)
                             mapOf(
-                                "id" to obj["id"],
+                                "event_id" to obj["id"],
                                 "author" to obj["pubkey"],
                                 "kind" to obj["kind"],
                                 "content" to obj["content"],
@@ -137,9 +136,11 @@ object MessageCommands {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
-            val target = findStoredInnerEvent(ctx, gid, targetId) ?: return Output.error("not_found", targetId)
+            val target =
+                findStoredInnerEvent(ctx, gid, targetId)
+                    ?: return Output.error("not_found", "no stored message $targetId in group $gid")
             val bundle = ctx.marmot.buildReactionMessage(gid, target, emoji)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, targets)
@@ -153,8 +154,7 @@ object MessageCommands {
                     "kind" to bundle.innerEvent.kind,
                     "target_event_id" to target.id,
                     "reaction" to emoji,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -169,12 +169,13 @@ object MessageCommands {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             val targetIds = rest.drop(1)
             val targets =
                 targetIds.map { id ->
-                    findStoredInnerEvent(ctx, gid, id) ?: return Output.error("not_found", id)
+                    findStoredInnerEvent(ctx, gid, id)
+                        ?: return Output.error("not_found", "no stored message $id in group $gid")
                 }
 
             val bundle = ctx.marmot.buildDeletionMessage(gid, targets)
@@ -189,8 +190,7 @@ object MessageCommands {
                     "outer_event_id" to bundle.outbound.signedEvent.id,
                     "kind" to bundle.innerEvent.kind,
                     "target_event_ids" to targets.map { it.id },
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

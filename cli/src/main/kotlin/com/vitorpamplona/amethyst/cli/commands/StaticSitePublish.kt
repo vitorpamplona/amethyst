@@ -110,10 +110,9 @@ object StaticSitePublish {
                     "aggregate_sha256" to SiteAggregateHash.compute(result.pathTags),
                     "files" to
                         result.uploaded.map {
-                            mapOf("path" to it.path, "sha256" to it.sha256, "size" to it.size, "url" to it.url)
+                            mapOf("path" to it.path, "sha256" to it.sha256, "size_bytes" to it.size, "url" to it.url)
                         },
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

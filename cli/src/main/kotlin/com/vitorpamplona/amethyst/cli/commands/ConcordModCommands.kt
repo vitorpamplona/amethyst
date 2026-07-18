@@ -87,8 +87,7 @@ object ConcordModCommands {
             val wrap = ConcordModeration.defineRole(ctx.signer, cp, roleId, role, editions, TimeUtils.now())
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
-            val acked = ack.filterValues { it }.keys
-            Output.emit(mapOf("role_id" to roleId.toHexKey(), "name" to name, "position" to position, "published_to" to acked.map { it.url }))
+            Output.emit(mapOf("role_id" to roleId.toHexKey(), "name" to name, "position" to position) + RawEventSupport.ackFields(ack))
             return 0
         }
     }
@@ -112,8 +111,7 @@ object ConcordModCommands {
             val wrap = ConcordModeration.grant(ctx.signer, cp, sc.communityId.hexToByteArray(), member, listOf(roleId), editions, TimeUtils.now())
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
-            val acked = ack.filterValues { it }.keys
-            Output.emit(mapOf("member" to member, "roles" to listOf(roleId), "published_to" to acked.map { it.url }))
+            Output.emit(mapOf("member" to member, "roles" to listOf(roleId)) + RawEventSupport.ackFields(ack))
             return 0
         }
     }
@@ -154,8 +152,7 @@ object ConcordModCommands {
                 }
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
-            val acked = ack.filterValues { it }.keys
-            Output.emit(mapOf("member" to member, "banned" to ban, "published_to" to acked.map { it.url }))
+            Output.emit(mapOf("member" to member, "banned" to ban) + RawEventSupport.ackFields(ack))
             return 0
         }
     }

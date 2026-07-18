@@ -134,8 +134,7 @@ object Podcast20Commands {
                     "kind" to signed.kind,
                     "d" to Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG,
                     "title" to title,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -196,8 +195,7 @@ object Podcast20Commands {
                     "d" to dTag,
                     "title" to title,
                     "audios" to audios.map { it.url },
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -235,8 +233,7 @@ object Podcast20Commands {
                     "d" to dTag,
                     "title" to title,
                     "url" to url,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

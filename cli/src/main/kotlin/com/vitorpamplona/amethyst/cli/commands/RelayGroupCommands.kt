@@ -129,7 +129,7 @@ object RelayGroupCommands {
                     "name" to name,
                     "private" to isPrivate,
                     "closed" to isClosed,
-                    "published" to (createAck.values.any { it } && editAck.values.any { it }),
+                    "published" to (createAck.values.any { it.accepted } && editAck.values.any { it.accepted }),
                     "listed" to listed,
                 ),
             )
@@ -161,7 +161,7 @@ object RelayGroupCommands {
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val listed = updateGroupList(ctx, relay, groupId, add = true)
             Output.emit(
-                mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it }, "listed" to listed),
+                mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it.accepted }, "listed" to listed),
             )
             return 0
         }
@@ -189,7 +189,7 @@ object RelayGroupCommands {
             RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             val listed = updateGroupList(ctx, relay, groupId, add = false)
             Output.emit(
-                mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it }, "listed" to listed),
+                mapOf("group_id" to groupId, "relay" to relay.url, "published" to ack.values.any { it.accepted }, "listed" to listed),
             )
             return 0
         }
@@ -253,7 +253,7 @@ private suspend fun updateGroupList(
             else -> SimpleGroupListEvent.remove(current, tag, signer = ctx.signer)
         }
 
-    return ctx.publish(updated, outbox).values.any { it }
+    return ctx.publish(updated, outbox).values.any { it.accepted }
 }
 
 /**
@@ -303,7 +303,7 @@ internal suspend fun publishScoped(
                 "kind" to signed.kind,
                 "group_id" to groupId,
                 "relay" to relay.url,
-                "published" to ack.values.any { it },
+                "published" to ack.values.any { it.accepted },
             ),
         )
         return 0

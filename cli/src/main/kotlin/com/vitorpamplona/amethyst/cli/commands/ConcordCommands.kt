@@ -107,7 +107,7 @@ object ConcordCommands {
 
             val publishTo = normalize(relays).ifEmpty { ctx.outboxRelays() }
             val acked = mutableSetOf<NormalizedRelayUrl>()
-            for (wrap in community.genesisWraps) acked += ctx.publish(wrap, publishTo).filterValues { it }.keys
+            for (wrap in community.genesisWraps) acked += ctx.publish(wrap, publishTo).filterValues { it.accepted }.keys
 
             ConcordStore(dataDir.concordFile).upsert(
                 StoredCommunity(
@@ -218,15 +218,13 @@ object ConcordCommands {
             val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), sc.relays)
             val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
-            val acked = ack.filterValues { it }.keys
 
             Output.emit(
                 mapOf(
                     "url" to minted.url,
                     "bundle_event_id" to minted.bundleEvent.id,
                     "link_signer" to minted.linkSignerPubKey,
-                    "published_to" to acked.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

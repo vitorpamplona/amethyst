@@ -122,9 +122,7 @@ object PostCommand {
                     "pow" to if (powTarget != null) signed.pow() else null,
                     "pow_target" to powTarget,
                     "pow_millis" to powMillis,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

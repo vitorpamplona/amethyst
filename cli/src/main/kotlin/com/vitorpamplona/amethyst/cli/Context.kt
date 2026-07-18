@@ -39,9 +39,10 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -500,13 +501,13 @@ class Context(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
         timeoutSecs: Long = 15,
-    ): Map<NormalizedRelayUrl, Boolean> {
+    ): Map<NormalizedRelayUrl, PublishResult> {
         // Persist locally before broadcasting. The store is the source of
         // truth — even if every relay rejects, we want our own outbound
         // event in the local cache.
         verifyAndStore(event)
         if (relayList.isEmpty()) return emptyMap()
-        return client.publishAndConfirmDetailed(event, relayList, timeoutSecs)
+        return client.publishAndCollectResults(event, relayList, timeoutSecs)
     }
 
     /**

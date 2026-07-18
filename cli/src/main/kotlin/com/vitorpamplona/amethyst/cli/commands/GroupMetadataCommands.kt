@@ -138,7 +138,7 @@ object GroupMetadataCommands {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
             val outboxUrls = ctx.outboxRelays().map { it.url }
             val cur =
                 ctx.marmot.groupMetadata(gid)
@@ -161,8 +161,7 @@ object GroupMetadataCommands {
                     "admins" to updated.adminPubkeys,
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to commit.signedEvent.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ) + extra,
+                ) + RawEventSupport.ackFields(ack) + extra,
             )
             return 0
         }

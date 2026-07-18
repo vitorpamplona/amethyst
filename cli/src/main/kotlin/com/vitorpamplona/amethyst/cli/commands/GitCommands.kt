@@ -122,8 +122,7 @@ object GitCommands {
                 mapOf(
                     "event_id" to signed.id,
                     "address" to Address.assemble(signed.kind, signed.pubKey, identifier),
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -219,8 +218,7 @@ object GitCommands {
                     "kind" to signed.kind,
                     "repository" to Address.assemble(addr.kind, addr.pubKeyHex, addr.dTag),
                     "subject" to subject,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

@@ -113,7 +113,7 @@ object RelayGroupModerationCommands {
                     "relay" to relay.url,
                     "private" to isPrivate,
                     "closed" to isClosed,
-                    "published" to ack.values.any { it },
+                    "published" to ack.values.any { it.accepted },
                 ),
             )
             return 0
@@ -163,7 +163,7 @@ object RelayGroupModerationCommands {
                     "relay" to relay.url,
                     "pubkey" to pubkey,
                     "roles" to roles,
-                    "published" to ack.values.any { it },
+                    "published" to ack.values.any { it.accepted },
                 ),
             )
             return 0
@@ -195,7 +195,7 @@ object RelayGroupModerationCommands {
                     "group_id" to groupId,
                     "relay" to relay.url,
                     "pubkey" to pubkey,
-                    "published" to ack.values.any { it },
+                    "published" to ack.values.any { it.accepted },
                 ),
             )
             return 0

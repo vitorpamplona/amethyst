@@ -627,14 +627,14 @@ object RelayCommands {
 
             val targets = ctx.anyRelays()
             val eventIds = linkedMapOf<String, String?>()
-            val acceptedBy = linkedMapOf<String, List<String>>()
+            val results = linkedMapOf<String, Map<String, Any?>>()
             for ((key, event) in events) {
                 eventIds[key] = event?.id
                 val result = event?.let { ctx.publish(it, targets) }.orEmpty()
-                acceptedBy[key] = result.filterValues { it }.keys.map { it.url }
+                results[key] = RawEventSupport.ackFields(result)
             }
 
-            Output.emit(mapOf("event_ids" to eventIds, "published_to" to acceptedBy))
+            Output.emit(mapOf("event_ids" to eventIds, "results" to results))
             return 0
         }
     }

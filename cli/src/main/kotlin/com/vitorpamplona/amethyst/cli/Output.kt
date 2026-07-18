@@ -324,7 +324,7 @@ object Output {
             if (key.endsWith("_at") && asLong > 1_000_000_000L) {
                 return formatTimestamp(asLong, color)
             }
-            if (key.endsWith("_bytes") || key == "size") {
+            if (key.endsWith("_bytes")) {
                 return formatBytes(asLong)
             }
         }
@@ -404,10 +404,13 @@ internal class Ansi(
         fun forStream(isStderr: Boolean): Ansi {
             if (noColor) return Ansi(false)
             if (forceColor) return Ansi(true)
-            // System.console() is non-null only when both stdin and stdout are
-            // connected to a terminal. Good enough for the common case (interactive
-            // shell vs `amy ... | jq`); honor CLICOLOR_FORCE for the rest.
-            val tty = System.console() != null
+            // JDK 21 has no per-stream isatty. System.console() != null only when
+            // BOTH stdin and stdout are terminals, which wrongly stripped color
+            // from stderr progress during the most common pipe (`amy … | jq`).
+            // Approximation: stdout keeps the strict console() gate; stderr colors
+            // whenever an interactive TERM is around (stderr is rarely redirected
+            // on its own, and NO_COLOR remains the escape hatch).
+            val tty = System.console() != null || (isStderr && !System.getenv("TERM").isNullOrEmpty())
             return Ansi(tty)
         }
     }

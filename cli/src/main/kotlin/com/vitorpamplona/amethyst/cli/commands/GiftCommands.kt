@@ -103,9 +103,7 @@ object GiftCommands {
                 mapOf(
                     "event" to wrapNode,
                     "published" to true,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

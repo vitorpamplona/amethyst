@@ -35,11 +35,11 @@ object GroupMembershipCommands {
             val gid = ctx.resolveGroupId(rest[0])
             val target = ctx.requireUserHex(rest[1])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             val leafIndex =
                 ctx.marmot.leafIndexOf(gid, target)
-                    ?: return Output.error("target_not_member", target)
+                    ?: return Output.error("target_not_member", "$target is not a member of group $gid")
 
             val outbound = ctx.marmot.removeMember(nostrGroupId = gid, targetLeafIndex = leafIndex)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
@@ -52,8 +52,7 @@ object GroupMembershipCommands {
                     "leaf_index" to leafIndex,
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to outbound.signedEvent.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -67,7 +66,7 @@ object GroupMembershipCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
 
@@ -104,8 +103,7 @@ object GroupMembershipCommands {
                     "group_id" to gid,
                     "self_demote_event_id" to demoteEventId,
                     "proposal_event_id" to outbound.signedEvent.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

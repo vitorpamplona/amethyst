@@ -81,9 +81,7 @@ object PublishCommand {
                 mapOf(
                     "event_id" to event.id,
                     "kind" to event.kind,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

@@ -91,7 +91,7 @@ object CreateCommand {
             for (event in bootstrap.all()) {
                 val ack = ctx.publish(event, DefaultNIP65RelaySet)
                 accepted[event.kind.toString()] =
-                    ack.filterValues { it }.keys.map { it.url }
+                    ack.filterValues { it.accepted }.keys.map { it.url }
             }
         }
 

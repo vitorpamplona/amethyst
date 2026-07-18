@@ -192,7 +192,7 @@ object BlossomCommands {
                         "url" to result.url,
                         "sha256" to (result.sha256 ?: hash),
                         "ox" to result.ox,
-                        "size" to (result.size ?: file.length()),
+                        "size_bytes" to (result.size ?: file.length()),
                         "type" to (result.type ?: mime),
                         "server" to server,
                     ),
@@ -224,7 +224,7 @@ object BlossomCommands {
             Output.emit(
                 mapOf(
                     "url" to url,
-                    "size" to bytes.size,
+                    "size_bytes" to bytes.size,
                     "sha256" to sha256(bytes).toHexKey(),
                     "saved_to" to out,
                 ),

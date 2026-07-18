@@ -221,15 +221,13 @@ object GeochatCommands {
             Output.emit(
                 mapOf(
                     "event_id" to event.id,
-                    "pubkey" to event.pubKey,
+                    "author" to event.pubKey,
                     "geohash" to geohash,
                     "nickname" to nick,
                     "teleported" to teleported,
                     "pow" to PoWRankEvaluator.calculatePowRankOf(event.id),
                     "content" to message,
-                    "published_to" to acks.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to acks.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(acks),
             )
         }
         return 0

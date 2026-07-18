@@ -733,7 +733,18 @@ Notable error codes (the full canonical list is in
 
 - **`rejected`** (exit 1) — a publish was refused by **every** targeted
   relay; the payload carries `event_id` + `rejected_by`. Partial acceptance
-  still exits 0 and reports `published_to` / `rejected_by`.
+  still exits 0 and reports `published_to` / `rejected_by`. `rejected_by`
+  is a list of `{relay, reason}` objects — the reason is the relay's own
+  NIP-01 OK message (`blocked: …`, `rate-limited: …`), a connect error, or
+  `no response within timeout`, so "why didn't it post?" answers itself:
+
+  ```text
+  $ amy notes post "hi"
+  …
+  rejected_by:
+    - relay:  wss://nostr.wine/
+      reason: blocked: not on the allowlist
+  ```
 - **`bad_args`** (exit 2) — also raised for **unknown flags** (`--limt 5`
   fails instead of silently no-oping) and malformed numeric / relay-URL /
   `--author` / `--id` values.

@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
@@ -67,8 +70,7 @@ object OutboxCommand {
                 ctx.drain(
                     ctx.bootstrapRelays().associateWith {
                         listOf(
-                            com.vitorpamplona.quartz.nip01Core.relay.filters
-                                .Filter(authors = listOf(pubkey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1),
+                            Filter(authors = listOf(pubkey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1),
                         )
                     },
                     timeoutMs,
@@ -77,13 +79,14 @@ object OutboxCommand {
             }
 
             if (event == null) {
-                Output.emit(mapOf("pubkey" to pubkey, "found" to false))
+                Output.emit(mapOf("pubkey" to pubkey, "npub" to pubkey.hexToByteArray().toNpub(), "found" to false))
                 return 0
             }
 
             Output.emit(
                 mapOf(
                     "pubkey" to pubkey,
+                    "npub" to pubkey.hexToByteArray().toNpub(),
                     "found" to true,
                     "created_at" to event.createdAt,
                     "read" to (event.readRelaysNorm()?.map { it.url } ?: emptyList()),

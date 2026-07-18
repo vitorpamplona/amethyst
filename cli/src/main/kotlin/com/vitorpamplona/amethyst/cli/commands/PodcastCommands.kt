@@ -98,8 +98,7 @@ object PodcastCommands {
                     "event_id" to signed.id,
                     "kind" to signed.kind,
                     "title" to title,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -143,8 +142,7 @@ object PodcastCommands {
                     "kind" to signed.kind,
                     "title" to title,
                     "audios" to audios.map { it.url },
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

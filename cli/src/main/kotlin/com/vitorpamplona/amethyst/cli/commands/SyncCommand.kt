@@ -174,7 +174,7 @@ object SyncCommand {
                                 for (batch in haveBatches) {
                                     for (id in batch) {
                                         val ev = localById[id] ?: continue
-                                        if (ctx.publish(ev, setOf(relay)).values.any { it }) uploaded.incrementAndGet()
+                                        if (ctx.publish(ev, setOf(relay)).values.any { it.accepted }) uploaded.incrementAndGet()
                                     }
                                 }
                             }
