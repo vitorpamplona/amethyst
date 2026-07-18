@@ -1557,6 +1557,13 @@
     <string name="blossom_report">Report</string>
     <string name="blossom_open">Open</string>
     <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
+    <string name="blossom_payment_title">Payment required</string>
+    <string name="blossom_payment_message">This server charges a lightning payment to store the file. Pay from your connected wallet to continue.</string>
+    <string name="blossom_pay">Pay</string>
+    <plurals name="blossom_pay_sats">
+        <item quantity="one">Pay %1$d sat</item>
+        <item quantity="other">Pay %1$d sats</item>
+    </plurals>
     <string name="blossom_report_title">Report blob</string>
     <string name="blossom_report_comment_hint">Reason (optional)</string>
     <string name="blossom_send">Send</string>

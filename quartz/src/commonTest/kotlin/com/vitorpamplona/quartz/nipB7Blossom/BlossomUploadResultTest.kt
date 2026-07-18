@@ -105,4 +105,17 @@ class BlossomUploadResultTest {
         val payment = BlossomPaymentRequired.fromHeaders { null }
         assertEquals(false, payment.hasPaymentOption())
     }
+
+    @Test
+    fun paymentProofBuildsRetryHeaders() {
+        assertEquals(
+            listOf(BlossomServerUrl.X_LIGHTNING_HEADER to "preimageabc"),
+            BlossomPaymentProof(lightningPreimage = "preimageabc").headers(),
+        )
+        assertEquals(
+            listOf(BlossomServerUrl.X_CASHU_HEADER to "cashuToken"),
+            BlossomPaymentProof(cashu = "cashuToken").headers(),
+        )
+        assertEquals(emptyList(), BlossomPaymentProof().headers())
+    }
 }

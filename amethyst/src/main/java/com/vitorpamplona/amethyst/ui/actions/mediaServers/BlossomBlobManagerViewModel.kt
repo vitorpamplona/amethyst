@@ -26,10 +26,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomPaymentHandler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportType
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomReport
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
@@ -54,6 +58,15 @@ data class BlobRow(
     val serversMissing: List<String>,
 )
 
+/** A BUD-07 payment prompt raised while mirroring [row] to [target]. */
+@Immutable
+data class PendingMirrorPayment(
+    val row: BlobRow,
+    val target: String,
+    val payment: BlossomPaymentRequired,
+    val amountSats: Long?,
+)
+
 /**
  * Backs the Blossom blob-manager screen. For the active account it fans a
  * `GET /list/<pubkey>` (BUD-02) across every server in the user's kind-10063 list,
@@ -73,6 +86,9 @@ class BlossomBlobManagerViewModel : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
+
+    private val _pendingPayment = MutableStateFlow<PendingMirrorPayment?>(null)
+    val pendingPayment = _pendingPayment.asStateFlow()
 
     fun init(accountViewModel: AccountViewModel) {
         this.account = accountViewModel.account
@@ -176,25 +192,64 @@ class BlossomBlobManagerViewModel : ViewModel() {
     }
 
     /** BUD-04: mirror a blob to every server in the user's list that doesn't have it yet. */
-    fun mirrorToMissing(
-        row: BlobRow,
-        onDone: (Int) -> Unit = {},
-    ) {
-        val source = row.url ?: return onDone(0)
+    fun mirrorToMissing(row: BlobRow) {
+        val source = row.url ?: return
         viewModelScope.launch(Dispatchers.IO) {
             var mirrored = 0
-            row.serversMissing.forEach { target ->
+            for (target in row.serversMissing) {
                 try {
-                    val auth = account.createBlossomUploadAuth(row.hash, row.size ?: 0L, "Mirror ${row.hash}", listOf(target)).toAuthorizationHeader()
-                    clientFor(target).mirror(source, target, auth)
+                    mirrorOne(source, row, target, null)
                     mirrored++
+                } catch (e: BlossomPaymentException) {
+                    // BUD-07: this server wants payment. Pause and ask the user to confirm;
+                    // the rest of the servers are retried after they decide.
+                    if (BlossomPaymentHandler.canPay(account, e.payment)) {
+                        _pendingPayment.value = PendingMirrorPayment(row, target, e.payment, BlossomPaymentHandler.amountSats(e.payment))
+                        return@launch
+                    }
+                    Log.w("BlossomBlobManager", "mirror to $target needs unsupported payment", e)
                 } catch (e: Exception) {
                     Log.w("BlossomBlobManager", "mirror to $target failed", e)
                 }
             }
             if (mirrored > 0) refresh()
-            withContext(Dispatchers.Main) { onDone(mirrored) }
         }
+    }
+
+    private suspend fun mirrorOne(
+        source: String,
+        row: BlobRow,
+        target: String,
+        proof: BlossomPaymentProof?,
+    ) {
+        val auth = account.createBlossomUploadAuth(row.hash, row.size ?: 0L, "Mirror ${row.hash}", listOf(target)).toAuthorizationHeader()
+        clientFor(target).mirror(source, target, auth, proof)
+    }
+
+    /** User confirmed the BUD-07 prompt: pay via the wallet, retry, then continue with the rest. */
+    fun confirmPendingPayment() {
+        val pending = _pendingPayment.value ?: return
+        _pendingPayment.value = null
+        val source = pending.row.url ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val proof = BlossomPaymentHandler.pay(account, pending.payment)
+            if (proof == null) {
+                _error.value = "Payment failed or was not confirmed by the wallet."
+                return@launch
+            }
+            try {
+                mirrorOne(source, pending.row, pending.target, proof)
+            } catch (e: Exception) {
+                Log.w("BlossomBlobManager", "paid mirror to ${pending.target} failed", e)
+            }
+            // Continue mirroring to any remaining servers (which may prompt again).
+            refresh()
+            mirrorToMissing(pending.row.copy(serversMissing = pending.row.serversMissing.filter { it != pending.target }))
+        }
+    }
+
+    fun cancelPendingPayment() {
+        _pendingPayment.value = null
     }
 
     /** BUD-09: report a blob to a server as problematic content. */

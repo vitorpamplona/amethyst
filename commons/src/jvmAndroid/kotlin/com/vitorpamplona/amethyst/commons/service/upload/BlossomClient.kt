@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
@@ -114,6 +115,7 @@ open class BlossomClient(
         sourceUrl: String,
         serverBaseUrl: String,
         authHeader: String?,
+        paymentProof: BlossomPaymentProof? = null,
     ): BlossomUploadResult =
         withContext(Dispatchers.IO) {
             val body = JsonMapper.toJson(MirrorRequest(sourceUrl)).toRequestBody("application/json".toMediaType())
@@ -121,8 +123,10 @@ open class BlossomClient(
                 Request
                     .Builder()
                     .url(BlossomServerUrl.mirror(serverBaseUrl))
-                    .apply { authHeader?.let { addHeader("Authorization", it) } }
-                    .put(body)
+                    .apply {
+                        authHeader?.let { addHeader("Authorization", it) }
+                        paymentProof?.headers()?.forEach { (name, value) -> addHeader(name, value) }
+                    }.put(body)
                     .build()
             okHttpClient.newCall(request).execute().use { parseDescriptor(it, serverBaseUrl) }
         }

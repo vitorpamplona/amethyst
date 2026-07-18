@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -90,6 +91,16 @@ fun BlossomBlobManagerScreen(
     val blobs by vm.blobs.collectAsStateWithLifecycle()
     val loading by vm.isLoading.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
+    val pendingPayment by vm.pendingPayment.collectAsStateWithLifecycle()
+
+    pendingPayment?.let { pending ->
+        BlossomPaymentDialog(
+            amountSats = pending.amountSats,
+            reason = pending.payment.reason,
+            onConfirm = { vm.confirmPendingPayment() },
+            onDismiss = { vm.cancelPendingPayment() },
+        )
+    }
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(R.string.manage_stored_files), nav) },
@@ -277,6 +288,42 @@ private fun BlobCard(
             onDismiss = { reportOpen = false },
         )
     }
+}
+
+@Composable
+private fun BlossomPaymentDialog(
+    amountSats: Long?,
+    reason: String?,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.blossom_payment_title)) },
+        text = {
+            Text(
+                text =
+                    listOfNotNull(
+                        stringRes(R.string.blossom_payment_message),
+                        reason,
+                    ).joinToString("\n\n"),
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text(
+                    if (amountSats != null) {
+                        pluralStringResource(R.plurals.blossom_pay_sats, amountSats.toInt(), amountSats.toInt())
+                    } else {
+                        stringRes(R.string.blossom_pay)
+                    },
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
 }
 
 private fun humanBytes(bytes: Long): String =

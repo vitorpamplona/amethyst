@@ -56,3 +56,20 @@ data class BlossomPaymentRequired(
             )
     }
 }
+
+/**
+ * The proof a client sends when retrying a request after settling a BUD-07 [BlossomPaymentRequired]:
+ * a settled Cashu token (echoed in `X-Cashu`) or the preimage of the paid BOLT-11 invoice
+ * (echoed in `X-Lightning`).
+ */
+data class BlossomPaymentProof(
+    val cashu: String? = null,
+    val lightningPreimage: String? = null,
+) {
+    /** The header name/value pairs to attach to the retried request. */
+    fun headers(): List<Pair<String, String>> =
+        buildList {
+            cashu?.let { add(BlossomServerUrl.X_CASHU_HEADER to it) }
+            lightningPreimage?.let { add(BlossomServerUrl.X_LIGHTNING_HEADER to it) }
+        }
+}
