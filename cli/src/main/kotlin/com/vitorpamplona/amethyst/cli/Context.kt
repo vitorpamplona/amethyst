@@ -31,11 +31,9 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
-import com.vitorpamplona.amethyst.commons.marmot.ingest
-import com.vitorpamplona.quartz.marmot.MarmotFilters
+import com.vitorpamplona.amethyst.commons.marmot.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
-import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -68,11 +66,11 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
@@ -515,11 +513,13 @@ class Context(
     }
 
     /**
-     * Resolve `npub…` / `nprofile…` / 64-hex / `name@domain.tld` to a pubkey hex.
-     * Delegates to the shared [resolveUserHexOrNull] in quartz so the UI and CLI
-     * accept the exact same identifier formats. Throws on unrecognised input —
-     * command handlers catch [IllegalArgumentException] at the top level and
-     * translate to `{"error": "bad_args"}`.
+     * Resolve an alias (per-account `aliases.json`) / `npub…` / `nprofile…` /
+     * 64-hex / `name@domain.tld` to a pubkey hex. Aliases are checked first —
+     * they are local, unambiguous names the user chose (`amy dm send bob "hi"`)
+     * — then the input delegates to the shared [resolveUserHexOrNull] in quartz
+     * so the UI and CLI accept the exact same identifier formats. Throws on
+     * unrecognised input — command handlers catch [IllegalArgumentException] at
+     * the top level and translate to `{"error": "bad_args"}`.
      *
      * A pubkey is always 32 bytes, so we require exactly 64 hex chars: the shared
      * resolver's fallback runs a lenient `Hex.decode` that turns a short
@@ -527,11 +527,11 @@ class Context(
      * "pubkey" instead of failing — this rejects that so a bad OBSERVER/USER errors
      * cleanly rather than silently scoring/fetching garbage.
      */
-    suspend fun requireUserHex(input: String): com.vitorpamplona.quartz.nip01Core.core.HexKey {
-        val notResolved = "Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)"
+    suspend fun requireUserHex(input: String): HexKey {
+        val notResolved = "Could not resolve user: '$input' (accepts an alias, npub, nprofile, 64-hex, or name@domain.tld)"
+        val resolvable = Aliases.load(dataDir)[input] ?: input
         val hex =
-            com.vitorpamplona.quartz.nip05DnsIdentifiers
-                .resolveUserHexOrNull(input, nip05Client)
+            resolveUserHexOrNull(resolvable, nip05Client)
                 ?: throw IllegalArgumentException(notResolved)
         require(hex.length == 64) { notResolved }
         return hex
@@ -985,120 +985,61 @@ class Context(
     }
 
     /**
-     * Pull down everything needed to bring local Marmot state current:
-     *  - kind:1059 gift wraps on inbox relays → try to unwrap Welcomes
-     *  - kind:445 group events per active group → feed into inbound processor
-     *
-     * Incrementally advances the `since` cursors in [state] so the next run
-     * only asks relays for newer events. Two wrinkles:
-     *
-     *  1. NIP-59 gift wraps are published with a random-past `created_at`
-     *     (see [com.vitorpamplona.quartz.utils.TimeUtils.randomWithTwoDays])
-     *     so a newly-published wrap can trivially have `created_at` earlier
-     *     than the last cursor we saw. To avoid silently dropping such wraps
-     *     we always subtract a 2-day lookback window from the gift-wrap
-     *     `since`, and dedup is handled inside [MarmotInboundProcessor].
-     *  2. We only advance the on-disk cursor when events actually arrive.
-     *     Snapping an empty sync up to "now" on the first invocation would
-     *     make every later `since` query skip any past-dated wrap or 445.
+     * The shared Marmot catch-up policy (gift-wrap 2-day lookback, per-group
+     * `since` cursors, MIP-00 consumed-KeyPackage rotation), wired to the
+     * CLI's pieces: [drain] for the one-shot subscription, [RunState] for the
+     * persisted cursors, and [publish] for the rotation replacements. The
+     * policy itself lives in `commons` ([MarmotSyncPolicy]) so the CLI and the
+     * Android app apply identical rules. Lazy so an anonymous run never
+     * materialises [marmot] (which would allocate the per-account stores).
      */
-    suspend fun syncIncoming(timeoutMs: Long = 8_000) {
-        val inbox = inboxRelays().ifEmpty { anyRelays() }
-        val gwSince = state.giftWrapSince
-        val gwFilterSince =
-            gwSince?.let { (it - GIFT_WRAP_LOOKBACK_SECS).coerceAtLeast(0L) }
-        val gwFilter =
-            if (gwFilterSince != null) {
-                MarmotFilters.giftWrapsForUserSince(identity.pubKeyHex, gwFilterSince)
-            } else {
-                MarmotFilters.giftWrapsForUser(identity.pubKeyHex)
-            }
+    private val marmotSyncPolicy: MarmotSyncPolicy by lazy {
+        MarmotSyncPolicy(
+            marmot = marmot,
+            userPubKey = identity.pubKeyHex,
+            cursors =
+                object : MarmotSyncPolicy.Cursors {
+                    override var giftWrapSince: Long?
+                        get() = state.giftWrapSince
+                        set(value) {
+                            state.giftWrapSince = value
+                        }
 
-        val activeGroupIds = marmot.subscriptionManager.activeGroupIdsSnapshot().toList()
-        val perGroupFilters: Map<HexKey, Filter> =
-            activeGroupIds.associateWith { gid ->
-                val since = state.groupSince[gid]
-                if (since != null) {
-                    MarmotFilters.groupEventsByGroupIdSince(gid, since)
-                } else {
-                    MarmotFilters.groupEventsByGroupId(gid)
-                }
-            }
+                    override fun groupSince(groupId: HexKey): Long? = state.groupSince[groupId]
 
-        // Group filters go to each group's configured relays, not the user's
-        // inbox — kind:445 is delivered to the group's relay set advertised in
-        // its MIP-01 metadata (falls back to our outbox if the group never
-        // stamped any).
-        val filterMap = mutableMapOf<NormalizedRelayUrl, MutableList<Filter>>()
-        for (r in inbox) filterMap.getOrPut(r) { mutableListOf() }.add(gwFilter)
-        for ((gid, filter) in perGroupFilters) {
-            val groupRelays = marmotGroupRelays(gid).ifEmpty { outboxRelays() }
-            for (r in groupRelays) filterMap.getOrPut(r) { mutableListOf() }.add(filter)
-        }
-        if (filterMap.isEmpty()) return
-
-        val events = drain(filterMap, timeoutMs)
-
-        var maxGwSeen = gwSince ?: 0L
-        val maxGroupSeen = perGroupFilters.keys.associateWith { state.groupSince[it] ?: 0L }.toMutableMap()
-        var sawGiftWrap = false
-        val sawGroupEvent = mutableSetOf<HexKey>()
-
-        for ((relay, event) in events) {
-            // All the MLS/NIP-59 decryption + persistence lives in MarmotIngest —
-            // we only care about bookkeeping (since-cursors, logging) here.
-            val result = marmot.ingest(event)
-            val detail =
-                when (result) {
-                    is com.vitorpamplona.amethyst.commons.marmot.MarmotIngestResult.Failure -> " ${result.message}"
-                    else -> ""
-                }
-            System.err.println("[cli] ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}$detail")
-
-            when (event.kind) {
-                GiftWrapEvent.KIND -> {
-                    sawGiftWrap = true
-                    if (event.createdAt > maxGwSeen) maxGwSeen = event.createdAt
-                }
-
-                GroupEvent.KIND -> {
-                    val gid = (event as? GroupEvent)?.groupId() ?: continue
-                    sawGroupEvent.add(gid)
-                    val prev = maxGroupSeen[gid] ?: 0L
-                    if (event.createdAt > prev) maxGroupSeen[gid] = event.createdAt
-                }
-            }
-        }
-
-        if (sawGiftWrap && maxGwSeen > 0) {
-            state.giftWrapSince = maxGwSeen
-        }
-        for (gid in sawGroupEvent) {
-            val seen = maxGroupSeen[gid] ?: continue
-            if (seen > 0) state.groupSince[gid] = seen
-        }
-
-        // If any welcome we processed consumed a KeyPackage, MIP-00 requires
-        // us to immediately publish a replacement (a KP can only be used for
-        // ONE welcome; leaving the old one on relays lets a second sender
-        // invite us with a bundle we no longer have private keys for). The
-        // Amethyst UI handles this via its own rotation scheduler; the CLI
-        // has no scheduler, so we rotate inline right after sync.
-        if (marmot.needsKeyPackageRotation()) {
-            try {
-                val kpRelays = keyPackageRelays().ifEmpty { outboxRelays() }.ifEmpty { anyRelays() }
-                if (kpRelays.isNotEmpty()) {
-                    val rotated = marmot.rotateConsumedKeyPackages(kpRelays.toList())
-                    for (event in rotated) {
-                        publish(event, kpRelays)
-                        System.err.println("[cli] rotated KeyPackage → ${event.id.take(8)} on ${kpRelays.size} relay(s)")
+                    override fun setGroupSince(
+                        groupId: HexKey,
+                        value: Long,
+                    ) {
+                        state.groupSince[groupId] = value
                     }
-                }
-            } catch (e: Exception) {
-                System.err.println("[cli] key-package rotation failed: ${e.message}")
-            }
-        }
+                },
+            relays =
+                object : MarmotSyncPolicy.Relays {
+                    override suspend fun inboxRelays() = this@Context.inboxRelays()
+
+                    override suspend fun outboxRelays() = this@Context.outboxRelays()
+
+                    override suspend fun keyPackageRelays() = this@Context.keyPackageRelays()
+
+                    override suspend fun anyRelays() = this@Context.anyRelays()
+
+                    override fun groupRelays(nostrGroupId: HexKey) = marmotGroupRelays(nostrGroupId)
+                },
+            drain = { filters, timeoutMs -> drain(filters, timeoutMs) },
+            publish = { event, relayList -> publish(event, relayList) },
+            log = { System.err.println("[cli] $it") },
+        )
     }
+
+    /**
+     * Pull down everything needed to bring local Marmot state current —
+     * kind:1059 gift wraps and kind:445 group events — advancing the `since`
+     * cursors in [state] and rotating consumed KeyPackages. All policy
+     * (lookback windows, cursor advancement rules, MIP-00 rotation) lives in
+     * the shared [MarmotSyncPolicy]; see its docs for the reasoning.
+     */
+    suspend fun syncIncoming(timeoutMs: Long = 8_000) = marmotSyncPolicy.syncIncoming(timeoutMs)
 
     /**
      * Resolve a group identifier given on the CLI to the nostr_group_id that
@@ -1160,13 +1101,6 @@ class Context(
     }
 
     companion object {
-        /**
-         * Lookback applied to the gift-wrap `since` filter to compensate for
-         * NIP-59's randomised-past `created_at`. 2 days matches
-         * [com.vitorpamplona.quartz.utils.TimeUtils.randomWithTwoDays].
-         */
-        private const val GIFT_WRAP_LOOKBACK_SECS: Long = 2L * 24 * 60 * 60
-
         /** FDs reserved for everything that isn't a relay socket (store, jars, pipes, DNS). */
         private const val FD_RESERVE = 256L
 
