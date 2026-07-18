@@ -2149,6 +2149,8 @@
     <string name="geohash_explainer">Adds a Geohash of your location to the post. The public will know you are within 5km (3mi) of the current location</string>
     <string name="geohash_teleport_title">Teleport</string>
     <string name="geohash_teleport_action">✈  Teleport here</string>
+    <string name="location_pick_on_map">Pick a place on the map</string>
+    <string name="location_change_place">Change place on the map</string>
 
     <string name="geohash_exclusive">Location-exclusive Post</string>
     <string name="geohash_exclusive_explainer">Only followers of the location will see it. Your general followers won\'t see it.</string>

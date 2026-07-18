@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
@@ -106,6 +107,8 @@ import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePick
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
+import com.vitorpamplona.amethyst.ui.note.creators.location.DisplayLocationInTitle
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
@@ -527,19 +530,7 @@ private fun NewPostScreenBody(
                 }
 
                 if (postViewModel.wantsToAddGeoHash) {
-                    Row(
-                        verticalAlignment = CenterVertically,
-                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        LocationAsHash(postViewModel) {
-                            SettingsRow(
-                                R.string.geohash_exclusive,
-                                R.string.geohash_exclusive_explainer,
-                            ) {
-                                Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
-                            }
-                        }
-                    }
+                    GeoHashPostSection(postViewModel)
                 }
 
                 if (postViewModel.wantsForwardZapTo) {
@@ -878,6 +869,85 @@ private fun BottomRowActions(
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
             }
         }
+    }
+}
+
+/**
+ * The composer's location section. Defaults to the device GPS flow ([LocationAsHash]),
+ * but a "pick on map" action opens the shared [GeohashLocationPickerDialog] and stores
+ * the chosen geohash in [ShortNotePostViewModel.pickedGeoHash], which then overrides GPS
+ * at build time. Picking a place also skips the GPS permission prompt.
+ */
+@Composable
+private fun GeoHashPostSection(postViewModel: ShortNotePostViewModel) {
+    var showPicker by remember { mutableStateOf(false) }
+    val picked = postViewModel.pickedGeoHash
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = Size10dp, horizontal = Size10dp),
+    ) {
+        if (picked != null) {
+            // A map-picked place: show it, and let the user clear back to GPS.
+            Row(verticalAlignment = CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    symbol = MaterialSymbols.LocationOn,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringRes(R.string.geohash_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.W500,
+                    modifier = Modifier.padding(start = 10.dp),
+                )
+                DisplayLocationInTitle(geohash = picked)
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { postViewModel.pickedGeoHash = null }) {
+                    Icon(
+                        symbol = MaterialSymbols.Close,
+                        contentDescription = stringRes(R.string.remove_location),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            HorizontalDivider()
+            SettingsRow(R.string.geohash_exclusive, R.string.geohash_exclusive_explainer) {
+                Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
+            }
+        } else {
+            // GPS mode (unchanged): current device location + the exclusive-post switch.
+            LocationAsHash(postViewModel) {
+                SettingsRow(R.string.geohash_exclusive, R.string.geohash_exclusive_explainer) {
+                    Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
+                }
+            }
+        }
+
+        TextButton(onClick = { showPicker = true }, modifier = Modifier.padding(top = 4.dp)) {
+            Icon(
+                symbol = MaterialSymbols.LocationOn,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringRes(if (picked != null) R.string.location_change_place else R.string.location_pick_on_map),
+                modifier = Modifier.padding(start = 6.dp),
+            )
+        }
+    }
+
+    if (showPicker) {
+        GeohashLocationPickerDialog(
+            initialGeohash = picked,
+            onDismiss = { showPicker = false },
+            onConfirm = { cell ->
+                postViewModel.pickedGeoHash = cell
+                showPicker = false
+            },
+        )
     }
 }
 
