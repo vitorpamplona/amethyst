@@ -512,7 +512,8 @@ class Context(
 
     /**
      * Subscribe to the given filters across the given relays, drain all events
-     * until either every relay has sent EOSE or the timeout elapses, and
+     * until either every relay has sent EOSE or the line has been silent for
+     * the timeout (an idle window — progress resets it), and
      * return them. Used for one-shot catch-up queries — not live subscriptions.
      * Thin adapter over the shared [fetchAllWithHooks] accessory: every arriving
      * event is verified + persisted via [verifyAndStore] before it is surfaced.

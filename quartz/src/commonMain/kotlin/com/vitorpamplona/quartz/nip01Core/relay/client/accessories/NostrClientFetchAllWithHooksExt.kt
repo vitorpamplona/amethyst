@@ -40,7 +40,15 @@ import kotlinx.coroutines.withTimeoutOrNull
  * funnel every arriving event through the suspending [onEvent] hook (verify /
  * persist / filter — return `true` to keep it in the result), and return the
  * accepted `(relay, event)` pairs once every relay reached a terminal state
- * (EOSE, CLOSED, or cannot-connect) or [timeoutMs] elapsed.
+ * (EOSE, CLOSED, or cannot-connect) or the line went quiet for [timeoutMs].
+ *
+ * [timeoutMs] is an **idle window, not a hard cap**: the clock only runs while
+ * the relays are silent, and every arriving event or terminal signal resets
+ * it. A slow relay actively streaming a large backlog is therefore never
+ * cropped mid-delivery — the fetch ends when the work is done or when nothing
+ * has arrived for [timeoutMs] (a stall). The terminal conditions (EOSE /
+ * CLOSED / cannot-connect per relay) are what bound the fetch; the timeout's
+ * only job is detecting relays that will never reach one.
  *
  * Extras over [fetchAll]:
  *  - **[onEvent] hook** — suspending per-event callback, invoked single-threaded
@@ -58,7 +66,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    this same subscription, so the post-auth events are collected instead of
  *    returning empty. If auth never satisfies it, the relay simply falls through
  *    to the [timeoutMs].
- *  - **[onTimeout]** — diagnostic hook fired when the deadline elapsed with
+ *  - **[onTimeout]** — diagnostic hook fired when the idle window elapsed with
  *    relays still pending: receives the stalled set, the terminal reasons seen so
  *    far (`"eose"` / `"closed:<msg>"` / `"cannot:<msg>"`), and what was collected.
  */
@@ -118,10 +126,14 @@ suspend fun INostrClient.fetchAllWithHooks(
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
     try {
         subscribe(subscriptionId, filters, listener)
-        val completed =
-            withTimeoutOrNull(timeoutMs) {
-                while (remaining.isNotEmpty()) {
-                    select {
+        // Idle-window wait: each pass waits up to [timeoutMs] for the NEXT
+        // message; any event or terminal signal restarts the window. Only a
+        // full window of silence ends the fetch early.
+        var stalled = false
+        while (remaining.isNotEmpty()) {
+            val progressed =
+                withTimeoutOrNull(timeoutMs) {
+                    select<Unit> {
                         eventChannel.onReceive { pair ->
                             if (onEvent(pair.first, pair.second)) collected.add(pair)
                         }
@@ -131,16 +143,20 @@ suspend fun INostrClient.fetchAllWithHooks(
                         }
                     }
                 }
-                // Drain any events that landed after EOSE but before cancel
-                while (true) {
-                    val r = eventChannel.tryReceive()
-                    if (!r.isSuccess) break
-                    val pair = r.getOrThrow()
-                    if (onEvent(pair.first, pair.second)) collected.add(pair)
-                }
-                true
+            if (progressed == null) {
+                stalled = true
+                break
             }
-        if (completed == null && remaining.isNotEmpty()) {
+        }
+        // Drain any events that landed after the last terminal signal (or
+        // during the final window) but before unsubscribe.
+        while (true) {
+            val r = eventChannel.tryReceive()
+            if (!r.isSuccess) break
+            val pair = r.getOrThrow()
+            if (onEvent(pair.first, pair.second)) collected.add(pair)
+        }
+        if (stalled && remaining.isNotEmpty()) {
             onTimeout?.invoke(remaining, doneReasons, collected)
         }
     } finally {

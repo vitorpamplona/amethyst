@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 
 suspend fun INostrClient.fetchAll(
@@ -69,12 +70,28 @@ suspend fun INostrClient.fetchAll(
     timeoutMs: Long = 30_000L,
 ) = fetchAll(subscriptionId, mapOf(relay to filters), timeoutMs)
 
+/**
+ * Subscribe [filters], collect every (deduped) event, and return once every
+ * relay reached a terminal state (EOSE, CLOSED, or cannot-connect) or the
+ * line went quiet for [timeoutMs].
+ *
+ * [timeoutMs] is an **idle window, not a hard cap**: every arriving event or
+ * terminal signal resets it, so a slow relay actively streaming a large
+ * backlog is never cropped mid-delivery. The fetch only gives up after a full
+ * window of silence — the timeout's job is detecting relays that will never
+ * reach a terminal state, not bounding total work.
+ */
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 30_000L,
 ): List<Event> {
     val doneChannel = Channel<NormalizedRelayUrl>(Channel.UNLIMITED)
+
+    // Conflated liveness ping: onEvent runs on the socket thread and only needs
+    // to signal "still streaming" — one pending token is enough to reset the
+    // idle window, so repeats are safely dropped.
+    val activityChannel = Channel<Unit>(Channel.CONFLATED)
 
     val events = mutableListOf<Event>()
     val seenIds = mutableSetOf<HexKey>()
@@ -92,6 +109,7 @@ suspend fun INostrClient.fetchAll(
                 if (seenIds.add(event.id)) {
                     events.add(event)
                 }
+                activityChannel.trySend(Unit)
             }
 
             override fun onCannotConnect(
@@ -121,15 +139,24 @@ suspend fun INostrClient.fetchAll(
     try {
         subscribe(subscriptionId, filters, listener)
 
-        withTimeoutOrNull(timeoutMs) {
-            while (remaining.isNotEmpty()) {
-                val finished = doneChannel.receive()
-                remaining.remove(finished)
-            }
+        // Idle-window wait: each pass waits up to [timeoutMs] for the next
+        // signal — a terminal message or an event-activity ping. Progress of
+        // either kind restarts the window; a full window of silence ends the
+        // fetch with whatever arrived.
+        while (remaining.isNotEmpty()) {
+            val progressed =
+                withTimeoutOrNull(timeoutMs) {
+                    select<Unit> {
+                        doneChannel.onReceive { finished -> remaining.remove(finished) }
+                        activityChannel.onReceive { }
+                    }
+                }
+            if (progressed == null) break
         }
     } finally {
         unsubscribe(subscriptionId)
         doneChannel.close()
+        activityChannel.close()
     }
 
     return events.sortedWith(DefaultFeedOrderEvent)

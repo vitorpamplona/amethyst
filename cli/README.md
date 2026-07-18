@@ -279,7 +279,7 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 
 | Command | What it does |
 |---|---|
-| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE (or `--timeout`, default 8s), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
+| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE or goes silent for `--timeout` (default 8s — an **idle window**, reset by every arriving event, so a slow-but-streaming relay is never cut off), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
 | `amy fetch CODE [--timeout SECS]` | Code mode — pass a single `nevent`/`naddr`/`nprofile`/`npub`/`note` or `name@domain`. Resolves relays the outbox way: the hints embedded in the code **plus** the author's NIP-65 write relays (draining their kind:10002 on a cache miss), exactly how the app opens a shared link. |
 | `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
 | `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |

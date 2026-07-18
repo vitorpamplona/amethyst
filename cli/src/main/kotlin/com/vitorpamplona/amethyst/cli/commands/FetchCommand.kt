@@ -42,7 +42,8 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  *   amy fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
  *
  * One-shot query: open a subscription, collect everything until every relay
- * sends EOSE (or the timeout fires), then print and exit. This is the bounded
+ * sends EOSE (or nothing has arrived for the timeout — an idle window, so a
+ * relay still streaming is never cropped), then print and exit. This is the bounded
  * half of nak's `req`; the live-streaming half is `amy subscribe`.
  *
  * Two modes:
