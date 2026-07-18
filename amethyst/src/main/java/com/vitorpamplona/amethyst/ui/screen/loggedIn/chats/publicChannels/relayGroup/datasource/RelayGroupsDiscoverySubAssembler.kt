@@ -55,7 +55,7 @@ class RelayGroupsDiscoverySubAssembler(
         val feedSettings = key.followsPerRelay()
         val defaultSince = key.feedStates.relayGroupsDiscoveryFeed.lastNoteCreatedAtIfFilled()
 
-        val base = makeRelayGroupsDiscoveryFilter(feedSettings, since, defaultSince)
+        val base = filterRelayGroupsDiscovery(feedSettings, since, defaultSince)
 
         // The follow-list filter sets resolve their relays via the outbox model (a follow's own
         // publish relays), but a NIP-29 roster (39001/39002) lives ONLY on the group's host relay.

@@ -28,14 +28,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /** Mount on a group's Threads screen to stream its kind-11 threads + 1111 comments. */
 @Composable
-fun RelayGroupThreadFeedSubscription(
+fun RelayGroupOpenThreadsSubscription(
     channel: RelayGroupChannel,
-    dataSource: RelayGroupThreadFeedFilterAssembler,
+    dataSource: RelayGroupOpenThreadsFilterAssembler,
     accountViewModel: AccountViewModel,
 ) {
     val state =
         remember(channel.groupId) {
-            RelayGroupThreadFeedQueryState(channel)
+            RelayGroupOpenThreadsQueryState(channel)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

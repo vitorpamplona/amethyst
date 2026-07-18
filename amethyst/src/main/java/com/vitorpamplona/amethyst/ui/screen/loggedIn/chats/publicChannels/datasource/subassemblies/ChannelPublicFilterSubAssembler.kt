@@ -63,7 +63,7 @@ class ChannelPublicFilterSubAssembler(
                 // the relay-signed metadata + pinned-id back-fill so an OPEN group — including a non-joined
                 // one not covered by the always-on joined-groups state sub — resolves its name/roster/pins.
                 // See amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md.
-                filterMetadataToRelayGroup(channel, since)
+                filterRelayGroupState(channel, since)
             }
 
             else -> {

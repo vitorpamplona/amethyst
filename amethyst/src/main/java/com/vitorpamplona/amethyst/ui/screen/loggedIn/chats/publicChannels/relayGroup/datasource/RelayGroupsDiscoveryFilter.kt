@@ -42,7 +42,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-fun makeRelayGroupsDiscoveryFilter(
+fun filterRelayGroupsDiscovery(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,

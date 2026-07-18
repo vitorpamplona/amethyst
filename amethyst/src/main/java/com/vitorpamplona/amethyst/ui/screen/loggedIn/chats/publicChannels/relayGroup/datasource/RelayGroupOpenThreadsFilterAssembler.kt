@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 
 /** One threads-screen's request for a single group's kind-11 threads. */
-class RelayGroupThreadFeedQueryState(
+class RelayGroupOpenThreadsQueryState(
     val channel: RelayGroupChannel,
 )
 
@@ -43,12 +43,12 @@ class RelayGroupThreadFeedQueryState(
  * kind-9 chat, so we don't pay for them until asked). Fetching the comments here
  * too means opening a thread from the list has its replies already cached.
  */
-class RelayGroupThreadFeedFilterAssembler(
+class RelayGroupOpenThreadsFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupThreadFeedQueryState>() {
+) : ComposeSubscriptionManager<RelayGroupOpenThreadsQueryState>() {
     val group =
         listOf(
-            RelayGroupThreadFeedSubAssembler(client, ::allKeys),
+            RelayGroupOpenThreadsSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()
@@ -58,12 +58,12 @@ class RelayGroupThreadFeedFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
-class RelayGroupThreadFeedSubAssembler(
+class RelayGroupOpenThreadsSubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupThreadFeedQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupThreadFeedQueryState, GroupId>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupOpenThreadsQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupOpenThreadsQueryState, GroupId>(client, allKeys) {
     override fun updateFilter(
-        key: RelayGroupThreadFeedQueryState,
+        key: RelayGroupOpenThreadsQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val groupId = key.channel.groupId
@@ -80,5 +80,5 @@ class RelayGroupThreadFeedSubAssembler(
         )
     }
 
-    override fun id(key: RelayGroupThreadFeedQueryState) = key.channel.groupId
+    override fun id(key: RelayGroupOpenThreadsQueryState) = key.channel.groupId
 }

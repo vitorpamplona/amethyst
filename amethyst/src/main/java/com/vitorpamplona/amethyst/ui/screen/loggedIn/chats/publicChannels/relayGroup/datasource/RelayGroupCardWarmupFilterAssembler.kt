@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.filterMetadataToRelayGroup
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.filterRelayGroupState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -99,7 +99,7 @@ class RelayGroupCardWarmupSubAssembler(
         if (joined.any { it.groupId == groupId.id && RelayUrlNormalizer.normalizeOrNull(it.relayUrl) == groupId.relayUrl }) {
             return emptyList()
         }
-        val metadata = if (key.contentOnly) emptyList() else filterMetadataToRelayGroup(key.channel, since)
+        val metadata = if (key.contentOnly) emptyList() else filterRelayGroupState(key.channel, since)
         return metadata +
             RelayBasedFilter(
                 relay = groupId.relayUrl,

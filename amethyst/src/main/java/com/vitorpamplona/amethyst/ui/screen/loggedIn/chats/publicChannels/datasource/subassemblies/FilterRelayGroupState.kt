@@ -46,7 +46,7 @@ private val RELAY_GROUP_METADATA_KINDS =
  * group's host relay. The relay signs these with its own key, so a single-relay
  * query scoped by `#d` returns exactly this group's directory.
  */
-fun filterMetadataToRelayGroup(
+fun filterRelayGroupState(
     channel: RelayGroupChannel,
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter> {

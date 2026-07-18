@@ -44,7 +44,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStateFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatHistoryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatTailFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupThreadFeedFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelayFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
@@ -129,7 +129,7 @@ class RelaySubscriptionsCoordinator(
     // assembler above (same as NIP-28 public chats), so only the group-specific surfaces get their
     // own here.
     val relayGroupsOnRelay = RelayGroupsOnRelayFilterAssembler(client) // browsing one relay's channel list
-    val relayGroupThreadFeed = RelayGroupThreadFeedFilterAssembler(client) // a group's forum-threads tab
+    val relayGroupOpenThreads = RelayGroupOpenThreadsFilterAssembler(client) // a group's forum-threads tab
     val relayGroupCardWarmup = RelayGroupCardWarmupFilterAssembler(client) // prefetching a group before it's opened
     val relayGroupsDiscovery = RelayGroupsDiscoveryFilterAssembler(client) // the cross-relay Discover feed
 
@@ -210,7 +210,7 @@ class RelaySubscriptionsCoordinator(
     val all =
         listOf(
             relayGroupsOnRelay,
-            relayGroupThreadFeed,
+            relayGroupOpenThreads,
             relayGroupCardWarmup,
             relayGroupsDiscovery,
             relayGroupJoinedState,
