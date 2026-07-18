@@ -68,6 +68,8 @@ data class BlossomMirrorResult(
  */
 class BlossomMirrorQueue(
     private val scope: CoroutineScope,
+    /** Invoked (on the foreground thread that called [start]) when a sweep begins, to start the FGS. */
+    private val onActive: () -> Unit = {},
 ) {
     data class Task(
         val hash: HexKey,
@@ -95,11 +97,15 @@ class BlossomMirrorQueue(
         val work = tasks.flatMap { t -> t.targets.map { t to it } }
         if (work.isEmpty()) return
 
+        // Publish the active state and start the foreground service synchronously (we're on the
+        // foreground thread here, which is what dataSync FGS starts require) before the sweep runs.
+        _state.value = BlossomSyncState(total = work.size, done = 0, failed = 0, running = true)
+        onActive()
+
         job =
             scope.launch {
                 var done = 0
                 var failed = 0
-                _state.value = BlossomSyncState(total = work.size, done = 0, failed = 0, running = true)
                 for ((task, target) in work) {
                     _state.value = _state.value?.copy(currentHost = BlossomServerUrl.domain(target))
                     val ok =

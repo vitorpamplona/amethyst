@@ -1557,6 +1557,9 @@
     <string name="blossom_sync_gaps">Some of your files aren\'t on all your servers yet.</string>
     <string name="blossom_syncing">Copying your files across servers…</string>
     <string name="blossom_sync_done">Sync complete</string>
+    <string name="blossom_sync_cancel">Cancel</string>
+    <string name="blossom_sync_channel_name">Blossom sync</string>
+    <string name="blossom_sync_channel_description">Shows progress while copying your files across your Blossom servers.</string>
     <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
     <string name="blossom_mirror_to_missing">Mirror to missing</string>
     <string name="blossom_delete_from">Delete from…</string>

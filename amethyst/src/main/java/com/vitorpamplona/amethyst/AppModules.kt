@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.service.safeCacheDir
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundService
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
@@ -797,7 +798,12 @@ class AppModules(
     }
 
     /** App-level BUD-04 mirror sweep, so "sync all" keeps running as the user navigates. */
-    val blossomMirrorQueue by lazy { BlossomMirrorQueue(applicationIOScope) }
+    val blossomMirrorQueue by lazy {
+        BlossomMirrorQueue(
+            scope = applicationIOScope,
+            onActive = { BlossomSyncForegroundService.start(appContext) },
+        )
+    }
 
     val powJobRestorer by lazy {
         PowJobRestorer(powPublishQueue, powJobStore, scheduledPostStore)
