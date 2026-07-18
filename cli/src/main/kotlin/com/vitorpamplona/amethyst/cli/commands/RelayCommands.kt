@@ -40,7 +40,11 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayFacet
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.addFacet
+import com.vitorpamplona.quartz.nip65RelayList.applyFacet
+import com.vitorpamplona.quartz.nip65RelayList.setFacet
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
@@ -220,9 +224,10 @@ object RelayCommands {
     /** The two facet-nouns that edit the read/write markers of kind:10002. */
     private enum class Facet(
         val noun: String,
+        val rw: AdvertisedRelayFacet,
     ) {
-        OUTBOX("outbox"),
-        INBOX("inbox"),
+        OUTBOX("outbox", AdvertisedRelayFacet.WRITE),
+        INBOX("inbox", AdvertisedRelayFacet.READ),
     }
 
     // ------------------------------------------------------------------
@@ -459,7 +464,7 @@ object RelayCommands {
                 "add", "remove", "rm" -> {
                     val present = verb == "add"
                     val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
-                    val changed = mutateNip65(ctx, self) { applyFacet(it, url, facet, present) }
+                    val changed = mutateNip65(ctx, self) { it.applyFacet(url, facet.rw, present) }
                     Output.emit(
                         mapOf(
                             "noun" to facet.noun,
@@ -479,7 +484,7 @@ object RelayCommands {
                             if (parsed.isEmpty()) return Output.error("bad_args", "set needs at least one URL; use `relay ${facet.noun} clear` to empty it")
                             parsed
                         }
-                    mutateNip65(ctx, self) { facetSet(it, relays, facet) }
+                    mutateNip65(ctx, self) { it.setFacet(relays, facet.rw) }
                     Output.emit(mapOf("noun" to facet.noun, "kind" to AdvertisedRelayListEvent.KIND, "relays" to facetUrls(ctx, self, facet)))
                 }
                 "list" -> Output.emit(mapOf("noun" to facet.noun, "kind" to AdvertisedRelayListEvent.KIND, "relays" to facetUrls(ctx, self, facet)))
@@ -549,7 +554,7 @@ object RelayCommands {
             // nip65 as read+write (both).
             changed["nip65"] =
                 if (add) {
-                    mutateNip65(ctx, self) { applyFacet(applyFacet(it, url, Facet.OUTBOX, true), url, Facet.INBOX, true) }
+                    mutateNip65(ctx, self) { it.addFacet(url, AdvertisedRelayFacet.WRITE).addFacet(url, AdvertisedRelayFacet.READ) }
                 } else {
                     mutateNip65(ctx, self) { infos -> infos.filterNot { it.relayUrl.url == url.url } }
                 }
@@ -660,68 +665,6 @@ object RelayCommands {
         ctx: Context,
         self: HexKey,
     ): List<AdvertisedRelayInfo> = ctx.relaysOf(self)?.relays().orEmpty()
-
-    /** Read/write flags for one relay, split out from [AdvertisedRelayType]. */
-    private data class RW(
-        val read: Boolean,
-        val write: Boolean,
-    )
-
-    private fun AdvertisedRelayType.rw() = RW(isRead(), isWrite())
-
-    private fun RW.toTypeOrNull(): AdvertisedRelayType? =
-        when {
-            read && write -> AdvertisedRelayType.BOTH
-            read -> AdvertisedRelayType.READ
-            write -> AdvertisedRelayType.WRITE
-            else -> null
-        }
-
-    /**
-     * Toggle one [facet] on/off for [url] within the kind:10002 entry list,
-     * applying the NIP-65 merge rules: turning a facet on merges into `both`
-     * when the other facet is set; turning the last facet off drops the relay.
-     * Order is preserved.
-     */
-    private fun applyFacet(
-        infos: List<AdvertisedRelayInfo>,
-        url: NormalizedRelayUrl,
-        facet: Facet,
-        present: Boolean,
-    ): List<AdvertisedRelayInfo> {
-        val urls = LinkedHashMap<String, NormalizedRelayUrl>()
-        val flags = LinkedHashMap<String, RW>()
-        for (i in infos) {
-            urls[i.relayUrl.url] = i.relayUrl
-            flags[i.relayUrl.url] = i.type.rw()
-        }
-        val cur = flags[url.url] ?: RW(read = false, write = false)
-        val next = if (facet == Facet.OUTBOX) cur.copy(write = present) else cur.copy(read = present)
-        if (next.read || next.write) {
-            urls[url.url] = url
-            flags[url.url] = next
-        } else {
-            urls.remove(url.url)
-            flags.remove(url.url)
-        }
-        return flags.entries.map { AdvertisedRelayInfo(urls[it.key]!!, it.value.toTypeOrNull()!!) }
-    }
-
-    /** Make exactly [targets] carry [facet], demoting/removing any relay that currently does but shouldn't. */
-    private fun facetSet(
-        infos: List<AdvertisedRelayInfo>,
-        targets: List<NormalizedRelayUrl>,
-        facet: Facet,
-    ): List<AdvertisedRelayInfo> {
-        val keep = targets.map { it.url }.toSet()
-        var result = infos
-        for (i in infos) {
-            val has = if (facet == Facet.OUTBOX) i.type.isWrite() else i.type.isRead()
-            if (has && i.relayUrl.url !in keep) result = applyFacet(result, i.relayUrl, facet, present = false)
-        }
-        for (u in targets) result = applyFacet(result, u, facet, present = true)
-        return result
-    }
 
     /** Read, transform, and (only if it changed) re-sign + store the kind:10002. Returns whether it changed. */
     private suspend fun mutateNip65(
