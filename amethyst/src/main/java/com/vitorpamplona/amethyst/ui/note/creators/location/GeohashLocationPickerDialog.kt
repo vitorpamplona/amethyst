@@ -99,25 +99,59 @@ private const val SEEDED_ZOOM = 13.0
 private const val WORLD_ZOOM = 2.5
 
 /**
- * A full-screen, map-first location picker that produces a geohash string.
+ * A full-screen, map-first location picker dialog that produces a geohash string.
  *
- * The user has three ways to land on a place — pan the map under the fixed center
- * pin, search for a place by name (forward geocoding), or tap "use my location"
- * (device GPS) — and never has to know what a geohash is. The chosen precision
- * ([GeohashChannelLevel]) controls how many characters the resulting geohash has,
- * i.e. how large an area the group claims. On confirm, [onConfirm] receives the
- * encoded geohash (e.g. `u4pruy`).
- *
- * Reuses [LocationPickerMap] (in center-pin mode), [LoadCityName] for the
- * human-readable place name, and the app-wide [LocationState] for GPS. Modeled on
- * the Geohash-chat Teleport screen, promoted here into a reusable dialog.
+ * Thin chrome around [GeohashLocationPickerContent]: a close button + title header
+ * over the shared picker body. Use this when you need the picker as a modal (e.g.
+ * the NIP-29 group form); use [GeohashLocationPickerContent] directly when hosting
+ * it inside your own screen scaffold (e.g. the Geohash-chat Teleport screen).
  */
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun GeohashLocationPickerDialog(
     initialGeohash: String?,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxSize()) {
+                PickerHeader(onClose = onDismiss)
+                GeohashLocationPickerContent(
+                    initialGeohash = initialGeohash,
+                    confirmLabel = stringRes(R.string.location_picker_confirm),
+                    onConfirm = onConfirm,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The reusable, chrome-less body of the location picker: a map with a fixed center
+ * pin, a place-search bar, a "use my location" button, precision chips, a live
+ * place-name readout, and a confirm button labeled [confirmLabel]. Fill it into a
+ * dialog ([GeohashLocationPickerDialog]) or a screen scaffold.
+ *
+ * The user has three ways to land on a place — pan the map under the center pin,
+ * search for a place by name (forward geocoding), or tap "use my location" (device
+ * GPS) — and never has to know what a geohash is. The chosen precision
+ * ([GeohashChannelLevel]) controls how many characters the resulting geohash has.
+ * On confirm, [onConfirm] receives the encoded geohash (e.g. `u4pruy`).
+ *
+ * Reuses [LocationPickerMap] (in center-pin mode), [LoadCityName] for the
+ * human-readable place name, and the app-wide [LocationState] for GPS.
+ */
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun GeohashLocationPickerContent(
+    initialGeohash: String?,
+    confirmLabel: String,
+    onConfirm: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -219,82 +253,74 @@ fun GeohashLocationPickerDialog(
         keyboard?.hide()
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-            Column(Modifier.fillMaxSize()) {
-                PickerHeader(onClose = onDismiss)
+    Column(modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            LocationPickerMap(
+                latitude = seed?.centerLat ?: 20.0,
+                longitude = seed?.centerLon ?: 0.0,
+                pickedLatitude = null,
+                pickedLongitude = null,
+                zoom = if (seed != null) SEEDED_ZOOM else WORLD_ZOOM,
+                recenter = recenter,
+                recenterZoom = RECENTER_ZOOM,
+                onCenterChanged = { lat, lon ->
+                    pickedLat = lat
+                    pickedLon = lon
+                },
+                onPick = { lat, lon ->
+                    recenter = GeoPoint(lat, lon)
+                    pickedLat = lat
+                    pickedLon = lon
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
 
-                Box(Modifier.fillMaxWidth().weight(1f)) {
-                    LocationPickerMap(
-                        latitude = seed?.centerLat ?: 20.0,
-                        longitude = seed?.centerLon ?: 0.0,
-                        pickedLatitude = null,
-                        pickedLongitude = null,
-                        zoom = if (seed != null) SEEDED_ZOOM else WORLD_ZOOM,
-                        recenter = recenter,
-                        recenterZoom = RECENTER_ZOOM,
-                        onCenterChanged = { lat, lon ->
-                            pickedLat = lat
-                            pickedLon = lon
-                        },
-                        onPick = { lat, lon ->
-                            recenter = GeoPoint(lat, lon)
-                            pickedLat = lat
-                            pickedLon = lon
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            CenterPin(lifted = pinLifted, modifier = Modifier.align(Alignment.Center))
 
-                    CenterPin(lifted = pinLifted, modifier = Modifier.align(Alignment.Center))
-
-                    Column(
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                    ) {
-                        SearchField(
-                            query = query,
-                            onQueryChange = {
-                                query = it
-                                searchMissed = false
-                            },
-                            onSearch = runSearch,
-                            searching = searching,
-                            missed = searchMissed,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        if (results.isNotEmpty()) {
-                            SearchResults(
-                                results = results,
-                                onSelect = selectResult,
-                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                            )
-                        }
-                    }
-
-                    MyLocationButton(
-                        loading = wantsMyLocation || awaitingPermission,
-                        onClick = onUseMyLocation,
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(16.dp),
+            Column(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(12.dp),
+            ) {
+                SearchField(
+                    query = query,
+                    onQueryChange = {
+                        query = it
+                        searchMissed = false
+                    },
+                    onSearch = runSearch,
+                    searching = searching,
+                    missed = searchMissed,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (results.isNotEmpty()) {
+                    SearchResults(
+                        results = results,
+                        onSelect = selectResult,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     )
                 }
-
-                PickerBottomBar(
-                    cell = cell,
-                    settledCell = settledCell,
-                    level = level,
-                    onLevel = { level = it },
-                    onConfirm = { cell?.let(onConfirm) },
-                )
             }
+
+            MyLocationButton(
+                loading = wantsMyLocation || awaitingPermission,
+                onClick = onUseMyLocation,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+            )
         }
+
+        PickerBottomBar(
+            cell = cell,
+            settledCell = settledCell,
+            level = level,
+            confirmLabel = confirmLabel,
+            onLevel = { level = it },
+            onConfirm = { cell?.let(onConfirm) },
+        )
     }
 }
 
@@ -494,6 +520,7 @@ private fun PickerBottomBar(
     cell: String?,
     settledCell: String?,
     level: GeohashChannelLevel,
+    confirmLabel: String,
     onLevel: (GeohashChannelLevel) -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -581,7 +608,7 @@ private fun PickerBottomBar(
                 enabled = cell != null,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.location_picker_confirm), fontWeight = FontWeight.SemiBold)
+                Text(confirmLabel, fontWeight = FontWeight.SemiBold)
             }
         }
     }
