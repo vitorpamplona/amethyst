@@ -45,22 +45,22 @@ import kotlinx.coroutines.flow.StateFlow
 private val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
 /** One open NIP-29 group whose older history the chat screen wants paged in. */
-class RelayGroupChatHistoryQueryState(
+class RelayGroupOpenChatHistoryQueryState(
     val account: Account,
     val groupId: GroupId,
 )
 
 /**
  * Mounts the on-demand **history** pager for whichever NIP-29 group chat screen is open. The live
- * tail ([RelayGroupChatTailFilterAssembler]) holds the recent window each host relay serves; this
+ * tail ([RelayGroupOpenChatTailFilterAssembler]) holds the recent window each host relay serves; this
  * pages older kind-9/poll messages backward by `until`+`limit` on the group's host relay, exactly
  * like the per-conversation NIP-04 history and the Concord channel history
  * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistoryFilterAssembler]).
  */
-class RelayGroupChatHistoryFilterAssembler(
+class RelayGroupOpenChatHistoryFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupChatHistoryQueryState>() {
-    val history = RelayGroupChatHistorySubAssembler(client, ::allKeys)
+) : ComposeSubscriptionManager<RelayGroupOpenChatHistoryQueryState>() {
+    val history = RelayGroupOpenChatHistorySubAssembler(client, ::allKeys)
 
     val group = listOf(history)
 
@@ -80,25 +80,25 @@ class RelayGroupChatHistoryFilterAssembler(
  * needs each event's `createdAt`. All authors (never author-filtered), so it also re-materializes the
  * user's own older sent messages — the job the retired `filterMyMessagesToRelayGroup` used to do.
  */
-class RelayGroupChatHistorySubAssembler(
+class RelayGroupOpenChatHistorySubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupChatHistoryQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupChatHistoryQueryState, GroupId>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupOpenChatHistoryQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupOpenChatHistoryQueryState, GroupId>(client, allKeys) {
     private val pager = BackwardRelayPager("relayGroup.chat.history")
 
     val loadingMore: StateFlow<Boolean> = pager.loadingMore
     val status: StateFlow<PagingStatus> = pager.status
 
-    override fun id(key: RelayGroupChatHistoryQueryState) = key.groupId
+    override fun id(key: RelayGroupOpenChatHistoryQueryState) = key.groupId
 
     // This group's persistent paging cursors, held on its LocalCache RelayGroupChannel.
-    private fun cursorsFor(key: RelayGroupChatHistoryQueryState) = LocalCache.getOrCreateRelayGroupChannel(key.groupId).history
+    private fun cursorsFor(key: RelayGroupOpenChatHistoryQueryState) = LocalCache.getOrCreateRelayGroupChannel(key.groupId).history
 
     /** A relay group lives on exactly one relay: its host. */
-    private fun relaysFor(key: RelayGroupChatHistoryQueryState): Set<NormalizedRelayUrl> = setOf(key.groupId.relayUrl)
+    private fun relaysFor(key: RelayGroupOpenChatHistoryQueryState): Set<NormalizedRelayUrl> = setOf(key.groupId.relayUrl)
 
     override fun updateFilter(
-        key: RelayGroupChatHistoryQueryState,
+        key: RelayGroupOpenChatHistoryQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val relays = relaysFor(key)
@@ -131,13 +131,13 @@ class RelayGroupChatHistorySubAssembler(
         if (pager.advanceAll()) invalidateFilters()
     }
 
-    override fun newSub(key: RelayGroupChatHistoryQueryState): Subscription {
+    override fun newSub(key: RelayGroupOpenChatHistoryQueryState): Subscription {
         // Repoint the single-active orchestrator at this group's cursors and its host relay.
         pager.bind(cursorsFor(key), key.account.scope) { relaysFor(key) }
         return requestNewSubscription(historyListener(key))
     }
 
-    private fun historyListener(key: RelayGroupChatHistoryQueryState): SubscriptionListener {
+    private fun historyListener(key: RelayGroupOpenChatHistoryQueryState): SubscriptionListener {
         // A just-backgrounded group's subscription can still deliver after the orchestrator rebinds to
         // another group; gate the pager (single-active) on whether it's still bound to THIS group's
         // cursors so a late callback can't move another group's cursors. newEose runs regardless.

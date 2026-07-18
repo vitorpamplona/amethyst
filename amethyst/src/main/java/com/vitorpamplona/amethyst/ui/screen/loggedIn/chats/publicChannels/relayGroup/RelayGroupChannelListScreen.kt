@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.warningColor
@@ -185,9 +185,9 @@ private fun RelayGroupChannelRow(
     // messages for its group (content only — the directory subscription already streams metadata),
     // so opening the chat lands on cached content instead of a blank load. Bounded to visible rows
     // by the LazyColumn, and released as they scroll off.
-    RelayGroupWarmupSubscription(
+    RelayGroupCardWarmupSubscription(
         channel,
-        accountViewModel.dataSources().relayGroupWarmup,
+        accountViewModel.dataSources().relayGroupCardWarmup,
         accountViewModel,
         contentOnly = true,
         contentLimit = CHANNEL_LIST_WARMUP_LIMIT,

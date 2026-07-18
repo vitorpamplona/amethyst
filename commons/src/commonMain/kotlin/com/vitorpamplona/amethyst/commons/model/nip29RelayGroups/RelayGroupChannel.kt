@@ -57,7 +57,7 @@ class RelayGroupChannel(
 ) : Channel() {
     /**
      * Per-relay backward-pagination cursors for this group's chat history. The live tail
-     * (RelayGroupChatTailSubAssembler) holds the recent window; this pages older kind-9/poll
+     * (RelayGroupOpenChatTailSubAssembler) holds the recent window; this pages older kind-9/poll
      * messages by `until`+`limit` on the host relay, the NIP-29 analog of the per-conversation
      * NIP-04 / Concord history. Held here so the cursors share the channel's cache lifetime.
      */

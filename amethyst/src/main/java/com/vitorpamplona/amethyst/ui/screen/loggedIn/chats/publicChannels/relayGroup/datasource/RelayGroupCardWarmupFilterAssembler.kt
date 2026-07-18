@@ -22,12 +22,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.filterMetadataToRelayGroup
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
@@ -36,7 +38,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /** One on-screen group card's request to warm a single group. */
-class RelayGroupWarmupQueryState(
+class RelayGroupCardWarmupQueryState(
+    val account: Account,
     val channel: RelayGroupChannel,
     /** When true, prefetch only recent content — the caller's screen already streams metadata. */
     val contentOnly: Boolean = false,
@@ -52,7 +55,7 @@ private val RELAY_GROUP_WARMUP_CONTENT_KINDS =
  * Default number of recent events to pull ahead of a tap — enough to fill the first screen AND drive
  * the discovery card's "50+ messages" activity signal (a chat that returns the full page reads as
  * "50+"; fewer shows the exact loaded count). Callers that only need a first-screen preview (e.g. a
- * relay's channel list) pass a smaller [RelayGroupWarmupQueryState.contentLimit].
+ * relay's channel list) pass a smaller [RelayGroupCardWarmupQueryState.contentLimit].
  */
 const val RELAY_GROUP_WARMUP_LIMIT = 50
 
@@ -63,12 +66,12 @@ const val RELAY_GROUP_WARMUP_LIMIT = 50
  * messages and threads so tapping the card lands on already-cached content. Both are
  * pinned to the group's single host relay. Active only while the card is on-screen.
  */
-class RelayGroupWarmupFilterAssembler(
+class RelayGroupCardWarmupFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupWarmupQueryState>() {
+) : ComposeSubscriptionManager<RelayGroupCardWarmupQueryState>() {
     val group =
         listOf(
-            RelayGroupWarmupSubAssembler(client, ::allKeys),
+            RelayGroupCardWarmupSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()
@@ -78,15 +81,24 @@ class RelayGroupWarmupFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
-class RelayGroupWarmupSubAssembler(
+class RelayGroupCardWarmupSubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupWarmupQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupWarmupQueryState, GroupId>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupCardWarmupQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupCardWarmupQueryState, GroupId>(client, allKeys) {
     override fun updateFilter(
-        key: RelayGroupWarmupQueryState,
+        key: RelayGroupCardWarmupQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val groupId = key.channel.groupId
+        // A joined group is already kept fully warm app-wide by the always-on state sub (metadata/roster)
+        // and preview tail (recent chat), and by the chat tail + history pager once opened. Warmup is for
+        // groups shown as cards that those don't cover — above all NON-joined groups (discovery, a relay's
+        // channel list, member/metadata/parent screens). So skip a group we've already joined to avoid
+        // re-fetching what's live everywhere. See amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md.
+        val joined = key.account.relayGroupList.liveRelayGroupList.value
+        if (joined.any { it.groupId == groupId.id && RelayUrlNormalizer.normalizeOrNull(it.relayUrl) == groupId.relayUrl }) {
+            return emptyList()
+        }
         val metadata = if (key.contentOnly) emptyList() else filterMetadataToRelayGroup(key.channel, since)
         return metadata +
             RelayBasedFilter(
@@ -101,5 +113,5 @@ class RelayGroupWarmupSubAssembler(
             )
     }
 
-    override fun id(key: RelayGroupWarmupQueryState) = key.channel.groupId
+    override fun id(key: RelayGroupCardWarmupQueryState) = key.channel.groupId
 }

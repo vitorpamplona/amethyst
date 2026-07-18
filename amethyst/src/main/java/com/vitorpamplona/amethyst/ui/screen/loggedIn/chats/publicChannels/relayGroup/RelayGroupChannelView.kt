@@ -56,9 +56,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupChatHistorySubAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupChatHistorySubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupChatTailSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatHistorySubAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatHistorySubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenChatTailSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -155,10 +155,10 @@ private fun ChannelView(
 
     // Recent chat (live) + on-demand backward history, the group analog of the NIP-04 per-conversation
     // stack. The tail also covers a non-joined group opened by link (not in the batched preview tail).
-    RelayGroupChatTailSubscription(channel.groupId, accountViewModel.dataSources().relayGroupChatTail, accountViewModel)
-    RelayGroupChatHistorySubscription(channel.groupId, accountViewModel.dataSources().relayGroupChatHistory, accountViewModel)
+    RelayGroupOpenChatTailSubscription(channel.groupId, accountViewModel.dataSources().relayGroupOpenChatTail, accountViewModel)
+    RelayGroupOpenChatHistorySubscription(channel.groupId, accountViewModel.dataSources().relayGroupOpenChatHistory, accountViewModel)
 
-    val history = remember(accountViewModel) { accountViewModel.dataSources().relayGroupChatHistory.history }
+    val history = remember(accountViewModel) { accountViewModel.dataSources().relayGroupOpenChatHistory.history }
     val loadingHistory by history.loadingMore.collectAsStateWithLifecycle()
     val historyStatus by history.status.collectAsStateWithLifecycle()
     val limits =
@@ -285,7 +285,7 @@ private const val RELAY_GROUP_HISTORY_TARGET = 50
 @Composable
 private fun RelayGroupBackfillHistoryToWindow(
     feedContentState: FeedContentState,
-    history: RelayGroupChatHistorySubAssembler,
+    history: RelayGroupOpenChatHistorySubAssembler,
 ) {
     LaunchedEffect(feedContentState, history) {
         delay(1200L)

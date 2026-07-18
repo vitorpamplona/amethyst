@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.StateFlow
 private val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
 /** One screen's request to keep the user's joined groups' recent chat live. */
-class RelayGroupPreviewTailQueryState(
+class RelayGroupJoinedChatTailQueryState(
     val account: Account,
 )
 
@@ -59,16 +59,16 @@ class RelayGroupPreviewTailQueryState(
  * `since = recentBoundary()` and **no per-group limit** — a time floor bounds it, so unlike the fixed
  * `limit=50` window it can batch all of a relay's groups into a single REQ. This keeps the Messages-list
  * previews reflecting the true newest message and joined groups' recent chat warm in cache without
- * opening each one. Older history is the [RelayGroupChatHistorySubAssembler]'s job (below the floor).
+ * opening each one. Older history is the [RelayGroupOpenChatHistorySubAssembler]'s job (below the floor).
  *
  * Batching by a shared time floor (rather than a per-group `limit` + shared per-relay EOSE `since`) is
  * what makes this both correct — every joined group is covered the moment it joins — and reconnect-safe:
  * a reconnect re-issues one `since=window` REQ per relay, never a per-group page replay.
  */
-class RelayGroupPreviewTailFilterAssembler(
+class RelayGroupJoinedChatTailFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupPreviewTailQueryState>() {
-    val tail = RelayGroupPreviewTailSubAssembler(client, ::allKeys)
+) : ComposeSubscriptionManager<RelayGroupJoinedChatTailQueryState>() {
+    val tail = RelayGroupJoinedChatTailSubAssembler(client, ::allKeys)
 
     val group = listOf(tail)
 
@@ -79,15 +79,15 @@ class RelayGroupPreviewTailFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
-class RelayGroupPreviewTailSubAssembler(
+class RelayGroupJoinedChatTailSubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupPreviewTailQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupPreviewTailQueryState, Account>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupJoinedChatTailQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupJoinedChatTailQueryState, Account>(client, allKeys) {
     private val windowLoad = WindowLoadTracker("relayGroup.preview.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
     override fun updateFilter(
-        key: RelayGroupPreviewTailQueryState,
+        key: RelayGroupJoinedChatTailQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP29)) {
@@ -122,11 +122,11 @@ class RelayGroupPreviewTailSubAssembler(
         return filters
     }
 
-    override fun id(key: RelayGroupPreviewTailQueryState) = key.account
+    override fun id(key: RelayGroupJoinedChatTailQueryState) = key.account
 
     private val toggleJobs = mutableMapOf<Account, Job>()
 
-    override fun newSub(key: RelayGroupPreviewTailQueryState): Subscription {
+    override fun newSub(key: RelayGroupJoinedChatTailQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)
         toggleJobs.remove(key.account)?.cancel()
         toggleJobs[key.account] =

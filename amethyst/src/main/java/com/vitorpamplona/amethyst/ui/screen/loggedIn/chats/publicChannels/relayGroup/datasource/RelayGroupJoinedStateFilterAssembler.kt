@@ -52,7 +52,7 @@ private val RELAY_GROUP_STATE_KINDS =
     )
 
 /** One request to keep the relay-signed state of the user's joined groups live. */
-class RelayGroupStateQueryState(
+class RelayGroupJoinedStateQueryState(
     val account: Account,
 )
 
@@ -69,10 +69,10 @@ class RelayGroupStateQueryState(
  * opening each chat — the reason the old `RelayGroupMyJoinedGroups` roster path existed, promoted from
  * "while a groups screen is up" to genuinely always-on.
  */
-class RelayGroupStateFilterAssembler(
+class RelayGroupJoinedStateFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupStateQueryState>() {
-    val group = listOf(RelayGroupStateSubAssembler(client, ::allKeys))
+) : ComposeSubscriptionManager<RelayGroupJoinedStateQueryState>() {
+    val group = listOf(RelayGroupJoinedStateSubAssembler(client, ::allKeys))
 
     override fun invalidateKeys() = invalidateFilters()
 
@@ -81,12 +81,12 @@ class RelayGroupStateFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
-class RelayGroupStateSubAssembler(
+class RelayGroupJoinedStateSubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupStateQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupStateQueryState, Account>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupJoinedStateQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupJoinedStateQueryState, Account>(client, allKeys) {
     override fun updateFilter(
-        key: RelayGroupStateQueryState,
+        key: RelayGroupJoinedStateQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP29)) return null
@@ -108,11 +108,11 @@ class RelayGroupStateSubAssembler(
         }
     }
 
-    override fun id(key: RelayGroupStateQueryState) = key.account
+    override fun id(key: RelayGroupJoinedStateQueryState) = key.account
 
     private val toggleJobs = mutableMapOf<Account, Job>()
 
-    override fun newSub(key: RelayGroupStateQueryState): Subscription {
+    override fun newSub(key: RelayGroupJoinedStateQueryState): Subscription {
         toggleJobs.remove(key.account)?.cancel()
         toggleJobs[key.account] =
             key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP29) { invalidateFilters() }

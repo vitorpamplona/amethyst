@@ -133,7 +133,7 @@ private fun PreloadFor(
         NavBarItem.PUBLIC_CHATS -> PublicChatsFilterAssemblerSubscription(accountViewModel)
 
         // Joined groups' state + recent-chat previews are kept live app-wide by the always-on
-        // RelayGroupStatePreload + RelayGroupPreviewTailPreload (mounted at LoggedInPage), so pinning
+        // RelayGroupJoinedStatePreload + RelayGroupJoinedChatTailPreload (mounted at LoggedInPage), so pinning
         // this tab needs no extra preload.
         NavBarItem.RELAY_GROUPS -> Unit
 

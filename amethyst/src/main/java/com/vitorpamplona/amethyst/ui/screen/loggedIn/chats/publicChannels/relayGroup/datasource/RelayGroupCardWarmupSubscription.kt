@@ -32,16 +32,17 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
  * subscription already streams that for the whole relay, so each visible row asks for content only.
  */
 @Composable
-fun RelayGroupWarmupSubscription(
+fun RelayGroupCardWarmupSubscription(
     channel: RelayGroupChannel,
-    dataSource: RelayGroupWarmupFilterAssembler,
+    dataSource: RelayGroupCardWarmupFilterAssembler,
     accountViewModel: AccountViewModel,
     contentOnly: Boolean = false,
     contentLimit: Int = RELAY_GROUP_WARMUP_LIMIT,
 ) {
+    val account = accountViewModel.account
     val state =
-        remember(channel.groupId, contentOnly, contentLimit) {
-            RelayGroupWarmupQueryState(channel, contentOnly, contentLimit)
+        remember(account, channel.groupId, contentOnly, contentLimit) {
+            RelayGroupCardWarmupQueryState(account, channel, contentOnly, contentLimit)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

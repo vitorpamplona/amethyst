@@ -43,7 +43,7 @@ import kotlinx.coroutines.flow.StateFlow
 private val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
 /** One open NIP-29 group whose recent chat the screen wants live. */
-class RelayGroupChatTailQueryState(
+class RelayGroupOpenChatTailQueryState(
     val account: Account,
     val groupId: GroupId,
 )
@@ -52,15 +52,15 @@ class RelayGroupChatTailQueryState(
  * Per-open-group **live tail**: the recent chat window of the *currently open* group, `#h`-scoped on
  * its host relay, `since = recentBoundary()`. The group analog of the NIP-04 per-conversation live tail.
  *
- * The batched [RelayGroupPreviewTailFilterAssembler] already covers every *joined* group; this exists so
+ * The batched [RelayGroupJoinedChatTailFilterAssembler] already covers every *joined* group; this exists so
  * an open **non-joined** group (opened by link before joining, not in `liveRelayGroupList`) still gets
  * its recent messages and live updates. For a joined open group it simply overlaps the batched tail
- * (harmless — events dedup by id on ingest). Older history is the [RelayGroupChatHistorySubAssembler]'s job.
+ * (harmless — events dedup by id on ingest). Older history is the [RelayGroupOpenChatHistorySubAssembler]'s job.
  */
-class RelayGroupChatTailFilterAssembler(
+class RelayGroupOpenChatTailFilterAssembler(
     client: INostrClient,
-) : ComposeSubscriptionManager<RelayGroupChatTailQueryState>() {
-    val tail = RelayGroupChatTailSubAssembler(client, ::allKeys)
+) : ComposeSubscriptionManager<RelayGroupOpenChatTailQueryState>() {
+    val tail = RelayGroupOpenChatTailSubAssembler(client, ::allKeys)
 
     val group = listOf(tail)
 
@@ -71,15 +71,15 @@ class RelayGroupChatTailFilterAssembler(
     override fun destroy() = group.forEach { it.destroy() }
 }
 
-class RelayGroupChatTailSubAssembler(
+class RelayGroupOpenChatTailSubAssembler(
     client: INostrClient,
-    allKeys: () -> Set<RelayGroupChatTailQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupChatTailQueryState, GroupId>(client, allKeys) {
+    allKeys: () -> Set<RelayGroupOpenChatTailQueryState>,
+) : PerUniqueIdEoseManager<RelayGroupOpenChatTailQueryState, GroupId>(client, allKeys) {
     private val windowLoad = WindowLoadTracker("relayGroup.chat.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
     override fun updateFilter(
-        key: RelayGroupChatTailQueryState,
+        key: RelayGroupOpenChatTailQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val relay = key.groupId.relayUrl
@@ -97,9 +97,9 @@ class RelayGroupChatTailSubAssembler(
         )
     }
 
-    override fun id(key: RelayGroupChatTailQueryState) = key.groupId
+    override fun id(key: RelayGroupOpenChatTailQueryState) = key.groupId
 
-    override fun newSub(key: RelayGroupChatTailQueryState): Subscription {
+    override fun newSub(key: RelayGroupOpenChatTailQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)
         return requestNewSubscription(
             windowLoad.trackingListener { relay: NormalizedRelayUrl, filters -> newEose(key, relay, TimeUtils.now(), filters) },

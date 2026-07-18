@@ -70,7 +70,7 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupWarmupSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -142,7 +142,7 @@ private fun ParentSelectorCard(
     val liveParent: RelayGroupChannel? =
         parentId?.let { id ->
             val channel = remember(id, relay) { accountViewModel.checkGetOrCreateRelayGroupChannel(GroupId(id, relay)) }
-            RelayGroupWarmupSubscription(channel, accountViewModel.dataSources().relayGroupWarmup, accountViewModel)
+            RelayGroupCardWarmupSubscription(channel, accountViewModel.dataSources().relayGroupCardWarmup, accountViewModel)
             val state by channel
                 .flow()
                 .metadata.stateFlow

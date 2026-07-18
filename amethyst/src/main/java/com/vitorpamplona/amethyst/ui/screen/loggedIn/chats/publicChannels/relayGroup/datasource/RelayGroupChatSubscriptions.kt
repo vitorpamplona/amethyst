@@ -37,10 +37,10 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
  * keyed on the account (stable), so we watch the joined-group list and re-derive on every join/leave.
  */
 @Composable
-fun RelayGroupStatePreload(accountViewModel: AccountViewModel) {
+fun RelayGroupJoinedStatePreload(accountViewModel: AccountViewModel) {
     val account = accountViewModel.account
-    val dataSource = accountViewModel.dataSources().relayGroupState
-    val state = remember(account) { RelayGroupStateQueryState(account) }
+    val dataSource = accountViewModel.dataSources().relayGroupJoinedState
+    val state = remember(account) { RelayGroupJoinedStateQueryState(account) }
 
     val joined by account.relayGroupList.liveRelayGroupList.collectAsStateWithLifecycle()
     LaunchedEffect(joined) { dataSource.invalidateFilters() }
@@ -49,14 +49,14 @@ fun RelayGroupStatePreload(accountViewModel: AccountViewModel) {
 }
 
 /**
- * Always-on preview **live tail** for joined groups' recent chat, mounted alongside [RelayGroupStatePreload]
+ * Always-on preview **live tail** for joined groups' recent chat, mounted alongside [RelayGroupJoinedStatePreload]
  * — keeps the Messages-list previews reflecting the true newest message app-wide. Re-derives on join/leave.
  */
 @Composable
-fun RelayGroupPreviewTailPreload(accountViewModel: AccountViewModel) {
+fun RelayGroupJoinedChatTailPreload(accountViewModel: AccountViewModel) {
     val account = accountViewModel.account
-    val dataSource = accountViewModel.dataSources().relayGroupPreviewTail
-    val state = remember(account) { RelayGroupPreviewTailQueryState(account) }
+    val dataSource = accountViewModel.dataSources().relayGroupJoinedChatTail
+    val state = remember(account) { RelayGroupJoinedChatTailQueryState(account) }
 
     val joined by account.relayGroupList.liveRelayGroupList.collectAsStateWithLifecycle()
     LaunchedEffect(joined) { dataSource.invalidateFilters() }
@@ -70,13 +70,13 @@ fun RelayGroupPreviewTailPreload(accountViewModel: AccountViewModel) {
  * aware so it stops when the screen leaves.
  */
 @Composable
-fun RelayGroupChatTailSubscription(
+fun RelayGroupOpenChatTailSubscription(
     groupId: GroupId,
-    dataSource: RelayGroupChatTailFilterAssembler,
+    dataSource: RelayGroupOpenChatTailFilterAssembler,
     accountViewModel: AccountViewModel,
 ) {
     val account = accountViewModel.account
-    val state = remember(account, groupId) { RelayGroupChatTailQueryState(account, groupId) }
+    val state = remember(account, groupId) { RelayGroupOpenChatTailQueryState(account, groupId) }
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }
 
@@ -85,12 +85,12 @@ fun RelayGroupChatTailSubscription(
  * kind-9/poll by `until`+`limit` on the host relay), the NIP-29 analog of [ConcordChannelHistorySubscription].
  */
 @Composable
-fun RelayGroupChatHistorySubscription(
+fun RelayGroupOpenChatHistorySubscription(
     groupId: GroupId,
-    dataSource: RelayGroupChatHistoryFilterAssembler,
+    dataSource: RelayGroupOpenChatHistoryFilterAssembler,
     accountViewModel: AccountViewModel,
 ) {
     val account = accountViewModel.account
-    val state = remember(account, groupId) { RelayGroupChatHistoryQueryState(account, groupId) }
+    val state = remember(account, groupId) { RelayGroupOpenChatHistoryQueryState(account, groupId) }
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
 }
