@@ -68,13 +68,16 @@ JSON object instead of human-readable text — same data, machine shape.
 ```text
 $ amy notes post "good morning nostr"
 
-event_id:    a3c1f9c2…(64 hex)
-kind:        1
-accepted_by:
+event_id:     a3c1f9c2…(64 hex)
+kind:         1
+published_to:
   - wss://relay.damus.io/
   - wss://nos.lol/
-rejected_by: (none)
+rejected_by:  (none)
 ```
+
+If **every** targeted relay refuses the event, amy reports
+`error: rejected` and exits 1 — a total rejection never exits 0.
 
 `amy notes feed` reads recent kind:1 notes from your follows; `--limit N`
 caps the count, `--author npub1…` narrows to one user.
@@ -241,9 +244,12 @@ Two amy processes can talk: one **hosts** a bunker with its local key; the other
 | `amy bunker connect nostrconnect://…` | Client-initiated (NostrConnect) flow, signer side: ack a client's offer (echo its secret) and service its requests. |
 | `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer to connect, then persist a bunker account that acts as the signer's key. |
 
-Interop-tested against the real [`nak`](https://github.com/fiatjaf/nak) binary:
-- **bunker:// both directions** — `amy login bunker://` ⇄ `nak bunker`, and `nak event --sec bunker://` ⇄ `amy bunker`.
-- **nostrconnect:// client** — `amy login --nostrconnect` ⇄ `nak bunker connect` (amy signs, event authored by nak's key).
+The flows were verified against the real [`nak`](https://github.com/fiatjaf/nak)
+binary during development — `amy login bunker://` ⇄ `nak bunker`, `nak event
+--sec bunker://` ⇄ `amy bunker`, and `amy login --nostrconnect` ⇄ `nak bunker
+connect` (amy signs, event authored by nak's key). A scripted nak harness
+under `cli/tests/` is still pending, so treat these as dev-verified, not
+CI-pinned.
 
 Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. When a bunker answers with an `auth_url` challenge, amy prints the authorization URL to stderr and keeps waiting for the real response (open the URL in a browser to authorize).
 
@@ -280,6 +286,16 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 | `amy outbox USER [--refresh] [--timeout SECS]` | Show USER's NIP-65 read/write relays (outbox model). Cache-first; `--refresh` forces a relay drain. |
 | `amy sync --relay URL [filter flags] [--down] [--up]` | NIP-77 Negentropy reconcile between the local store and a relay. `--down` (default) pulls events we lack; `--up` pushes events the relay lacks; both for bidirectional. |
 
+### Search (NIP-50)
+
+Runs against your kind:10007 search-relay list, falling back to Amethyst's
+default search relays.
+
+| Command | What it does |
+|---|---|
+| `amy search user QUERY [--limit N] [--timeout SECS]` | Search kind:0 profiles. Default `--limit 50`. |
+| `amy search note QUERY [--kind K[,K…]] [--limit N] [--timeout SECS]` | Search event content. Default kind:1 (e.g. `--kind 1,30023`); `--kinds` is accepted as an alias. |
+
 ### Encryption
 
 | Command | What it does |
@@ -308,6 +324,35 @@ nak's `clone`/`push`/`pull` (git-packfile transport over relays/GRASP) are out o
 | `amy podcast publish --title T --description D --audio URL[,URL] [--audio-type MIME] [--image URL] [--content MD]` | Publish a kind:54 episode. |
 | `amy podcast list [USER] [--limit N]` | List a user's show metadata + episodes. |
 
+### Podcasts (Podcasting 2.0 / podstr)
+
+The podstr-compatible surface — Podcasting 2.0 tags carried in addressable
+events. `--identifier` is accepted as an alias of `--d` everywhere here.
+
+| Command | What it does |
+|---|---|
+| `amy podcast20 metadata --title T [--description D] [--author A] [--email E] [--image URL] [--language L] [--categories A,B] [--funding URL,URL] [--website URL] [--copyright C] [--type episodic\|serial] [--explicit] [--complete] [--locked] [--guid G] [--value-json JSON] [--relay URL[,URL…]]` | Publish kind:30078 show metadata (JSON body). `--value-json` is the value-for-value split block. |
+| `amy podcast20 episode --title T --audio URL[,URL] [--d ID] [--audio-type MIME] [--description D] [--image URL] [--duration SECS] [--video URL] [--video-type MIME] [--episode N] [--season N] [--transcript URL] [--chapters URL] [--value-json JSON] [--topic A,B] [--content MARKDOWN] [--pubdate RFC2822] [--relay URL[,URL…]]` | Publish a kind:30054 episode. |
+| `amy podcast20 trailer --title T --url URL [--d ID] [--type MIME] [--length BYTES] [--season N] [--pubdate RFC2822] [--relay URL[,URL…]]` | Publish a kind:30055 trailer. |
+| `amy podcast20 list [USER] [--limit N] [--relay URL[,URL…]]` | List a creator's metadata + episodes + trailers. |
+
+### Static websites & napplets (NIP-5A / NIP-5D)
+
+Sites and napplets are manifests on Nostr with content on Blossom; every
+fetch is verified against the manifest's sha256 pins. `--identifier` is an
+alias of `--d`; `--d` selects a named site/napplet, else the root one.
+
+| Command | What it does |
+|---|---|
+| `amy nsite fetch AUTHOR [--d ID] [--path P] [--server URL[,URL]] [--relay URL[,URL]] [--out FILE] [--max-inline-bytes N] [--timeout SECS]` | Resolve one path over Nostr + Blossom and verify it against the manifest's sha256 pin (kind:15128 root, or kind:35128 named with `--d`; `--path` defaults to `/`). |
+| `amy nsite publish DIR --server URL[,URL] [--d ID] [--relay URL[,URL]] [--title T] [--description D] [--source URL] [--icon URL]` | Upload a directory to Blossom and broadcast its NIP-5A manifest, including the `x` aggregate hash so it is self-verifying. |
+| `amy nsite serve AUTHOR [--d ID] [--port N] [--server URL[,URL]] [--relay URL[,URL]] [--timeout SECS]` | Fetch the manifest and serve it over a local HTTP server (sha256-verified per request) so you can open it in a browser. |
+| `amy nsite list AUTHOR [--relay URL[,URL]] [--timeout SECS]` | Enumerate an author's sites: the root and every named one, latest per identifier. |
+| `amy napplet fetch AUTHOR [--d ID] [--path P] …` | Like `nsite fetch`, plus NIP-5D verification: recompute + check the `x` aggregate hash and report the napplet's `requires` capabilities. `--snapshot EVENT-ID` pins a kind:5129 immutable snapshot by event id. |
+| `amy napplet publish DIR --server URL[,URL] [--requires identity,relay,…] [--d ID] [--relay URL[,URL]] [--title T] [--description D] [--source URL] [--icon URL]` | Upload a napplet directory and broadcast its NIP-5D manifest (kind:15129 root / 35129 named) with the `x` aggregate hash and the `requires` capability tags the shell gates on. |
+| `amy napplet serve AUTHOR [--d ID] [--port N] …` | Fetch + aggregate-verify the manifest and serve its static content over local HTTP. |
+| `amy napplet list AUTHOR [--relay URL[,URL]] [--timeout SECS]` | Enumerate an author's napplets, latest per identifier. |
+
 ### Blossom blobs (NIP-B7)
 
 | Command | What it does |
@@ -335,7 +380,7 @@ amy's on-relay events match the app's. NUT-13 counters persist in
 | `amy cashu balance [--mint URL]` | Spendable balance from the local store (optionally one mint). |
 | `amy cashu mint ping URL` / `info URL` | Stateless `/v1/info` probe (name/pubkey/version) / full DTO. |
 | `amy cashu receive ln SATS [--mint URL]` | Request a mint quote; prints the bolt11 + kind:7374 quote. |
-| `amy cashu receive complete QUOTE_ID` / `resume QUOTE_ID` | Poll the quote; once the invoice is settled, mint proofs (kind:7375 + kind:7376). |
+| `amy cashu receive complete QUOTE_ID` | Poll the quote; once the invoice is settled, mint proofs (kind:7375 + kind:7376). (`resume` is a deprecated alias.) |
 | `amy cashu receive token TOKEN` | Redeem a `cashuB…` token into the wallet. |
 | `amy cashu receive nutzap-sweep [--mint URL]` | Redeem inbound NIP-61 nutzaps locked to your wallet key. |
 | `amy cashu send ln INVOICE [--mint URL]` | Melt proofs to pay a bolt11 (scrubs stale proofs first). |
@@ -455,8 +500,8 @@ kind:10040 out-of-band.
 | `amy dm send RECIPIENT TEXT [--allow-fallback]` | Gift-wrap a kind:14 to RECIPIENT. Strict kind:10050 routing by default. |
 | `amy dm send-file RECIPIENT --file PATH --server URL` | Encrypt a local file, upload to a Blossom server, publish a kind:15 referencing it. |
 | `amy dm send-file RECIPIENT URL --key HEX --nonce HEX` | Reference-mode: file already uploaded; just publish the kind:15. |
-| `amy dm list [--peer NPUB] [--since TS] [--limit N]` | Drain and decrypt gift wraps. |
-| `amy dm await --peer NPUB --match TEXT [--timeout SECS]` | Block until a matching DM arrives. |
+| `amy dm list [USER] [--peer USER] [--since TS] [--limit N]` | Drain and decrypt gift wraps. Positional USER is an alternative to `--peer` (the flag wins). Default `--limit 50`. |
+| `amy dm await [USER] --match TEXT [--peer USER] [--timeout SECS]` | Block until a matching DM arrives (positional USER or `--peer`; the flag wins). |
 
 ### Groups (Marmot / MLS)
 
@@ -472,7 +517,7 @@ kind:10040 out-of-band.
 | `amy marmot group promote / demote / remove GID NPUB` | Admin verbs. |
 | `amy marmot group leave GID` | Self-remove. |
 | `amy marmot message send GID TEXT` | Publish a kind:9 inner event into the group. |
-| `amy marmot message list GID [--limit N]` | Decrypted inner events, oldest first. |
+| `amy marmot message list GID [--limit N]` | Decrypted inner events, oldest first. Default `--limit 50`. |
 | `amy marmot message react GID EVENT_ID EMOJI` | Publish a kind:7 reaction. |
 | `amy marmot message delete GID EVENT_ID …` | Publish a kind:5 deletion. |
 
@@ -497,20 +542,83 @@ screen speaks.
 | `amy relaygroup put-user RELAY GID PUBKEY [--role admin\|moderator]` | Add or promote a user (9000, moderator). |
 | `amy relaygroup remove-user RELAY GID PUBKEY` | Kick a user (9001, moderator). |
 
+### Concord Channels (encrypted communities)
+
+Encrypted, serverless communities (the CORD specs). Community secrets
+persist in `~/.amy/<account>/concord.json`; your joined-community list is
+also carried on-relay as an encrypted kind:13302.
+
+| Command | What it does |
+|---|---|
+| `amy concord create --name NAME [--about T] [--relay wss://a,wss://b]` | Create an encrypted Concord community. `--relay` is canonical; `--relays` is accepted as an alias. |
+| `amy concord list` | List joined Concord communities. |
+| `amy concord import` | Fetch + decrypt this account's kind:13302 community list (carries heldRoots, CORD-06). |
+| `amy concord channels COMMUNITY` | List a community's channels. |
+| `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). |
+| `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane. |
+| `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link. |
+| `amy concord join URL` | Redeem an invite link and save the community. |
+| `amy concord roles COMMUNITY` | List live roles + the current banlist (CORD-04). |
+| `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`). |
+| `amy concord grant COMMUNITY USER ROLE-ID` | Grant a role to a member. |
+| `amy concord ban COMMUNITY USER` / `unban COMMUNITY USER` | Ban / unban a member. |
+
+### Geochat (Bitchat geohash channels)
+
+Bitchat-interoperable public location chat: ephemeral kind:20000 events
+tagged `["g", geohash]`, signed with a per-geohash **throwaway identity**
+and routed to the relays geographically nearest the cell. Relays broadcast
+ephemeral events live but don't store them, so `listen` holds an open
+subscription for a window.
+
+| Command | What it does |
+|---|---|
+| `amy geochat listen GEOHASH [--seconds N] [--limit N] [--relay URL[,URL…]] [--no-fetch]` | Hold a live subscription to the cell and report messages + present pubkeys seen in the window (default `--seconds 30`, `--limit 50`). |
+| `amy geochat send GEOHASH MESSAGE [--nick NAME] [--teleport] [--pow BITS] [--pow-timeout SECS] [--seed HEX] [--relay URL[,URL…]] [--no-fetch]` | Sign with the per-geohash throwaway identity and publish to the cell's nearest relays. |
+| `amy geochat keys GEOHASH [--seed HEX]` | Print the per-geohash derived pubkey. |
+
+`--no-fetch` skips the geo-relay directory refresh.
+
+### Which chat system?
+
+Four group-chat surfaces coexist — pick by threat model and topology:
+
+| Verb | Protocol | Encryption | Where it lives | Use when |
+|---|---|---|---|---|
+| `marmot` | Marmot / MLS | E2EE (MLS) with forward secrecy | Gift-wrapped events on ordinary relays | Private groups; strongest crypto; membership managed by commits. |
+| `relaygroup` | NIP-29 | None (relay-enforced access) | One **host relay** per group, which moderates | Public/moderated communities à la Armada/relay29. |
+| `concord` | Concord (CORD) | Encrypted, serverless | Ordinary relays; secrets in `concord.json` | Encrypted communities with channels + roles, no host relay to trust. |
+| `geochat` | Bitchat geohash | None (public, throwaway identity) | Ephemeral kind:20000 on geo-nearest relays | Location-based public chat; Bitchat interop. |
+
+### Zaps (NIP-57)
+
+Builds the kind:9734 zap request and fetches a BOLT11 invoice from the
+recipient's Lightning service. No auto-payment by default — paste the
+invoice into a wallet — unless you pass `--with NDEBIT`, which settles each
+fetched invoice in-place through a CLINK debit pointer (kind:21002); the
+output then also reports `paid` + the preimage.
+
+| Command | What it does |
+|---|---|
+| `amy zap user USER SATS [--comment X] [--anon\|--private] [--with NDEBIT] [--timeout SECS]` | Profile zap: build the zap request and fetch a BOLT11 from USER's LN service. |
+| `amy zap event EVENT-ID SATS [--comment X] [--anon\|--private] [--with NDEBIT] [--timeout SECS]` | Same, attributed to a specific event (must be in the local store). Zap splits are honored — one invoice per recipient. |
+
 ### CLINK Offers
 
 | Command | What it does |
 |---|---|
 | `amy offer info NOFFER` | Decode a `noffer1…` pointer (pubkey, relays, price type/amount). Local, no network. |
-| `amy offer request NOFFER [--amount SATS] [--timeout MS] [--payer-data K=V,…]` | kind:21001 round-trip: publish the request to the pointer's relays and print the returned BOLT11. `--amount` is required for spontaneous offers; fixed offers default to the pointer's price. `--payer-data` attaches payer fields (e.g. `email=a@b.c`) for offers that require them — Lightning.Pub answers "Invalid Offer" (code 1) when they are missing. |
+| `amy offer discover NIP05` | Resolve a profile's advertised offer from its NIP-05 `.well-known` (e.g. `bob@example.com`). |
+| `amy offer request NOFFER [--amount SATS] [--timeout SECS] [--follow] [--payer-data K=V,…]` | kind:21001 round-trip: publish the request to the pointer's relays and print the returned BOLT11. `--amount` is required for spontaneous offers; fixed offers default to the pointer's price. `--follow` chases an "Expired or Moved" (code 3) reply to the `latest` pointer. `--payer-data` attaches payer fields (e.g. `email=a@b.c`) for offers that require them — Lightning.Pub answers "Invalid Offer" (code 1) when they are missing. |
+| `amy offer pay NOFFER --with NDEBIT [--amount SATS] [--timeout SECS]` | Fetch the invoice and settle it end-to-end through a CLINK debit pointer (kind:21002). |
 
 ### CLINK Debits
 
 | Command | What it does |
 |---|---|
 | `amy debit info NDEBIT` | Decode an `ndebit1…` pointer (pubkey, relays, pointer id, session flag). Local, no network. |
-| `amy debit pay NDEBIT BOLT11 [--amount SATS] [--timeout MS]` | kind:21002 round-trip: ask the pointed-to wallet to pay the invoice; print the preimage or the service's GFY error. |
-| `amy debit budget NDEBIT --amount SATS [--frequency day\|week\|month] [--timeout MS]` | Authorize a spending budget; omit `--frequency` for a one-time budget. |
+| `amy debit pay NDEBIT BOLT11 [--amount SATS] [--timeout SECS]` | kind:21002 round-trip: ask the pointed-to wallet to pay the invoice; print the preimage or the service's GFY error. |
+| `amy debit budget NDEBIT --amount SATS [--frequency day\|week\|month] [--timeout SECS]` | Authorize a spending budget; omit `--frequency` for a one-time budget. |
 
 ### Wait-for-condition (`await`)
 
@@ -570,12 +678,17 @@ the last facet removes R entirely.
 
 ### Local store maintenance
 
+The shared store lives under `~/.amy/shared/` — a SQLite `events.db` by
+default, or the `events-store/` file tree when `AMY_STORE=fs` (see
+[DEVELOPMENT.md](./DEVELOPMENT.md)).
+
 | Command | What it does |
 |---|---|
-| `amy store stat` | Event count, kind histogram, disk usage, oldest/newest timestamps. |
+| `amy store stat` | Event count + disk usage (kind histogram/mtime on the fs backend). |
 | `amy store sweep-expired` | Delete events past their NIP-40 expiration. |
-| `amy store scrub` | Rebuild the index after external edits or a crash. |
-| `amy store compact` | Drop dangling index entries (canonical event already gone). |
+| `amy store scrub` | fs: rebuild `idx/` from canonical events; sqlite: no-op. |
+| `amy store compact` | fs: drop dangling index entries; sqlite: `VACUUM`. |
+| `amy store reindex-fts` | Rebuild the NIP-50 search index (after a searchable-kinds change). |
 
 ---
 
@@ -605,14 +718,34 @@ Under `--json` the error goes to stderr as `{"error":"not_member","detail":"abc1
 Color auto-disables when stdout is a pipe; force it with `CLICOLOR_FORCE=1`,
 turn it off entirely with `NO_COLOR=1`.
 
-**Exit codes** — the real signal for scripts:
+**Exit codes** — the real signal for scripts. The error **code string picks
+the exit code**: `bad_args` → 2, `timeout` → 124, every other code → 1.
 
 | Code | Meaning |
 |---|---|
 | 0 | success |
-| 1 | runtime error (network, permission, NIP rejection, …) |
-| 2 | bad arguments |
-| 124 | `await` timed out |
+| 1 | runtime error (network, permission, `rejected`, `not_member`, …) |
+| 2 | bad arguments — **any** `bad_args`, including unknown flags and malformed values |
+| 124 | timed out — `await` verbs, `pow mine`, offer/debit round-trips |
+
+Notable error codes (the full canonical list is in
+[DEVELOPMENT.md](./DEVELOPMENT.md)):
+
+- **`rejected`** (exit 1) — a publish was refused by **every** targeted
+  relay; the payload carries `event_id` + `rejected_by`. Partial acceptance
+  still exits 0 and reports `published_to` / `rejected_by`.
+- **`bad_args`** (exit 2) — also raised for **unknown flags** (`--limt 5`
+  fails instead of silently no-oping) and malformed numeric / relay-URL /
+  `--author` / `--id` values.
+- **`timeout`** (exit 124) — every timeout error, not just `await`.
+
+**Argument-parsing conveniences:**
+
+- `amy <cmd> --help` prints that command group's usage (and an unknown
+  sub-verb echoes the expected verb list). An unknown top-level verb prints
+  a one-screen verb list; `amy --help` remains the full reference.
+- A literal `--` ends flag parsing — everything after it is positional even
+  if it starts with `--` (`amy notes post -- "--good morning"`).
 
 ---
 
@@ -624,12 +757,16 @@ matches that:
 ```
 ~/.amy/
 ├── current                    # marker: which account `amy use NAME` pinned
+├── operator/                  # machine-level GrapeRank operator keys (no account)
 ├── shared/
-│   └── events-store/          # one Nostr event store, shared by every account
+│   ├── events.db              # the shared event store — SQLite, the default
+│   └── events-store/          # …or this file tree instead, when AMY_STORE=fs
 ├── alice/
 │   ├── identity.json          # keypair (or reference to keychain entry)
 │   ├── state.json             # sync cursors
 │   ├── aliases.json           # local name → npub map
+│   ├── cashu.json             # NIP-60 NUT-13 counters
+│   ├── concord.json           # Concord community secrets
 │   └── marmot/                # MLS state per group
 └── bob/
     └── …
@@ -656,8 +793,10 @@ upload/list/delete, cashu, …) require an account — and say so.
 For one-off override, prepend `--account NAME` to any command.
 
 `init` and `create` write a self-entry into `aliases.json` so you can
-refer to your own account by name in future commands. The alias resolver
-in recipient slots (`amy dm send alice "hi"`) is on the roadmap.
+refer to your own account by name in future commands. Aliases **resolve in
+every user slot**: anywhere a command takes a USER (`amy dm send bob "hi"`,
+`amy follow bob`, `amy profile show bob`, …) the input is checked against
+`aliases.json` first, then parsed as npub/nprofile/hex/NIP-05.
 
 For the deeper layout (events-store internals, relay-routing rules, the
 public-contract guarantees) see [DEVELOPMENT.md](./DEVELOPMENT.md).
@@ -671,9 +810,10 @@ Three contracts keep amy machine-safe:
 1. **One JSON object per success on stdout** under `--json`. Stable
    snake_case keys; keys never disappear silently.
 2. **Errors as JSON on stderr** under `--json`: `{"error":"...","detail":"..."}`.
-3. **Exit codes mean specific things** (table above) — `124` for
-   `await` timeout in particular lets you distinguish "condition never
-   happened" from "the command itself crashed".
+3. **Exit codes mean specific things** (table above) — `124` for a
+   timeout in particular lets you distinguish "condition never
+   happened" from "the command itself crashed", and `rejected` (exit 1)
+   means no targeted relay accepted a publish.
 
 ### Recipes
 
@@ -740,6 +880,8 @@ Inside the amy process there's no test mode — it just sees a fresh
 
 ## Where to go next
 
+- **[RECIPES.md](./RECIPES.md)** — task-shaped walkthroughs: run a
+  relay, bunker, marmot, cashu, nsite, graperank.
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** — design principles,
   architecture, the public contract, the local event store, relay
   routing, full on-disk layout, how to extend amy without breaking it.

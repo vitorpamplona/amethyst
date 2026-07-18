@@ -53,27 +53,34 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-01 note publish (`amy notes post TEXT`) | ✅ | `PostCommand` — outbox via `RelayCommands` configured set. |
 | NIP-13 proof of work (`amy notes post --pow N`, `amy pow check/mine/bench`) | ✅ | `PostCommand` + `PowCommands` — mines pre-signature via quartz `PoWMiner`; `pow mine --pubkey` covers delegated PoW; `pow check` applies the commitment cap. |
 | NIP-01 feed read (`amy notes feed [--following \| --author NPUB]`) | ✅ | `FeedCommand`. Hashtag / community feeds still pending. |
-| NIP-02 follow list add / remove / list | 🆕 | Logic in `amethyst/model/nip02FollowLists/`. |
+| NIP-02 follow list add / remove / list | ✅ | `FollowCommand` — `amy follow USER` / `amy unfollow USER` (fetches the freshest kind:3 first). |
 | NIP-09 event deletion | 🆕 | Builder exists in quartz. |
 | NIP-17 DMs send / list / await | ✅ | `DmCommands` — reuses Quartz `NIP17Factory` + `RecipientRelayFetcher`; filter extracted to `commons/relayClient/nip17Dm/`. Plan: [`cli/plans/2026-04-23-nip17-dm.md`](./plans/2026-04-23-nip17-dm.md). |
 | NIP-18 reposts / quotes | 🆕 | |
 | NIP-25 reactions | ✅ in groups · 🆕 elsewhere | `marmot message react` covers MLS group reactions; outer-event reactions still pending. |
+| NIP-29 relay groups (`amy relaygroup`) | ✅ | `RelayGroupCommands` — list/browse/info/create/join/leave/message/edit/invite/put-user/remove-user against a host relay; kind:10009 joined-list kept in sync. |
 | NIP-51 lists (bookmarks, mute, follow sets) | 🆕 | `amethyst/model/nip51Lists/` |
-| NIP-57 zaps (send + verify) | 🆕 | Needs LN-URL plumbing; `amethyst/service/lnurl/`. |
-| NIP-65 outbox model queries | 🆕 | |
+| NIP-57 zaps (send) | ✅ partial | `ZapCommand` — `zap user`/`zap event` build the kind:9734 request and fetch the BOLT11 (zap splits honored, one invoice per recipient); `--with NDEBIT` auto-pays through a CLINK debit pointer. Receipt (kind:9735) verification still 🆕. |
+| NIP-65 outbox model queries | ✅ | `OutboxCommand` — `amy outbox USER [--refresh]`, cache-first. |
+| CLINK offers + debits (`amy offer` / `amy debit`) | ✅ | `OfferCommands` + `DebitCommands` — pointer decode, NIP-05 discover, kind:21001/21002 round-trips, `offer pay --with NDEBIT` end-to-end settlement. `--timeout` is SECONDS. |
+| Geochat (Bitchat geohash, ephemeral kind:20000) | ✅ | `GeochatCommands` — listen/send/keys with per-geohash throwaway identity + geo-nearest relay routing; doubles as the Bitchat interop harness. |
+| Concord Channels (encrypted communities) | ✅ | `ConcordCommands` — 13 sub-verbs (create/list/import/channels/send/read/invite/join/roles/role/grant/ban/unban) over shared `commons` `ConcordActions`; secrets in `concord.json`. |
+| NIP-5A nsites + NIP-5D napplets | ✅ | `NsiteCommands` + `NappletCommands` — fetch/publish/serve/list with sha256 + aggregate-hash verification and `requires` capability reporting. |
+| Podcasting 2.0 / podstr (`amy podcast20`) | ✅ | `Podcast20Commands` — kind:30078 metadata, 30054 episodes, 30055 trailers, list. |
+| Follows-of-follows (`amy fof get/list/sync`) | ✅ | `FofCommand` — single-hop social proof from the local store (`wot` kept as deprecation alias). |
 | NIP-85 GrapeRank web-of-trust (`amy graperank`) | ✅ | `GrapeRankCommand` — outbox-model crawl + scoring engine in `commons/wot/` (`GrapeRank`, `TrustGraph`, `TrustGraphBuilder`); every score run persists kind:30382 `ContactCardEvent` cards to the local store (diffed against prior ranks, kind:5 retractions), `publish` mirrors that set to the operator relays via NIP-77 up-sync, `rank` reads cards back, plus `register` / `unregister` / `providers` for the kind:10040 `TrustProviderListEvent` discovery layer. |
 | NIP-72 communities | 🆕 | |
 | NIP-78 app-specific data (settings sync) | 🆕 | |
 | Long-form (NIP-23) publish / read | 🆕 | |
 | Live activities / chess (NIP-53 / NIP-64) | 🆕 | |
-| Blossom uploads (NIP-B7) | 🆕 | |
+| Blossom blobs (NIP-B7) | ✅ | `BlossomCommands` — upload/download/list/delete/check/mirror on shared `commons` `BlossomClient`; live-server harness at `cli/tests/blossom/`. |
 | NIP-60 / 61 Cashu wallet + nutzaps | ✅ | Full surface: `cashu wallet {create,show,export-key,destroy}`, `mint {ping,info}`, `balance`, `receive {ln,complete,resume,token,nutzap-sweep}`, `send {ln,token,nutzap}`, `maintenance {scrub,restore,migrate-keysets}`, `mint-rec {show,add,remove}` — all on shared `commons` `CashuWalletOps` + `CashuWalletReader` (the exact path the Android wallet runs). Interop harness pending. Plan: [`cli/plans/2026-05-28-cashu-cli.md`](./plans/2026-05-28-cashu-cli.md). |
 | NIP-47 Wallet Connect | 🆕 | |
-| NIP-46 bunker signer | 🆕 | Needs a signers abstraction in Amy. |
+| NIP-46 bunker signer | ✅ | `BunkerCommand` + `NostrConnect` + `LoginCommand` — host (`amy bunker[ connect]`) and client (`amy login bunker://` / `--nostrconnect`) sides, `--perms`/`--interactive` gating, `auth_url` challenges. |
 | Profile view (`amy profile show NPUB`) + edit | ✅ | `ProfileCommands`. Cache-first; `--refresh` forces a relay drain. |
-| Thread view (`amy thread show EVENT_ID`) | ⚠️ | Same. |
+| Thread view (`amy thread show EVENT_ID`) | 🆕 | No `thread` verb yet — needs the event-renderer read path (Order of operations §1/§3). |
 | Notifications feed | 🆕 | |
-| Search (NIP-50) | 🆕 | |
+| Search (NIP-50) | ✅ | `SearchCommand` — `search user` (kind:0) + `search note` (`--kind`, `--kinds` alias) over the kind:10007 search-relay list; default limit 50. |
 | Namecoin NIP-05 resolve (`amy namecoin resolve .bit\|d/\|id/`) | ✅ | `NamecoinCommand` — reuses Quartz `NamecoinNameResolver` + `ElectrumXClient` + the default ElectrumX server set the Android/Desktop apps ship with. Stateless. On-chain `name_history` + Core RPC backend pending separate PRs. |
 
 ### `nak` parity — army-knife primitives
@@ -126,15 +133,14 @@ nak has 34 functional commands (introspected from `nak --help`). Coverage:
   nak's local hints DB).
 - **Missing (6):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98), `fs` (FUSE),
   `spell` (MuSig2/FROST), and `validate` (event-schema validation).
-  `relaygroup` (NIP-29) now ships alongside MLS/Marmot — the two group models
-  are offered side by side rather than one substituting for the other.
 
 **Design differences (not gaps):** amy is a *stateful client* (accounts,
 `~/.amy/`, shared event store) with a stable JSON contract; nak is a *stateless*
 per-invocation tool that prints bare values for shell substitution. amy also has
-a large surface nak lacks: Marmot/MLS, NIP-17 DMs, zaps, CLINK offer/debit,
-NIP-02 follow, NIP-50 search, napplets, profile edit, store management, account
-management.
+a large surface nak lacks: Marmot/MLS, NIP-29 relay groups (offered side by
+side with MLS, not substituting for it), Concord communities, geochat, NIP-17
+DMs, zaps, CLINK offer/debit, NIP-02 follow, NIP-50 search, nsites/napplets,
+podcast20, GrapeRank/fof, profile edit, store management, account management.
 
 **Cheap remaining wins:** the `key` `expand` (hex left-pad) and `default`
 (print the active account's key) sub-verbs. `key combine` needs MuSig2.
@@ -149,7 +155,7 @@ move anything, re-audit — you're probably duplicating logic.
 
 1. **Event rendering core** in `commons/commonMain/.../rendering/`
    with renderers for kinds 0 / 1 / 3 / 6 / 7 / 10002 / 10050.
-   Unblocks all the 🆕 and ⚠️ read-path rows below.
+   Unblocks the remaining 🆕 read-path rows (thread view, notifications).
    Design: `commons/plans/2026-04-21-event-renderer.md`.
 2. **`amy notes post` / `amy notes show` / `amy notes react`** —
    smallest end-to-end write+read loop outside Marmot. Post + feed
@@ -157,20 +163,25 @@ move anything, re-audit — you're probably duplicating logic.
 3. **`amy notes feed home|profile|hashtag|thread`** reading through the
    renderer. `--following` and `--author NPUB` ✅; hashtag/thread
    variants still pending.
-4. **`amy follow add|remove|list`** (NIP-02) — proves extraction of
-   list-building logic from `amethyst/model/`.
+4. **`amy follow|unfollow`** (NIP-02) — ✅ shipped. A standalone
+   `follow list` view is still pending.
 5. **`amy dm send|list`** (NIP-17) — ✅ shipped. Reuses the gift-wrap
    path also exercised by Marmot.
 6. **`amy list bookmarks|mute|pin …`** (NIP-51).
-7. **`amy zap send|verify`** (NIP-57).
+7. **`amy zap send|verify`** (NIP-57) — send ✅ (invoice fetch +
+   optional CLINK auto-pay via `--with NDEBIT`); receipt verify pending.
 8. **Distribution** — Homebrew + Scoop + `.deb` in the same release
    pipeline as desktop. Plan: `cli/plans/2026-04-21-cli-distribution.md`.
-9. **Test suite** — end-to-end against a local relay. Marmot interop is
-   covered by `cli/tests/marmot/marmot-interop-headless.sh`; NIP-17 DM
-   interop between two `amy` clients is covered by
-   `cli/tests/dm/dm-interop-headless.sh` (text + file + strict 10050 +
-   fallback + cursor-advance). Neither runs in CI yet (both need Rust +
-   ~3 min cold relay build).
+9. **Test suite** — largely in place, two layers:
+   - **Shell harnesses** under `cli/tests/` — nine suites: `blossom`
+     (live servers), `cache`, `clink`, `dm`, `marmot` (vs whitenoise-rs),
+     `nests` (manual audio-rooms matrix), `pow`, `relaygroup`, `sync`,
+     plus the shared `headless/` helpers. See `cli/tests/README.md`.
+     None run in CI yet (the relay-backed ones need Rust + a ~3 min
+     cold `nostr-rs-relay` build).
+   - **JVM unit suite** at `cli/src/test/kotlin/` — `Args` parsing,
+     exit-code contract, and `--json` shape tests driving `runCli`
+     in-process via the `amy.home` isolation seam.
 10. **Everything else in the matrix.**
 
 ---

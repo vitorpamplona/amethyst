@@ -1,13 +1,24 @@
 # amy CLI test harnesses
 
-Shell-based end-to-end harnesses that drive the `amy` CLI binary against a
-loopback `nostr-rs-relay`. Layout:
+Shell-based end-to-end harnesses that drive the `amy` CLI binary — against a
+loopback `nostr-rs-relay`, an embedded `amy serve` relay, live public servers,
+or no relay at all, depending on the suite. Ten directories:
 
 ```
 cli/tests/
 ├── lib.sh                 # shared logging, results, assertions
 ├── headless/              # shared bits used by every harness
 │   └── helpers.sh
+├── blossom/               # Blossom blob lifecycle vs LIVE public servers
+│   └── blossom-live.sh
+├── cache/                 # local-store-as-cache semantics (profile show
+│   └── cache-headless.sh  #   cache/refresh, store stat) vs nostr-rs-relay
+├── clink/                 # CLINK pointer decode — local-only, no relay
+│   └── clink-headless.sh
+├── dm/                    # NIP-17 DM interop (amy ↔ amy)
+│   ├── dm-interop-headless.sh
+│   ├── setup.sh                    # preflight + identities
+│   └── tests-dm.sh
 ├── marmot/                # Marmot / MLS group-messaging interop
 │   ├── marmot-interop.sh           # interactive — prompts Amethyst Android UI
 │   ├── marmot-interop-headless.sh  # zero-prompt
@@ -16,19 +27,44 @@ cli/tests/
 │   ├── tests-manage.sh             # tests 06–08, 11
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
 │   └── patches/                    # whitenoise-rs harness patches
-├── dm/                    # NIP-17 DM interop (amy ↔ amy)
-│   ├── dm-interop-headless.sh
-│   ├── setup.sh                    # preflight + identities
-│   └── tests-dm.sh
-└── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
-    ├── nests-interop.sh            # 47-test manual harness
-    └── README.md                   # operator brief + per-test matrix
+├── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
+│   ├── nests-interop.sh            # 47-test manual harness
+│   └── README.md                   # operator brief + per-test matrix
+├── pow/                   # NIP-13 primitives (bench/mine/check) — no relay
+│   └── pow-headless.sh
+├── relaygroup/            # NIP-29 round-trip vs embedded `amy serve` (geode)
+│   └── relaygroup-headless.sh
+└── sync/                  # NIP-77 deletion propagation vs `amy serve`
+    └── sync-deletions-headless.sh
 ```
 
-The CLINK suite is local-only (no relay): `clink/clink-headless.sh` asserts that
-`amy offer info` / `amy debit info` decode the canonical interop vectors to the
-right fields, plus the argument-error paths. The round-trip verbs (`offer
-request`, `debit pay/budget`) need a live CLINK service and aren't covered here.
+These shell suites are the *interop* layer. The *contract* net — `Args`
+parsing, the exit-code contract (bad_args → 2, timeout → 124), and `--json`
+shapes — is the JVM unit suite at `cli/src/test/kotlin/` (`ArgsTest`,
+`ExitCodeContractTest`, `JsonContractTest`), which drives `runCli`
+in-process with an isolated `~/.amy` via the `amy.home` seam. Run it with
+`./gradlew :cli:test` — no relay, no Rust, milliseconds.
+
+Suite notes:
+
+- **`clink/clink-headless.sh`** is local-only (no relay): asserts that
+  `amy offer info` / `amy debit info` decode the canonical interop vectors
+  (the same fixtures quartz's `ClinkInteropTest` uses) to the right fields,
+  plus the argument-error paths. The round-trip verbs (`offer request`,
+  `debit pay/budget`) need a live CLINK service and aren't covered here.
+- **`pow/pow-headless.sh`** is also relay-free: `pow bench` sanity,
+  `pow mine` hitting its target (and exiting 124 on an impossible one),
+  and mined-nonce round-trips through `pow check`.
+- **`cache/cache-headless.sh`** proves the local store is the source of
+  truth for reads: `profile show` served from cache vs `--refresh`, and
+  `store stat` reporting the right histogram, vs a loopback nostr-rs-relay.
+- **`relaygroup/relaygroup-headless.sh`** runs NIP-29 create/message/join/
+  list/browse against an embedded relay (`amy serve`, which boots geode) —
+  no external relay binary. geode doesn't sign 39000-39003, so browse/info
+  emptiness is a relay capability, not a client bug.
+- **`sync/sync-deletions-headless.sh`** proves NIP-77 deletion propagation
+  both directions (plus the `--no-sync-deletions` opt-out) against
+  `amy serve`, with one `$HOME` per account so stores don't share.
 
 The Marmot harnesses come in two flavours, same scenarios:
 
@@ -95,6 +131,7 @@ the end of the run.
 | 11 | Leave group | – |
 | 12 | Offline catch-up / replay | – |
 | 13 | KeyPackage rotation | – |
+| 14 | Push notifications (MIP-05) | opt-in via `--transponder` |
 
 ### DM (amy ↔ amy, NIP-17) — `dm/dm-interop-headless.sh`
 
@@ -120,7 +157,6 @@ pure loopback and isn't matched by that filter. Override with
 (`dm send-file --file PATH --server URL`) needs a local Blossom server
 and isn't scripted here — the upload classes are unit-tested on desktop
 at `desktopApp/src/jvmTest/kotlin/.../service/upload/`.
-| 14 | Push notifications (MIP-05) | opt-in via `--transponder` |
 
 ## Prerequisites
 
