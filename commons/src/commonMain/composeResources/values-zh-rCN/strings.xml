@@ -1,17 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
+    <string name="login_title">欢迎使用 Amethyst</string>
+    <string name="login_subtitle">登录到您的 Nostr 帐户</string>
+    <string name="login_subtitle_desktop">Nostr 桌面客户端</string>
+    <string name="login_card_title">使用您的Nostr密钥登录</string>
+    <string name="login_card_subtitle">nsec 完全访问，bunker:// 远程签名，或 npub 只读</string>
+    <string name="login_with_key">使用密钥登录</string>
+    <string name="login_button">登录</string>
+    <string name="login_generate_new">生成新密钥</string>
+    <string name="login_generate_button">生成新的</string>
+    <string name="login_key_hint">输入您的私钥 (nsec) 或公钥 (npub)</string>
+    <string name="login_key_label">nsec, bunker://, 或 npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
+    <string name="login_show_key">显示密钥</string>
+    <string name="login_hide_key">隐藏密钥</string>
     <!-- New Key Warning -->
+    <string name="new_key_warning_title">重要：保存您的密钥！</string>
+    <string name="new_key_warning_message">您的密钥(nsec)是访问您账户的唯一方式。如果您丢失它，您的账户就废了。将它保存在安全的地方！</string>
+    <string name="new_key_public_label">公钥(可分享)：</string>
+    <string name="new_key_secret_label">密钥 (绝对不要共享这个!)：</string>
+    <string name="new_key_continue_button">我已保存我的密钥，继续</string>
     <!-- Common Actions -->
+    <string name="action_copy">复制</string>
+    <string name="action_paste">粘贴</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_ok">好</string>
+    <string name="action_save">保存</string>
+    <string name="action_delete">删除</string>
+    <string name="action_share">分享</string>
     <!-- Errors -->
+    <string name="error_invalid_key">密钥格式无效。请检查并重试。</string>
+    <string name="error_network">网络错误。请检查您的网络连接。</string>
+    <string name="error_generic">发生错误，请重试。</string>
     <!-- Loading & Empty States -->
+    <string name="action_refresh">刷新</string>
+    <string name="action_try_again">重试</string>
+    <string name="feed_empty">Feed 为空</string>
+    <string name="error_loading_feed">加载源时出错： %s</string>
     <!-- Placeholder Screens -->
+    <string name="screen_search_title">搜索</string>
+    <string name="screen_search_description">搜索用户、笔记和话题标签。</string>
+    <string name="screen_messages_title">消息</string>
+    <string name="screen_messages_description">您的加密私信将出现在这里。</string>
+    <string name="screen_notifications_title">通知</string>
+    <string name="screen_notifications_description">这里将出现提及、回复和反应。</string>
     <!-- Accessibility -->
+    <string name="accessibility_user_avatar">用户头像</string>
+    <string name="accessibility_navigate">导航</string>
     <!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">正在加载：</string>
+    <string name="chats_history_fully_loaded_label">已全部加载：</string>
+    <string name="chats_history_fully_loaded">(已全部载入)</string>
+    <string name="chats_history_by_relay">按中继分类的历史记录</string>
+    <string name="chats_history_stalled_retry">当您重新打开此屏幕时会重试</string>
+    <string name="chats_history_older">更早的 %1$s 条消息</string>
+    <string name="chats_history_all_caught_up">全部被抓取</string>
+    <string name="chats_history_reached_start">已到达您 %1$s 条消息的开头</string>
+    <string name="chats_history_subtitle">%1$s · %2$s ·从 %3$s 起加载</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
+    <string name="chats_history_waiting">正在等待 %1$s</string>
+    <string name="chats_history_incomplete">一些中继没有回应</string>
+    <string name="chats_history_incomplete_sub">%1$s 不可访问 · 点击查看哪些</string>
+    <string name="chats_history_relays_title">%1$s · 按中继分类的历史记录</string>
+    <string name="chats_history_relay_since">自 %1$s</string>
+    <string name="action_dismiss">忽略</string>
+    <plurals name="chats_history_relays">
+        <item quantity="other">%1$d 个中继</item>
+    </plurals>
     <!-- Notes & Replies -->
+    <string name="replying_to">回复 </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
+    <string name="napplet_card_permissions">此应用可以访问什么</string>
+    <string name="nsite_root_site">根站点</string>
+    <string name="nsite_source">源：</string>
+    <string name="nsite_servers">服务器：</string>
+    <string name="nsite_open">打开</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">使用直接 URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">昵称</string>
+    <string name="nickname_dialog_explainer">显示给你而不是这个用户的名字，在应用中的每个地方。 它被加密保存到您的联系卡上：只有您可以阅读它。请输入 : 使用您的自定义表情符号。</string>
+    <string name="nickname_label">昵称</string>
+    <string name="nickname_summary_label">关于此用户的私人便笺</string>
+    <string name="nickname_save">保存</string>
+    <string name="nickname_cancel">取消</string>
     <string name="git_status_open">打开</string>
     <string name="git_status_merged">已合并</string>
     <string name="git_status_closed">已关闭</string>
@@ -35,7 +112,7 @@
     <string name="road_event_animal">道路上的动物</string>
     <string name="road_event_confirmed">仍在那里</string>
     <string name="road_event_confirms_report">确认道路报告</string>
-    <string name="road_event_construction">建设</string>
+    <string name="road_event_construction">施工</string>
     <string name="road_event_denied">已不存在</string>
     <string name="road_event_denies_report">报告道路事件已清理完毕</string>
     <string name="road_event_fog">雾</string>
@@ -50,6 +127,8 @@
     <string name="road_event_traffic_jam">塞车</string>
     <string name="road_event_unknown">道路事件</string>
     <string name="podcast_value_zap_split_hint">对此的Zaps 在以下对象间分割：</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">值对值</string>
     <string name="relay_monitor_rtt_open">打开</string>
     <string name="relay_monitor_rtt_read">读取</string>
     <string name="relay_monitor_rtt_write">写入</string>

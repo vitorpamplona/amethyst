@@ -1,17 +1,89 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
+    <string name="login_title">Willkommen bei Amethyst</string>
+    <string name="login_subtitle">Melde dich bei deinem Nostr-Konto an</string>
+    <string name="login_subtitle_desktop">Ein Nostr-Client für den Desktop</string>
+    <string name="login_card_title">Mit deinem Nostr-Schlüssel anmelden</string>
+    <string name="login_card_subtitle">nsec für vollen Zugriff, bunker:// für Remote-Signer oder npub für Nur-Lesen</string>
+    <string name="login_with_key">Mit Schlüssel anmelden</string>
+    <string name="login_button">Anmelden</string>
+    <string name="login_generate_new">Neuen Schlüssel erstellen</string>
+    <string name="login_generate_button">Neu erstellen</string>
+    <string name="login_key_hint">Gib deinen privaten Schlüssel (nsec) oder öffentlichen Schlüssel (npub) ein</string>
+    <string name="login_key_label">nsec, bunker:// oder npub</string>
+    <string name="login_show_key">Schlüssel anzeigen</string>
+    <string name="login_hide_key">Schlüssel verbergen</string>
     <!-- New Key Warning -->
+    <string name="new_key_warning_title">WICHTIG: Speichere deine Schlüssel!</string>
+    <string name="new_key_warning_message">Dein geheimer Schlüssel (nsec) ist die EINZIGE Möglichkeit, auf dein Konto zuzugreifen. Wenn du ihn verlierst, ist dein Konto für immer verloren. Bewahre ihn an einem sicheren Ort auf!</string>
+    <string name="new_key_public_label">Öffentlicher Schlüssel (teilbar):</string>
+    <string name="new_key_secret_label">Geheimer Schlüssel (NIEMALS teilen!):</string>
+    <string name="new_key_continue_button">Ich habe meine Schlüssel gespeichert, weiter</string>
     <!-- Common Actions -->
+    <string name="action_copy">Kopieren</string>
+    <string name="action_paste">Einfügen</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_share">Teilen</string>
     <!-- Errors -->
+    <string name="error_invalid_key">Ungültiges Schlüsselformat. Bitte überprüfe es und versuche es erneut.</string>
+    <string name="error_network">Netzwerkfehler. Bitte überprüfe deine Verbindung.</string>
+    <string name="error_generic">Ein Fehler ist aufgetreten. Bitte versuche es erneut.</string>
     <!-- Loading & Empty States -->
+    <string name="action_refresh">Aktualisieren</string>
+    <string name="action_try_again">Erneut versuchen</string>
+    <string name="feed_empty">Feed ist leer</string>
+    <string name="error_loading_feed">Fehler beim Laden des Feeds: %s</string>
     <!-- Placeholder Screens -->
+    <string name="screen_search_title">Suche</string>
+    <string name="screen_search_description">Suche nach Benutzern, Notizen und Hashtags.</string>
+    <string name="screen_messages_title">Nachrichten</string>
+    <string name="screen_messages_description">Deine verschlüsselten Direktnachrichten erscheinen hier.</string>
+    <string name="screen_notifications_title">Benachrichtigungen</string>
+    <string name="screen_notifications_description">Erwähnungen, Antworten und Reaktionen erscheinen hier.</string>
     <!-- Accessibility -->
+    <string name="accessibility_user_avatar">Benutzer-Avatar</string>
+    <string name="accessibility_navigate">Navigieren</string>
     <!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">Wird geladen:</string>
+    <string name="chats_history_fully_loaded_label">Vollständig geladen:</string>
+    <string name="chats_history_fully_loaded">(vollständig geladen)</string>
+    <string name="chats_history_by_relay">Verlauf nach Relay</string>
+    <string name="chats_history_stalled_retry">Wird erneut versucht, wenn du diesen Bildschirm erneut öffnest</string>
+    <string name="chats_history_older">Ältere %1$s Nachrichten</string>
+    <string name="chats_history_all_caught_up">Alles gelesen</string>
+    <string name="chats_history_reached_start">Anfang deiner %1$s Nachrichten erreicht</string>
+    <string name="chats_history_subtitle">%1$s · %2$s · geladen seit %3$s</string>
+    <string name="chats_history_waiting">warte auf %1$s</string>
+    <string name="chats_history_incomplete">Einige Relays haben nicht geantwortet</string>
+    <string name="chats_history_incomplete_sub">%1$s nicht erreichbar · tippen, um zu sehen welche</string>
+    <string name="chats_history_relays_title">%1$s · Verlauf nach Relay</string>
+    <string name="chats_history_relay_since">seit %1$s</string>
+    <string name="action_dismiss">Verwerfen</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d Relay</item>
+        <item quantity="other">%1$d Relays</item>
+    </plurals>
     <!-- Notes & Replies -->
+    <string name="replying_to">Antworten auf </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">Statische Website: %1$s</string>
+    <string name="napplet_card_permissions">Worauf sie zugreifen kann</string>
+    <string name="nsite_root_site">Stammseite</string>
+    <string name="nsite_source">Quelle:</string>
+    <string name="nsite_servers">Server:</string>
+    <string name="nsite_open">Öffnen</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Direkte URL verwenden</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">Spitzname</string>
+    <string name="nickname_dialog_explainer">Wird dir überall in der App anstelle des Namens dieses Benutzers angezeigt. Er wird verschlüsselt in deiner Kontaktkarte gespeichert: nur du kannst ihn lesen. Tippe :, um deine benutzerdefinierten Emojis zu verwenden.</string>
+    <string name="nickname_label">Spitzname</string>
+    <string name="nickname_summary_label">Private Notiz über diesen Benutzer</string>
+    <string name="nickname_save">Speichern</string>
+    <string name="nickname_cancel">Abbrechen</string>
     <string name="git_status_open">Offen</string>
     <string name="git_status_merged">Zusammengeführt</string>
     <string name="git_status_closed">Geschlossen</string>
@@ -68,77 +140,5 @@
     <plurals name="calendar_collection_count">
         <item quantity="one">%1$d Termin</item>
         <item quantity="other">%1$d Termine</item>
-    </plurals>
-    <string name="accessibility_navigate">Navigieren</string>
-    <string name="accessibility_user_avatar">Benutzer-Avatar</string>
-    <string name="action_cancel">Abbrechen</string>
-    <string name="action_copy">Kopieren</string>
-    <string name="action_delete">Löschen</string>
-    <string name="action_dismiss">Verwerfen</string>
-    <string name="action_paste">Einfügen</string>
-    <string name="action_refresh">Aktualisieren</string>
-    <string name="action_save">Speichern</string>
-    <string name="action_share">Teilen</string>
-    <string name="action_try_again">Erneut versuchen</string>
-    <string name="chats_history_all_caught_up">Alles gelesen</string>
-    <string name="chats_history_by_relay">Verlauf nach Relay</string>
-    <string name="chats_history_fully_loaded">(vollständig geladen)</string>
-    <string name="chats_history_fully_loaded_label">Vollständig geladen:</string>
-    <string name="chats_history_incomplete">Einige Relays haben nicht geantwortet</string>
-    <string name="chats_history_incomplete_sub">%1$s nicht erreichbar · tippen, um zu sehen welche</string>
-    <string name="chats_history_loading_label">Wird geladen:</string>
-    <string name="chats_history_older">Ältere %1$s Nachrichten</string>
-    <string name="chats_history_reached_start">Anfang deiner %1$s Nachrichten erreicht</string>
-    <string name="chats_history_relay_since">seit %1$s</string>
-    <string name="chats_history_relays_title">%1$s · Verlauf nach Relay</string>
-    <string name="chats_history_stalled_retry">Wird erneut versucht, wenn du diesen Bildschirm erneut öffnest</string>
-    <string name="chats_history_subtitle">%1$s · %2$s · geladen seit %3$s</string>
-    <string name="chats_history_waiting">warte auf %1$s</string>
-    <string name="error_generic">Ein Fehler ist aufgetreten. Bitte versuche es erneut.</string>
-    <string name="error_invalid_key">Ungültiges Schlüsselformat. Bitte überprüfe es und versuche es erneut.</string>
-    <string name="error_loading_feed">Fehler beim Laden des Feeds: %s</string>
-    <string name="error_network">Netzwerkfehler. Bitte überprüfe deine Verbindung.</string>
-    <string name="feed_empty">Feed ist leer</string>
-    <string name="login_button">Anmelden</string>
-    <string name="login_card_subtitle">nsec für vollen Zugriff, bunker:// für Remote-Signer oder npub für Nur-Lesen</string>
-    <string name="login_card_title">Mit deinem Nostr-Schlüssel anmelden</string>
-    <string name="login_generate_button">Neu erstellen</string>
-    <string name="login_generate_new">Neuen Schlüssel erstellen</string>
-    <string name="login_hide_key">Schlüssel verbergen</string>
-    <string name="login_key_hint">Gib deinen privaten Schlüssel (nsec) oder öffentlichen Schlüssel (npub) ein</string>
-    <string name="login_key_label">nsec, bunker:// oder npub</string>
-    <string name="login_show_key">Schlüssel anzeigen</string>
-    <string name="login_subtitle">Melde dich bei deinem Nostr-Konto an</string>
-    <string name="login_subtitle_desktop">Ein Nostr-Client für den Desktop</string>
-    <string name="login_title">Willkommen bei Amethyst</string>
-    <string name="login_with_key">Mit Schlüssel anmelden</string>
-    <string name="napplet_card_permissions">Worauf sie zugreifen kann</string>
-    <string name="new_key_continue_button">Ich habe meine Schlüssel gespeichert, weiter</string>
-    <string name="new_key_public_label">Öffentlicher Schlüssel (teilbar):</string>
-    <string name="new_key_secret_label">Geheimer Schlüssel (NIEMALS teilen!):</string>
-    <string name="new_key_warning_message">Dein geheimer Schlüssel (nsec) ist die EINZIGE Möglichkeit, auf dein Konto zuzugreifen. Wenn du ihn verlierst, ist dein Konto für immer verloren. Bewahre ihn an einem sicheren Ort auf!</string>
-    <string name="new_key_warning_title">WICHTIG: Speichere deine Schlüssel!</string>
-    <string name="nickname_cancel">Abbrechen</string>
-    <string name="nickname_dialog_explainer">Wird dir überall in der App anstelle des Namens dieses Benutzers angezeigt. Er wird verschlüsselt in deiner Kontaktkarte gespeichert: nur du kannst ihn lesen. Tippe :, um deine benutzerdefinierten Emojis zu verwenden.</string>
-    <string name="nickname_dialog_title">Spitzname</string>
-    <string name="nickname_label">Spitzname</string>
-    <string name="nickname_save">Speichern</string>
-    <string name="nickname_summary_label">Private Notiz über diesen Benutzer</string>
-    <string name="nsite_open">Öffnen</string>
-    <string name="nsite_root_site">Stammseite</string>
-    <string name="nsite_servers">Server:</string>
-    <string name="nsite_source">Quelle:</string>
-    <string name="nsite_title">Statische Website: %1$s</string>
-    <string name="replying_to">Antworten auf </string>
-    <string name="screen_messages_description">Deine verschlüsselten Direktnachrichten erscheinen hier.</string>
-    <string name="screen_messages_title">Nachrichten</string>
-    <string name="screen_notifications_description">Erwähnungen, Antworten und Reaktionen erscheinen hier.</string>
-    <string name="screen_notifications_title">Benachrichtigungen</string>
-    <string name="screen_search_description">Suche nach Benutzern, Notizen und Hashtags.</string>
-    <string name="screen_search_title">Suche</string>
-    <string name="use_direct_url">Direkte URL verwenden</string>
-    <plurals name="chats_history_relays">
-        <item quantity="one">%1$d Relay</item>
-        <item quantity="other">%1$d Relays</item>
     </plurals>
 </resources>

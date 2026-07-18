@@ -1,17 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
+    <string name="login_title">अमेथिस्ट पर आपका स्वागत है</string>
+    <string name="login_subtitle">आपके नोस्टर लेखा में प्रवेंशांकन करें</string>
+    <string name="login_subtitle_desktop">नोस्टर ग्राहक लेखनपीठ संगणकों के लिए</string>
+    <string name="login_card_title">आपकी नोस्टर कुंचिका के साथ प्रवेशांकन करें</string>
+    <string name="login_card_subtitle">एनसेक॰ पूर्ण अभिगम्यता के लिए। bunker:// दूरस्थ हस्ताक्षरकर्ता के लिए। अथवा एनपुब॰ केवल पठनशक्य के लिए</string>
+    <string name="login_with_key">कुंचिका के साथ प्रवेशांकन</string>
+    <string name="login_button">प्रवेशांकन</string>
+    <string name="login_generate_new">एक नयी कुंचिका बनाएँ</string>
+    <string name="login_generate_button">नया बनाएँ</string>
+    <string name="login_key_hint">आपकी निजी कुंचिका (एनसेक॰) अथवा ख्याप्य कुंचिका (एनपुब॰) प्रविष्ट करें</string>
+    <string name="login_key_label">एनसेक॰ अथवा bunker:// अथवा एनपुब॰</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
+    <string name="login_show_key">कुंचिका दिखाएँ</string>
+    <string name="login_hide_key">कुंचिका छिपाएँ</string>
     <!-- New Key Warning -->
+    <string name="new_key_warning_title">महत्वपूर्ण। आपके कुंचिकाओं को सुरक्षित रखें।</string>
+    <string name="new_key_warning_message">आपकी गुप्त कुंचिका (एनसेक॰) एकमात्र विधि है आपके अपने लेखा अभिगमन के लिए। यदि आप इसे खो देते हैं तो आपका लेखा भी सर्वदा के लिए चला जाएगा। इसे कहीं सुरक्षित रखें।</string>
+    <string name="new_key_public_label">ख्याप्य कुंचिका (वितरणशक्य):</string>
+    <string name="new_key_secret_label">गुप्त कुंचिका (इसे कभी ना बाँटें):</string>
+    <string name="new_key_continue_button">मेरे कुंचिकाओं को सुरक्षित रख लिया। आगे</string>
     <!-- Common Actions -->
+    <string name="action_copy">अनुकृति</string>
+    <string name="action_paste">चिपकाएँ</string>
+    <string name="action_cancel">निरस्त</string>
+    <string name="action_ok">ठीक</string>
+    <string name="action_save">अभिलेखन</string>
+    <string name="action_delete">मिटाएँ</string>
+    <string name="action_share">बाँटें</string>
     <!-- Errors -->
+    <string name="error_invalid_key">अमान्य कुंचिका प्रारूप। कृपया जाँच करें और पुनःप्रयास करें।</string>
+    <string name="error_network">जाल अपक्रम। कृपया आपके संयोजन की जाँच करें।</string>
+    <string name="error_generic">एक अपक्रम हुआ। कृपया पुनःप्रयास करें।</string>
     <!-- Loading & Empty States -->
+    <string name="action_refresh">नवीकरण</string>
+    <string name="action_try_again">पुनःप्रयास करें</string>
+    <string name="feed_empty">सूचनावली रिक्त है</string>
+    <string name="error_loading_feed">सूचनावली आवहन में अपक्रम : %s</string>
     <!-- Placeholder Screens -->
+    <string name="screen_search_title">खोज</string>
+    <string name="screen_search_description">खोज करें प्रयोक्ता टीका तथा विषयसूचकों के लिए।</string>
+    <string name="screen_messages_title">सन्देश</string>
+    <string name="screen_messages_description">आपके रहस्यीकृत सीधे सन्देश यहाँ दिखेंगे।</string>
+    <string name="screen_notifications_title">सूचनाएँ</string>
+    <string name="screen_notifications_description">उल्लेख प्रत्युत्तर तथा प्रतिक्रियाएँ यहाँ दिखेंगे।</string>
     <!-- Accessibility -->
+    <string name="accessibility_user_avatar">प्रयोक्ता चित्र</string>
+    <string name="accessibility_navigate">मार्गदर्शन</string>
     <!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">आवहन चालू :</string>
+    <string name="chats_history_fully_loaded_label">आवहन सम्पन्न :</string>
+    <string name="chats_history_fully_loaded">(आवहन सम्पन्न)</string>
+    <string name="chats_history_by_relay">इतिहास पुनःप्रसारक आनुसार</string>
+    <string name="chats_history_stalled_retry">इस पटल को पुनःखोलने पर पुनःप्रयास किया जाएगा</string>
+    <string name="chats_history_older">पुराने %1$s सन्देश</string>
+    <string name="chats_history_all_caught_up">सब सम्पन्न</string>
+    <string name="chats_history_reached_start">आपके %1$s सन्देशों के आरम्भ तक आ गए</string>
+    <string name="chats_history_subtitle">%1$s। %2$s। आवहन सम्पन्न %3$s से</string>
+    <string name="chats_history_subtitle_no_date">%1$s। %2$s</string>
+    <string name="chats_history_waiting">प्रतीक्षा %1$s पर</string>
+    <string name="chats_history_incomplete">कुछ पुनःप्रसारकों ने उत्तर नहीं दी</string>
+    <string name="chats_history_incomplete_sub">%1$s अनभिगम्य। दबाएँ यह देखने के लिए कि कौनसा है</string>
+    <string name="chats_history_relays_title">%1$s। इतिहास पुनःप्रसारक अनुसार</string>
+    <string name="chats_history_relay_since">%1$s से</string>
+    <string name="action_dismiss">हटाएँ</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d पुनःप्रसारक</item>
+        <item quantity="other">%1$d पुनःप्रसारक</item>
+    </plurals>
     <!-- Notes & Replies -->
+    <string name="replying_to">उत्तर इनको </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">नोस्टरस्थान : %1$s</string>
+    <string name="napplet_card_title">नोस्टरसंलग्नक्रमक : %1$s</string>
+    <string name="napplet_card_kind">नोस्टरसंलग्नक्रमक</string>
+    <string name="nsite_website_kind">नोस्टरस्थान</string>
+    <string name="napplet_card_permissions">इसके लिए क्या अभिगम्य है</string>
+    <string name="nsite_root_site">मूल स्थान</string>
+    <string name="nsite_source">स्रोत :</string>
+    <string name="nsite_servers">सेवासंगणक :</string>
+    <string name="nsite_open">खोलें</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">सीधे जालपता का उपयोग करें</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">उपनाम</string>
+    <string name="nickname_dialog_explainer">आपको दिखाया गया इस प्रयोक्ता के नाम के स्थान पर तथा क्रमक में सर्वत्र। यह अभिलेखित है रहस्यीकृत रूप में आपके सम्पर्क पत्रक में। केवल आप इसे पढ सकेंगे। अपने विशिष्ट भावचिह्नों का उपयोग करने के लिए : टंकण करें।</string>
+    <string name="nickname_label">उपनाम</string>
+    <string name="nickname_summary_label">निजी टीका इस प्रयोक्ता के विषय में</string>
+    <string name="nickname_save">अभिलेखन</string>
+    <string name="nickname_cancel">निरस्त</string>
     <string name="git_status_open">खुला</string>
     <string name="git_status_merged">विलीन</string>
     <string name="git_status_closed">आवृत</string>
