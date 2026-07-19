@@ -24,6 +24,7 @@ import android.content.Context
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
@@ -105,10 +106,16 @@ fun buildSignerConsentInfo(
     )
 }
 
-/** Creates a [SignerConnectInfo] for the first-connect dialog. */
+/**
+ * Creates a [SignerConnectInfo] for the first-connect dialog. [declared] is the capability set the
+ * connection pre-grants as ALLOW_ALWAYS on accept, so it is surfaced as
+ * [SignerConnectInfo.requestedPermissions] — otherwise the dialog would be asking the user to
+ * approve a set it never showed them.
+ */
 fun buildConnectInfo(
     context: Context,
     identity: NappletIdentity,
+    declared: Set<NappletCapability> = emptySet(),
 ): SignerConnectInfo {
     val untitled = context.getString(R.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
@@ -124,5 +131,18 @@ fun buildConnectInfo(
         } else {
             identity.identifier.ifBlank { identity.authorPubKey.take(12) + "…" }
         }
-    return SignerConnectInfo(appletTitle = title, coordinate = identity.coordinate, domain = domain, iconUrl = iconUrl)
+    // Only the capabilities that actually get pre-granted are listed; SHELL/THEME never prompt and
+    // VALUE is per-use, so listing them would overstate what accepting hands over.
+    val preGranted =
+        declared
+            .filter { it.requiresConsent && !it.requiresPerUseConsent }
+            .map { context.getString(it.labelRes()) }
+            .sorted()
+    return SignerConnectInfo(
+        appletTitle = title,
+        coordinate = identity.coordinate,
+        domain = domain,
+        iconUrl = iconUrl,
+        requestedPermissions = preGranted,
+    )
 }

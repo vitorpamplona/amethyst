@@ -81,7 +81,9 @@ class AccountNappletGateways(
     private val httpClient: (useProxy: Boolean) -> OkHttpClient,
     private val signerLedger: NostrSignerPermissionLedger? = null,
 ) {
-    private val consentSummary = NappletConsentSummary(context)
+    // Takes the account so the consent dialog can diff a proposed replaceable list (follows, relays,
+    // mutes) against the copy already cached here, and say what actually changes.
+    private val consentSummary = NappletConsentSummary(context, account)
 
     // Reuse the app-wide HTTP client so napplet blob fetches inherit the same Tor
     // routing, Onion-Location discovery/rewriting, Blossom cache and pool as the
@@ -138,10 +140,10 @@ class AccountNappletGateways(
             }
 
         val connectPrompt =
-            NostrConnectPrompt { identity ->
+            NostrConnectPrompt { identity, declared ->
                 SignerConnectCoordinator.requestConnect(
                     context = context,
-                    info = buildConnectInfo(context, identity),
+                    info = buildConnectInfo(context, identity, declared),
                 )
             }
 
