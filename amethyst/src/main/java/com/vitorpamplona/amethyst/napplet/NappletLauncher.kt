@@ -156,6 +156,9 @@ object NappletLauncher {
             putString(NappletHostContract.EXTRA_HOST_PROFILE, profile.name)
             putBoolean(NappletHostContract.EXTRA_USE_TOR, useTor)
             putString(NappletHostContract.EXTRA_THEME, theme)
+            // Opaque per-account storage partition, so a napplet/nSite can't carry one npub's cookies
+            // and localStorage into another. Derived here (the sandbox never sees the pubkey).
+            putString(NappletHostContract.EXTRA_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
         }
     }
 }

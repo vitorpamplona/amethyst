@@ -87,6 +87,8 @@ class NappletBrowserService : Service() {
         var useTor: Boolean,
         val bgColor: Int,
         val themeType: String,
+        // Opaque per-account WebView storage-profile name (see NappletWebViewProfile).
+        val webViewProfile: String?,
     ) {
         var webView: WebView? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
@@ -159,6 +161,7 @@ class NappletBrowserService : Service() {
                         useTor = data.getBoolean(NappletBrowserContract.KEY_USE_TOR, false),
                         bgColor = data.getInt(NappletBrowserContract.KEY_BG_COLOR, android.graphics.Color.WHITE),
                         themeType = data.getString(NappletBrowserContract.KEY_THEME).orEmpty().ifBlank { "SYSTEM" },
+                        webViewProfile = data.getString(NappletBrowserContract.KEY_WEBVIEW_PROFILE),
                     )
                 tabs[sessionId] = tab
                 // Bind the broker once; a re-sent MSG_CREATE_SESSION (e.g. client reconnect) must not
@@ -259,6 +262,10 @@ class NappletBrowserService : Service() {
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No browser tab for session $sessionId")
         val wv = WebView(nightThemedContext(context, tab.themeType))
+        // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
+        // profile has otherwise been used), so the storage partition must be chosen before the
+        // configure/bridge setup and the loadUrl below.
+        NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
         configureWebView(wv, tab)
         // Theme the pre-load background so a blank/loading page shows Amethyst's background, not white.
         wv.setBackgroundColor(tab.bgColor)

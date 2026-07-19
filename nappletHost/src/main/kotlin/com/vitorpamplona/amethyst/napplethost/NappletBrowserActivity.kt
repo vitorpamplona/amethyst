@@ -171,6 +171,9 @@ class NappletBrowserActivity : ComponentActivity() {
         // Build the WebView from a context forced to the app theme so its content follows DARK/LIGHT even when
         // the device theme differs (WebView reads the context's theme, not the window's — see nightThemedContext).
         webView = WebView(nightThemedContext(this, themeType))
+        // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
+        // profile has otherwise been used), so the storage partition must be chosen before anything else.
+        NappletWebViewProfile.apply(this, webView, intent.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE))
         configureWebView(webView)
         webView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
         webView.dropSystemBarInsets()
@@ -766,6 +769,7 @@ class NappletBrowserActivity : ComponentActivity() {
             title: String = "",
             theme: String = "SYSTEM",
             isFavorite: Boolean = false,
+            webViewProfile: String? = null,
         ): Intent =
             Intent()
                 .setClassName(context, "com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity")
@@ -775,6 +779,9 @@ class NappletBrowserActivity : ComponentActivity() {
                 .putExtra(EXTRA_TITLE, title)
                 .putExtra(EXTRA_THEME, theme)
                 .putExtra(EXTRA_IS_FAVORITE, isFavorite)
+                // Opaque per-account storage partition; shares the host contract's key so there is one
+                // name for the concept across every WebView creation site.
+                .putExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE, webViewProfile)
                 // Distinct task identity per URL for documentLaunchMode=intoExisting.
                 .setData(url.toUri())
     }

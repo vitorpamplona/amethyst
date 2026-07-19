@@ -137,6 +137,14 @@ object NappletBrowserContract {
     const val KEY_THEME = "theme"
 
     /**
+     * Opaque per-account WebView storage-profile name (a truncated SHA-256 of the account pubkey,
+     * minted in the main process). Partitions cookies/localStorage/IndexedDB/service workers per
+     * account so an embedded site can't carry one npub's session into another. See
+     * [NappletHostContract.EXTRA_WEBVIEW_PROFILE].
+     */
+    const val KEY_WEBVIEW_PROFILE = "webViewProfile"
+
+    /**
      * Opaque per-tab session id the client stamps on [MSG_CREATE_SESSION] and every control message
      * ([MSG_NAVIGATE]/[MSG_RELOAD]/[MSG_BACK]/[MSG_SET_TOR]). A single provider instance is shared by all
      * embedded browser tabs (they bind the same Intent), so this scopes a control to the right surface —
