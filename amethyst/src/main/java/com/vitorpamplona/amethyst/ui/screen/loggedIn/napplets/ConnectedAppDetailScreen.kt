@@ -117,7 +117,7 @@ fun ConnectedAppDetailScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore) }
+    val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore, Amethyst.instance.nappletAccountScope) }
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
     val untitled = stringResource(CommonsR.string.napplet_untitled)
 

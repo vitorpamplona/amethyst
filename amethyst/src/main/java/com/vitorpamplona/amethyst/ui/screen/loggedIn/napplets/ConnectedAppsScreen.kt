@@ -96,7 +96,7 @@ fun ConnectedAppsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore) }
+    val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore, Amethyst.instance.nappletAccountScope) }
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
 
     var items by remember { mutableStateOf<List<ConnectedAppEntry>?>(null) }

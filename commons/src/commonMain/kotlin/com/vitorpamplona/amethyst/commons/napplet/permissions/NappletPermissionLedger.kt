@@ -40,11 +40,21 @@ import com.vitorpamplona.amethyst.commons.util.withLock
  */
 class NappletPermissionLedger(
     private val store: NappletPermissionStore,
+    /**
+     * The account session grants belong to, read at call time. This ledger is a process-wide
+     * singleton shared by every account, and a bare coordinate carries no account (it is
+     * `<appAuthor>:<identifier>`), so without this an "allow for this session" granted under one
+     * npub would authorize the same applet under every other npub on the device. The persistent
+     * store is namespaced the same way.
+     */
+    private val accountPubKey: () -> String = { "" },
 ) {
     private val lock = KmpLock()
 
-    // coordinate -> capability -> ALLOW_SESSION (the only state kept here).
+    // "<account>\u0000<coordinate>" -> capability -> ALLOW_SESSION (the only state kept here).
     private val session = mutableMapOf<String, MutableMap<NappletCapability, GrantState>>()
+
+    private fun sessionKey(identity: NappletIdentity) = "${accountPubKey()}\u0000${identity.coordinate}"
 
     /**
      * The standing decision for ([identity], [capability]) without prompting. A persistent
@@ -58,7 +68,7 @@ class NappletPermissionLedger(
         if (persistent == GrantState.DENY) return PermissionDecision.DENY
         if (persistent == GrantState.ALLOW_ALWAYS) return PermissionDecision.ALLOW
 
-        val sessionGrant = lock.withLock { session[identity.coordinate]?.get(capability) }
+        val sessionGrant = lock.withLock { session[sessionKey(identity)]?.get(capability) }
         if (sessionGrant == GrantState.ALLOW_SESSION) return PermissionDecision.ALLOW
 
         return PermissionDecision.ASK
@@ -77,12 +87,12 @@ class NappletPermissionLedger(
         when (grant) {
             GrantState.ALLOW_ALWAYS, GrantState.DENY -> {
                 // A new persistent decision supersedes any lingering session grant.
-                lock.withLock { session[identity.coordinate]?.remove(capability) }
+                lock.withLock { session[sessionKey(identity)]?.remove(capability) }
                 store.store(identity.coordinate, capability, grant)
             }
             GrantState.ALLOW_SESSION ->
                 lock.withLock {
-                    session.getOrPut(identity.coordinate) { mutableMapOf() }[capability] = grant
+                    session.getOrPut(sessionKey(identity)) { mutableMapOf() }[capability] = grant
                 }
             GrantState.ALLOW_ONCE, GrantState.ASK -> Unit // transient; not remembered
         }
@@ -96,13 +106,13 @@ class NappletPermissionLedger(
         identity: NappletIdentity,
         capability: NappletCapability,
     ) {
-        lock.withLock { session[identity.coordinate]?.remove(capability) }
+        lock.withLock { session[sessionKey(identity)]?.remove(capability) }
         store.remove(identity.coordinate, capability)
     }
 
     /** Forgets all grants for [identity] — both the persisted and the in-session ones. */
     suspend fun revokeAll(identity: NappletIdentity) {
-        lock.withLock { session.remove(identity.coordinate) }
+        lock.withLock { session.remove(sessionKey(identity)) }
         store.clear(identity.coordinate)
     }
 

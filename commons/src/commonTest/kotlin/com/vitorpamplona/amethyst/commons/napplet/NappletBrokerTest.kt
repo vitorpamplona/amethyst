@@ -293,12 +293,63 @@ class NappletBrokerTest {
         var calls = 0
             private set
 
-        override suspend fun request(identity: NappletIdentity): AppConnectResult {
+        /** The capabilities the last call was asked to disclose, so tests can assert the dialog got them. */
+        var lastDeclared: Set<NappletCapability> = emptySet()
+            private set
+
+        override suspend fun request(
+            identity: NappletIdentity,
+            declared: Set<NappletCapability>,
+        ): AppConnectResult {
             val answer = answers[minOf(calls, answers.size - 1)]
             calls++
+            lastDeclared = declared
             return answer
         }
     }
+
+    @Test
+    fun aGrantFromOneAccountNeverAuthorizesTheSameAppUnderAnother() =
+        runTest {
+            // The signer permission store is shared across accounts (and with NIP-46), so the napplet
+            // coordinate must carry the account. Without that, "always allow" granted by one npub
+            // silently authorized signing under every other npub on the device — which would defeat
+            // the point of keeping a pseudonymous account separate from a real one.
+            val store = InMemoryNostrSignerPermissionStore()
+            val otherSigner = NostrSignerInternal(KeyPair())
+
+            fun brokerFor(who: NostrSignerInternal) =
+                NappletBroker(
+                    signer = who,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = NostrSignerPermissionLedger(store),
+                    nostrConnectPrompt = ScriptedConnectPrompt(AppConnectResult.Connected(AppSignerPolicy.FULL_TRUST)),
+                )
+
+            // Account A connects the applet and fully trusts it.
+            assertEquals(
+                NappletResponse.PublicKey(signer.pubKey),
+                brokerFor(signer).handle(applet, NappletRequest.GetPublicKey, allDeclared),
+            )
+            assertEquals(AppSignerPolicy.FULL_TRUST, store.loadPolicy("napplet:${signer.pubKey}:${applet.coordinate}"))
+
+            // Account B has granted the very same applet nothing.
+            assertNull(store.loadPolicy("napplet:${otherSigner.pubKey}:${applet.coordinate}"))
+
+            // ...so B's broker must run its own first-connect flow rather than inheriting A's trust.
+            val bConnect = ScriptedConnectPrompt(AppConnectResult.Cancelled)
+            val bBroker =
+                NappletBroker(
+                    signer = otherSigner,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = NostrSignerPermissionLedger(store),
+                    nostrConnectPrompt = bConnect,
+                )
+            assertIs<NappletResponse.Denied>(bBroker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(1, bConnect.calls)
+        }
 
     @Test
     fun cancellingFirstConnectThenRetryingRePromptsOnceCooldownLapses() =
@@ -333,7 +384,8 @@ class NappletBrokerTest {
             clock += 10_000L
             assertEquals(NappletResponse.PublicKey(signer.pubKey), broker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
             assertEquals(2, connect.calls)
-            assertEquals(AppSignerPolicy.REASONABLE, signerLedger.store.loadPolicy(applet.coordinate))
+            // Signer grants are stored under the account-scoped coordinate, not the bare one.
+            assertEquals(AppSignerPolicy.REASONABLE, signerLedger.store.loadPolicy("napplet:${signer.pubKey}:${applet.coordinate}"))
         }
 
     @Test

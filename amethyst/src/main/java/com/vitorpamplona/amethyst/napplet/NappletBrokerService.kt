@@ -79,14 +79,14 @@ class NappletBrokerService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // One ledger for the whole service lifetime: persistent grants on disk, session grants in RAM.
-    private val ledger by lazy { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore) }
+    private val ledger by lazy { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore, Amethyst.instance.nappletAccountScope) }
 
     // Per-app internal-signer permission ledger (policy + per-op overrides). Lazy so it's only
     // instantiated in the main process where the signer lives; never touched from :napplet.
     private val signerLedger by lazy { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
 
-    // Per-applet sandboxed key-value store (namespaced by coordinate inside the impl).
-    private val storage by lazy { DataStoreNappletStorage(applicationContext) }
+    // Per-applet sandboxed key-value store (namespaced by account + coordinate inside the impl).
+    private val storage by lazy { DataStoreNappletStorage(applicationContext, Amethyst.instance.nappletAccountScope) }
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 

@@ -92,7 +92,10 @@ class NappletBroker(
     private val signerConsentLock = Mutex()
 
     // In-memory session grants (AllowForSession): cleared when this broker instance is destroyed.
-    // Only accessed under signerConsentLock.
+    // Keyed by "<coordinate>|<op.key>" via [sessionKey] — this broker instance is shared by every
+    // applet and browser origin under the account, so an unkeyed op would let one app's session
+    // grant silently authorize the same op for all the others. Only accessed under
+    // signerConsentLock.
     private val sessionAllows = mutableSetOf<String>()
 
     // Apps whose first-connect dialog the user just dismissed with Cancel, mapped to the wall-clock
@@ -135,7 +138,7 @@ class NappletBroker(
         }
 
         // Show the first-connect dialog if the app has no signer policy yet.
-        if (signerLedger != null && !signerLedger.hasPolicy(identity.coordinate)) {
+        if (signerLedger != null && !signerLedger.hasPolicy(signerCoordinateFor(identity))) {
             if (!ensureConnected(identity, declared)) {
                 return NappletResponse.Denied(capability, "Connection not authorized.")
             }
@@ -362,7 +365,7 @@ class NappletBroker(
         signerConsentLock.withLock {
             val sl = signerLedger ?: return@withLock true
             // Re-check after acquiring lock: a sibling request may have set the policy while we waited.
-            if (sl.hasPolicy(identity.coordinate)) return@withLock true
+            if (sl.hasPolicy(signerCoordinateFor(identity))) return@withLock true
 
             // Within the post-cancel cooldown, suppress re-prompting so a load-time burst doesn't
             // relaunch the dialog per request. Once it lapses, drop the stale entry and fall through to
@@ -374,10 +377,10 @@ class NappletBroker(
             }
 
             val prompt = nostrConnectPrompt ?: return@withLock true
-            when (val result = prompt.request(identity)) {
+            when (val result = prompt.request(identity, declared)) {
                 is AppConnectResult.Connected -> {
                     cancelledUntil.remove(identity.coordinate)
-                    sl.setPolicy(identity.coordinate, result.policy)
+                    sl.setPolicy(signerCoordinateFor(identity), result.policy)
                     // Bulk-grant non-payment capabilities only for non-paranoid policies.
                     // PARANOID users chose "ask me for everything" — leave the capability ledger
                     // empty so each capability prompts on first use.
@@ -391,7 +394,7 @@ class NappletBroker(
                     true
                 }
                 AppConnectResult.Blocked -> {
-                    sl.setPolicy(identity.coordinate, AppSignerPolicy.PARANOID)
+                    sl.setPolicy(signerCoordinateFor(identity), AppSignerPolicy.PARANOID)
                     for (cap in declared) {
                         ledger.record(identity, cap, GrantState.DENY)
                     }
@@ -415,14 +418,15 @@ class NappletBroker(
     ): Boolean =
         signerConsentLock.withLock {
             val sl = signerLedger ?: return@withLock true
-            // Session grants win immediately without touching storage.
-            if (op.key in sessionAllows) {
-                sl.updateLastUsed(identity.coordinate)
+            // Session grants win immediately without touching storage. Scoped to this applet: a
+            // grant made for one app never authorizes another.
+            if (sessionKey(signerCoordinateFor(identity), op) in sessionAllows) {
+                sl.updateLastUsed(signerCoordinateFor(identity))
                 return@withLock true
             }
-            when (sl.decide(identity.coordinate, op)) {
+            when (sl.decide(signerCoordinateFor(identity), op)) {
                 NostrOpDecision.ALLOW -> {
-                    sl.updateLastUsed(identity.coordinate)
+                    sl.updateLastUsed(signerCoordinateFor(identity))
                     true
                 }
                 NostrOpDecision.DENY -> false
@@ -430,27 +434,27 @@ class NappletBroker(
                     val prompt = signerConsentPrompt ?: return@withLock true
                     when (val grant = prompt.request(identity, op, request)) {
                         is SignerOpGrant.AllowAll -> {
-                            sl.setPolicy(identity.coordinate, AppSignerPolicy.FULL_TRUST)
-                            sl.updateLastUsed(identity.coordinate)
+                            sl.setPolicy(signerCoordinateFor(identity), AppSignerPolicy.FULL_TRUST)
+                            sl.updateLastUsed(signerCoordinateFor(identity))
                             true
                         }
                         is SignerOpGrant.AllowForOp -> {
-                            sl.setOpDecision(identity.coordinate, op, NostrOpDecision.ALLOW)
-                            sl.updateLastUsed(identity.coordinate)
+                            sl.setOpDecision(signerCoordinateFor(identity), op, NostrOpDecision.ALLOW)
+                            sl.updateLastUsed(signerCoordinateFor(identity))
                             true
                         }
                         is SignerOpGrant.AllowForSession -> {
-                            sessionAllows.add(op.key)
-                            sl.updateLastUsed(identity.coordinate)
+                            sessionAllows.add(sessionKey(signerCoordinateFor(identity), op))
+                            sl.updateLastUsed(signerCoordinateFor(identity))
                             true
                         }
                         is SignerOpGrant.AllowUntil -> {
-                            sl.setTimedOpDecision(identity.coordinate, op, NostrOpDecision.ALLOW, grant.expiresAt)
-                            sl.updateLastUsed(identity.coordinate)
+                            sl.setTimedOpDecision(signerCoordinateFor(identity), op, NostrOpDecision.ALLOW, grant.expiresAt)
+                            sl.updateLastUsed(signerCoordinateFor(identity))
                             true
                         }
                         is SignerOpGrant.DenyForOp -> {
-                            sl.setOpDecision(identity.coordinate, op, NostrOpDecision.DENY)
+                            sl.setOpDecision(signerCoordinateFor(identity), op, NostrOpDecision.DENY)
                             false
                         }
                         else -> grant.isAllowed
@@ -458,6 +462,45 @@ class NappletBroker(
                 }
             }
         }
+
+    /**
+     * The signer-ledger coordinate for [identity] under the current account. The signer permission
+     * store is shared with NIP-46, which already namespaces by account
+     * (`nip46:<signer>:<client>` — see Nip46PermissionAuthorizer.coordinateFor); this mirrors that so
+     * an "always allow" granted by one npub can never authorize signing under another. The bare
+     * [NappletIdentity.coordinate] stays the app's display/UI identity and is unchanged.
+     */
+    private fun signerCoordinateFor(identity: NappletIdentity): String = "napplet:${signer.pubKey}:${identity.coordinate}"
+
+    /**
+     * Namespaces an in-memory session grant to the applet that was actually prompted for. Mirrors
+     * `Nip46PermissionAuthorizer.sessionKey`; both authorizers share one process-wide instance, so
+     * the coordinate is what keeps one app's "allow for this session" from leaking to the rest.
+     */
+    private fun sessionKey(
+        coordinate: String,
+        op: NostrSignerOp,
+    ): String = "$coordinate|${op.key}"
+
+    /**
+     * Drops every live session grant held for [coordinate], so revoking an app takes effect
+     * immediately instead of lingering until this broker instance dies.
+     */
+    suspend fun revokeSessionGrants(coordinate: String) {
+        signerConsentLock.withLock {
+            sessionAllows.removeAll { it.startsWith("$coordinate|") }
+        }
+    }
+
+    /**
+     * True when [capability] carries a standing denial for [identity]. Push-subscription edge ops
+     * (identity.watch and friends) short-circuit before [handle], so they have to apply the same
+     * "a standing denial always wins" rule themselves rather than trusting the declaration alone.
+     */
+    suspend fun isDenied(
+        identity: NappletIdentity,
+        capability: NappletCapability,
+    ): Boolean = ledger.decide(identity, capability) == PermissionDecision.DENY
 
     companion object {
         /**

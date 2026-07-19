@@ -33,6 +33,26 @@ class NappletPermissionLedgerTest {
     private fun ledger(store: NappletPermissionStore = InMemoryNappletPermissionStore()) = NappletPermissionLedger(store)
 
     @Test
+    fun aSessionGrantFromOneAccountDoesNotAuthorizeAnother() =
+        runTest {
+            // This ledger is a process-wide singleton shared by every account, and a coordinate carries
+            // no account, so an unscoped session map let "allow for this session" under one npub
+            // silently authorize the same applet under every other npub on the device.
+            var account = "aaaa"
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { account }
+
+            ledger.record(applet, NappletCapability.RELAY, GrantState.ALLOW_SESSION)
+            assertEquals(PermissionDecision.ALLOW, ledger.decide(applet, NappletCapability.RELAY))
+
+            account = "bbbb"
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.RELAY))
+
+            // ...and switching back still honors the grant the user actually made.
+            account = "aaaa"
+            assertEquals(PermissionDecision.ALLOW, ledger.decide(applet, NappletCapability.RELAY))
+        }
+
+    @Test
     fun unknownGrantDefaultsToAsk() =
         runTest {
             val ledger = ledger()
