@@ -211,6 +211,32 @@ install_konan_dep "llvm-19-x86_64-linux-essentials-109" \
 install_konan_dep "libffi-3.2.1-2-linux-x86-64" \
   "$KONAN_DEPS_URL/libffi-3.2.1-2-linux-x86-64.tar.gz"
 
+# --- ngit: git-over-nostr CLI (nostr:// remotes + PR proposals) ---
+# ngit isn't packaged for apt and its GitHub release binaries are blocked by the
+# web sandbox's git-only GitHub proxy (403). The only proxy-reachable source is
+# crates.io, so build it with cargo (which fetches crates through the proxy
+# fine). This installs TWO binaries into ~/.cargo/bin (already on PATH): the
+# `ngit` CLI and the `git-remote-nostr` helper that lets git speak to nostr://
+# remotes. Compiling from source takes a few minutes; the guard makes it a no-op
+# once installed, and the whole thing is best-effort so a failure here never
+# aborts the rest of the hook (which runs under `set -e`).
+install_ngit() {
+  if command -v ngit >/dev/null 2>&1 && command -v git-remote-nostr >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! command -v cargo >/dev/null 2>&1; then
+    echo "cargo not found; skipping ngit install (nostr:// git remotes unavailable)." >&2
+    return 0
+  fi
+  echo "Installing ngit via cargo (compiles from source; may take a few minutes)..." >&2
+  if cargo install ngit >&2; then
+    echo "ngit installed: $(command -v ngit) ($(ngit --version 2>/dev/null))" >&2
+  else
+    echo "ngit install failed; nostr:// git remotes will be unavailable this session." >&2
+  fi
+}
+install_ngit
+
 # --- Gradle distribution: pre-seed the wrapper distribution ---
 # The wrapper's distributionUrl (services.gradle.org) 307-redirects to
 # github.com release assets, which the web sandbox's git-only GitHub proxy
