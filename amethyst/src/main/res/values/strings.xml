@@ -1630,6 +1630,7 @@
     <string name="follow_list_kind3follows_users_only">All User Follows</string>
     <string name="follow_list_kind3_follows_users_only">Default Follow List</string>
     <string name="follow_list_aroundme">Around Me</string>
+    <string name="follow_list_teleport">Teleport to a place…</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_curated">Curated</string>
     <string name="follow_list_mine">Mine</string>

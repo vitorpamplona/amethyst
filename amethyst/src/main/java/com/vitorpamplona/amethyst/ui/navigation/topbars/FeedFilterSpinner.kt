@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
 import com.vitorpamplona.amethyst.ui.screen.FavoriteAlgoFeedName
@@ -142,7 +143,10 @@ fun FeedFilterSpinner(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.weight(1f, fill = false),
             ) {
-                val filter = selected?.code
+                // Fall back to the raw selection: a teleported geohash that isn't in the
+                // catalog (not followed) has no matching option, but we still want to show
+                // its place name rather than "Select an option".
+                val filter = selected?.code ?: placeholderCode
                 if (filter is TopFilter.Geohash) {
                     LoadCityName(
                         geohashStr = filter.tag,
@@ -267,6 +271,8 @@ fun FeedFilterSpinner(
         )
     }
 
+    var teleporting by remember { mutableStateOf(false) }
+
     if (optionsShowing && options.isNotEmpty()) {
         GroupedFeedFilterDialog(
             title = explainer,
@@ -274,11 +280,28 @@ fun FeedFilterSpinner(
             onDismiss = { optionsShowing = false },
             onSelect = { definition ->
                 optionsShowing = false
-                onSelect(definition)
+                // "Teleport" isn't a real filter — open the map picker and apply the chosen
+                // place as this screen's Geohash filter via the normal onSelect path.
+                if (definition.code is TopFilter.TeleportPicker) {
+                    teleporting = true
+                } else {
+                    onSelect(definition)
+                }
             },
         ) {
             RenderOption(it.name, accountViewModel)
         }
+    }
+
+    if (teleporting) {
+        GeohashLocationPickerDialog(
+            initialGeohash = (selected?.code as? TopFilter.Geohash)?.tag,
+            onDismiss = { teleporting = false },
+            onConfirm = { cell ->
+                teleporting = false
+                onSelect(FeedDefinition(code = TopFilter.Geohash(cell), name = GeoHashName(cell)))
+            },
+        )
     }
 }
 
@@ -366,6 +389,7 @@ private fun FeedDefinition.group(): FeedGroup =
         is ResourceName -> {
             when (code) {
                 is TopFilter.AroundMe -> FeedGroup.LOCATIONS
+                is TopFilter.TeleportPicker -> FeedGroup.LOCATIONS
                 is TopFilter.Global -> FeedGroup.RELAYS
                 is TopFilter.Selected -> FeedGroup.RELAYS
                 is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
@@ -514,6 +538,10 @@ private fun FeedIcon(
 
             is TopFilter.AroundMe -> {
                 MaterialSymbols.LocationOn
+            }
+
+            is TopFilter.TeleportPicker -> {
+                MaterialSymbols.TravelExplore
             }
 
             is TopFilter.AllFollows -> {
