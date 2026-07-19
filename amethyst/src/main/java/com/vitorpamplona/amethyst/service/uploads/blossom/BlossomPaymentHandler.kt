@@ -46,10 +46,15 @@ object BlossomPaymentHandler {
         payment: BlossomPaymentRequired,
     ): Boolean = payment.lightning != null && account.nip47SignerState.hasWalletConnectSetup()
 
-    /** The invoice amount in sats, for display in a confirmation prompt. */
+    /**
+     * The invoice amount in sats for display in a confirmation prompt, or null when it is absent or
+     * unreadable. `getAmountInSats` returns ZERO for an amountless BOLT11 rather than null, so a bare
+     * read renders "Pay 0 sats" — telling the user a payment is free when the amount is actually
+     * unspecified and chosen by the payee.
+     */
     fun amountSats(payment: BlossomPaymentRequired): Long? =
         payment.lightning?.let {
-            runCatching { LnInvoiceUtil.getAmountInSats(it).toLong() }.getOrNull()
+            runCatching { LnInvoiceUtil.getAmountInSats(it).toLong() }.getOrNull()?.takeIf { sats -> sats > 0 }
         }
 
     /**

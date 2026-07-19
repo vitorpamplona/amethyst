@@ -841,6 +841,8 @@
     <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
     <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>
     <string name="napplet_consent_pay">This nApplet wants to pay a Lightning invoice.</string>
+    <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">⚠ This nApplet wants to pay a Lightning invoice that specifies NO amount — the payee decides how much is taken. Only allow this if you trust it.</string>
     <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
     <string name="napplet_consent_upload">This nApplet wants to upload a file to your media server.</string>
     <string name="napplet_consent_notify">This nApplet wants to show you notifications.</string>
@@ -848,6 +850,60 @@
     <plurals name="napplet_consent_pay_amount">
         <item quantity="one">This nApplet wants to pay a Lightning invoice for %1$d sat.</item>
         <item quantity="other">This nApplet wants to pay a Lightning invoice for %1$d sats.</item>
+    </plurals>
+    <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
+         kind-only summary would hide what is actually being signed. These replaceable lists are
+         already cached on the account, so the dialog diffs the proposed list against the current
+         one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">follows %1$d new account</item>
+        <item quantity="other">follows %1$d new accounts</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">UNFOLLOWS %1$d account</item>
+        <item quantity="other">UNFOLLOWS %1$d accounts</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">adds %1$d relay</item>
+        <item quantity="other">adds %1$d relays</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">REMOVES %1$d relay</item>
+        <item quantity="other">REMOVES %1$d relays</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">mutes %1$d more person</item>
+        <item quantity="other">mutes %1$d more people</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">UNMUTES %1$d person</item>
+        <item quantity="other">UNMUTES %1$d people</item>
+    </plurals>
+    <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
+         the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">⚠ This follows %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠ This UNFOLLOWS %1$s.</string>
+    <string name="napplet_consent_diff_mute_one">⚠ This mutes %1$s.</string>
+    <string name="napplet_consent_diff_unmute_one">⚠ This UNMUTES %1$s.</string>
+    <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">⚠ This rewrites your follow list: %1$s.</string>
+    <string name="napplet_consent_diff_relays">⚠ This rewrites your relay list: %1$s. Your posts and reads move with it.</string>
+    <string name="napplet_consent_diff_mutes">⚠ This rewrites your mute list: %1$s. Muted words and hashtags are not shown here — tap “Show Event” for the full list.</string>
+    <string name="napplet_consent_diff_joiner">%1$s and %2$s</string>
+    <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">This republishes your existing list unchanged.</string>
+    <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">⚠ This writes a list of %1$d entry. Amethyst has no cached copy to compare against.</item>
+        <item quantity="other">⚠ This writes a list of %1$d entries. Amethyst has no cached copy to compare against.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">⚠ This requests deletion of %1$d of your events.</item>
+        <item quantity="other">⚠ This requests deletion of %1$d of your events.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">Carries %1$d tag. Tap “Show Event” to see exactly what would be signed.</item>
+        <item quantity="other">Carries %1$d tags. Tap “Show Event” to see exactly what would be signed.</item>
     </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Connect to Nostr</string>
