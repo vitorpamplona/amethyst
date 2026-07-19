@@ -1963,7 +1963,7 @@
     <string name="search_button">स्थानीय तथा दूरस्थ अभिलेखों को खोजें</string>
     <string name="nip05_verified">नोस्ट्र पता का सत्यापन सफल</string>
     <string name="nip05_failed">नोस्ट्र पता का सत्यापन असफल</string>
-    <string name="nip05_checking">नोस्ट्र पता का जाँच चल रहा है</string>
+    <string name="nip05_checking">नोस्टर पता की जाँच चल रही है</string>
     <string name="default_relays">मूलविकल्प</string>
     <string name="default_relays_longer">मूलविकल्प पुनःस्थापित करें</string>
     <string name="geohash_title">स्थान अनावृत करें ऐसे </string>
