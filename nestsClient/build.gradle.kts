@@ -84,8 +84,8 @@ kotlin {
                 // JNA as runtime-scope; Kotlin needs it at compile time to
                 // resolve the `tomp2p.opuswrapper.Opus extends com.sun.jna.Library`
                 // supertype, so pull it explicitly.
-                implementation("club.minnced:opus-java:1.1.1")
-                implementation("net.java.dev.jna:jna:5.19.1")
+                implementation(libs.opus.java)
+                implementation(libs.jna)
             }
         }
 

@@ -37,6 +37,7 @@ kchesslib = "1.0.5"
 kotlin = "2.4.10"
 kotlinxCollectionsImmutable = "0.5.1"
 kotlinxCoroutinesCore = "1.11.0"
+kotlinxCrypto = "0.0.4"
 kotlinxSerialization = "1.11.0"
 genaiProofreading = "1.0.0-beta1"
 genaiPrompt = "1.0.0-beta3"
@@ -73,6 +74,9 @@ vico-charts-compose = "3.2.3"
 zelory = "3.0.1"
 zoomable = "2.13.0"
 composemediaplayer = "0.11.3"
+nucleusNotification = "1.15.7"
+opusJava = "1.1.1"
+jna = "5.19.1"
 jcodec = "0.2.5"
 commonsImaging = "1.0.0-alpha6"
 thumbnailator = "0.4.21"
@@ -158,6 +162,11 @@ commons-imaging = { group = "org.apache.commons", name = "commons-imaging", vers
 thumbnailator = { group = "net.coobird", name = "thumbnailator", version.ref = "thumbnailator" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 composemediaplayer = { group = "io.github.kdroidfilter", name = "composemediaplayer", version.ref = "composemediaplayer" }
+nucleus-notification-macos = { group = "io.github.kdroidfilter", name = "nucleus.notification-macos", version.ref = "nucleusNotification" }
+nucleus-notification-windows = { group = "io.github.kdroidfilter", name = "nucleus.notification-windows", version.ref = "nucleusNotification" }
+nucleus-notification-linux = { group = "io.github.kdroidfilter", name = "nucleus.notification-linux", version.ref = "nucleusNotification" }
+opus-java = { group = "club.minnced", name = "opus-java", version.ref = "opusJava" }
+jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jcodec = { group = "org.jcodec", name = "jcodec", version.ref = "jcodec" }
 jcodec-javase = { group = "org.jcodec", name = "jcodec-javase", version.ref = "jcodec" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
@@ -186,6 +195,8 @@ kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
+kotlinx-crypto-hmac = { module = "io.github.andreypfau:kotlinx-crypto-hmac", version.ref = "kotlinxCrypto" }
+kotlinx-crypto-sha2 = { module = "io.github.andreypfau:kotlinx-crypto-sha2", version.ref = "kotlinxCrypto" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
 jlatexmath-android = { module = "com.github.rikkahub.jlatexmath-android:jlatexmath", version.ref = "jlatexmath" }
