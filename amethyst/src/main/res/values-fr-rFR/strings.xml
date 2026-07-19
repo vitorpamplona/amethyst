@@ -1705,6 +1705,7 @@
     <string name="relay_group_change_photo">Modifier la photo</string>
     <string name="relay_group_section_discovery">Découverte</string>
     <string name="relay_group_field_geohash">Localisation (géohash)</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_flag_private">Privé</string>
     <string name="messages_new_message">Privé</string>
     <string name="messages_new_message_to">À</string>

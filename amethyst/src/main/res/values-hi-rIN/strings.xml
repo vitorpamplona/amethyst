@@ -2123,6 +2123,7 @@
     <string name="relay_group_field_topics_hint">द्व्यंकरूप्य नोस्टर कला इत्यादि</string>
     <string name="relay_group_field_geohash">स्थान (भूभागसूचक)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_section_structure">व्यूह</string>
     <string name="relay_group_parent_desc">इस समूह को एक अभिभावक के नीचे रखें वर्गानुक्रम बनाने के लिए।</string>
     <string name="relay_group_parent_label">अभिभावक समूह</string>

@@ -1484,6 +1484,7 @@
     <string name="messages_create_public_private_chat_description">새 공개 또는 비공개 그룹</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="messages_new_message">비공개</string>
     <string name="messages_new_message_to">받는 사람</string>
     <string name="messages_new_message_subject">제목</string>
