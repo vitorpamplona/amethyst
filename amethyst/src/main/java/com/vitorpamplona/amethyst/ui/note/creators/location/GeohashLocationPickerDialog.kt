@@ -70,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +95,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import kotlin.math.abs
 
@@ -224,6 +226,17 @@ fun GeohashLocationPickerContent(
         settledCell = cell
     }
 
+    // The selected geohash cell outlined on the map, and its stroke colour.
+    val highlightColor = MaterialTheme.colorScheme.primary.toArgb()
+    val highlight = remember(cell) { cell?.let(::geohashBounds) }
+
+    // When the area-size level changes (only after a real selection), zoom the map so the
+    // new cell is comfortably framed.
+    var zoomTo by remember { mutableStateOf<Double?>(null) }
+    LaunchedEffect(level) {
+        if (hasSelection) zoomTo = zoomForGeohashLength(level.chars)
+    }
+
     // Lift the center pin briefly whenever the target point moves, for tactile feedback.
     var pinLifted by remember { mutableStateOf(false) }
     LaunchedEffect(pickedLat, pickedLon) {
@@ -313,6 +326,9 @@ fun GeohashLocationPickerContent(
                 zoom = if (seed != null) zoomForGeohashLength(seedLen) else WORLD_ZOOM,
                 recenter = recenter,
                 recenterZoom = RECENTER_ZOOM,
+                zoomTo = zoomTo,
+                highlight = highlight,
+                highlightColor = highlightColor,
                 onCenterChanged = { lat, lon ->
                     pickedLat = lat
                     pickedLon = lon
@@ -689,6 +705,26 @@ private fun Address.displayLine(): String {
     val primary = featureName ?: locality ?: subAdminArea ?: adminArea ?: getAddressLine(0)
     val context = listOfNotNull(locality, adminArea, countryName).distinct().filter { it != primary }
     return listOfNotNull(primary, context.joinToString(", ").ifBlank { null }).joinToString(", ")
+}
+
+/**
+ * The lat/lon bounding box of a geohash cell. A geohash of length L uses 5L bits,
+ * split lon = ceil(5L/2), lat = floor(5L/2); each halves its axis per bit, so the cell
+ * spans 180/2^latBits by 360/2^lonBits around the decoded center.
+ */
+private fun geohashBounds(geohash: String): BoundingBox? {
+    val gh = GeoHash.decode(geohash) ?: return null
+    val bits = 5 * geohash.length
+    val latBits = bits / 2
+    val lonBits = bits - latBits
+    val latHeight = 180.0 / (1L shl latBits)
+    val lonWidth = 360.0 / (1L shl lonBits)
+    return BoundingBox(
+        gh.centerLat + latHeight / 2,
+        gh.centerLon + lonWidth / 2,
+        gh.centerLat - latHeight / 2,
+        gh.centerLon - lonWidth / 2,
+    )
 }
 
 /** A rough physical size for a geohash cell at this precision, for the chip subtitle. */

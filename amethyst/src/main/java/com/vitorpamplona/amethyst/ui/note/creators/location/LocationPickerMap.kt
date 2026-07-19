@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -41,11 +42,13 @@ import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 
 /**
  * An interactive OpenStreetMap (osmdroid) picker: tapping the map reports the
@@ -73,6 +76,9 @@ fun LocationPickerMap(
     zoom: Double = 4.0,
     recenter: GeoPoint? = null,
     recenterZoom: Double? = null,
+    zoomTo: Double? = null,
+    highlight: BoundingBox? = null,
+    highlightColor: Int = 0,
     onCenterChanged: ((Double, Double) -> Unit)? = null,
     onPick: (Double, Double) -> Unit,
 ) {
@@ -89,6 +95,10 @@ fun LocationPickerMap(
     // Tracks the last marker point so we only rebuild the marker overlay (and invalidate)
     // when it actually changes — not on every scroll-driven recomposition.
     val lastMarker = remember { arrayOfNulls<GeoPoint>(1) }
+
+    // Same change-guards for the highlighted cell rectangle and the level-driven zoom.
+    val lastHighlight = remember { arrayOfNulls<BoundingBox>(1) }
+    val lastZoomTo = remember { doubleArrayOf(Double.NaN) }
 
     val mapView =
         remember(context) {
@@ -162,7 +172,7 @@ fun LocationPickerMap(
     // Follow the app theme: dim the bright MAPNIK tiles in dark mode (matching the
     // display-only LocationPreviewMap). Applied only when the theme flips, not per frame.
     LaunchedEffect(mapView, darkTheme) {
-        mapView.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else null)
+        mapView.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else MUTED_TILE_FILTER)
         mapView.invalidate()
     }
 
@@ -177,6 +187,39 @@ fun LocationPickerMap(
                 } else {
                     map.controller.animateTo(recenter)
                 }
+            }
+
+            // Animate the zoom when the caller asks (e.g. the area-size level changed),
+            // keeping the current center. Guarded so it fires once per distinct value.
+            if (zoomTo != null && zoomTo != lastZoomTo[0]) {
+                lastZoomTo[0] = zoomTo
+                map.controller.zoomTo(zoomTo, 400L)
+            }
+
+            // Outline the selected geohash cell so the user sees exactly which region a
+            // post/filter will cover. Rebuilt only when the cell bounds change.
+            if (highlight != lastHighlight[0]) {
+                lastHighlight[0] = highlight
+                map.overlays.removeAll { it is Polygon }
+                if (highlight != null) {
+                    map.overlays.add(
+                        0,
+                        Polygon(map).apply {
+                            points =
+                                listOf(
+                                    GeoPoint(highlight.latNorth, highlight.lonWest),
+                                    GeoPoint(highlight.latNorth, highlight.lonEast),
+                                    GeoPoint(highlight.latSouth, highlight.lonEast),
+                                    GeoPoint(highlight.latSouth, highlight.lonWest),
+                                )
+                            fillPaint.color = ColorUtils.setAlphaComponent(highlightColor, 38)
+                            outlinePaint.color = highlightColor
+                            outlinePaint.strokeWidth = 4f
+                            setOnClickListener { _, _, _ -> false }
+                        },
+                    )
+                }
+                map.invalidate()
             }
 
             // Only rebuild the marker overlay when the picked point actually changes. The

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
 import android.graphics.ColorFilter
+import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.BitmapDrawable
 import android.view.MotionEvent
@@ -81,6 +82,44 @@ internal val NIGHT_TILE_FILTER: ColorFilter =
             1f,
             0f,
         ),
+    )
+
+/**
+ * Light-mode "calm" filter for the busy MAPNIK tiles: desaturate (mute the loud
+ * road/POI colours) and lift brightness a touch so labels read softer. Keeps the
+ * map legible for picking a spot without the full-colour visual noise.
+ */
+internal val MUTED_TILE_FILTER: ColorFilter =
+    ColorMatrixColorFilter(
+        ColorMatrix().apply {
+            setSaturation(0.55f)
+            postConcat(
+                ColorMatrix(
+                    floatArrayOf(
+                        0.92f,
+                        0f,
+                        0f,
+                        0f,
+                        16f,
+                        0f,
+                        0.92f,
+                        0f,
+                        0f,
+                        16f,
+                        0f,
+                        0f,
+                        0.92f,
+                        0f,
+                        16f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                    ),
+                ),
+            )
+        },
     )
 
 /**
@@ -174,8 +213,8 @@ fun LocationPreviewMap(
             map.controller.setZoom(zoom)
             map.controller.setCenter(point)
 
-            // Follow the app theme: dim the bright MAPNIK tiles in dark mode.
-            map.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else null)
+            // Follow the app theme: dim in dark mode, mute the busy colours in light mode.
+            map.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else MUTED_TILE_FILTER)
 
             map.overlays.removeAll { it is Marker }
             val marker =
