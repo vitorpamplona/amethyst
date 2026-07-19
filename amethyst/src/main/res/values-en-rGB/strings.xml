@@ -35,6 +35,7 @@
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Onchain zap send dialog -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->

@@ -2127,6 +2127,7 @@
     <string name="relay_group_field_topics_hint">比特币，nostr，艺术品</string>
     <string name="relay_group_field_geohash">位置 (gehash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_section_structure">结构</string>
     <string name="relay_group_parent_desc">把这个群置于父级下方以构建一个层次结构。</string>
     <string name="relay_group_parent_label">父群</string>

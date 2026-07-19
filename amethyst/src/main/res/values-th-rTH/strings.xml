@@ -1470,6 +1470,7 @@
     <string name="messages_create_public_private_chat_description">สร้างกลุ่มสาธารณะ/ส่วนตัว</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="messages_new_message">ส่วนตัว</string>
     <string name="messages_new_message_to">ถึง</string>
     <string name="messages_new_message_subject">ชื่อเรื่อง</string>

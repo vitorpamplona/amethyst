@@ -2173,6 +2173,7 @@
     <string name="relay_group_field_topics_hint">bitcoin, nostr, umění</string>
     <string name="relay_group_field_geohash">Poloha (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_section_structure">Struktura</string>
     <string name="relay_group_parent_desc">Vnořte tuto skupinu pod nadřazenou a vytvořte hierarchii.</string>
     <string name="relay_group_parent_label">Nadřazená skupina</string>

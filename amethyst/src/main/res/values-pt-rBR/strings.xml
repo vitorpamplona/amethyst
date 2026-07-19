@@ -2119,6 +2119,7 @@
     <string name="relay_group_field_topics_hint">bitcoin, nostr, arte</string>
     <string name="relay_group_field_geohash">Localização (geohash)</string>
     <string name="relay_group_field_geohash_hint">un0d</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_section_structure">Estrutura</string>
     <string name="relay_group_parent_desc">Aninhe este grupo sob um grupo pai para construir uma hierarquia.</string>
     <string name="relay_group_parent_label">Grupo pai</string>

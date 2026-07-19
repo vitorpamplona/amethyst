@@ -1514,6 +1514,7 @@
     <string name="messages_create_public_private_chat_description">گروه خصوصی یا عمومی جدید</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="messages_new_message">خصوصی</string>
     <string name="messages_new_message_to">به</string>
     <string name="messages_new_message_subject">موضوع</string>

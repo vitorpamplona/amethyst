@@ -1498,6 +1498,7 @@
     <string name="messages_create_public_private_chat_description">Kikundi Kipya cha Umma au Binafsi</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="messages_new_message">Binafsi</string>
     <string name="messages_new_message_to">Kwa</string>
     <string name="messages_new_message_subject">Somo</string>

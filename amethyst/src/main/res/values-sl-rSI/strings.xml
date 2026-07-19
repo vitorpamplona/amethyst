@@ -1911,6 +1911,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_field_topics_hint">bitcoin, nostr, umetnost</string>
     <string name="relay_group_field_geohash">Lokacija (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_section_permissions">Dovoljenja</string>
     <string name="relay_group_flag_private">Zasebno</string>
     <string name="relay_group_flag_private_desc">Samo člani lahko berejo sporočila.</string>

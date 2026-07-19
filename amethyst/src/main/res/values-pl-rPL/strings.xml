@@ -2175,6 +2175,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_field_topics_hint">bitcoin, nostr, sztuka</string>
     <string name="relay_group_field_geohash">Lokalizacja (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_section_structure">Struktura</string>
     <string name="relay_group_parent_desc">Umieść tę grupę w podgrupie nadrzędnej, aby utworzyć hierarchię.</string>
     <string name="relay_group_parent_label">Grupa nadrzędna</string>

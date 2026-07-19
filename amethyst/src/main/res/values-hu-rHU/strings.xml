@@ -1986,6 +1986,7 @@
     <string name="relay_group_field_topics_hint">bitcoin, nostr, művészet</string>
     <string name="relay_group_field_geohash">Helyszín (geo-kivonat)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
     <string name="relay_group_section_permissions">Engedélyek</string>
     <string name="relay_group_flag_private">Privát</string>
     <string name="relay_group_flag_private_desc">Csak a tagok olvashatják az üzeneteket.</string>
