@@ -112,6 +112,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -165,6 +166,15 @@ open class CommentPostViewModel :
 
     var externalIdentity by mutableStateOf<ExternalId?>(null)
     var replyingTo: Note? by mutableStateOf(null)
+
+    /** The geohash channel this comment is scoped to, or null when it isn't a geo-post. */
+    val geohashScope: String?
+        get() = (externalIdentity as? GeohashId)?.geohash
+
+    /** Retarget a geo-post to a different location channel (from the map picker). */
+    fun setGeohashScope(geohash: String) {
+        externalIdentity = GeohashId(geohash)
+    }
 
     // The signature pre-filled by applySignature(), so an untouched signature-only
     // message is treated as blank instead of auto-saved as a junk draft.

@@ -1631,6 +1631,10 @@
     <string name="follow_list_kind3_follows_users_only">Default Follow List</string>
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_teleport">Teleport to a place…</string>
+    <string name="follow_geohash">Follow this location</string>
+    <string name="unfollow_geohash">Unfollow this location</string>
+    <string name="geo_post_posting_to">Posting to</string>
+    <string name="geo_post_change_place">Change</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_curated">Curated</string>
     <string name="follow_list_mine">Mine</string>

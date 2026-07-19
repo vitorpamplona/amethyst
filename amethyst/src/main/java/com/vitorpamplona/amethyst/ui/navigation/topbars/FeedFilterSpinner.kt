@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
@@ -130,88 +132,108 @@ fun FeedFilterSpinner(
 
     val openDropdownLabel = stringRes(R.string.open_dropdown_menu)
 
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Spacer(modifier = Size20Modifier)
+    val filter = selected?.code ?: placeholderCode
 
-            // Bound the Column so long filter names (e.g. DVM titles) get truncated
-            // instead of wrapping to multiple lines and shoving the expand icon out.
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f, fill = false),
-            ) {
-                // Fall back to the raw selection: a teleported geohash that isn't in the
-                // catalog (not followed) has no matching option, but we still want to show
-                // its place name rather than "Select an option".
-                val filter = selected?.code ?: placeholderCode
-                if (filter is TopFilter.Geohash) {
-                    LoadCityName(
-                        geohashStr = filter.tag,
-                        onLoading = {
-                            Row {
-                                Text(
-                                    text = filter.tag,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Spacer(modifier = StdHorzSpacer)
-                                LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
-                            }
-                        },
-                    ) { cityName ->
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier.weight(1f, fill = false),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Size20Modifier)
+
+                // Bound the Column so long filter names (e.g. DVM titles) get truncated
+                // instead of wrapping to multiple lines and shoving the expand icon out.
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f, fill = false),
+                ) {
+                    if (filter is TopFilter.Geohash) {
+                        LoadCityName(
+                            geohashStr = filter.tag,
+                            onLoading = {
+                                Row {
+                                    Text(
+                                        text = filter.tag,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Spacer(modifier = StdHorzSpacer)
+                                    LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
+                                }
+                            },
+                        ) { cityName ->
+                            Text(
+                                text = cityName,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    } else {
                         Text(
-                            text = cityName,
+                            text = currentText,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                } else {
-                    Text(
-                        text = currentText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
 
-                if (filter is TopFilter.AroundMe) {
-                    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
-                    if (!locationPermissionState.status.isGranted) {
-                        LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
+                    if (filter is TopFilter.AroundMe) {
+                        val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        if (!locationPermissionState.status.isGranted) {
+                            LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
 
-                        Text(
-                            text = stringRes(R.string.lack_location_permissions),
-                            fontSize = Font12SP,
-                            lineHeight = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    } else {
-                        val location by Amethyst.instance.locationManager.geohashStateFlow
-                            .collectAsStateWithLifecycle()
+                            Text(
+                                text = stringRes(R.string.lack_location_permissions),
+                                fontSize = Font12SP,
+                                lineHeight = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        } else {
+                            val location by Amethyst.instance.locationManager.geohashStateFlow
+                                .collectAsStateWithLifecycle()
 
-                        when (val myLocation = location) {
-                            is LocationState.LocationResult.Success -> {
-                                LoadCityName(
-                                    geohashStr = myLocation.geoHash.toString(),
-                                    onLoading = {
-                                        Row {
-                                            Text(
-                                                text = "(${myLocation.geoHash})",
-                                                fontSize = Font12SP,
-                                                lineHeight = 12.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                            Spacer(modifier = StdHorzSpacer)
-                                            LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
-                                        }
-                                    },
-                                ) { cityName ->
+                            when (val myLocation = location) {
+                                is LocationState.LocationResult.Success -> {
+                                    LoadCityName(
+                                        geohashStr = myLocation.geoHash.toString(),
+                                        onLoading = {
+                                            Row {
+                                                Text(
+                                                    text = "(${myLocation.geoHash})",
+                                                    fontSize = Font12SP,
+                                                    lineHeight = 12.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                                Spacer(modifier = StdHorzSpacer)
+                                                LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
+                                            }
+                                        },
+                                    ) { cityName ->
+                                        Text(
+                                            text = "($cityName)",
+                                            fontSize = Font12SP,
+                                            lineHeight = 12.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+
+                                LocationState.LocationResult.LackPermission -> {
                                     Text(
-                                        text = "($cityName)",
+                                        text = stringRes(R.string.lack_location_permissions),
+                                        fontSize = Font12SP,
+                                        lineHeight = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+
+                                LocationState.LocationResult.Loading -> {
+                                    Text(
+                                        text = stringRes(R.string.loading_location),
                                         fontSize = Font12SP,
                                         lineHeight = 12.sp,
                                         maxLines = 1,
@@ -219,56 +241,42 @@ fun FeedFilterSpinner(
                                     )
                                 }
                             }
-
-                            LocationState.LocationResult.LackPermission -> {
-                                Text(
-                                    text = stringRes(R.string.lack_location_permissions),
-                                    fontSize = Font12SP,
-                                    lineHeight = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-
-                            LocationState.LocationResult.Loading -> {
-                                Text(
-                                    text = stringRes(R.string.loading_location),
-                                    fontSize = Font12SP,
-                                    lineHeight = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
                         }
                     }
                 }
-            }
 
-            Icon(
-                symbol = MaterialSymbols.ExpandMore,
-                contentDescription = explainer,
-                modifier = Size20Modifier,
-                tint = MaterialTheme.colorScheme.placeholderText,
+                Icon(
+                    symbol = MaterialSymbols.ExpandMore,
+                    contentDescription = explainer,
+                    modifier = Size20Modifier,
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            optionsShowing = true
+                        }.semantics {
+                            role = Role.DropdownList
+                            stateDescription = accessibilityDescription
+                            onClick(label = openDropdownLabel) {
+                                optionsShowing = true
+                                return@onClick true
+                            }
+                        },
             )
         }
-        Box(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        optionsShowing = true
-                    }.semantics {
-                        role = Role.DropdownList
-                        stateDescription = accessibilityDescription
-                        onClick(label = openDropdownLabel) {
-                            optionsShowing = true
-                            return@onClick true
-                        }
-                    },
-        )
+
+        // Save/unsave the active place to the followed-locations list (kind 10081), so a
+        // teleported spot can be kept as a permanent chip — the "add to my interests" step.
+        if (filter is TopFilter.Geohash) {
+            FollowLocationToggle(filter.tag, accountViewModel)
+        }
     }
 
     var teleporting by remember { mutableStateOf(false) }
@@ -301,6 +309,37 @@ fun FeedFilterSpinner(
                 teleporting = false
                 onSelect(FeedDefinition(code = TopFilter.Geohash(cell), name = GeoHashName(cell)))
             },
+        )
+    }
+}
+
+/** A compact toggle in the filter header to follow/unfollow the active geohash location. */
+@Composable
+private fun FollowLocationToggle(
+    tag: String,
+    accountViewModel: AccountViewModel,
+) {
+    val isFollowing by observeUserIsFollowingGeohash(tag, accountViewModel)
+    IconButton(onClick = {
+        if (!accountViewModel.isWriteable()) {
+            accountViewModel.toastManager.toast(
+                R.string.read_only_user,
+                if (isFollowing) R.string.login_with_a_private_key_to_be_able_to_unfollow else R.string.login_with_a_private_key_to_be_able_to_follow,
+            )
+        } else if (isFollowing) {
+            accountViewModel.unfollowGeohash(tag)
+        } else {
+            accountViewModel.followGeohash(tag)
+        }
+    }) {
+        Icon(
+            symbol = if (isFollowing) MaterialSymbols.Bookmark else MaterialSymbols.BookmarkAdd,
+            contentDescription =
+                stringRes(
+                    if (isFollowing) R.string.unfollow_geohash else R.string.follow_geohash,
+                ),
+            modifier = Size20Modifier,
+            tint = if (isFollowing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
