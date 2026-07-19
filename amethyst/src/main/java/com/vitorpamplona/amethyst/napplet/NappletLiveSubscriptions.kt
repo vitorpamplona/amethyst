@@ -38,12 +38,13 @@ import java.util.concurrent.atomic.AtomicInteger
  * `relay.eose`. Encodes the `relay.event`/`relay.eose`/`relay.closed` pushes and hands them to the
  * caller-supplied sink — it never touches the transport itself.
  *
- * [account] is read live (so it always targets the currently signed-in account); [open] is reached
- * only after the broker authorized the subscription (RELAY consent).
+ * The account is supplied per [open] by the caller, which resolves it from the requesting surface's
+ * LAUNCH account — not from whoever is signed in at the time. A full-screen surface survives an
+ * account switch, and reading live would have pointed its REQs at the new account's relays while its
+ * signatures still came from the old one. [open] is reached only after the broker authorized the
+ * subscription (RELAY consent).
  */
-class NappletLiveSubscriptions(
-    private val account: () -> Account?,
-) {
+class NappletLiveSubscriptions {
     private val liveSubs = ConcurrentHashMap<String, LiveSub>()
     private val liveSeq = AtomicInteger(0)
 
@@ -62,9 +63,9 @@ class NappletLiveSubscriptions(
     fun open(
         nappletSubId: String,
         filters: List<Filter>,
+        account: Account?,
         push: (String) -> Unit,
     ) {
-        val account = account()
         val relays = account?.homeRelays?.flow?.value ?: emptySet()
         if (account == null || filters.isEmpty() || relays.isEmpty()) {
             push(NappletProtocolJson.encodeRelayEose(nappletSubId))

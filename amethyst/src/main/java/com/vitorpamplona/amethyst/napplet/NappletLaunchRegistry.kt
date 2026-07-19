@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import java.security.SecureRandom
 
@@ -45,6 +46,18 @@ object NappletLaunchRegistry {
     data class Session(
         val identity: NappletIdentity,
         val declared: Set<NappletCapability>,
+        /**
+         * The account this surface was launched as. Requests resolve their signer through THIS, not
+         * through whichever account happens to be active when they arrive.
+         *
+         * A full-screen host is a separate activity that an account switch does not tear down, so
+         * resolving live meant its WebView kept account A's cookies while the broker signed as B —
+         * a page showing one identity while another signed, and B's session written into A's
+         * storage jar. Binding here gives both halves of the rule for free: embedded surfaces are
+         * rebuilt on a switch, so they re-mint and follow the active account, while a full-screen
+         * surface keeps the account it was opened with.
+         */
+        val accountPubKey: HexKey,
     )
 
     // Access-ordered + capped so tokens from long-closed napplets can't accumulate without bound. The
@@ -60,9 +73,10 @@ object NappletLaunchRegistry {
     fun register(
         identity: NappletIdentity,
         declared: Set<NappletCapability>,
+        accountPubKey: HexKey,
     ): String {
         val token = ByteArray(32).also(secureRandom::nextBytes).toHexKey()
-        sessions[token] = Session(identity, declared)
+        sessions[token] = Session(identity, declared, accountPubKey)
         return token
     }
 

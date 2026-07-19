@@ -120,7 +120,16 @@ object NappletLauncher {
         // requests back to THIS identity + declared set, regardless of anything the sandbox sends.
         val identity = NappletIdentity(authorPubKey = authorPubKey, identifier = identifier, aggregateHash = aggregateHash)
         val declared = profile.declaredCapabilities(requires)
-        val launchToken = NappletLaunchRegistry.register(identity, declared)
+        // Bound to the account launching it, so the surface keeps signing as that account even if the
+        // user switches while it is open (an embedded surface is rebuilt on a switch and re-mints).
+        // An empty key can never match a loaded account, so a launch with nobody signed in fails
+        // closed at the broker rather than falling back to whoever signs in later.
+        val launchAccountPubKey =
+            Amethyst.instance.sessionManager
+                .loggedInAccount()
+                ?.pubKey
+                .orEmpty()
+        val launchToken = NappletLaunchRegistry.register(identity, declared, launchAccountPubKey)
 
         // Resolve the per-site network choice (Tor default; a site can be opted out to the open web).
         // Locked napplets always keep Tor for their blob fetches — only nSites expose the toggle.

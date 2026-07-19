@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.screen.AccountState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -93,17 +93,23 @@ class NappletBrokerService : Service() {
     // The broker for the current account, rebuilt only on account switch (see broker()).
     private var cachedBroker: Pair<Account, NappletBroker>? = null
 
-    // Live relay subscriptions, keyed by the applet's subId; reads the current account live.
-    private val liveSubscriptions = NappletLiveSubscriptions { Amethyst.instance.sessionManager.loggedInAccount() }
+    // Live relay subscriptions, keyed by the applet's subId. The account comes per-open from the
+    // requesting surface's launch token, so a surface's REQs always target the account it acts as.
+    private val liveSubscriptions = NappletLiveSubscriptions()
 
     // The app-wide inc pub/sub bus: routes inc.emit between live napplet sessions as inc.event pushes.
     private val incBus = NappletIncBus { replyTo, payload -> push(replyTo, payload) }
 
-    // Streams identity.changed pushes (account switch / connect / disconnect) to a watching applet.
+    // Streams identity.changed to a watching applet. Bound to the surface's LAUNCH account, not the
+    // app's active one: a surface acts as the account that opened it for its whole life, so switching
+    // accounts elsewhere is not an identity change *for it*. Announcing the newly-active pubkey here
+    // would tell a page it had become someone else while its signatures still came back as the
+    // original — the same desync the launch binding exists to prevent. What this does still report is
+    // that account going away (logout/removal), which emits "".
     private val identityWatch =
-        NappletIdentityWatch(scope) {
-            Amethyst.instance.sessionManager.accountContent
-                .map { (it as? AccountState.LoggedIn)?.account?.signer?.pubKey ?: "" }
+        NappletIdentityWatch(scope) { boundPubKey ->
+            Amethyst.instance.accountsCache.accounts
+                .map { loaded -> if (loaded.containsKey(boundPubKey)) boundPubKey else "" }
         }
 
     // Binding is restricted to our own UID by exported=false in the manifest, enforced by the OS.
@@ -241,7 +247,10 @@ class NappletBrokerService : Service() {
             val replyTo = msg.replyTo ?: return true
             val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
             val identity = NappletIdentity(authorPubKey = BROWSER_IDENTITY_AUTHOR, identifier = origin)
-            val token = NappletLaunchRegistry.register(identity, setOf(NappletCapability.IDENTITY, NappletCapability.RELAY))
+            // Bind to the account active at mint time: a browser token minted for one account must
+            // never sign as another if the user switches while the page is still open.
+            val mintAccount = Amethyst.instance.sessionManager.loggedInAccount() ?: return true
+            val token = NappletLaunchRegistry.register(identity, setOf(NappletCapability.IDENTITY, NappletCapability.RELAY), mintAccount.pubKey)
             val response =
                 Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
                     this.data =
@@ -278,17 +287,20 @@ class NappletBrokerService : Service() {
             // The shared, host-agnostic router owns decode → broker → encode and the subscribe-vs-reply
             // decision (it stays wire-identical with the future desktop host). This service only supplies
             // the broker, the Messenger transport, and the live relay subscription each Outcome implies.
-            val broker = broker()
+            // The launch token decides whose key signs — not the active account. A surface opened by
+            // one account can never be handed another's signer, even while it stays open across a switch.
+            val broker = brokerFor(session.accountPubKey)
             if (broker == null) {
-                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("No account is signed in.")))
+                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("That account is no longer signed in.")))
                 return@launch
             }
             when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload)) {
                 is NappletRequestRouter.Outcome.Ignore -> {}
                 is NappletRequestRouter.Outcome.Reply -> reply(replyTo, requestId, outcome.payload)
-                is NappletRequestRouter.Outcome.OpenSubscription -> liveSubscriptions.open(outcome.subId, outcome.filters) { push(replyTo, it) }
+                is NappletRequestRouter.Outcome.OpenSubscription ->
+                    liveSubscriptions.open(outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(outcome.subId)
-                is NappletRequestRouter.Outcome.WatchIdentity -> identityWatch.start { push(replyTo, it) }
+                is NappletRequestRouter.Outcome.WatchIdentity -> identityWatch.start(session.accountPubKey) { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.UnwatchIdentity -> identityWatch.stop()
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
@@ -327,14 +339,29 @@ class NappletBrokerService : Service() {
             }
     }
 
+    /** The launched-as account, or null once it is no longer loaded. */
+    private fun accountFor(accountPubKey: HexKey): Account? = Amethyst.instance.accountsCache.accounts.value[accountPubKey]
+
     /**
-     * The broker for the *currently* signed-in account, cached and rebuilt only when the account
-     * changes (reference identity). The gateways capture the account and read its flows live, so a
-     * cached broker stays correct across requests without per-request allocation.
+     * The broker for the account a surface was LAUNCHED as — [NappletLaunchRegistry.Session.accountPubKey],
+     * never whichever account is active right now.
+     *
+     * Resolving live was wrong in a way that defeated per-account isolation: a full-screen host is a
+     * separate activity that an account switch does not tear down, so its WebView kept account A's
+     * cookies while requests were signed by B. The page displayed one identity while another signed,
+     * and B's session was written into A's storage jar — after which even the embedded tab, which is
+     * rebuilt correctly, showed the wrong account.
+     *
+     * Binding to the launch account satisfies both halves of the rule with no extra machinery:
+     * embedded surfaces are torn down and re-minted on a switch, so they follow the active account,
+     * while a full-screen surface stays on the account it was opened with.
+     *
+     * Returns null when that account is no longer loaded (logged out), so requests fail closed
+     * rather than silently falling back to someone else's key.
      */
     @Synchronized
-    private fun broker(): NappletBroker? {
-        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
+    private fun brokerFor(accountPubKey: HexKey): NappletBroker? {
+        val account = accountFor(accountPubKey) ?: return null
         cachedBroker?.let { (acc, broker) -> if (acc === account) return broker }
         val broker =
             AccountNappletGateways(
