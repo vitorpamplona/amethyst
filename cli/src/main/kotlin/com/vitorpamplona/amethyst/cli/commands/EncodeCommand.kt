@@ -47,10 +47,28 @@ import com.vitorpamplona.quartz.nip19Bech32.toNsec
  * file parses flags and calls them.
  */
 object EncodeCommand {
+    val USAGE: String =
+        """
+        |amy encode — build a NIP-19 entity from raw parts (local, no account)
+        |
+        |  encode npub HEX              encode a public key
+        |  encode nsec HEX              encode a private key
+        |  encode note ID               encode an event id
+        |  encode nevent ID [--author HEX] [--kind N] [--relay URL[,URL…]]
+        |  encode nprofile HEX [--relay URL[,URL…]]
+        |  encode naddr --kind N --pubkey HEX --identifier D [--relay URL[,URL…]]
+        """.trimMargin()
+
     fun run(rest: Array<String>): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         if (rest.isEmpty()) return Output.error("bad_args", "encode <npub|nsec|note|nevent|nprofile|naddr> …")
         val type = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
+        // Flags are read branch-dependently below, so whitelist the union.
+        args.rejectUnknown("author", "kind", "relay", "pubkey", "identifier")
 
         return when (type) {
             "npub" -> emit("npub", NPub.create(hex32(args.positional(0, "pubkey-hex"))))

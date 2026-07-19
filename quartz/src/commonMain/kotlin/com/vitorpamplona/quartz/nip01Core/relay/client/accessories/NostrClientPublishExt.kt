@@ -35,29 +35,73 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
-class Result(
-    val relay: NormalizedRelayUrl,
-    val success: Boolean,
-)
+/**
+ * One relay's verdict on a published event: [accepted] plus the reason the
+ * relay (or the transport) gave. For an accepted event [message] is whatever
+ * the relay put in the OK (usually empty); for a rejection it is the NIP-01
+ * machine-readable reason (`blocked: …`, `rate-limited: …`, `pow: …`), a
+ * connection error, or `"no response within timeout"`.
+ */
+class PublishResult(
+    val accepted: Boolean,
+    val message: String,
+) {
+    /**
+     * True when this failure came from the transport (never connected,
+     * dropped, or silent past the timeout) rather than from the relay
+     * actually answering `OK false`. Callers use this to tell "the relay
+     * refused the event" apart from "the relay never weighed in".
+     */
+    val isTransportFailure: Boolean
+        get() = !accepted && (message == NO_RESPONSE || message == DISCONNECTED || message.startsWith(CANNOT_CONNECT_PREFIX))
+
+    companion object {
+        const val NO_RESPONSE = "no response within timeout"
+        const val DISCONNECTED = "disconnected before OK"
+        const val CANNOT_CONNECT_PREFIX = "cannot connect: "
+    }
+}
 
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndConfirm(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Boolean = publishAndConfirmDetailed(event, relayList, timeoutInSeconds).any { it.value }
+): Boolean = publishAndCollectResults(event, relayList, timeoutInSeconds).any { it.value.accepted }
 
 /**
  * Sends an event to the given relays and waits for OK responses.
  * Returns per-relay results: relay URL -> accepted (true/false).
+ * Keeps the historical contract: only relays that RESPONDED (an OK, a
+ * connect failure, or a disconnect) appear — a relay that stayed silent
+ * past the timeout is absent, not reported as `false`, so long-standing
+ * callers that render the false entries as "rejected by" don't start
+ * blaming relays that merely never answered. Prefer
+ * [publishAndCollectResults] when the caller can surface the reasons.
  */
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndConfirmDetailed(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Map<NormalizedRelayUrl, Boolean> {
-    val resultChannel = Channel<Result>(UNLIMITED)
+): Map<NormalizedRelayUrl, Boolean> =
+    publishAndCollectResults(event, relayList, timeoutInSeconds)
+        .filterValues { it.message != PublishResult.NO_RESPONSE }
+        .mapValues { it.value.accepted }
+
+/**
+ * Sends an event to the given relays and waits for OK responses, keeping the
+ * per-relay reason alongside the verdict. Relays that never answered inside
+ * the timeout are present with `accepted = false, message = "no response
+ * within timeout"`, so the result always covers the full [relayList].
+ */
+@OptIn(DelicateCoroutinesApi::class)
+suspend fun INostrClient.publishAndCollectResults(
+    event: Event,
+    relayList: Set<NormalizedRelayUrl>,
+    timeoutInSeconds: Long = 15,
+): Map<NormalizedRelayUrl, PublishResult> {
+    val resultChannel = Channel<DetailedResult>(UNLIMITED)
 
     Log.d("publishAndConfirm") { "Waiting for ${relayList.size} responses" }
 
@@ -68,14 +112,14 @@ suspend fun INostrClient.publishAndConfirmDetailed(
                 errorMessage: String,
             ) {
                 if (relay.url in relayList) {
-                    resultChannel.trySend(Result(relay.url, false))
+                    resultChannel.trySend(DetailedResult(relay.url, false, PublishResult.CANNOT_CONNECT_PREFIX + errorMessage))
                     Log.d("publishAndConfirm") { "Error from relay ${relay.url}: $errorMessage" }
                 }
             }
 
             override fun onDisconnected(relay: IRelayClient) {
                 if (relay.url in relayList) {
-                    resultChannel.trySend(Result(relay.url, false))
+                    resultChannel.trySend(DetailedResult(relay.url, false, PublishResult.DISCONNECTED))
                     Log.d("publishAndConfirm") { "Disconnected from relay ${relay.url}" }
                 }
             }
@@ -90,7 +134,7 @@ suspend fun INostrClient.publishAndConfirmDetailed(
                 when (msg) {
                     is OkMessage -> {
                         if (msg.eventId == event.id) {
-                            resultChannel.trySend(Result(relay.url, msg.success))
+                            resultChannel.trySend(DetailedResult(relay.url, msg.success, msg.message))
                             Log.d("publishAndConfirm") { "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}" }
                         }
                     }
@@ -107,7 +151,7 @@ suspend fun INostrClient.publishAndConfirmDetailed(
                 coroutineScope {
                     val result =
                         async {
-                            val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
+                            val receivedResults = mutableMapOf<NormalizedRelayUrl, PublishResult>()
                             // The withTimeout block will cancel the coroutine if the loop takes too long
                             withTimeoutOrNull(timeoutInSeconds * 1000) {
                                 while (receivedResults.size < relayList.size) {
@@ -115,8 +159,8 @@ suspend fun INostrClient.publishAndConfirmDetailed(
 
                                     val currentResult = receivedResults[result.relay]
                                     // do not override a successful result.
-                                    if (currentResult == null || !currentResult) {
-                                        receivedResults[result.relay] = result.success
+                                    if (currentResult == null || !currentResult.accepted) {
+                                        receivedResults[result.relay] = PublishResult(result.success, result.message)
                                     }
                                 }
                             }
@@ -138,5 +182,13 @@ suspend fun INostrClient.publishAndConfirmDetailed(
 
     Log.d("publishAndConfirm") { "Finished with ${receivedResults.size} results" }
 
-    return receivedResults
+    // Pure construction of the promised invariant: the result covers the
+    // full relayList, with never-answered relays reported as NO_RESPONSE.
+    return relayList.associateWith { receivedResults[it] ?: PublishResult(false, PublishResult.NO_RESPONSE) }
 }
+
+private class DetailedResult(
+    val relay: NormalizedRelayUrl,
+    val success: Boolean,
+    val message: String,
+)

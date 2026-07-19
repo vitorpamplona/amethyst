@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 /**
@@ -35,14 +37,28 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  * miss (or always with `--refresh`).
  */
 object OutboxCommand {
+    val USAGE: String =
+        """
+        |amy outbox — show a user's NIP-65 (kind:10002) outbox-model relays
+        |
+        |  outbox USER [--refresh]       show USER's NIP-65 read/write relays (outbox model)
+        |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain; cache-first,
+        |                                  --refresh forces a relay drain; default timeout 8s)
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val user = args.positional(0, "user")
         val refresh = args.bool("refresh")
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -53,8 +69,7 @@ object OutboxCommand {
                 ctx.drain(
                     ctx.bootstrapRelays().associateWith {
                         listOf(
-                            com.vitorpamplona.quartz.nip01Core.relay.filters
-                                .Filter(authors = listOf(pubkey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1),
+                            Filter(authors = listOf(pubkey), kinds = listOf(AdvertisedRelayListEvent.KIND), limit = 1),
                         )
                     },
                     timeoutMs,
@@ -63,13 +78,14 @@ object OutboxCommand {
             }
 
             if (event == null) {
-                Output.emit(mapOf("pubkey" to pubkey, "found" to false))
+                Output.emit(mapOf("pubkey" to pubkey, "npub" to NPub.create(pubkey), "found" to false))
                 return 0
             }
 
             Output.emit(
                 mapOf(
                     "pubkey" to pubkey,
+                    "npub" to NPub.create(pubkey),
                     "found" to true,
                     "created_at" to event.createdAt,
                     "read" to (event.readRelaysNorm()?.map { it.url } ?: emptyList()),

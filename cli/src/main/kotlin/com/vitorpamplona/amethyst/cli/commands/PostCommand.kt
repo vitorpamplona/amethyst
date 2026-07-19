@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.pow
@@ -50,28 +49,30 @@ object PostCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", "post <text> [--relay URL …] [--pow BITS [--pow-timeout SECS]]")
-        val text = rest[0]
+        // Args first, then the positional — so flags may appear anywhere
+        // (`amy notes post --relay X "hi"` posts "hi", not "--relay").
+        val args = Args(rest)
+        val text =
+            args.positionalOrNull(0)
+                ?: return Output.error("bad_args", "post <text> [--relay URL …] [--pow BITS [--pow-timeout SECS]]")
         if (text.isBlank()) return Output.error("bad_args", "post text must not be blank")
 
-        val args = Args(rest.drop(1).toTypedArray())
-        val extraRelays =
-            args.flags["relay"]
-                ?.split(',')
-                ?.map { it.trim() }
-                ?.filter { it.isNotEmpty() } ?: emptyList()
+        // Strictly validated like every other `--relay` in amy — a malformed
+        // entry is a bad_args failure, not a silent drop.
+        val extraRelays = RawEventSupport.relayFlag(args)
 
-        val powTarget = args.flags["pow"]?.toIntOrNull()
-        if (args.flags.containsKey("pow") && (powTarget == null || powTarget < 1 || powTarget > MAX_DIFFICULTY)) {
+        val powRaw = args.flag("pow")
+        val powTarget = powRaw?.toIntOrNull()
+        if (powRaw != null && (powTarget == null || powTarget < 1 || powTarget > MAX_DIFFICULTY)) {
             return Output.error("bad_args", "--pow must be between 1 and $MAX_DIFFICULTY leading zero bits")
         }
-        val powTimeoutSec = args.flags["pow-timeout"]?.toLongOrNull()
+        val powTimeoutSec = args.flag("pow-timeout")?.toLongOrNull()
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val outbox = ctx.outboxRelays()
-            val extraNormalized = extraRelays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-            val targets = (outbox + extraNormalized).toSet()
+            val targets = (outbox + extraRelays).toSet()
             if (targets.isEmpty()) {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
@@ -93,7 +94,7 @@ object PostCommand {
                                 }
                             }
                         } catch (e: CancellationException) {
-                            Output.error("pow_timeout", "did not reach $powTarget bits within ${powTimeoutSec}s; nothing was published")
+                            Output.error("timeout", "pow: did not reach $powTarget bits within ${powTimeoutSec}s; nothing was published")
                             return 124
                         }
                     powMillis = (System.nanoTime() - startedAt) / 1_000_000
@@ -105,6 +106,7 @@ object PostCommand {
 
             val signed = ctx.signer.sign(readyToSign)
             val ack = ctx.publish(signed, targets)
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
 
             Output.emit(
                 mapOf(
@@ -115,9 +117,7 @@ object PostCommand {
                     "pow" to if (powTarget != null) signed.pow() else null,
                     "pow_target" to powTarget,
                     "pow_millis" to powMillis,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

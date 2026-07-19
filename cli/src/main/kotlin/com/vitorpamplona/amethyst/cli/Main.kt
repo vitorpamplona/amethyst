@@ -106,6 +106,16 @@ import kotlin.system.exitProcess
  * shape is not. Diagnostic logs always go to stderr.
  */
 fun main(argv: Array<String>) {
+    exitProcess(runCli(argv))
+}
+
+/**
+ * Everything [main] does except the process exit — the seam the JVM test
+ * suite drives (`exitProcess` would kill the test JVM). Note the shared
+ * mutable bits ([Output.mode], [Log.minLevel]) persist across calls; tests
+ * reset them between invocations.
+ */
+fun runCli(argv: Array<String>): Int {
     // Force AWT headless before any class load that might touch ImageIO,
     // Toolkit, or Graphics2D (image upload pulls in BufferedImage via
     // commons MediaMetadataReader / ImageReencoder). The Gradle launcher
@@ -137,7 +147,7 @@ fun main(argv: Array<String>) {
             Output.error("runtime", "${e::class.simpleName}: ${e.message}")
             1
         }
-    exitProcess(code)
+    return code
 }
 
 class AwaitTimeout(
@@ -155,7 +165,7 @@ class AwaitTimeout(
 private val STRICT_ACCOUNT_VERBS = setOf("init", "create", "login", "logoff", "whoami")
 
 private suspend fun dispatch(argv: Array<String>): Int {
-    if (argv.isEmpty() || argv[0] == "--help" || argv[0] == "-h") {
+    if (argv.firstOrNull() == "--help" || argv.firstOrNull() == "-h") {
         printUsage()
         return 0
     }
@@ -181,12 +191,22 @@ private suspend fun dispatch(argv: Array<String>): Int {
         i += consumed.tokensConsumed
     }
     if (filteredArgs.isEmpty()) {
-        printUsage()
+        Output.error("bad_args", "no subcommand given")
+        printVerbList()
         return 2
     }
 
     val head = filteredArgs[0]
-    val tail = filteredArgs.drop(1).toTypedArray()
+    var tail = filteredArgs.drop(1).toTypedArray()
+
+    // Central --help hoist: a help request anywhere before a `--` sentinel
+    // becomes a plain leading --help, so `amy notes post "hi" --help` prints
+    // usage instead of publishing, and no command can forget to honor it.
+    // (`--` still lets you pass the literal text: `amy notes post -- --help`.)
+    val helpIdx = tail.indexOfFirst { it == "--" || it == "--help" || it == "-h" }
+    if (helpIdx >= 0 && tail[helpIdx] != "--") {
+        tail = arrayOf("--help")
+    }
 
     // `use` operates on `<root>/current` directly and must work even
     // when account auto-pick would fail (the whole point of `use` is to
@@ -305,11 +325,35 @@ private suspend fun dispatch(argv: Array<String>): Int {
         }
         "concord" -> ConcordCommands.dispatch(dataDir, tail)
         else -> {
-            System.err.println("unknown subcommand: $head")
-            printUsage()
+            Output.error("bad_args", "unknown subcommand: $head")
+            printVerbList()
             2
         }
     }
+}
+
+/**
+ * The one-screen alternative to the full usage dump: shown on an unknown or
+ * missing subcommand so the error stays readable. `amy --help` still prints
+ * the full reference.
+ */
+private fun printVerbList() {
+    System.err.println(
+        """
+        |
+        |Commands (see `amy --help` for the full reference, `amy <cmd> --help` for one group):
+        |  identity:    init create login logoff whoami use status
+        |  primitives:  decode encode verify key filter nip kind pow namecoin
+        |  events:      event publish fetch subscribe count sync encrypt decrypt gift
+        |  social:      notes profile follow unfollow search zap dm outbox
+        |  groups:      marmot relaygroup concord geochat
+        |  relays:      relay admin serve store
+        |  trust:       graperank fof
+        |  media/sites: blossom nsite napplet podcast podcast20 git
+        |  payments:    cashu offer debit
+        |  signing:     bunker
+        """.trimMargin(),
+    )
 }
 
 private suspend fun marmotDispatch(
@@ -510,7 +554,8 @@ private fun printUsage() {
         |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)
         |
         |Profile (NIP-01 kind:0):
-        |  profile show [USER] [--timeout SECS]       fetch latest kind:0 metadata
+        |  profile show [USER] [--refresh]            fetch latest kind:0 metadata (--refresh forces
+        |               [--timeout SECS]              a relay round-trip past the local cache)
         |                                              (USER: npub|nprofile|hex|name@domain)
         |  profile edit [--name NAME]                  patch kind:0; unset flags keep prior values,
         |               [--display-name N]             blank values delete the field
@@ -520,6 +565,7 @@ private fun printUsage() {
         |               [--lud16 X] [--lud06 X]
         |               [--pronouns P]
         |               [--twitter H] [--mastodon H] [--github H]
+        |               [--clink-offer NOFFER]
         |               [--timeout SECS]
         |
         |Notes (NIP-10 kind:1):
@@ -679,22 +725,26 @@ private fun printUsage() {
         |
         |CLINK Offers:
         |  offer info NOFFER                          decode a noffer1… pointer (local, no network)
+        |  offer discover USER                        find a user's published offers
+        |  offer pay NOFFER --with NDEBIT             request an invoice AND settle it through the
+        |    [--amount SATS] [--timeout SECS]          given debit pointer in one step
         |  offer request NOFFER [--amount SATS]       kind:21001 round-trip: ask the service for a
-        |    [--timeout MS]                            fresh BOLT11 (amount required for spontaneous
-        |                                              offers; defaults to the pointer's fixed price)
+        |    [--follow] [--timeout SECS]               fresh BOLT11 (amount required for spontaneous
+        |                                              offers, else the pointer's fixed price;
+        |                                              --follow waits for settlement)
         |
         |CLINK Debits:
         |  debit info NDEBIT                          decode an ndebit1… pointer (local, no network)
         |  debit pay NDEBIT BOLT11 [--amount SATS]    kind:21002 round-trip: ask the wallet to pay the
-        |    [--timeout MS]                            invoice; prints the preimage or a GFY error
+        |    [--timeout SECS]                            invoice; prints the preimage or a GFY error
         |  debit budget NDEBIT --amount SATS          authorize a spending budget; omit --frequency
-        |    [--frequency day|week|month] [--timeout MS] for a one-time budget
+        |    [--frequency day|week|month] [--timeout SECS] for a one-time budget
         |
         |Search (NIP-50):
         |  search user QUERY [--limit N]              search kind:0 profiles
         |                    [--timeout SECS]
         |  search note QUERY [--limit N]              search event content
-        |                    [--kinds K[,K…]]          (default kind:1; e.g. 1,30023)
+        |                    [--kind K[,K…]]           (default kind:1; e.g. 1,30023; --kinds alias)
         |                    [--timeout SECS]
         |                                              uses your kind:10007 search-relay
         |                                              list, falls back to Amethyst defaults

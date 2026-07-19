@@ -39,13 +39,28 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
  * (`INostrClient.count`); this file builds the filter and shapes output.
  */
 object CountCommand {
+    val USAGE: String =
+        """
+        |NIP-45 COUNT (per-relay match counts, no event download):
+        |  count  [--kind K[,K]] [--author U[,U]]       ask each relay how many events match the
+        |         [--id ID[,ID]] [--tag e=ID,p=PK,…]     filter. Same filter flags as fetch;
+        |         [--since TS] [--until TS] [--limit N]  --author/--id accept npub/nevent/note/hex.
+        |         [--search TEXT] [--relay URL[,URL…]]   `total` is the per-relay max (counts can't
+        |         [--timeout SECS]                       be deduplicated across relays).
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 15L) * 1000
+        val timeoutMs = args.timeoutMs(15)
         val filter = RawEventSupport.buildFilter(args)
+        args.rejectUnknown("relay")
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()

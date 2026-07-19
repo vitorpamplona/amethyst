@@ -38,8 +38,23 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verifySignature
  * a runtime failure (parse errors are runtime/bad_args).
  */
 object VerifyCommand {
+    val USAGE: String =
+        """
+        |amy verify — check an event's id hash + signature (stateless)
+        |
+        |  verify [EVENT-JSON]          reads stdin when the arg is omitted or `-`.
+        |                                Reports id_ok and signature_ok separately;
+        |                                `valid` is the conjunction. Exit stays 0 —
+        |                                the result is data (parse errors are bad_args).
+        """.trimMargin()
+
     fun run(rest: Array<String>): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
+        args.rejectUnknown()
         val arg = args.positionalOrNull(0)
         val json =
             if (arg == null || arg == "-") {

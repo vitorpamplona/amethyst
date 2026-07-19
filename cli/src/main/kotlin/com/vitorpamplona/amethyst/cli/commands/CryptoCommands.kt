@@ -38,13 +38,26 @@ import com.vitorpamplona.amethyst.cli.Output
  * `nip04*`); this file resolves the peer and shuttles strings.
  */
 object EncryptCommand {
+    val USAGE: String =
+        """
+        |Encryption (active account's key):
+        |  encrypt --to USER [TEXT] [--nip04]    NIP-44 (default) or NIP-04 encrypt. Reads
+        |                                        stdin when TEXT is omitted or `-`.
+        |                                        USER: npub|nprofile|hex|name@domain.
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val to = args.flag("to") ?: return Output.error("bad_args", "encrypt requires --to USER")
         val nip04 = args.bool("nip04")
+        args.rejectUnknown()
         val text = RawEventSupport.readArgOrStdin(args)
         if (text.isEmpty()) return Output.error("bad_args", "no plaintext on the argument or stdin")
 
@@ -60,13 +73,27 @@ object EncryptCommand {
 }
 
 object DecryptCommand {
+    val USAGE: String =
+        """
+        |Decryption (active account's key):
+        |  decrypt --from USER [CIPHERTEXT] [--nip04]    inverse of encrypt: NIP-44 (default) or
+        |                                                NIP-04 decrypt. Reads stdin when
+        |                                                CIPHERTEXT is omitted or `-`.
+        |                                                USER: npub|nprofile|hex|name@domain.
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val from = args.flag("from") ?: return Output.error("bad_args", "decrypt requires --from USER")
         val nip04 = args.bool("nip04")
+        args.rejectUnknown()
         val ciphertext = RawEventSupport.readArgOrStdin(args)
         if (ciphertext.isEmpty()) return Output.error("bad_args", "no ciphertext on the argument or stdin")
 

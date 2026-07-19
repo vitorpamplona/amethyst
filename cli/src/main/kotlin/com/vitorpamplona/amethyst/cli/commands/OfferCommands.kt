@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
  *
  * - `info <noffer>` decodes a pointer locally (no network).
  * - `discover <nip05>` resolves a profile's advertised offer from its NIP-05 `.well-known`.
- * - `request <noffer> [--amount N] [--timeout MS] [--follow] [--payer-data k=v,…]` runs the
+ * - `request <noffer> [--amount N] [--timeout SECS] [--follow] [--payer-data k=v,…]` runs the
  *   kind-21001 round-trip: publishes the request to the pointer's relays and prints the
  *   returned BOLT-11. With `--follow` it chases an "Expired or Moved" (code 3) reply to the
  *   `latest` pointer. `--payer-data` attaches the payer fields some offers require.
@@ -54,6 +54,20 @@ object OfferCommands {
     private const val MAX_FOLLOW_HOPS = 3
     private const val ERR_NOT_A_NOFFER = "not a valid noffer pointer"
 
+    val USAGE: String =
+        """
+        |CLINK Offers:
+        |  offer info NOFFER                          decode a noffer1… pointer (local, no network)
+        |  offer discover NIP05                       resolve a profile's advertised offer from its
+        |                                              NIP-05 .well-known (e.g. bob@example.com)
+        |  offer request NOFFER [--amount SATS]       kind:21001 round-trip: ask the service for a
+        |    [--timeout SECS] [--follow]                fresh BOLT11 (amount required for spontaneous
+        |    [--payer-data k=v[,k=v…]]                  offers; --follow chases an Expired-or-Moved
+        |                                              reply; --payer-data attaches required fields)
+        |  offer pay NOFFER --with NDEBIT             fetch the invoice and settle it end-to-end
+        |    [--amount SATS] [--timeout SECS]           through a CLINK debit pointer (kind:21002)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -62,12 +76,14 @@ object OfferCommands {
             "offer",
             tail,
             "offer <info|discover|request|pay>",
-            mapOf(
-                "info" to { rest -> info(rest) },
-                "discover" to { rest -> discover(dataDir, rest) },
-                "request" to { rest -> request(dataDir, rest) },
-                "pay" to { rest -> pay(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "info" to { rest -> info(rest) },
+                    "discover" to { rest -> discover(dataDir, rest) },
+                    "request" to { rest -> request(dataDir, rest) },
+                    "pay" to { rest -> pay(dataDir, rest) },
+                ),
         )
 
     /**
@@ -80,6 +96,7 @@ object OfferCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
+        args.rejectUnknown()
         val id =
             Nip05Id.parse(args.positional(0, "nip05").trim())
                 ?: return Output.error("bad_args", "not a valid NIP-05 address (e.g. bob@example.com)")
@@ -111,6 +128,7 @@ object OfferCommands {
     /** Local decode of a `noffer` pointer — no network, no account needed. */
     internal fun info(rest: Array<String>): Int {
         val args = Args(rest)
+        args.rejectUnknown()
         val offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
                 ?: return Output.error("bad_args", ERR_NOT_A_NOFFER)
@@ -134,7 +152,9 @@ object OfferCommands {
     ): Int {
         val args = Args(rest)
         val amount = args.flag("amount")?.toLongOrNull()
-        val timeoutMs = args.longFlag("timeout", 15_000)
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
         val follow = args.bool("follow")
         // Offers can be configured to require payer fields (e.g. email); Lightning.Pub
         // rejects a request missing them as "Invalid Offer" (code 1), so the round-trip
@@ -145,6 +165,7 @@ object OfferCommands {
                 if (idx <= 0) return Output.error("bad_args", "--payer-data expects key=value[,key2=value2…]")
                 pair.take(idx) to pair.substring(idx + 1)
             }
+        args.rejectUnknown()
 
         var offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
@@ -162,7 +183,7 @@ object OfferCommands {
 
                 val reply = ctx.requestResponse(requestEvent, relays, client.responseFilter(requestEvent.id), timeoutMs)
                 if (reply == null) {
-                    Output.error("timeout", "no response from the offer service within ${timeoutMs}ms")
+                    Output.error("timeout", "no response from the offer service within ${timeoutMs / 1000}s")
                     return 124
                 }
 
@@ -211,7 +232,9 @@ object OfferCommands {
     ): Int {
         val args = Args(rest)
         val amount = args.flag("amount")?.toLongOrNull()
-        val timeoutMs = args.longFlag("timeout", 15_000)
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
 
         val offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
@@ -222,6 +245,7 @@ object OfferCommands {
         val debit =
             ClinkPointerParser.parse(withFlag.trim()) as? NDebit
                 ?: return Output.error("bad_args", "--with is not a valid ndebit pointer")
+        args.rejectUnknown()
 
         val offerRelays = offer.relays.toSet()
         if (offerRelays.isEmpty()) return Output.error("bad_pointer", "noffer carries no relay to reach")
@@ -235,7 +259,7 @@ object OfferCommands {
             val offerReq = offerClient.requestInvoice(amountSats = amount)
             val offerReply = ctx.requestResponse(offerReq, offerRelays, offerClient.responseFilter(offerReq.id), timeoutMs)
             if (offerReply == null) {
-                Output.error("timeout", "no response from the offer service within ${timeoutMs}ms")
+                Output.error("timeout", "no response from the offer service within ${timeoutMs / 1000}s")
                 return 124
             }
             val offerResp =
@@ -255,7 +279,7 @@ object OfferCommands {
             // 2. settle the invoice through the debit service (shared with `debit pay`).
             return when (val outcome = DebitCommands.settle(ctx, debit, timeoutMs) { it.payInvoice(bolt11, amount) }) {
                 DebitCommands.Settle.Timeout -> {
-                    Output.error("timeout", "no response from the debit service within ${timeoutMs}ms")
+                    Output.error("timeout", "no response from the debit service within ${timeoutMs / 1000}s")
                     124
                 }
                 DebitCommands.Settle.BadReply -> Output.error("bad_response", "debit reply was not a kind-21002 event")

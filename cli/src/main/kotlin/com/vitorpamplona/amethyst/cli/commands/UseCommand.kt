@@ -36,7 +36,20 @@ import java.io.File
  * unset). `amy use --clear` removes the marker entirely.
  */
 object UseCommand {
+    val USAGE: String =
+        """
+        |amy use — pin the active account in ~/.amy/current
+        |
+        |  use NAME                                  pin NAME as the active account
+        |  use --clear                                remove the pin
+        |  use                                        print current pin + available accounts
+        """.trimMargin()
+
     fun run(tail: Array<String>): Int {
+        if (tail.firstOrNull() == "--help" || tail.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val rootBase = DataDir.DEFAULT_ROOT
         val markerFile = File(rootBase, DataDir.CURRENT_MARKER_NAME)
 

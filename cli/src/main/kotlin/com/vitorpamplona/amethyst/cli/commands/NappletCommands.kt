@@ -50,6 +50,27 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
  * shared with `amy nsite` via [StaticSiteFetch].
  */
 object NappletCommands {
+    val USAGE: String =
+        """
+        |Napplets (NIP-5D kind:5129/15129/35129):
+        |  napplet fetch AUTHOR [--d ID] [--path P]    like `nsite fetch`, plus NIP-5D verification:
+        |        [--server URL[,URL]] [--relay URL[,URL]]  recompute + check the `x` aggregate hash and
+        |        [--out FILE] [--timeout SECS]          report the napplet's `requires` capabilities
+        |        [--max-inline-bytes N]                 (--d selects a kind:35129 named napplet, else
+        |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
+        |        [--path P] …                            immutable snapshot; --identifier aliases --d)
+        |  napplet publish DIR --server URL[,URL]      upload a napplet directory to Blossom and
+        |        [--requires identity,relay,…]           broadcast its NIP-5D manifest (kind:15129
+        |        [--d ID] [--relay URL[,URL]]            root, or 35129 named with --d); adds the x
+        |        [--title T] [--description D]           aggregate hash and the `requires` capability
+        |        [--source URL] [--icon URL]             tags the shell gates on
+        |  napplet serve AUTHOR [--d ID] [--port N]    fetch + aggregate-verify the manifest and serve
+        |        [--server URL[,URL]] [--relay URL[,URL]]  its static content over local HTTP (the
+        |        [--timeout SECS]                        window.napplet.* runtime needs the app host)
+        |  napplet list AUTHOR [--relay URL[,URL]]     enumerate an author's napplets: the root and
+        |        [--timeout SECS]                        every named one, latest per identifier
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -58,12 +79,14 @@ object NappletCommands {
             "napplet",
             tail,
             "napplet <fetch|publish|serve|list> …",
-            mapOf(
-                "fetch" to { rest -> fetch(dataDir, rest) },
-                "publish" to { rest -> publish(dataDir, rest) },
-                "serve" to { rest -> serve(dataDir, rest) },
-                "list" to { rest -> list(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "fetch" to { rest -> fetch(dataDir, rest) },
+                    "publish" to { rest -> publish(dataDir, rest) },
+                    "serve" to { rest -> serve(dataDir, rest) },
+                    "list" to { rest -> list(dataDir, rest) },
+                ),
         )
 
     /**
@@ -78,6 +101,7 @@ object NappletCommands {
         val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "napplet list <author> [--relay R] [--timeout S]")
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -128,11 +152,13 @@ object NappletCommands {
     ): Int {
         val args = Args(rest)
         val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "napplet serve <author> [--d ID] [--port N] [--server S] [--relay R]")
-        val identifier = args.flag("d")
+        val identifierAlias = args.flag("identifier")
+        val identifier = args.flag("d") ?: identifierAlias
         val port = args.intFlag("port", 8080)
         val extraServers = StaticSiteFetch.commaList(args.flag("server"))
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -185,13 +211,15 @@ object NappletCommands {
         if (snapshotId == null && author == null) {
             return Output.error("bad_args", "napplet fetch <author> [--d ID] | --snapshot <event-id> [--path P]")
         }
-        val identifier = args.flag("d")
+        val identifierAlias = args.flag("identifier")
+        val identifier = args.flag("d") ?: identifierAlias
         val requestPath = args.flag("path", "/")!!
         val outFile = args.flag("out")
         val timeoutSecs = args.longFlag("timeout", 8L)
         val maxInlineBytes = args.longFlag("max-inline-bytes", 65_536L)
         val extraServers = StaticSiteFetch.commaList(args.flag("server"))
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()

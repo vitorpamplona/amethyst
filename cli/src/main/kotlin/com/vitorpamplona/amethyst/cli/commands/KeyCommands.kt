@@ -43,18 +43,33 @@ import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
  * (reused here via [Identity] / [Nip49]).
  */
 object KeyCommands {
+    val USAGE: String =
+        """
+        |amy key — standalone key utilities (local, no network, no account)
+        |
+        |  key generate                 mint a fresh keypair (nsec + npub + hex)
+        |  key public NSEC|HEX          derive the public key from a secret key
+        |  key encrypt NSEC|HEX --password X    NIP-49 encrypt to ncryptsec1…
+        |  key decrypt NCRYPTSEC --password X   NIP-49 decrypt back to a secret key
+        |  key validate PUBKEY          check an npub/64-hex pubkey is structurally valid
+        |                                (reports {"valid": false} instead of erroring)
+        |
+        |  --pw is accepted as an alias of --password.
+        """.trimMargin()
+
     suspend fun dispatch(rest: Array<String>): Int =
         route(
             "key",
             rest,
-            "key <generate|public|encrypt|decrypt>",
+            "key <generate|public|encrypt|decrypt|validate>",
             mapOf(
-                "generate" to { _ -> generate() },
+                "generate" to { tail -> generate(tail) },
                 "public" to { tail -> public(tail) },
                 "encrypt" to { tail -> encrypt(tail) },
                 "decrypt" to { tail -> decrypt(tail) },
                 "validate" to { tail -> validate(tail) },
             ),
+            help = USAGE,
         )
 
     /**
@@ -64,7 +79,9 @@ object KeyCommands {
      * branch on the field rather than the exit code.
      */
     private fun validate(rest: Array<String>): Int {
-        val input = Args(rest).positional(0, "pubkey").trim()
+        val args = Args(rest)
+        args.rejectUnknown()
+        val input = args.positional(0, "pubkey").trim()
         val hex =
             when {
                 input.startsWith("npub") -> runCatching { input.bechToBytes().toHexKey() }.getOrNull()
@@ -93,7 +110,10 @@ object KeyCommands {
     private fun encrypt(rest: Array<String>): Int {
         val args = Args(rest)
         val priv = privHexOrNull(args.positional(0, "secret-key").trim()) ?: return Output.error("bad_args", "expected an nsec or 64-char hex secret key")
-        val password = args.flag("password") ?: args.flag("pw") ?: return Output.error("bad_args", "key encrypt requires --password")
+        // Read both spellings eagerly so passing both doesn't trip rejectUnknown().
+        val pwAlias = args.flag("pw")
+        val password = args.flag("password") ?: pwAlias ?: return Output.error("bad_args", "key encrypt requires --password")
+        args.rejectUnknown()
         val ncryptsec = Nip49().encrypt(priv, password)
         Output.emit(mapOf("ncryptsec" to ncryptsec))
         return 0
@@ -103,7 +123,10 @@ object KeyCommands {
         val args = Args(rest)
         val ncryptsec = args.positional(0, "ncryptsec").trim()
         if (!ncryptsec.startsWith("ncryptsec")) return Output.error("bad_args", "expected an ncryptsec1… string")
-        val password = args.flag("password") ?: args.flag("pw") ?: return Output.error("bad_args", "key decrypt requires --password")
+        // Read both spellings eagerly so passing both doesn't trip rejectUnknown().
+        val pwAlias = args.flag("pw")
+        val password = args.flag("password") ?: pwAlias ?: return Output.error("bad_args", "key decrypt requires --password")
+        args.rejectUnknown()
         val privHex =
             try {
                 Nip49().decrypt(ncryptsec, password)
@@ -115,7 +138,8 @@ object KeyCommands {
         return 0
     }
 
-    private fun generate(): Int {
+    private fun generate(rest: Array<String>): Int {
+        Args(rest).rejectUnknown()
         val id = Identity.create()
         Output.emit(
             mapOf(
@@ -130,6 +154,7 @@ object KeyCommands {
 
     private fun public(rest: Array<String>): Int {
         val args = Args(rest)
+        args.rejectUnknown()
         val input = args.positional(0, "secret-key").trim()
         val id =
             try {

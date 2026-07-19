@@ -53,6 +53,18 @@ import java.util.Collections
  *  - `fof sync`      — refresh your follows' kind:3 from relays.
  */
 object FofCommand {
+    val USAGE: String =
+        """
+        |amy fof — follows-of-follows (social proof — the cheap counterpart to graperank)
+        |
+        |  fof get USER                               USER's score: how many accounts you follow also
+        |                                              follow them (single-hop social proof, not trust).
+        |  fof list [--threshold N] [--limit N]       accounts ranked by that score — who's most
+        |                                              followed inside your network (default N: 1 / 50).
+        |  fof sync [--timeout SECS]                  refresh your follows' kind:3 from the index relays
+        |                                              so the next get/list is current.
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         rest: Array<String>,
@@ -60,6 +72,10 @@ object FofCommand {
         val head = rest.firstOrNull() ?: return usage()
         val tail = rest.drop(1).toTypedArray()
         return when (head) {
+            "--help", "-h", "help" -> {
+                System.err.println(USAGE)
+                0
+            }
             "get" -> get(dataDir, tail)
             "list" -> list(dataDir, tail)
             "sync" -> sync(dataDir, tail)
@@ -96,6 +112,7 @@ object FofCommand {
         val args = Args(rest)
         val threshold = args.flag("threshold")?.toIntOrNull() ?: 1
         val limit = args.flag("limit")?.toIntOrNull() ?: 50
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val (svc, scope) = buildHydratedService(ctx)
@@ -125,7 +142,8 @@ object FofCommand {
         val args = Args(rest)
         // Overall timeout; per-relay budget is set by OutboxDispatcher's
         // default (4s). `--timeout N` overrides the overall cap.
-        val overallTimeoutMs = args.flag("timeout")?.toLongOrNull()?.times(1000) ?: 8_000L
+        val overallTimeoutMs = args.timeoutMs(8)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val self = ctx.identity.pubKeyHex

@@ -49,10 +49,27 @@ import okhttp3.OkHttpClient
  *  - NIP-05 identifier (name@domain.tld)   → read-only (HTTP lookup)
  */
 object LoginCommand {
+    val USAGE: String =
+        """
+        |amy login — import an identifier and persist the identity
+        |
+        |  login KEY [--password X]     KEY: nsec | ncryptsec (needs --password, alias --pw) |
+        |                                BIP-39 mnemonic | 64-hex privkey (with --private) |
+        |                                npub/nprofile/64-hex pubkey (read-only) |
+        |                                NIP-05 name@domain (read-only) | bunker://…
+        |  login bunker://PUBKEY?relay=…&secret=…      sign through a remote NIP-46 bunker
+        |  login --nostrconnect [--relay URL[,URL…]]   client-initiated: print a nostrconnect://
+        |    [--name N] [--perms P] [--timeout SECS]    offer, wait for a signer, persist it
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         // NIP-46 NostrConnect (client-initiated) login: no key positional —
         // amy mints a transport key, prints an offer, and waits for a signer.
         val preArgs = Args(rest)
@@ -68,6 +85,9 @@ object LoginCommand {
 
         val key = rest[0].trim()
         val args = Args(rest.drop(1).toTypedArray())
+        // --password/--pw/--private are read branch-dependently inside
+        // resolveIdentity, so whitelist them up front.
+        args.rejectUnknown("password", "pw", "private")
 
         val identity =
             resolveIdentity(key, args)
@@ -132,8 +152,10 @@ object LoginCommand {
         if (key.startsWith("bunker://")) return Identity.fromBunkerUri(key)
         // 1. ncryptsec — password mandatory.
         if (key.startsWith("ncryptsec")) {
+            // Read both spellings eagerly so passing both doesn't trip rejectUnknown().
+            val pwAlias = args.flag("pw")
             val pw =
-                args.flag("password") ?: args.flag("pw")
+                args.flag("password") ?: pwAlias
                     ?: throw IllegalArgumentException("ncryptsec input requires --password")
             val privHex = Nip49().decrypt(key, pw)
             return Identity.fromPrivateKey(

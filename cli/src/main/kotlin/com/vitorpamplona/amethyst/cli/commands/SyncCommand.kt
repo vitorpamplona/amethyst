@@ -103,23 +103,43 @@ object SyncCommand {
      */
     private const val MAX_DELETION_ROUNDS = 4
 
+    val USAGE: String =
+        """
+        |amy sync — NIP-77 Negentropy reconcile between the local store and a relay
+        |
+        |  sync --relay URL [<filter flags>]           a reconcile is inherently per-relay: one
+        |       [--down] [--up] [--timeout SECS]        relay per run (run it once per relay to
+        |       [--no-sync-deletions]                   sync several). --down (default) pulls
+        |                                               events we lack; --up pushes ours; both
+        |                                               for bidirectional. Filter flags are the
+        |                                               same as fetch/subscribe; empty filter
+        |                                               reconciles the whole store. Deletions
+        |                                               propagate by default (--no-sync-deletions
+        |                                               disables).
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val relayUrl =
             args.flag("relay")
-                ?: return Output.error("bad_args", "sync requires --relay URL")
+                ?: return Output.error("bad_args", "sync requires --relay URL (one relay per run)")
         val relay =
             RelayUrlNormalizer.normalizeOrNull(relayUrl)
                 ?: return Output.invalidRelayUrl(relayUrl)
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 30L) * 1000
+        val timeoutMs = args.timeoutMs(30)
         // Default direction is download; --up adds upload.
         val up = args.bool("up")
         val down = args.bool("down") || !up
         val syncDeletions = !args.bool("no-sync-deletions")
         val filter = RawEventSupport.buildFilter(args)
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -154,7 +174,7 @@ object SyncCommand {
                                 for (batch in haveBatches) {
                                     for (id in batch) {
                                         val ev = localById[id] ?: continue
-                                        if (ctx.publish(ev, setOf(relay)).values.any { it }) uploaded.incrementAndGet()
+                                        if (ctx.publish(ev, setOf(relay)).values.any { it.accepted }) uploaded.incrementAndGet()
                                     }
                                 }
                             }

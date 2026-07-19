@@ -42,7 +42,8 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  *   amy fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
  *
  * One-shot query: open a subscription, collect everything until every relay
- * sends EOSE (or the timeout fires), then print and exit. This is the bounded
+ * sends EOSE (or nothing has arrived for the timeout — an idle window, so a
+ * relay still streaming is never cropped), then print and exit. This is the bounded
  * half of nak's `req`; the live-streaming half is `amy subscribe`.
  *
  * Two modes:
@@ -68,10 +69,28 @@ object FetchCommand {
     /** Output/paging cap for a fetch (either path) when `--limit` is omitted. */
     private const val DEFAULT_LIMIT = 100
 
+    val USAGE: String =
+        """
+        |amy fetch — one-shot query: collect until EOSE, print, exit
+        |
+        |  fetch [--kind K[,K]] [--author U[,U]]       --author/--id accept npub/nevent/note/hex.
+        |        [--id ID[,ID]] [--tag e=ID,p=PK,…]     default --limit 100 (0 = unbounded),
+        |        [--since TS] [--until TS] [--limit N]  --timeout 8s.
+        |        [--search TEXT] [--relay URL[,URL…]]
+        |        [--timeout SECS] [--paginate|--all]    --paginate walks each relay page-by-page
+        |                                                past its per-REQ cap (alias --all).
+        |  fetch <nevent1…|naddr1…|nprofile1…|npub1…|note1…|name@domain>
+        |                                               outbox-model resolution of a shared code.
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         // `--limit`: omitted → DEFAULT_LIMIT on BOTH the plain and --paginate paths;
         // `0` → unbounded (drain everything — only useful with --paginate); negative
@@ -79,7 +98,11 @@ object FetchCommand {
         val explicitLimit = args.flag("limit")?.toIntOrNull()
         if (explicitLimit != null && explicitLimit < 0) return Output.error("bad_args", "--limit must be >= 0 (0 = unbounded)")
         val effectiveLimit: Int? = if (explicitLimit == 0) null else (explicitLimit ?: DEFAULT_LIMIT)
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
+        // The filter/relay/paging flags are read later (buildFilter, queryTargets,
+        // the --paginate branch) and code mode skips them entirely, so whitelist
+        // them here where both paths still share the flow.
+        args.rejectUnknown("kind", "author", "id", "tag", "since", "until", "search", "relay", "paginate", "all")
 
         // Code mode: a nip19/nip05 positional resolves its own relays via the
         // outbox model rather than using a hand-built filter. It fetches a single

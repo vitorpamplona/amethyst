@@ -41,8 +41,20 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
  * just maps the parsed entity onto amy's result-map output contract.
  */
 object DecodeCommand {
+    val USAGE: String =
+        """
+        |NIP-19 / NIP-21 decoding (local, no network, no account):
+        |  decode ENTITY    decode a NIP-19/21 entity (npub|nsec|note|nevent|nprofile|naddr|
+        |                    nrelay|nembed) to its structured parts; accepts a `nostr:` prefix
+        """.trimMargin()
+
     fun run(rest: Array<String>): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
+        args.rejectUnknown()
         val input = args.positional(0, "entity").trim()
 
         val entity =

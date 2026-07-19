@@ -138,15 +138,33 @@ object BunkerCommand {
             }
     }
 
+    val USAGE: String =
+        """
+        |Remote signing (NIP-46):
+        |  bunker [--relay URL[,URL…]]  run a remote signer for this (local-key) account; prints a
+        |    [--secret S] [--timeout SECS]  bunker:// uri and signs requests until interrupt/timeout.
+        |    [--perms P] [--interactive]    --perms sign_event:1,nip44_encrypt,… restricts which ops
+        |                                    are allowed (rest rejected); --interactive prompts y/N on
+        |                                    the terminal for anything not pre-allowed (needs a TTY).
+        |                                    Default (neither): approve everything.
+        |  bunker connect NOSTRCONNECT-URI             act as signer for a client's nostrconnect://
+        |    [--perms P] [--interactive] [--timeout SECS]  offer (acks + services; same gating flags)
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
-    ): Int =
-        if (rest.firstOrNull() == "connect") {
+    ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
+        return if (rest.firstOrNull() == "connect") {
             connect(dataDir, rest.drop(1).toTypedArray())
         } else {
             advertise(dataDir, rest)
         }
+    }
 
     /** `amy bunker …` — advertise a bunker:// uri and service requests. */
     private suspend fun advertise(
@@ -154,8 +172,9 @@ object BunkerCommand {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        val timeoutMs = args.timeoutMsOrNull()
         interactiveTtyError(args)?.let { return it }
+        args.rejectUnknown("relay", "secret", "perms")
         val accountError = checkHostable(dataDir)
         if (accountError != null) return accountError
 
@@ -200,8 +219,9 @@ object BunkerCommand {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        val timeoutMs = args.timeoutMsOrNull()
         interactiveTtyError(args)?.let { return it }
+        args.rejectUnknown("perms")
         val uri = args.positional(0, "nostrconnect-uri")
         val offer = NostrConnect.parseOffer(uri) ?: return Output.error("bad_args", "not a valid nostrconnect:// uri")
         val accountError = checkHostable(dataDir)

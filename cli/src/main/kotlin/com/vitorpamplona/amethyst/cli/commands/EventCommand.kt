@@ -44,10 +44,23 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * (`EventTemplate` / `NostrSigner.sign`); this file parses flags.
  */
 object EventCommand {
+    val USAGE: String =
+        """
+        |amy event — build + sign an arbitrary event with the active account
+        |
+        |  event --kind N [--content TEXT]             prints the signed event; add --publish
+        |        [--tags JSON] [--created-at TS]        (or --relay) to broadcast. --tags takes a
+        |        [--publish] [--relay URL[,URL…]]       JSON array-of-arrays, e.g. '[["t","nostr"]]'.
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
         val kind =
             args.flag("kind")?.toIntOrNull()
@@ -69,6 +82,7 @@ object EventCommand {
 
         // Publish when explicitly asked (--publish) or when a relay set is given.
         val wantPublish = args.bool("publish") || args.flag("relay") != null
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -85,13 +99,12 @@ object EventCommand {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
             val ack = ctx.publish(signed, targets)
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event" to eventNode,
                     "published" to true,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

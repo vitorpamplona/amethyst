@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.sun.management.UnixOperatingSystemMXBean
-import com.vitorpamplona.amethyst.cli.stores.FileCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.cli.stores.FileKeyPackageBundleStore
 import com.vitorpamplona.amethyst.cli.stores.FileMarmotMessageStore
 import com.vitorpamplona.amethyst.cli.stores.FileMlsGroupStateStore
@@ -31,28 +30,23 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
-import com.vitorpamplona.amethyst.commons.marmot.ingest
-import com.vitorpamplona.quartz.marmot.MarmotFilters
+import com.vitorpamplona.amethyst.commons.marmot.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
-import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.classifyDrainFailure
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -61,44 +55,25 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.TcpNoDelaySocketFactory
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.verifyAndInsert
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
-import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
-import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
-import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
-import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
-import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
-import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
-import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
-import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.lang.management.ManagementFactory
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
@@ -158,7 +133,9 @@ class Context(
             runCatching { it.load() }
         }
 
-    private val okhttp =
+    // Internal (not private) so [CashuContext] can reuse the shared instance
+    // for mint HTTP.
+    internal val okhttp =
         OkHttpClient
             .Builder()
             .socketFactory(TcpNoDelaySocketFactory)
@@ -259,39 +236,18 @@ class Context(
         ).also { client.addConnectionListener(it) }
 
     /**
-     * Concord plane stream-key AUTH (CORD-01 §4b). Concord relays gate a plane's
-     * kind-1059 wraps behind NIP-42 and serve them only to a connection authenticated
-     * AS the plane's derived *stream key* — the member is neither the wrap's author
-     * (the stream key) nor its recipient (a throwaway ephemeral key), so an account
-     * AUTH is refused. `amy concord` verbs register their control + channel stream
-     * secrets here (scoped to the community's relays, the same scope the plane REQ
-     * uses) before draining, and [relayAuth] answers a challenge from one of those
-     * relays with one kind-22242 per stream key — signed locally from the raw derived
-     * key, never the account, so no user identity is exposed.
+     * Concord plane stream-key AUTH registry (CORD-01 §4b) — see [ConcordAuth].
+     * `amy concord` verbs register their stream secrets via
+     * [registerConcordStreamKeys] before draining, and [relayAuth] answers a
+     * challenge from one of those relays with one kind-22242 per stream key.
      */
-    private val concordStreamSecrets = ConcurrentHashMap<NormalizedRelayUrl, MutableSet<HexKey>>()
-    private val concordStreamSigners = ConcurrentHashMap<HexKey, NostrSignerSync>()
+    private val concordAuth = ConcordAuth()
 
     /** Registers raw 32-byte Concord stream [secrets] to answer NIP-42 challenges from [relays]. */
     fun registerConcordStreamKeys(
         relays: Set<NormalizedRelayUrl>,
         secrets: List<ByteArray>,
-    ) {
-        if (relays.isEmpty() || secrets.isEmpty()) return
-        val hexes = secrets.map { it.toHexKey() }
-        for (relay in relays) concordStreamSecrets.getOrPut(relay) { ConcurrentHashMap.newKeySet() }.addAll(hexes)
-    }
-
-    /** Signs one kind-22242 per Concord stream key registered for [relay] (empty if none). */
-    private fun signConcordStreamAuths(
-        relay: NormalizedRelayUrl,
-        template: EventTemplate<RelayAuthEvent>,
-    ): List<RelayAuthEvent> =
-        concordStreamSecrets[relay].orEmpty().mapNotNull { hex ->
-            runCatching {
-                concordStreamSigners.getOrPut(hex) { NostrSignerSync(KeyPair(privKey = hex.hexToByteArray())) }.sign(template)
-            }.getOrNull()
-        }
+    ) = concordAuth.register(relays, secrets)
 
     /**
      * NIP-42 responder: answers a relay's AUTH challenge by signing with the
@@ -313,7 +269,7 @@ class Context(
                     } else {
                         emptyList()
                     }
-                accountAuth + signConcordStreamAuths(relay, template)
+                accountAuth + concordAuth.signAuths(relay, template)
             },
         )
 
@@ -388,109 +344,25 @@ class Context(
     // Cashu (NIP-60 / NIP-61) — shared wallet code from commons
     // ------------------------------------------------------------------
 
-    /** Durable NUT-13 counter store at `<data-dir>/cashu.json`. */
-    private val cashuCounters by lazy { FileCashuKeysetCounterStore(dataDir.cashuFile) }
-
-    @Volatile private var cachedCashuSeed: ByteArray? = null
-
     /**
-     * Decrypt the wallet's NUT-13 seed once per run and cache it. The
-     * [DeterministicSecretFactory] thunk reads this synchronously, so any
-     * mint/swap op must warm it first (CashuWalletOps' seedWarmer does).
+     * Cashu wiring (seed warming, snapshot projection, NUT-09 restore) —
+     * see [CashuContext]. Lazy so a run that never touches the wallet pays
+     * nothing. The `cashuOps` / `cashuSnapshot` / `cashuSeed` / `cashuRestore`
+     * members below forward to it, keeping the command surface unchanged.
      */
-    private suspend fun warmCashuSeed() {
-        if (cachedCashuSeed != null) return
-        val priv = cashuSnapshot().walletEvent?.let { runCatching { it.privkey(signer) }.getOrNull() } ?: return
-        cachedCashuSeed = CashuDeterministic.deriveWalletSeed(priv.hexToByteArray())
-    }
+    val cashu: CashuContext by lazy { CashuContext(this) }
 
-    /**
-     * Wallet operations driven by the exact same `commons` [CashuWalletOps]
-     * the Android app uses. Wired to publish on the account's outbox relays,
-     * the shared OkHttp instance for mint HTTP, and the file-backed NUT-13
-     * counter store.
-     */
-    fun cashuOps(): CashuWalletOps =
-        CashuWalletOps(
-            signer = signer,
-            // Amethyst publishes cashu events via sendLiterallyEverywhere
-            // (all the user's relays). anyRelays() — outbox + inbox +
-            // keypackage — is the CLI's closest analog, so the wallet lands
-            // on the same broad relay set the app would use, not just outbox.
-            publish = { event -> publish(event, anyRelays()) },
-            okHttpClient = { okhttp },
-            secretFactory =
-                DeterministicSecretFactory(
-                    seedProvider = { cachedCashuSeed },
-                    reserveCounters = { keysetId, count -> cashuCounters.reserve(keysetId, count) },
-                ),
-            seedWarmer = { warmCashuSeed() },
-            seedForRestore = {
-                warmCashuSeed()
-                cachedCashuSeed
-            },
-            peekCashuCounter = { keysetId -> cashuCounters.peek(keysetId) },
-            reserveCashuCounters = { keysetId, count -> cashuCounters.reserve(keysetId, count) },
-        )
+    /** See [CashuContext.ops]. */
+    fun cashuOps(): CashuWalletOps = cashu.ops()
 
-    /**
-     * Project this account's locally-stored NIP-60/61/87 events into a wallet
-     * snapshot via the shared [CashuWalletReader] — the same decrypt +
-     * del-rollover + pending-quote logic the Android holder runs. Reads the
-     * cache only; commands that need fresh state should [drain] first.
-     */
-    suspend fun cashuSnapshot(): CashuWalletReader.WalletSnapshot {
-        val pk = identity.pubKeyHex
-        // Mirror commons' CashuWalletFilterAssembler exactly: authored wallet
-        // kinds by authors=[pk], inbound nutzaps by #p — so amy projects the
-        // same event set the Android app subscribes to.
-        val authored =
-            store.query<Event>(
-                Filter(
-                    authors = listOf(pk),
-                    kinds =
-                        listOf(
-                            CashuWalletEvent.KIND,
-                            CashuTokenEvent.KIND,
-                            CashuSpendingHistoryEvent.KIND,
-                            CashuMintQuoteEvent.KIND,
-                            NutzapInfoEvent.KIND,
-                            MintRecommendationEvent.KIND,
-                        ),
-                ),
-            )
-        val inboundNutzaps =
-            store.query<Event>(
-                Filter(kinds = listOf(NutzapEvent.KIND), tags = mapOf("p" to listOf(pk))),
-            )
-        return CashuWalletReader(signer).project(authored + inboundNutzaps)
-    }
+    /** See [CashuContext.snapshot]. */
+    suspend fun cashuSnapshot(): CashuWalletReader.WalletSnapshot = cashu.snapshot()
 
-    /** Warm and return the wallet's NUT-13 seed, or null if no wallet. */
-    suspend fun cashuSeed(): ByteArray? {
-        warmCashuSeed()
-        return cachedCashuSeed
-    }
+    /** See [CashuContext.seed]. */
+    suspend fun cashuSeed(): ByteArray? = cashu.seed()
 
-    /**
-     * NUT-09 restore for one mint, mirroring Android's
-     * `CashuWalletState.restoreFromMint`: re-derive proofs from the seed
-     * (skipping secrets we already hold), then bump the persisted NUT-13
-     * counter past every slot the scan confirmed in use so later mints can't
-     * reuse one. Returns null when the wallet has no seed yet.
-     */
-    suspend fun cashuRestore(mintUrl: String): RestoreOutcome? {
-        val seed = cashuSeed() ?: return null
-        val existingSecrets =
-            cashuSnapshot()
-                .tokenEntries
-                .flatMap { it.content.proofs }
-                .mapTo(HashSet()) { it.secret }
-        val outcome = cashuOps().restoreFromMint(mintUrl = mintUrl, seed = seed, startCounter = 0L, existingSecrets = existingSecrets)
-        val delta = (outcome.nextCounterAfterScan - cashuCounters.peek(outcome.keysetId)).coerceAtLeast(0L)
-        if (delta > 0) cashuCounters.reserve(outcome.keysetId, delta.toInt())
-        return outcome
-    }
+    /** See [CashuContext.restore]. */
+    suspend fun cashuRestore(mintUrl: String): RestoreOutcome? = cashu.restore(mintUrl)
 
     private var prepared = false
 
@@ -515,11 +387,29 @@ class Context(
     }
 
     /**
-     * Resolve `npub…` / `nprofile…` / 64-hex / `name@domain.tld` to a pubkey hex.
-     * Delegates to the shared [resolveUserHexOrNull] in quartz so the UI and CLI
-     * accept the exact same identifier formats. Throws on unrecognised input —
-     * command handlers catch [IllegalArgumentException] at the top level and
-     * translate to `{"error": "bad_args"}`.
+     * Per-account alias map, read once per invocation. Alias lookups only
+     * apply to short name-shaped inputs: an npub/nprofile/NIP-05/64-hex input
+     * always resolves as itself, so an alias can never silently shadow a real
+     * identifier (`amy dm send bob@damus.io …` reaches the actual NIP-05 owner
+     * even if a local account happens to carry that name).
+     */
+    private val aliases by lazy { Aliases.load(dataDir) }
+
+    private fun aliasFor(input: String): String? {
+        val nameShaped = input.length in 1..64 && input.all { it.isLetterOrDigit() || it == '_' || it == '-' }
+        val hexShaped = input.length == 64 && input.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+        if (!nameShaped || hexShaped) return null
+        return aliases[input]
+    }
+
+    /**
+     * Resolve an alias (per-account `aliases.json`) / `npub…` / `nprofile…` /
+     * 64-hex / `name@domain.tld` to a pubkey hex. Aliases are checked first —
+     * they are local, unambiguous names the user chose (`amy dm send bob "hi"`)
+     * — then the input delegates to the shared [resolveUserHexOrNull] in quartz
+     * so the UI and CLI accept the exact same identifier formats. Throws on
+     * unrecognised input — command handlers catch [IllegalArgumentException] at
+     * the top level and translate to `{"error": "bad_args"}`.
      *
      * A pubkey is always 32 bytes, so we require exactly 64 hex chars: the shared
      * resolver's fallback runs a lenient `Hex.decode` that turns a short
@@ -527,11 +417,11 @@ class Context(
      * "pubkey" instead of failing — this rejects that so a bad OBSERVER/USER errors
      * cleanly rather than silently scoring/fetching garbage.
      */
-    suspend fun requireUserHex(input: String): com.vitorpamplona.quartz.nip01Core.core.HexKey {
-        val notResolved = "Could not resolve user: '$input' (accepts npub, nprofile, 64-hex, or name@domain.tld)"
+    suspend fun requireUserHex(input: String): HexKey {
+        val notResolved = "Could not resolve user: '$input' (accepts an alias, npub, nprofile, 64-hex, or name@domain.tld)"
+        val resolvable = aliasFor(input) ?: input
         val hex =
-            com.vitorpamplona.quartz.nip05DnsIdentifiers
-                .resolveUserHexOrNull(input, nip05Client)
+            resolveUserHexOrNull(resolvable, nip05Client)
                 ?: throw IllegalArgumentException(notResolved)
         require(hex.length == 64) { notResolved }
         return hex
@@ -627,19 +517,22 @@ class Context(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
         timeoutSecs: Long = 15,
-    ): Map<NormalizedRelayUrl, Boolean> {
+    ): Map<NormalizedRelayUrl, PublishResult> {
         // Persist locally before broadcasting. The store is the source of
         // truth — even if every relay rejects, we want our own outbound
         // event in the local cache.
         verifyAndStore(event)
         if (relayList.isEmpty()) return emptyMap()
-        return client.publishAndConfirmDetailed(event, relayList, timeoutSecs)
+        return client.publishAndCollectResults(event, relayList, timeoutSecs)
     }
 
     /**
      * Subscribe to the given filters across the given relays, drain all events
-     * until either every relay has sent EOSE or the timeout elapses, and
+     * until either every relay has sent EOSE or the line has been silent for
+     * the timeout (an idle window — progress resets it), and
      * return them. Used for one-shot catch-up queries — not live subscriptions.
+     * Thin adapter over the shared [fetchAllWithHooks] accessory: every arriving
+     * event is verified + persisted via [verifyAndStore] before it is surfaced.
      *
      * When [deadOut] is provided, every relay that reported it could not be
      * connected to (`onCannotConnect`) is added to it, so callers can prune
@@ -661,92 +554,19 @@ class Context(
         diagnoseSlow: Boolean = false,
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
         pendingOnAuthRequired: Boolean = false,
-    ): List<Pair<NormalizedRelayUrl, Event>> {
-        if (filters.isEmpty()) return emptyList()
-        val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
-        // Carries the terminal reason per relay so a timeout can distinguish a slow
-        // relay (never terminal) from a connect failure / CLOSED.
-        val doneChannel = Channel<Pair<NormalizedRelayUrl, String>>(UNLIMITED)
-        val remaining = filters.keys.toMutableSet()
-        val doneReasons = HashMap<NormalizedRelayUrl, String>()
-        val subId = newSubId()
-        val listener =
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    eventChannel.trySend(relay to event)
-                }
-
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    doneChannel.trySend(relay to "eose")
-                }
-
-                override fun onClosed(
-                    message: String,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    // Keep the relay pending on an auth-required refusal: the authenticator answers the
-                    // challenge and re-fires this subscription, so the post-auth events still arrive.
-                    if (pendingOnAuthRequired && MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) return
-                    doneChannel.trySend(relay to "closed:$message")
-                }
-
-                override fun onCannotConnect(
-                    relay: NormalizedRelayUrl,
-                    message: String,
-                    forFilters: List<Filter>?,
-                ) {
-                    doneChannel.trySend(relay to "cannot:$message")
-                }
-            }
-        val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-        try {
-            client.subscribe(subId, filters, listener)
-            val completed =
-                withTimeoutOrNull(timeoutMs) {
-                    while (remaining.isNotEmpty()) {
-                        select {
-                            eventChannel.onReceive { pair ->
-                                if (verifyAndStore(pair.second)) collected.add(pair)
-                            }
-                            doneChannel.onReceive { (relay, reason) ->
-                                remaining.remove(relay)
-                                doneReasons[relay] = reason
-                            }
-                        }
-                    }
-                    // Drain any events that landed after EOSE but before cancel
-                    while (true) {
-                        val r = eventChannel.tryReceive()
-                        if (!r.isSuccess) break
-                        val pair = r.getOrThrow()
-                        if (verifyAndStore(pair.second)) collected.add(pair)
-                    }
-                    true
-                }
-            if (diagnoseSlow && completed == null && remaining.isNotEmpty()) {
-                logSlowDrain(timeoutMs, remaining, doneReasons, collected)
-            }
-        } finally {
-            client.unsubscribe(subId)
-            eventChannel.close()
-            doneChannel.close()
-        }
-        deadOut?.let { out ->
-            for ((relay, reason) in doneReasons) {
-                classifyDrainFailure(reason)?.let { out[relay] = it }
-            }
-        }
-        return collected
-    }
+    ): List<Pair<NormalizedRelayUrl, Event>> =
+        client.fetchAllWithHooks(
+            filters = filters,
+            timeoutMs = timeoutMs,
+            pendingOnAuthRequired = pendingOnAuthRequired,
+            deadOut = deadOut,
+            onTimeout =
+                if (diagnoseSlow) {
+                    { stalled, doneReasons, collected -> logSlowDrain(timeoutMs, stalled, doneReasons, collected) }
+                } else {
+                    null
+                },
+        ) { _, event -> verifyAndStore(event) }
 
     /**
      * On a [drain] timeout, report which relays stalled and why — a relay that
@@ -775,16 +595,16 @@ class Context(
 
     /**
      * Like [drain], but paginates every relay to completion via
-     * [fetchAllPagesFromPool] instead of stopping at the first EOSE — so a query
-     * larger than a relay's per-`REQ` cap (strfry's `limit`, ~500) is fully
+     * [fetchAllPagesFromPoolWithHooks] instead of stopping at the first EOSE — so a
+     * query larger than a relay's per-`REQ` cap (strfry's `limit`, ~500) is fully
      * retrieved instead of silently truncated. Each relay is walked on its own
      * `until` cursor, up to [maxConcurrentRelays] at once, and every event funnels
      * through [verifyAndStore]; the result is tagged by the relay that first
      * delivered it. Unlike [drain], it IS deduped across relays: the same
-     * widely-mirrored event arrives once per relay, and the repeats are dropped by a
-     * [SeenIds] filter BEFORE the expensive verify+store — an id is marked seen only
-     * after it verifies, so a forged copy (valid id, bad signature) delivered first
-     * can't suppress the genuine one from another relay.
+     * widely-mirrored event arrives once per relay, and the repeats are dropped by
+     * the accessory's `SeenIds` filter BEFORE the expensive verify+store — an id is
+     * marked seen only after it verifies, so a forged copy (valid id, bad signature)
+     * delivered first can't suppress the genuine one from another relay.
      *
      * Bound the work with the filters' `limit`: each relay pages until it reaches
      * the limit, so an unbounded filter pages that relay's entire matching history.
@@ -795,44 +615,12 @@ class Context(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long = 30_000,
         maxConcurrentRelays: Int = 8,
-    ): List<Pair<NormalizedRelayUrl, Event>> {
-        if (filters.isEmpty()) return emptyList()
-        val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-        // fetchAllPages' onEvent can't suspend, but verifyAndStore does — bridge
-        // through a channel and verify+store single-threaded in one consumer so the
-        // store writes stay serialized (same shape as `drain`).
-        val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
-        coroutineScope {
-            val consumer =
-                launch {
-                    // One writer → SeenIds' single-writer contract holds. Skip a
-                    // cross-relay duplicate before verifying it; mark it seen only once
-                    // it verifies so a bad-sig copy can't pre-empt a good one. Start
-                    // small (CLI fetches are typically hundreds of events); it grows if
-                    // an unbounded drain needs it, rather than eagerly taking the
-                    // large-walk default table.
-                    val seen = SeenIds(initialSlotsPow2 = 12)
-                    for ((relay, event) in eventChannel) {
-                        if (seen.contains(event.id)) continue
-                        if (verifyAndStore(event)) {
-                            seen.add(event.id)
-                            collected.add(relay to event)
-                        }
-                    }
-                }
-            try {
-                client.fetchAllPagesFromPool(
-                    filters = filters,
-                    timeoutMs = timeoutMs,
-                    maxConcurrentRelays = maxConcurrentRelays,
-                ) { event, relay -> eventChannel.trySend(relay to event) }
-            } finally {
-                eventChannel.close()
-            }
-            consumer.join()
-        }
-        return collected
-    }
+    ): List<Pair<NormalizedRelayUrl, Event>> =
+        client.fetchAllPagesFromPoolWithHooks(
+            filters = filters,
+            timeoutMs = timeoutMs,
+            maxConcurrentRelays = maxConcurrentRelays,
+        ) { _, event -> verifyAndStore(event) }
 
     /**
      * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]
@@ -985,120 +773,61 @@ class Context(
     }
 
     /**
-     * Pull down everything needed to bring local Marmot state current:
-     *  - kind:1059 gift wraps on inbox relays → try to unwrap Welcomes
-     *  - kind:445 group events per active group → feed into inbound processor
-     *
-     * Incrementally advances the `since` cursors in [state] so the next run
-     * only asks relays for newer events. Two wrinkles:
-     *
-     *  1. NIP-59 gift wraps are published with a random-past `created_at`
-     *     (see [com.vitorpamplona.quartz.utils.TimeUtils.randomWithTwoDays])
-     *     so a newly-published wrap can trivially have `created_at` earlier
-     *     than the last cursor we saw. To avoid silently dropping such wraps
-     *     we always subtract a 2-day lookback window from the gift-wrap
-     *     `since`, and dedup is handled inside [MarmotInboundProcessor].
-     *  2. We only advance the on-disk cursor when events actually arrive.
-     *     Snapping an empty sync up to "now" on the first invocation would
-     *     make every later `since` query skip any past-dated wrap or 445.
+     * The shared Marmot catch-up policy (gift-wrap 2-day lookback, per-group
+     * `since` cursors, MIP-00 consumed-KeyPackage rotation), wired to the
+     * CLI's pieces: [drain] for the one-shot subscription, [RunState] for the
+     * persisted cursors, and [publish] for the rotation replacements. The
+     * policy itself lives in `commons` ([MarmotSyncPolicy]) so the CLI and the
+     * Android app apply identical rules. Lazy so an anonymous run never
+     * materialises [marmot] (which would allocate the per-account stores).
      */
-    suspend fun syncIncoming(timeoutMs: Long = 8_000) {
-        val inbox = inboxRelays().ifEmpty { anyRelays() }
-        val gwSince = state.giftWrapSince
-        val gwFilterSince =
-            gwSince?.let { (it - GIFT_WRAP_LOOKBACK_SECS).coerceAtLeast(0L) }
-        val gwFilter =
-            if (gwFilterSince != null) {
-                MarmotFilters.giftWrapsForUserSince(identity.pubKeyHex, gwFilterSince)
-            } else {
-                MarmotFilters.giftWrapsForUser(identity.pubKeyHex)
-            }
+    private val marmotSyncPolicy: MarmotSyncPolicy by lazy {
+        MarmotSyncPolicy(
+            marmot = marmot,
+            userPubKey = identity.pubKeyHex,
+            cursors =
+                object : MarmotSyncPolicy.Cursors {
+                    override var giftWrapSince: Long?
+                        get() = state.giftWrapSince
+                        set(value) {
+                            state.giftWrapSince = value
+                        }
 
-        val activeGroupIds = marmot.subscriptionManager.activeGroupIdsSnapshot().toList()
-        val perGroupFilters: Map<HexKey, Filter> =
-            activeGroupIds.associateWith { gid ->
-                val since = state.groupSince[gid]
-                if (since != null) {
-                    MarmotFilters.groupEventsByGroupIdSince(gid, since)
-                } else {
-                    MarmotFilters.groupEventsByGroupId(gid)
-                }
-            }
+                    override fun groupSince(groupId: HexKey): Long? = state.groupSince[groupId]
 
-        // Group filters go to each group's configured relays, not the user's
-        // inbox — kind:445 is delivered to the group's relay set advertised in
-        // its MIP-01 metadata (falls back to our outbox if the group never
-        // stamped any).
-        val filterMap = mutableMapOf<NormalizedRelayUrl, MutableList<Filter>>()
-        for (r in inbox) filterMap.getOrPut(r) { mutableListOf() }.add(gwFilter)
-        for ((gid, filter) in perGroupFilters) {
-            val groupRelays = marmotGroupRelays(gid).ifEmpty { outboxRelays() }
-            for (r in groupRelays) filterMap.getOrPut(r) { mutableListOf() }.add(filter)
-        }
-        if (filterMap.isEmpty()) return
-
-        val events = drain(filterMap, timeoutMs)
-
-        var maxGwSeen = gwSince ?: 0L
-        val maxGroupSeen = perGroupFilters.keys.associateWith { state.groupSince[it] ?: 0L }.toMutableMap()
-        var sawGiftWrap = false
-        val sawGroupEvent = mutableSetOf<HexKey>()
-
-        for ((relay, event) in events) {
-            // All the MLS/NIP-59 decryption + persistence lives in MarmotIngest —
-            // we only care about bookkeeping (since-cursors, logging) here.
-            val result = marmot.ingest(event)
-            val detail =
-                when (result) {
-                    is com.vitorpamplona.amethyst.commons.marmot.MarmotIngestResult.Failure -> " ${result.message}"
-                    else -> ""
-                }
-            System.err.println("[cli] ingest ${event.kind}/${event.id.take(8)} via $relay → ${result::class.simpleName}$detail")
-
-            when (event.kind) {
-                GiftWrapEvent.KIND -> {
-                    sawGiftWrap = true
-                    if (event.createdAt > maxGwSeen) maxGwSeen = event.createdAt
-                }
-
-                GroupEvent.KIND -> {
-                    val gid = (event as? GroupEvent)?.groupId() ?: continue
-                    sawGroupEvent.add(gid)
-                    val prev = maxGroupSeen[gid] ?: 0L
-                    if (event.createdAt > prev) maxGroupSeen[gid] = event.createdAt
-                }
-            }
-        }
-
-        if (sawGiftWrap && maxGwSeen > 0) {
-            state.giftWrapSince = maxGwSeen
-        }
-        for (gid in sawGroupEvent) {
-            val seen = maxGroupSeen[gid] ?: continue
-            if (seen > 0) state.groupSince[gid] = seen
-        }
-
-        // If any welcome we processed consumed a KeyPackage, MIP-00 requires
-        // us to immediately publish a replacement (a KP can only be used for
-        // ONE welcome; leaving the old one on relays lets a second sender
-        // invite us with a bundle we no longer have private keys for). The
-        // Amethyst UI handles this via its own rotation scheduler; the CLI
-        // has no scheduler, so we rotate inline right after sync.
-        if (marmot.needsKeyPackageRotation()) {
-            try {
-                val kpRelays = keyPackageRelays().ifEmpty { outboxRelays() }.ifEmpty { anyRelays() }
-                if (kpRelays.isNotEmpty()) {
-                    val rotated = marmot.rotateConsumedKeyPackages(kpRelays.toList())
-                    for (event in rotated) {
-                        publish(event, kpRelays)
-                        System.err.println("[cli] rotated KeyPackage → ${event.id.take(8)} on ${kpRelays.size} relay(s)")
+                    override fun setGroupSince(
+                        groupId: HexKey,
+                        value: Long,
+                    ) {
+                        state.groupSince[groupId] = value
                     }
-                }
-            } catch (e: Exception) {
-                System.err.println("[cli] key-package rotation failed: ${e.message}")
-            }
-        }
+                },
+            relays =
+                object : MarmotSyncPolicy.Relays {
+                    override suspend fun inboxRelays() = this@Context.inboxRelays()
+
+                    override suspend fun outboxRelays() = this@Context.outboxRelays()
+
+                    override suspend fun keyPackageRelays() = this@Context.keyPackageRelays()
+
+                    override suspend fun anyRelays() = this@Context.anyRelays()
+
+                    override fun groupRelays(nostrGroupId: HexKey) = marmotGroupRelays(nostrGroupId)
+                },
+            drain = { filters, timeoutMs -> drain(filters, timeoutMs) },
+            publish = { event, relayList -> publish(event, relayList) },
+            log = { System.err.println("[cli] $it") },
+        )
     }
+
+    /**
+     * Pull down everything needed to bring local Marmot state current —
+     * kind:1059 gift wraps and kind:445 group events — advancing the `since`
+     * cursors in [state] and rotating consumed KeyPackages. All policy
+     * (lookback windows, cursor advancement rules, MIP-00 rotation) lives in
+     * the shared [MarmotSyncPolicy]; see its docs for the reasoning.
+     */
+    suspend fun syncIncoming(timeoutMs: Long = 8_000) = marmotSyncPolicy.syncIncoming(timeoutMs)
 
     /**
      * Resolve a group identifier given on the CLI to the nostr_group_id that
@@ -1160,13 +889,6 @@ class Context(
     }
 
     companion object {
-        /**
-         * Lookback applied to the gift-wrap `since` filter to compensate for
-         * NIP-59's randomised-past `created_at`. 2 days matches
-         * [com.vitorpamplona.quartz.utils.TimeUtils.randomWithTwoDays].
-         */
-        private const val GIFT_WRAP_LOOKBACK_SECS: Long = 2L * 24 * 60 * 60
-
         /** FDs reserved for everything that isn't a relay socket (store, jars, pipes, DNS). */
         private const val FD_RESERVE = 256L
 

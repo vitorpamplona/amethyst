@@ -34,6 +34,15 @@ import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEven
  * (kind:38000), on the shared commons CashuWalletOps.
  */
 object CashuMintRecCommands {
+    val USAGE: String =
+        """
+        |NIP-87 mint recommendations (kind:38000):
+        |  cashu mint-rec show [--author NPUB]             list recommendations (own by default;
+        |                                                   --author drains relays for another user)
+        |  cashu mint-rec add URL [--dtag X] [--review T]  publish a recommendation for a mint
+        |  cashu mint-rec remove EVENT_ID                  NIP-09 delete a recommendation
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -42,6 +51,7 @@ object CashuMintRecCommands {
             name = "cashu mint-rec",
             tail = tail,
             usage = "cashu mint-rec <show|add|remove>",
+            help = USAGE,
             routes =
                 mapOf(
                     "show" to { rest -> show(dataDir, rest) },
@@ -64,7 +74,9 @@ object CashuMintRecCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val author = Args(rest).flag("author")
+        val args = Args(rest)
+        val author = args.flag("author")
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val recs =
@@ -90,6 +102,7 @@ object CashuMintRecCommands {
     ): Int {
         val args = Args(rest)
         val url = args.positional(0, "mint-url").trimEnd('/')
+        args.rejectUnknown("dtag", "review")
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val event = ctx.cashuOps().recommendMint(mintUrl = url, mintAnnouncementDTag = args.flag("dtag"), review = args.flag("review") ?: "")
@@ -102,7 +115,9 @@ object CashuMintRecCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val id = Args(rest).positional(0, "event-id")
+        val args = Args(rest)
+        val id = args.positional(0, "event-id")
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val event =

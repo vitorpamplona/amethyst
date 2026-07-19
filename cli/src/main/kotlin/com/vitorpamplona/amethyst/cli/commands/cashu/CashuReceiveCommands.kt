@@ -33,6 +33,19 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
  * all on the shared commons CashuWalletOps the Android wallet runs.
  */
 object CashuReceiveCommands {
+    val USAGE: String =
+        """
+        |Cashu inbound flows (NIP-60 / NIP-61):
+        |  cashu receive ln SATS [--mint URL]         request a mint quote; prints the bolt11 +
+        |                                              kind:7374 quote
+        |  cashu receive complete QUOTE_ID            poll the quote; once the invoice is settled,
+        |                                              mint proofs (kind:7375 + kind:7376)
+        |  cashu receive resume QUOTE_ID              deprecated alias of `complete`
+        |  cashu receive token TOKEN                  redeem a cashuB… token into the wallet
+        |  cashu receive nutzap-sweep [--mint URL]    redeem inbound NIP-61 nutzaps locked to
+        |                                              your wallet key
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -41,11 +54,16 @@ object CashuReceiveCommands {
             name = "cashu receive",
             tail = tail,
             usage = "cashu receive <ln|complete|resume|token|nutzap-sweep>",
+            help = USAGE,
             routes =
                 mapOf(
                     "ln" to { rest -> ln(dataDir, rest) },
                     "complete" to { rest -> complete(dataDir, rest) },
-                    "resume" to { rest -> complete(dataDir, rest) },
+                    // Kept as a deprecated alias of `complete`.
+                    "resume" to { rest ->
+                        System.err.println("[amy] `cashu receive resume` is deprecated — use `cashu receive complete`.")
+                        complete(dataDir, rest)
+                    },
                     "token" to { rest -> token(dataDir, rest) },
                     "nutzap-sweep" to { rest -> nutzapSweep(dataDir, rest) },
                 ),
@@ -64,6 +82,7 @@ object CashuReceiveCommands {
         val args = Args(rest)
         val sats = args.positional(0, "sats").toLongOrNull() ?: return Output.error("bad_args", "sats must be a positive integer")
         if (sats <= 0) return Output.error("bad_args", "sats must be positive")
+        args.rejectUnknown("mint")
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val mint = pickMint(args.flag("mint"), ctx.cashuSnapshot().mints) ?: return Output.error("no_mint", "no mint configured; pass --mint URL")
@@ -89,7 +108,9 @@ object CashuReceiveCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val quoteId = Args(rest).positional(0, "quote-id")
+        val args = Args(rest)
+        val quoteId = args.positional(0, "quote-id")
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val snap = ctx.cashuSnapshot()
@@ -127,7 +148,9 @@ object CashuReceiveCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val raw = Args(rest).positional(0, "token").trim()
+        val args = Args(rest)
+        val raw = args.positional(0, "token").trim()
+        args.rejectUnknown()
         val parsed = CashuTokenB64Parser.parse(raw) ?: return Output.error("bad_args", "could not parse cashu token")
         if (parsed.isEmpty()) return Output.error("bad_args", "token has no proofs")
         Context.open(dataDir).use { ctx ->
@@ -163,7 +186,9 @@ object CashuReceiveCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        val mintFilter = Args(rest).flag("mint")?.trimEnd('/')
+        val args = Args(rest)
+        val mintFilter = args.flag("mint")?.trimEnd('/')
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val snap = ctx.cashuSnapshot()

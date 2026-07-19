@@ -42,7 +42,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
  *
  * Events are deduplicated by id, sorted newest-first, and capped at `--limit`
  * (default 50). The output is a JSON object with a `notes` array of
- * `{id, pubkey, created_at, content, tags}`.
+ * `{event_id, author, created_at, content, tags}`.
  */
 object FeedCommand {
     suspend fun run(
@@ -60,6 +60,7 @@ object FeedCommand {
         val since = args.flag("since")?.toLongOrNull()
         val until = args.flag("until")?.toLongOrNull()
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         // Read-only: runs anonymously when there is no account. `--author` /
         // `--following` still work; the bare "self" feed just has no self to
@@ -115,8 +116,8 @@ object FeedCommand {
                     .take(limit)
                     .map { ev ->
                         mapOf(
-                            "id" to ev.id,
-                            "pubkey" to ev.pubKey,
+                            "event_id" to ev.id,
+                            "author" to ev.pubKey,
                             "created_at" to ev.createdAt,
                             "content" to ev.content,
                             "tags" to ev.tags.map { it.toList() },

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
@@ -77,31 +78,23 @@ data class Identity(
          * Parse a `bunker://<remote-pubkey>?relay=…&secret=…` URI into a
          * remote-signer identity. The account acts as `remote-pubkey` (the
          * key the bunker signs with); a fresh local keypair is minted for the
-         * NIP-46 transport. Mirrors the parsing in Quartz's
-         * `NostrSignerRemote.fromBunkerUri`.
+         * NIP-46 transport. Parsing (including percent-encoded relay/secret
+         * params, as emitted by nak: `relay=wss%3A%2F%2F…`) is delegated to
+         * Quartz's [NostrConnectURI.parseBunker].
          */
         fun fromBunkerUri(uri: String): Identity {
-            require(uri.startsWith("bunker://")) { "not a bunker:// uri" }
-            val parts = uri.removePrefix("bunker://").split("?", limit = 2)
-            val remotePubkey = parts[0].lowercase()
-            require(remotePubkey.length == 64 && remotePubkey.all { it in "0123456789abcdef" }) {
-                "bunker uri must carry a 64-hex remote pubkey"
-            }
-            val relays = mutableListOf<String>()
-            var secret: String? = null
-            parts.getOrNull(1)?.split("&")?.forEach { param ->
-                val kv = param.split("=", limit = 2)
-                if (kv.size < 2) return@forEach
-                // Relay/secret params are percent-encoded by spec-compliant
-                // emitters (nak does: `relay=wss%3A%2F%2F…`), so decode them.
-                val value = java.net.URLDecoder.decode(kv[1], "UTF-8")
-                when (kv[0]) {
-                    "relay" -> relays.add(value)
-                    "secret" -> secret = value
+            require(uri.startsWith(NostrConnectURI.BUNKER_SCHEME)) { "not a bunker:// uri" }
+            val parsed =
+                requireNotNull(NostrConnectURI.parseBunker(uri)) {
+                    "bunker uri must carry a 64-hex remote pubkey"
                 }
-            }
-            require(relays.isNotEmpty()) { "bunker uri must carry at least one relay" }
-            return bunkerIdentity(remotePubkey, relays, secret, KeyPair().privKey!!.toHexKey())
+            require(parsed.relays.isNotEmpty()) { "bunker uri must carry at least one relay" }
+            return bunkerIdentity(
+                signerPubkey = parsed.remoteSignerPubKey.lowercase(),
+                relays = parsed.relays.map { it.url },
+                connectSecret = parsed.secret,
+                clientPrivKeyHex = KeyPair().privKey!!.toHexKey(),
+            )
         }
 
         /**
@@ -370,6 +363,12 @@ class DataDir(
          * (Windows, weird containers).
          */
         val DEFAULT_ROOT: File get() {
+            // In-process seam for the JVM test suite only: a subprocess can
+            // isolate with `HOME=… amy`, but a test driving runCli() in the
+            // same JVM cannot change its own environment.
+            System.getProperty("amy.home").takeUnless { it.isNullOrBlank() }?.let {
+                return File(it, ".amy")
+            }
             val home =
                 System.getenv("HOME").takeUnless { it.isNullOrBlank() }
                     ?: System.getProperty("user.home")

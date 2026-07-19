@@ -36,6 +36,20 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
  *   destroy
  */
 object CashuWalletCommands {
+    val USAGE: String =
+        """
+        |Cashu wallet lifecycle (NIP-60):
+        |  cashu wallet create [--mint URL] [--mints a,b]  publish a kind:17375 wallet + kind:10019
+        |        [--privkey HEX] [--relay r1,r2]            nutzap info (advertises your inbox relays
+        |                                                   for nutzaps unless --relay overrides)
+        |  cashu wallet show                               P2PK pubkey, mints, balance, per-mint
+        |                                                   balances, proof/history/pending counts
+        |  cashu wallet export-key                         decrypt + print the wallet's P2PK key
+        |  cashu wallet destroy                            withdraw the nutzap advertisement and
+        |                                                   NIP-09 delete the wallet (token events
+        |                                                   stay — the ecash still lives at the mint)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -44,6 +58,7 @@ object CashuWalletCommands {
             name = "cashu wallet",
             tail = tail,
             usage = "cashu wallet <create|show|export-key|destroy>",
+            help = USAGE,
             routes =
                 mapOf(
                     "create" to { rest -> create(dataDir, rest) },
@@ -69,6 +84,7 @@ object CashuWalletCommands {
         if (mints.isEmpty()) return Output.error("bad_args", "at least one --mint URL is required")
         val privkey = args.flag("privkey")
         val explicitRelays = args.csv("relay").mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()

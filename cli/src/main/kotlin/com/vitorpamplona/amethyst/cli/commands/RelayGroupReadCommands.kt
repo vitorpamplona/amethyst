@@ -45,6 +45,7 @@ object RelayGroupReadCommands {
     ): Int {
         val args = Args(rest)
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val relays = ctx.outboxRelays()
@@ -87,6 +88,7 @@ object RelayGroupReadCommands {
         val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", "relaygroup browse RELAY")
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -127,6 +129,7 @@ object RelayGroupReadCommands {
         val groupId = args.positionalOrNull(1) ?: return Output.error("bad_args", "relaygroup info RELAY GROUP_ID")
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()

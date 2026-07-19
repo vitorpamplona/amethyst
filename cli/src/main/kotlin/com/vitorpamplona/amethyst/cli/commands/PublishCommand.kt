@@ -37,11 +37,25 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
  * `--relay` is not given.
  */
 object PublishCommand {
+    val USAGE: String =
+        """
+        |amy publish — broadcast a pre-made signed event
+        |
+        |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast a pre-made signed event (verified
+        |                                                first; reads stdin when the arg is omitted/`-`;
+        |                                                targets default to the account's outbox)
+        """.trimMargin()
+
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
+        args.rejectUnknown("relay")
         val json = RawEventSupport.readArgOrStdin(args)
         if (json.isEmpty()) return Output.error("bad_args", "no event JSON on the argument or stdin")
 
@@ -62,13 +76,12 @@ object PublishCommand {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
             val ack = ctx.publish(event, targets)
+            RawEventSupport.publishGuard(ack, event.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event_id" to event.id,
                     "kind" to event.kind,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

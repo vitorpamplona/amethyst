@@ -23,13 +23,10 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.withTimeoutOrNull
 
 suspend fun INostrClient.fetchAll(
     relay: String,
@@ -69,70 +66,37 @@ suspend fun INostrClient.fetchAll(
     timeoutMs: Long = 30_000L,
 ) = fetchAll(subscriptionId, mapOf(relay to filters), timeoutMs)
 
+/**
+ * Subscribe [filters], collect every (deduped) event, and return once every
+ * relay reached a terminal state (EOSE, CLOSED, or cannot-connect) or the
+ * line went quiet for [timeoutMs].
+ *
+ * [timeoutMs] is an **idle window, not a hard cap**: every arriving event or
+ * terminal signal resets it, so a slow relay actively streaming a large
+ * backlog is never cropped mid-delivery. The fetch only gives up after a full
+ * window of silence — or at the [maxTotalMs] wall-clock ceiling (default 10x
+ * the idle window), which keeps a trickling never-terminal relay from pinning
+ * the caller forever.
+ *
+ * Thin projection over [fetchAllWithHooks] — one shared loop implementation,
+ * with dedup done in the (single-threaded) hook so no shared collection is
+ * ever touched from socket callback threads.
+ */
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 30_000L,
+    maxTotalMs: Long = timeoutMs * 10,
 ): List<Event> {
-    val doneChannel = Channel<NormalizedRelayUrl>(Channel.UNLIMITED)
-
-    val events = mutableListOf<Event>()
     val seenIds = mutableSetOf<HexKey>()
-
-    val remaining = filters.keys.toMutableSet()
-
-    val listener =
-        object : SubscriptionListener {
-            override fun onEvent(
-                event: Event,
-                isLive: Boolean,
-                relay: NormalizedRelayUrl,
-                forFilters: List<Filter>?,
-            ) {
-                if (seenIds.add(event.id)) {
-                    events.add(event)
-                }
-            }
-
-            override fun onCannotConnect(
-                relay: NormalizedRelayUrl,
-                message: String,
-                forFilters: List<Filter>?,
-            ) {
-                doneChannel.trySend(relay)
-            }
-
-            override fun onClosed(
-                message: String,
-                relay: NormalizedRelayUrl,
-                forFilters: List<Filter>?,
-            ) {
-                doneChannel.trySend(relay)
-            }
-
-            override fun onEose(
-                relay: NormalizedRelayUrl,
-                forFilters: List<Filter>?,
-            ) {
-                doneChannel.trySend(relay)
-            }
-        }
-
-    try {
-        subscribe(subscriptionId, filters, listener)
-
-        withTimeoutOrNull(timeoutMs) {
-            while (remaining.isNotEmpty()) {
-                val finished = doneChannel.receive()
-                remaining.remove(finished)
-            }
-        }
-    } finally {
-        unsubscribe(subscriptionId)
-        doneChannel.close()
-    }
-
-    return events.sortedWith(DefaultFeedOrderEvent)
+    return fetchAllWithHooks(
+        filters = filters,
+        timeoutMs = timeoutMs,
+        subscriptionId = subscriptionId,
+        maxTotalMs = maxTotalMs,
+    ) { _, event -> seenIds.add(event.id) }
+        .map { it.second }
+        .sortedWith(DefaultFeedOrderEvent)
 }
 
 val DefaultFeedOrderEvent: Comparator<Event> =

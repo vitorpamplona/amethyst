@@ -58,6 +58,26 @@ import kotlinx.coroutines.delay
  * accounts) where strict mode is too strict.
  */
 object DmCommands {
+    val USAGE: String =
+        """
+        |Direct messages (NIP-17):
+        |  dm send RECIPIENT TEXT                     send a gift-wrapped DM
+        |    [--allow-fallback]                       (default: only deliver to recipient's kind:10050)
+        |  dm send-file RECIPIENT --file PATH         encrypt + upload to Blossom + publish kind:15
+        |    --server URL [--mime-type M]
+        |  dm send-file RECIPIENT URL --key HEX       reference-mode: file already uploaded
+        |    --nonce HEX [--mime-type M] [--hash H]
+        |    [--original-hash H] [--size N]
+        |    [--dim WxH] [--blurhash S]
+        |  dm list [USER] [--peer USER] [--since TS]  list decrypted DMs (kind:14 text + kind:15 file
+        |          [--limit N] [--timeout SECS]        with `type` discriminator); positional USER is
+        |                                              an alternative to --peer (the flag wins);
+        |                                              default --limit 50
+        |  dm await [USER] --match TEXT               wait for a matching DM (positional USER or
+        |           [--peer USER] [--timeout SECS]     --peer; the flag wins; default 30s,
+        |                                              exit 124 on timeout)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -66,26 +86,30 @@ object DmCommands {
             "dm",
             tail,
             "dm <send|send-file|list|await> …",
-            mapOf(
-                "send" to { rest -> send(dataDir, rest) },
-                "send-file" to { rest -> sendFile(dataDir, rest) },
-                "list" to { rest -> list(dataDir, rest) },
-                "await" to { rest -> await(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "send" to { rest -> send(dataDir, rest) },
+                    "send-file" to { rest -> sendFile(dataDir, rest) },
+                    "list" to { rest -> list(dataDir, rest) },
+                    "await" to { rest -> await(dataDir, rest) },
+                ),
         )
 
     private suspend fun send(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Output.error("bad_args", "dm send <recipient> <text> [--allow-fallback]")
-        val text = rest[1]
-        val args = Args(rest.drop(2).toTypedArray())
+        val args = Args(rest)
         val allowFallback = args.bool("allow-fallback")
+        args.rejectUnknown()
+        if (args.positional.size < 2) return Output.error("bad_args", "dm send <recipient> <text> [--allow-fallback]")
+        val recipientInput = args.positional(0, "recipient")
+        val text = args.positional(1, "text")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val recipient = ctx.requireUserHex(rest[0])
+            val recipient = ctx.requireUserHex(recipientInput)
             val result = DmActions.buildTextDm(ctx.signer, recipient, text)
             return publishWraps(ctx, result, allowFallback)
         }
@@ -111,10 +135,10 @@ object DmCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.isEmpty()) return Output.error("bad_args", USAGE_SEND_FILE)
-        val args = Args(rest.drop(1).toTypedArray())
+        val args = Args(rest)
         val allowFallback = args.bool("allow-fallback")
-        val recipientInput = rest[0]
+        args.rejectUnknown("file", "server", "mime-type", "key", "nonce", "hash", "original-hash", "size", "dim", "blurhash")
+        val recipientInput = args.positionalOrNull(0) ?: return Output.error("bad_args", USAGE_SEND_FILE)
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -207,7 +231,7 @@ object DmCommands {
         args: Args,
     ): Pair<NIP17Factory.Result, Map<String, Any?>>? {
         val url =
-            args.positionalOrNull(0) ?: run {
+            args.positionalOrNull(1) ?: run {
                 Output.error("bad_args", USAGE_SEND_FILE)
                 return null
             }
@@ -226,7 +250,7 @@ object DmCommands {
         val mimeType = args.flag("mime-type")
         val hash = args.flag("hash")
         val originalHash = args.flag("original-hash")
-        val size = args.flags["size"]?.toIntOrNull()
+        val size = args.flag("size")?.toIntOrNull()
         val blurhash = args.flag("blurhash")
         val dimension =
             args.flag("dim")?.let { raw ->
@@ -283,10 +307,9 @@ object DmCommands {
                 mapOf(
                     "pubkey" to target,
                     "wrap_id" to wrap.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "relays_tried" to resolution.relays.map { it.url },
                     "relay_source" to resolution.source.name.lowercase(),
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
         }
         val out =
@@ -305,10 +328,12 @@ object DmCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val peerInput = args.flag("peer")
-        val sinceFlag = args.flags["since"]?.toLongOrNull()
-        val limit = args.intFlag("limit", Int.MAX_VALUE)
+        // `--peer` wins over the optional positional USER when both are given.
+        val peerInput = args.flag("peer") ?: args.positionalOrNull(0)
+        val sinceFlag = args.flag("since")?.toLongOrNull()
+        val limit = args.intFlag("limit", 50)
         val timeoutSecs = args.longFlag("timeout", 8)
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -359,9 +384,13 @@ object DmCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val peerInput = args.requireFlag("peer")
+        // `--peer` wins over the optional positional USER when both are given.
+        val peerInput =
+            args.flag("peer") ?: args.positionalOrNull(0)
+                ?: return Output.error("bad_args", "dm await [USER] --match TEXT (positional USER or --peer)")
         val match = args.requireFlag("match")
         val timeoutSecs = args.longFlag("timeout", 30)
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -452,9 +481,9 @@ object DmCommands {
         override fun toJson(): Map<String, Any?> =
             mapOf(
                 "type" to "text",
-                "id" to id,
+                "event_id" to id,
                 "wrap_id" to wrapId,
-                "from" to from,
+                "author" to from,
                 "to" to to,
                 "content" to content,
                 "created_at" to createdAt,
@@ -486,9 +515,9 @@ object DmCommands {
             val out =
                 mutableMapOf<String, Any?>(
                     "type" to "file",
-                    "id" to id,
+                    "event_id" to id,
                     "wrap_id" to wrapId,
-                    "from" to from,
+                    "author" to from,
                     "to" to to,
                     "url" to url,
                     "created_at" to createdAt,

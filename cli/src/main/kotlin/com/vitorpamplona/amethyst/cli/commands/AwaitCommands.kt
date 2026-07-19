@@ -39,6 +39,18 @@ import kotlinx.coroutines.delay
  * on timeout we throw [AwaitTimeout] which maps to exit code 124.
  */
 object AwaitCommands {
+    val USAGE: String =
+        """
+        |Marmot await verbs (all take --timeout SECS, default 30; exit 124 on timeout):
+        |  marmot await key-package NPUB              wait for NPUB's KeyPackage on their relays
+        |  marmot await group [--name NAME]           wait until a (named) group is joined
+        |  marmot await member GID NPUB               wait until NPUB is a member of GID
+        |  marmot await admin GID NPUB                wait until NPUB is an admin of GID
+        |  marmot await message GID --match TEXT      wait for a group message containing TEXT
+        |  marmot await rename GID --name NAME        wait until GID is renamed to NAME
+        |  marmot await epoch GID [--min N]           wait until GID's epoch reaches N (default 1)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -47,15 +59,17 @@ object AwaitCommands {
             "await",
             tail,
             "await <key-package|group|member|admin|message|rename|epoch>",
-            mapOf(
-                "key-package" to { rest -> awaitKeyPackage(dataDir, rest) },
-                "group" to { rest -> awaitGroup(dataDir, rest) },
-                "member" to { rest -> awaitMember(dataDir, rest) },
-                "admin" to { rest -> awaitAdmin(dataDir, rest) },
-                "message" to { rest -> awaitMessage(dataDir, rest) },
-                "rename" to { rest -> awaitRename(dataDir, rest) },
-                "epoch" to { rest -> awaitEpoch(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "key-package" to { rest -> awaitKeyPackage(dataDir, rest) },
+                    "group" to { rest -> awaitGroup(dataDir, rest) },
+                    "member" to { rest -> awaitMember(dataDir, rest) },
+                    "admin" to { rest -> awaitAdmin(dataDir, rest) },
+                    "message" to { rest -> awaitMessage(dataDir, rest) },
+                    "rename" to { rest -> awaitRename(dataDir, rest) },
+                    "epoch" to { rest -> awaitEpoch(dataDir, rest) },
+                ),
         )
 
     private suspend fun awaitKeyPackage(
@@ -65,6 +79,7 @@ object AwaitCommands {
         if (rest.isEmpty()) return Output.error("bad_args", "await key-package <npub>")
         val args = Args(rest.drop(1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 30)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val target = ctx.requireUserHex(rest[0])
@@ -122,6 +137,7 @@ object AwaitCommands {
         val args = Args(rest)
         val wantedName = args.flag("name")
         val timeoutSecs = args.longFlag("timeout", 30)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
@@ -192,6 +208,7 @@ object AwaitCommands {
         val args = Args(rest.drop(1).toTypedArray())
         val wantedName = args.requireFlag("name")
         val timeoutSecs = args.longFlag("timeout", 30)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
@@ -217,6 +234,7 @@ object AwaitCommands {
         val args = Args(rest.drop(1).toTypedArray())
         val min = args.longFlag("min", 1)
         val timeoutSecs = args.longFlag("timeout", 30)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
@@ -242,6 +260,7 @@ object AwaitCommands {
         val args = Args(rest.drop(1).toTypedArray())
         val needle = args.requireFlag("match")
         val timeoutSecs = args.longFlag("timeout", 30)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
@@ -290,6 +309,7 @@ object AwaitCommands {
         if (rest.size <= targetIdx) return Output.error("bad_args", usage)
         val args = Args(rest.drop(targetIdx + 1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 30)
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000

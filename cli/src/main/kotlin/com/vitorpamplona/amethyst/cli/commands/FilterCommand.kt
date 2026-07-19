@@ -34,8 +34,24 @@ import com.vitorpamplona.amethyst.cli.Output
  * npub/nevent/note/naddr or hex (local decode only).
  */
 object FilterCommand {
+    val USAGE: String =
+        """
+        |amy filter — assemble + print a NIP-01 filter JSON (local, no query sent)
+        |
+        |  filter [--kind K[,K]] [--author U[,U]]      same flag grammar as fetch/subscribe;
+        |         [--id ID[,ID]] [--tag e=ID,p=PK,…]    --author/--id accept npub/nevent/note/
+        |         [--since TS] [--until TS]             naddr or hex (local decode only).
+        |         [--limit N] [--search TEXT]
+        """.trimMargin()
+
     fun run(rest: Array<String>): Int {
-        val filter = RawEventSupport.buildFilter(Args(rest))
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
+        val args = Args(rest)
+        val filter = RawEventSupport.buildFilter(args)
+        args.rejectUnknown()
         Output.emit(Output.mapper.readTree(filter.toJson()))
         return 0
     }

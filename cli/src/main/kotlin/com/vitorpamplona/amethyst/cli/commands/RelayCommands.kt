@@ -40,7 +40,11 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayFacet
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.addFacet
+import com.vitorpamplona.quartz.nip65RelayList.applyFacet
+import com.vitorpamplona.quartz.nip65RelayList.setFacet
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
@@ -86,8 +90,33 @@ import okhttp3.Request
  * the local store but do not broadcast — run `relay publish-lists` to push them.
  */
 object RelayCommands {
-    private const val USAGE =
+    private const val SHORT_USAGE =
         "relay <outbox|inbox|nip65|dm|key-package|search|private|blocked|trusted|proxy|indexer|broadcast|feeds|add|remove|list|publish-lists|info|probe> …"
+
+    val USAGE: String =
+        """
+        |Relays: `relay NOUN [add|remove|set|clear|list] …` (bare NOUN lists it)
+        |  NOUN = outbox|inbox|nip65 (kind:10002)  dm (10050)  key-package (10051)
+        |         search (10007)  private (10013)  blocked|trusted|proxy|indexer|
+        |         broadcast|feeds (NIP-51, encrypted)
+        |  relay outbox add URL          add URL as a write relay (read-only → both)
+        |  relay inbox add URL           add URL as a read relay (write-only → both)
+        |  relay outbox remove URL       drop write (both → read; write-only → gone)
+        |  relay blocked add URL         e.g. private lists: add/remove/set/clear
+        |  relay nip65                   show the combined read/write list
+        |  relay nip65 remove|clear      drop one relay regardless of marker / wipe the event
+        |  relay add URL                 fan-out: nip65(both)+dm+key-package
+        |  relay remove URL              fan-out remove from those three
+        |  relay list                    print every configured relay bucket
+        |  relay publish-lists           broadcast every configured relay list
+        |  relay info URL                fetch + print a relay's NIP-11 info document (stateless)
+        |  relay probe [--timeout SECS]  relay census: mass-connect every relay the store
+        |    [--concurrency N]            knows and record live/dead + measured rtt-open
+        |                                 into the reachability cache (NIP-66 kind:30166),
+        |                                 so reachability-aware commands (graperank crawl/
+        |                                 refresh) skip dead relays and wait once
+        |                                 (--timeout: per wave, default 15s)
+        """.trimMargin()
 
     // ------------------------------------------------------------------
     // Flat buckets — a plain list of relay URLs, one Nostr replaceable kind.
@@ -195,9 +224,10 @@ object RelayCommands {
     /** The two facet-nouns that edit the read/write markers of kind:10002. */
     private enum class Facet(
         val noun: String,
+        val rw: AdvertisedRelayFacet,
     ) {
-        OUTBOX("outbox"),
-        INBOX("inbox"),
+        OUTBOX("outbox", AdvertisedRelayFacet.WRITE),
+        INBOX("inbox", AdvertisedRelayFacet.READ),
     }
 
     // ------------------------------------------------------------------
@@ -208,8 +238,12 @@ object RelayCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", USAGE)
+        if (tail.isEmpty()) return Output.error("bad_args", SHORT_USAGE)
         val head = tail[0]
+        if (head == "--help" || head == "-h" || head == "help") {
+            System.err.println(USAGE)
+            return 0
+        }
         val rest = tail.drop(1).toTypedArray()
         return when (head) {
             "list" -> listAll(dataDir)
@@ -224,7 +258,7 @@ object RelayCommands {
             "inbox" -> facetVerb(dataDir, Facet.INBOX, rest)
             "nip65" -> nip65Verb(dataDir, rest)
             else -> {
-                val flat = flatFor(head) ?: return Output.error("bad_args", "unknown relay noun: $head ($USAGE)")
+                val flat = flatFor(head) ?: return Output.error("bad_args", "unknown relay noun: $head ($SHORT_USAGE)")
                 flatVerb(dataDir, flat, rest)
             }
         }
@@ -236,6 +270,7 @@ object RelayCommands {
 
     fun info(rest: Array<String>): Int {
         val args = Args(rest)
+        args.rejectUnknown()
         val raw = args.positional(0, "relay-url")
         val normalized =
             raw.normalizeRelayUrlOrNull()
@@ -267,7 +302,7 @@ object RelayCommands {
                 0
             }
         } catch (e: Exception) {
-            Output.error("fetch_failed", "could not fetch NIP-11 from $httpUrl: ${e.message}")
+            Output.error("http_error", "could not fetch NIP-11 from $httpUrl: ${e.message}")
         }
     }
 
@@ -298,10 +333,11 @@ object RelayCommands {
         val args = Args(rest)
         // Per probe WAVE, not per relay or total — a wave's stragglers are cut off
         // together when it elapses.
-        val timeoutMs = args.longFlag("timeout", 15L) * 1000
+        val timeoutMs = args.timeoutMs(15)
         // Relays dialed at once; --relay-concurrency accepted as the alias the
         // graperank verbs spell it with.
         val waveSize = args.intFlag("concurrency", args.intFlag("relay-concurrency", Context.defaultPreconnectCap))
+        args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -370,6 +406,7 @@ object RelayCommands {
     ): Int {
         val verb = rest.getOrNull(0) ?: "list"
         val args = Args(rest.drop(1).toTypedArray())
+        args.rejectUnknown()
         if (verb !in VERBS) return Output.error("bad_args", "relay ${flat.noun} $verb ($VERB_LIST)")
 
         Context.open(dataDir).use { ctx ->
@@ -418,6 +455,7 @@ object RelayCommands {
     ): Int {
         val verb = rest.getOrNull(0) ?: "list"
         val args = Args(rest.drop(1).toTypedArray())
+        args.rejectUnknown()
         if (verb !in VERBS) return Output.error("bad_args", "relay ${facet.noun} $verb ($VERB_LIST)")
 
         Context.open(dataDir).use { ctx ->
@@ -426,7 +464,7 @@ object RelayCommands {
                 "add", "remove", "rm" -> {
                     val present = verb == "add"
                     val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
-                    val changed = mutateNip65(ctx, self) { applyFacet(it, url, facet, present) }
+                    val changed = mutateNip65(ctx, self) { it.applyFacet(url, facet.rw, present) }
                     Output.emit(
                         mapOf(
                             "noun" to facet.noun,
@@ -446,7 +484,7 @@ object RelayCommands {
                             if (parsed.isEmpty()) return Output.error("bad_args", "set needs at least one URL; use `relay ${facet.noun} clear` to empty it")
                             parsed
                         }
-                    mutateNip65(ctx, self) { facetSet(it, relays, facet) }
+                    mutateNip65(ctx, self) { it.setFacet(relays, facet.rw) }
                     Output.emit(mapOf("noun" to facet.noun, "kind" to AdvertisedRelayListEvent.KIND, "relays" to facetUrls(ctx, self, facet)))
                 }
                 "list" -> Output.emit(mapOf("noun" to facet.noun, "kind" to AdvertisedRelayListEvent.KIND, "relays" to facetUrls(ctx, self, facet)))
@@ -462,6 +500,7 @@ object RelayCommands {
     ): Int {
         val verb = rest.getOrNull(0) ?: "list"
         val args = Args(rest.drop(1).toTypedArray())
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             val self = ctx.identity.pubKeyHex
             when (verb) {
@@ -506,6 +545,7 @@ object RelayCommands {
         args: Args,
         add: Boolean,
     ): Int {
+        args.rejectUnknown()
         val url = urlArg(args) ?: return Output.invalidRelayUrl(args.positional(0, "url"))
         Context.open(dataDir).use { ctx ->
             val self = ctx.identity.pubKeyHex
@@ -514,7 +554,7 @@ object RelayCommands {
             // nip65 as read+write (both).
             changed["nip65"] =
                 if (add) {
-                    mutateNip65(ctx, self) { applyFacet(applyFacet(it, url, Facet.OUTBOX, true), url, Facet.INBOX, true) }
+                    mutateNip65(ctx, self) { it.addFacet(url, AdvertisedRelayFacet.WRITE).addFacet(url, AdvertisedRelayFacet.READ) }
                 } else {
                     mutateNip65(ctx, self) { infos -> infos.filterNot { it.relayUrl.url == url.url } }
                 }
@@ -587,14 +627,14 @@ object RelayCommands {
 
             val targets = ctx.anyRelays()
             val eventIds = linkedMapOf<String, String?>()
-            val acceptedBy = linkedMapOf<String, List<String>>()
+            val results = linkedMapOf<String, Map<String, Any?>>()
             for ((key, event) in events) {
                 eventIds[key] = event?.id
                 val result = event?.let { ctx.publish(it, targets) }.orEmpty()
-                acceptedBy[key] = result.filterValues { it }.keys.map { it.url }
+                results[key] = RawEventSupport.ackFields(result)
             }
 
-            Output.emit(mapOf("event_ids" to eventIds, "accepted_by" to acceptedBy))
+            Output.emit(mapOf("event_ids" to eventIds, "results" to results))
             return 0
         }
     }
@@ -625,68 +665,6 @@ object RelayCommands {
         ctx: Context,
         self: HexKey,
     ): List<AdvertisedRelayInfo> = ctx.relaysOf(self)?.relays().orEmpty()
-
-    /** Read/write flags for one relay, split out from [AdvertisedRelayType]. */
-    private data class RW(
-        val read: Boolean,
-        val write: Boolean,
-    )
-
-    private fun AdvertisedRelayType.rw() = RW(isRead(), isWrite())
-
-    private fun RW.toTypeOrNull(): AdvertisedRelayType? =
-        when {
-            read && write -> AdvertisedRelayType.BOTH
-            read -> AdvertisedRelayType.READ
-            write -> AdvertisedRelayType.WRITE
-            else -> null
-        }
-
-    /**
-     * Toggle one [facet] on/off for [url] within the kind:10002 entry list,
-     * applying the NIP-65 merge rules: turning a facet on merges into `both`
-     * when the other facet is set; turning the last facet off drops the relay.
-     * Order is preserved.
-     */
-    private fun applyFacet(
-        infos: List<AdvertisedRelayInfo>,
-        url: NormalizedRelayUrl,
-        facet: Facet,
-        present: Boolean,
-    ): List<AdvertisedRelayInfo> {
-        val urls = LinkedHashMap<String, NormalizedRelayUrl>()
-        val flags = LinkedHashMap<String, RW>()
-        for (i in infos) {
-            urls[i.relayUrl.url] = i.relayUrl
-            flags[i.relayUrl.url] = i.type.rw()
-        }
-        val cur = flags[url.url] ?: RW(read = false, write = false)
-        val next = if (facet == Facet.OUTBOX) cur.copy(write = present) else cur.copy(read = present)
-        if (next.read || next.write) {
-            urls[url.url] = url
-            flags[url.url] = next
-        } else {
-            urls.remove(url.url)
-            flags.remove(url.url)
-        }
-        return flags.entries.map { AdvertisedRelayInfo(urls[it.key]!!, it.value.toTypeOrNull()!!) }
-    }
-
-    /** Make exactly [targets] carry [facet], demoting/removing any relay that currently does but shouldn't. */
-    private fun facetSet(
-        infos: List<AdvertisedRelayInfo>,
-        targets: List<NormalizedRelayUrl>,
-        facet: Facet,
-    ): List<AdvertisedRelayInfo> {
-        val keep = targets.map { it.url }.toSet()
-        var result = infos
-        for (i in infos) {
-            val has = if (facet == Facet.OUTBOX) i.type.isWrite() else i.type.isRead()
-            if (has && i.relayUrl.url !in keep) result = applyFacet(result, i.relayUrl, facet, present = false)
-        }
-        for (u in targets) result = applyFacet(result, u, facet, present = true)
-        return result
-    }
 
     /** Read, transform, and (only if it changed) re-sign + store the kind:10002. Returns whether it changed. */
     private suspend fun mutateNip65(

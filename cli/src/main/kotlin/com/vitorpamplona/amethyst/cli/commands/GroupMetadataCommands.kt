@@ -87,6 +87,7 @@ object GroupMetadataCommands {
         val gid = args.positional(0, "gid")
         val path = args.positional(1, "image-file")
         val server = args.flag("server")
+        args.rejectUnknown()
         val file = File(path)
         if (!file.isFile) return Output.error("bad_args", "no such file: $path")
 
@@ -137,7 +138,7 @@ object GroupMetadataCommands {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
             val outboxUrls = ctx.outboxRelays().map { it.url }
             val cur =
                 ctx.marmot.groupMetadata(gid)
@@ -151,6 +152,7 @@ object GroupMetadataCommands {
             val commit = ctx.marmot.updateGroupMetadata(gid, updated)
             val targets = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(commit.signedEvent, targets)
+            RawEventSupport.publishGuard(ack, commit.signedEvent.id)?.let { return it }
 
             Output.emit(
                 mapOf(
@@ -159,8 +161,7 @@ object GroupMetadataCommands {
                     "admins" to updated.adminPubkeys,
                     "epoch" to ctx.marmot.groupEpoch(gid),
                     "commit_event_id" to commit.signedEvent.id,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                ) + extra,
+                ) + RawEventSupport.ackFields(ack) + extra,
             )
             return 0
         }

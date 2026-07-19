@@ -23,6 +23,26 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.DataDir
 
 object GroupCommands {
+    val USAGE: String =
+        """
+        |amy marmot group — MLS group management
+        |
+        |  marmot group create [--name NAME]          create an empty group (self-only)
+        |  marmot group list                          list joined groups
+        |  marmot group show GID                      print full group details
+        |  marmot group members GID                   print members
+        |  marmot group admins GID                    print admins
+        |  marmot group add GID NPUB [NPUB...]        fetch KPs and invite
+        |  marmot group rename GID NAME               commit a rename
+        |  marmot group promote GID NPUB              add admin
+        |  marmot group demote GID NPUB               remove admin
+        |  marmot group set-image GID FILE            encrypt + commit a group avatar
+        |    [--server URL]                            (--server uploads the ciphertext to Blossom)
+        |  marmot group clear-image GID               remove the group avatar
+        |  marmot group remove GID NPUB               remove member
+        |  marmot group leave GID                     self-remove
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -46,5 +66,6 @@ object GroupCommands {
                 "remove" to { rest -> GroupMembershipCommands.remove(dataDir, rest) },
                 "leave" to { rest -> GroupMembershipCommands.leave(dataDir, rest) },
             ),
+            help = USAGE,
         )
 }

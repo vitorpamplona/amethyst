@@ -43,6 +43,15 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
  * `name@domain.tld` — same set [Context.requireUserHex] handles.
  */
 object FollowCommand {
+    val USAGE: String =
+        """
+        |amy follow / unfollow — update the NIP-02 kind:3 contact list
+        |
+        |  follow USER [--timeout SECS]               add USER to your contact list
+        |  unfollow USER [--timeout SECS]             remove USER from your contact list
+        |                                              (USER: npub|nprofile|hex|name@domain)
+        """.trimMargin()
+
     suspend fun follow(
         dataDir: DataDir,
         rest: Array<String>,
@@ -60,6 +69,10 @@ object FollowCommand {
         rest: Array<String>,
         op: FollowOp,
     ): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         if (rest.isEmpty()) {
             val verb = if (op == FollowOp.FOLLOW) "follow" else "unfollow"
             return Output.error("bad_args", "$verb <user> [--timeout SECS]")
@@ -67,6 +80,7 @@ object FollowCommand {
         val userArg = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val timeoutSecs = args.longFlag("timeout", 8L)
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -132,6 +146,7 @@ object FollowCommand {
             }
 
             val ack = ctx.publish(newEvent, outbox)
+            RawEventSupport.publishGuard(ack, newEvent.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "target" to target,
@@ -142,9 +157,7 @@ object FollowCommand {
                     "created_at" to newEvent.createdAt,
                     "based_on" to latest?.id,
                     "follow_count" to newEvent.verifiedFollowKeySet().size,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }

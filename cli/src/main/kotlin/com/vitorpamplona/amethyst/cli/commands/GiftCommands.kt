@@ -44,6 +44,16 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  * (`SealedRumorEvent`, `GiftWrapEvent`).
  */
 object GiftCommands {
+    val USAGE: String =
+        """
+        |amy gift — NIP-59 gift-wrap primitives (inner/wrap JSON from arg or stdin/`-`)
+        |
+        |  gift wrap --to USER [EVENT-JSON]            seal + wrap a signed inner event for
+        |       [--relay URL[,URL…]]                    USER (add --relay to broadcast the wrap)
+        |  gift unwrap [GIFTWRAP-JSON]                 decrypt + unseal a kind:1059 wrap addressed
+        |                                               to the active account
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -56,6 +66,7 @@ object GiftCommands {
                 "wrap" to { rest -> wrap(dataDir, rest) },
                 "unwrap" to { rest -> unwrap(dataDir, rest) },
             ),
+            help = USAGE,
         )
 
     private suspend fun wrap(
@@ -81,18 +92,18 @@ object GiftCommands {
             val wrapNode = Output.mapper.readTree(giftWrap.toJson())
 
             val targets = RawEventSupport.relayFlag(args)
+            args.rejectUnknown()
             if (targets.isEmpty()) {
                 Output.emit(mapOf("event" to wrapNode, "published" to false))
                 return 0
             }
             val ack = ctx.publish(giftWrap, targets)
+            RawEventSupport.publishGuard(ack, giftWrap.id)?.let { return it }
             Output.emit(
                 mapOf(
                     "event" to wrapNode,
                     "published" to true,
-                    "published_to" to ack.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to ack.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(ack),
             )
             return 0
         }
@@ -103,6 +114,7 @@ object GiftCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
+        args.rejectUnknown()
         val json = RawEventSupport.readArgOrStdin(args)
         if (json.isEmpty()) return Output.error("bad_args", "no gift wrap JSON on the argument or stdin")
         val giftWrap =

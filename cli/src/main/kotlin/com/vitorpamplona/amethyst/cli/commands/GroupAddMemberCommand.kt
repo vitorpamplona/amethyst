@@ -50,7 +50,7 @@ object GroupAddMemberCommand {
             ctx.prepare()
             val gid = ctx.resolveGroupId(rest[0])
             ctx.syncIncoming()
-            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", gid)
+            if (!ctx.marmot.isMember(gid)) return Output.error("not_member", "not a member of group $gid")
 
             // Accept any identifier the UI would: npub1…, nprofile1…, 64-hex,
             // NIP-05 (name@domain). Resolution fires NIP-05 HTTP fetches in parallel
@@ -151,8 +151,8 @@ object GroupAddMemberCommand {
                         "key_package_event_id" to kpEvent.id,
                         "commit_event_id" to commitEvent.signedEvent.id,
                         "welcome_event_id" to welcomeDelivery?.giftWrapEvent?.id,
-                        "commit_accepted_by" to commitAck.filterValues { it }.keys.map { it.url },
-                        "welcome_accepted_by" to welcomeAck.filterValues { it }.keys.map { it.url },
+                        "commit_accepted_by" to commitAck.filterValues { it.accepted }.keys.map { it.url },
+                        "welcome_accepted_by" to welcomeAck.filterValues { it.accepted }.keys.map { it.url },
                         "welcome_targets" to welcomeTargets.map { it.url },
                         "key_package_relays" to kpRelays.map { it.url },
                     ),

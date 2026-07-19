@@ -60,6 +60,12 @@ object Output {
         }
     }
 
+    /**
+     * Report a failure and return the exit code the process should end with.
+     * The code string picks the exit code — `bad_args` → 2, `timeout` → 124,
+     * everything else → 1 — so `return Output.error(…)` always honours the
+     * documented exit-code contract without per-site bookkeeping.
+     */
     fun error(
         code: String,
         detail: String? = null,
@@ -83,7 +89,11 @@ object Output {
                 System.err.println(base + suffix)
             }
         }
-        return 1
+        return when (code) {
+            "bad_args" -> 2
+            "timeout" -> 124
+            else -> 1
+        }
     }
 
     /**
@@ -314,7 +324,7 @@ object Output {
             if (key.endsWith("_at") && asLong > 1_000_000_000L) {
                 return formatTimestamp(asLong, color)
             }
-            if (key.endsWith("_bytes") || key == "size") {
+            if (key.endsWith("_bytes")) {
                 return formatBytes(asLong)
             }
         }
@@ -394,11 +404,23 @@ internal class Ansi(
         fun forStream(isStderr: Boolean): Ansi {
             if (noColor) return Ansi(false)
             if (forceColor) return Ansi(true)
-            // System.console() is non-null only when both stdin and stdout are
-            // connected to a terminal. Good enough for the common case (interactive
-            // shell vs `amy ... | jq`); honor CLICOLOR_FORCE for the rest.
-            val tty = System.console() != null
-            return Ansi(tty)
+            // JDK 21 has no per-stream isatty, so the safe rule is: never
+            // color unless we positively know a terminal is attached.
+            // System.console() != null covers JDK 21 (both stdin and stdout
+            // are terminals); on JDK 22+ Console.isTerminal() answers even
+            // when a stream is redirected (reflective — the method doesn't
+            // exist on 21). A TERM-sniffing heuristic was tried here and
+            // reverted: cron/CI capture stderr with TERM exported, and raw
+            // escape codes in log files are worse than uncolored progress
+            // during `amy … | jq`. CLICOLOR_FORCE remains the escape hatch.
+            val console = System.console() ?: return Ansi(false)
+            val isTerminal =
+                try {
+                    console.javaClass.getMethod("isTerminal").invoke(console) as? Boolean ?: true
+                } catch (e: Exception) {
+                    true // JDK 21: console() non-null already implies both-TTY
+                }
+            return Ansi(isTerminal)
         }
     }
 }

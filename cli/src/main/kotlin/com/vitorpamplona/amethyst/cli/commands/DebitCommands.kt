@@ -44,6 +44,17 @@ import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
  * (`ClinkPointerParser`, `DebitClient`); the round-trip uses `Context.requestResponse`.
  */
 object DebitCommands {
+    val USAGE: String =
+        """
+        |CLINK Debits:
+        |  debit info NDEBIT                          decode an ndebit1… pointer (local, no network)
+        |  debit pay NDEBIT BOLT11 [--amount SATS]    kind:21002 round-trip: ask the wallet to pay the
+        |    [--timeout SECS]                           invoice; prints the preimage or a GFY error
+        |  debit budget NDEBIT --amount SATS          authorize a spending budget; omit --frequency
+        |    [--frequency day|week|month]               for a one-time budget
+        |    [--timeout SECS]
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -52,16 +63,19 @@ object DebitCommands {
             "debit",
             tail,
             "debit <info|pay|budget>",
-            mapOf(
-                "info" to { rest -> info(rest) },
-                "pay" to { rest -> pay(dataDir, rest) },
-                "budget" to { rest -> budget(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "info" to { rest -> info(rest) },
+                    "pay" to { rest -> pay(dataDir, rest) },
+                    "budget" to { rest -> budget(dataDir, rest) },
+                ),
         )
 
     /** Local decode of an `ndebit` pointer — no network, no account needed. */
     internal fun info(rest: Array<String>): Int {
         val args = Args(rest)
+        args.rejectUnknown()
         val debit =
             ClinkPointerParser.parse(args.positional(0, "ndebit").trim()) as? NDebit
                 ?: return Output.error("bad_args", "not a valid ndebit pointer")
@@ -85,7 +99,10 @@ object DebitCommands {
         val args = Args(rest)
         val bolt11 = args.positional(1, "bolt11")
         val amount = args.flag("amount")?.toLongOrNull()
-        val timeoutMs = args.longFlag("timeout", 15_000)
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
+        args.rejectUnknown()
 
         return roundTrip(dataDir, args, timeoutMs) { client -> client.payInvoice(bolt11, amount) }
     }
@@ -100,7 +117,10 @@ object DebitCommands {
             args.flag("amount")?.toLongOrNull()
                 ?: return Output.error("bad_args", "--amount SATS is required for a budget")
         val frequency = parseFrequency(args.flag("frequency")) ?: return Output.error("bad_args", "unknown --frequency '${args.flag("frequency")}' (day|week|month)")
-        val timeoutMs = args.longFlag("timeout", 15_000)
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
+        args.rejectUnknown()
 
         return roundTrip(dataDir, args, timeoutMs) { client -> client.requestBudget(amount, frequency.value) }
     }
@@ -124,7 +144,7 @@ object DebitCommands {
             ctx.prepare()
             return when (val outcome = settle(ctx, debit, timeoutMs, buildRequest)) {
                 Settle.Timeout -> {
-                    Output.error("timeout", "no response from the debit service within ${timeoutMs}ms")
+                    Output.error("timeout", "no response from the debit service within ${timeoutMs / 1000}s")
                     124
                 }
                 Settle.BadReply -> Output.error("bad_response", "service reply was not a kind-21002 debit event")

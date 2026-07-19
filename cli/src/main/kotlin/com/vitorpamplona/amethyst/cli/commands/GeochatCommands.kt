@@ -66,8 +66,26 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 object GeochatCommands {
     private const val DEFAULT_LISTEN_SECONDS = 30L
-    private const val DEFAULT_LIMIT = 500
+    private const val DEFAULT_LIMIT = 50
     private const val DEFAULT_POW_TIMEOUT_SECS = 5L
+
+    val USAGE: String =
+        """
+        |amy geochat — Bitchat-interoperable public geohash chat (ephemeral kind:20000)
+        |
+        |  geochat listen GEOHASH [--seconds N]        hold a live subscription to the cell and report
+        |          [--limit N] [--relay URL[,URL…]]     messages + present pubkeys seen in the window
+        |          [--no-fetch]                         (default --seconds 30, --limit 50)
+        |  geochat send GEOHASH MESSAGE [--nick NAME]  sign with the per-geohash throwaway identity and
+        |          [--teleport] [--pow BITS]            publish to the cell's nearest relays
+        |          [--pow-timeout SECS] [--seed HEX]
+        |          [--relay URL[,URL…]] [--no-fetch]
+        |  geochat keys GEOHASH [--seed HEX]           print the per-geohash derived pubkey
+        |
+        |  --relay accepts a comma-separated list; bare wss://… positionals are
+        |  also accepted for back-compat. --no-fetch skips the geo-relay
+        |  directory refresh.
+        """.trimMargin()
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -82,6 +100,7 @@ object GeochatCommands {
                 "send" to { rest -> send(dataDir, rest) },
                 "keys" to { rest -> keys(rest) },
             ),
+            help = USAGE,
         )
 
     /**
@@ -102,6 +121,7 @@ object GeochatCommands {
         val seconds = args.longFlag("seconds", DEFAULT_LISTEN_SECONDS)
         val limit = args.intFlag("limit", DEFAULT_LIMIT)
         val relays = resolveRelays(args, geohash)
+        args.rejectUnknown()
         if (relays.isEmpty()) return Output.error("no_relays", "no relays for geohash $geohash (directory empty / bad --relay)")
 
         val since = TimeUtils.now() - seconds.coerceAtLeast(1)
@@ -191,22 +211,23 @@ object GeochatCommands {
 
         val relays = resolveRelays(args, geohash)
         if (relays.isEmpty()) return Output.error("no_relays", "no relays for geohash $geohash (directory empty / bad --relay)")
+        // --pow-timeout is only read when --pow is set; whitelist it either way.
+        args.rejectUnknown("pow-timeout")
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val acks = ctx.publish(event, relays.toSet())
+            RawEventSupport.publishGuard(acks, event.id)?.let { return it }
             Output.emit(
                 mapOf(
-                    "id" to event.id,
-                    "pubkey" to event.pubKey,
+                    "event_id" to event.id,
+                    "author" to event.pubKey,
                     "geohash" to geohash,
                     "nickname" to nick,
                     "teleported" to teleported,
                     "pow" to PoWRankEvaluator.calculatePowRankOf(event.id),
                     "content" to message,
-                    "published_to" to acks.filterValues { it }.keys.map { it.url },
-                    "rejected_by" to acks.filterValues { !it }.keys.map { it.url },
-                ),
+                ) + RawEventSupport.ackFields(acks),
             )
         }
         return 0
@@ -222,6 +243,7 @@ object GeochatCommands {
         val geohash = args.positional.firstOrNull()?.lowercase() ?: return Output.error("bad_args", "geochat keys <geohash> [--seed HEX]")
         if (!isGeohash(geohash)) return Output.error("bad_args", "not a geohash: $geohash")
         val seed = resolveSeed(args) ?: return Output.error("bad_args", "--seed must be 64 hex chars (32 bytes)")
+        args.rejectUnknown()
         val keyPair = GeohashKeyDerivation.deriveKeyPair(seed, geohash)
         Output.emit(
             mapOf(
@@ -235,17 +257,25 @@ object GeochatCommands {
 
     // ------------------------------------------------------------------
 
-    /** Explicit `--relay` list wins; otherwise the closest relays from the (optionally refreshed) directory. */
+    /**
+     * Explicit `--relay URL[,URL…]` list wins (strictly validated — a bad entry
+     * is a `bad_args` failure, like every other `--relay` in amy); bare
+     * `wss://…` positionals are still accepted for back-compat. Otherwise the
+     * closest relays from the (optionally refreshed) directory.
+     */
     private suspend fun resolveRelays(
         args: Args,
         geohash: String,
     ): List<NormalizedRelayUrl> {
-        val explicit = args.flags["relay"]?.let { listOfNotNull(RelayUrlNormalizer.normalizeOrNull(it)) } ?: emptyList()
+        // Read eagerly so `--relay X --no-fetch` doesn't trip rejectUnknown()
+        // when the explicit-relay early return skips the directory branch.
+        val noFetch = args.bool("no-fetch")
+        val explicit = RawEventSupport.relayFlag(args).toList()
         val allExplicit = (explicit + args.positional.mapNotNull { if (it.startsWith("wss://") || it.startsWith("ws://")) RelayUrlNormalizer.normalizeOrNull(it) else null })
         if (allExplicit.isNotEmpty()) return allExplicit.distinct()
 
         val directory = GeoRelayDirectory()
-        if (!args.bool("no-fetch")) {
+        if (!noFetch) {
             runCatching { GeoRelayCsvLoader { OkHttpClient() }.refresh(directory) }
         }
         return directory.closestRelays(geohash)
@@ -260,8 +290,8 @@ object GeochatCommands {
 
     private fun messageJson(event: GeohashChatEvent): Map<String, Any?> =
         mapOf(
-            "id" to event.id,
-            "pubkey" to event.pubKey,
+            "event_id" to event.id,
+            "author" to event.pubKey,
             "nickname" to event.nickname(),
             "teleported" to event.isTeleported(),
             "content" to event.content,

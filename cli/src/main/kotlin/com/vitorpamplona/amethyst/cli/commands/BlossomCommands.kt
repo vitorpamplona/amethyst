@@ -56,6 +56,24 @@ import java.nio.file.Files
  * they can't be replayed elsewhere (BUD-11).
  */
 object BlossomCommands {
+    val USAGE: String =
+        """
+        |Blossom blobs (NIP-B7 / BUD-01/02/04/05/09):
+        |  blossom upload --server URL FILE             upload a file (authed); prints the blob URL.
+        |          [--mime-type M]
+        |  blossom media --server URL FILE              BUD-05: upload + let the server optimize the
+        |          [--mime-type M]                       media (transcode/strip); prints the blob URL.
+        |  blossom download URL [--out FILE]            download a blob (public). Accepts a full URL,
+        |  blossom download HASH --server URL            or a HASH plus --server.
+        |  blossom list --server URL [USER]             list a user's blobs (defaults to self)
+        |  blossom delete HASH --server URL             delete a blob you own
+        |  blossom check --server URL HASH[,HASH]       HEAD-check blobs exist (fails if any missing)
+        |  blossom mirror --server URL SOURCE-URL       ask the server to mirror a blob (BUD-04)
+        |  blossom report --server URL HASH             PUT a signed NIP-56 blob report (BUD-09);
+        |          [--type T] [--comment C]              --type is a NIP-56 code (spam, illegal,
+        |          [--uploader HEX]                      nudity, malware, …; default: other)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -64,16 +82,18 @@ object BlossomCommands {
             "blossom",
             tail,
             "blossom <upload|media|download|list|delete|check|mirror|report>",
-            mapOf(
-                "upload" to { rest -> upload(dataDir, rest, media = false) },
-                "media" to { rest -> upload(dataDir, rest, media = true) },
-                "download" to { rest -> download(dataDir, rest) },
-                "list" to { rest -> list(dataDir, rest) },
-                "delete" to { rest -> delete(dataDir, rest) },
-                "check" to { rest -> check(dataDir, rest) },
-                "mirror" to { rest -> mirror(dataDir, rest) },
-                "report" to { rest -> report(dataDir, rest) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "upload" to { rest -> upload(dataDir, rest, media = false) },
+                    "media" to { rest -> upload(dataDir, rest, media = true) },
+                    "download" to { rest -> download(dataDir, rest) },
+                    "list" to { rest -> list(dataDir, rest) },
+                    "delete" to { rest -> delete(dataDir, rest) },
+                    "check" to { rest -> check(dataDir, rest) },
+                    "mirror" to { rest -> mirror(dataDir, rest) },
+                    "report" to { rest -> report(dataDir, rest) },
+                ),
         )
 
     /** `blossom check --server URL HASH[,HASH]` — HEAD each blob; fail if any is missing (BUD-01). */
@@ -89,6 +109,7 @@ object BlossomCommands {
                 .split(',')
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
+        args.rejectUnknown()
 
         // Read-only HEAD probe — no auth, so it runs anonymously without an account.
         Context.openOrAnonymous(dataDir).use { _ ->
@@ -125,6 +146,7 @@ object BlossomCommands {
         if (hash.length != 64 || hash.any { it !in "0123456789abcdef" }) {
             return Output.error("bad_args", "could not extract a sha256 from the source url '$sourceUrl'")
         }
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -152,6 +174,7 @@ object BlossomCommands {
         val bytes = file.readBytes()
         val hash = sha256(bytes).toHexKey()
         val mime = args.flag("mime-type") ?: runCatching { Files.probeContentType(file.toPath()) }.getOrNull() ?: "application/octet-stream"
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -169,7 +192,7 @@ object BlossomCommands {
                         "url" to result.url,
                         "sha256" to (result.sha256 ?: hash),
                         "ox" to result.ox,
-                        "size" to (result.size ?: file.length()),
+                        "size_bytes" to (result.size ?: file.length()),
                         "type" to (result.type ?: mime),
                         "server" to server,
                     ),
@@ -186,6 +209,8 @@ object BlossomCommands {
         val args = Args(rest)
         val target = args.positional(0, "url-or-hash")
         val server = args.flag("server")
+        val out = args.flag("out")
+        args.rejectUnknown()
         val url = if (server != null && !target.startsWith("http")) BlossomServerUrl.blob(server, target) else target
 
         // Public download — no auth, so it runs anonymously without an account.
@@ -193,14 +218,13 @@ object BlossomCommands {
             val bytes =
                 BlossomClient().download(url)
                     ?: return Output.error("not_found", "server returned no blob for $url")
-            val out = args.flag("out")
             if (out != null) {
                 File(out).writeBytes(bytes)
             }
             Output.emit(
                 mapOf(
                     "url" to url,
-                    "size" to bytes.size,
+                    "size_bytes" to bytes.size,
                     "sha256" to sha256(bytes).toHexKey(),
                     "saved_to" to out,
                 ),
@@ -215,6 +239,7 @@ object BlossomCommands {
     ): Int {
         val args = Args(rest)
         val server = args.flag("server") ?: return Output.error("bad_args", "blossom list requires --server URL")
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -233,6 +258,7 @@ object BlossomCommands {
         val args = Args(rest)
         val server = args.flag("server") ?: return Output.error("bad_args", "blossom delete requires --server URL")
         val hash = args.positional(0, "sha256")
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -263,6 +289,7 @@ object BlossomCommands {
             } ?: ReportType.OTHER
         val comment = args.flag("comment") ?: ""
         val uploader = args.flag("uploader")
+        args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()

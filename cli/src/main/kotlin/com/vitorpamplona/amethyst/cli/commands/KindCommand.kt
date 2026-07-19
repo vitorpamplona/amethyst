@@ -36,8 +36,21 @@ import com.vitorpamplona.quartz.kinds.KindNames
  * (`KindNames`) — the same data the Android relay view localizes on top of.
  */
 object KindCommand {
+    val USAGE: String =
+        """
+        |amy kind — look up a Nostr event kind (local, accountless)
+        |
+        |  kind N                       print kind N's label + defining NIP
+        |  kind NAME                    search kind labels by name
+        """.trimMargin()
+
     fun run(rest: Array<String>): Int {
+        if (rest.firstOrNull() == "--help" || rest.firstOrNull() == "-h") {
+            System.err.println(USAGE)
+            return 0
+        }
         val args = Args(rest)
+        args.rejectUnknown()
         val arg = args.positional(0, "kind-number-or-name").trim()
         val n = arg.toIntOrNull()
         if (n != null) {

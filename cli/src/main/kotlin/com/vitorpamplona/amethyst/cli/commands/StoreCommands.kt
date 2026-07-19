@@ -60,6 +60,16 @@ import kotlin.io.path.exists
  *                    upgrade that changes which kinds are searchable.
  */
 object StoreCommands {
+    val USAGE: String =
+        """
+        |Local event store (shared, under `<data-dir>/shared/`; backend via AMY_STORE):
+        |  store stat                                 event count + disk usage (kind histogram/mtime on fs)
+        |  store sweep-expired                        delete events past their NIP-40 expiration
+        |  store scrub                                fs: rebuild idx/ from canonical events; sqlite: no-op
+        |  store compact                              fs: drop dangling idx entries; sqlite: VACUUM
+        |  store reindex-fts                          rebuild the NIP-50 search index (after a searchable-kinds change)
+        """.trimMargin()
+
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
@@ -68,13 +78,15 @@ object StoreCommands {
             "store",
             tail,
             "store <stat|sweep-expired|scrub|compact|reindex-fts>",
-            mapOf(
-                "stat" to { _ -> stat(dataDir) },
-                "sweep-expired" to { _ -> sweepExpired(dataDir) },
-                "scrub" to { _ -> scrub(dataDir) },
-                "compact" to { _ -> compact(dataDir) },
-                "reindex-fts" to { _ -> reindexFts(dataDir) },
-            ),
+            help = USAGE,
+            routes =
+                mapOf(
+                    "stat" to { _ -> stat(dataDir) },
+                    "sweep-expired" to { _ -> sweepExpired(dataDir) },
+                    "scrub" to { _ -> scrub(dataDir) },
+                    "compact" to { _ -> compact(dataDir) },
+                    "reindex-fts" to { _ -> reindexFts(dataDir) },
+                ),
         )
 
     private suspend fun stat(dataDir: DataDir): Int =
