@@ -51,6 +51,7 @@
     <string name="timestamp_it">Uporabi časovni žig</string>
     <string name="timestamp_pending">Časovni žig: Potrditve v obdelavi</string>
     <string name="timestamp_pending_short">OTS: V obdelavi</string>
+    <string name="one_year_plus">+1Leto</string>
     <string name="request_deletion">Zaprosi za izbris</string>
     <string name="block_report">Blokiraj / Prijavi</string>
     <string name="block_hide_user"><![CDATA[Blokiraj in skrij uporabnika]]></string>
@@ -112,6 +113,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="security_filters">Varnostni filtri</string>
     <string name="log_out">Odjavi se</string>
     <string name="show_more">Pokaži več</string>
+    <string name="show_less">Prikaži manj</string>
     <string name="lightning_invoice">Lightning račun</string>
     <string name="invoice_expired">Poteklo</string>
     <string name="clink_lightning_offer">CLINK ponudba</string>
@@ -310,6 +312,37 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="already_have_an_account">Že imam Nostr račun?</string>
     <string name="loading_feed">Nalagam vir vsebin</string>
     <string name="loading_account">Račun se nalaga</string>
+    <string name="concord_send_image_title">Pošlji sliko</string>
+    <string name="concord_open_channel">Odpri kanal</string>
+    <string name="concord_edit_banner_hint">Dodaj pasico</string>
+    <string name="concord_channel_create">Nov kanal</string>
+    <string name="concord_channel_rename">Preimenuj kanal</string>
+    <string name="concord_channel_rename_save">Preimenuj</string>
+    <string name="concord_channel_name_label">Ime kanala</string>
+    <string name="concord_channel_delete">Izbriši kanal</string>
+    <string name="concord_channel_delete_title">Izbrišem kanal?</string>
+    <string name="concord_channel_delete_confirm">Izbriši</string>
+    <string name="concord_create_name">Ime</string>
+    <string name="concord_create_about">Opis (neobvezno)</string>
+    <string name="concord_create_relays">Releji</string>
+    <plurals name="concord_unread_messages">
+        <item quantity="one">%1$d novo sporočilo</item>
+        <item quantity="two">%1$d nova sporočila</item>
+        <item quantity="few">%1$d nova sporočila</item>
+        <item quantity="other">%1$d novih sporočil</item>
+    </plurals>
+    <string name="concord_channel_no_messages">Še ni sporočil</string>
+    <string name="concord_create_action">Ustvari</string>
+    <string name="concord_invite_action">Povabi ljudi</string>
+    <string name="concord_make_admin">Povišaj v administratorja</string>
+    <string name="concord_remove_admin">Odstrani administratorja</string>
+    <string name="concord_ban_user">Izključi</string>
+    <string name="concord_ban_user_title">Izključim iz te skupnosti?</string>
+    <string name="concord_create_icon_hint">Nastavi ikono skupnosti</string>
+    <string name="concord_edit_title">Uredi skupnost</string>
+    <string name="concord_edit_save">Shrani</string>
+    <string name="concord_members_title">Člani</string>
+    <string name="concord_members_make_admin">Povišaj v administratorja</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
@@ -1227,7 +1260,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="manage_bookmark_label">Uredi %1$s v seznam zaznamkov</string>
     <string name="post_bookmark_management_title">Dodaj objavo med zaznamke</string>
     <string name="article_bookmark_management_title">Dodaj članek med zaznamke</string>
-    <string name="public_bookmark_presence_indicator">je javni zaznamek tukaj</string>
+    <string name="public_bookmark_presence_indicator">že v tem javnem zaznamku</string>
     <string name="private_bookmark_presence_indicator">je zasebni zaznamek tukaj</string>
     <string name="private_rumor_mark">Zasebno — vidno le označenim sodelujočim</string>
     <string name="private_note">Nastavi kot zasebno: šifriraj zapis le za obveščene uporabnike</string>
@@ -1238,7 +1271,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Odstrani uporabnika iz obvestil</string>
     <string name="notify_search_and_add_user">Poišči in dodaj prejemnika obvestil</string>
-    <string name="bookmark_absence_indicator">ni zaznamek tukaj</string>
+    <string name="bookmark_absence_indicator">Ni v tem zaznamku</string>
     <string name="bookmark_remove_action_desc">Odstrani zaznamek iz seznama</string>
     <string name="bookmark_add_action_desc">Dodaj zaznamek v seznam</string>
     <string name="public_bookmark_add_action_label">Dodaj kot javni zaznamek</string>
