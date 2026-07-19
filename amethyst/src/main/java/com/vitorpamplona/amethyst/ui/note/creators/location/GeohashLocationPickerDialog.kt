@@ -286,6 +286,17 @@ fun GeohashLocationPickerContent(
         }
     }
 
+    // On open with no seed, if we already have location permission, start the map at the
+    // user's current position instead of the neutral world view. Runs once, and never
+    // prompts — it only uses permission that's already granted.
+    var autoLocated by remember { mutableStateOf(false) }
+    LaunchedEffect(permission.status.isGranted) {
+        if (!autoLocated && seed == null && permission.status.isGranted) {
+            autoLocated = true
+            wantsMyLocation = true
+        }
+    }
+
     // Forward-geocode search. Results are shown as a pick list; choosing one flies there.
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
