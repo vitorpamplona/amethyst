@@ -142,7 +142,7 @@ object FofCommand {
         val args = Args(rest)
         // Overall timeout; per-relay budget is set by OutboxDispatcher's
         // default (4s). `--timeout N` overrides the overall cap.
-        val overallTimeoutMs = args.flag("timeout")?.toLongOrNull()?.times(1000) ?: 8_000L
+        val overallTimeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
             ctx.prepare()

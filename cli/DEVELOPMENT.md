@@ -294,8 +294,9 @@ contract.
 `--json` contract; reuse an existing code before minting a new one:
 
 - **Contract-wide:** `bad_args` (exit 2), `timeout` (exit 124),
-  `rejected` (every targeted relay refused a publish; payload carries
-  `event_id` + `rejected_by`), `runtime` (uncaught exception),
+  `rejected` (every targeted relay refused a publish AND at least one
+  actually answered `OK false`; payload carries `event_id` + `rejected_by` —
+  when every failure is transport-level the code is `timeout`/124 instead), `runtime` (uncaught exception),
   `invalid_event` (event/template fails id or signature checks),
   `http_error`, `bad_response`, `not_found`, `exists`, `read_only`,
   `no_identity`, `bad_account`, `signer_error`, `decrypt_failed`.

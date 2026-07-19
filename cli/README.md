@@ -279,7 +279,7 @@ Filter flags are shared by `fetch` and `subscribe`: `--kind K[,K]`, `--author U[
 
 | Command | What it does |
 |---|---|
-| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE or goes silent for `--timeout` (default 8s — an **idle window**, reset by every arriving event, so a slow-but-streaming relay is never cut off), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
+| `amy fetch [filter flags] [--timeout SECS]` | One-shot query — collect until every relay sends EOSE or goes silent for `--timeout` (default 8s — an **idle window**, reset by every arriving event, so a slow-but-streaming relay is never cut off; a wall-clock ceiling of 10x the window still bounds a relay that trickles forever), dedupe, sort newest-first, print and exit. `--limit` defaults to 100. |
 | `amy fetch CODE [--timeout SECS]` | Code mode — pass a single `nevent`/`naddr`/`nprofile`/`npub`/`note` or `name@domain`. Resolves relays the outbox way: the hints embedded in the code **plus** the author's NIP-65 write relays (draining their kind:10002 on a cache miss), exactly how the app opens a shared link. |
 | `amy subscribe [filter flags] [--timeout SECS]` | Live stream — print each matching event as it arrives (NDJSON under `--json`). Runs until `--timeout` SECS or until interrupted. |
 | `amy count [filter flags] [--timeout SECS]` | NIP-45 COUNT — per-relay match counts, no event download. |
@@ -732,8 +732,12 @@ Notable error codes (the full canonical list is in
 [DEVELOPMENT.md](./DEVELOPMENT.md)):
 
 - **`rejected`** (exit 1) — a publish was refused by **every** targeted
-  relay; the payload carries `event_id` + `rejected_by`. Partial acceptance
-  still exits 0 and reports `published_to` / `rejected_by`. `rejected_by`
+  relay **and at least one relay actually answered `OK false`**; the payload
+  carries `event_id` + `rejected_by`. When every failure is transport-level
+  (unreachable, dropped, silent past the window) the code is `timeout`
+  (exit 124) instead — retry a flaky network, don't give up on a rejection
+  no relay voiced. Partial acceptance still exits 0 and reports
+  `published_to` / `rejected_by`. `rejected_by`
   is a list of `{relay, reason}` objects — the reason is the relay's own
   NIP-01 OK message (`blocked: …`, `rate-limited: …`), a connect error, or
   `no response within timeout`, so "why didn't it post?" answers itself:

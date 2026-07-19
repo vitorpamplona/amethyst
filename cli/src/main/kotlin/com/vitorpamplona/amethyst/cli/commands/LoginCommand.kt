@@ -152,8 +152,10 @@ object LoginCommand {
         if (key.startsWith("bunker://")) return Identity.fromBunkerUri(key)
         // 1. ncryptsec — password mandatory.
         if (key.startsWith("ncryptsec")) {
+            // Read both spellings eagerly so passing both doesn't trip rejectUnknown().
+            val pwAlias = args.flag("pw")
             val pw =
-                args.flag("password") ?: args.flag("pw")
+                args.flag("password") ?: pwAlias
                     ?: throw IllegalArgumentException("ncryptsec input requires --password")
             val privHex = Nip49().decrypt(key, pw)
             return Identity.fromPrivateKey(

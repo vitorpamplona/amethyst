@@ -73,7 +73,16 @@ fun List<AdvertisedRelayInfo>.applyFacet(
     val flags = LinkedHashMap<String, RW>()
     for (i in this) {
         urls[i.relayUrl.url] = i.relayUrl
-        flags[i.relayUrl.url] = i.type.rw()
+        val new = i.type.rw()
+        val old = flags[i.relayUrl.url]
+        flags[i.relayUrl.url] =
+            if (old == null) {
+                new
+            } else {
+                // A list may legally carry two `r` tags for the same URL (one
+                // `read`, one `write`) — merge the facets instead of last-wins.
+                RW(read = old.read || new.read, write = old.write || new.write)
+            }
     }
     val cur = flags[url.url] ?: RW(read = false, write = false)
     val next = if (facet == AdvertisedRelayFacet.WRITE) cur.copy(write = present) else cur.copy(read = present)

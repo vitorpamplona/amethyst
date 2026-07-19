@@ -27,7 +27,9 @@ import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * Raw-socket reachability pre-probe: answers "will this relay's port even accept a
@@ -43,9 +45,20 @@ object TcpProber {
     // far past the connect timeout. On the shared Dispatchers.IO those hanging lookups
     // starve the crawl's own IO — measured +462s on the finishing drain at hop-3. Run
     // them on a dedicated, isolated daemon pool instead so the crawl's IO is untouched.
+    // allowCoreThreadTimeOut: a plain fixed pool's core threads never die, and
+    // this object now lives in quartz — a long-lived app/relay process that
+    // probes once would otherwise carry 128 parked threads for its whole
+    // lifetime. With the 60s keep-alive the pool drains back to zero threads
+    // a minute after a crawl finishes.
     private val probeDispatcher =
-        Executors
-            .newFixedThreadPool(128) { r -> Thread(r, "relay-probe").apply { isDaemon = true } }
+        ThreadPoolExecutor(
+            128,
+            128,
+            60L,
+            TimeUnit.SECONDS,
+            LinkedBlockingQueue(),
+        ) { r -> Thread(r, "relay-probe").apply { isDaemon = true } }
+            .apply { allowCoreThreadTimeOut(true) }
             .asCoroutineDispatcher()
 
     /**

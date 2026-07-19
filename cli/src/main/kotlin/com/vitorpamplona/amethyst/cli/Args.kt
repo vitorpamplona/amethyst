@@ -109,6 +109,18 @@ class Args(
             ?: throw IllegalArgumentException("--$name expects a number, got '$raw'")
     }
 
+    /** Read `--timeout` (seconds) and return milliseconds; non-numeric input is bad_args. */
+    fun timeoutMs(defaultSecs: Long): Long = longFlag("timeout", defaultSecs) * 1000
+
+    /** Like [timeoutMs] but with no default: null when `--timeout` is absent; non-numeric input is bad_args. */
+    fun timeoutMsOrNull(): Long? {
+        val raw = flag("timeout") ?: return null
+        val secs =
+            raw.toLongOrNull()
+                ?: throw IllegalArgumentException("--timeout expects a number, got '$raw'")
+        return secs * 1000
+    }
+
     fun requireFlag(name: String): String {
         consumed.add(name)
         return flags[name]

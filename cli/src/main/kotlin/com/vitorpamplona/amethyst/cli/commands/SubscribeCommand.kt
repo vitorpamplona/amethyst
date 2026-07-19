@@ -69,7 +69,7 @@ object SubscribeCommand {
             return 0
         }
         val args = Args(rest)
-        val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        val timeoutMs = args.timeoutMsOrNull()
         val filter = RawEventSupport.buildFilter(args)
         args.rejectUnknown("relay")
 

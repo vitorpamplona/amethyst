@@ -77,11 +77,24 @@ object RawEventSupport {
         eventId: String,
     ): Int? {
         if (ack.isEmpty() || ack.any { it.value.accepted }) return null
-        return Output.error(
-            "rejected",
-            "no relay accepted event $eventId",
-            extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
-        )
+        // `rejected` means a relay actually answered `OK false`. When every
+        // failure is transport-level (silent, unreachable, dropped) the honest
+        // code is `timeout` (exit 124) — a retry-on-124 script should retry a
+        // flaky network, not give up on a "rejection" no relay ever voiced.
+        val genuinelyRejected = ack.values.any { !it.isTransportFailure }
+        return if (genuinelyRejected) {
+            Output.error(
+                "rejected",
+                "no relay accepted event $eventId",
+                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
+            )
+        } else {
+            Output.error(
+                "timeout",
+                "no relay answered for event $eventId (all unreachable or silent)",
+                extra = mapOf("event_id" to eventId, "rejected_by" to rejectedBy(ack)),
+            )
+        }
     }
 
     /**

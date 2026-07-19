@@ -110,7 +110,9 @@ object KeyCommands {
     private fun encrypt(rest: Array<String>): Int {
         val args = Args(rest)
         val priv = privHexOrNull(args.positional(0, "secret-key").trim()) ?: return Output.error("bad_args", "expected an nsec or 64-char hex secret key")
-        val password = args.flag("password") ?: args.flag("pw") ?: return Output.error("bad_args", "key encrypt requires --password")
+        // Read both spellings eagerly so passing both doesn't trip rejectUnknown().
+        val pwAlias = args.flag("pw")
+        val password = args.flag("password") ?: pwAlias ?: return Output.error("bad_args", "key encrypt requires --password")
         args.rejectUnknown()
         val ncryptsec = Nip49().encrypt(priv, password)
         Output.emit(mapOf("ncryptsec" to ncryptsec))
@@ -121,7 +123,9 @@ object KeyCommands {
         val args = Args(rest)
         val ncryptsec = args.positional(0, "ncryptsec").trim()
         if (!ncryptsec.startsWith("ncryptsec")) return Output.error("bad_args", "expected an ncryptsec1… string")
-        val password = args.flag("password") ?: args.flag("pw") ?: return Output.error("bad_args", "key decrypt requires --password")
+        // Read both spellings eagerly so passing both doesn't trip rejectUnknown().
+        val pwAlias = args.flag("pw")
+        val password = args.flag("password") ?: pwAlias ?: return Output.error("bad_args", "key decrypt requires --password")
         args.rejectUnknown()
         val privHex =
             try {

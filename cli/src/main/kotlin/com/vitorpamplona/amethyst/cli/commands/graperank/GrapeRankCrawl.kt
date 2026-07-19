@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.cli.commands.RawEventSupport
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.quartz.experimental.graperank.FollowerCrawler
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
@@ -97,7 +97,7 @@ object GrapeRankCrawl {
                     contentAggregatorRelays = aggregators,
                     maxRounds = args.intFlag("max-rounds", Int.MAX_VALUE),
                     maxHops = args.intFlag("max-hops", Int.MAX_VALUE),
-                    timeoutMs = args.longFlag("timeout", 10L) * 1000,
+                    timeoutMs = args.timeoutMs(10),
                     parkTimeoutMs = args.longFlag("park-timeout", 40L) * 1000,
                     diagnose = args.bool("diagnose"),
                     insertBatchSize = args.intFlag(FLAG_INSERT_BATCH, INSERT_BATCH_DEFAULT),
@@ -251,7 +251,9 @@ object GrapeRankCrawl {
     ): Int {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
-        val relayArg = args.flag("relay")
+        // Strictly validated like every other `--relay` in amy — a malformed
+        // entry is a bad_args failure, not a silent drop.
+        val explicitRelays = RawEventSupport.relayFlag(args)
         val relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 16))
         // --max/--timeout/--insert-batch are read later inside the crawler
         // Config; --no-reachability-cache inside allKnownRelays.
@@ -267,11 +269,7 @@ object GrapeRankCrawl {
             val observer = observerArg?.let { ctx.requireUserHex(it) } ?: ctx.identity.pubKeyHex
 
             val relays =
-                relayArg
-                    ?.split(",")
-                    ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-                    ?.toSet()
-                    ?.takeIf { it.isNotEmpty() }
+                explicitRelays.takeIf { it.isNotEmpty() }
                     ?: allKnownRelays(ctx, args)
 
             if (relays.isEmpty()) {
@@ -289,7 +287,7 @@ object GrapeRankCrawl {
                             // Default null → pull EVERY follower each relay holds; --max
                             // N caps the total per relay for a quick spot check.
                             maxPerRelay = args.flag("max")?.toIntOrNull(),
-                            timeoutMs = args.longFlag("timeout", 15L) * 1000,
+                            timeoutMs = args.timeoutMs(15),
                             maxConcurrentRelays = relayConcurrency,
                             insertBatchSize = args.intFlag(FLAG_INSERT_BATCH, INSERT_BATCH_DEFAULT),
                         ),

@@ -197,7 +197,16 @@ private suspend fun dispatch(argv: Array<String>): Int {
     }
 
     val head = filteredArgs[0]
-    val tail = filteredArgs.drop(1).toTypedArray()
+    var tail = filteredArgs.drop(1).toTypedArray()
+
+    // Central --help hoist: a help request anywhere before a `--` sentinel
+    // becomes a plain leading --help, so `amy notes post "hi" --help` prints
+    // usage instead of publishing, and no command can forget to honor it.
+    // (`--` still lets you pass the literal text: `amy notes post -- --help`.)
+    val helpIdx = tail.indexOfFirst { it == "--" || it == "--help" || it == "-h" }
+    if (helpIdx >= 0 && tail[helpIdx] != "--") {
+        tail = arrayOf("--help")
+    }
 
     // `use` operates on `<root>/current` directly and must work even
     // when account auto-pick would fail (the whole point of `use` is to
@@ -545,7 +554,8 @@ private fun printUsage() {
         |        [--timeout SECS]         (USER: npub|nprofile|hex|name@domain)
         |
         |Profile (NIP-01 kind:0):
-        |  profile show [USER] [--timeout SECS]       fetch latest kind:0 metadata
+        |  profile show [USER] [--refresh]            fetch latest kind:0 metadata (--refresh forces
+        |               [--timeout SECS]              a relay round-trip past the local cache)
         |                                              (USER: npub|nprofile|hex|name@domain)
         |  profile edit [--name NAME]                  patch kind:0; unset flags keep prior values,
         |               [--display-name N]             blank values delete the field
@@ -555,6 +565,7 @@ private fun printUsage() {
         |               [--lud16 X] [--lud06 X]
         |               [--pronouns P]
         |               [--twitter H] [--mastodon H] [--github H]
+        |               [--clink-offer NOFFER]
         |               [--timeout SECS]
         |
         |Notes (NIP-10 kind:1):
@@ -714,9 +725,13 @@ private fun printUsage() {
         |
         |CLINK Offers:
         |  offer info NOFFER                          decode a noffer1… pointer (local, no network)
+        |  offer discover USER                        find a user's published offers
+        |  offer pay NOFFER --with NDEBIT             request an invoice AND settle it through the
+        |    [--amount SATS] [--timeout SECS]          given debit pointer in one step
         |  offer request NOFFER [--amount SATS]       kind:21001 round-trip: ask the service for a
-        |    [--timeout SECS]                            fresh BOLT11 (amount required for spontaneous
-        |                                              offers; defaults to the pointer's fixed price)
+        |    [--follow] [--timeout SECS]               fresh BOLT11 (amount required for spontaneous
+        |                                              offers, else the pointer's fixed price;
+        |                                              --follow waits for settlement)
         |
         |CLINK Debits:
         |  debit info NDEBIT                          decode an ndebit1… pointer (local, no network)
@@ -729,7 +744,7 @@ private fun printUsage() {
         |  search user QUERY [--limit N]              search kind:0 profiles
         |                    [--timeout SECS]
         |  search note QUERY [--limit N]              search event content
-        |                    [--kinds K[,K…]]          (default kind:1; e.g. 1,30023)
+        |                    [--kind K[,K…]]           (default kind:1; e.g. 1,30023; --kinds alias)
         |                    [--timeout SECS]
         |                                              uses your kind:10007 search-relay
         |                                              list, falls back to Amethyst defaults

@@ -404,14 +404,23 @@ internal class Ansi(
         fun forStream(isStderr: Boolean): Ansi {
             if (noColor) return Ansi(false)
             if (forceColor) return Ansi(true)
-            // JDK 21 has no per-stream isatty. System.console() != null only when
-            // BOTH stdin and stdout are terminals, which wrongly stripped color
-            // from stderr progress during the most common pipe (`amy … | jq`).
-            // Approximation: stdout keeps the strict console() gate; stderr colors
-            // whenever an interactive TERM is around (stderr is rarely redirected
-            // on its own, and NO_COLOR remains the escape hatch).
-            val tty = System.console() != null || (isStderr && !System.getenv("TERM").isNullOrEmpty())
-            return Ansi(tty)
+            // JDK 21 has no per-stream isatty, so the safe rule is: never
+            // color unless we positively know a terminal is attached.
+            // System.console() != null covers JDK 21 (both stdin and stdout
+            // are terminals); on JDK 22+ Console.isTerminal() answers even
+            // when a stream is redirected (reflective — the method doesn't
+            // exist on 21). A TERM-sniffing heuristic was tried here and
+            // reverted: cron/CI capture stderr with TERM exported, and raw
+            // escape codes in log files are worse than uncolored progress
+            // during `amy … | jq`. CLICOLOR_FORCE remains the escape hatch.
+            val console = System.console() ?: return Ansi(false)
+            val isTerminal =
+                try {
+                    console.javaClass.getMethod("isTerminal").invoke(console) as? Boolean ?: true
+                } catch (e: Exception) {
+                    true // JDK 21: console() non-null already implies both-TTY
+                }
+            return Ansi(isTerminal)
         }
     }
 }

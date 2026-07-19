@@ -82,7 +82,7 @@ object NipCommand {
         val args = Args(rest)
         val raw = args.positional(0, "nip-number").trim()
         val slug = normalizeSlug(raw)
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
 
         // 1. Canonical repo first.

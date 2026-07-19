@@ -23,14 +23,10 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.withTimeoutOrNull
 
 suspend fun INostrClient.fetchAll(
     relay: String,
@@ -78,88 +74,29 @@ suspend fun INostrClient.fetchAll(
  * [timeoutMs] is an **idle window, not a hard cap**: every arriving event or
  * terminal signal resets it, so a slow relay actively streaming a large
  * backlog is never cropped mid-delivery. The fetch only gives up after a full
- * window of silence — the timeout's job is detecting relays that will never
- * reach a terminal state, not bounding total work.
+ * window of silence — or at the [maxTotalMs] wall-clock ceiling (default 10x
+ * the idle window), which keeps a trickling never-terminal relay from pinning
+ * the caller forever.
+ *
+ * Thin projection over [fetchAllWithHooks] — one shared loop implementation,
+ * with dedup done in the (single-threaded) hook so no shared collection is
+ * ever touched from socket callback threads.
  */
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 30_000L,
+    maxTotalMs: Long = timeoutMs * 10,
 ): List<Event> {
-    val doneChannel = Channel<NormalizedRelayUrl>(Channel.UNLIMITED)
-
-    // Conflated liveness ping: onEvent runs on the socket thread and only needs
-    // to signal "still streaming" — one pending token is enough to reset the
-    // idle window, so repeats are safely dropped.
-    val activityChannel = Channel<Unit>(Channel.CONFLATED)
-
-    val events = mutableListOf<Event>()
     val seenIds = mutableSetOf<HexKey>()
-
-    val remaining = filters.keys.toMutableSet()
-
-    val listener =
-        object : SubscriptionListener {
-            override fun onEvent(
-                event: Event,
-                isLive: Boolean,
-                relay: NormalizedRelayUrl,
-                forFilters: List<Filter>?,
-            ) {
-                if (seenIds.add(event.id)) {
-                    events.add(event)
-                }
-                activityChannel.trySend(Unit)
-            }
-
-            override fun onCannotConnect(
-                relay: NormalizedRelayUrl,
-                message: String,
-                forFilters: List<Filter>?,
-            ) {
-                doneChannel.trySend(relay)
-            }
-
-            override fun onClosed(
-                message: String,
-                relay: NormalizedRelayUrl,
-                forFilters: List<Filter>?,
-            ) {
-                doneChannel.trySend(relay)
-            }
-
-            override fun onEose(
-                relay: NormalizedRelayUrl,
-                forFilters: List<Filter>?,
-            ) {
-                doneChannel.trySend(relay)
-            }
-        }
-
-    try {
-        subscribe(subscriptionId, filters, listener)
-
-        // Idle-window wait: each pass waits up to [timeoutMs] for the next
-        // signal — a terminal message or an event-activity ping. Progress of
-        // either kind restarts the window; a full window of silence ends the
-        // fetch with whatever arrived.
-        while (remaining.isNotEmpty()) {
-            val progressed =
-                withTimeoutOrNull(timeoutMs) {
-                    select<Unit> {
-                        doneChannel.onReceive { finished -> remaining.remove(finished) }
-                        activityChannel.onReceive { }
-                    }
-                }
-            if (progressed == null) break
-        }
-    } finally {
-        unsubscribe(subscriptionId)
-        doneChannel.close()
-        activityChannel.close()
-    }
-
-    return events.sortedWith(DefaultFeedOrderEvent)
+    return fetchAllWithHooks(
+        filters = filters,
+        timeoutMs = timeoutMs,
+        subscriptionId = subscriptionId,
+        maxTotalMs = maxTotalMs,
+    ) { _, event -> seenIds.add(event.id) }
+        .map { it.second }
+        .sortedWith(DefaultFeedOrderEvent)
 }
 
 val DefaultFeedOrderEvent: Comparator<Event> =

@@ -172,7 +172,7 @@ object BunkerCommand {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        val timeoutMs = args.timeoutMsOrNull()
         interactiveTtyError(args)?.let { return it }
         args.rejectUnknown("relay", "secret", "perms")
         val accountError = checkHostable(dataDir)
@@ -219,7 +219,7 @@ object BunkerCommand {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val timeoutMs = args.flag("timeout")?.toLongOrNull()?.let { it * 1000 }
+        val timeoutMs = args.timeoutMsOrNull()
         interactiveTtyError(args)?.let { return it }
         args.rejectUnknown("perms")
         val uri = args.positional(0, "nostrconnect-uri")

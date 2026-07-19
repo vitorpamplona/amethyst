@@ -83,6 +83,30 @@ class AdvertisedRelayListMutationsTest {
     }
 
     @Test
+    fun splitReadWriteEntriesForSameUrlMergeToBoth() {
+        // Legal per NIP-65 and produced by split-marker clients: two `r` tags
+        // for the same URL, one `read` and one `write`. The facets must merge
+        // to BOTH instead of the last entry winning.
+        val before =
+            listOf(
+                AdvertisedRelayInfo(relay1, AdvertisedRelayType.READ),
+                AdvertisedRelayInfo(relay1, AdvertisedRelayType.WRITE),
+            )
+
+        val afterAdd = before.addFacet(relay2, AdvertisedRelayFacet.READ)
+        assertEquals(
+            listOf(relay1.url to AdvertisedRelayType.BOTH, relay2.url to AdvertisedRelayType.READ),
+            afterAdd.keys(),
+        )
+
+        val afterRemove = before.removeFacet(relay1, AdvertisedRelayFacet.WRITE)
+        assertEquals(listOf(relay1.url to AdvertisedRelayType.READ), afterRemove.keys())
+
+        val afterSet = before.setFacet(listOf(relay1), AdvertisedRelayFacet.WRITE)
+        assertEquals(listOf(relay1.url to AdvertisedRelayType.BOTH), afterSet.keys())
+    }
+
+    @Test
     fun setFacetDemotesUnlistedAndAddsTargets() {
         val before =
             listOf(

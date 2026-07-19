@@ -96,8 +96,10 @@ object ConcordCommands {
         val args = Args(rest)
         val name = args.requireFlag("name")
         val about = args.flag("about")
-        // `--relay` is the canonical spelling; `--relays` stays as a silent alias.
-        val relayArg = parseRelays(args.flag("relay") ?: args.flag("relays"))
+        // `--relay` is the canonical spelling; `--relays` stays as a silent alias —
+        // read eagerly so passing both spellings doesn't trip rejectUnknown().
+        val relaysAlias = args.flag("relays")
+        val relayArg = parseRelays(args.flag("relay") ?: relaysAlias)
         args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->

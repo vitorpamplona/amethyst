@@ -45,7 +45,22 @@ import kotlinx.coroutines.withTimeoutOrNull
 class PublishResult(
     val accepted: Boolean,
     val message: String,
-)
+) {
+    /**
+     * True when this failure came from the transport (never connected,
+     * dropped, or silent past the timeout) rather than from the relay
+     * actually answering `OK false`. Callers use this to tell "the relay
+     * refused the event" apart from "the relay never weighed in".
+     */
+    val isTransportFailure: Boolean
+        get() = !accepted && (message == NO_RESPONSE || message == DISCONNECTED || message.startsWith(CANNOT_CONNECT_PREFIX))
+
+    companion object {
+        const val NO_RESPONSE = "no response within timeout"
+        const val DISCONNECTED = "disconnected before OK"
+        const val CANNOT_CONNECT_PREFIX = "cannot connect: "
+    }
+}
 
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndConfirm(
@@ -57,15 +72,22 @@ suspend fun INostrClient.publishAndConfirm(
 /**
  * Sends an event to the given relays and waits for OK responses.
  * Returns per-relay results: relay URL -> accepted (true/false).
- * Prefer [publishAndCollectResults] when the caller can surface the
- * relays' rejection reasons — this projection drops them.
+ * Keeps the historical contract: only relays that RESPONDED (an OK, a
+ * connect failure, or a disconnect) appear — a relay that stayed silent
+ * past the timeout is absent, not reported as `false`, so long-standing
+ * callers that render the false entries as "rejected by" don't start
+ * blaming relays that merely never answered. Prefer
+ * [publishAndCollectResults] when the caller can surface the reasons.
  */
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun INostrClient.publishAndConfirmDetailed(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Map<NormalizedRelayUrl, Boolean> = publishAndCollectResults(event, relayList, timeoutInSeconds).mapValues { it.value.accepted }
+): Map<NormalizedRelayUrl, Boolean> =
+    publishAndCollectResults(event, relayList, timeoutInSeconds)
+        .filterValues { it.message != PublishResult.NO_RESPONSE }
+        .mapValues { it.value.accepted }
 
 /**
  * Sends an event to the given relays and waits for OK responses, keeping the
@@ -90,14 +112,14 @@ suspend fun INostrClient.publishAndCollectResults(
                 errorMessage: String,
             ) {
                 if (relay.url in relayList) {
-                    resultChannel.trySend(DetailedResult(relay.url, false, "cannot connect: $errorMessage"))
+                    resultChannel.trySend(DetailedResult(relay.url, false, PublishResult.CANNOT_CONNECT_PREFIX + errorMessage))
                     Log.d("publishAndConfirm") { "Error from relay ${relay.url}: $errorMessage" }
                 }
             }
 
             override fun onDisconnected(relay: IRelayClient) {
                 if (relay.url in relayList) {
-                    resultChannel.trySend(DetailedResult(relay.url, false, "disconnected before OK"))
+                    resultChannel.trySend(DetailedResult(relay.url, false, PublishResult.DISCONNECTED))
                     Log.d("publishAndConfirm") { "Disconnected from relay ${relay.url}" }
                 }
             }
@@ -160,11 +182,9 @@ suspend fun INostrClient.publishAndCollectResults(
 
     Log.d("publishAndConfirm") { "Finished with ${receivedResults.size} results" }
 
-    // Relays that never answered are still part of the verdict.
-    val silent = relayList - receivedResults.keys
-    silent.forEach { receivedResults[it] = PublishResult(false, "no response within timeout") }
-
-    return receivedResults
+    // Pure construction of the promised invariant: the result covers the
+    // full relayList, with never-answered relays reported as NO_RESPONSE.
+    return relayList.associateWith { receivedResults[it] ?: PublishResult(false, PublishResult.NO_RESPONSE) }
 }
 
 private class DetailedResult(

@@ -191,7 +191,7 @@ object GrapeRankOperator {
                             relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 4)),
                             authorChunk = args.intFlag("author-chunk", 500),
                             minAuthors = args.intFlag("min-authors", 1),
-                            idleTimeoutMs = args.longFlag("timeout", 30L) * 1000,
+                            idleTimeoutMs = args.timeoutMs(30),
                             knownDead = knownDead,
                         ),
                     log = { System.err.println(it) },
@@ -325,11 +325,14 @@ object GrapeRankOperator {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val providerArg = args.positionalOrNull(0) ?: args.flag("provider")
+        // Read `--provider` eagerly so a positional PROVIDER plus the flag
+        // spelling doesn't trip rejectUnknown().
+        val providerFlag = args.flag("provider")
+        val providerArg = args.positionalOrNull(0) ?: providerFlag
         val serviceArg = args.flag("service")
         val relayArg = args.flag("relay")
         val isPrivate = args.bool("private")
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val timeoutMs = args.timeoutMs(8L)
         args.rejectUnknown()
 
         val service =
@@ -344,7 +347,7 @@ object GrapeRankOperator {
 
             val outbox = ctx.outboxRelays()
             val relay =
-                relayArg?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+                relayArg?.let { RelayUrlNormalizer.normalizeOrNull(it) ?: throw IllegalArgumentException("invalid relay url: $it") }
                     ?: outbox.firstOrNull()
                     ?: return Output.error("no_relays", "no relay hint; pass --relay URL or configure outbox relays")
 
@@ -407,13 +410,16 @@ object GrapeRankOperator {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
+        // Read `--provider` eagerly so a positional PROVIDER plus the flag
+        // spelling doesn't trip rejectUnknown().
+        val providerFlag = args.flag("provider")
         val providerArg =
             args.positionalOrNull(0)
-                ?: args.flag("provider")
+                ?: providerFlag
                 ?: return Output.error("bad_args", "usage: amy graperank unregister PROVIDER [--service KIND:TAG] [--relay URL]")
         val serviceArg = args.flag("service")
         val relayArg = args.flag("relay")
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val timeoutMs = args.timeoutMs(8L)
         args.rejectUnknown()
 
         val service =
@@ -497,7 +503,7 @@ object GrapeRankOperator {
         val args = Args(rest)
         val userArg = args.positionalOrNull(0)
         val refresh = args.bool("refresh")
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->

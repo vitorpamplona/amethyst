@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
@@ -48,7 +49,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * cropped mid-delivery — the fetch ends when the work is done or when nothing
  * has arrived for [timeoutMs] (a stall). The terminal conditions (EOSE /
  * CLOSED / cannot-connect per relay) are what bound the fetch; the timeout's
- * only job is detecting relays that will never reach one.
+ * only job is detecting relays that will never reach one. [maxTotalMs]
+ * (default 10x the idle window) is the wall-clock ceiling that keeps a
+ * trickling relay from pinning the caller forever.
  *
  * Extras over [fetchAll]:
  *  - **[onEvent] hook** — suspending per-event callback, invoked single-threaded
@@ -77,6 +80,15 @@ suspend fun INostrClient.fetchAllWithHooks(
     pendingOnAuthRequired: Boolean = false,
     deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
     onTimeout: ((stalled: Set<NormalizedRelayUrl>, doneReasons: Map<NormalizedRelayUrl, String>, collected: List<Pair<NormalizedRelayUrl, Event>>) -> Unit)? = null,
+    /**
+     * Hard wall-clock ceiling. The idle window alone is unbounded when a relay
+     * keeps trickling events without ever reaching a terminal state — an
+     * adversarial or misbehaving relay could pin the caller forever. The cap
+     * restores an upper bound while staying far above the idle window, so a
+     * legitimately streaming relay still finishes its backlog. Pass
+     * [Long.MAX_VALUE] for a deliberately uncapped drain.
+     */
+    maxTotalMs: Long = timeoutMs * 10,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
     if (filters.isEmpty()) return emptyList()
@@ -124,40 +136,94 @@ suspend fun INostrClient.fetchAllWithHooks(
             }
         }
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
+    // One conflated token, armed by a delay()-based watchdog, ends the fetch
+    // at the wall-clock ceiling. delay() keeps the cap on the coroutine clock
+    // (cancellable, virtual-time-testable) instead of sampling a wall clock.
+    val capChannel = Channel<Unit>(Channel.CONFLATED)
     try {
-        subscribe(subscriptionId, filters, listener)
-        // Idle-window wait: each pass waits up to [timeoutMs] for the NEXT
-        // message; any event or terminal signal restarts the window. Only a
-        // full window of silence ends the fetch early.
-        var stalled = false
-        while (remaining.isNotEmpty()) {
-            val progressed =
-                withTimeoutOrNull(timeoutMs) {
-                    select<Unit> {
-                        eventChannel.onReceive { pair ->
-                            if (onEvent(pair.first, pair.second)) collected.add(pair)
-                        }
-                        doneChannel.onReceive { (relay, reason) ->
-                            remaining.remove(relay)
-                            doneReasons[relay] = reason
-                        }
+        coroutineScope {
+            subscribe(subscriptionId, filters, listener)
+            val watchdog =
+                if (maxTotalMs == Long.MAX_VALUE) {
+                    null
+                } else {
+                    launch {
+                        delay(maxTotalMs)
+                        capChannel.trySend(Unit)
                     }
                 }
-            if (progressed == null) {
-                stalled = true
-                break
+            // Idle-window wait with a wall-clock ceiling. Two structural rules:
+            //
+            //  1. The suspending [onEvent] hook NEVER runs inside a timeout
+            //     scope. Cancellation only lands at suspension points, so a
+            //     hook stalled in verify/persist work would otherwise be
+            //     cancelled mid-write by an expiring window and the
+            //     already-received event silently lost. The select bodies
+            //     below only stash/bookkeep (non-suspending — they cannot be
+            //     cancelled mid-body); the hook runs after.
+            //
+            //  2. The timeout is only armed when both channels are DRY.
+            //     Buffered messages drain through the tryReceive fast path
+            //     with zero timeout-job churn — under burst arrival a
+            //     per-message withTimeoutOrNull would pay one
+            //     scheduled+cancelled cancellation task per event for nothing.
+            var stalled = false
+            var capped = false
+            while (remaining.isNotEmpty() && !capped) {
+                var pending: Pair<NormalizedRelayUrl, Event>? = null
+
+                // Fast path: consume whatever is already buffered.
+                if (capChannel.tryReceive().isSuccess) {
+                    capped = true
+                    break
+                }
+                val bufferedDone = doneChannel.tryReceive().getOrNull()
+                if (bufferedDone != null) {
+                    remaining.remove(bufferedDone.first)
+                    doneReasons[bufferedDone.first] = bufferedDone.second
+                    continue
+                }
+                pending = eventChannel.tryReceive().getOrNull()
+
+                // Slow path: both dry — arm one idle wait for the next signal.
+                if (pending == null) {
+                    val progressed =
+                        withTimeoutOrNull(timeoutMs) {
+                            select<Unit> {
+                                eventChannel.onReceive { pending = it }
+                                doneChannel.onReceive { (relay, reason) ->
+                                    remaining.remove(relay)
+                                    doneReasons[relay] = reason
+                                }
+                                capChannel.onReceive { capped = true }
+                            }
+                        }
+                    if (progressed == null) {
+                        stalled = true
+                        break
+                    }
+                    if (capped) break
+                }
+
+                pending?.let { pair ->
+                    if (onEvent(pair.first, pair.second)) collected.add(pair)
+                }
             }
-        }
-        // Drain any events that landed after the last terminal signal (or
-        // during the final window) but before unsubscribe.
-        while (true) {
-            val r = eventChannel.tryReceive()
-            if (!r.isSuccess) break
-            val pair = r.getOrThrow()
-            if (onEvent(pair.first, pair.second)) collected.add(pair)
-        }
-        if (stalled && remaining.isNotEmpty()) {
-            onTimeout?.invoke(remaining, doneReasons, collected)
+            // Drain any events that landed after the last terminal signal (or
+            // during the final window) but before unsubscribe. Skipped when
+            // the ceiling fired — the cap must actually stop the work.
+            if (!capped) {
+                while (true) {
+                    val r = eventChannel.tryReceive()
+                    if (!r.isSuccess) break
+                    val pair = r.getOrThrow()
+                    if (onEvent(pair.first, pair.second)) collected.add(pair)
+                }
+            }
+            if ((stalled || capped) && remaining.isNotEmpty()) {
+                onTimeout?.invoke(remaining, doneReasons, collected)
+            }
+            watchdog?.cancel()
         }
     } finally {
         unsubscribe(subscriptionId)

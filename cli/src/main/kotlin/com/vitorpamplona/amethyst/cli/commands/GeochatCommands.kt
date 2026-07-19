@@ -267,12 +267,15 @@ object GeochatCommands {
         args: Args,
         geohash: String,
     ): List<NormalizedRelayUrl> {
+        // Read eagerly so `--relay X --no-fetch` doesn't trip rejectUnknown()
+        // when the explicit-relay early return skips the directory branch.
+        val noFetch = args.bool("no-fetch")
         val explicit = RawEventSupport.relayFlag(args).toList()
         val allExplicit = (explicit + args.positional.mapNotNull { if (it.startsWith("wss://") || it.startsWith("ws://")) RelayUrlNormalizer.normalizeOrNull(it) else null })
         if (allExplicit.isNotEmpty()) return allExplicit.distinct()
 
         val directory = GeoRelayDirectory()
-        if (!args.bool("no-fetch")) {
+        if (!noFetch) {
             runCatching { GeoRelayCsvLoader { OkHttpClient() }.refresh(directory) }
         }
         return directory.closestRelays(geohash)

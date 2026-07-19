@@ -98,7 +98,7 @@ object FetchCommand {
         val explicitLimit = args.flag("limit")?.toIntOrNull()
         if (explicitLimit != null && explicitLimit < 0) return Output.error("bad_args", "--limit must be >= 0 (0 = unbounded)")
         val effectiveLimit: Int? = if (explicitLimit == 0) null else (explicitLimit ?: DEFAULT_LIMIT)
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
         // The filter/relay/paging flags are read later (buildFilter, queryTargets,
         // the --paginate branch) and code mode skips them entirely, so whitelist
         // them here where both paths still share the flow.

@@ -333,7 +333,7 @@ object RelayCommands {
         val args = Args(rest)
         // Per probe WAVE, not per relay or total — a wave's stragglers are cut off
         // together when it elapses.
-        val timeoutMs = args.longFlag("timeout", 15L) * 1000
+        val timeoutMs = args.timeoutMs(15)
         // Relays dialed at once; --relay-concurrency accepted as the alias the
         // graperank verbs spell it with.
         val waveSize = args.intFlag("concurrency", args.intFlag("relay-concurrency", Context.defaultPreconnectCap))

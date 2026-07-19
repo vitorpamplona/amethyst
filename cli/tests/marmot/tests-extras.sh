@@ -47,7 +47,7 @@ test_09_reply_react_unreact() {
   sleep 3
   local a_anchor_id
   a_anchor_id=$(amy_json marmot message list "$gid" --limit 50 2>/dev/null \
-                  | jq -r '[.messages[]? | select((.content // "") == "anchor for reactions")][0].id // empty')
+                  | jq -r '[.messages[]? | select((.content // "") == "anchor for reactions")][0].event_id // empty')
   if [[ -z "$a_anchor_id" || "$a_anchor_id" == "null" ]]; then
     record_result "$id" fail "amy couldn't find anchor message in local log"; return
   fi

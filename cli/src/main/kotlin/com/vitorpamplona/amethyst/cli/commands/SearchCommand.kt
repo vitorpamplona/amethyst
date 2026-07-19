@@ -86,7 +86,7 @@ object SearchCommand {
         val query = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val limit = args.longFlag("limit", 50L).toInt()
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
 
         val filter =
@@ -127,10 +127,12 @@ object SearchCommand {
         val query = rest[0]
         val args = Args(rest.drop(1).toTypedArray())
         val limit = args.longFlag("limit", 50L).toInt()
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
-        // `--kind` is canonical (matching fetch/subscribe); `--kinds` stays a silent alias.
+        val timeoutMs = args.timeoutMs(8L)
+        // `--kind` is canonical (matching fetch/subscribe); `--kinds` stays a silent
+        // alias — read eagerly so passing both spellings doesn't trip rejectUnknown().
+        val kindsAlias = args.flag("kinds")
         val kindList =
-            (args.flag("kind") ?: args.flag("kinds"))
+            (args.flag("kind") ?: kindsAlias)
                 ?.split(',')
                 ?.mapNotNull { it.trim().toIntOrNull() }
                 ?.takeIf { it.isNotEmpty() }

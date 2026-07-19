@@ -152,7 +152,8 @@ object NappletCommands {
     ): Int {
         val args = Args(rest)
         val author = args.positionalOrNull(0) ?: return Output.error("bad_args", "napplet serve <author> [--d ID] [--port N] [--server S] [--relay R]")
-        val identifier = args.flag("d") ?: args.flag("identifier")
+        val identifierAlias = args.flag("identifier")
+        val identifier = args.flag("d") ?: identifierAlias
         val port = args.intFlag("port", 8080)
         val extraServers = StaticSiteFetch.commaList(args.flag("server"))
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
@@ -210,7 +211,8 @@ object NappletCommands {
         if (snapshotId == null && author == null) {
             return Output.error("bad_args", "napplet fetch <author> [--d ID] | --snapshot <event-id> [--path P]")
         }
-        val identifier = args.flag("d") ?: args.flag("identifier")
+        val identifierAlias = args.flag("identifier")
+        val identifier = args.flag("d") ?: identifierAlias
         val requestPath = args.flag("path", "/")!!
         val outFile = args.flag("out")
         val timeoutSecs = args.longFlag("timeout", 8L)

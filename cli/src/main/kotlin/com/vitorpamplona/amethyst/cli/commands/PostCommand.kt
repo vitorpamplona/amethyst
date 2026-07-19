@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.pow
@@ -58,12 +57,9 @@ object PostCommand {
                 ?: return Output.error("bad_args", "post <text> [--relay URL …] [--pow BITS [--pow-timeout SECS]]")
         if (text.isBlank()) return Output.error("bad_args", "post text must not be blank")
 
-        val extraRelays =
-            args
-                .flag("relay")
-                ?.split(',')
-                ?.map { it.trim() }
-                ?.filter { it.isNotEmpty() } ?: emptyList()
+        // Strictly validated like every other `--relay` in amy — a malformed
+        // entry is a bad_args failure, not a silent drop.
+        val extraRelays = RawEventSupport.relayFlag(args)
 
         val powRaw = args.flag("pow")
         val powTarget = powRaw?.toIntOrNull()
@@ -76,8 +72,7 @@ object PostCommand {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val outbox = ctx.outboxRelays()
-            val extraNormalized = extraRelays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-            val targets = (outbox + extraNormalized).toSet()
+            val targets = (outbox + extraRelays).toSet()
             if (targets.isEmpty()) {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }

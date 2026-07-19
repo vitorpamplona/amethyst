@@ -141,6 +141,37 @@ class FetchAllIdleTimeoutTest {
         }
 
     @Test
+    fun wallClockCapStopsAnEndlessTrickle() =
+        runTest {
+            val client = ScriptedClient()
+            var stalledRelays: Set<NormalizedRelayUrl>? = null
+            val feeder =
+                launch {
+                    // A relay that trickles forever, always inside the idle
+                    // window, never reaching a terminal state — without the cap
+                    // this fetch would never return.
+                    var i = 0
+                    while (true) {
+                        delay(200)
+                        client.listener!!.onEvent(event(i++), false, relay, null)
+                    }
+                }
+            val start = currentTime
+            val collected =
+                client.fetchAllWithHooks(
+                    filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
+                    timeoutMs = 300,
+                    maxTotalMs = 1_000,
+                    onTimeout = { stalled, _, _ -> stalledRelays = stalled },
+                ) { _, _ -> true }
+            feeder.cancel()
+            val elapsed = currentTime - start
+            assertTrue(elapsed in 1_000..1_300, "the cap must stop the fetch near maxTotalMs, took $elapsed")
+            assertTrue(collected.size in 4..6, "events before the cap are kept, got ${collected.size}")
+            assertEquals(setOf(relay), stalledRelays, "the capped relay is reported to onTimeout")
+        }
+
+    @Test
     fun eoseStillEndsImmediately() =
         runTest {
             val client = ScriptedClient()

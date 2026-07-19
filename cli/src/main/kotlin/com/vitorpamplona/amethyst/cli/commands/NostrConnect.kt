@@ -92,7 +92,7 @@ object NostrConnect {
         }
         val relays = RawEventSupport.relayFlag(args).ifEmpty { DefaultNIP65RelaySet }
         if (relays.isEmpty()) return Output.error("bad_args", "no relays; pass --relay URL[,URL…]")
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 120L) * 1000
+        val timeoutMs = args.timeoutMs(120)
         val name = args.flag("name")
         // Optional NIP-46 permission request (`--perms sign_event:1,nip44_encrypt,…`). When present it
         // rides along in the offer so a signer that honors `perms` (e.g. Amethyst's informed-consent

@@ -161,7 +161,8 @@ object Podcast20Commands {
                 return Output.error("bad_args", "podcast20 episode --value-json is not valid JSON")
             }
 
-        val dTag = args.flag("d") ?: args.flag("identifier") ?: generateDTag("episode")
+        val identifierAlias = args.flag("identifier")
+        val dTag = args.flag("d") ?: identifierAlias ?: generateDTag("episode")
         val video = args.flag("video")?.let { PodcastAudio(it, args.flag("video-type")) }
 
         Context.open(dataDir).use { ctx ->
@@ -208,7 +209,8 @@ object Podcast20Commands {
         val args = Args(rest)
         val title = args.flag("title") ?: return Output.error("bad_args", "podcast20 trailer requires --title")
         val url = args.flag("url") ?: return Output.error("bad_args", "podcast20 trailer requires --url")
-        val dTag = args.flag("d") ?: args.flag("identifier") ?: generateDTag("trailer")
+        val identifierAlias = args.flag("identifier")
+        val dTag = args.flag("d") ?: identifierAlias ?: generateDTag("trailer")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()

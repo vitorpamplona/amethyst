@@ -87,8 +87,10 @@ object GitCommands {
     ): Int {
         val args = Args(rest)
         val name = args.flag("name") ?: return Output.error("bad_args", "git announce requires --name")
-        // `--identifier` is the spelled-out alias of `--d` (the d-tag).
-        val identifier = args.flag("d") ?: args.flag("identifier") ?: name
+        // `--identifier` is the spelled-out alias of `--d` (the d-tag) — read
+        // eagerly so passing both spellings doesn't trip rejectUnknown().
+        val identifierAlias = args.flag("identifier")
+        val identifier = args.flag("d") ?: identifierAlias ?: name
         val csv = { key: String ->
             args
                 .flag(key)

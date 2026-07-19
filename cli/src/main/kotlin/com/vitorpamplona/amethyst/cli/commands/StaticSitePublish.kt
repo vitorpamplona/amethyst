@@ -66,7 +66,8 @@ object StaticSitePublish {
         val servers = StaticSiteFetch.commaList(args.flag("server"))
         if (servers.isEmpty()) return Output.error("bad_args", "publish requires --server <blossom-url> (comma-separated for mirrors)")
 
-        val identifier = args.flag("d") ?: args.flag("identifier")
+        val identifierAlias = args.flag("identifier")
+        val identifier = args.flag("d") ?: identifierAlias
         val requires = StaticSiteFetch.commaList(args.flag("requires"))
         val title = args.flag("title")
         val description = args.flag("description")

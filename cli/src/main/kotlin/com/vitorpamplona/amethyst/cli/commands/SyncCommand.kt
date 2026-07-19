@@ -133,7 +133,7 @@ object SyncCommand {
         val relay =
             RelayUrlNormalizer.normalizeOrNull(relayUrl)
                 ?: return Output.invalidRelayUrl(relayUrl)
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 30L) * 1000
+        val timeoutMs = args.timeoutMs(30)
         // Default direction is download; --up adds upload.
         val up = args.bool("up")
         val down = args.bool("down") || !up

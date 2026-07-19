@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.cli.commands.RawEventSupport
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.quartz.experimental.graperank.GrapeRankPublisher
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -31,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
@@ -61,12 +61,14 @@ object GrapeRankPublish {
     ): Int {
         val args = Args(rest)
         val observerArg = args.positionalOrNull(0)
-        val relayArg = args.flag("relay")
+        // Strictly validated like every other `--relay` in amy — a malformed
+        // entry is a bad_args failure, not a silent drop.
+        val explicitRelays = RawEventSupport.relayFlag(args)
         // --relay-concurrency is canonical for "relays worked at once" across the
         // graperank verbs; --concurrency is accepted everywhere as its alias.
         val relayConcurrency = args.intFlag(FLAG_RELAY_CONCURRENCY, args.intFlag(FLAG_CONCURRENCY, 4))
         // Idle watchdog per relay reconcile (not a total budget), like `refresh`.
-        val idleTimeoutMs = args.longFlag("timeout", 30L) * 1000
+        val idleTimeoutMs = args.timeoutMs(30)
         args.rejectUnknown()
 
         Context.open(dataDir).use { ctx ->
@@ -77,11 +79,7 @@ object GrapeRankPublish {
 
             // Cards live on the operator's own relay(s); --relay overrides.
             val relays =
-                relayArg
-                    ?.split(",")
-                    ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-                    ?.toSet()
-                    ?.takeIf { it.isNotEmpty() }
+                explicitRelays.takeIf { it.isNotEmpty() }
                     ?: opKeys.operatorRelays()
             if (relays.isEmpty()) {
                 return Output.error("no_relays", "no operator relay configured — run `amy graperank operator relay <url>` or pass --relay")
@@ -162,7 +160,7 @@ object GrapeRankPublish {
                 ?: return Output.error("bad_args", "usage: amy graperank rank USER [--provider PUBKEY] [--refresh] [--timeout SECS]")
         val providerArg = args.flag("provider")
         val refresh = args.bool("refresh")
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
         args.rejectUnknown()
 
         Context.openOrAnonymous(dataDir).use { ctx ->

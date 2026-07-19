@@ -103,7 +103,7 @@ object ZapCommand {
         val args = Args(rest.drop(2).toTypedArray())
         val comment = args.flag("comment") ?: ""
         val zapType = parseZapType(args)
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
         val withFlag = args.flag("with")
         val settleWith =
             if (withFlag == null) {
@@ -152,7 +152,7 @@ object ZapCommand {
         val args = Args(rest.drop(2).toTypedArray())
         val comment = args.flag("comment") ?: ""
         val zapType = parseZapType(args)
-        val timeoutMs = args.longFlag("timeout", 8L) * 1000
+        val timeoutMs = args.timeoutMs(8)
         val withFlag = args.flag("with")
         val settleWith =
             if (withFlag == null) {

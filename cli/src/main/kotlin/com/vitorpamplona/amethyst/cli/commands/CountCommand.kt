@@ -58,7 +58,7 @@ object CountCommand {
             return 0
         }
         val args = Args(rest)
-        val timeoutMs = (args.flag("timeout")?.toLongOrNull() ?: 15L) * 1000
+        val timeoutMs = args.timeoutMs(15)
         val filter = RawEventSupport.buildFilter(args)
         args.rejectUnknown("relay")
 

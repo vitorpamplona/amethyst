@@ -99,7 +99,9 @@ object DebitCommands {
         val args = Args(rest)
         val bolt11 = args.positional(1, "bolt11")
         val amount = args.flag("amount")?.toLongOrNull()
-        val timeoutMs = args.longFlag("timeout", 15) * 1000
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
         args.rejectUnknown()
 
         return roundTrip(dataDir, args, timeoutMs) { client -> client.payInvoice(bolt11, amount) }
@@ -115,7 +117,9 @@ object DebitCommands {
             args.flag("amount")?.toLongOrNull()
                 ?: return Output.error("bad_args", "--amount SATS is required for a budget")
         val frequency = parseFrequency(args.flag("frequency")) ?: return Output.error("bad_args", "unknown --frequency '${args.flag("frequency")}' (day|week|month)")
-        val timeoutMs = args.longFlag("timeout", 15) * 1000
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
         args.rejectUnknown()
 
         return roundTrip(dataDir, args, timeoutMs) { client -> client.requestBudget(amount, frequency.value) }

@@ -152,7 +152,9 @@ object OfferCommands {
     ): Int {
         val args = Args(rest)
         val amount = args.flag("amount")?.toLongOrNull()
-        val timeoutMs = args.longFlag("timeout", 15) * 1000
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
         val follow = args.bool("follow")
         // Offers can be configured to require payer fields (e.g. email); Lightning.Pub
         // rejects a request missing them as "Invalid Offer" (code 1), so the round-trip
@@ -230,7 +232,9 @@ object OfferCommands {
     ): Int {
         val args = Args(rest)
         val amount = args.flag("amount")?.toLongOrNull()
-        val timeoutMs = args.longFlag("timeout", 15) * 1000
+        val timeoutMs = args.timeoutMs(15)
+        // Guard ms-era scripts: a value this large is almost certainly milliseconds.
+        if (timeoutMs > 3_600_000) return Output.error("bad_args", "--timeout is seconds (max 3600); ${timeoutMs / 1000} looks like milliseconds")
 
         val offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer

@@ -387,6 +387,22 @@ class Context(
     }
 
     /**
+     * Per-account alias map, read once per invocation. Alias lookups only
+     * apply to short name-shaped inputs: an npub/nprofile/NIP-05/64-hex input
+     * always resolves as itself, so an alias can never silently shadow a real
+     * identifier (`amy dm send bob@damus.io …` reaches the actual NIP-05 owner
+     * even if a local account happens to carry that name).
+     */
+    private val aliases by lazy { Aliases.load(dataDir) }
+
+    private fun aliasFor(input: String): String? {
+        val nameShaped = input.length in 1..64 && input.all { it.isLetterOrDigit() || it == '_' || it == '-' }
+        val hexShaped = input.length == 64 && input.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+        if (!nameShaped || hexShaped) return null
+        return aliases[input]
+    }
+
+    /**
      * Resolve an alias (per-account `aliases.json`) / `npub…` / `nprofile…` /
      * 64-hex / `name@domain.tld` to a pubkey hex. Aliases are checked first —
      * they are local, unambiguous names the user chose (`amy dm send bob "hi"`)
@@ -403,7 +419,7 @@ class Context(
      */
     suspend fun requireUserHex(input: String): HexKey {
         val notResolved = "Could not resolve user: '$input' (accepts an alias, npub, nprofile, 64-hex, or name@domain.tld)"
-        val resolvable = Aliases.load(dataDir)[input] ?: input
+        val resolvable = aliasFor(input) ?: input
         val hex =
             resolveUserHexOrNull(resolvable, nip05Client)
                 ?: throw IllegalArgumentException(notResolved)
