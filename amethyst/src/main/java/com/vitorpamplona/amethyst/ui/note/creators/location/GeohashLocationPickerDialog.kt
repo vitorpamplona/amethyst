@@ -65,6 +65,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,8 +93,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.label
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -192,6 +195,7 @@ fun GeohashLocationPickerContent(
 ) {
     val context = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
     val locationManager = Amethyst.instance.locationManager
 
     val seed = remember(initialGeohash) { initialGeohash?.takeIf { it.isNotBlank() }?.let { GeoHash.decode(it) } }
@@ -246,19 +250,18 @@ fun GeohashLocationPickerContent(
     }
 
     // "Use my location": tapping either fires the fetch (permission already granted) or
-    // asks for it; [awaitingPermission] carries the intent across the system dialog so a
-    // grant auto-starts the fetch, while a denial simply drops the request (no stuck spinner).
-    val permission = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
+    // asks for it; [awaitingPermission] tracks the in-flight prompt so the button shows a
+    // spinner. The result callback fires on BOTH grant and denial — so a denial always
+    // clears the spinner (an isGranted-keyed effect wouldn't re-run on the false→false case).
     var wantsMyLocation by remember { mutableStateOf(false) }
     var awaitingPermission by remember { mutableStateOf(false) }
+    val permission =
+        rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION) { granted ->
+            awaitingPermission = false
+            if (granted) wantsMyLocation = true
+        }
     LaunchedEffect(permission.status.isGranted) {
         locationManager.setLocationPermission(permission.status.isGranted)
-        if (permission.status.isGranted && awaitingPermission) {
-            awaitingPermission = false
-            wantsMyLocation = true
-        } else if (!permission.status.isGranted) {
-            awaitingPermission = false
-        }
     }
     LaunchedEffect(wantsMyLocation) {
         if (wantsMyLocation) {
@@ -309,11 +312,15 @@ fun GeohashLocationPickerContent(
             searching = true
             searchMissed = false
             results = emptyList()
-            ForwardGeolocation.execute(q, context) { addresses ->
-                searching = false
-                val hits = addresses.orEmpty().filter { it.hasLatitude() && it.hasLongitude() }
-                results = hits
-                searchMissed = hits.isEmpty()
+            // Off the main thread: on Android < 13 ForwardGeolocation.execute() calls the
+            // blocking Geocoder synchronously, which would freeze/ANR the UI thread.
+            scope.launch(Dispatchers.IO) {
+                ForwardGeolocation.execute(q, context) { addresses ->
+                    searching = false
+                    val hits = addresses.orEmpty().filter { it.hasLatitude() && it.hasLongitude() }
+                    results = hits
+                    searchMissed = hits.isEmpty()
+                }
             }
         }
     }
