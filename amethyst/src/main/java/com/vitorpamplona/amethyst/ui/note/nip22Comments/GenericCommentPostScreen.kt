@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -244,9 +245,16 @@ private fun GenericCommentPostBody(
         ) {
             Column(Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true)) {
                 postViewModel.externalIdentity?.let {
-                    Row {
-                        DisplayExternalId(it, accountViewModel, nav)
+                    if (it is GeohashId) {
+                        // Geo-post: the interactive location channel (with retarget) replaces
+                        // the static external-id marker so there's a single location control.
+                        GeoPostLocationChannel(postViewModel)
                         Spacer(modifier = StdVertSpacer)
+                    } else {
+                        Row {
+                            DisplayExternalId(it, accountViewModel, nav)
+                            Spacer(modifier = StdVertSpacer)
+                        }
                     }
                 }
 
@@ -310,8 +318,6 @@ private fun GenericCommentPostBody(
                         postViewModel,
                     )
                 }
-
-                GeoPostLocationChannel(postViewModel)
 
                 DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
 
