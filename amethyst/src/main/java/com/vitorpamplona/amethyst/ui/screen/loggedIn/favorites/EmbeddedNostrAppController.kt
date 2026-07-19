@@ -36,6 +36,7 @@ import androidx.annotation.RequiresApi
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
@@ -72,9 +73,18 @@ class EmbeddedNostrAppController(
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
 
+    /**
+     * True once this controller's adapter has actually been handed to a [SandboxedSdkView]. An adapter can
+     * only ever serve ONE view: when that view is disposed, privacysandbox closes the remote session and the
+     * sandbox destroys its WebView, so the adapter is dead. See [attachView].
+     */
+    private var adapterDelivered = false
+
     // A single NappletHostService instance serves every embedded napplet tab, so each controller stamps
     // its own id on every message; the provider uses it to route controls/state/IME to this tab.
-    private val sessionId: String = "napplet-${SESSION_SEQ.incrementAndGet()}"
+    // Re-minted whenever the remote session is re-created (see [attachView]), so a late close() from the
+    // previous view can never reap the replacement.
+    private var sessionId: String = "napplet-${SESSION_SEQ.incrementAndGet()}"
 
     // A parked tab can be hidden (paused) before the service even binds, so the pause message is
     // dropped (no messenger yet). Remember the intent and replay it right after the session is created,
@@ -129,6 +139,7 @@ class EmbeddedNostrAppController(
         serviceMessenger = null
         sandboxedSdkView = null
         pendingAdapter = null
+        adapterDelivered = false
         onStateChanged = null
         onNotice = null
         onImeEvent = null
@@ -136,14 +147,44 @@ class EmbeddedNostrAppController(
         onLoadStatusChanged = null
     }
 
+    /**
+     * Hands the surface view to the controller; applies the adapter if it already arrived, and re-arms the
+     * remote session when this controller is being re-used by a *second* view.
+     *
+     * A warm controller outlives the composition (it lives in the process-scoped
+     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost]), but its [SandboxedSdkView]
+     * does not: an account switch rebuilds the whole logged-in subtree, disposing every surface. That
+     * disposal makes privacysandbox close the remote session and the sandbox destroy its WebView, so the
+     * adapter already handed out is dead and cannot serve the fresh view. A [SandboxedSdkView] with no
+     * adapter never builds a ContentView/SurfaceView and paints nothing but its background colour, forever.
+     *
+     * So when a new view attaches after the adapter was already delivered, ask the sandbox for a brand new
+     * session; the reply arms this view. [sendCreateSession] re-stamps the CURRENT account's storage
+     * profile, so re-arming can never resurrect the previous account's jar.
+     */
     override fun attachView(view: SandboxedSdkView) {
         sandboxedSdkView = view
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(params.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE))
-        pendingAdapter?.let {
-            view.setAdapter(it)
-            pendingAdapter = null
+        val adapter = pendingAdapter
+        when {
+            adapter != null -> {
+                pendingAdapter = null
+                adapterDelivered = true
+                view.setAdapter(adapter)
+            }
+            // No adapter in hand and one was already spent on a previous (now disposed) view: the session
+            // behind it is gone, so this view would stay blank forever. Re-create it.
+            adapterDelivered -> {
+                // Mint a FRESH session id: the disposed view's Session.close() reaches the sandbox
+                // asynchronously and can land AFTER this create. Reusing the id would let that late close
+                // reap the session we just asked for, leaving the surface black.
+                sessionId = "napplet-${SESSION_SEQ.incrementAndGet()}"
+                adapterDelivered = false
+                sendCreateSession()
+            }
+            // else: the first session is still in flight; MSG_SESSION_READY will arm this view.
         }
     }
 
@@ -157,7 +198,15 @@ class EmbeddedNostrAppController(
         val msg =
             Message.obtain(null, NappletEmbedContract.MSG_CREATE_SESSION).apply {
                 replyTo = incoming
-                data = Bundle(params).apply { putString(NappletEmbedContract.KEY_SESSION_ID, sessionId) }
+                data =
+                    Bundle(params).apply {
+                        putString(NappletEmbedContract.KEY_SESSION_ID, sessionId)
+                        // Re-stamp the storage partition at SEND time rather than trusting the one baked
+                        // into [params] at construction: a session re-created for a new view (see
+                        // [attachView]) must land in the CURRENT account's jar, never the one this
+                        // controller was originally built for.
+                        putString(NappletHostContract.EXTRA_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
+                    }
             }
         runCatching { serviceMessenger?.send(msg) }
         // Replay a pause that was requested before we had a messenger to send it on (parked-before-bound),
@@ -172,7 +221,12 @@ class EmbeddedNostrAppController(
                 val coreLibInfo = msg.data?.getBundle(NappletEmbedContract.KEY_CORE_LIB_INFO) ?: return true
                 val adapter = SandboxedUiAdapterFactory.createFromCoreLibInfo(coreLibInfo)
                 val view = sandboxedSdkView
-                if (view != null) view.setAdapter(adapter) else pendingAdapter = adapter
+                if (view != null) {
+                    adapterDelivered = true
+                    view.setAdapter(adapter)
+                } else {
+                    pendingAdapter = adapter
+                }
             }
             NappletEmbedContract.MSG_STATE -> {
                 val canGoBack = msg.data?.getBoolean(NappletEmbedContract.KEY_CAN_GO_BACK, false) ?: false
