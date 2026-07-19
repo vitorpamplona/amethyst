@@ -115,10 +115,10 @@
     <string name="road_event_accident">दुर्घटना</string>
     <string name="road_event_animal">मार्ग पर मृग</string>
     <string name="road_event_confirmed">अब भी वहीं</string>
-    <string name="road_event_confirms_report">मार्ग सूचना की पुष्टि</string>
+    <string name="road_event_confirms_report">मार्ग वृत्तान्त की पुष्टि</string>
     <string name="road_event_construction">निर्माण</string>
     <string name="road_event_denied">अब वहाँ नहीं</string>
-    <string name="road_event_denies_report">सूचना की मार्ग घटना हटाया गया</string>
+    <string name="road_event_denies_report">वृत्तान्त की मार्ग घटना हटाया गया</string>
     <string name="road_event_fog">धूमिका</string>
     <string name="road_event_hazard">संकट</string>
     <string name="road_event_ice">हिम</string>
