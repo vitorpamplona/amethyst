@@ -8,13 +8,13 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 // Disables the Kotlin/Native compiler cache for an iOS test binary so the
 // Compose ui-uikit klib recompiles fresh instead of linking the broken prebuilt
 // cache (see the call site in the `kotlin {}` block). The version guard makes
-// Kotlin re-surface this workaround once we move past 2.4.0, so it can be
+// Kotlin re-surface this workaround once we move past 2.4.10, so it can be
 // dropped when a newer Compose/Kotlin pairing fixes the cache. Wrapped in a
 // helper because @OptIn only applies to declarations, not bare statements.
 @OptIn(KotlinNativeCacheApi::class)
 fun TestExecutable.disableUiKitPrebuiltCache() =
     disableNativeCache(
-        DisableCacheInKotlinVersion.`2_4_0`,
+        DisableCacheInKotlinVersion.`2_4_10`,
         "Compose ui-uikit prebuilt cache references UIViewLayoutRegion (iOS 17+); " +
             "linking the iOS test binary fails under Xcode 16.4.",
     )
