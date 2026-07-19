@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
@@ -41,8 +42,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -72,7 +79,9 @@ import com.vitorpamplona.amethyst.ui.note.creators.expiration.ExpirationDatePick
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
-import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
+import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
 import com.vitorpamplona.amethyst.ui.note.creators.pow.PowOverrideButton
@@ -97,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -235,9 +245,16 @@ private fun GenericCommentPostBody(
         ) {
             Column(Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true)) {
                 postViewModel.externalIdentity?.let {
-                    Row {
-                        DisplayExternalId(it, accountViewModel, nav)
+                    if (it is GeohashId) {
+                        // Geo-post: the interactive location channel (with retarget) replaces
+                        // the static external-id marker so there's a single location control.
+                        GeoPostLocationChannel(postViewModel)
                         Spacer(modifier = StdVertSpacer)
+                    } else {
+                        Row {
+                            DisplayExternalId(it, accountViewModel, nav)
+                            Spacer(modifier = StdVertSpacer)
+                        }
                     }
                 }
 
@@ -330,7 +347,7 @@ private fun GenericCommentPostBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
                     ) {
-                        LocationAsHash(postViewModel)
+                        GeoHashPostSection(postViewModel)
                     }
                 }
 
@@ -436,6 +453,56 @@ private fun GenericCommentPostBody(
         postViewModel.validationResult?.let { CommunityRulesViolationBanner(it) }
 
         BottomRowActions(postViewModel)
+    }
+}
+
+/**
+ * For a geo-post (a comment scoped to a geohash channel), shows which place it will post
+ * to and lets the user retarget it via the map picker. Hidden for non-geo comments.
+ */
+@Composable
+private fun GeoPostLocationChannel(postViewModel: CommentPostViewModel) {
+    val scope = postViewModel.geohashScope ?: return
+    var showPicker by remember { mutableStateOf(false) }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { showPicker = true }
+                .padding(horizontal = Size10dp, vertical = 6.dp),
+        verticalAlignment = CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.LocationOn,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
+            Text(
+                text = stringRes(R.string.geo_post_posting_to),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LoadCityName(geohashStr = scope) { cityName ->
+                Text(text = cityName, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+            }
+        }
+        TextButton(onClick = { showPicker = true }) {
+            Text(stringRes(R.string.geo_post_change_place))
+        }
+    }
+
+    if (showPicker) {
+        GeohashLocationPickerDialog(
+            initialGeohash = scope,
+            onDismiss = { showPicker = false },
+            onConfirm = { cell ->
+                postViewModel.setGeohashScope(cell)
+                showPicker = false
+            },
+        )
     }
 }
 

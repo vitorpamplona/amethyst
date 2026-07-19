@@ -74,7 +74,9 @@ class FeedTopNavFilterState(
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
-            TopFilter.Global, TopFilter.Selected -> {
+            // TeleportPicker is a UI-only sentinel (intercepted by the spinner to open the
+            // map picker); it never reaches here, but fall back to Global for exhaustiveness.
+            TopFilter.Global, TopFilter.Selected, TopFilter.TeleportPicker -> {
                 GlobalFeedFlow(followsRelays, proxyRelays, relayFeeds)
             }
 

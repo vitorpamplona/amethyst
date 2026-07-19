@@ -27,4 +27,11 @@ interface ILocationGrabber {
     fun locationManager(): LocationState
 
     fun locationFlow(): StateFlow<LocationState.LocationResult>
+
+    /**
+     * A geohash the user picked on the map (via [GeohashLocationPickerDialog]), which
+     * overrides the live GPS location at build time. Null means "use my current GPS
+     * location" — the default behavior. Implementers back this with a Compose state.
+     */
+    var pickedGeoHash: String?
 }

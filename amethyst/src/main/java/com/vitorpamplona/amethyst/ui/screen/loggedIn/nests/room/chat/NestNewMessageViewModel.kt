@@ -178,6 +178,7 @@ open class NestNewMessageViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationState.LocationResult>? = null
 
     // ZapRaiser
@@ -272,6 +273,7 @@ open class NestNewMessageViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
@@ -427,7 +429,7 @@ open class NestNewMessageViewModel :
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
@@ -482,6 +484,7 @@ open class NestNewMessageViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
 
         forwardZapTo = SplitBuilder()
         forwardZapToEditting.clearText()

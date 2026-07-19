@@ -193,6 +193,7 @@ open class ChannelNewMessageViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationState.LocationResult>? = null
 
     // Geohash location chat (Bitchat interop): messages are signed with an anonymous per-cell
@@ -306,6 +307,7 @@ open class ChannelNewMessageViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
@@ -514,7 +516,7 @@ open class ChannelNewMessageViewModel :
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
 
         val channelRelays = channel.relays()
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
         val localExpirationDate = if (wantsExpirationDate) expirationDate else null
@@ -738,6 +740,7 @@ open class ChannelNewMessageViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
 
         forwardZapTo = SplitBuilder()
         forwardZapToEditting.clearText()

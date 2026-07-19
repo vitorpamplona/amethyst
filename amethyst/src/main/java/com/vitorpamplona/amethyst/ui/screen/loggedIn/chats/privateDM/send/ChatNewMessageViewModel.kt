@@ -246,6 +246,7 @@ class ChatNewMessageViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationState.LocationResult>? = null
 
     // ZapRaiser
@@ -370,6 +371,7 @@ class ChatNewMessageViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
@@ -579,7 +581,7 @@ class ChatNewMessageViewModel :
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = accountViewModel.account.emoji.findEmojiTags(messageText)
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        val geoHash = if (wantsToAddGeoHash) (pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()) else null
         val message = messageText
 
         val contentWarningReason = if (wantsToMarkAsSensitive) contentWarningDescription else null
@@ -649,6 +651,7 @@ class ChatNewMessageViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
         wantsSecretEmoji = false
 
         forwardZapTo.value = SplitBuilder()

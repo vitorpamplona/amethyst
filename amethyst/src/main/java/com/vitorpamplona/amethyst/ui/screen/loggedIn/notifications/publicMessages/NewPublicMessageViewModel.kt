@@ -197,6 +197,7 @@ class NewPublicMessageViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationState.LocationResult>? = null
 
     // ZapRaiser
@@ -300,6 +301,7 @@ class NewPublicMessageViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
 
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
@@ -388,7 +390,7 @@ class NewPublicMessageViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val geoHash = (if (wantsToAddGeoHash) pickedGeoHash else null) ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
@@ -528,6 +530,7 @@ class NewPublicMessageViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
         wantsSecretEmoji = false
 
         forwardZapTo.value = SplitBuilder()

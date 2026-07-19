@@ -329,6 +329,8 @@ open class ShortNotePostViewModel :
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
+
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser
@@ -753,6 +755,7 @@ open class ShortNotePostViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
         if (geohash != null) {
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
@@ -858,6 +861,7 @@ open class ShortNotePostViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
         if (geohash != null) {
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
@@ -931,6 +935,7 @@ open class ShortNotePostViewModel :
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
+        pickedGeoHash = geohash
         if (geohash != null) {
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
@@ -1236,7 +1241,13 @@ open class ShortNotePostViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
+        val geoHash =
+            if (wantsToAddGeoHash) {
+                // A map-picked geohash wins over the live GPS fix.
+                pickedGeoHash ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+            } else {
+                null
+            }
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
@@ -1563,6 +1574,7 @@ open class ShortNotePostViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
         wantsExclusiveGeoPost = false
         wantsSecretEmoji = false
         wantsAnonymousPost = false

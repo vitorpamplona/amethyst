@@ -127,6 +127,14 @@ sealed class TopFilter(
     @Serializable
     object AroundMe : TopFilter(" Around Me ")
 
+    /**
+     * Not a real selection: a sentinel for the "Teleport" chip in the top-nav filter.
+     * The spinner intercepts it to open the map picker and then applies the chosen
+     * [Geohash] instead — it is never persisted or dispatched to a feed flow.
+     */
+    @Serializable
+    object TeleportPicker : TopFilter(" Teleport ")
+
     @Serializable
     object Mine : TopFilter(" Mine ")
 

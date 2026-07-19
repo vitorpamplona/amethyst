@@ -1630,6 +1630,11 @@
     <string name="follow_list_kind3follows_users_only">All User Follows</string>
     <string name="follow_list_kind3_follows_users_only">Default Follow List</string>
     <string name="follow_list_aroundme">Around Me</string>
+    <string name="follow_list_teleport">Teleport to a place…</string>
+    <string name="follow_geohash">Follow this location</string>
+    <string name="unfollow_geohash">Unfollow this location</string>
+    <string name="geo_post_posting_to">Posting to</string>
+    <string name="geo_post_change_place">Change</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_curated">Curated</string>
     <string name="follow_list_mine">Mine</string>
@@ -2147,6 +2152,10 @@
 
     <string name="geohash_title">Expose Location as </string>
     <string name="geohash_explainer">Adds a Geohash of your location to the post. The public will know you are within 5km (3mi) of the current location</string>
+    <string name="geohash_teleport_title">Teleport</string>
+    <string name="geohash_teleport_action">✈  Teleport here</string>
+    <string name="location_pick_on_map">Pick a place on the map</string>
+    <string name="location_change_place">Change place on the map</string>
 
     <string name="geohash_exclusive">Location-exclusive Post</string>
     <string name="geohash_exclusive_explainer">Only followers of the location will see it. Your general followers won\'t see it.</string>
@@ -2356,7 +2365,20 @@
     <string name="relay_group_field_topics">Topics</string>
     <string name="relay_group_field_topics_hint">bitcoin, nostr, art</string>
     <string name="relay_group_field_geohash">Location (geohash)</string>
-    <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_field_geohash_hint">Tap the map icon to choose a place</string>
+    <string name="relay_group_location_add">Add a location</string>
+    <string name="relay_group_location_add_desc">Pin your group on a map so people nearby can discover it.</string>
+    <string name="relay_group_location_edit">Change location</string>
+    <string name="relay_group_location_clear">Remove location</string>
+    <string name="relay_group_location_manual">Enter a geohash manually</string>
+    <!-- Reusable geohash location picker (shared, not group-specific) -->
+    <string name="location_picker_title">Choose location</string>
+    <string name="location_picker_hint">Move the map, search for a place, or use your current location.</string>
+    <string name="location_picker_search_hint">Search for a city or address</string>
+    <string name="location_picker_search_empty">No matching place found.</string>
+    <string name="location_picker_use_mine">Use my current location</string>
+    <string name="location_picker_area">Area size</string>
+    <string name="location_picker_confirm">Use this location</string>
     <string name="relay_group_section_structure">Structure</string>
     <string name="relay_group_parent_desc">Nest this group under a parent to build a hierarchy.</string>
     <string name="relay_group_parent_label">Parent group</string>

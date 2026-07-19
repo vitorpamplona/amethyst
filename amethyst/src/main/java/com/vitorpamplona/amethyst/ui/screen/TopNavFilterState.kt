@@ -97,6 +97,14 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_aroundme),
         )
 
+    // A UI-only entry: selecting it opens the map picker (handled in FeedFilterSpinner)
+    // and applies the chosen place as a TopFilter.Geohash for this screen's feed.
+    val teleport =
+        FeedDefinition(
+            code = TopFilter.TeleportPicker,
+            name = ResourceName(R.string.follow_list_teleport),
+        )
+
     val muteListFollow =
         FeedDefinition(
             code = TopFilter.MuteList(account.muteList.getMuteListAddress()),
@@ -115,9 +123,9 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_all_favorite_dvms),
         )
 
-    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
+    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, muteListFollow)
 
-    val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow, muteListFollow)
+    val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, selectedFollow, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -261,7 +269,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -303,7 +311,7 @@ class TopNavFilterState(
                 listOf(
                     // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
                     // music + playlists screens can show only the user's own published items.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -321,7 +329,7 @@ class TopNavFilterState(
                 listOf(
                     // Git repository announcements can be narrowed by author, hashtag and geohash,
                     // so this mirrors the kind3 catalog plus "Mine" — the user's own repositories.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -355,7 +363,7 @@ class TopNavFilterState(
                     // Relay-group discovery routes to relays by author, hashtag and geohash, plus
                     // favorited + joined-group relay chips; "Mine" (the joined-groups view) sits last
                     // in the base group to match the ordering every other feed uses.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
                     peopleLists,
                     interests,
                     joinedRelayChips,
@@ -374,7 +382,7 @@ class TopNavFilterState(
                 listOf(
                     // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
                     // podcasts + episodes screens can show only the user's own published shows/episodes.
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -387,7 +395,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow),
                     peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
@@ -415,7 +423,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, selectedFollow, globalFollow),
                     peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
@@ -455,22 +463,22 @@ class TopNavFilterState(
     val musicRoutes =
         _musicRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
 
     val gitRepositoryRoutes =
         _gitRepositoryRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
 
     val relayGroupsDiscoveryRoutes =
         _relayGroupsDiscoveryRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
 
     val podcastRoutes =
         _podcastRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
 
     fun destroy() {
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }

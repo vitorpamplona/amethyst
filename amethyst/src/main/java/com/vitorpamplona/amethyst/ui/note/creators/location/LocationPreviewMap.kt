@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
 import android.graphics.ColorFilter
+import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.BitmapDrawable
 import android.view.MotionEvent
@@ -57,7 +58,7 @@ private const val DEFAULT_ZOOM = 16.0
  * unlike a plain colour invert (forests → magenta) or a desaturating invert
  * (everything → black).
  */
-private val NIGHT_TILE_FILTER: ColorFilter =
+internal val NIGHT_TILE_FILTER: ColorFilter =
     ColorMatrixColorFilter(
         floatArrayOf(
             0.574f,
@@ -84,6 +85,44 @@ private val NIGHT_TILE_FILTER: ColorFilter =
     )
 
 /**
+ * Light-mode "calm" filter for the busy MAPNIK tiles: desaturate (mute the loud
+ * road/POI colours) and lift brightness a touch so labels read softer. Keeps the
+ * map legible for picking a spot without the full-colour visual noise.
+ */
+internal val MUTED_TILE_FILTER: ColorFilter =
+    ColorMatrixColorFilter(
+        ColorMatrix().apply {
+            setSaturation(0.55f)
+            postConcat(
+                ColorMatrix(
+                    floatArrayOf(
+                        0.92f,
+                        0f,
+                        0f,
+                        0f,
+                        16f,
+                        0f,
+                        0.92f,
+                        0f,
+                        0f,
+                        16f,
+                        0f,
+                        0f,
+                        0.92f,
+                        0f,
+                        16f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                    ),
+                ),
+            )
+        },
+    )
+
+/**
  * A small OpenStreetMap (osmdroid) preview centered on [latitude]/[longitude]
  * with a single pin at that point.
  *
@@ -107,6 +146,7 @@ fun LocationPreviewMap(
     longitude: Double,
     modifier: Modifier = Modifier,
     zoom: Double = DEFAULT_ZOOM,
+    aspectRatio: Float = 1f,
     pinColor: Color? = null,
     pinEmoji: String? = null,
     pinAlpha: Float = 1f,
@@ -166,15 +206,15 @@ fun LocationPreviewMap(
     }
 
     AndroidView(
-        modifier = modifier.fillMaxWidth().aspectRatio(1f),
+        modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio),
         factory = { mapView },
         update = { map ->
             val point = GeoPoint(latitude, longitude)
             map.controller.setZoom(zoom)
             map.controller.setCenter(point)
 
-            // Follow the app theme: dim the bright MAPNIK tiles in dark mode.
-            map.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else null)
+            // Follow the app theme: dim in dark mode, mute the busy colours in light mode.
+            map.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else MUTED_TILE_FILTER)
 
             map.overlays.removeAll { it is Marker }
             val marker =

@@ -82,6 +82,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -111,6 +112,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -164,6 +166,15 @@ open class CommentPostViewModel :
 
     var externalIdentity by mutableStateOf<ExternalId?>(null)
     var replyingTo: Note? by mutableStateOf(null)
+
+    /** The geohash channel this comment is scoped to, or null when it isn't a geo-post. */
+    val geohashScope: String?
+        get() = (externalIdentity as? GeohashId)?.geohash
+
+    /** Retarget a geo-post to a different location channel (from the map picker). */
+    fun setGeohashScope(geohash: String) {
+        externalIdentity = GeohashId(geohash)
+    }
 
     // The signature pre-filled by applySignature(), so an untouched signature-only
     // message is treated as blank instead of auto-saved as a junk draft.
@@ -242,6 +253,7 @@ open class CommentPostViewModel :
 
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
+    override var pickedGeoHash by mutableStateOf<String?>(null)
     var location: StateFlow<LocationState.LocationResult>? = null
 
     // ZapRaiser
@@ -510,6 +522,7 @@ open class CommentPostViewModel :
         replyingTo?.let { observeCommunityRules(it) }
 
         wantsToAddGeoHash = draftEvent.hasGeohashes()
+        pickedGeoHash = draftEvent.getGeoHash()
 
         notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
             draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
@@ -641,7 +654,7 @@ open class CommentPostViewModel :
             )
         tagger.run()
 
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val geoHash = (if (wantsToAddGeoHash) pickedGeoHash else null) ?: (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
 
         val emojis = account.emoji.findEmojiTags(tagger.message)
         val urls = findURLs(tagger.message)
@@ -867,6 +880,7 @@ open class CommentPostViewModel :
         wantsToMarkAsSensitive = false
         contentWarningDescription = ""
         wantsToAddGeoHash = false
+        pickedGeoHash = null
         wantsSecretEmoji = false
         wantsAnonymousPost = false
         anonymousSignerCache = null
