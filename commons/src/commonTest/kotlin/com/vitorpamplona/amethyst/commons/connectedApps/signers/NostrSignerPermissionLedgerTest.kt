@@ -51,14 +51,13 @@ class NostrSignerPermissionLedgerTest {
             ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
 
             // Profile (0), contacts (3), deletion (5), relay list (10002), nutzap (9321), NIP-98 HTTP
-            // auth (27235), and gift-wrapped DM (1059) must never auto-sign — they change config,
-            // delete, spend ecash, authorize arbitrary HTTP calls, or leak. These are replaceable
-            // *configuration* (0/3/10002), unlike addressable *content* such as long-form (30023) which
-            // is allowed. A nutzap in particular *is* the payment (it carries the ecash proofs), unlike a
-            // zap request (9734) which only fetches an invoice; and NIP-98 authorizes destructive/admin
-            // HTTP requests, unlike NIP-42 relay auth (22242) which is a replay-bound read proof.
-            // Decryption reveals private content, so it also asks.
-            for (kind in listOf(0, 3, 5, 10002, 9321, 27235, 1059)) {
+            // auth (27235), relay auth (22242), and gift-wrapped DM (1059) must never auto-sign — they
+            // change config, delete, spend ecash, authorize arbitrary HTTP calls, authenticate as the
+            // user, or leak. These are replaceable *configuration* (0/3/10002), unlike addressable
+            // *content* such as long-form (30023) which is allowed. A nutzap in particular *is* the
+            // payment (it carries the ecash proofs), unlike a zap request (9734) which only fetches an
+            // invoice. Decryption reveals private content, so it also asks.
+            for (kind in listOf(0, 3, 5, 10002, 9321, 27235, 22242, 1059)) {
                 assertEquals(
                     NostrOpDecision.ASK,
                     ledger.decide(coordinate, NostrSignerOp.SignKind(kind)),
@@ -72,9 +71,12 @@ class NostrSignerPermissionLedgerTest {
             assertEquals(NostrOpDecision.ALLOW, ledger.decide(coordinate, NostrSignerOp.SignKind(9734)))
             assertEquals(NostrOpDecision.ASK, ledger.decide(coordinate, NostrSignerOp.SignKind(9321)))
 
-            // Contrast: NIP-42 relay auth (22242) auto-signs — it is a replay-bound read proof — but
-            // NIP-98 HTTP auth (27235) does not, since it can authorize destructive/admin HTTP calls.
-            assertEquals(NostrOpDecision.ALLOW, ledger.decide(coordinate, NostrSignerOp.SignKind(22242)))
+            // NIP-42 relay auth (22242) must ASK. Being replay-bound is not the protection it looks
+            // like: the requesting app supplies the relay and challenge tags, so it can obtain a FRESH
+            // signature naming any relay and then AUTH there as the user — reading whatever that relay
+            // gates behind AUTH (the kind-1059 giftwrap inbox and its DM metadata) and spending the
+            // quota on paid relays, which bill whoever authenticates.
+            assertEquals(NostrOpDecision.ASK, ledger.decide(coordinate, NostrSignerOp.SignKind(22242)))
             assertEquals(NostrOpDecision.ASK, ledger.decide(coordinate, NostrSignerOp.SignKind(27235)))
         }
 
