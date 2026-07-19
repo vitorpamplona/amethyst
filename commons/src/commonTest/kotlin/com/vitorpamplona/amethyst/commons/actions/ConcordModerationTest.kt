@@ -24,11 +24,15 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -36,6 +40,7 @@ class ConcordModerationTest {
     private val owner = NostrSignerInternal(KeyPair())
     private val admin = NostrSignerInternal(KeyPair())
     private val troll = NostrSignerInternal(KeyPair())
+    private val stranger = NostrSignerInternal(KeyPair())
 
     @Test
     fun ownerDefinesRoleGrantsItAndBans() =
@@ -93,5 +98,80 @@ class ConcordModerationTest {
             val forgedEditions: List<ControlEdition> = editions + ConcordActions.controlEditions(listOf(forged), cp)
             val afterForgery = ConcordCommunityState.fold(forgedEditions, community.ownerPubKey)
             assertFalse(afterForgery.authority.effectivePermissions(troll.pubKey).has(ConcordPermissions.BAN))
+        }
+
+    /**
+     * Regression: [ConcordModeration] used to locate an entity's head with
+     * `current.firstOrNull { … }`. `current` is the raw edition list in **wrap-arrival**
+     * order, not chain order, so once an entity had ≥2 editions the "head" was whichever
+     * one a relay delivered first — a stale one. The next edition then chained off it,
+     * forking the chain at an already-used version, and [EditionFold] resolved the fork by
+     * `minByOrNull { rumorId }` — a coin flip that could silently drop the change. Bans are
+     * masked by the down-only healing union, but an unban is not, so an unban simply
+     * failed to apply.
+     *
+     * Here the banlist has two editions (v0 bans [troll], v1 also bans [stranger]) before
+     * the unban. The unban must chain off v1 — the folded head — at v2, not off v0.
+     */
+    @Test
+    fun thirdBanlistEditionChainsOffTheFoldedHeadNotTheFirstArrival() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val cp = community.controlPlane
+            val communityId = community.communityId
+
+            val editions = ConcordActions.controlEditions(community.genesisWraps, cp).toMutableList()
+
+            // v0: ban the troll. v1: ban the stranger too (chains onto v0).
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, communityId, troll.pubKey, editions, createdAt = 2L)), cp)
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, communityId, stranger.pubKey, editions, createdAt = 3L)), cp)
+
+            val banlistSoFar = editions.filter { it.entityKind == ControlEntityKind.BANLIST }
+            assertEquals(2, banlistSoFar.size)
+            val head = EditionFold.foldEntity(banlistSoFar)!!
+            assertEquals(1L, head.version)
+            // The stale v0 sorts first in arrival order — exactly what the old firstOrNull picked up.
+            assertEquals(0L, banlistSoFar.first().version)
+
+            // Now unban the troll. The head must be found regardless of arrival order — in
+            // particular in the natural order, where the stale v0 comes first and is exactly
+            // what the old firstOrNull latched onto.
+            for (arrival in listOf(editions.toList(), editions.reversed())) {
+                val unbanWrap = ConcordModeration.unban(owner, cp, communityId, troll.pubKey, arrival, createdAt = 4L)
+                val unban = ConcordActions.controlEditions(listOf(unbanWrap), cp).single()
+
+                // Chains onto the folded head (v1), not the first-arrival v0.
+                assertEquals(2L, unban.version)
+                assertEquals(head.hashHex, unban.prevHash!!.toHexKey())
+
+                // And the resulting state is the one the moderator asked for: troll freed, stranger still banned.
+                val state = ConcordCommunityState.fold(editions + unban, community.ownerPubKey)
+                assertFalse(state.authority.isBanned(troll.pubKey))
+                assertTrue(state.authority.isBanned(stranger.pubKey))
+            }
+        }
+
+    /** The same stale-head trap on a versioned entity: a third role edition must be v2. */
+    @Test
+    fun thirdRoleEditionChainsOffTheFoldedHead() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val cp = community.controlPlane
+            val editions = ConcordActions.controlEditions(community.genesisWraps, cp).toMutableList()
+
+            val roleId = ByteArray(32) { (it + 1).toByte() }
+
+            fun role(name: String) = RoleEntity(name = name, position = 1, permissions = ConcordPermissions.of(ConcordPermissions.KICK).toWire())
+
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Mod"), editions, createdAt = 2L)), cp)
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Admin"), editions, createdAt = 3L)), cp)
+
+            for (arrival in listOf(editions.toList(), editions.reversed())) {
+                val third = ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Owner"), arrival, createdAt = 4L)), cp).single()
+                assertEquals(2L, third.version)
+
+                val state = ConcordCommunityState.fold(editions + third, community.ownerPubKey)
+                assertEquals("Owner", state.roles[roleId.toHexKey()]?.name)
+            }
         }
 }

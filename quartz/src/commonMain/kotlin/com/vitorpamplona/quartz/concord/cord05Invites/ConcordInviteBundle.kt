@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * What the events fetched at an invite's addressable coordinate `(33301,
@@ -49,6 +50,16 @@ sealed interface InviteBundleStatus {
 
     /** The newest event at the coordinate is a `vsk=9` revocation tombstone — the link was retired. */
     data object Revoked : InviteBundleStatus
+
+    /**
+     * A `vsk=6` bundle that opened and validated, but whose `expires_at` is in the past.
+     * The [invite] is still carried so a preview can render what the link *would* have
+     * opened; joining must be refused (CORD-05 — an expiry that nobody enforces is
+     * decorative).
+     */
+    data class Expired(
+        val invite: CommunityInvite,
+    ) : InviteBundleStatus
 
     /**
      * Something is at the coordinate, but it isn't a `vsk=6` bundle this client can open —
@@ -120,15 +131,25 @@ object ConcordInviteBundle {
      * can't resurrect a retired link). Otherwise the first `vsk=6` bundle that opens +
      * validates with [token] is [InviteBundleStatus.Live]; anything else present is
      * [InviteBundleStatus.Unreadable], and an empty set is [InviteBundleStatus.Absent].
+     *
+     * An opened bundle whose `expires_at` has passed (compared against [nowMs], unix
+     * milliseconds) resolves to [InviteBundleStatus.Expired] rather than
+     * [InviteBundleStatus.Live], so the expiry is actually enforced at the one place
+     * every redeeming client already funnels through.
      */
     fun classify(
         wraps: List<Event>,
         token: ByteArray,
+        nowMs: Long = TimeUtils.nowMillis(),
     ): InviteBundleStatus {
         val newest = wraps.maxByOrNull { it.createdAt } ?: return InviteBundleStatus.Absent
         if (newest.tags.vsk() == ControlEntityKind.INVITE_REVOKED) return InviteBundleStatus.Revoked
         val invite = wraps.firstNotNullOfOrNull { parse(it, token)?.takeIf { i -> validate(i) } }
-        return if (invite != null) InviteBundleStatus.Live(invite) else InviteBundleStatus.Unreadable
+        return when {
+            invite == null -> InviteBundleStatus.Unreadable
+            isExpired(invite, nowMs) -> InviteBundleStatus.Expired(invite)
+            else -> InviteBundleStatus.Live(invite)
+        }
     }
 
     /**

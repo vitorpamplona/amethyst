@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
@@ -55,13 +56,31 @@ import kotlinx.serialization.builtins.serializer
  * act under so the fold can verify the chain terminates at the owner.
  */
 object ConcordModeration {
+    /**
+     * The current head of ([kind], [entityId]) within [current], or null if the entity
+     * has no editions yet.
+     *
+     * [current] arrives in **wrap-arrival order**, which is not chain order — so the
+     * first matching edition is whichever one a relay happened to deliver first, not
+     * the newest. Chaining off that stale edition would fork the chain at an
+     * already-used version, and [EditionFold] would then break the tie by
+     * `minByOrNull { rumorId }` — a coin flip that can silently drop the new edition
+     * (an unban or a role revocation quietly failing to apply). Fold the entity's
+     * chain instead, exactly as every reader does.
+     */
+    private fun headOf(
+        current: List<ControlEdition>,
+        kind: ControlEntityKind,
+        entityId: ByteArray,
+    ): ControlEdition? = EditionFold.foldEntity(current.filter { it.entityKind == kind && it.entityId.contentEquals(entityId) })
+
     /** version/prevHash to chain onto the current head of ([kind], [entityId]), or genesis. */
     private fun versioning(
         current: List<ControlEdition>,
         kind: ControlEntityKind,
         entityId: ByteArray,
     ): Pair<Long, ByteArray?> {
-        val head = current.firstOrNull { it.entityKind == kind && it.entityId.contentEquals(entityId) }
+        val head = headOf(current, kind, entityId)
         return if (head != null) (head.version + 1) to head.hash else 0L to null
     }
 
@@ -184,7 +203,7 @@ object ConcordModeration {
         communityId: ByteArray,
     ): Set<HexKey> {
         val entityId = ConcordKeyDerivation.banlistCoordinate(communityId)
-        val head = current.firstOrNull { it.entityKind == ControlEntityKind.BANLIST && it.entityId.contentEquals(entityId) }
+        val head = headOf(current, ControlEntityKind.BANLIST, entityId)
         return head?.let { ConcordJson.decodeBanlist(it.content) }?.mapTo(HashSet()) { it.lowercase() } ?: emptySet()
     }
 

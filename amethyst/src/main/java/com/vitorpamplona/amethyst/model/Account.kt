@@ -2090,6 +2090,16 @@ class Account(
      * bundle we can't open (e.g. minted by a newer client) must not strand the user
      * on a spinner that retries forever.
      *
+     * A bundle whose `expires_at` has passed is rejected with
+     * [ConcordInviteResult.Expired]. Expiry is resolved inside
+     * [ConcordActions.classifyInvite], so it is enforced on every redeem path rather
+     * than being a field nobody reads.
+     *
+     * **This must only ever be called from an explicit user action.** It contacts
+     * relay URLs carried in the link (chosen by whoever minted it) and publishes a
+     * Guestbook JOIN signed by this account, so calling it on deep-link arrival would
+     * leak the user's IP and enroll them without consent — see `ConcordInviteScreen`.
+     *
      * If the resolved community is already in the joined list, this returns
      * [ConcordInviteResult.Joined] without re-following or re-announcing a Guestbook
      * JOIN, so reopening an old invite for a community you're already in simply takes
@@ -2112,6 +2122,7 @@ class Account(
         val bundle =
             when (val status = ConcordActions.classifyInvite(wraps, parsed.fragment.token)) {
                 is InviteBundleStatus.Live -> status.invite
+                is InviteBundleStatus.Expired -> return ConcordInviteResult.Expired
                 InviteBundleStatus.Revoked -> return ConcordInviteResult.Revoked
                 InviteBundleStatus.Unreadable -> return ConcordInviteResult.Incompatible
                 InviteBundleStatus.Absent -> return ConcordInviteResult.NotReachable

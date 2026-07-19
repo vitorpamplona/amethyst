@@ -312,6 +312,10 @@
     <string name="concord_invite_failed_invalid">This invite link is invalid or can\'t be opened with this account.</string>
     <string name="concord_invite_failed_incompatible">This invite link can\'t be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
+    <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
+    <string name="concord_invite_preview_unknown_name">Community name is only revealed after you join</string>
+    <string name="concord_invite_preview_explainer">Joining connects to this invite\'s relays, publishes a join announcement signed by your account, and adds the community to your list. Nothing is sent until you tap Join.</string>
+    <string name="concord_invite_preview_relays">Relays this invite will contact: %1$s</string>
     <string name="concord_home_title">Concord Channels</string>
     <string name="concord_home_empty">You haven\'t joined any Concord Channels yet. Create one, or open an invite link.</string>
     <string name="concord_channels_empty">No channels yet.</string>

@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** One decrypted, verified Concord channel message projected for display. */
 data class ConcordChatMessage(
@@ -358,14 +359,16 @@ object ConcordActions {
 
     /**
      * Resolves every event fetched at an invite's addressable coordinate into one
-     * [InviteBundleStatus] (live / revoked / unreadable / absent) per CORD-05 §2, so a
-     * redeeming client honours a `vsk=9` revocation tombstone and reports why a link
-     * can't be opened instead of retrying blindly.
+     * [InviteBundleStatus] (live / expired / revoked / unreadable / absent) per CORD-05
+     * §2, so a redeeming client honours a `vsk=9` revocation tombstone and an
+     * `expires_at` in the past, and reports why a link can't be opened instead of
+     * retrying blindly. [nowMs] is unix milliseconds.
      */
     fun classifyInvite(
         wraps: List<Event>,
         token: ByteArray,
-    ): InviteBundleStatus = ConcordInviteBundle.classify(wraps, token)
+        nowMs: Long = TimeUtils.nowMillis(),
+    ): InviteBundleStatus = ConcordInviteBundle.classify(wraps, token, nowMs)
 
     /** Derives the control plane described by a redeemed [invite] so the joiner can read it. */
     fun controlPlaneFor(invite: CommunityInvite): GroupKey = controlPlane(invite.communityRoot.hexToByteArray(), invite.communityId.hexToByteArray(), invite.rootEpoch)

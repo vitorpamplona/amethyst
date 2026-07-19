@@ -88,40 +88,13 @@ fun ConcordInviteCard(
         onClick = { nav.nav(Route.ConcordInvite(linkText)) },
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ConcordInvitePreviewRow(
+            robotSeed = robotSeed,
+            title = title,
+            subtitle = stringRes(R.string.concord_invite_card_subtitle),
+            accountViewModel = accountViewModel,
+            autoPlayGif = autoPlayGif,
         ) {
-            RobohashFallbackAsyncImage(
-                robot = robotSeed,
-                model = null,
-                contentDescription = title,
-                modifier =
-                    Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-                autoPlayGif = autoPlayGif,
-            )
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = stringRes(R.string.concord_invite_card_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
             SymbolIcon(
                 symbol = MaterialSymbols.ChevronRight,
                 contentDescription = stringRes(R.string.concord_invite_card_join),
@@ -129,5 +102,59 @@ fun ConcordInviteCard(
                 tint = MaterialTheme.colorScheme.primary,
             )
         }
+    }
+}
+
+/**
+ * The avatar + title/subtitle row shared by [ConcordInviteCard] (in note content) and
+ * the deep-link consent screen, so both render an invite identically. Purely
+ * presentational — it performs no I/O, which is what lets the deep-link screen show a
+ * preview without contacting the link's (attacker-supplied) relays before the user
+ * consents.
+ */
+@Composable
+fun ConcordInvitePreviewRow(
+    robotSeed: String,
+    title: String,
+    subtitle: String,
+    accountViewModel: AccountViewModel,
+    autoPlayGif: Boolean,
+    trailing: @Composable () -> Unit = {},
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        RobohashFallbackAsyncImage(
+            robot = robotSeed,
+            model = null,
+            contentDescription = title,
+            modifier =
+                Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif = autoPlayGif,
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        trailing()
     }
 }
