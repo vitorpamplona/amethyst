@@ -381,6 +381,13 @@
     <string name="concord_members_remove_title">Remove member?</string>
     <string name="concord_members_remove_message">This rotates the community\'s encryption key so this member can no longer read anything sent afterwards. Everyone else is re-keyed automatically. This can\'t be undone.</string>
     <string name="concord_members_remove_confirm">Remove</string>
+    <string name="concord_members_roles">Roles…</string>
+    <string name="concord_members_roles_title">Assign roles</string>
+    <string name="concord_members_roles_message">Pick every role this member should hold. Unchecking a role removes it.</string>
+    <string name="concord_members_roles_save">Save</string>
+    <string name="concord_members_roles_out_of_reach">You don\'t outrank this member</string>
+    <string name="concord_members_roles_none_assignable">No roles you can assign</string>
+    <string name="concord_members_roles_failed">Could not update this member\'s roles.</string>
     <string name="concord_role_owner">Owner</string>
     <string name="concord_role_admin">Admin</string>
     <string name="concord_role_banned">Banned</string>

@@ -59,6 +59,17 @@ object ConcordModCommands {
                         state.roles.map { (id, r) ->
                             mapOf("id" to id, "name" to r.name, "position" to r.position, "permissions" to r.permissions)
                         },
+                    // The role-holder roster AFTER the authority fixpoint, so a grant that was
+                    // published but dropped on fold (granter didn't outrank the role or the member)
+                    // is visibly absent here rather than looking like it landed.
+                    "grants" to
+                        state.authority.roleHolders().sorted().map { member ->
+                            mapOf(
+                                "member" to member,
+                                "rank" to state.authority.rank(member),
+                                "roles" to state.authority.rolesFor(member).map { it.name },
+                            )
+                        },
                     "banned" to ConcordModeration.currentBanned(editions, sc.communityId.hexToByteArray(), sc.owner).toList(),
                 ),
             )

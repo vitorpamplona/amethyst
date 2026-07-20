@@ -632,6 +632,24 @@ class AccountViewModel(
         if (makeAdmin) account.makeConcordAdmin(communityId, member) else account.removeConcordAdmin(communityId, member)
     }
 
+    /**
+     * Set [member]'s CORD-04 roles in [communityId] to exactly [roleIds] (empty revokes
+     * everything). The Control Plane grant REPLACES the member's role set rather than
+     * merging into it, so [roleIds] must be the *complete* list the member should end up
+     * holding — the caller (the Members roster dialog) preselects their current roles for
+     * that reason. Authority is re-checked at fold time by every client, so the caller must
+     * also have offered only roles it strictly outranks on a member it strictly outranks.
+     */
+    fun setConcordRoles(
+        communityId: String,
+        member: HexKey,
+        roleIds: List<String>,
+    ) = launchSigner {
+        if (!account.grantConcordRole(communityId, member, roleIds)) {
+            toastManager.toast(R.string.concord_members_roles_title, R.string.concord_members_roles_failed)
+        }
+    }
+
     /** Ban/unban [member] from [communityId] (from the Members roster). */
     fun setConcordBan(
         communityId: String,

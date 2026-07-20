@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -124,12 +128,28 @@ fun ConcordMembersScreen(
                             .minByOrNull { r -> r.position }
                             ?.name
                             ?.takeIf { n -> n.isNotBlank() }
-                    RosterEntry(it, ConcordMembership.of(authority, it), roleName)
+                    RosterEntry(it, ConcordMembership.of(authority, it), roleName, authority.rolesOf(it))
                 }.sortedWith(compareBy({ it.membership.sortRank() }, { it.pubkey }))
         }
 
     val iAmOwner = state?.authority?.isOwner(myPubKey) == true
     val iCanBan = state?.let { it.authority.isOwner(myPubKey) || it.authority.effectivePermissions(myPubKey).has(ConcordPermissions.BAN) } == true
+    val iCanManageRoles = state?.authority?.hasPermission(myPubKey, ConcordPermissions.MANAGE_ROLES) == true
+
+    // The roles this viewer may actually hand out. The fold drops a grant whose granter does
+    // not *strictly* outrank every assigned role, so offering a role at or above our own
+    // position would publish an edition that every client then silently discards. The owner
+    // sits at rank 0 and no role may claim position 0, so this admits everything for them.
+    val assignableRoles =
+        remember(state, myPubKey) {
+            val authority = state?.authority ?: return@remember emptyList<AssignableRole>()
+            val myRank = authority.rank(myPubKey) ?: return@remember emptyList()
+            authority
+                .roles()
+                .filter { (_, role) -> myRank < role.position }
+                .map { (id, role) -> AssignableRole(id, role.name, role.position) }
+                .sortedBy { it.position }
+        }
 
     Scaffold(
         topBar = {
@@ -168,6 +188,12 @@ fun ConcordMembersScreen(
                         isSelf = entry.pubkey.equals(myPubKey, ignoreCase = true),
                         viewerIsOwner = iAmOwner,
                         viewerCanBan = iCanBan,
+                        viewerCanManageRoles = iCanManageRoles,
+                        // canActOn folds the whole rank rule for us: we hold MANAGE_ROLES, we're not
+                        // banned, the target isn't the owner (unremovable), and we strictly outrank
+                        // them — which also rules out acting on ourselves (equal cannot act on equal).
+                        canManageRolesOnTarget = state?.authority?.canActOn(myPubKey, entry.pubkey, ConcordPermissions.MANAGE_ROLES) == true,
+                        assignableRoles = assignableRoles,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
@@ -185,6 +211,9 @@ private fun ConcordMemberRow(
     isSelf: Boolean,
     viewerIsOwner: Boolean,
     viewerCanBan: Boolean,
+    viewerCanManageRoles: Boolean,
+    canManageRolesOnTarget: Boolean,
+    assignableRoles: List<AssignableRole>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -199,7 +228,31 @@ private fun ConcordMemberRow(
     val canBan = viewerCanBan && !isOwnerTarget && !isSelf
     // Hard removal (CORD-06 Refounding) rotates the community key; same authority as ban.
     val canRemove = viewerCanBan && !isOwnerTarget && !isSelf
-    val hasMenu = canToggleAdmin || canBan || canRemove
+    // Shown to any MANAGE_ROLES holder, but disabled with a reason when this particular
+    // member (or every defined role) is out of our reach — a grant we don't outrank
+    // publishes fine and is then dropped by every client's fold, so a silently no-op
+    // control would be worse than none. The owner's own row never offers it: the owner
+    // is unremovable and outranks everyone, so canManageRolesOnTarget is false there.
+    val rolesBlockedReason =
+        when {
+            !canManageRolesOnTarget -> stringRes(R.string.concord_members_roles_out_of_reach)
+            assignableRoles.isEmpty() -> stringRes(R.string.concord_members_roles_none_assignable)
+            else -> null
+        }
+    val hasMenu = canToggleAdmin || canBan || canRemove || viewerCanManageRoles
+
+    var editRoles by remember { mutableStateOf(false) }
+    if (editRoles) {
+        ConcordRolesDialog(
+            assignable = assignableRoles,
+            current = entry.roleIds,
+            onConfirm = { selected ->
+                accountViewModel.setConcordRoles(communityId, entry.pubkey, selected)
+                editRoles = false
+            },
+            onDismiss = { editRoles = false },
+        )
+    }
 
     var confirmRemove by remember { mutableStateOf(false) }
     if (confirmRemove) {
@@ -212,7 +265,7 @@ private fun ConcordMemberRow(
         )
     }
 
-    androidx.compose.foundation.layout.Row(
+    Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -237,6 +290,27 @@ private fun ConcordMemberRow(
                         text = { Text(stringRes(if (isAdmin) R.string.concord_members_remove_admin else R.string.concord_members_make_admin)) },
                         onClick = {
                             accountViewModel.setConcordAdmin(communityId, entry.pubkey, makeAdmin = !isAdmin)
+                            expanded = false
+                        },
+                    )
+                }
+                if (viewerCanManageRoles) {
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(stringRes(R.string.concord_members_roles))
+                                rolesBlockedReason?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        },
+                        enabled = rolesBlockedReason == null,
+                        onClick = {
+                            editRoles = true
                             expanded = false
                         },
                     )
@@ -298,6 +372,64 @@ private fun MemberBadge(
     }
 }
 
+/**
+ * Multi-select over the roles the viewer may assign (CORD-04 role grant).
+ *
+ * A grant REPLACES the member's role set rather than merging into it, so the box starts
+ * checked on everything they already hold — otherwise saving would silently strip the
+ * roles that weren't re-checked. Every currently-held role is guaranteed to appear in
+ * [assignable]: the caller only opens this when it strictly outranks the member, and the
+ * member's rank is the *lowest* position they hold, so all of their roles sit strictly
+ * below us too. Like "Make admin", saving applies immediately — no extra confirmation.
+ */
+@Composable
+private fun ConcordRolesDialog(
+    assignable: List<AssignableRole>,
+    current: Set<String>,
+    onConfirm: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val selected = remember(current) { mutableStateListOf<String>().apply { addAll(current) } }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.concord_members_roles_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringRes(R.string.concord_members_roles_message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                assignable.forEach { role ->
+                    val checked = role.id in selected
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (checked) selected.remove(role.id) else selected.add(role.id)
+                                }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Checkbox(checked = checked, onCheckedChange = null)
+                        Text(role.name.ifBlank { role.id.take(8) }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selected.toList()) }) {
+                Text(stringRes(R.string.concord_members_roles_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
+}
+
 /** Confirms a hard removal — spells out that it rotates the community key (CORD-06). */
 @Composable
 private fun ConcordRemoveMemberDialog(
@@ -324,6 +456,15 @@ private class RosterEntry(
     val membership: ConcordMembership,
     /** The member's most-privileged role name (e.g. "Admin"/"Moderator"), null for a plain member. */
     val roleName: String?,
+    /** Every role id the member currently holds — the preselection for the role picker. */
+    val roleIds: Set<String>,
+)
+
+/** One role the viewer is allowed to hand out, ordered by [position] (lower ranks higher). */
+private class AssignableRole(
+    val id: String,
+    val name: String,
+    val position: Long,
 )
 
 /** Owner first, then admins, then plain members, then banned last. */
