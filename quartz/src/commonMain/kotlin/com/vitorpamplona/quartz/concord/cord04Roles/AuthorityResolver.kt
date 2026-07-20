@@ -145,6 +145,17 @@ class AuthorityResolver private constructor(
                 return held.mapNotNull { roles[it]?.position }.minOrNull()
             }
 
+            // The bits a member currently holds, evaluated against the chain settled so far — the same
+            // owner-rooted basis as rankOf. Needed inside the fixpoint; effectivePermissionsOf below is
+            // the post-settlement view.
+            fun bitsOf(member: String): ConcordPermissions {
+                if (member == ownerLower) return ConcordPermissions.ALL
+                val held = memberRoles[member] ?: return ConcordPermissions.NONE
+                var acc = ConcordPermissions.NONE
+                for (id in held) roles[id]?.let { acc = acc union it.permissionBits() }
+                return acc
+            }
+
             fun holdsManageRoles(member: String): Boolean {
                 if (member == ownerLower) return true
                 val held = memberRoles[member] ?: return false
@@ -161,8 +172,28 @@ class AuthorityResolver private constructor(
                 val newRoles = HashMap<String, RoleEntity>()
                 for ((entity, chain) in roleChains) {
                     val head =
-                        EditionFold.foldEntity(chain.filter { it.author.lowercase() == ownerLower || holdsManageRoles(it.author.lowercase()) })
-                            ?: continue
+                        EditionFold.foldEntity(
+                            chain.filter { e ->
+                                val author = e.author.lowercase()
+                                if (author == ownerLower) return@filter true
+                                if (!holdsManageRoles(author)) return@filter false
+                                val authorRank = rankOf(author) ?: return@filter false
+                                val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: return@filter false
+                                // MANAGE_ROLES alone was the whole test, which let any holder rewrite the
+                                // role they hold — position 1 with every bit — and then demote the real
+                                // admins beneath them. Grants are gated on rank (a granter must outrank
+                                // what it hands out); role editions must be too, in both directions:
+                                //   - it may not claim a position at or above the author's own rank, and
+                                //   - it may not touch a role that already sits at or above them.
+                                // A delete keeps only the second rule: you may retire a role beneath you.
+                                val currentPosition = roles[entity]?.position
+                                if (currentPosition != null && currentPosition <= authorRank) return@filter false
+                                if (!r.deleted && r.position <= authorRank) return@filter false
+                                // Nor may it grant bits the author does not itself hold, which would
+                                // otherwise escalate through a role rather than through a grant.
+                                r.deleted || bitsOf(author).hasAll(r.permissionBits())
+                            },
+                        ) ?: continue
                     val r = ConcordJson.decodeOrNull<RoleEntity>(head.content) ?: continue
                     if (r.deleted || r.position < 1) continue // no role may claim the owner's position 0
                     newRoles[entity] = r

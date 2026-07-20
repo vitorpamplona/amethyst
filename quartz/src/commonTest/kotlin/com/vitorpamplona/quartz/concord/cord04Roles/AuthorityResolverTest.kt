@@ -86,6 +86,76 @@ class AuthorityResolverTest {
     )
 
     @Test
+    fun aManageRolesHolderCannotPromoteItsOwnRoleAboveItself() {
+        // Grants are rank-gated but role editions were not: holding MANAGE_ROLES was the whole test. So
+        // a mid-tier moderator could rewrite the very role they hold — claiming position 1 and every
+        // permission bit — and in one more edition demote the real admins below them.
+        val modWithManageRoles = """{"name":"Mod","position":5,"permissions":"9"}""" // KICK|MANAGE_ROLES
+        val modV0 = role(modRole, modWithManageRoles)
+        val selfPromotion =
+            ControlEdition(
+                ControlEntityKind.ROLE,
+                modRole.hexToByteArray(),
+                1,
+                modV0.hash, // chains correctly, so only the rank gate can stop it
+                null,
+                """{"name":"Mod","position":1,"permissions":"18446744073709551615"}""",
+                bob, // holds the role being edited
+                "role-$modRole-selfpromo",
+                1,
+            )
+
+        val r =
+            AuthorityResolver.resolve(
+                listOf(
+                    role(adminRole, adminJson), // position 1, owner-authored
+                    modV0, // position 5, owner-authored
+                    grant("31".repeat(32), alice, listOf(adminRole), granter = owner),
+                    grant("32".repeat(32), bob, listOf(modRole), granter = owner),
+                    selfPromotion,
+                ),
+                owner,
+            )
+
+        assertEquals(5, r.roles()[modRole]?.position, "Bob's self-promotion must not take effect")
+        assertFalse(r.effectivePermissions(bob).has(BAN), "Bob must not gain bits his role never held")
+        assertTrue(r.canActOn(alice, bob, KICK), "the real admin must still outrank the moderator")
+        assertFalse(r.canActOn(bob, alice, KICK), "the moderator must not gain authority over the admin")
+    }
+
+    @Test
+    fun aManageRolesHolderCanStillManageRolesBeneathIt() {
+        // The gate must not break legitimate delegation: an admin may still edit a role below its rank.
+        val modV0 = role(modRole, modJson)
+        val renamed =
+            ControlEdition(
+                ControlEntityKind.ROLE,
+                modRole.hexToByteArray(),
+                1,
+                modV0.hash,
+                null,
+                """{"name":"Moderator","position":5,"permissions":"8"}""",
+                alice, // admin at position 1, outranks the role being edited
+                "role-$modRole-rename",
+                1,
+            )
+
+        val r =
+            AuthorityResolver.resolve(
+                listOf(
+                    role(adminRole, adminJson),
+                    modV0,
+                    grant("31".repeat(32), alice, listOf(adminRole), granter = owner),
+                    renamed,
+                ),
+                owner,
+            )
+
+        assertEquals("Moderator", r.roles()[modRole]?.name, "an admin may edit a role beneath it")
+        assertEquals(5, r.roles()[modRole]?.position)
+    }
+
+    @Test
     fun ranksPermissionsAndActionAuthorityAreOwnerRooted() {
         val heads =
             listOf(

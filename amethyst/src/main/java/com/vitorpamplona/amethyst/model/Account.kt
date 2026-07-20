@@ -2602,10 +2602,19 @@ class Account(
     /**
      * Drain any buffered inbound base-rotation rekeys (CORD-06 receive path): for
      * each joined community, look for our new root among the kind-3303 wraps seen at
-     * our next base-rekey address. If a role-authorized rotator (owner or a current
-     * BAN-holder) delivered us one, adopt it. Idempotent — once adopted, the session
-     * rebuilds at the new epoch and its next-rekey address moves on, so a stale wrap
-     * never re-triggers. Called on every Concord revision tick.
+     * our next base-rekey address. If a role-authorized rotator (owner or a current,
+     * non-banned BAN-holder) delivered us one, adopt it. Idempotent — once adopted, the
+     * session rebuilds at the new epoch and its next-rekey address moves on, so a stale
+     * wrap never re-triggers. Called on every Concord revision tick.
+     *
+     * KNOWN LIMIT — a rotation carries only (newRoot, newEpoch, rotator); there is no
+     * recipient list, so a receiver cannot tell who was left out. A BAN-holder can
+     * therefore still evict the OWNER by simply omitting them: every other member
+     * adopts, the owner receives nothing and is stranded on the old epoch. Refusing a
+     * foreign rotation as the owner (above) stops the worse variant — being carried
+     * onto an attacker-minted root — but not exclusion. Closing that needs a protocol
+     * change: a recipient commitment the receiver can check the owner against, or
+     * owner co-signing of a rotation. Tracked for CORD-06.
      */
     private suspend fun drainConcordRekeys() {
         if (!isWriteable()) return
@@ -2623,7 +2632,16 @@ class Account(
                 ) ?: continue
             if (received.newEpoch <= entry.rootEpoch) continue
             val authority = session.state.value?.authority ?: continue
-            val authorized = authority.isOwner(received.rotator) || authority.effectivePermissions(received.rotator).has(ConcordPermissions.BAN)
+
+            // The owner never adopts a root someone else minted. A rotation replaces the community
+            // root, so a rotator who includes the owner as a recipient would hand themselves the keys
+            // to the owner's own community — the owner would follow them onto an attacker-chosen
+            // epoch. The owner changes epoch only by rotating themselves.
+            if (authority.isOwner(signer.pubKey) && !received.rotator.equals(signer.pubKey, ignoreCase = true)) continue
+
+            // hasPermission, not effectivePermissions: the latter ignores the banlist, so a BAN-holder
+            // who has themselves been banned could still rotate the whole community.
+            val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
             if (!authorized) continue
             adoptConcordRoot(entry, received.newRoot, received.newEpoch)
         }
