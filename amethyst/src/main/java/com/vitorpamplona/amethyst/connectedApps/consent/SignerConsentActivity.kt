@@ -193,6 +193,16 @@ private fun SignerConsentDialog(
                     if (info.accountName != null) {
                         ConnectedAccountRow(info.accountName, info.accountPicture, info.accountPubKey)
                     }
+                    // For a decrypt request, WHOSE conversation is being read is the decision. Show
+                    // that person as an avatar + name, never as nothing.
+                    if (info.counterpartyName != null) {
+                        Text(
+                            stringResource(R.string.nip46_signer_messages_with),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        ConnectedAccountRow(info.counterpartyName, info.counterpartyPicture, info.counterpartyPubKey)
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -204,12 +214,31 @@ private fun SignerConsentDialog(
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
 
-                // Primary: always allow this op
-                Button(
-                    onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                ) {
-                    Text(stringResource(R.string.napplet_consent_allow_always))
+                // Primary: the NARROWEST "remember" available. For decrypt that is "always allow for
+                // Alice" — one broad decrypt grant would otherwise hand over every conversation
+                // forever, and scoping the op itself would mean a prompt per conversation.
+                val narrowOp = info.narrowOp
+                if (narrowOp != null && info.narrowOpLabel != null) {
+                    Button(
+                        onClick = { onGrant(SignerOpGrant.AllowForOp(narrowOp)) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    ) {
+                        Text(info.narrowOpLabel)
+                    }
+                    // The broad grant stays available, but demoted below the scoped one.
+                    OutlinedButton(
+                        onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    ) {
+                        Text(stringResource(R.string.napplet_consent_allow_always))
+                    }
+                } else {
+                    Button(
+                        onClick = { onGrant(SignerOpGrant.AllowForOp(info.op)) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    ) {
+                        Text(stringResource(R.string.napplet_consent_allow_always))
+                    }
                 }
 
                 // Secondary: allow just once

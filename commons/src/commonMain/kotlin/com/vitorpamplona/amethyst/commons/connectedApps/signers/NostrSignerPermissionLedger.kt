@@ -168,7 +168,9 @@ class NostrSignerPermissionLedger(
             is NostrSignerOp.SignKind ->
                 if (op.kind in REASONABLE_SIGN_KINDS) NostrOpDecision.ALLOW else NostrOpDecision.ASK
             NostrSignerOp.Encrypt -> NostrOpDecision.ALLOW
-            NostrSignerOp.Decrypt -> NostrOpDecision.ASK
+            // Decryption always asks under REASONABLE — both the broad grant and the per-counterparty
+            // one, which is only ever created by an explicit "always allow for X" in the dialog.
+            NostrSignerOp.Decrypt, is NostrSignerOp.DecryptFrom -> NostrOpDecision.ASK
         }
 
     companion object {

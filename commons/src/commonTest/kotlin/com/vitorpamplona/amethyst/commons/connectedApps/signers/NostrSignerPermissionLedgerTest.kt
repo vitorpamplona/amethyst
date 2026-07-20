@@ -106,4 +106,32 @@ class NostrSignerPermissionLedgerTest {
             val ledger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
             assertEquals(NostrOpDecision.ASK, ledger.decide(coordinate, NostrSignerOp.SignKind(1)))
         }
+
+    // ---------------------------------------------------------------------
+    // Per-counterparty decrypt op
+    // ---------------------------------------------------------------------
+
+    @Test
+    fun decryptFromRoundTripsThroughItsStorageKeyWithoutColliding() {
+        val alice = "1".repeat(64)
+        val op = NostrSignerOp.DecryptFrom(alice)
+
+        assertEquals("decrypt:$alice", op.key)
+        // The broad grant keeps its historical bare key, so no stored decision migrates.
+        assertEquals("decrypt", NostrSignerOp.Decrypt.key)
+        assertEquals(op, NostrSignerOp.fromKey(op.key))
+        assertEquals(NostrSignerOp.Decrypt, NostrSignerOp.fromKey("decrypt"))
+        assertEquals(null, NostrSignerOp.fromKey("decrypt:"))
+    }
+
+    @Test
+    fun decryptFromAlwaysAsksUnderReasonableSoItIsOnlyEverGrantedExplicitly() =
+        runTest {
+            val store = InMemoryNostrSignerPermissionStore()
+            val ledger = NostrSignerPermissionLedger(store)
+            val coordinate = "nip46:a:b"
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+
+            assertEquals(NostrOpDecision.ASK, ledger.decide(coordinate, NostrSignerOp.DecryptFrom("1".repeat(64))))
+        }
 }

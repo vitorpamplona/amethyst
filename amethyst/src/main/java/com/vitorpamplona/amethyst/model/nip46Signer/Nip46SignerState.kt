@@ -170,7 +170,12 @@ class Nip46SignerState(
             // connect, and an allow/deny prompt whenever the ledger says ASK (dangerous kinds,
             // decryption, DMs, or a PARANOID app). Same surface + ledger as napplet/browser signing.
             connectConsent = Nip46ConsentBridge::requestConnect,
-            opConsent = Nip46ConsentBridge::requestOp,
+            // The account's own signer goes to the bridge so a decrypt request can be decrypted
+            // BEFORE the prompt — the dialog shows the actual plaintext instead of an opaque
+            // "wants to read your private messages". Local only; nothing is disclosed until approval.
+            opConsent = { coordinate, clientPubKey, op, request ->
+                Nip46ConsentBridge.requestOp(coordinate, clientPubKey, op, request, signer)
+            },
         )
 
     init {

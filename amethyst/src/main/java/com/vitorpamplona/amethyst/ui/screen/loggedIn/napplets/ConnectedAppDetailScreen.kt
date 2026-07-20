@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
+import com.vitorpamplona.amethyst.napplet.counterpartyLabel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
@@ -703,6 +704,7 @@ private fun NostrSignerOp.opLabel(): String =
         is NostrSignerOp.SignKind -> stringResource(R.string.napplet_op_sign_kind, kind)
         NostrSignerOp.Encrypt -> stringResource(R.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> stringResource(R.string.napplet_op_decrypt)
+        is NostrSignerOp.DecryptFrom -> stringResource(R.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
     }
 
 @Composable

@@ -30,10 +30,13 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /** Human-readable label for a [NostrSignerOp]. */
@@ -42,7 +45,23 @@ fun NostrSignerOp.label(context: Context): String =
         is NostrSignerOp.SignKind -> context.getString(R.string.napplet_op_sign_kind_named, kindNameFor(context, kind), kind)
         NostrSignerOp.Encrypt -> context.getString(R.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> context.getString(R.string.napplet_op_decrypt)
+        is NostrSignerOp.DecryptFrom -> context.getString(R.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
     }
+
+/**
+ * A person's display name for a consent prompt: their profile name when we have it cached, otherwise
+ * a shortened npub. Never empty — "read your private messages with <nothing>" would be worse than the
+ * broad wording it replaces.
+ */
+fun counterpartyLabel(pubKeyHex: HexKey): String {
+    LocalCache
+        .getUserIfExists(pubKeyHex)
+        ?.toBestDisplayName()
+        ?.ifBlank { null }
+        ?.let { return it }
+    val npub = runCatching { NPub.create(pubKeyHex) }.getOrNull()
+    return if (npub != null) npub.take(12) + "…" else pubKeyHex.take(12) + "…"
+}
 
 /** Builds the [SignerConsentInfo] needed by the per-op consent dialog. */
 fun buildSignerConsentInfo(

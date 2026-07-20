@@ -947,6 +947,14 @@
     <string name="napplet_op_encrypt">encrypt a message</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">read your private messages</string>
+    <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">read your private messages with %1$s</string>
+    <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">Always allow for %1$s</string>
+    <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">Amethyst could not decrypt this message. It may not be addressed to this account.</string>
+    <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">Messages with</string>
 
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Connected Apps</string>
