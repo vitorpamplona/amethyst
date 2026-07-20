@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteBundle
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteLink
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordStrandedRecovery
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.MintedInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
@@ -350,6 +352,23 @@ object ConcordActions {
 
     /** Parses a shareable invite URL into its pointer + private fragment. */
     fun parseInviteLink(url: String): ParsedInviteLink? = ConcordInviteLink.parseUrl(url)
+
+    /**
+     * Reduces an invite URL to the domain-agnostic bare `<naddr>#<fragment>` form
+     * stored as an entry's `invite_ref` (the stranded-recovery anchor). Null if the
+     * link is unparseable.
+     */
+    fun bareInviteRef(url: String): String? = ConcordInviteLink.bareForm(url)
+
+    /**
+     * Merges a stranded membership forward onto a higher-epoch [bundle] resolved at
+     * its own stored invite link, or null when there is nothing to recover. See
+     * [ConcordStrandedRecovery].
+     */
+    fun recoverStranded(
+        entry: ConcordCommunityListEntry,
+        bundle: CommunityInvite,
+    ): ConcordCommunityListEntry? = ConcordStrandedRecovery.mergeForward(entry, bundle)
 
     /** Decrypts + validates a fetched bundle event with the link token; null if invalid. */
     fun openBundle(

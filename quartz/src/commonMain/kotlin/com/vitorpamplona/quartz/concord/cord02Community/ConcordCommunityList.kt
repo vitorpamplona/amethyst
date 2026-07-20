@@ -49,6 +49,15 @@ class PrivateChannelKey(
  * [heldRoots], any [privateChannels] keys, bootstrap [relays], and a cached
  * display [name]. [addedAt] is the wire join timestamp (ms) that tiebreaks
  * liveness against tombstones.
+ *
+ * [inviteRef] is the invite link this membership was joined through, kept in the
+ * domain-agnostic bare `<naddr>#<fragment>` form (Armada's `invite_ref`, CORD-05
+ * §2/§3). It is the anchor for stranded recovery: a Refounding carries no
+ * recipient list, so a member left out of the rekey set never hears about the new
+ * epoch — re-resolving this link is the only way back. Entries joined without a
+ * link (direct invites, legacy entries) simply have none and are inert for
+ * recovery. [excludedAtEpoch] records the epoch at which we observed ourselves
+ * excluded, if ever.
  */
 @Serializable
 class ConcordCommunityListEntry(
@@ -62,6 +71,8 @@ class ConcordCommunityListEntry(
     val relays: List<String> = emptyList(),
     val name: String = "",
     val addedAt: Long = 0,
+    val inviteRef: String? = null,
+    val excludedAtEpoch: Long? = null,
 )
 
 /**
@@ -118,6 +129,8 @@ object ConcordCommunityList {
         val seed: JoinMaterialWire? = null,
         val current: JoinMaterialWire? = null,
         @SerialName("added_at") val addedAt: Long = 0,
+        @SerialName("invite_ref") val inviteRef: String? = null,
+        @SerialName("excluded_at_epoch") val excludedAtEpoch: Long? = null,
     )
 
     @Serializable
@@ -145,19 +158,24 @@ object ConcordCommunityList {
             heldRoots = heldRoots.map { WireHeldRoot(it.epoch, it.key) },
         )
 
-    private fun JoinMaterialWire.toEntry(addedAt: Long) =
-        ConcordCommunityListEntry(
-            id = communityId,
-            owner = owner,
-            ownerSalt = ownerSalt,
-            root = communityRoot,
-            rootEpoch = rootEpoch,
-            heldRoots = heldRoots.map { HeldRoot(it.epoch, it.key) },
-            privateChannels = channels.map { PrivateChannelKey(it.id, it.key, it.epoch, it.name) },
-            relays = relays,
-            name = name,
-            addedAt = addedAt,
-        )
+    private fun JoinMaterialWire.toEntry(
+        addedAt: Long,
+        inviteRef: String? = null,
+        excludedAtEpoch: Long? = null,
+    ) = ConcordCommunityListEntry(
+        id = communityId,
+        owner = owner,
+        ownerSalt = ownerSalt,
+        root = communityRoot,
+        rootEpoch = rootEpoch,
+        heldRoots = heldRoots.map { HeldRoot(it.epoch, it.key) },
+        privateChannels = channels.map { PrivateChannelKey(it.id, it.key, it.epoch, it.name) },
+        relays = relays,
+        name = name,
+        addedAt = addedAt,
+        inviteRef = inviteRef,
+        excludedAtEpoch = excludedAtEpoch,
+    )
 
     // ---- build / codec --------------------------------------------------------
 
@@ -183,6 +201,8 @@ object ConcordCommunityList {
                             seed = jm,
                             current = jm,
                             addedAt = e.addedAt,
+                            inviteRef = e.inviteRef,
+                            excludedAtEpoch = e.excludedAtEpoch,
                         )
                     },
                 tombstones = emptyList(),
@@ -206,7 +226,7 @@ object ConcordCommunityList {
             doc.entries.mapNotNull { e ->
                 val removedAt = latestRemoval[e.communityId]
                 if (removedAt != null && e.addedAt <= removedAt) return@mapNotNull null
-                (e.current ?: e.seed)?.toEntry(e.addedAt)
+                (e.current ?: e.seed)?.toEntry(e.addedAt, e.inviteRef, e.excludedAtEpoch)
             }
         } catch (_: Exception) {
             emptyList()
@@ -238,8 +258,33 @@ object ConcordCommunityList {
         val byId = LinkedHashMap<String, ConcordCommunityListEntry>()
         for (e in a + b) {
             val existing = byId[e.id]
-            if (existing == null || e.rootEpoch > existing.rootEpoch) byId[e.id] = e
+            if (existing == null) {
+                byId[e.id] = e
+            } else if (e.rootEpoch > existing.rootEpoch) {
+                // A winner without an invite_ref inherits the loser's: that link is the only anchor
+                // stranded recovery has, and dropping it on a merge would disarm recovery forever.
+                byId[e.id] = if (e.inviteRef == null) e.withInviteRef(existing.inviteRef) else e
+            } else if (existing.inviteRef == null && e.inviteRef != null) {
+                byId[e.id] = existing.withInviteRef(e.inviteRef)
+            }
         }
         return byId.values.toList()
     }
+
+    /** Copy of this entry carrying [inviteRef]; every other field untouched. */
+    fun ConcordCommunityListEntry.withInviteRef(inviteRef: String?) =
+        ConcordCommunityListEntry(
+            id = id,
+            owner = owner,
+            ownerSalt = ownerSalt,
+            root = root,
+            rootEpoch = rootEpoch,
+            heldRoots = heldRoots,
+            privateChannels = privateChannels,
+            relays = relays,
+            name = name,
+            addedAt = addedAt,
+            inviteRef = inviteRef,
+            excludedAtEpoch = excludedAtEpoch,
+        )
 }

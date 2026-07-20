@@ -169,7 +169,12 @@ object ConcordInviteLink {
         return "$trimmed/invite/$naddr#${encodeFragment(token, relays)}"
     }
 
-    /** Parses a full invite URL back into its pointer + fragment, or null if malformed. */
+    /**
+     * Parses an invite link back into its pointer + fragment, or null if malformed.
+     * Accepts both the full `{base}/invite/{naddr}#{fragment}` URL and the
+     * domain-agnostic bare `{naddr}#{fragment}` form produced by [bareForm], so a
+     * link stored by one front end still resolves when shared through another.
+     */
     fun parseUrl(url: String): ParsedInviteLink? {
         val hash = url.indexOf('#')
         if (hash < 0) return null
@@ -180,10 +185,26 @@ object ConcordInviteLink {
                 return null
             }
         val marker = url.indexOf("/invite/")
-        if (marker < 0) return null
-        val naddr = url.substring(marker + "/invite/".length, hash)
+        val naddr =
+            if (marker >= 0) {
+                url.substring(marker + "/invite/".length, hash)
+            } else {
+                // Bare `<naddr>#<fragment>` — no host, no path.
+                url.substring(0, hash)
+            }
         val parsed = NAddress.parse(naddr) ?: return null
         if (parsed.kind != ConcordInviteBundleEvent.KIND) return null
         return ParsedInviteLink(naddr, parsed.author, parsed.kind, fragment)
+    }
+
+    /**
+     * Reduces any invite link to the domain-agnostic bare `{naddr}#{fragment}` form
+     * (CORD-05 §2/§3 `invite_ref`), dropping any `https://host/invite/` prefix so a
+     * membership anchored through one front end still matches a link shared via
+     * another. Returns null if [url] is not a parseable invite link.
+     */
+    fun bareForm(url: String): String? {
+        val parsed = parseUrl(url) ?: return null
+        return parsed.naddr + "#" + url.substring(url.indexOf('#') + 1)
     }
 }

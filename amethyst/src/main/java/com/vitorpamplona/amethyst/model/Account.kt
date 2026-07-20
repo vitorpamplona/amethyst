@@ -362,6 +362,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
@@ -370,6 +371,14 @@ private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
 private const val CONCORD_ADMIN_ROLE = "Admin"
+
+/**
+ * How often a joined Concord community's stored invite link is re-resolved to check whether
+ * we were left out of a Refounding (see `recoverStrandedConcordCommunities`). Stranding is
+ * rare and silent, so this trades detection latency for not turning the revision tick into a
+ * relay-fetch loop.
+ */
+private const val RECOVERY_CHECK_INTERVAL_MS = 15 * 60 * 1000L
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -2146,6 +2155,10 @@ class Account(
                 relays = bundle.relays,
                 name = bundle.name,
                 addedAt = TimeUtils.now() * 1000,
+                // Anchor for stranded recovery: keep the link we joined through, domain-agnostic, so a
+                // Refounding that leaves us out of the recipient set is recoverable later. See
+                // recoverStrandedConcordCommunities().
+                inviteRef = ConcordActions.bareInviteRef(url),
             )
         joinConcordCommunity(entry)
         return ConcordInviteResult.Joined(bundle.communityId)
@@ -2603,6 +2616,10 @@ class Account(
                 relays = entry.relays,
                 name = entry.name,
                 addedAt = entry.addedAt,
+                // The invite_ref anchor must survive a rotation, or the *next* Refounding we're left
+                // out of would be unrecoverable.
+                inviteRef = entry.inviteRef,
+                excludedAtEpoch = entry.excludedAtEpoch,
             )
         sendMyPublicAndPrivateOutbox(concordChannelList.follow(next))
         announceConcordGuestbookJoin(next, inviteCreator = null, inviteLabel = null)
@@ -2623,12 +2640,11 @@ class Account(
      * which forks a community across clients. Self-escalation to BAN is prevented
      * upstream by the role rank gate in AuthorityResolver.
      *
-     * KNOWN LIMIT — a rotation carries only (newRoot, newEpoch, rotator); there is no
-     * recipient list, so a receiver cannot tell who was left out, and a BAN-holder can
-     * evict anyone (the owner included) by omission. Armada does not prevent this
-     * either; it *recovers* from it, re-resolving the invite link the member joined
-     * through and merging forward to the higher epoch ("stranded recovery"). Amethyst
-     * has no equivalent yet, so a stranded member stays stranded. Tracked for CORD-06.
+     * A rotation carries only (newRoot, newEpoch, rotator); there is no recipient list,
+     * so a receiver cannot tell who was left out, and a BAN-holder can evict anyone (the
+     * owner included) by omission — nothing on this receive path can prevent it. The
+     * cure is after the fact: see [recoverStrandedConcordCommunities], which re-resolves
+     * the invite link the membership was joined through and merges forward.
      */
     private suspend fun drainConcordRekeys() {
         if (!isWriteable()) return
@@ -2652,6 +2668,67 @@ class Account(
             val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
             if (!authorized) continue
             adoptConcordRoot(entry, received.newRoot, received.newEpoch)
+        }
+    }
+
+    // Last time we re-resolved each community's invite_ref, so the recovery sweep rides the
+    // Concord revision tick (which fires on every structural change) without turning it into a
+    // relay-fetch loop.
+    private val lastConcordRecoveryCheck = ConcurrentHashMap<String, Long>()
+
+    /**
+     * Stranded recovery (CORD-05/06 receive path). A Refounding carries only
+     * `(newRoot, newEpoch, rotator)` — **no recipient list** — so a member simply left
+     * out of the rekey recipient set receives nothing and sits on the dead epoch
+     * forever while everyone else moves on. This happens to any member, the owner
+     * included, and [drainConcordRekeys] cannot prevent it: there is no message to
+     * miss detecting.
+     *
+     * The way back is the invite link the membership was joined through
+     * ([ConcordCommunityListEntry.inviteRef], persisted by [joinConcordViaInvite] and
+     * carried through every rotation by [adoptConcordRoot]). The community keeps
+     * re-minting its bundle at that same addressable coordinate, so a bundle there at
+     * a **strictly higher** epoch than ours proves we were left behind — and carries
+     * the new root. Same or lower epoch is a no-op. Memberships with no link (direct
+     * invites, legacy entries) are inert here; that is expected, not an error.
+     *
+     * The merge itself ([ConcordActions.recoverStranded]) is epoch-monotonic and keeps
+     * both the `invite_ref` anchor (so the *next* exclusion is recoverable too) and the
+     * entry's [HeldRoot]s (so prior-epoch history the member legitimately holds stays
+     * derivable). We then re-announce the Guestbook at the new epoch, exactly as an
+     * ordinary rotation does, so the recovered member is visible to whoever refounds
+     * next instead of being silently dropped again.
+     *
+     * Called on the Concord revision tick, but rate-limited per community
+     * ([RECOVERY_CHECK_INTERVAL_MS]) — a tick with nothing to do costs a map lookup.
+     */
+    private suspend fun recoverStrandedConcordCommunities() {
+        if (!isWriteable()) return
+        val now = TimeUtils.nowMillis()
+        for (entry in concordChannelList.liveCommunities.value) {
+            val inviteRef = entry.inviteRef ?: continue
+            val last = lastConcordRecoveryCheck[entry.id]
+            if (last != null && now - last < RECOVERY_CHECK_INTERVAL_MS) continue
+            lastConcordRecoveryCheck[entry.id] = now
+
+            val parsed = ConcordActions.parseInviteLink(inviteRef) ?: continue
+            val relays =
+                (
+                    parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } +
+                        entry.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                ).toSet()
+            if (relays.isEmpty()) continue
+
+            val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
+            val wraps = client.fetchAll(filters = filters)
+            // Only a live bundle recovers: an expired/revoked link is not a rotation we missed.
+            val bundle = (ConcordActions.classifyInvite(wraps, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
+
+            val merged = ConcordActions.recoverStranded(entry, bundle) ?: continue
+            if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
+            Log.i("Concord", "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}")
+            sendMyPublicAndPrivateOutbox(concordChannelList.follow(merged))
+            announceConcordGuestbookJoin(merged, inviteCreator = null, inviteLabel = null)
         }
     }
 
@@ -5410,6 +5487,9 @@ class Account(
                 refreshConcordChannelIndex()
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
                 runCatching { drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+                // A rotation we were *excluded* from produces no rekey to drain, so it can only be
+                // found by re-resolving the invite link we joined through. Rate-limited internally.
+                runCatching { recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
             }
         }
 
