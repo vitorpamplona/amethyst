@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDe
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
@@ -5048,7 +5049,10 @@ class Account(
                 else -> event.content
             }
         } else {
-            event.content
+            // A read-only (npub-only) account holds no key, so nothing above can run. Returning
+            // `content` verbatim would push the raw NIP-04/NIP-44 base64 blob straight into the
+            // UI (chat bubbles, Messages previews, ...). Callers treat null as "not readable".
+            if (event.hasEncryptedContent()) null else event.content
         }
     }
 
@@ -5074,6 +5078,11 @@ class Account(
             event is DraftWrapEvent && isWriteable() -> {
                 draftsDecryptionCache.cachedDraft(event)?.content
             }
+
+            // Encrypted kinds that reached here did so because this account is not writeable
+            // (every branch above is gated on isWriteable). Their `content` is ciphertext —
+            // hand back null rather than let the blob render. See cachedDecryptContent.
+            event != null && event.hasEncryptedContent() -> null
 
             else -> {
                 event?.content
