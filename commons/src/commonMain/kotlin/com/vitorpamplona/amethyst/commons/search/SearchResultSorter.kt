@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.currentTimeSeconds
@@ -64,7 +65,7 @@ object SearchResultSorter {
         order: SearchSortOrder,
     ): List<User> =
         when (order) {
-            SearchSortOrder.NAME_AZ -> people.sortedBy { it.toBestDisplayName().lowercase() }
+            SearchSortOrder.NAME_AZ -> people.sortedBySnapshot { it.toBestDisplayName().lowercase() }
             SearchSortOrder.NAME_ZA -> people.sortedByDescending { it.toBestDisplayName().lowercase() }
             else -> people
         }
