@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,28 +46,51 @@ class FilterRelayGroupStateTest {
     private val relaySignKey = "b".repeat(64)
     private val sig = "0".repeat(128)
 
-    private val stateKinds =
+    private val metadataKinds =
         listOf(
             GroupMetadataEvent.KIND,
             GroupAdminsEvent.KIND,
             GroupMembersEvent.KIND,
             SupportedRolesEvent.KIND,
-            GroupPinnedEvent.KIND,
         )
+    private val pinKinds = listOf(GroupPinnedEvent.KIND)
 
     @Test
-    fun `with no pins it is a single host d-scoped state filter and no message window`() {
+    fun `with no pins it is host d-scoped state filters and no message window`() {
         val channel = RelayGroupChannel(groupId)
 
         val filters = filterRelayGroupState(channel, since = null)
 
-        val f = filters.single()
-        assertEquals(relayA, f.relay)
-        assertEquals(stateKinds, f.filter.kinds)
-        assertEquals(listOf("g1"), f.filter.tags!!["d"])
-        assertNull("state is #d-scoped, never #h — the message window is the tail/pager's job", f.filter.tags!!["h"])
-        assertNull("state carries no message-window kinds (9/poll), so no limit either", f.filter.limit)
-        assertNull(f.filter.until)
+        assertEquals(2, filters.size)
+        filters.forEach { f ->
+            assertEquals(relayA, f.relay)
+            assertEquals(listOf("g1"), f.filter.tags!!["d"])
+            assertNull("state is #d-scoped, never #h — the message window is the tail/pager's job", f.filter.tags!!["h"])
+            assertNull("state carries no message-window kinds (9/poll), so no limit either", f.filter.limit)
+            assertNull(f.filter.until)
+        }
+        assertEquals(metadataKinds, filters[0].filter.kinds)
+        assertEquals(pinKinds, filters[1].filter.kinds)
+    }
+
+    /**
+     * Regression: relay29-family relays (0xchat's `groups.0xchat.com`) answer a filter that mixes the
+     * 39000-39003 metadata kinds with any other kind — 39005 pins included — with
+     * `CLOSED … "blocked: it's not allowed to mix metadata kinds with others"`, dropping the WHOLE REQ.
+     * The group then never learns its name, roster or the user's own membership, so it renders as a raw
+     * id and offers "Join" to somebody the relay already lists as an admin. Keep the two apart.
+     */
+    @Test
+    fun `pins are never mixed into the metadata filter`() {
+        val channel = RelayGroupChannel(groupId)
+
+        filterRelayGroupState(channel, since = null).forEach { f ->
+            val kinds = f.filter.kinds ?: return@forEach
+            assertFalse(
+                "39005 must not share a filter with the 39000-39003 metadata block: $kinds",
+                kinds.contains(GroupPinnedEvent.KIND) && kinds.any { it in metadataKinds },
+            )
+        }
     }
 
     @Test
@@ -85,7 +109,7 @@ class FilterRelayGroupStateTest {
         )
 
         val filters = filterRelayGroupState(channel, since = null)
-        assertEquals(2, filters.size)
+        assertEquals(3, filters.size)
 
         val pinFilter = filters.first { it.filter.ids != null }
         assertEquals(relayA, pinFilter.relay)
@@ -93,10 +117,12 @@ class FilterRelayGroupStateTest {
         assertNull("pinned bodies are fetched by id, so no kinds", pinFilter.filter.kinds)
         assertNull("pinned events are immutable, so no since either", pinFilter.filter.since)
 
-        // The state filter is still present and still carries no #h message window.
-        val stateFilter = filters.first { it.filter.ids == null }
-        assertEquals(stateKinds, stateFilter.filter.kinds)
-        assertTrue(stateFilter.filter.tags!!.containsKey("d"))
-        assertNull(stateFilter.filter.tags!!["h"])
+        // The state filters are still present and still carry no #h message window.
+        val stateFilters = filters.filter { it.filter.ids == null }
+        assertEquals(listOf(metadataKinds, pinKinds), stateFilters.map { it.filter.kinds })
+        stateFilters.forEach {
+            assertTrue(it.filter.tags!!.containsKey("d"))
+            assertNull(it.filter.tags!!["h"])
+        }
     }
 }

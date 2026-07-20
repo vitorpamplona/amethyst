@@ -22,45 +22,34 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datas
 
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_PIN_KINDS
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
-
-/** Relay-signed group directory kinds: metadata + admins + members + roles + pins. */
-private val RELAY_GROUP_METADATA_KINDS =
-    listOf(
-        GroupMetadataEvent.KIND,
-        GroupAdminsEvent.KIND,
-        GroupMembersEvent.KIND,
-        SupportedRolesEvent.KIND,
-        GroupPinnedEvent.KIND,
-    )
 
 /**
  * The relay-signed metadata for a NIP-29 group (name/picture/about + admin,
  * member and role lists), addressed by the group id (`d` tag) and pinned to the
  * group's host relay. The relay signs these with its own key, so a single-relay
  * query scoped by `#d` returns exactly this group's directory.
+ *
+ * The 39000-39003 metadata block and the 39005 pin list go out as **two separate filters**: relay29-family
+ * relays (0xchat's included) reject a filter that mixes them and drop the whole REQ, which would leave the
+ * group with no name, no roster and no membership. See
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_PIN_KINDS].
  */
 fun filterRelayGroupState(
     channel: RelayGroupChannel,
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter> {
     val relays = channel.relays().toSet()
+    val scope = mapOf("d" to listOf(channel.groupId.id))
     val directory =
-        relays.map {
-            RelayBasedFilter(
-                relay = it,
-                filter =
-                    Filter(
-                        kinds = RELAY_GROUP_METADATA_KINDS,
-                        tags = mapOf("d" to listOf(channel.groupId.id)),
-                        since = since?.get(it)?.time,
-                    ),
+        relays.flatMap {
+            val floor = since?.get(it)?.time
+            listOf(
+                RelayBasedFilter(relay = it, filter = Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = scope, since = floor)),
+                RelayBasedFilter(relay = it, filter = Filter(kinds = RELAY_GROUP_PIN_KINDS, tags = scope, since = floor)),
             )
         }
 
