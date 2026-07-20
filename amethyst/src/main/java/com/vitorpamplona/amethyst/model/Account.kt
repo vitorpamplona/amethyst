@@ -2782,7 +2782,15 @@ class Account(
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
-        val channel = ChannelEntity(name = name.trim())
+        // Carry the standing definition forward and change only the name. A ChannelEntity built from
+        // scratch defaults `private` and `voice` to false, so renaming a private channel used to
+        // publish an edition declaring it PUBLIC — and a voice channel became a text channel.
+        val standing =
+            session.state.value
+                ?.channels
+                ?.get(channelIdHex)
+                ?.definition
+        val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false)
         val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now())
         publishConcordWrap(session.entry, wrap)
         return true
@@ -2796,7 +2804,14 @@ class Account(
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
-        val channel = ChannelEntity(name = name.trim(), deleted = true)
+        // Same as rename: preserve the standing flags so a tombstone does not also silently
+        // reclassify the channel it retires.
+        val standing =
+            session.state.value
+                ?.channels
+                ?.get(channelIdHex)
+                ?.definition
+        val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false, deleted = true)
         val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now())
         publishConcordWrap(session.entry, wrap)
         return true
