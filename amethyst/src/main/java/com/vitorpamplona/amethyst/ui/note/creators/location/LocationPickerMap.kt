@@ -65,10 +65,6 @@ import org.osmdroid.views.overlay.Polygon
  * - [recenter] animates the map to a new point when its value changes (e.g. after
  *   a place search or a "use my location" tap). Passing the same value twice is a
  *   no-op, so it is safe to hoist in state.
- * - [onUserInteraction] fires when a finger first lands on the map. [onCenterChanged]
- *   alone cannot tell a user pan from osmdroid's own layout-time scroll (which the
- *   MapView emits at the opening center with pixel-quantized coordinates), so callers
- *   that must not treat an automatic scroll as a choice gate on this instead.
  */
 @Composable
 fun LocationPickerMap(
@@ -84,14 +80,12 @@ fun LocationPickerMap(
     highlight: BoundingBox? = null,
     highlightColor: Int = 0,
     onCenterChanged: ((Double, Double) -> Unit)? = null,
-    onUserInteraction: (() -> Unit)? = null,
     onPick: (Double, Double) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnPick by rememberUpdatedState(onPick)
     val currentOnCenterChanged by rememberUpdatedState(onCenterChanged)
-    val currentOnUserInteraction by rememberUpdatedState(onUserInteraction)
     val darkTheme = !MaterialTheme.colorScheme.isLight
 
     // Tracks the last point we animated to, so a recomposition that re-supplies the
@@ -123,10 +117,7 @@ fun LocationPickerMap(
                 // LocationPreviewMap. Returning false lets the MapView still pan/zoom/tap.
                 setOnTouchListener { view, event ->
                     when (event.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            view.parent?.requestDisallowInterceptTouchEvent(true)
-                            currentOnUserInteraction?.invoke()
-                        }
+                        MotionEvent.ACTION_DOWN -> view.parent?.requestDisallowInterceptTouchEvent(true)
                         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
                     }
                     false

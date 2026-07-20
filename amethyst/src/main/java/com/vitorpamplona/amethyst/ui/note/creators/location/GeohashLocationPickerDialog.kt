@@ -100,6 +100,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
+import kotlin.math.abs
 
 /** Zoom the map animates to after a search hit or a "use my location" tap. */
 private const val RECENTER_ZOOM = 14.0
@@ -124,16 +125,15 @@ private fun zoomForGeohashLength(length: Int): Double =
         else -> 17.5
     }
 
-/**
- * Neutral starting center when the picker opens with no seed: a genuinely unnamed
- * point in the mid-Atlantic, framing the Americas, Europe and Africa at [WORLD_ZOOM].
- *
- * Deliberately NOT 20N/0E — that is inland Mali (it reverse-geocodes to Tessalit) and
- * sits exactly on the prime meridian, where a sub-kilometre pan flips the geohash
- * between the `e…` and `s…` halves of the world and looks like a broken readout.
- */
+/** Neutral starting center (mid-Atlantic) when the picker opens with no seed. */
 private const val WORLD_CENTER_LAT = 20.0
-private const val WORLD_CENTER_LON = -30.0
+private const val WORLD_CENTER_LON = 0.0
+
+/**
+ * Minimum center shift (degrees) from the opening center that counts as a real pan,
+ * so an initial osmdroid layout-scroll at the opening center is not mistaken for a pick.
+ */
+private const val SELECT_MOVE_EPS = 0.0005
 
 /** Give up waiting for a GPS fix after this long so the button never spins forever. */
 private const val GPS_FIX_TIMEOUT_MS = 20_000L
@@ -201,21 +201,15 @@ fun GeohashLocationPickerContent(
     val seed = remember(initialGeohash) { initialGeohash?.takeIf { it.isNotBlank() }?.let { GeoHash.decode(it) } }
     val seedLen = initialGeohash?.trim()?.length ?: 0
 
-    // The map opens centered here. Without a seed there is no real selection yet.
+    // The map opens centered here. Without a seed there is no real selection yet — and
+    // osmdroid can emit an initial scroll at this exact center, which must NOT be treated
+    // as a pick (else the picker would auto-select the mid-Atlantic and enable Confirm).
     val initialLat = seed?.centerLat ?: WORLD_CENTER_LAT
     val initialLon = seed?.centerLon ?: WORLD_CENTER_LON
 
     var pickedLat by remember { mutableStateOf(seed?.centerLat) }
     var pickedLon by remember { mutableStateOf(seed?.centerLon) }
     var hasSelection by remember { mutableStateOf(seed != null) }
-
-    // osmdroid emits a scroll event when the MapView is first laid out, reporting a
-    // pixel-quantized version of the opening center — at world zoom a single pixel is
-    // ~0.4 degrees, so that phantom "pan" can be hundreds of km away from where we asked
-    // it to open. Treating it as a pick auto-selected whatever the default center was and
-    // enabled Confirm with nothing chosen. Only map movement that follows a real finger
-    // down on the map counts, so an automatic scroll can never become a selection.
-    var mapTouched by remember { mutableStateOf(false) }
     var level by remember {
         mutableStateOf(GeohashChannelLevel.forChars(seedLen) ?: GeohashChannelLevel.CITY)
     }
@@ -343,8 +337,8 @@ fun GeohashLocationPickerContent(
     Column(modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().weight(1f)) {
             LocationPickerMap(
-                latitude = initialLat,
-                longitude = initialLon,
+                latitude = seed?.centerLat ?: 20.0,
+                longitude = seed?.centerLon ?: 0.0,
                 pickedLatitude = null,
                 pickedLongitude = null,
                 zoom = if (seed != null) zoomForGeohashLength(seedLen) else WORLD_ZOOM,
@@ -353,12 +347,11 @@ fun GeohashLocationPickerContent(
                 zoomTo = zoomTo,
                 highlight = highlight,
                 highlightColor = highlightColor,
-                onUserInteraction = { mapTouched = true },
                 onCenterChanged = { lat, lon ->
-                    // Only a movement the user drove counts as their first real pick.
-                    if (mapTouched) {
-                        pickedLat = lat
-                        pickedLon = lon
+                    pickedLat = lat
+                    pickedLon = lon
+                    // A pan/zoom away from the opening center is the user's first real pick.
+                    if (!hasSelection && (abs(lat - initialLat) > SELECT_MOVE_EPS || abs(lon - initialLon) > SELECT_MOVE_EPS)) {
                         hasSelection = true
                     }
                 },
@@ -694,24 +687,13 @@ private fun PickerBottomBar(
                         }
                     }
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                        // The place name must never contradict the geohash under it. Resolve
-                        // it only for the settled cell, and only while that IS the current
-                        // cell — mid-pan the debounced [settledCell] still names the previous
-                        // cell, and drawing it beside a fresh geohash is worse than no name.
-                        // LoadCityName echoes the geohash back when it cannot resolve a name
-                        // (no geocoder backend, or a point at sea); drop that too rather than
-                        // repeat the geohash as if it were a place.
-                        if (settledCell == cell) {
-                            LoadCityName(geohashStr = cell) { cityName ->
-                                if (cityName != cell) {
-                                    Text(
-                                        cityName,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                    )
-                                }
-                            }
+                        LoadCityName(geohashStr = settledCell ?: cell) { cityName ->
+                            Text(
+                                cityName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                            )
                         }
                         Text(
                             "#$cell",
