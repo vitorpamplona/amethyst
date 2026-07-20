@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsHistoryEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
@@ -56,13 +57,20 @@ class AccountFilterAssembler(
     // History: older gift wraps, loaded on demand in bounded one-shot slices.
     val giftWrapsHistory = AccountGiftWrapsHistoryEoseManager(client, ::allKeys)
 
+    // Live tail: the recent week of notifications from the inbox + group host relays.
+    val notifications = AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys)
+
+    // History: older notifications, paged backward by until+limit per relay, driven by the feed's markers.
+    val notificationsHistory = AccountNotificationsHistoryEoseManager(client, ::allKeys)
+
     val group =
         listOf(
             AccountMetadataEoseManager(client, ::allKeys),
             giftWraps,
             giftWrapsHistory,
             AccountDraftsEoseManager(client, ::allKeys),
-            AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
+            notifications,
+            notificationsHistory,
             MarmotGroupEventsEoseManager(client, ::allKeys),
         )
 

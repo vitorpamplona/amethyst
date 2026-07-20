@@ -33,7 +33,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class AccountNotificationsEoseFromRandomRelaysManager(
@@ -51,8 +50,9 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        // only loads this after the feed is built
-        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo()
+        // Fixed one-week live tail of stragglers from follow relays. Backward history is the marker-driven
+        // [AccountNotificationsHistoryEoseManager]'s job (on inbox + group relays), so this no longer drifts.
+        val defaultSince = TimeUtils.oneWeekAgo()
         return (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
             val since = since?.get(it)?.time ?: defaultSince
             filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
@@ -70,11 +70,6 @@ class AccountNotificationsEoseFromRandomRelaysManager(
                 key.account.scope.launch(Dispatchers.IO) {
                     // no need to hurry here. we can wait the app stabilize
                     key.account.followsPerRelay.debounce(5000).collectLatest {
-                        invalidateFilters()
-                    }
-                },
-                key.account.scope.launch(Dispatchers.IO) {
-                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

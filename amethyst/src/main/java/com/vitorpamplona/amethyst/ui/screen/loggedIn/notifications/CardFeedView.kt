@@ -53,6 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
@@ -70,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.NutzapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.ShowDonationCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -77,7 +84,13 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @Composable
 fun RenderCardFeed(
@@ -91,6 +104,12 @@ fun RenderCardFeed(
     headerContent: (@Composable () -> Unit)? = null,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
+
+    // A genuinely empty feed has no card rows to host the per-relay window-limit markers, so step every
+    // relay one page at a time to hunt for the first notifications. Once cards appear the markers take
+    // over, demand-driven. Gated on Empty only (never the transient Loading navigation flashes through).
+    val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
+    BootstrapNotificationHistoryWhenEmpty(feedState is CardFeedState.Empty, history.loadingMore, history.status) { history.advanceAll() }
 
     // Direct switch instead of CrossfadeIfEnabled: the crossfade's `currentlyVisible`
     // accumulator can leave a previous `Loaded` instance composed alongside the new
@@ -152,6 +171,37 @@ private fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
+
+    // Backward time-pagination of the notifications feed: each notification relay carries a window-limit
+    // marker placed at the oldest point it has paged to. Scrolling that marker into view pulls the relay's
+    // next, older page (see RelayReachSentinels) — the same demand-driven mechanism the DM history uses.
+    val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
+    val historyStatus by history.status.collectAsStateWithLifecycle()
+
+    // One cursor per relay: its reached depth, state (reaching / stalled / done) and the advance() that
+    // pulls its next page. A done relay's marker sinks to the oldest end reading "fully loaded".
+    val limits =
+        remember(historyStatus) {
+            historyStatus.relayProgress.map { (relay, p) ->
+                RelayReachCursor(relay.url, relayShortName(relay), p.reachedUntil, reachState(p)) { history.advance(relay) }
+            }
+        }
+
+    // Count of items above the notification cards in the LazyColumn (scaffold header + donation card +
+    // open-poll cards), so the hoisted sentinel can map a visible LazyColumn index back to a card.
+    val leadingItemCount = (if (headerContent != null) 1 else 0) + 1 + openPolls.size
+
+    // Hoisted load driver (above the LazyColumn): pages each relay off viewport visibility, so feed
+    // reorders don't re-fire paging. The per-gap markers below are pure UI.
+    if (limits.isNotEmpty()) {
+        RelayReachSentinels(limits, listState) { index -> items.list.getOrNull(index - leadingItemCount)?.createdAt() }
+    }
+
+    // The relays behind a tapped in-stream marker; non-null shows the per-relay breakdown popup.
+    var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }
+    syncDetail?.let { detail ->
+        RelayReachDetailDialog(detail, ::formatHistoryReachDate) { syncDetail = null }
+    }
 
     StickToTopOnPrepend(listState, items.list.firstOrNull()?.id())
 
@@ -233,7 +283,7 @@ private fun FeedLoaded(
             items = items.list,
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
-        ) { _, item ->
+        ) { index, item ->
             val isHighlighted = highlightedCardId == item.id()
             val highlightColor by animateColorAsState(
                 targetValue = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
@@ -257,9 +307,61 @@ private fun FeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+
+            // Per-relay window-limit markers in the gap toward the next-older card: each pulls its relay's
+            // next page while on screen. olderCreatedAt is null past the oldest loaded card, so relays that
+            // reached the bottom of the list sit there as "fully loaded".
+            if (limits.isNotEmpty()) {
+                RelayReachMarkers(
+                    limits,
+                    item.createdAt(),
+                    items.list.getOrNull(index + 1)?.createdAt(),
+                ) { syncDetail = it }
+            }
         }
     }
 }
+
+/**
+ * Bootstraps notification history while the feed is genuinely empty: steps every relay one page at a
+ * time, gated on its own loader, until notifications appear or every relay exhausts. Once cards load this
+ * stops and the per-relay window-limit markers drive paging on demand.
+ *
+ * Leads with a debounce so the brief Empty/Loading flash navigation passes through does NOT trigger a
+ * hunt; if [active] drops before it elapses (cards loaded) the effect cancels and nothing pages.
+ */
+@Composable
+private fun BootstrapNotificationHistoryWhenEmpty(
+    active: Boolean,
+    loadingMore: StateFlow<Boolean>,
+    status: StateFlow<PagingStatus>,
+    advanceAll: () -> Unit,
+) {
+    LaunchedEffect(active, loadingMore, status) {
+        if (!active) return@LaunchedEffect
+        delay(BOOTSTRAP_DEBOUNCE_MS)
+        combine(loadingMore, status) { loading, s -> !loading && !s.exhausted }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect { advanceAll() }
+    }
+}
+
+// Ignore the transient empty feed that navigation flashes through before notifications re-appear.
+private const val BOOTSTRAP_DEBOUNCE_MS = 1200L
+
+private fun reachState(p: RelayPagingProgress): RelayReachState =
+    when {
+        p.done -> RelayReachState.DONE
+        p.stalled -> RelayReachState.STALLED
+        else -> RelayReachState.REACHING
+    }
+
+private fun relayShortName(relay: NormalizedRelayUrl): String =
+    relay.url
+        .substringAfter("://")
+        .trimEnd('/')
+        .substringBefore('/')
 
 @Composable
 private fun RenderCardItem(

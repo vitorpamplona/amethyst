@@ -61,7 +61,10 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                     filterNotificationsToPubkey(
                         relay = it,
                         pubkey = user(key).pubkeyHex,
-                        since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
+                        // Fixed one-week live tail. Everything older is paged on demand by the marker-driven
+                        // [AccountNotificationsHistoryEoseManager] (until+limit, per relay) — the NIP-04 model —
+                        // so this filter no longer drifts its `since` back as the feed fills.
+                        since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo(),
                     )
             }
 
@@ -100,11 +103,6 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                 // from) the notification query.
                 key.account.scope.launch(Dispatchers.IO) {
                     key.account.relayGroupList.liveRelayGroupList.sample(1000).collectLatest {
-                        invalidateFilters()
-                    }
-                },
-                key.account.scope.launch(Dispatchers.IO) {
-                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

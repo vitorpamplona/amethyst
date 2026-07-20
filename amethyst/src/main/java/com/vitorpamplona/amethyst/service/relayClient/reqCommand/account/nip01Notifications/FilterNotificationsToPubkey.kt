@@ -124,6 +124,70 @@ val NotificationsPerKeyKinds3 =
         AttestorRecommendationEvent.KIND,
     )
 
+/**
+ * Every kind the notifications feed cares about on the user's inbox relays, flattened into one list.
+ * The live-tail query ([filterNotificationsToPubkey] / [filterSummaryNotificationsToPubkey]) splits these
+ * across several filters with different per-kind limits; backward history paging instead asks ONE filter
+ * per relay so the single until+limit cursor stays gap-proof (an empty page truly means "nothing older").
+ */
+val AllNotificationKinds =
+    (SummaryKinds + NotificationsPerKeyKinds + NotificationsPerKeyKinds2 + NotificationsPerKeyKinds3).distinct()
+
+/**
+ * One backward-paging page of notifications on an inbox relay: the N newest events tagging me
+ * ([AllNotificationKinds], `#p` = me) strictly older than [until]. A single filter (not the live query's
+ * split) so the [BackwardRelayPager][com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager]
+ * cursor tracking the oldest delivered `created_at` can't skip a band that a per-kind sub-limit capped.
+ */
+fun filterNotificationsHistoryToPubkey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    until: Long,
+    limit: Int,
+): List<RelayBasedFilter> {
+    if (pubkey.isNullOrEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = AllNotificationKinds,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = limit,
+                    until = until,
+                ),
+        ),
+    )
+}
+
+/**
+ * One backward-paging page of NIP-29 group-activity notifications on a group's host relay:
+ * [GroupNotificationKinds] tagging me (`#p`) inside my joined groups (`#h`), strictly older than [until].
+ */
+fun filterGroupNotificationsHistoryToPubkey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    groupIds: List<String>,
+    until: Long,
+    limit: Int,
+): List<RelayBasedFilter> {
+    if (pubkey.isNullOrEmpty() || groupIds.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = GroupNotificationKinds,
+                    tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
+                    limit = limit,
+                    until = until,
+                ),
+        ),
+    )
+}
+
 fun filterSummaryNotificationsToPubkey(
     relay: NormalizedRelayUrl,
     pubkey: HexKey?,
