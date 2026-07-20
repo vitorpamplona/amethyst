@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
-import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
@@ -105,9 +105,9 @@ fun RenderCardFeed(
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
-    // A genuinely empty feed has no card rows to host the per-relay window-limit markers, so step every
-    // relay one page at a time to hunt for the first notifications. Once cards appear the markers take
-    // over, demand-driven. Gated on Empty only (never the transient Loading navigation flashes through).
+    // A genuinely empty feed has no rows for the look-ahead buffer driver to measure, so step every relay
+    // one page at a time to hunt for the first notifications. Once cards appear the buffer driver takes
+    // over. Gated on Empty only (never the transient Loading navigation flashes through).
     val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
     BootstrapNotificationHistoryWhenEmpty(feedState is CardFeedState.Empty, history.loadingMore, history.status) { history.advanceAll() }
 
@@ -172,30 +172,43 @@ private fun FeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
 
-    // Backward time-pagination of the notifications feed: each notification relay carries a window-limit
-    // marker placed at the oldest point it has paged to. Scrolling that marker into view pulls the relay's
-    // next, older page (see RelayReachSentinels) — the same demand-driven mechanism the DM history uses.
+    // Infinite-scroll backward pagination: the notifications feed keeps a fat look-ahead buffer of older
+    // notifications loaded below the viewport. When fewer than [NOTIFICATION_LOOKAHEAD_BUFFER] rows remain
+    // ahead of the last visible one, every not-done relay is stepped one older page (until+limit, gap-proof)
+    // — refilling eagerly and repeating until the buffer is full again or all relays run dry. The per-relay
+    // [BackwardRelayPager] engine is the same one the DM history uses; only the trigger differs (buffer depth
+    // here vs. marker visibility there).
     val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
     val historyStatus by history.status.collectAsStateWithLifecycle()
 
-    // One cursor per relay: its reached depth, state (reaching / stalled / done) and the advance() that
-    // pulls its next page. A done relay's marker sinks to the oldest end reading "fully loaded".
+    // Keep a big runway of already-loaded rows below the fold so the user effectively never reaches the end.
+    val exhausted = historyStatus.exhausted
+    val loadingMore by history.loadingMore.collectAsStateWithLifecycle()
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisibleIndex =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: 0
+            val totalItems = listState.layoutInfo.totalItemsCount
+            totalItems > 0 && lastVisibleIndex >= totalItems - NOTIFICATION_LOOKAHEAD_BUFFER
+        }
+    }
+    // Re-evaluated when the buffer runs low, a page settles (loadingMore falls), or paging exhausts — so a
+    // single page that doesn't refill the whole buffer keeps pulling the next until it does or relays run dry.
+    LaunchedEffect(shouldLoadMore, loadingMore, exhausted) {
+        if (shouldLoadMore && !loadingMore && !exhausted) history.advanceAll()
+    }
+
+    // One cursor per relay: its reached depth, state (reaching / stalled / done) and the advance() that pulls
+    // its next page (also usable to retry a stalled relay by tapping). A done relay's marker sinks to the
+    // oldest end reading "fully loaded".
     val limits =
         remember(historyStatus) {
             historyStatus.relayProgress.map { (relay, p) ->
                 RelayReachCursor(relay.url, relayShortName(relay), p.reachedUntil, reachState(p)) { history.advance(relay) }
             }
         }
-
-    // Count of items above the notification cards in the LazyColumn (scaffold header + donation card +
-    // open-poll cards), so the hoisted sentinel can map a visible LazyColumn index back to a card.
-    val leadingItemCount = (if (headerContent != null) 1 else 0) + 1 + openPolls.size
-
-    // Hoisted load driver (above the LazyColumn): pages each relay off viewport visibility, so feed
-    // reorders don't re-fire paging. The per-gap markers below are pure UI.
-    if (limits.isNotEmpty()) {
-        RelayReachSentinels(limits, listState) { index -> items.list.getOrNull(index - leadingItemCount)?.createdAt() }
-    }
 
     // The relays behind a tapped in-stream marker; non-null shows the per-relay breakdown popup.
     var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }
@@ -308,9 +321,9 @@ private fun FeedLoaded(
                 thickness = DividerThickness,
             )
 
-            // Per-relay window-limit markers in the gap toward the next-older card: each pulls its relay's
-            // next page while on screen. olderCreatedAt is null past the oldest loaded card, so relays that
-            // reached the bottom of the list sit there as "fully loaded".
+            // Per-relay progress markers in the gap toward the next-older card, at the depth each relay has
+            // paged to (loading is driven by the look-ahead buffer above, not by these). olderCreatedAt is
+            // null past the oldest loaded card, so relays that reached the bottom sit there as "fully loaded".
             if (limits.isNotEmpty()) {
                 RelayReachMarkers(
                     limits,
@@ -325,7 +338,7 @@ private fun FeedLoaded(
 /**
  * Bootstraps notification history while the feed is genuinely empty: steps every relay one page at a
  * time, gated on its own loader, until notifications appear or every relay exhausts. Once cards load this
- * stops and the per-relay window-limit markers drive paging on demand.
+ * stops and the look-ahead buffer driver takes over, keeping older pages loaded ahead of the viewport.
  *
  * Leads with a debounce so the brief Empty/Loading flash navigation passes through does NOT trigger a
  * hunt; if [active] drops before it elapses (cards loaded) the effect cancels and nothing pages.
@@ -349,6 +362,10 @@ private fun BootstrapNotificationHistoryWhenEmpty(
 
 // Ignore the transient empty feed that navigation flashes through before notifications re-appear.
 private const val BOOTSTRAP_DEBOUNCE_MS = 1200L
+
+// How many already-loaded rows to keep below the last visible one before pulling the next older page.
+// Large on purpose: the feed reads as infinite scroll, the user practically never reaches the bottom.
+private const val NOTIFICATION_LOOKAHEAD_BUFFER = 100
 
 private fun reachState(p: RelayPagingProgress): RelayReachState =
     when {
