@@ -70,6 +70,41 @@ class ConcordCommunityStateTest {
         assertFalse(state.dissolved)
     }
 
+    /**
+     * The per-kind gated folds share the shape that poisoned GRANT chains live: gating used
+     * to pre-filter the chain, so one unauthorized edition in the middle of a CHANNEL (or
+     * METADATA) chain orphaned every authorized edition above it — the channel frozen at its
+     * pre-attack name, permanently, with no way for the owner to rename or delete it.
+     */
+    @Test
+    fun anUnauthorizedChannelOrMetadataEditionMidChainDoesNotOrphanTheEditionsAboveIt() {
+        val chan = "c1".repeat(32)
+        val meta = "00".repeat(32)
+        val troll = "77".repeat(32) // holds no roles at all
+
+        fun chained(
+            kind: ControlEntityKind,
+            eid: String,
+            version: Long,
+            prev: ControlEdition?,
+            content: String,
+            author: String,
+        ) = ControlEdition(kind, eid.hexToByteArray(), version, prev?.hash, null, content, author, "r-$eid-$version", version)
+
+        val c0 = chained(ControlEntityKind.CHANNEL, chan, 0, null, """{"name":"general"}""", owner)
+        val c1 = chained(ControlEntityKind.CHANNEL, chan, 1, c0, """{"name":"HACKED"}""", troll)
+        val c2 = chained(ControlEntityKind.CHANNEL, chan, 2, c1, """{"name":"renamed"}""", owner)
+
+        val m0 = chained(ControlEntityKind.METADATA, meta, 0, null, """{"name":"My Server"}""", owner)
+        val m1 = chained(ControlEntityKind.METADATA, meta, 1, m0, """{"name":"HACKED"}""", troll)
+        val m2 = chained(ControlEntityKind.METADATA, meta, 2, m1, """{"name":"Renamed Server"}""", owner)
+
+        val state = ConcordCommunityState.fold(listOf(c0, c1, c2, m0, m1, m2), owner)
+
+        assertEquals("renamed", state.channels[chan]?.definition?.name, "the owner's v2 rename must apply")
+        assertEquals("Renamed Server", state.metadata?.name, "the owner's v2 metadata edit must apply")
+    }
+
     @Test
     fun dissolutionTombstoneMarksCommunityDissolved() {
         val editions =

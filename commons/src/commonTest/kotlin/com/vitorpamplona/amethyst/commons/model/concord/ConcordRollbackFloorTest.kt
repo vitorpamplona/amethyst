@@ -65,6 +65,7 @@ class ConcordRollbackFloorTest {
                     metadata = MetadataEntity(name = "Nostrichs HQ"),
                     current = genesisEditions,
                     createdAt = 2L,
+                    owner = community.ownerPubKey,
                 )
             val epoch0Wraps = community.genesisWraps + rename
 
@@ -125,6 +126,7 @@ class ConcordRollbackFloorTest {
                     metadata = MetadataEntity(name = "Nostrichs HQ"),
                     current = genesisEditions,
                     createdAt = 2L,
+                    owner = community.ownerPubKey,
                 )
             val epoch0Wraps = community.genesisWraps + rename
 
@@ -219,6 +221,7 @@ class ConcordRollbackFloorTest {
                     metadata = MetadataEntity(name = "Hijacked"),
                     current = genesisEditions,
                     createdAt = 2L,
+                    owner = community.ownerPubKey,
                 )
 
             val floors =

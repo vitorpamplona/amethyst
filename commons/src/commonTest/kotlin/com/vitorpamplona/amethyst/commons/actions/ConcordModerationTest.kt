@@ -65,13 +65,13 @@ class ConcordModerationTest {
                     position = 1,
                     permissions = ConcordPermissions.of(ConcordPermissions.BAN, ConcordPermissions.KICK).toWire(),
                 )
-            add(ConcordModeration.defineRole(owner, cp, roleId, adminRole, editions, createdAt = 2L))
+            add(ConcordModeration.defineRole(owner, cp, roleId, adminRole, editions, createdAt = 2L, owner = community.ownerPubKey))
 
             // Owner grants that role to the admin user.
-            add(ConcordModeration.grant(owner, cp, communityId, admin.pubKey, listOf(roleIdHex), editions, createdAt = 3L))
+            add(ConcordModeration.grant(owner, cp, communityId, admin.pubKey, listOf(roleIdHex), editions, createdAt = 3L, owner = community.ownerPubKey))
 
             // Owner bans the troll.
-            add(ConcordModeration.ban(owner, cp, communityId, troll.pubKey, editions, createdAt = 4L))
+            add(ConcordModeration.ban(owner, cp, communityId, troll.pubKey, editions, createdAt = 4L, owner = community.ownerPubKey))
 
             val state: ConcordCommunityState = ConcordCommunityState.fold(editions, community.ownerPubKey)
 
@@ -83,18 +83,18 @@ class ConcordModerationTest {
             assertFalse(state.authority.isBanned(admin.pubKey))
 
             // Revoking (an empty grant, as "Remove admin" does) strips the role and its permissions.
-            add(ConcordModeration.grant(owner, cp, communityId, admin.pubKey, emptyList(), editions, createdAt = 7L))
+            add(ConcordModeration.grant(owner, cp, communityId, admin.pubKey, emptyList(), editions, createdAt = 7L, owner = community.ownerPubKey))
             val demoted = ConcordCommunityState.fold(editions, community.ownerPubKey)
             assertFalse(demoted.authority.effectivePermissions(admin.pubKey).has(ConcordPermissions.BAN))
             assertTrue(demoted.authority.rolesOf(admin.pubKey).isEmpty())
 
             // Unbanning the troll clears the flag (version chains onto the ban).
-            add(ConcordModeration.unban(owner, cp, communityId, troll.pubKey, editions, createdAt = 5L))
+            add(ConcordModeration.unban(owner, cp, communityId, troll.pubKey, editions, createdAt = 5L, owner = community.ownerPubKey))
             val healed = ConcordCommunityState.fold(editions, community.ownerPubKey)
             assertFalse(healed.authority.isBanned(troll.pubKey))
 
             // A grant forged by the troll (who outranks nobody) is dropped by the fold.
-            val forged = ConcordModeration.grant(troll, cp, communityId, troll.pubKey, listOf(roleIdHex), editions, createdAt = 6L)
+            val forged = ConcordModeration.grant(troll, cp, communityId, troll.pubKey, listOf(roleIdHex), editions, createdAt = 6L, owner = community.ownerPubKey)
             val forgedEditions: List<ControlEdition> = editions + ConcordActions.controlEditions(listOf(forged), cp)
             val afterForgery = ConcordCommunityState.fold(forgedEditions, community.ownerPubKey)
             assertFalse(afterForgery.authority.effectivePermissions(troll.pubKey).has(ConcordPermissions.BAN))
@@ -123,8 +123,8 @@ class ConcordModerationTest {
             val editions = ConcordActions.controlEditions(community.genesisWraps, cp).toMutableList()
 
             // v0: ban the troll. v1: ban the stranger too (chains onto v0).
-            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, communityId, troll.pubKey, editions, createdAt = 2L)), cp)
-            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, communityId, stranger.pubKey, editions, createdAt = 3L)), cp)
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, communityId, troll.pubKey, editions, createdAt = 2L, owner = community.ownerPubKey)), cp)
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, communityId, stranger.pubKey, editions, createdAt = 3L, owner = community.ownerPubKey)), cp)
 
             val banlistSoFar = editions.filter { it.entityKind == ControlEntityKind.BANLIST }
             assertEquals(2, banlistSoFar.size)
@@ -137,7 +137,7 @@ class ConcordModerationTest {
             // particular in the natural order, where the stale v0 comes first and is exactly
             // what the old firstOrNull latched onto.
             for (arrival in listOf(editions.toList(), editions.reversed())) {
-                val unbanWrap = ConcordModeration.unban(owner, cp, communityId, troll.pubKey, arrival, createdAt = 4L)
+                val unbanWrap = ConcordModeration.unban(owner, cp, communityId, troll.pubKey, arrival, createdAt = 4L, owner = community.ownerPubKey)
                 val unban = ConcordActions.controlEditions(listOf(unbanWrap), cp).single()
 
                 // Chains onto the folded head (v1), not the first-arrival v0.
@@ -163,15 +163,55 @@ class ConcordModerationTest {
 
             fun role(name: String) = RoleEntity(name = name, position = 1, permissions = ConcordPermissions.of(ConcordPermissions.KICK).toWire())
 
-            editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Mod"), editions, createdAt = 2L)), cp)
-            editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Admin"), editions, createdAt = 3L)), cp)
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Mod"), editions, createdAt = 2L, owner = community.ownerPubKey)), cp)
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Admin"), editions, createdAt = 3L, owner = community.ownerPubKey)), cp)
 
             for (arrival in listOf(editions.toList(), editions.reversed())) {
-                val third = ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Owner"), arrival, createdAt = 4L)), cp).single()
+                val third = ConcordActions.controlEditions(listOf(ConcordModeration.defineRole(owner, cp, roleId, role("Owner"), arrival, createdAt = 4L, owner = community.ownerPubKey)), cp).single()
                 assertEquals(2L, third.version)
 
                 val state = ConcordCommunityState.fold(editions + third, community.ownerPubKey)
                 assertEquals("Owner", state.roles[roleId.toHexKey()]?.name)
             }
+        }
+
+    /**
+     * The writer must chain onto the head a READER would honor, not the raw structural tip.
+     * Given the community's owner, `headOf` folds the authority-gated head, so a rogue
+     * edition sitting at the tip of the banlist chain does not drag the honest moderator's
+     * next edition up behind it (version inflation an attacker controls). Armada's writers
+     * chain off `folded.heads` — `pickHead`'s gated pick — for the same reason.
+     */
+    @Test
+    fun theWriterChainsOntoTheAuthorityGatedHeadNotTheRogueTip() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val cp = community.controlPlane
+            val communityId = community.communityId
+            val editions = ConcordActions.controlEditions(community.genesisWraps, cp).toMutableList()
+
+            // v0: the owner bans the troll.
+            editions += ConcordActions.controlEditions(listOf(ConcordModeration.ban(owner, cp, communityId, troll.pubKey, editions, createdAt = 2L, owner = community.ownerPubKey)), cp)
+            // v1: the stranger — who holds nothing — forges an empty banlist at the tip.
+            val rogue = ConcordActions.controlEditions(listOf(ConcordModeration.unban(stranger, cp, communityId, troll.pubKey, editions, createdAt = 3L, owner = community.ownerPubKey)), cp).single()
+            assertEquals(1L, rogue.version)
+            val poisoned = editions + rogue
+
+            // The owner now bans the stranger. It must chain onto v0 — the head the fold
+            // honors — not onto the rogue v1, so the version is 1, not 2.
+            val next =
+                ConcordActions
+                    .controlEditions(
+                        listOf(ConcordModeration.ban(owner, cp, communityId, stranger.pubKey, poisoned, createdAt = 4L, owner = community.ownerPubKey)),
+                        cp,
+                    ).single()
+            assertEquals(1L, next.version, "the rogue tip must not inflate the honest edition's version")
+
+            // And, critically, the owner's banlist is computed from the GATED head, so it still
+            // carries the troll. Reading the rogue's content instead would launder the forged
+            // unban into an owner-signed edition and free the troll for good.
+            val state = ConcordCommunityState.fold(poisoned + next, community.ownerPubKey)
+            assertTrue(state.authority.isBanned(troll.pubKey), "the forged unban must not free the troll")
+            assertTrue(state.authority.isBanned(stranger.pubKey))
         }
 }

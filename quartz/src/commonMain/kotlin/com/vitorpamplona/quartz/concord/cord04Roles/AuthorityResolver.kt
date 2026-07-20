@@ -168,61 +168,63 @@ class AuthorityResolver private constructor(
             var pass = 0
             while (pass++ <= maxPasses) {
                 // Roles: a role edition is authorized when its author is the owner or holds MANAGE_ROLES.
-                // Fold each role chain through its authorized editions, then keep a live, ranked head.
+                // The gate is applied to the chain's ORDERED CANDIDATES, never used to pre-filter the
+                // chain — see EditionFold.candidates for why filtering first orphans honest editions.
+                fun roleGate(
+                    entity: String,
+                    e: ControlEdition,
+                ): Boolean {
+                    val author = e.author.lowercase()
+                    if (author == ownerLower) return true
+                    if (!holdsManageRoles(author)) return false
+                    val authorRank = rankOf(author) ?: return false
+                    val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: return false
+                    // MANAGE_ROLES alone was the whole test, which let any holder rewrite the
+                    // role they hold — position 1 with every bit — and then demote the real
+                    // admins beneath them. Grants are gated on rank (a granter must outrank
+                    // what it hands out); role editions must be too, in both directions:
+                    //   - it may not claim a position at or above the author's own rank, and
+                    //   - it may not touch a role that already sits at or above them.
+                    // A delete keeps only the second rule: you may retire a role beneath you.
+                    val currentPosition = roles[entity]?.position
+                    if (currentPosition != null && currentPosition <= authorRank) return false
+                    if (!r.deleted && r.position <= authorRank) return false
+                    // Nor may it grant bits the author does not itself hold, which would
+                    // otherwise escalate through a role rather than through a grant.
+                    return r.deleted || bitsOf(author).hasAll(r.permissionBits())
+                }
+
                 val newRoles = HashMap<String, RoleEntity>()
                 for ((entity, chain) in roleChains) {
-                    val head =
-                        EditionFold.foldEntity(
-                            chain.filter { e ->
-                                val author = e.author.lowercase()
-                                if (author == ownerLower) return@filter true
-                                if (!holdsManageRoles(author)) return@filter false
-                                val authorRank = rankOf(author) ?: return@filter false
-                                val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: return@filter false
-                                // MANAGE_ROLES alone was the whole test, which let any holder rewrite the
-                                // role they hold — position 1 with every bit — and then demote the real
-                                // admins beneath them. Grants are gated on rank (a granter must outrank
-                                // what it hands out); role editions must be too, in both directions:
-                                //   - it may not claim a position at or above the author's own rank, and
-                                //   - it may not touch a role that already sits at or above them.
-                                // A delete keeps only the second rule: you may retire a role beneath you.
-                                val currentPosition = roles[entity]?.position
-                                if (currentPosition != null && currentPosition <= authorRank) return@filter false
-                                if (!r.deleted && r.position <= authorRank) return@filter false
-                                // Nor may it grant bits the author does not itself hold, which would
-                                // otherwise escalate through a role rather than through a grant.
-                                r.deleted || bitsOf(author).hasAll(r.permissionBits())
-                            },
-                        ) ?: continue
+                    val head = EditionFold.foldEntityGated(chain) { roleGate(entity, it) } ?: continue
                     val r = ConcordJson.decodeOrNull<RoleEntity>(head.content) ?: continue
                     if (r.deleted || r.position < 1) continue // no role may claim the owner's position 0
                     newRoles[entity] = r
                 }
 
                 // Grants: an edition is authorized when its granter is the owner, or holds MANAGE_ROLES
-                // AND strictly outranks every role it hands out. Fold each member's grant chain through
-                // its authorized editions so a rogue higher-version grant is dropped, not honored.
+                // AND strictly outranks every role it hands out. Same candidate-then-gate shape, so a
+                // rogue grant is dropped without orphaning the honest grants chained above it.
+                fun grantGate(e: ControlEdition): Boolean {
+                    val granter = e.author.lowercase()
+                    if (granter == ownerLower) return true
+                    if (!holdsManageRoles(granter)) return false
+                    val granterRank = rankOf(granter) ?: return false
+                    val g = ConcordJson.decodeOrNull<GrantEntity>(e.content) ?: return false
+                    // Must strictly outrank each assigned role that actually exists...
+                    if (!g.roleIds.all { rid -> newRoles[rid]?.let { granterRank < it.position } ?: true }) return false
+                    // ...and outrank the member being edited. A grant is an action ON that
+                    // member, and a REVOKE carries no role ids at all — `all {}` over an
+                    // empty list is vacuously true, so without this any MANAGE_ROLES holder
+                    // could strip anyone's roles, the owner's admins included. Demotion has
+                    // to be at least as hard as promotion.
+                    val targetRank = rankOf(g.member.lowercase())
+                    return targetRank == null || granterRank < targetRank
+                }
+
                 val newMemberRoles = HashMap<String, Set<String>>()
                 for ((_, chain) in grantChains) {
-                    val head =
-                        EditionFold.foldEntity(
-                            chain.filter { e ->
-                                val granter = e.author.lowercase()
-                                if (granter == ownerLower) return@filter true
-                                if (!holdsManageRoles(granter)) return@filter false
-                                val granterRank = rankOf(granter) ?: return@filter false
-                                val g = ConcordJson.decodeOrNull<GrantEntity>(e.content) ?: return@filter false
-                                // Must strictly outrank each assigned role that actually exists...
-                                if (!g.roleIds.all { rid -> newRoles[rid]?.let { granterRank < it.position } ?: true }) return@filter false
-                                // ...and outrank the member being edited. A grant is an action ON that
-                                // member, and a REVOKE carries no role ids at all — `all {}` over an
-                                // empty list is vacuously true, so without this any MANAGE_ROLES holder
-                                // could strip anyone's roles, the owner's admins included. Demotion has
-                                // to be at least as hard as promotion.
-                                val targetRank = rankOf(g.member.lowercase())
-                                targetRank == null || granterRank < targetRank
-                            },
-                        ) ?: continue
+                    val head = EditionFold.foldEntityGated(chain, gate = ::grantGate) ?: continue
                     val g = ConcordJson.decodeOrNull<GrantEntity>(head.content) ?: continue
                     newMemberRoles[g.member.lowercase()] = g.roleIds.filter { newRoles.containsKey(it) }.toSet()
                 }
@@ -250,16 +252,22 @@ class AuthorityResolver private constructor(
             // Ancestors (superseded by the chain, including an unban's now-cleared target) are already
             // reflected by the head and must not be resurrected. This is CORD-06's "down-only healing":
             // a concurrent ban is never lost, while an on-chain unban still takes effect.
-            val authorizedBanlist =
-                editions.filter {
-                    it.entityKind == ControlEntityKind.BANLIST &&
-                        (it.author.lowercase() == ownerLower || effectivePermissionsOf(it.author.lowercase()).has(ConcordPermissions.BAN))
-                }
+            val allBanlist = editions.filter { it.entityKind == ControlEntityKind.BANLIST }
+
+            fun banGate(e: ControlEdition): Boolean = e.author.lowercase() == ownerLower || effectivePermissionsOf(e.author.lowercase()).has(ConcordPermissions.BAN)
+            val authorizedBanlist = allBanlist.filter(::banGate)
             val banned = HashSet<String>()
-            val banHead = EditionFold.foldEntity(authorizedBanlist)
+            // Candidate-then-gate, like roles and grants: an unauthorized banlist edition in the
+            // middle of the chain must not orphan the authorized ones chained above it (which, on
+            // a banlist, would silently resurrect every ban a later unban had cleared).
+            val banHead = EditionFold.foldEntityGated(allBanlist, gate = ::banGate)
             if (banHead != null) {
                 ConcordJson.decodeBanlist(banHead.content)?.forEach { banned.add(it.lowercase()) }
-                val ancestry = banlistAncestry(banHead, authorizedBanlist)
+                // Ancestry is a STRUCTURAL fact, so it is walked over the full pool: an unauthorized
+                // edition on the head's back-chain still supersedes what is beneath it, and walking
+                // only the authorized subset would stop there and mis-read those genuine ancestors as
+                // concurrent forks — un-doing the unban the chain already recorded.
+                val ancestry = banlistAncestry(banHead, allBanlist)
                 for (edition in authorizedBanlist) {
                     if (edition.hashHex !in ancestry) {
                         ConcordJson.decodeBanlist(edition.content)?.forEach { banned.add(it.lowercase()) }

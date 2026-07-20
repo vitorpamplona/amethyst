@@ -2368,7 +2368,7 @@ class Account(
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
-        val wrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, roleIds, session.controlEditions(), TimeUtils.now())
+        val wrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, roleIds, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -2430,12 +2430,12 @@ class Account(
         val roleIdHex =
             existing?.key ?: run {
                 val roleId = RandomInstance.bytes(32)
-                val roleWrap = ConcordModeration.defineRole(signer, cp, roleId, concordAdminRole(), session.controlEditions(), TimeUtils.now())
+                val roleWrap = ConcordModeration.defineRole(signer, cp, roleId, concordAdminRole(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
                 publishConcordWrap(session.entry, roleWrap)
                 roleId.toHexKey()
             }
 
-        val grantWrap = ConcordModeration.grant(signer, cp, communityId.hexToByteArray(), member, listOf(roleIdHex), session.controlEditions(), TimeUtils.now())
+        val grantWrap = ConcordModeration.grant(signer, cp, communityId.hexToByteArray(), member, listOf(roleIdHex), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, grantWrap)
         return true
     }
@@ -2447,7 +2447,7 @@ class Account(
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
-        val grantWrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now())
+        val grantWrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, grantWrap)
         return true
     }
@@ -2482,7 +2482,7 @@ class Account(
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
-        val wrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now())
+        val wrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -2494,7 +2494,7 @@ class Account(
     ): Boolean {
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
-        val wrap = ConcordModeration.unban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now())
+        val wrap = ConcordModeration.unban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -2533,7 +2533,7 @@ class Account(
         //    and thus the new epoch — carries the ban. publishConcordWrap folds it in locally
         //    first, so each subsequent edition chains onto the updated banlist head.
         for (target in removedLower) {
-            val banWrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now())
+            val banWrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
             publishConcordWrap(session.entry, banWrap)
         }
 
@@ -2752,7 +2752,7 @@ class Account(
         val session = concordSessions.sessionFor(communityId) ?: return false
         if (!isWriteable()) return false
         val metadata = MetadataEntity(name = name, icon = icon, banner = banner, description = description, relays = relays)
-        val wrap = ConcordModeration.editMetadata(signer, session.controlPlaneKey(), communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now())
+        val wrap = ConcordModeration.editMetadata(signer, session.controlPlaneKey(), communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -2770,7 +2770,7 @@ class Account(
         if (!isWriteable()) return false
         val channelId = RandomInstance.bytes(32)
         val channel = ChannelEntity(name = name.trim())
-        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelId, channel, session.controlEditions(), TimeUtils.now())
+        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -2792,7 +2792,7 @@ class Account(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false)
-        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now())
+        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -2813,7 +2813,7 @@ class Account(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false, deleted = true)
-        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now())
+        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }

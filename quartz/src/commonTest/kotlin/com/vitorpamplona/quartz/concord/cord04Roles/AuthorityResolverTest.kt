@@ -382,4 +382,127 @@ class AuthorityResolverTest {
         val r = AuthorityResolver.resolve(listOf(role(adminRole, adminJson), ownerGrant, rogueV1), owner)
         assertEquals(1L, r.rank(alice)) // rogue v1 dropped; the owner's v0 grant stands
     }
+
+    /** A chained edition of [kind] on [entityId], authored by [author]. */
+    private fun edition(
+        kind: ControlEntityKind,
+        entityId: String,
+        version: Long,
+        prev: ControlEdition?,
+        content: String,
+        author: String,
+        rumorId: String,
+    ) = ControlEdition(kind, entityId.hexToByteArray(), version, prev?.hash, null, content, author, rumorId, version)
+
+    private fun grantJson(roleIds: List<String>) = """{"member":"$alice","role_ids":[${roleIds.joinToString(",") { "\"$it\"" }}]}"""
+
+    /**
+     * An unauthorized edition in the MIDDLE of an entity's chain must be inert, not
+     * chain-breaking. The resolver used to filter unauthorized editions out *before* the
+     * structural fold, so removing v2 left v3 citing a hash the walk no longer knew — the
+     * fold halted at v1 and v3/v4/v5 were orphaned FOREVER, since every honest edition
+     * after it keeps citing the rejected one. Any member could permanently freeze any
+     * member's roles (the owner's own ability to change them included) with one event,
+     * recoverable only by a CORD-06 Refounding. Observed live on a GRANT chain.
+     *
+     * Armada folds the same shape and is not poisoned: `headCandidates` walks the
+     * UNFILTERED chain for priority and `pickHead` takes the first candidate passing the
+     * authority gate, so it converges on v5 here. This must too.
+     */
+    @Test
+    fun anUnauthorizedEditionMidChainDoesNotOrphanTheHonestEditionsAboveIt() {
+        val grantId = "ab".repeat(32)
+        val v0 = edition(ControlEntityKind.GRANT, grantId, 0, null, grantJson(listOf(modRole)), owner, "g0")
+        val v1 = edition(ControlEntityKind.GRANT, grantId, 1, v0, grantJson(listOf(adminRole)), owner, "g1")
+        // carol holds ZERO roles — correctly rejected, at any position in the chain.
+        val v2 = edition(ControlEntityKind.GRANT, grantId, 2, v1, grantJson(listOf(adminRole)), carol, "g2")
+        val v3 = edition(ControlEntityKind.GRANT, grantId, 3, v2, grantJson(emptyList()), owner, "g3")
+        val v4 = edition(ControlEntityKind.GRANT, grantId, 4, v3, grantJson(listOf(adminRole)), owner, "g4")
+        val v5 = edition(ControlEntityKind.GRANT, grantId, 5, v4, grantJson(listOf(modRole)), owner, "g5")
+
+        val r =
+            AuthorityResolver.resolve(
+                listOf(role(adminRole, adminJson), role(modRole, modJson), v0, v1, v2, v3, v4, v5),
+                owner,
+            )
+
+        assertEquals(setOf(modRole), r.rolesOf(alice), "the fold must reach v5, not stall at v1")
+        assertEquals(5L, r.rank(alice), "alice's standing rank is whatever the owner's LAST grant says")
+    }
+
+    /** The same poisoning shape on a ROLE chain — the entity kinds share the fold. */
+    @Test
+    fun anUnauthorizedRoleEditionMidChainDoesNotOrphanTheHonestEditionsAboveIt() {
+        fun mod(
+            position: Int,
+            perms: String,
+        ) = """{"name":"Mod","position":$position,"permissions":"$perms"}"""
+
+        val v0 = edition(ControlEntityKind.ROLE, modRole, 0, null, mod(5, "8"), owner, "r0")
+        val v1 = edition(ControlEntityKind.ROLE, modRole, 1, v0, mod(5, "24"), owner, "r1") // +BAN
+        // dave holds no role at all: an escalation to position 1 with every bit, correctly rejected.
+        val v2 = edition(ControlEntityKind.ROLE, modRole, 2, v1, mod(1, "18446744073709551615"), dave, "r2")
+        val v3 = edition(ControlEntityKind.ROLE, modRole, 3, v2, mod(6, "8"), owner, "r3")
+        val v4 = edition(ControlEntityKind.ROLE, modRole, 4, v3, mod(7, "8"), owner, "r4")
+
+        val r =
+            AuthorityResolver.resolve(
+                listOf(role(adminRole, adminJson), v0, v1, v2, v3, v4, grant("32".repeat(32), bob, listOf(modRole), granter = owner)),
+                owner,
+            )
+
+        assertEquals(7, r.roles()[modRole]?.position, "the fold must reach v4, not stall at v1")
+        assertFalse(r.effectivePermissions(bob).has(BAN), "v1's BAN bit was superseded by v3/v4")
+        assertEquals(7L, r.rank(bob))
+    }
+
+    /**
+     * The banlist variant — and the reason the ancestry walk must run over the FULL pool.
+     * With the rejected v2 absent from the ancestry walk it stops at v3, so v0/v1 read as
+     * *concurrent forks* and the healing union resurrects the ban the owner's v3 lifted.
+     */
+    @Test
+    fun anUnauthorizedBanlistEditionMidChainDoesNotOrphanOrResurrectBans() {
+        val banId = "44".repeat(32)
+
+        fun list(vararg keys: String) = "[${keys.joinToString(",") { "\"$it\"" }}]"
+
+        val v0 = edition(ControlEntityKind.BANLIST, banId, 0, null, list(bob), owner, "b0")
+        val v1 = edition(ControlEntityKind.BANLIST, banId, 1, v0, list(bob, carol), owner, "b1")
+        val v2 = edition(ControlEntityKind.BANLIST, banId, 2, v1, list(), dave, "b2") // dave holds no BAN
+        val v3 = edition(ControlEntityKind.BANLIST, banId, 3, v2, list(carol), owner, "b3") // owner unbans bob
+
+        val r = AuthorityResolver.resolve(listOf(role(adminRole, adminJson), v0, v1, v2, v3), owner)
+
+        assertTrue(r.isBanned(carol), "carol's ban survives to the head")
+        assertFalse(r.isBanned(bob), "the owner's v3 unban must apply — v2 may not orphan it")
+    }
+
+    /** A forged edition takes effect at NO position: not at the tip, and not mid-chain. */
+    @Test
+    fun aForgedEditionNeverTakesEffectAtAnyPosition() {
+        val grantId = "ab".repeat(32)
+        val v0 = edition(ControlEntityKind.GRANT, grantId, 0, null, grantJson(listOf(adminRole)), owner, "g0")
+        // carol holds nothing; her revoke is the forgery, and it must apply at NO position.
+        val forgedV1 = edition(ControlEntityKind.GRANT, grantId, 1, v0, grantJson(emptyList()), carol, "g1")
+        val v2 = edition(ControlEntityKind.GRANT, grantId, 2, forgedV1, grantJson(listOf(modRole)), owner, "g2")
+        val base = listOf(role(adminRole, adminJson), role(modRole, modJson))
+
+        // Mid-chain: the honest v2 above it still resolves (this arm needs the fix), and the
+        // forged revoke never empties alice's roles.
+        val mid = AuthorityResolver.resolve(base + listOf(v0, forgedV1, v2), owner)
+        assertEquals(setOf(modRole), mid.rolesOf(alice))
+        assertEquals(5L, mid.rank(alice))
+
+        // At the tip: the chain-verified head fails the gate, so the fold falls back to v0.
+        val tip = AuthorityResolver.resolve(base + listOf(v0, forgedV1), owner)
+        assertEquals(setOf(adminRole), tip.rolesOf(alice), "the forged revoke must not strip alice")
+        assertEquals(1L, tip.rank(alice))
+
+        // Above the tip, dangling: a higher version is never a shortcut past the gate.
+        val danglingV9 = edition(ControlEntityKind.GRANT, grantId, 9, null, grantJson(emptyList()), carol, "g9")
+        val above = AuthorityResolver.resolve(base + listOf(v0, danglingV9), owner)
+        assertEquals(setOf(adminRole), above.rolesOf(alice))
+        assertEquals(1L, above.rank(alice))
+    }
 }

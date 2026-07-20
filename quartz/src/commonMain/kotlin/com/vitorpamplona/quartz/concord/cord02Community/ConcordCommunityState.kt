@@ -94,11 +94,13 @@ class ConcordCommunityState(
             val out = HashMap<String, EntityFloor>(floors)
             for ((kind, list) in pool.groupBy { it.entityKind }) {
                 val bit = requiredPermission(kind)
-                val gated =
-                    list.filter {
+                // Gate the CANDIDATES, don't pre-filter the chain: a rejected edition mid-chain must
+                // stay inert instead of orphaning the authorized editions above it (EditionFold.candidates).
+                val heads =
+                    EditionFold.foldGated(list, floors) {
                         authority.isOwner(it.author) || (bit != null && authority.hasPermission(it.author, bit))
                     }
-                for ((entity, head) in EditionFold.fold(gated, floors)) {
+                for ((entity, head) in heads) {
                     // Monotonic: a floor only ever rises. Folding epoch by epoch, an entity the
                     // newer epoch never mentions keeps the version the older one reached.
                     val prior = out[entity]
@@ -132,27 +134,29 @@ class ConcordCommunityState(
             // structural fold filters out spoofed editions — e.g. a decoy metadata genesis minted by
             // an unprivileged key — instead of letting a higher-version forgery win the chain. The
             // permission check also excludes banned authors (hasPermission is false for a banned npub).
-            fun editorsWith(
+            // The gate is applied to each entity's ORDERED CANDIDATES (chain head first, then the
+            // remaining editions version-descending), never as a pre-filter on the chain: dropping a
+            // rejected edition out of the middle of a chain permanently orphans every honest edition
+            // above it, freezing the entity. See EditionFold.candidates.
+            fun foldGatedBy(
                 kind: ControlEntityKind,
                 bit: Int,
-            ): List<ControlEdition> =
-                editions.filter {
-                    it.entityKind == kind && (authority.isOwner(it.author) || authority.hasPermission(it.author, bit))
+            ): Map<String, ControlEdition> =
+                EditionFold.foldGated(editions.filter { it.entityKind == kind }, floors) {
+                    authority.isOwner(it.author) || authority.hasPermission(it.author, bit)
                 }
 
-            // Metadata is one entity (== community id), gated by MANAGE_METADATA. Fold only the
-            // authorized editions, then take the highest-version head (guarding against strays).
+            // Metadata is one entity (== community id), gated by MANAGE_METADATA. Take the
+            // highest-version gated head (guarding against strays).
             val metadata =
-                EditionFold
-                    .fold(editorsWith(ControlEntityKind.METADATA, ConcordPermissions.MANAGE_METADATA), floors)
+                foldGatedBy(ControlEntityKind.METADATA, ConcordPermissions.MANAGE_METADATA)
                     .values
                     .maxByOrNull { it.version }
                     ?.let { ConcordJson.decodeOrNull<MetadataEntity>(it.content) }
 
-            // Channels are gated by MANAGE_CHANNELS. Fold each channel entity from its authorized
-            // editions only, dropping the tombstoned ones.
+            // Channels are gated by MANAGE_CHANNELS, per channel entity, dropping the tombstoned ones.
             val channels = LinkedHashMap<String, ConcordChannel>()
-            for (head in EditionFold.fold(editorsWith(ControlEntityKind.CHANNEL, ConcordPermissions.MANAGE_CHANNELS), floors).values) {
+            for (head in foldGatedBy(ControlEntityKind.CHANNEL, ConcordPermissions.MANAGE_CHANNELS).values) {
                 val def = ConcordJson.decodeOrNull<ChannelEntity>(head.content) ?: continue
                 if (def.deleted) continue
                 channels[head.entityIdHex] = ConcordChannel(head.entityIdHex, def)

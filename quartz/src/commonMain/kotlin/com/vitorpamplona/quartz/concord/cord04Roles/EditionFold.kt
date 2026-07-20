@@ -189,6 +189,87 @@ object EditionFold {
     }
 
     /**
+     * One entity's [editions] as an **ordered candidate list** for its head:
+     *
+     *  1. the chain-verified [foldEntity] head first — the steady-state answer, and
+     *     the compaction bootstrap too;
+     *  2. then every remaining edition, version-**descending** (ties by the lower
+     *     rumor id, the fold's tie-break winner first).
+     *
+     * The caller layers its authority gate on top and takes the first candidate that
+     * passes ([foldGated]). That ordering is the whole point: an edition that fails
+     * the gate must be *skipped*, never allowed to truncate the chain.
+     *
+     * Filtering the unauthorized editions out **before** the walk is what CORD-04
+     * §1 ("an edition whose signer isn't authorized is dropped") reads like, but it
+     * is a fork bomb: `foldEntity` only advances to `version + 1` when that edition
+     * cites the current head's hash, so deleting a rejected edition from the middle
+     * of the chain orphans every honest edition above it — permanently, since the
+     * honest editions keep citing it. One unauthorized edition anywhere in an
+     * entity's history would freeze that entity for good (a member's roles, a
+     * channel, the banlist), recoverable only by a CORD-06 Refounding. Walking the
+     * *unfiltered* chain for priority and gating the candidates instead keeps the
+     * rejected edition inert while its honest successors still resolve — the same
+     * shape Armada's `headCandidates` + `pickHead` use, so the two clients converge.
+     *
+     * The rogue-higher-version hole stays closed because the gate still decides: a
+     * forged edition is never admissible at any position, and the chain-verified
+     * head outranks any dangling higher version.
+     *
+     * [floor] semantics match [foldEntity]: anchored at the floor edition, and on a
+     * gap nothing above the floor is offered — only [EntityFloor.known].
+     */
+    fun candidates(
+        editions: List<ControlEdition>,
+        floor: EntityFloor? = null,
+        onGap: GapReporter = LOG_GAP,
+    ): List<ControlEdition> {
+        val head = foldEntity(editions, floor, onGap) ?: return emptyList()
+        // A gap re-seated the known head: nothing from the offered set is admissible above
+        // the floor, so the known edition is the only candidate.
+        if (floor != null && editions.none { it.version == floor.version && it.hashHex == floor.hashHex }) {
+            return listOf(head)
+        }
+        val out = ArrayList<ControlEdition>(editions.size)
+        out.add(head)
+        editions
+            .filterTo(ArrayList()) { it.rumorId != head.rumorId && (floor == null || it.version >= floor.version) }
+            .sortedWith(compareByDescending<ControlEdition> { it.version }.thenBy { it.rumorId })
+            .let(out::addAll)
+        return out
+    }
+
+    /**
+     * The head of one entity: the highest-priority [candidates] entry that passes
+     * [gate], or null when none does. See [candidates] for why the gate is applied
+     * *after* the chain walk rather than before it.
+     */
+    fun foldEntityGated(
+        editions: List<ControlEdition>,
+        floor: EntityFloor? = null,
+        onGap: GapReporter = LOG_GAP,
+        gate: (ControlEdition) -> Boolean,
+    ): ControlEdition? = candidates(editions, floor, onGap).firstOrNull(gate)
+
+    /**
+     * Groups mixed [editions] by entity id and folds each to the highest-priority
+     * head passing [gate] — the gated counterpart of [fold]. See [candidates].
+     */
+    fun foldGated(
+        editions: Collection<ControlEdition>,
+        floors: Map<String, EntityFloor> = emptyMap(),
+        onGap: GapReporter = LOG_GAP,
+        gate: (ControlEdition) -> Boolean,
+    ): Map<String, ControlEdition> {
+        val byEntity = editions.groupBy { it.entityIdHex }
+        val out = HashMap<String, ControlEdition>(byEntity.size)
+        for ((entity, list) in byEntity) {
+            foldEntityGated(list, floors[entity], onGap, gate)?.let { out[entity] = it }
+        }
+        return out
+    }
+
+    /**
      * The subset of [editions] a client holding [floors] may consider at all — the
      * pre-filter for the layers that fold *derived* views of the same editions
      * (authority resolution, per-kind gated folds) and therefore cannot each carry
