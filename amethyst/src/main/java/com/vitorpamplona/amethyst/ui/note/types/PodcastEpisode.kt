@@ -95,8 +95,17 @@ fun RenderPodcastEpisode(
     val value = remember(noteEvent) { episode.episodeValue() }
     var chaptersExpanded by remember(noteEvent) { mutableStateOf(false) }
     // Suppress the markdown block if blank — title + description already describe a short
-    // episode. Otherwise hand off to RichText below.
-    val markdown = remember(noteEvent) { noteEvent.content.ifBlank { null } }
+    // episode — and ALSO when it merely repeats the description. Most feeds put the same text in
+    // both the `description` tag and the event content, and the thread view renders both blocks
+    // (`makeItShort` is false there), so the whole description appeared twice inside one card,
+    // each copy with its own "Show More". Compared on collapsed whitespace so a copy differing
+    // only in wrapping still counts as a duplicate.
+    val markdown =
+        remember(noteEvent, description) {
+            noteEvent.content.ifBlank { null }?.takeUnless { body ->
+                description?.let { normalizeForCompare(body) == normalizeForCompare(it) } == true
+            }
+        }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
         PodcastCoverCard(image, note, accountViewModel)
@@ -230,3 +239,8 @@ fun RenderPodcastEpisode(
         }
     }
 }
+
+/** Collapses whitespace so two copies of the same text that differ only in wrapping compare equal. */
+private fun normalizeForCompare(text: String): String = text.trim().replace(WHITESPACE_RUN, " ")
+
+private val WHITESPACE_RUN = Regex("\\s+")
