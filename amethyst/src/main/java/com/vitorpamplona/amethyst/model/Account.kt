@@ -2620,6 +2620,9 @@ class Account(
                 // out of would be unrecoverable.
                 inviteRef = entry.inviteRef,
                 excludedAtEpoch = entry.excludedAtEpoch,
+                // Unknown keys another client wrote (Armada's list is `[k: string]: unknown`)
+                // must survive our rotation write, or we delete their data on every rekey.
+                residue = entry.residue,
             )
         sendMyPublicAndPrivateOutbox(concordChannelList.follow(next))
         announceConcordGuestbookJoin(next, inviteCreator = null, inviteLabel = null)

@@ -51,11 +51,18 @@ class ConcordCommunityListEvent(
     override fun isContentEncoded() = true
 
     /** Decrypts this list's entries with [signer], or empty on failure / wrong key. */
-    suspend fun decrypt(signer: NostrSigner): List<ConcordCommunityListEntry> =
+    suspend fun decrypt(signer: NostrSigner): List<ConcordCommunityListEntry> = decryptDocument(signer).entries
+
+    /**
+     * Decrypts the whole document with [signer] — entries plus the residue (unknown keys and
+     * tombstones) that a read-modify-write must hand back untouched. Use this, not [decrypt],
+     * whenever the result will be re-encoded: [decrypt] discards the document-level residue.
+     */
+    suspend fun decryptDocument(signer: NostrSigner): ConcordCommunityListDocument =
         try {
-            ConcordCommunityList.decode(signer.nip44Decrypt(content, signer.pubKey))
+            ConcordCommunityList.decodeDocument(signer.nip44Decrypt(content, signer.pubKey))
         } catch (_: Exception) {
-            emptyList()
+            ConcordCommunityListDocument(emptyList())
         }
 
     companion object {
@@ -70,8 +77,9 @@ class ConcordCommunityListEvent(
             signer: NostrSigner,
             entries: List<ConcordCommunityListEntry>,
             createdAt: Long = TimeUtils.now(),
+            residue: ConcordListResidue = ConcordListResidue.EMPTY,
         ): ConcordCommunityListEvent {
-            val content = signer.nip44Encrypt(ConcordCommunityList.encode(entries), signer.pubKey)
+            val content = signer.nip44Encrypt(ConcordCommunityList.encode(entries, residue), signer.pubKey)
             return signer.sign(createdAt, KIND, emptyArray(), content)
         }
     }

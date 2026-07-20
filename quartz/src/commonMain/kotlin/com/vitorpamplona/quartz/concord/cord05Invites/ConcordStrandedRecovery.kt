@@ -92,6 +92,9 @@ object ConcordStrandedRecovery {
             inviteRef = entry.inviteRef,
             // We were excluded from the epoch we were sitting on when we found the gap.
             excludedAtEpoch = entry.rootEpoch,
+            // Unknown keys another client wrote are data we hold in trust: carry them forward,
+            // or this recovery write silently deletes them.
+            residue = entry.residue,
         )
     }
 }
