@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
@@ -172,12 +173,15 @@ private fun FeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
 
-    // Infinite-scroll backward pagination: the notifications feed keeps a fat look-ahead buffer of older
-    // notifications loaded below the viewport. When fewer than [NOTIFICATION_LOOKAHEAD_BUFFER] rows remain
-    // ahead of the last visible one, every not-done relay is stepped one older page (until+limit, gap-proof)
-    // — refilling eagerly and repeating until the buffer is full again or all relays run dry. The per-relay
-    // [BackwardRelayPager] engine is the same one the DM history uses; only the trigger differs (buffer depth
-    // here vs. marker visibility there).
+    // Infinite-scroll backward pagination over the per-relay [BackwardRelayPager] (the same engine the DM
+    // history uses — each relay keeps its own until+limit cursor so faulty relays with different datasets
+    // page independently and can't gap each other). Two drivers cooperate:
+    //  1. the look-ahead BUFFER below keeps a fat runway of older notifications loaded ahead of the viewport
+    //     (advanceAll), so healthy relays fill the feed and the user practically never reaches the end;
+    //  2. the per-relay MARKERS/SENTINELS below retry an INDIVIDUAL relay when its frontier marker scrolls
+    //     into view — the recovery path for a stalled/faulty relay, naturally rate-limited by scrolling.
+    // The buffer keeps the frontier ~a screen-full below the fold, so the sentinels stay quiet during normal
+    // scrolling and only fire when the buffer can't keep up (relays stalled/exhausted) — exactly a retry.
     val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
     val historyStatus by history.status.collectAsStateWithLifecycle()
 
@@ -201,14 +205,25 @@ private fun FeedLoaded(
     }
 
     // One cursor per relay: its reached depth, state (reaching / stalled / done) and the advance() that pulls
-    // its next page (also usable to retry a stalled relay by tapping). A done relay's marker sinks to the
-    // oldest end reading "fully loaded".
+    // its next page. A done relay's marker sinks to the oldest end reading "fully loaded".
     val limits =
         remember(historyStatus) {
             historyStatus.relayProgress.map { (relay, p) ->
                 RelayReachCursor(relay.url, relayShortName(relay), p.reachedUntil, reachState(p)) { history.advance(relay) }
             }
         }
+
+    // Count of items above the notification cards in the LazyColumn (scaffold header + donation card + open
+    // polls), so the hoisted sentinel can map a visible LazyColumn index back to a card.
+    val leadingItemCount = (if (headerContent != null) 1 else 0) + 1 + openPolls.size
+
+    // Per-relay retry driver: when a relay's frontier marker is on screen (the buffer couldn't keep the
+    // frontier ahead, i.e. that relay stalled or the feed is genuinely at its end), step that one relay.
+    // A done relay drives nothing. This is the recovery path the buffer driver above can't cover once every
+    // relay is stalled (exhausted) — scrolling to the stalled marker retries it, no hammering.
+    if (limits.isNotEmpty()) {
+        RelayReachSentinels(limits, listState) { index -> items.list.getOrNull(index - leadingItemCount)?.createdAt() }
+    }
 
     // The relays behind a tapped in-stream marker; non-null shows the per-relay breakdown popup.
     var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }
@@ -321,9 +336,10 @@ private fun FeedLoaded(
                 thickness = DividerThickness,
             )
 
-            // Per-relay progress markers in the gap toward the next-older card, at the depth each relay has
-            // paged to (loading is driven by the look-ahead buffer above, not by these). olderCreatedAt is
-            // null past the oldest loaded card, so relays that reached the bottom sit there as "fully loaded".
+            // Per-relay markers in the gap toward the next-older card, at the depth each relay has paged to.
+            // The bulk load is buffer-driven (above); these mark each relay's frontier and drive the
+            // stalled-relay retry when scrolled into view (see the sentinel above). olderCreatedAt is null
+            // past the oldest loaded card, so relays that reached the bottom sit there as "fully loaded".
             if (limits.isNotEmpty()) {
                 RelayReachMarkers(
                     limits,
