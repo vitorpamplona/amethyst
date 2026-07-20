@@ -119,6 +119,17 @@ done
 grep -q "relay up at" "$LOG_FILE" || { fail_msg "relay did not come up"; exit 1; }
 
 # =============================================================================
+# git init — bootstrap from the local git checkout (this repo)
+# =============================================================================
+banner "git init (from the amethyst checkout)"
+INIT="$(M git init --repo "$REPO_ROOT" --relay "$RELAY_URL")"
+info "init: $INIT"
+assert_eq "$(echo "$INIT" | jq -r '.from_git_repo')" "true" init.from_git "init derived fields from the git repo"
+assert_nonempty "$(echo "$INIT" | jq -r '.name')" init.name "repo name derived"
+assert_nonempty "$(echo "$INIT" | jq -r '.earliest_commit')" init.euc "earliest-unique-commit derived from git"
+assert_nonempty "$(echo "$INIT" | jq -r '.state_event_id')" init.state "init also published a 30618 state event"
+
+# =============================================================================
 # Repository announcement (30617) + state (30618)
 # =============================================================================
 banner "announce + state"

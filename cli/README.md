@@ -322,7 +322,8 @@ the default is the repo's advertised relays, else your outbox.
 
 | Command | What it does |
 |---|---|
-| `amy git announce --name N [--description D] [--clone URL[,URL]] [--web URL[,URL]] [--relay URL[,URL]] [--maintainer HEX[,HEX]] [--hashtag T[,T]] [--earliest-commit C] [--personal-fork] [--d ID]` | Publish a kind:30617 repository announcement. |
+| `amy git init [--name N] [--description D] [--clone URL[,URL]] [--relay URL[,URL]] [--no-state] [--repo PATH] [--d ID]` | Bootstrap a repo from the local git checkout (like `ngit init`): derive name, clone URL, earliest-unique-commit, and branch/tag state via `git`, then publish the kind:30617 announcement and (unless `--no-state`) the kind:30618 state. Any flag overrides a derived value. |
+| `amy git announce --name N [--description D] [--clone URL[,URL]] [--web URL[,URL]] [--relay URL[,URL]] [--maintainer HEX[,HEX]] [--hashtag T[,T]] [--earliest-commit C] [--personal-fork] [--d ID]` | Publish a kind:30617 repository announcement (manual, no local repo needed). |
 | `amy git state REPO\|IDENTIFIER [--head BRANCH] [--branch name=commit[,…]] [--tag name=commit[,…]]` | Publish a kind:30618 repository state (branch/tag tips + HEAD). |
 | `amy git list [USER]` | List a user's repo announcements (defaults to self). |
 | `amy git show NADDR\|kind:pubkey:id` | Print one repo announcement (cache-first). |

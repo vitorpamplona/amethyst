@@ -49,6 +49,9 @@ object GitCommands {
         |amy git — NIP-34 Nostr-native git collaboration
         |
         |Repository:
+        |  git init [--name N] [--description D]          bootstrap a repo from the local git checkout
+        |      [--clone URL[,URL]] [--relay URL[,URL]]     (derives name/clone/earliest-commit/state via
+        |      [--no-state] [--repo PATH] [--d ID]          `git`; flags override; publishes 30617 + 30618)
         |  git announce --name N [--description D]        publish a kind:30617 repo announcement
         |      [--clone URL[,URL]] [--web URL[,URL]]       (--d / --identifier sets the identifier;
         |      [--relay URL[,URL]] [--maintainer HEX[,]]    defaults to name)
@@ -95,8 +98,9 @@ object GitCommands {
         route(
             "git",
             tail,
-            "git <announce|state|list|show|grasp|browse|cat|log|issue|patch|pr|comment|open|applied|close|draft|issues|patches|prs|thread>",
+            "git <init|announce|state|list|show|grasp|browse|cat|log|issue|patch|pr|comment|open|applied|close|draft|issues|patches|prs|thread>",
             mapOf(
+                "init" to { rest -> GitInitCommand.init(dataDir, rest) },
                 "announce" to { rest -> announce(dataDir, rest) },
                 "state" to { rest -> state(dataDir, rest) },
                 "list" to { rest -> list(dataDir, rest) },

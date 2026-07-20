@@ -624,6 +624,8 @@ private fun printUsage() {
         |  blossom mirror --server URL SOURCE-URL       ask the server to mirror a blob (BUD-04)
         |
         |Git (NIP-34):
+        |  git init [--name N] [--clone URL]            bootstrap a repo from the local git checkout
+        |      [--no-state] [--repo PATH]                 (derives fields via `git`; publishes 30617+30618)
         |  git announce --name N [--description D]      publish a kind:30617 repo announcement
         |      [--clone URL[,URL]] [--web URL[,URL]]     (--d sets the identifier; defaults to name)
         |      [--relay URL[,URL]] [--maintainer HEX[,]]

@@ -68,7 +68,9 @@ Suite notes:
   both directions (plus the `--no-sync-deletions` opt-out) against
   `amy serve`, with one `$HOME` per account so stores don't share.
 - **`git/git-nip34-headless.sh`** drives the full NIP-34 collaboration surface
-  against `amy serve`: announce (30617) + state (30618) + GRASP list (10317),
+  against `amy serve`: `git init` bootstrapping a repo from the harness's own
+  git checkout (announce + state derived via `git`), announce (30617) + state
+  (30618) + GRASP list (10317),
   issue (1621), patch (1617), pull request (1618) + update (1619), NIP-22
   comment (1111), and status events (1630-1633), then asserts the
   `issues`/`patches`/`prs`/`thread` reads derive the right status (a closed
