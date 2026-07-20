@@ -104,6 +104,49 @@ class ConcordInviteClassifyTest {
             assertEquals(InviteBundleStatus.Unreadable, ConcordInviteBundle.classify(listOf(registry), ByteArray(16)))
         }
 
+    /**
+     * Regression: `expires_at` used to be decorative — [ConcordInviteBundle.isExpired] had no
+     * production caller, so an expired link redeemed forever. Enforcement lives in [classify],
+     * which every redeeming path (Account.joinConcordViaInvite) funnels through.
+     */
+    @Test
+    fun expiredBundleDoesNotResolveLive() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val expiresAtMs = 2_000_000L
+            val invite =
+                CommunityInvite(
+                    communityId = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    communityRoot = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    relays = listOf("wss://relay.example"),
+                    name = "Nostrichs",
+                    expiresAt = expiresAtMs,
+                )
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", invite, createdAt = 1L, relays = listOf("wss://relay.example"))
+            val wraps = listOf(minted.bundleEvent)
+
+            // Before the expiry the very same bundle still opens…
+            val live = ConcordInviteBundle.classify(wraps, minted.token, nowMs = expiresAtMs - 1)
+            assertTrue(live is InviteBundleStatus.Live)
+
+            // …and after it, the join path must refuse it (not Live) while the preview data survives.
+            val expired = ConcordInviteBundle.classify(wraps, minted.token, nowMs = expiresAtMs + 1)
+            assertTrue(expired is InviteBundleStatus.Expired)
+            assertEquals(community.communityIdHex, expired.invite.communityId)
+        }
+
+    /** No `expires_at` means "never expires" — it must not be read as "expired at epoch 0". */
+    @Test
+    fun bundleWithoutExpiryNeverExpires() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L, relays = listOf("wss://relay.example"))
+            assertTrue(ConcordInviteBundle.classify(listOf(minted.bundleEvent), minted.token, nowMs = Long.MAX_VALUE) is InviteBundleStatus.Live)
+        }
+
     @Test
     fun emptyFetchIsAbsent() {
         assertEquals(InviteBundleStatus.Absent, ConcordInviteBundle.classify(emptyList(), ByteArray(16)))

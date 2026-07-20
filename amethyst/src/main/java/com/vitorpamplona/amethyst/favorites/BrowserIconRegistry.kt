@@ -22,10 +22,14 @@ package com.vitorpamplona.amethyst.favorites
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -50,12 +54,28 @@ object BrowserIconRegistry {
 
     @Volatile private var iconDir: File? = null
 
-    /** Binds the app context and indexes already-stored icons. Idempotent. */
+    // Disk work runs here, never on the caller's thread. Both entry points are reached from threads
+    // that must not block: init() from app startup and record() from the broker's IPC handler, which
+    // is the main looper — StrictMode flagged the write, and a slow filesystem would have stalled the
+    // UI while a favicon was saved.
+    private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Binds the app context and indexes already-stored icons. Idempotent.
+     *
+     * [iconDir] is published synchronously so [iconModelFor] and [record] work immediately; only the
+     * directory scan is deferred. Until it lands [keys] is empty, so an icon simply renders its
+     * placeholder for one frame and then recomposes — [keys] is a StateFlow precisely so that arrival
+     * drives recomposition.
+     */
     fun init(context: Context) {
         if (iconDir != null) return
-        val dir = File(context.applicationContext.filesDir, DIR).apply { mkdirs() }
+        val dir = File(context.applicationContext.filesDir, DIR)
         iconDir = dir
-        _keys.value = dir.listFiles()?.mapNotNull { it.name.removeSuffix(PNG).takeIf { n -> n.isNotBlank() } }?.toSet() ?: emptySet()
+        io.launch {
+            dir.mkdirs()
+            _keys.value = dir.listFiles()?.mapNotNull { it.name.removeSuffix(PNG).takeIf { n -> n.isNotBlank() } }?.toSet() ?: emptySet()
+        }
     }
 
     /** Persists [bytes] as the favicon for [host] and marks it available. Called from the broker on IPC. */
@@ -66,11 +86,17 @@ object BrowserIconRegistry {
         val dir = iconDir ?: return
         if (host.isBlank() || bytes.isEmpty()) return
         val key = sanitize(host)
-        try {
-            File(dir, key + PNG).writeBytes(bytes)
-            _keys.update { it + key }
-        } catch (e: Exception) {
-            Log.w("BrowserIconRegistry", "Failed to store favicon for $host", e)
+        // Fire-and-forget: a favicon is a decoration, and the IPC handler must not wait on disk.
+        // [keys] updates only after the bytes are actually on disk, so a reader can never be told an
+        // icon exists before the file backing it does.
+        io.launch {
+            try {
+                dir.mkdirs()
+                File(dir, key + PNG).writeBytes(bytes)
+                _keys.update { it + key }
+            } catch (e: Exception) {
+                Log.w("BrowserIconRegistry", "Failed to store favicon for $host", e)
+            }
         }
     }
 

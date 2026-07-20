@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleLogEntry
@@ -73,6 +74,13 @@ class EmbeddedWebAppController(
 
     private var sandboxedSdkView: SandboxedSdkView? = null
     private var pendingAdapter: SandboxedUiAdapter? = null
+
+    /**
+     * True once this controller's adapter has actually been handed to a [SandboxedSdkView]. An adapter can
+     * only ever serve ONE view: when that view is disposed, privacysandbox closes the remote session and the
+     * sandbox destroys its WebView, so the adapter is dead. See [attachView] for why this matters.
+     */
+    private var adapterDelivered = false
     private var startUrl: String = "about:blank"
 
     private var hasLoadedReal = false
@@ -92,7 +100,9 @@ class EmbeddedWebAppController(
 
     // A single NappletBrowserService instance serves every embedded browser tab, so each controller
     // stamps its own id on every message; the provider uses it to route controls/updates to this tab.
-    private val sessionId: String = "browser-${SESSION_SEQ.incrementAndGet()}"
+    // Re-minted whenever the remote session is re-created (see [attachView]), so a late close() from the
+    // previous view can never reap the replacement.
+    private var sessionId: String = "browser-${SESSION_SEQ.incrementAndGet()}"
 
     /** Invoked on the main thread when the page navigates: (url, canGoBack). */
     var onUrlChanged: ((String, Boolean) -> Unit)? = null
@@ -132,6 +142,7 @@ class EmbeddedWebAppController(
         serviceMessenger = null
         sandboxedSdkView = null
         pendingAdapter = null
+        adapterDelivered = false
         onUrlChanged = null
         onImeEvent = null
         onMagnifierFrame = null
@@ -141,15 +152,48 @@ class EmbeddedWebAppController(
 
     override fun teardown() = unbind()
 
-    /** Hands the surface view to the controller; applies the adapter if it already arrived. */
+    /**
+     * Hands the surface view to the controller; applies the adapter if it already arrived, and re-arms the
+     * remote session when this controller is being re-used by a *second* view.
+     *
+     * A warm controller outlives the composition (it lives in the process-scoped [EmbeddedTabHost]), but its
+     * [SandboxedSdkView] does not: an account switch rebuilds the whole logged-in subtree, disposing every
+     * surface. That disposal makes privacysandbox close the remote session, which destroys the sandbox's
+     * WebView — so the adapter this controller already handed out is dead and cannot be given to the fresh
+     * view. A [SandboxedSdkView] with no adapter never builds a ContentView/SurfaceView and paints nothing
+     * but its background colour, forever (the load overlay's retry can't help — it re-navigates a WebView
+     * that no longer exists).
+     *
+     * So when a new view attaches after the adapter was already delivered, ask the sandbox for a brand new
+     * session; the [NappletBrowserContract.MSG_SESSION_READY] reply arms this view. The sandbox stamps the
+     * CURRENT account's storage profile on that new session (see [sendCreateSession]), so re-arming can
+     * never resurrect the previous account's cookie jar.
+     */
     override fun attachView(view: SandboxedSdkView) {
         sandboxedSdkView = view
         // Paint the surface placeholder in the app's theme background so there's no white flash before
         // the remote WebView delivers its first frame.
         view.setBackgroundColor(backgroundColor)
-        pendingAdapter?.let {
-            view.setAdapter(it)
-            pendingAdapter = null
+        val adapter = pendingAdapter
+        when {
+            adapter != null -> {
+                pendingAdapter = null
+                adapterDelivered = true
+                view.setAdapter(adapter)
+            }
+            // No adapter in hand and one was already spent on a previous (now disposed) view: the session
+            // behind it is gone, so this view would stay blank forever. Re-create it.
+            adapterDelivered -> {
+                // Mint a FRESH session id. The disposed view's Session.close() reaches the sandbox
+                // asynchronously (it posts to the sandbox's main thread) and was measured landing ~1 s
+                // AFTER this create: reusing the id let that late close reap the session we had just asked
+                // for — a new WebView was built, destroyed, and the surface stayed black. A new id makes
+                // the stale close target only the corpse it belongs to.
+                sessionId = "browser-${SESSION_SEQ.incrementAndGet()}"
+                adapterDelivered = false
+                sendCreateSession()
+            }
+            // else: the first session is still in flight; MSG_SESSION_READY will arm this view.
         }
     }
 
@@ -165,6 +209,9 @@ class EmbeddedWebAppController(
                         putBoolean(NappletBrowserContract.KEY_USE_TOR, initialUseTor)
                         putInt(NappletBrowserContract.KEY_BG_COLOR, backgroundColor)
                         putString(NappletBrowserContract.KEY_THEME, themeType)
+                        // Opaque per-account storage partition, so an embedded site can't carry one
+                        // npub's session into another. Derived here (the sandbox never sees the pubkey).
+                        putString(NappletBrowserContract.KEY_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
                     }
             }
         runCatching { serviceMessenger?.send(msg) }
@@ -176,7 +223,12 @@ class EmbeddedWebAppController(
                 val coreLibInfo = msg.data?.getBundle(NappletBrowserContract.KEY_CORE_LIB_INFO) ?: return true
                 val adapter = SandboxedUiAdapterFactory.createFromCoreLibInfo(coreLibInfo)
                 val view = sandboxedSdkView
-                if (view != null) view.setAdapter(adapter) else pendingAdapter = adapter
+                if (view != null) {
+                    adapterDelivered = true
+                    view.setAdapter(adapter)
+                } else {
+                    pendingAdapter = adapter
+                }
             }
             NappletBrowserContract.MSG_URL_CHANGED -> {
                 val url = msg.data?.getString(NappletBrowserContract.KEY_URL).orEmpty()

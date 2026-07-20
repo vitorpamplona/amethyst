@@ -33,6 +33,46 @@ class NappletPermissionLedgerTest {
     private fun ledger(store: NappletPermissionStore = InMemoryNappletPermissionStore()) = NappletPermissionLedger(store)
 
     @Test
+    fun aSessionGrantFromOneAccountDoesNotAuthorizeAnother() =
+        runTest {
+            // This ledger is a process-wide singleton shared by every account, and a coordinate carries
+            // no account, so an unscoped session map let "allow for this session" under one npub
+            // silently authorize the same applet under every other npub on the device.
+            var account = "aaaa"
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { account }
+
+            ledger.record(applet, NappletCapability.RELAY, GrantState.ALLOW_SESSION)
+            assertEquals(PermissionDecision.ALLOW, ledger.decide(applet, NappletCapability.RELAY))
+
+            account = "bbbb"
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.RELAY))
+
+            // ...and switching back still honors the grant the user actually made.
+            account = "aaaa"
+            assertEquals(PermissionDecision.ALLOW, ledger.decide(applet, NappletCapability.RELAY))
+        }
+
+    @Test
+    fun endSessionDropsSessionGrantsAcrossAppsButKeepsPersistedOnes() =
+        runTest {
+            // What the broker service calls in onDestroy, once every applet/browser surface has
+            // unbound. The ledger is now an app-wide singleton that outlives the service, so this is
+            // what keeps ALLOW_SESSION meaning "this session" rather than "until the process dies".
+            val store = InMemoryNappletPermissionStore()
+            val ledger = ledger(store)
+            ledger.record(applet, NappletCapability.RELAY, GrantState.ALLOW_SESSION)
+            ledger.record(other, NappletCapability.IDENTITY, GrantState.ALLOW_SESSION)
+            ledger.record(applet, NappletCapability.STORAGE, GrantState.ALLOW_ALWAYS)
+
+            ledger.endSession()
+
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.RELAY))
+            assertEquals(PermissionDecision.ASK, ledger.decide(other, NappletCapability.IDENTITY))
+            // The user's persisted decision is untouched — ending a session is not a revoke.
+            assertEquals(PermissionDecision.ALLOW, ledger.decide(applet, NappletCapability.STORAGE))
+        }
+
+    @Test
     fun unknownGrantDefaultsToAsk() =
         runTest {
             val ledger = ledger()

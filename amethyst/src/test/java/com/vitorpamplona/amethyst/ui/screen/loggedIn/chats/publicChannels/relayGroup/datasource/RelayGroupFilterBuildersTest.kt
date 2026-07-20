@@ -65,24 +65,44 @@ class RelayGroupFilterBuildersTest {
     // --- State (always-on): one #d filter per host relay, batching that relay's group ids ---
 
     @Test
-    fun `state batches one d-filter per host relay`() {
+    fun `state batches d-filters per host relay, metadata and pins kept apart`() {
         val filters = buildRelayGroupStateFilters(joined) { null }
-        assertEquals(2, filters.size)
+        // two relays x (metadata + pins)
+        assertEquals(4, filters.size)
 
-        val a = filters.single { it.relay == relayA }
-        assertEquals(RELAY_GROUP_STATE_KINDS, a.filter.kinds)
-        assertEquals(setOf("g1", "g2"), a.filter.tags!!["d"]!!.toSet())
-        assertNull("state is #d-scoped, never #h", a.filter.tags!!["h"])
+        val a = filters.filter { it.relay == relayA }
+        assertEquals(listOf(RELAY_GROUP_METADATA_KINDS, RELAY_GROUP_PIN_KINDS), a.map { it.filter.kinds })
+        a.forEach {
+            assertEquals(setOf("g1", "g2"), it.filter.tags!!["d"]!!.toSet())
+            assertNull("state is #d-scoped, never #h", it.filter.tags!!["h"])
+        }
 
-        val b = filters.single { it.relay == relayB }
-        assertEquals(listOf("g3"), b.filter.tags!!["d"])
+        val b = filters.filter { it.relay == relayB }
+        b.forEach { assertEquals(listOf("g3"), it.filter.tags!!["d"]) }
+    }
+
+    /**
+     * Regression: relay29-family relays (0xchat's `groups.0xchat.com`) reject a filter mixing the
+     * 39000-39003 metadata kinds with any other kind (39005 pins included) with
+     * `CLOSED … "blocked: it's not allowed to mix metadata kinds with others"` and drop the whole REQ —
+     * so every joined group on such a relay silently loses its name, roster and membership.
+     */
+    @Test
+    fun `state never mixes pins into the metadata filter`() {
+        buildRelayGroupStateFilters(joined) { null }.forEach { f ->
+            val kinds = f.filter.kinds!!
+            assertFalse(
+                "39005 must not share a filter with the 39000-39003 metadata block: $kinds",
+                kinds.contains(GroupPinnedEvent.KIND) && kinds.any { it in RELAY_GROUP_METADATA_KINDS },
+            )
+        }
     }
 
     @Test
     fun `state applies the per-relay since`() {
         val filters = buildRelayGroupStateFilters(joined) { relay -> if (relay == relayA) 111L else null }
-        assertEquals(111L, filters.single { it.relay == relayA }.filter.since)
-        assertNull(filters.single { it.relay == relayB }.filter.since)
+        filters.filter { it.relay == relayA }.forEach { assertEquals(111L, it.filter.since) }
+        filters.filter { it.relay == relayB }.forEach { assertNull(it.filter.since) }
     }
 
     // --- Joined chat tail (always-on): batched #h per relay, time floor, NO per-group limit ---

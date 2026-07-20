@@ -236,6 +236,19 @@ object LocalPreferences {
     // the source of truth, so there is no async hydrate that could clobber a user toggle.
     private fun globalSettingsPrefs(): SharedPreferences = Amethyst.instance.appContext.getSharedPreferences("amethyst_global_settings", Context.MODE_PRIVATE)
 
+    /**
+     * Loads the global-settings prefs file into SharedPreferences' in-memory cache, off the main
+     * thread, so the first synchronous read below hits memory rather than disk.
+     *
+     * The read itself is deliberately synchronous — see [setNotificationServiceEnabled]: an async
+     * hydrate reintroduces a window where a late disk read clobbers a user's toggle. So this warms
+     * the cache instead of deferring the read. Best-effort: if a main-thread reader wins the race it
+     * simply pays the disk hit once, exactly as before.
+     */
+    fun warmGlobalSettings() {
+        globalSettingsPrefs().getBoolean(PrefKeys.NOTIFICATION_SERVICE_ENABLED, true)
+    }
+
     private val notificationServiceEnabled: MutableStateFlow<Boolean> by lazy {
         MutableStateFlow(globalSettingsPrefs().getBoolean(PrefKeys.NOTIFICATION_SERVICE_ENABLED, true))
     }

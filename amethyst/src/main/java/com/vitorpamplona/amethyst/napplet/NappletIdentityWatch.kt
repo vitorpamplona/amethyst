@@ -39,15 +39,18 @@ import kotlinx.coroutines.launch
  */
 class NappletIdentityWatch(
     private val scope: CoroutineScope,
-    private val pubKey: () -> Flow<String>,
+    private val pubKey: (boundPubKey: String) -> Flow<String>,
 ) {
     private var job: Job? = null
 
-    fun start(push: (String) -> Unit) {
+    fun start(
+        boundPubKey: String,
+        push: (String) -> Unit,
+    ) {
         stop()
         job =
             scope.launch {
-                pubKey()
+                pubKey(boundPubKey)
                     .distinctUntilChanged()
                     .drop(1)
                     .collect { push(NappletProtocolJson.encodeIdentityChanged(it)) }

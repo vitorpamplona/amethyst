@@ -47,6 +47,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * `amy bunker [--relay URL[,URL…]] [--secret S] [--perms P] [--interactive] [--timeout SECS]`
@@ -94,11 +95,25 @@ object BunkerCommand {
     ) : Nip46RequestAuthorizer {
         private val promptLock = Mutex()
 
+        /**
+         * Clients that presented the right secret in this process's lifetime. The CLI bunker keeps no
+         * state on disk, so pairing is in-memory: a client must `connect` once per `amy bunker` run
+         * before it can read the hosted identity.
+         */
+        private val paired = ConcurrentHashMap.newKeySet<HexKey>()
+
+        /**
+         * Ungated (the headless default hosting the operator's own key) everything is open, matching
+         * [authorize]. Gated, the identity reads require a `connect` first.
+         */
+        override suspend fun isPaired(clientPubKey: HexKey): Boolean = !gated || clientPubKey in paired
+
         override suspend fun onConnect(
             clientPubKey: HexKey,
             request: BunkerRequestConnect,
         ): Nip46ConnectDecision =
             if (request.secret == secret) {
+                paired.add(clientPubKey)
                 Nip46ConnectDecision.Accept(BunkerRequestProcessor.ACK)
             } else {
                 Nip46ConnectDecision.Reject("invalid secret")

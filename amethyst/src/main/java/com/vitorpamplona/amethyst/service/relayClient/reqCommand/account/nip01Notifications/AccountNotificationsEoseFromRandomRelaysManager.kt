@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -51,8 +50,11 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        // only loads this after the feed is built
-        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo()
+        // only loads this after the feed is built, so it stays null on a quiet inbox. No week floor
+        // behind it: this probe is `#p`-scoped to me with `limit = 20`, so relays answer with the 20
+        // newest either way — the floor only ever hid notifications older than a week, and since the
+        // boundary above needs a full page to arm, a quiet inbox could never page past it.
+        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
         return (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
             val since = since?.get(it)?.time ?: defaultSince
             filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)

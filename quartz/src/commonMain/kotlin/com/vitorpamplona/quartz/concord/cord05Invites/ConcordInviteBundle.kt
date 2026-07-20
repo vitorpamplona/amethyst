@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * What the events fetched at an invite's addressable coordinate `(33301,
@@ -49,6 +50,16 @@ sealed interface InviteBundleStatus {
 
     /** The newest event at the coordinate is a `vsk=9` revocation tombstone — the link was retired. */
     data object Revoked : InviteBundleStatus
+
+    /**
+     * A `vsk=6` bundle that opened and validated, but whose `expires_at` is in the past.
+     * The [invite] is still carried so a preview can render what the link *would* have
+     * opened; joining must be refused (CORD-05 — an expiry that nobody enforces is
+     * decorative).
+     */
+    data class Expired(
+        val invite: CommunityInvite,
+    ) : InviteBundleStatus
 
     /**
      * Something is at the coordinate, but it isn't a `vsk=6` bundle this client can open —
@@ -120,21 +131,47 @@ object ConcordInviteBundle {
      * can't resurrect a retired link). Otherwise the first `vsk=6` bundle that opens +
      * validates with [token] is [InviteBundleStatus.Live]; anything else present is
      * [InviteBundleStatus.Unreadable], and an empty set is [InviteBundleStatus.Absent].
+     *
+     * An opened bundle whose `expires_at` has passed (compared against [nowMs], unix
+     * milliseconds) resolves to [InviteBundleStatus.Expired] rather than
+     * [InviteBundleStatus.Live], so the expiry is actually enforced at the one place
+     * every redeeming client already funnels through.
      */
     fun classify(
         wraps: List<Event>,
         token: ByteArray,
+        nowMs: Long = TimeUtils.nowMillis(),
     ): InviteBundleStatus {
         val newest = wraps.maxByOrNull { it.createdAt } ?: return InviteBundleStatus.Absent
         if (newest.tags.vsk() == ControlEntityKind.INVITE_REVOKED) return InviteBundleStatus.Revoked
         val invite = wraps.firstNotNullOfOrNull { parse(it, token)?.takeIf { i -> validate(i) } }
-        return if (invite != null) InviteBundleStatus.Live(invite) else InviteBundleStatus.Unreadable
+        return when {
+            invite == null -> InviteBundleStatus.Unreadable
+            isExpired(invite, nowMs) -> InviteBundleStatus.Expired(invite)
+            else -> InviteBundleStatus.Live(invite)
+        }
     }
 
     /**
-     * Validates that an [invite]'s owner + salt actually reproduce its
-     * community_id (CORD-02 self-certification), so a bundle can't smuggle a false
-     * owner or a fake key for a real community.
+     * Validates that an [invite]'s owner + salt actually reproduce its community_id
+     * (CORD-02 self-certification), so a bundle cannot smuggle a false OWNER.
+     *
+     * It does NOT bind `community_root`, and nothing here proves the bundle's minter is
+     * a member of the community it names. `community_id` commits only to (owner, salt) —
+     * both public in any invite — so an attacker can mint a bundle carrying a real
+     * community's id, owner and salt alongside a root of their own. A joiner adopts that
+     * root, believes they are in the real community, and posts into planes the attacker
+     * can read.
+     *
+     * This is a CORD-05 limitation rather than an implementation gap: Armada's
+     * `validateBundle` checks exactly the same thing and likewise leaves the root
+     * unbound, so a stricter unilateral rule here would break interop without
+     * protecting anyone. Verifying the adopted root's control plane does not close it
+     * either — sealed editions carry the owner's own signature, so an attacker can
+     * re-wrap genuine owner editions into their plane, which is precisely what a
+     * legitimate compaction does. Closing it needs a spec change: commit the root into
+     * the self-certifying id, or require the bundle to be signed by a roster-authorized
+     * member. Raise with the Concord/Armada authors before diverging.
      */
     fun validate(invite: CommunityInvite): Boolean {
         val owner = invite.owner.hexToByteArrayOrNull() ?: return false

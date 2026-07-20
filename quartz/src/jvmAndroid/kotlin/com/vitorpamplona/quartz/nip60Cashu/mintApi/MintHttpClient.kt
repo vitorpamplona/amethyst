@@ -57,12 +57,22 @@ class MintProtocolException(
  *
  * Each instance is bound to a single mint URL (e.g. `https://mint.example.com`).
  * Trailing slashes are stripped on construction.
+ *
+ * The URL is validated by [CashuMintUrlValidator] **on construction**, before any
+ * request can be issued, because `token.mint` on a pasted Cashu token is fully
+ * attacker controlled (SSRF + IP disclosure). Pass [userConfigured] = true only
+ * when the URL came from somewhere the user deliberately chose it — a mint in
+ * their own NIP-60 wallet, or one they typed on the CLI — which relaxes the
+ * host checks (a self-hosted LAN mint is legitimate) but never the scheme check.
+ *
+ * @throws MintUrlException when the mint URL is refused.
  */
 class MintHttpClient(
     mintUrl: String,
+    userConfigured: Boolean = false,
     private val okHttpClient: (String) -> OkHttpClient,
 ) {
-    private val baseUrl: String = mintUrl.trimEnd('/')
+    private val baseUrl: String = CashuMintUrlValidator.validatedBaseUrl(mintUrl, userConfigured)
 
     // Mint /v1/info changes infrequently (mint name, icon, supported
     // NUTs, motd). Cache it for [INFO_CACHE_TTL_MS] so the Verify

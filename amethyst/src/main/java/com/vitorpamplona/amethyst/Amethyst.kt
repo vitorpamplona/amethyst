@@ -32,6 +32,9 @@ import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -94,6 +97,10 @@ class Amethyst : Application() {
 
         // Index device-local captured favicons (main process only; decorates favorites + suggestions).
         BrowserIconRegistry.init(this)
+
+        // Warm the global-settings prefs off-main so the first (deliberately synchronous) read of
+        // them does not hit disk on the main thread. See LocalPreferences.warmGlobalSettings.
+        CoroutineScope(Dispatchers.IO).launch { LocalPreferences.warmGlobalSettings() }
 
         // Hydrate the per-web-client Tor routing preferences so a site opted out of Tor (some reject Tor
         // exits) starts on the open web without first flashing a failed Tor load.

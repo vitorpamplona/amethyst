@@ -45,15 +45,42 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
  * See amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md and the companion test plan.
  */
 
-/** Relay-signed group *state*: metadata + admins + members + roles + pins. Small replaceable events. */
-val RELAY_GROUP_STATE_KINDS =
+/**
+ * The relay's **directory** kinds for a group — metadata + admins + members + roles (39000-39003).
+ * These four are what NIP-29 relays treat as a group's "metadata" block, and they must be requested
+ * **alone**: see [RELAY_GROUP_PIN_KINDS].
+ */
+val RELAY_GROUP_METADATA_KINDS =
     listOf(
         GroupMetadataEvent.KIND,
         GroupAdminsEvent.KIND,
         GroupMembersEvent.KIND,
         SupportedRolesEvent.KIND,
-        GroupPinnedEvent.KIND,
     )
+
+/**
+ * The pin list (39005), deliberately kept in its **own** filter rather than merged into
+ * [RELAY_GROUP_METADATA_KINDS].
+ *
+ * NIP-29 relays derived from `relay29`/`khatru29` (0xchat's `groups.0xchat.com` among them) reject a REQ
+ * whose filter mixes the 39000-39003 metadata kinds with any other kind, replying
+ * `CLOSED … "blocked: it's not allowed to mix metadata kinds with others"`. A single filter asking for
+ * 39000-39003 **plus** 39005 is therefore dropped **whole** — the group never resolves its name, roster,
+ * roles or the user's own membership, so it renders as a raw id and offers "Join" to somebody the relay
+ * already lists as an admin.
+ *
+ * Splitting into two filter objects fixes it: those relays evaluate the rule per filter, so the
+ * metadata filter is served normally and the pins filter is served (or harmlessly ignored) on its own.
+ */
+val RELAY_GROUP_PIN_KINDS = listOf(GroupPinnedEvent.KIND)
+
+/**
+ * Every relay-signed group *state* kind: metadata + admins + members + roles + pins. Small replaceable
+ * events. **Never put this list on the wire as one filter** — request [RELAY_GROUP_METADATA_KINDS] and
+ * [RELAY_GROUP_PIN_KINDS] as separate filters instead (see [RELAY_GROUP_PIN_KINDS]). Kept as the
+ * semantic "all state kinds" set for cache/consume-side code.
+ */
+val RELAY_GROUP_STATE_KINDS = RELAY_GROUP_METADATA_KINDS + RELAY_GROUP_PIN_KINDS
 
 /** Timeline kinds shown in a group's chat — chat messages and polls. */
 val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
@@ -69,13 +96,7 @@ val RELAY_GROUP_CARD_WARMUP_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND, Threa
  * Narrower than [RELAY_GROUP_STATE_KINDS] on purpose: the directory lists groups, it doesn't need each
  * group's pin list.
  */
-val RELAY_GROUP_DIRECTORY_KINDS =
-    listOf(
-        GroupMetadataEvent.KIND,
-        GroupAdminsEvent.KIND,
-        GroupMembersEvent.KIND,
-        SupportedRolesEvent.KIND,
-    )
+val RELAY_GROUP_DIRECTORY_KINDS = RELAY_GROUP_METADATA_KINDS
 
 /** How many directory entries to pull per relay when browsing its whole group list. */
 const val RELAY_GROUP_DIRECTORY_LIMIT = 500
@@ -93,22 +114,21 @@ private fun byHostRelay(joined: Collection<GroupTag>): Map<NormalizedRelayUrl, L
 }
 
 /**
- * State (39000-39005) for every joined group, **one `#d` filter per host relay** carrying that relay's
- * group ids. `since` is per-relay (replaceable events; a reconnect just re-confirms).
+ * State (39000-39005) for every joined group, **two `#d` filters per host relay** carrying that relay's
+ * group ids: the 39000-39003 metadata block and the 39005 pin list, kept apart because relay29-family
+ * relays refuse a filter that mixes them (see [RELAY_GROUP_PIN_KINDS]). `since` is per-relay (replaceable
+ * events; a reconnect just re-confirms).
  */
 fun buildRelayGroupStateFilters(
     joined: Collection<GroupTag>,
     sinceForRelay: (NormalizedRelayUrl) -> Long?,
 ): List<RelayBasedFilter> =
-    byHostRelay(joined).map { (relay, ids) ->
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = RELAY_GROUP_STATE_KINDS,
-                    tags = mapOf(D_TAG to ids.distinct()),
-                    since = sinceForRelay(relay),
-                ),
+    byHostRelay(joined).flatMap { (relay, ids) ->
+        val scope = mapOf(D_TAG to ids.distinct())
+        val since = sinceForRelay(relay)
+        listOf(
+            RelayBasedFilter(relay = relay, filter = Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = scope, since = since)),
+            RelayBasedFilter(relay = relay, filter = Filter(kinds = RELAY_GROUP_PIN_KINDS, tags = scope, since = since)),
         )
     }
 

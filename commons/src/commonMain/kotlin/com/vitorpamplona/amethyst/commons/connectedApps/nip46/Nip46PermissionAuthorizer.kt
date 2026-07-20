@@ -136,6 +136,14 @@ class Nip46PermissionAuthorizer(
         if (shouldWrite) ledger.updateLastUsed(coordinate, now)
     }
 
+    /**
+     * A client is paired exactly when the ledger holds a trust level for its coordinate — which is
+     * what a successful `connect` writes (and what "Forget" removes). Because it is persisted, a
+     * client stays paired across restarts, so a returning app that does not re-`connect` still reads
+     * the identity it was already granted.
+     */
+    override suspend fun isPaired(clientPubKey: HexKey): Boolean = ledger.hasPolicy(coordinateFor(clientPubKey))
+
     override suspend fun onConnect(
         clientPubKey: HexKey,
         request: BunkerRequestConnect,
@@ -187,15 +195,22 @@ class Nip46PermissionAuthorizer(
         // sign/encrypt/decrypt, so this branch is a safety net).
         val op = request.toSignerOp() ?: return true
         val coordinate = coordinateFor(clientPubKey)
+        // A decrypt request also carries a narrower op ("decrypt messages from THIS counterparty").
+        // A standing narrow grant satisfies the request without widening the broad one.
+        val narrowOp = request.toNarrowSignerOp()
 
         val allowed =
             when (ledger.decide(coordinate, op)) {
                 NostrOpDecision.ALLOW -> true
+                // An explicit DENY on the broad op is final — a narrow grant never overrides it.
                 NostrOpDecision.DENY -> false
-                // ASK: honor a live session grant first, otherwise prompt the user (if wired). No
-                // prompt → deny, so a headless signer only ever performs pre-granted operations.
+                // ASK: honor a live session grant first, then any narrower standing/session grant,
+                // otherwise prompt the user (if wired). No prompt → deny, so a headless signer only
+                // ever performs pre-granted operations.
                 NostrOpDecision.ASK -> {
                     if (isSessionAllowed(coordinate, op)) {
+                        true
+                    } else if (narrowOp != null && isNarrowAllowed(coordinate, narrowOp)) {
                         true
                     } else {
                         askOpConsent(coordinate, clientPubKey, op, request)
@@ -215,10 +230,22 @@ class Nip46PermissionAuthorizer(
         val grant = opConsent?.invoke(coordinate, clientPubKey, op, request) ?: return false
         ledger.record(coordinate, grant)
         if (grant is SignerOpGrant.AllowForSession) {
-            throttleLock.withLock { sessionAllows.add(sessionKey(coordinate, op)) }
+            // Use the GRANT's op, not the requested one: the dialog may have returned a narrower op
+            // ("only from this counterparty"), and a session grant must be no wider than what was given.
+            throttleLock.withLock { sessionAllows.add(sessionKey(coordinate, grant.op)) }
         }
         return grant.isAllowed
     }
+
+    /** True when a standing or session grant exists for the narrower [narrowOp] (e.g. decrypt-from-X). */
+    private suspend fun isNarrowAllowed(
+        coordinate: String,
+        narrowOp: NostrSignerOp,
+    ): Boolean =
+        isSessionAllowed(coordinate, narrowOp) ||
+            // Only an explicit per-op override counts. decide() would otherwise fall through to the
+            // app's policy, and FULL_TRUST/REASONABLE would answer for an op nobody ever granted.
+            ledger.store.loadOpDecision(coordinate, narrowOp)?.let { ledger.decide(coordinate, narrowOp) == NostrOpDecision.ALLOW } ?: false
 
     private suspend fun isSessionAllowed(
         coordinate: String,
@@ -342,6 +369,29 @@ class Nip46PermissionAuthorizer(
                 is BunkerRequestNip44Encrypt -> NostrSignerOp.Encrypt
                 is BunkerRequestNip04Decrypt -> NostrSignerOp.Decrypt
                 is BunkerRequestNip44Decrypt -> NostrSignerOp.Decrypt
+                else -> null
+            }
+
+        /**
+         * The NARROWER op a request could be granted, or `null` when it has no narrower form.
+         *
+         * Only decryption has one today: `decrypt` reveals private conversations, and one broad
+         * "always allow" hands over every conversation forever — so the consent dialog can also offer
+         * "always allow for THIS counterparty" ([NostrSignerOp.DecryptFrom]). Encryption and signing
+         * have no equivalent: their counterparty/kind is already the thing being granted.
+         */
+        fun BunkerRequest.toNarrowSignerOp(): NostrSignerOp? =
+            when (this) {
+                is BunkerRequestNip04Decrypt -> NostrSignerOp.DecryptFrom(pubKey)
+                is BunkerRequestNip44Decrypt -> NostrSignerOp.DecryptFrom(pubKey)
+                else -> null
+            }
+
+        /** The counterparty a decrypt request names, or `null` for any other request. */
+        fun BunkerRequest.decryptCounterparty(): HexKey? =
+            when (this) {
+                is BunkerRequestNip04Decrypt -> pubKey
+                is BunkerRequestNip44Decrypt -> pubKey
                 else -> null
             }
     }

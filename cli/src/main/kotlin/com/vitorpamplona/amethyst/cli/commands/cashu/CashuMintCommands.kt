@@ -59,7 +59,8 @@ object CashuMintCommands {
         val url = args.positional(0, "mint-url")
         args.rejectUnknown()
         return try {
-            val dto = MintHttpClient(url) { okhttp }.info()
+            // userConfigured: the operator typed this URL on the command line.
+            val dto = MintHttpClient(url, userConfigured = true) { okhttp }.info()
             Output.emit(
                 mapOf(
                     "mint_url" to url,
@@ -82,7 +83,7 @@ object CashuMintCommands {
         val url = args.positional(0, "mint-url")
         args.rejectUnknown()
         return try {
-            val dto = MintHttpClient(url) { okhttp }.info(force = true)
+            val dto = MintHttpClient(url, userConfigured = true) { okhttp }.info(force = true)
             Output.emit(mapOf("mint_url" to url, "mint_info" to dto))
             0
         } catch (e: MintHttpException) {

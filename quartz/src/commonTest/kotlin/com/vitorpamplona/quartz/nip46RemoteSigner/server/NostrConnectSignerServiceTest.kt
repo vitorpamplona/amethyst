@@ -147,6 +147,8 @@ class NostrConnectSignerServiceTest {
     private class AllowAuthorizer : Nip46RequestAuthorizer {
         var logoutCalls = 0
 
+        override suspend fun isPaired(clientPubKey: HexKey) = true
+
         override suspend fun onConnect(
             clientPubKey: HexKey,
             request: BunkerRequestConnect,

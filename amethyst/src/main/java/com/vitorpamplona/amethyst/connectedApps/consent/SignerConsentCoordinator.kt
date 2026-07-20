@@ -65,6 +65,23 @@ data class SignerConsentInfo(
      * non-event ops.
      */
     val previewTemplate: EventTemplate<Event>? = null,
+    /**
+     * The OTHER party of a decrypt request — whose conversation the app is asking to read — shown as
+     * an avatar + name. "X wants to read your messages with Alice" is a categorically different
+     * decision from "X wants to read your private messages", so this must reach the dialog.
+     * Null for every op that has no counterparty (signing, and the napplet/browser paths).
+     */
+    val counterpartyName: String? = null,
+    val counterpartyPicture: String? = null,
+    val counterpartyPubKey: String? = null,
+    /**
+     * A NARROWER op the dialog may offer to remember instead of [op] — today only
+     * [com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp.DecryptFrom], i.e.
+     * "always allow, but only for this counterparty". Offered ALONGSIDE the broad "Always allow" so
+     * the user gets granularity without a prompt per conversation. [narrowOpLabel] is its button text.
+     */
+    val narrowOp: NostrSignerOp? = null,
+    val narrowOpLabel: String? = null,
 )
 
 /** One pending per-operation consent request, as the batched sheet renders it. */

@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -35,6 +37,7 @@ import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -55,13 +58,40 @@ import kotlinx.serialization.builtins.serializer
  * act under so the fold can verify the chain terminates at the owner.
  */
 object ConcordModeration {
-    /** version/prevHash to chain onto the current head of ([kind], [entityId]), or genesis. */
+    /**
+     * The current head of [entityId] within [current], or null if the entity has no
+     * editions yet — **the authority-gated head**, i.e. the same edition a reader would
+     * fold to, resolved against the community's [owner].
+     *
+     * Two traps live here, and both need the fold:
+     *
+     * 1. [current] arrives in **wrap-arrival order**, which is not chain order — so the
+     *    first matching edition is whichever one a relay happened to deliver first, not
+     *    the newest. Chaining off that stale edition forks the chain at an already-used
+     *    version, silently dropping the change.
+     * 2. The *ungated* structural tip may be an edition every reader **rejects**. Building
+     *    on it does two kinds of damage: the rogue's version number is inflated into every
+     *    honest edition that follows, and — for a replaced document like the banlist —
+     *    the rogue's *content* is read as the current state and re-published under an
+     *    authorized signature. That launders the attack: an unauthorized empty banlist
+     *    becomes an owner-signed one the moment the owner bans anybody else.
+     *
+     * Armada's writers chain off `folded.heads` (its `pickHead` gated pick) for exactly
+     * this reason; [ConcordCommunityState.authorizedHeads] is the same notion here.
+     */
+    private fun headOf(
+        current: List<ControlEdition>,
+        entityId: ByteArray,
+        owner: HexKey,
+    ): ControlEdition? = ConcordCommunityState.authorizedHeads(current, owner)[entityId.toHexKey()]?.known
+
+    /** version/prevHash to chain onto the current head of [entityId], or genesis. */
     private fun versioning(
         current: List<ControlEdition>,
-        kind: ControlEntityKind,
         entityId: ByteArray,
+        owner: HexKey,
     ): Pair<Long, ByteArray?> {
-        val head = current.firstOrNull { it.entityKind == kind && it.entityId.contentEquals(entityId) }
+        val head = headOf(current, entityId, owner)
         return if (head != null) (head.version + 1) to head.hash else 0L to null
     }
 
@@ -92,8 +122,9 @@ object ConcordModeration {
         current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation? = null,
+        owner: HexKey,
     ): Event {
-        val (version, prev) = versioning(current, ControlEntityKind.ROLE, roleId)
+        val (version, prev) = versioning(current, roleId, owner)
         val content = ConcordJson.instance.encodeToString(RoleEntity.serializer(), role)
         return wrap(actor, controlPlane, ControlEntityKind.ROLE, roleId, version, prev, content, createdAt, citation)
     }
@@ -113,8 +144,9 @@ object ConcordModeration {
         current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation? = null,
+        owner: HexKey,
     ): Event {
-        val (version, prev) = versioning(current, ControlEntityKind.CHANNEL, channelId)
+        val (version, prev) = versioning(current, channelId, owner)
         val content = ConcordJson.instance.encodeToString(ChannelEntity.serializer(), channel)
         return wrap(actor, controlPlane, ControlEntityKind.CHANNEL, channelId, version, prev, content, createdAt, citation)
     }
@@ -133,8 +165,9 @@ object ConcordModeration {
         current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation? = null,
+        owner: HexKey,
     ): Event {
-        val (version, prev) = versioning(current, ControlEntityKind.METADATA, communityId)
+        val (version, prev) = versioning(current, communityId, owner)
         val content = ConcordJson.instance.encodeToString(MetadataEntity.serializer(), metadata)
         return wrap(actor, controlPlane, ControlEntityKind.METADATA, communityId, version, prev, content, createdAt, citation)
     }
@@ -149,9 +182,10 @@ object ConcordModeration {
         current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation? = null,
+        owner: HexKey,
     ): Event {
         val entityId = ConcordKeyDerivation.grantCoordinate(communityId, member.hexToByteArray())
-        val (version, prev) = versioning(current, ControlEntityKind.GRANT, entityId)
+        val (version, prev) = versioning(current, entityId, owner)
         val content = ConcordJson.instance.encodeToString(GrantEntity.serializer(), GrantEntity(member = member, roleIds = roleIds))
         return wrap(actor, controlPlane, ControlEntityKind.GRANT, entityId, version, prev, content, createdAt, citation)
     }
@@ -165,7 +199,8 @@ object ConcordModeration {
         current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation? = null,
-    ): Event = setBanlist(actor, controlPlane, communityId, currentBanned(current, communityId) + member.lowercase(), current, createdAt, citation)
+        owner: HexKey,
+    ): Event = setBanlist(actor, controlPlane, communityId, currentBanned(current, communityId, owner) + member.lowercase(), current, createdAt, citation, owner)
 
     /** Removes [member] from the banlist. */
     suspend fun unban(
@@ -176,17 +211,23 @@ object ConcordModeration {
         current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation? = null,
-    ): Event = setBanlist(actor, controlPlane, communityId, currentBanned(current, communityId) - member.lowercase(), current, createdAt, citation)
+        owner: HexKey,
+    ): Event = setBanlist(actor, controlPlane, communityId, currentBanned(current, communityId, owner) - member.lowercase(), current, createdAt, citation, owner)
 
-    /** The current banlist union across the head editions (lowercase hex). */
+    /**
+     * The current banlist union across the head editions (lowercase hex).
+     *
+     * Read through the [AuthorityResolver] rather than by decoding the head's content directly, so
+     * this is the *honored* banlist: the resolver heals concurrent forks into the union (CORD-04 §4
+     * re-heal) and drops entries whose signer did not outrank them (§3's rank rule, enforced as a
+     * delta rule). Decoding the raw head instead would make every ban/unban we author re-publish
+     * entries our own fold refuses — laundering an unauthorized ban into a list signed by us.
+     */
     fun currentBanned(
         current: List<ControlEdition>,
         communityId: ByteArray,
-    ): Set<HexKey> {
-        val entityId = ConcordKeyDerivation.banlistCoordinate(communityId)
-        val head = current.firstOrNull { it.entityKind == ControlEntityKind.BANLIST && it.entityId.contentEquals(entityId) }
-        return head?.let { ConcordJson.decodeBanlist(it.content) }?.mapTo(HashSet()) { it.lowercase() } ?: emptySet()
-    }
+        owner: HexKey,
+    ): Set<HexKey> = AuthorityResolver.resolve(current, owner).bannedMembers()
 
     private suspend fun setBanlist(
         actor: NostrSigner,
@@ -196,9 +237,10 @@ object ConcordModeration {
         current: List<ControlEdition>,
         createdAt: Long,
         citation: AuthorityCitation?,
+        owner: HexKey,
     ): Event {
         val entityId = ConcordKeyDerivation.banlistCoordinate(communityId)
-        val (version, prev) = versioning(current, ControlEntityKind.BANLIST, entityId)
+        val (version, prev) = versioning(current, entityId, owner)
         val content = ConcordJson.instance.encodeToString(ListSerializer(String.serializer()), banned.sorted())
         return wrap(actor, controlPlane, ControlEntityKind.BANLIST, entityId, version, prev, content, createdAt, citation)
     }

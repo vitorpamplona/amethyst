@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -128,9 +129,16 @@ class BunkerRequestProcessorTest {
     private class FakeAuthorizer(
         val connectDecision: Nip46ConnectDecision,
         val allow: Boolean,
+        val paired: Boolean = true,
     ) : Nip46RequestAuthorizer {
         var connectCalls = 0
         var authorizeCalls = 0
+        var isPairedCalls = 0
+
+        override suspend fun isPaired(clientPubKey: HexKey): Boolean {
+            isPairedCalls++
+            return paired
+        }
 
         override suspend fun onConnect(
             clientPubKey: HexKey,
@@ -157,32 +165,84 @@ class BunkerRequestProcessorTest {
     ) = BunkerRequestProcessor(signer, { setOf(relay) }, authorizer)
 
     @Test
-    fun getPublicKeyReturnsUserPubKeyWithoutAuthorization() =
+    fun getPublicKeyReturnsUserPubKeyForAPairedClientWithoutPerOpAuthorization() =
         runTest {
-            val authorizer = FakeAuthorizer(Nip46ConnectDecision.Accept("ack"), allow = false)
+            // Paired but every op denied: the identity read still answers — it needs pairing, not consent.
+            val authorizer = FakeAuthorizer(Nip46ConnectDecision.Accept("ack"), allow = false, paired = true)
             val res = processor(authorizer = authorizer).process(clientPubKey, BunkerRequestGetPublicKey("1"))
 
             assertTrue(res is BunkerResponsePublicKey)
             assertEquals(userPubKey, res.pubkey)
             assertEquals("1", res.id)
-            // public reads are never gated
+            // gated on pairing only, never on per-op consent
             assertEquals(0, authorizer.authorizeCalls)
+            assertEquals(1, authorizer.isPairedCalls)
         }
 
+    /**
+     * The identity leak: anyone who obtains the `bunker://` URI can encrypt a well-formed request
+     * without knowing the secret. `get_public_key` must not tell them WHICH account this signer is.
+     */
     @Test
-    fun pingReturnsPong() =
+    fun getPublicKeyIsRefusedForAnUnpairedClient() =
         runTest {
-            val res = processor().process(clientPubKey, BunkerRequestPing("2"))
+            val authorizer = FakeAuthorizer(Nip46ConnectDecision.Accept("ack"), allow = true, paired = false)
+            val res = processor(authorizer = authorizer).process(clientPubKey, BunkerRequestGetPublicKey("1"))
+
+            assertTrue(res is BunkerResponseError, "unpaired get_public_key must error, got $res")
+            assertEquals(BunkerRequestProcessor.ERROR_NOT_CONNECTED, res.error)
+            assertEquals("1", res.id)
+            assertNull(res.result, "the error reply must carry no identity result")
+        }
+
+    /**
+     * `ping` stays open on purpose: it only confirms a signer is alive at a pubkey the caller already
+     * has (it is in the URI they hold) and leaks no identity, so gating it would risk breaking a
+     * legitimate pre-connect liveness check for no privacy gain. Pinned so the choice is deliberate.
+     */
+    @Test
+    fun pingReturnsPongEvenForAnUnpairedClient() =
+        runTest {
+            val authorizer = FakeAuthorizer(Nip46ConnectDecision.Accept("ack"), allow = false, paired = false)
+            val res = processor(authorizer = authorizer).process(clientPubKey, BunkerRequestPing("2"))
             assertTrue(res is BunkerResponsePong)
             assertEquals("2", res.id)
+            assertEquals(0, authorizer.isPairedCalls, "ping is deliberately not pairing-gated")
         }
 
     @Test
-    fun getRelaysReturnsConfiguredRelays() =
+    fun getRelaysReturnsConfiguredRelaysForAPairedClient() =
         runTest {
             val res = processor().process(clientPubKey, BunkerRequestGetRelays("3"))
             assertTrue(res is BunkerResponseGetRelays)
             assertTrue(res.relays.containsKey(relay.url))
+        }
+
+    /** `get_relays` additionally yields the user's inbox relay set — same pairing gate. */
+    @Test
+    fun getRelaysIsRefusedForAnUnpairedClient() =
+        runTest {
+            val authorizer = FakeAuthorizer(Nip46ConnectDecision.Accept("ack"), allow = true, paired = false)
+            val res = processor(authorizer = authorizer).process(clientPubKey, BunkerRequestGetRelays("3"))
+
+            assertTrue(res is BunkerResponseError, "unpaired get_relays must error, got $res")
+            assertEquals(BunkerRequestProcessor.ERROR_NOT_CONNECTED, res.error)
+            assertNull(res.result, "the error reply must carry no relay set")
+        }
+
+    /**
+     * The regression that would break ALL pairing: `connect` is how a client becomes paired, so it
+     * must stay reachable to a client that is not paired yet.
+     */
+    @Test
+    fun connectStillWorksForAnUnpairedClient() =
+        runTest {
+            val authorizer = FakeAuthorizer(Nip46ConnectDecision.Accept("s3cr3t"), allow = false, paired = false)
+            val res = processor(authorizer = authorizer).process(clientPubKey, BunkerRequestConnect(id = "9", remoteKey = userPubKey, secret = "s3cr3t"))
+
+            assertEquals(1, authorizer.connectCalls)
+            assertTrue(res !is BunkerResponseError, "connect must not be pairing-gated, got $res")
+            assertEquals("s3cr3t", res.result)
         }
 
     @Test

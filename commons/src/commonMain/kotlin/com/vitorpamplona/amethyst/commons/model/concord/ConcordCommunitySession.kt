@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntr
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
+import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -113,10 +115,40 @@ class ConcordCommunitySession(
     /** The next-epoch base-rekey stream address to watch for an inbound Refounding. */
     val nextBaseRekeyAddress: HexKey get() = nextBaseRekeyKey.publicKeyHex
 
+    /**
+     * The Control Plane of every **prior** epoch we still hold a root for (address ->
+     * key + epoch), newest-held first and bounded like the channel backfill.
+     *
+     * This is the anti-rollback memory. A CORD-06 Refounding re-wraps one edition per
+     * entity at the new epoch and the *rotator* chooses which one, so it can serve v1
+     * of a chain that had already reached v2 — restoring a revoked role, clearing a
+     * banlist — with every signature genuine. Folding the epochs we still hold roots
+     * for gives us the [EntityFloor] each entity must connect to, and because
+     * `heldRoots` is already persisted in the kind-13302 community list, that memory
+     * survives a process restart without any new storage.
+     */
+    private val historicalControlKeys: Map<HexKey, Pair<GroupKey, Long>> =
+        entry.heldRoots
+            .filter { it.epoch < entry.rootEpoch }
+            .sortedByDescending { it.epoch }
+            .take(ConcordActions.MAX_BACKFILL_EPOCHS)
+            .mapNotNull { held ->
+                val key = runCatching { ConcordActions.controlPlane(held.key.hexToByteArray(), communityIdBytes, held.epoch) }.getOrNull() ?: return@mapNotNull null
+                key.publicKeyHex to (key to held.epoch)
+            }.toMap()
+
+    /** The prior-epoch Control Plane addresses to subscribe to, so the rollback floor can be rebuilt. */
+    fun historicalControlPlaneAddresses(): Set<HexKey> = historicalControlKeys.keys
+
     private val lock = KmpLock()
 
     // Deduped inbound wraps.
     private val controlWraps = LinkedHashMap<HexKey, Event>()
+
+    // Prior-epoch Control Plane address -> (wrapId -> wrap). Kept apart from [controlWraps]: these
+    // never join the live fold, they only produce the anti-rollback floor.
+    private val historicalControlWraps = HashMap<HexKey, LinkedHashMap<HexKey, Event>>()
+
     private val channelWrapsById = HashMap<HexKey, LinkedHashMap<HexKey, Event>>() // channelIdHex -> (wrapId -> wrap)
     private val guestbookWraps = LinkedHashMap<HexKey, Event>()
     private val baseRekeyWraps = LinkedHashMap<HexKey, Event>()
@@ -236,6 +268,9 @@ class ConcordCommunitySession(
     fun streamKeys(): List<GroupKey> =
         lock.withLock {
             listOf(controlPlaneKey) +
+                // Prior-epoch Control Planes: the anti-rollback floor is folded from them, so the
+                // gated relays must serve their wraps too.
+                historicalControlKeys.values.map { it.first } +
                 channelKeysByAddress.values.map { it.second } +
                 // Prior-epoch channel stream keys so the gated relays serve their older wraps too.
                 historicalChannelKeysByAddress.values.map { it.second }
@@ -297,6 +332,17 @@ class ConcordCommunitySession(
                 return ConcordIngestOutcome.STRUCTURAL
             }
             else -> {
+                // A prior-epoch Control Plane wrap: buffer it and re-fold, so the anti-rollback
+                // floor rises as the old epochs drain in. Structural — the floor can change the
+                // folded state (and therefore the plane set) exactly like a live control wrap.
+                if (wrap.pubKey in historicalControlKeys) {
+                    lock.withLock {
+                        val buffer = historicalControlWraps.getOrPut(wrap.pubKey) { LinkedHashMap() }
+                        if (buffer.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
+                    }
+                    refold()
+                    return ConcordIngestOutcome.STRUCTURAL
+                }
                 val current = lock.withLock { channelKeysByAddress[wrap.pubKey] }
                 if (current != null) {
                     val (channelIdHex, key) = current
@@ -374,7 +420,12 @@ class ConcordCommunitySession(
         val newChannels =
             lock.withLock {
                 val wraps = controlWraps.values.toList()
-                val folded = ConcordActions.foldCommunity(wraps, controlPlaneKey, entry.owner)
+                val folded =
+                    ConcordCommunityState.fold(
+                        ConcordActions.controlEditions(wraps, controlPlaneKey),
+                        entry.owner,
+                        controlFloorsLocked(),
+                    )
 
                 val prevChannels = channelKeysByAddress.values.mapTo(HashSet()) { it.first }
                 val next = HashMap<HexKey, Pair<HexKey, GroupKey>>()
@@ -402,6 +453,30 @@ class ConcordCommunitySession(
         // a channel's buffer never pre-dates its first fold) — re-projecting all channels on every
         // control edition would be O(channels × history) of redundant decryption.
         for (channelIdHex in newChannels) reprojectChannel(channelIdHex)
+    }
+
+    /**
+     * The per-entity anti-rollback floor: the authority-gated heads of every prior epoch's
+     * Control Plane we still hold a root for, folded **oldest epoch first** so each epoch is
+     * itself anchored at the one before it and the floor only ever rises.
+     *
+     * The current epoch must then connect to these heads; an entity whose offered chain cannot
+     * reach its floor keeps the state we last folded (see [EditionFold.admissible]) and the
+     * refusal is warned. Empty for a fresh joiner (no held roots), which is exactly right — it
+     * legitimately has no history and must still accept the compacted head as its baseline.
+     *
+     * Caller must hold [lock]; a fold reads the wrap buffers.
+     */
+    private fun controlFloorsLocked(): Map<String, EntityFloor> {
+        if (historicalControlKeys.isEmpty()) return emptyMap()
+        var floors = emptyMap<String, EntityFloor>()
+        for ((address, keyAtEpoch) in historicalControlKeys.entries.sortedBy { it.value.second }) {
+            val wraps = historicalControlWraps[address]?.values?.toList() ?: continue
+            val editions = ConcordActions.controlEditions(wraps, keyAtEpoch.first)
+            if (editions.isEmpty()) continue
+            floors = ConcordCommunityState.authorizedHeads(editions, entry.owner, floors)
+        }
+        return floors
     }
 
     private fun refoldGuestbook() {

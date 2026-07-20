@@ -61,7 +61,7 @@ fun EmbeddedTabThemeWatcher() {
     LaunchedEffect(resolvedDark) {
         if (applied.value != resolvedDark) {
             applied.value = resolvedDark
-            EmbeddedTabHost.rebuildAllForTheme()
+            EmbeddedTabHost.rebuildAll()
         }
     }
 }

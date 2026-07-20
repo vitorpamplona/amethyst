@@ -27,7 +27,9 @@ import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.UserNip05Cac
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserCardsCache
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
@@ -40,6 +42,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
+import kotlin.concurrent.Volatile
 
 interface UserDependencies
 
@@ -76,12 +79,27 @@ class User(
 
     // These objects are designed to keep the cache
     // while this user obj is being used anywhere.
-    private var metadata: UserMetadataCache? = null
-    private var reports: UserReportCache? = null
-    private var cards: UserCardsCache? = null
-    private var nip05: UserNip05Cache? = null
-    private var status: UserStatusCache? = null
-    private var relays: UserRelaysCache? = null
+    //
+    // `@Volatile` + double-checked locking (see [lazyCacheLock]): these are created on demand
+    // from BOTH the Compose main thread — every `observeUserInfo`/`observeUserName` composition
+    // calls the accessor — and the relay/IO threads consuming events (`updateUserInfo` ->
+    // `metadata()`). The plain `field ?: Create().also { field = it }` idiom is not atomic: two
+    // threads can both read null, each build a cache, and whoever writes first gets orphaned.
+    // A UI flow collected from an orphaned UserMetadataCache never receives the metadata, so
+    // that composable is stuck on its `pubkeyDisplayHex()` fallback forever — while a sibling
+    // composable that read the surviving instance renders the real name. That is exactly the
+    // "group DM title shows npubs while the facepile beside it shows names" symptom.
+    @Volatile private var metadata: UserMetadataCache? = null
+
+    @Volatile private var reports: UserReportCache? = null
+
+    @Volatile private var cards: UserCardsCache? = null
+
+    @Volatile private var nip05: UserNip05Cache? = null
+
+    @Volatile private var status: UserStatusCache? = null
+
+    @Volatile private var relays: UserRelaysCache? = null
 
     fun pubkey() = Hex.decode(pubkeyHex)
 
@@ -169,34 +187,48 @@ class User(
 
     fun reportsOrNull(): UserReportCache? = reports
 
-    fun reports(): UserReportCache = reports ?: UserReportCache().also { reports = it }
+    fun reports(): UserReportCache = reports ?: lazyCacheLock.withLock { reports ?: UserReportCache().also { reports = it } }
 
     fun cardsOrNull(): UserCardsCache? = cards
 
-    fun cards(): UserCardsCache = cards ?: UserCardsCache().also { cards = it }
+    fun cards(): UserCardsCache = cards ?: lazyCacheLock.withLock { cards ?: UserCardsCache().also { cards = it } }
 
     fun metadataOrNull(): UserMetadataCache? = metadata
 
-    fun metadata(): UserMetadataCache = metadata ?: UserMetadataCache().also { metadata = it }
+    fun metadata(): UserMetadataCache = metadata ?: lazyCacheLock.withLock { metadata ?: UserMetadataCache().also { metadata = it } }
 
     fun nip05StateOrNull(): UserNip05Cache? = nip05
 
     fun nip05State(): UserNip05Cache =
-        nip05 ?: UserNip05Cache().also {
-            nip05 = it
-            val meta = metadata().flow.value
-            if (meta != null) {
-                it.newMetadata(meta.info.nip05, pubkeyHex)
+        nip05 ?: lazyCacheLock.withLock {
+            nip05 ?: UserNip05Cache().also {
+                nip05 = it
+                val meta = metadata().flow.value
+                if (meta != null) {
+                    it.newMetadata(meta.info.nip05, pubkeyHex)
+                }
             }
         }
 
     fun statusStateOrNull(): UserStatusCache? = status
 
-    fun statusState(): UserStatusCache = status ?: UserStatusCache().also { status = it }
+    fun statusState(): UserStatusCache = status ?: lazyCacheLock.withLock { status ?: UserStatusCache().also { status = it } }
 
     fun relayStateOrNull(): UserRelaysCache? = relays
 
-    fun relayState(): UserRelaysCache = relays ?: UserRelaysCache().also { relays = it }
+    fun relayState(): UserRelaysCache = relays ?: lazyCacheLock.withLock { relays ?: UserRelaysCache().also { relays = it } }
+
+    companion object {
+        /**
+         * Guards the double-checked lazy creation of every per-user cache above.
+         *
+         * Shared process-wide on purpose: it is only ever held for the few instructions that
+         * allocate a cache object, and one lock costs far less than one per [User] in a store
+         * that holds tens of thousands of them. [KmpLock] is reentrant, so `nip05State()`
+         * calling `metadata()` under the lock cannot deadlock.
+         */
+        private val lazyCacheLock = KmpLock()
+    }
 }
 
 fun Set<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }

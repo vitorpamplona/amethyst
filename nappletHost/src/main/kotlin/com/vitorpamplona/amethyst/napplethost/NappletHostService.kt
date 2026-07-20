@@ -98,6 +98,8 @@ class NappletHostService : Service() {
         val proxyPort: Int,
         val bgColor: Int,
         val themeType: String,
+        // Opaque per-account WebView storage-profile name (see NappletWebViewProfile).
+        val webViewProfile: String?,
         val declaredDomains: List<String>,
     ) {
         // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
@@ -215,6 +217,7 @@ class NappletHostService : Service() {
                 proxyPort = data.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1),
                 bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE),
                 themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
+                webViewProfile = data.getString(NappletHostContract.EXTRA_WEBVIEW_PROFILE),
                 declaredDomains = declaredDomains,
             )
         return tab
@@ -290,6 +293,10 @@ class NappletHostService : Service() {
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
         val wv = WebView(nightThemedContext(context, tab.themeType))
+        // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
+        // profile has otherwise been used), so the storage partition must be chosen before the
+        // hardening/bridge setup and the loadUrl below.
+        NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shimJs, appOrigin, tab.profile, imeProxy = true)

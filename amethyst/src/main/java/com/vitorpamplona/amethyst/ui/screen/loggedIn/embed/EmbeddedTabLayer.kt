@@ -215,13 +215,22 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // one's (opaque, pre-first-frame) surface — which itself sits above the nav screens, so the overlay
         // can't live in the screen. A spinner until a real page paints, or an error+retry when the load
         // failed or stalled, so a slow / blank / failed load isn't a bare black/white void.
+        //
+        // Gated on the active *id*, not on a live controller: right after [EmbeddedTabHost.rebuildAll] (an
+        // account switch or a theme flip) the active tab has no session at all for a frame or more, and a
+        // SandboxedSdkView with no adapter paints nothing but its background — a black rectangle that reads
+        // as broken. Treat "no session yet" as "still loading" so the spinner covers that window too.
         val activeController = EmbeddedTabHost.sessions.firstOrNull { it.id == activeId }?.controller
-        if (activeController != null && bounds.width > 0f && bounds.height > 0f) {
-            var loadStatus by remember(activeId) { mutableStateOf(activeController.loadStatus) }
+        if (activeId != null && bounds.width > 0f && bounds.height > 0f) {
+            var loadStatus by remember(activeId) { mutableStateOf(activeController?.loadStatus ?: EmbeddedLoadStatus()) }
             var timedOut by remember(activeId) { mutableStateOf(false) }
             DisposableEffect(activeId, activeController) {
-                activeController.onLoadStatusChanged = { loadStatus = it }
-                onDispose { activeController.onLoadStatusChanged = null }
+                // No session yet — the tab is mid-rebuild after an account switch, or being warmed for the
+                // first time. Fall back to the "still loading" state so the spinner covers the surface
+                // instead of leaving a bare black rectangle where a dead/absent adapter paints nothing.
+                loadStatus = activeController?.loadStatus ?: EmbeddedLoadStatus()
+                activeController?.onLoadStatusChanged = { loadStatus = it }
+                onDispose { activeController?.onLoadStatusChanged = null }
             }
             // Safety net: nothing painted and nothing actively loading after a grace period → offer a retry.
             LaunchedEffect(activeId, loadStatus) {
@@ -241,10 +250,12 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                             ).size(bounds.width.toDp(), bounds.height.toDp()),
                     ) {
                         EmbeddedLoadOverlay(
-                            failed = loadStatus.failed || timedOut,
+                            // A tab with no session yet can't have failed — it hasn't started. Keep it on
+                            // the spinner so a re-arming tab never flashes an error the user can't act on.
+                            failed = activeController != null && (loadStatus.failed || timedOut),
                             onRetry = {
                                 timedOut = false
-                                activeController.retry()
+                                activeController?.retry()
                             },
                         )
                     }

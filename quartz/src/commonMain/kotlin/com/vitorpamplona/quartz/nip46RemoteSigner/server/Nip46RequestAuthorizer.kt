@@ -35,10 +35,26 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
  * client do this?". Everything here is `suspend` so an implementation may block
  * on disk, a live user prompt, or IPC without changing the processor.
  *
- * Public, harmless requests (`get_public_key`, `ping`, `get_relays`) are NOT
- * routed through [authorize]; only signing, encryption and decryption are.
+ * Two gates, not one:
+ *  - [isPaired] answers "has this client completed a `connect`?" and guards the
+ *    identity reads (`get_public_key`, `get_relays`) — they need no per-op
+ *    consent, but they must not answer a stranger who merely obtained the
+ *    `bunker://` URI, since the answer names the user's account. `ping` is not
+ *    guarded (pure liveness), and `connect` obviously cannot be.
+ *  - [authorize] gates signing, encryption and decryption.
  */
 interface Nip46RequestAuthorizer {
+    /**
+     * `true` when [clientPubKey] has already paired with this signer — i.e. a `connect` succeeded
+     * and the client holds a standing grant. Guards the identity reads (`get_public_key`,
+     * `get_relays`), which would otherwise tell any holder of the bunker URI *which Nostr account*
+     * this signer belongs to without ever presenting the pairing secret.
+     *
+     * Deliberately has no default: every implementation must state its own pairing rule, so a new
+     * authorizer cannot silently inherit "everyone is paired".
+     */
+    suspend fun isPaired(clientPubKey: HexKey): Boolean
+
     /**
      * Called when a client sends a `connect` request. The implementation
      * validates the offered secret (the `bunker://…?secret=…` pairing token),

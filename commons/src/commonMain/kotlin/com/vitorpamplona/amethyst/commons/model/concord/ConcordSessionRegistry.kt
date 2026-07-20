@@ -93,6 +93,9 @@ class ConcordSessionRegistry(
             val out = HashSet<HexKey>()
             for (session in sessions.values) {
                 out += session.controlPlaneAddress
+                // Prior-epoch Control Planes too: folding them is what gives each entity its
+                // anti-rollback floor across a CORD-06 Refounding.
+                out += session.historicalControlPlaneAddresses()
                 out += session.channelAddresses()
             }
             out

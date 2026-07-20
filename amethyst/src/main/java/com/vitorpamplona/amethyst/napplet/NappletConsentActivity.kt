@@ -23,15 +23,19 @@ package com.vitorpamplona.amethyst.napplet
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -41,11 +45,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -54,6 +65,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 /**
@@ -168,20 +180,74 @@ private fun NappletConsentDialog(
                     )
                 }
 
-                // Operation detail box (may include content preview)
-                if (info.operationSummary.isNotBlank()) {
+                // Operation detail box (may include content preview), plus the full event behind a
+                // toggle: the summary truncates content and cannot spell out every tag, so for kinds
+                // whose payload IS the tags (3, 5, 10000, 10002) this is the only complete disclosure.
+                if (info.operationSummary.isNotBlank() || info.rawData.isNotBlank()) {
                     Spacer(Modifier.height(12.dp))
                     Surface(
                         modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.medium,
                     ) {
-                        SelectionContainer {
-                            Text(
-                                info.operationSummary,
-                                modifier = Modifier.padding(12.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            if (info.operationSummary.isNotBlank()) {
+                                SelectionContainer {
+                                    Text(
+                                        info.operationSummary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+                            // A single-account follow/mute change: show who, so the user recognizes
+                            // the face rather than parsing a name they may not read carefully.
+                            info.subject?.let { subject ->
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    RobohashFallbackAsyncImage(
+                                        robot = subject.pubKey,
+                                        model = subject.pictureUrl,
+                                        contentDescription = subject.name,
+                                        modifier = Modifier.size(36.dp).clip(CircleShape),
+                                        loadProfilePicture = true,
+                                        loadRobohash = true,
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        subject.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            }
+                            if (info.rawData.isNotBlank()) {
+                                var showRawData by remember { mutableStateOf(false) }
+                                if (showRawData) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Surface(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                                        SelectionContainer {
+                                            Text(
+                                                info.rawData,
+                                                style =
+                                                    MaterialTheme.typography.labelSmall.copy(
+                                                        fontFamily = FontFamily.Monospace,
+                                                    ),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                softWrap = false,
+                                            )
+                                        }
+                                    }
+                                }
+                                TextButton(onClick = { showRawData = !showRawData }) {
+                                    Text(
+                                        if (showRawData) {
+                                            stringResource(R.string.napplet_consent_hide_event)
+                                        } else {
+                                            stringResource(R.string.napplet_consent_show_event)
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

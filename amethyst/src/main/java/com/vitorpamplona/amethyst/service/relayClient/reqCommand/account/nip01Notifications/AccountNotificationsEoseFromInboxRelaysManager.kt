@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -51,17 +50,35 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
+        // Backward-paging boundary: once the feed has filled a page, ask for everything older than
+        // its oldest card. It stays null until then — see the note on the missing week floor below,
+        // which is what let it stay null forever on a quiet inbox.
+        val pagingBoundary = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
+
         val inbox =
             key.account.notificationRelays.flow.value.flatMap {
+                // No `since` floor on the first fetch. These filters are scoped by `#p` to my own
+                // key and carry a relay-side `limit`, so an all-time query costs one index scan and
+                // returns at most `limit` events, newest first — exactly what Home does (it passes
+                // `since ?: boundary`, i.e. null on a cold start).
+                //
+                // This used to fall back to `oneWeekAgo()`, which silently emptied the tab for
+                // anyone whose last mention was older than a week: EOSE `since` is in-memory only,
+                // so EVERY cold start re-pinned the window to 7 days, and the paging boundary above
+                // could never rescue it — it only arms once the feed holds a full page, and the feed
+                // could not fill because the query only ever asked for a week. A fresh install of an
+                // established account hit the same deadlock.
+                val notificationSince = since?.get(it)?.time ?: pagingBoundary
+
                 filterSummaryNotificationsToPubkey(
                     relay = it,
                     pubkey = user(key).pubkeyHex,
-                    since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo(),
+                    since = notificationSince,
                 ) +
                     filterNotificationsToPubkey(
                         relay = it,
                         pubkey = user(key).pubkeyHex,
-                        since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
+                        since = notificationSince,
                     )
             }
 
@@ -76,7 +93,9 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                         relay = relay,
                         pubkey = user(key).pubkeyHex,
                         groupIds = groupIds.distinct(),
-                        since = since?.get(relay)?.time ?: TimeUtils.oneWeekAgo(),
+                        // Same reasoning as the inbox filters above: `#p` + `#h` + `limit = 200`
+                        // already bound this, so a week floor only hides older group activity.
+                        since = since?.get(relay)?.time ?: pagingBoundary,
                     )
                 }
 

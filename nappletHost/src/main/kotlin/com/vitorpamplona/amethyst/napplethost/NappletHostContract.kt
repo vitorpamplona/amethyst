@@ -82,6 +82,17 @@ object NappletHostContract {
     const val EXTRA_THEME = "napplet_theme"
 
     /**
+     * Opaque per-account WebView storage-profile name (a truncated SHA-256 of the account pubkey,
+     * minted in the main process — see `NappletWebViewProfiles`). Partitions cookies/localStorage/
+     * IndexedDB/service workers per account so a web app can't carry one npub's session into another,
+     * while a switch away and back restores the earlier session. Deliberately a hash: the keyless
+     * sandbox must learn nothing about which account it runs for.
+     *
+     * NB: unrelated to [EXTRA_HOST_PROFILE], which is the WEBSITE/NAPPLET host posture.
+     */
+    const val EXTRA_WEBVIEW_PROFILE = "napplet_webview_profile"
+
+    /**
      * FQN of the main-process broker service (in `:amethyst`). The sandbox binds it by name so it
      * needs no compile-time reference to `:amethyst`. Must match the manifest `<service>` declaration.
      */

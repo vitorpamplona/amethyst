@@ -29,14 +29,14 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
-import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.napplet.label
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -119,39 +119,43 @@ object Nip46ConsentBridge {
         } ?: AppConnectResult.Cancelled
     }
 
-    /** Per-operation consent: describe the request (op + event preview) and await the user's grant. */
+    /**
+     * Per-operation consent: describe the request and await the user's grant.
+     *
+     * For a decrypt request this DECRYPTS FIRST and shows the resulting plaintext, together with the
+     * counterparty the conversation is with. That is what makes the decision reviewable: without it
+     * the dialog said only "wants to read your private messages" with no way to tell one request from
+     * another. Decryption is local — [signer] runs on this device and nothing leaves it unless the
+     * user approves — and it is bounded by [Nip46ConsentInfoBuilder.DECRYPT_PREVIEW_TIMEOUT_MS] so a slow or failing signer
+     * degrades to an explanatory message instead of hanging or blanking the prompt.
+     */
     suspend fun requestOp(
         coordinate: String,
         clientPubKey: HexKey,
         op: NostrSignerOp,
         request: BunkerRequest,
+        signer: NostrSigner,
     ): SignerOpGrant {
         val context = Amethyst.instance.appContext
         val info = runCatching { Amethyst.instance.nip46ClientStore.load(coordinate) }.getOrNull()
         val title = info?.name?.ifBlank { null } ?: context.getString(R.string.nip46_signer_remote_app)
-        val preview =
-            if (request is BunkerRequestSign) {
-                request.event.content
-                    .take(160)
-                    .trim()
-            } else {
-                ""
-            }
-        val rawData = if (request is BunkerRequestSign) JacksonMapper.toJsonPretty(request.event) else ""
-        val face = accountFace(coordinate)
+
         val consentInfo =
-            SignerConsentInfo(
-                appletTitle = title,
+            Nip46ConsentInfoBuilder.build(
                 coordinate = coordinate,
-                op = op,
-                operationSummary = op.label(context),
-                contentPreview = preview,
-                rawData = rawData,
+                title = title,
                 iconUrl = info?.image,
-                accountName = face.name,
-                accountPicture = face.picture,
-                accountPubKey = face.pubKey,
-                previewTemplate = (request as? BunkerRequestSign)?.event,
+                op = op,
+                request = request,
+                account = accountFace(coordinate),
+                faceOf = ::userFace,
+                strings =
+                    Nip46ConsentStrings(
+                        opLabel = { it.label(context) },
+                        allowAlwaysFor = { context.getString(R.string.nip46_signer_allow_always_for, it) },
+                        decryptFailed = context.getString(R.string.nip46_signer_decrypt_failed),
+                    ),
+                decrypt = { decryptWithAccountSigner(signer, it) },
             )
         // Fail closed if the prompt is never answered so a stuck dialog can't hold the signer hostage.
         return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {
@@ -159,16 +163,30 @@ object Nip46ConsentBridge {
         } ?: SignerOpGrant.DenyOnce
     }
 
+    /**
+     * Performs the local decryption behind the decrypt preview with the account's own signer. Errors
+     * and timeouts are handled by [Nip46ConsentInfoBuilder]; this only maps the request to a call.
+     */
+    private suspend fun decryptWithAccountSigner(
+        signer: NostrSigner,
+        request: BunkerRequest,
+    ): String? =
+        when (request) {
+            is BunkerRequestNip04Decrypt -> signer.nip04Decrypt(request.ciphertext, request.pubKey)
+            is BunkerRequestNip44Decrypt -> signer.nip44Decrypt(request.ciphertext, request.pubKey)
+            else -> null
+        }
+
     /** The account being signed for (avatar + name), resolved from the coordinate's signer pubkey. */
-    private fun accountFace(coordinate: String): AccountFace {
+    private fun accountFace(coordinate: String): SignerFace {
         val pubKey = Nip46PermissionAuthorizer.signerPubKeyOf(coordinate)
         val user = pubKey?.let { LocalCache.getUserIfExists(it) }
-        return AccountFace(name = user?.toBestDisplayName(), picture = user?.profilePicture(), pubKey = pubKey)
+        return SignerFace(name = user?.toBestDisplayName(), picture = user?.profilePicture(), pubKey = pubKey)
     }
 
-    private data class AccountFace(
-        val name: String?,
-        val picture: String?,
-        val pubKey: String?,
-    )
+    /** Cached profile for a counterparty; the builder supplies the shortened-npub fallback. */
+    private fun userFace(pubKey: HexKey): SignerFace {
+        val user = LocalCache.getUserIfExists(pubKey)
+        return SignerFace(name = user?.toBestDisplayName(), picture = user?.profilePicture(), pubKey = pubKey)
+    }
 }
