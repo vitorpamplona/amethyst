@@ -109,7 +109,7 @@ vs streaming `subscribe`). Stateless verbs run with no account or network.
 | `nip` | `amy nip` | ✅ | repo-first lookup + Nostr fallback (NipText kind:30817, wiki:30818, long-form:30023); `nip list`. |
 | `kind` | `amy kind` | ✅ | quartz `KindNames` registry (kind → English label + NIP) covering **every** event kind quartz defines (280 entries); number lookup + name search. |
 | `sync` | `amy sync` | ✅ | NIP-77 Negentropy reconcile with the local store (down/up/both). |
-| `git` | `amy git` | ✅ in part | NIP-34 repo announce/list/show/issue. clone/push (packfile transport) out of scope. |
+| `git` | `amy git` | ✅ (events) | NIP-34: repo announce (30617) + state (30618), patches (1617), pull requests (1618/1619), issues (1621), NIP-22 comments (1111), status open/applied/closed/draft (1630-1633); `issues`/`patches`/`prs`/`thread` reads derive status. clone/push (git-packfile transport) out of scope. |
 | `podcast` | `amy podcast` | ✅ | NIP-F4 show metadata (10154) + episode publish (54) + list. |
 | `bunker` | `amy bunker[ connect]` + `amy login bunker://`/`--nostrconnect` | ✅ | NIP-46 remote signer + login, both the `bunker://` and `nostrconnect://` flows, each direction, plus `auth_url` challenge handling (client surfaces the URL + keeps waiting). Interop-verified vs real `nak`. |
 | `admin` | `amy admin RELAY METHOD` | ✅ | NIP-86 Relay Management over NIP-98 HTTP auth — full method set (ban/allow pubkey + event, kinds, IP block, change name/desc/icon, list-*). Reuses quartz `Nip86Client` + shared `commons` `Nip86Retriever`. Interop-verified against `amy serve`. |
@@ -129,8 +129,9 @@ nak has 34 functional commands (introspected from `nak --help`). Coverage:
   Protocol-sensitive ones (`bunker`, `sync`, `key` NIP-49, `encode`/`decode`,
   `admin`) are interop-verified against the real `nak` binary or `amy serve`.
 - **Partial / adapted (3):** `key` (no `expand`/`combine`(MuSig2)/`default`),
-  `git` (NIP-34 events only — no packfile transport), `outbox` (NIP-65 model vs
-  nak's local hints DB).
+  `git` (full NIP-34 event surface — announce/state/patch/PR/issue/comment/status
+  + status-deriving reads — but no git-packfile clone/push transport), `outbox`
+  (NIP-65 model vs nak's local hints DB).
 - **Missing (6):** `dekey` (NIP-4E), `mcp`, `curl` (NIP-98), `fs` (FUSE),
   `spell` (MuSig2/FROST), and `validate` (event-schema validation).
 
@@ -173,10 +174,11 @@ move anything, re-audit — you're probably duplicating logic.
 8. **Distribution** — Homebrew + Scoop + `.deb` in the same release
    pipeline as desktop. Plan: `cli/plans/2026-04-21-cli-distribution.md`.
 9. **Test suite** — largely in place, two layers:
-   - **Shell harnesses** under `cli/tests/` — nine suites: `blossom`
-     (live servers), `cache`, `clink`, `dm`, `marmot` (vs whitenoise-rs),
-     `nests` (manual audio-rooms matrix), `pow`, `relaygroup`, `sync`,
-     plus the shared `headless/` helpers. See `cli/tests/README.md`.
+   - **Shell harnesses** under `cli/tests/` — ten suites: `blossom`
+     (live servers), `cache`, `clink`, `dm`, `git` (NIP-34 vs `amy serve`),
+     `marmot` (vs whitenoise-rs), `nests` (manual audio-rooms matrix), `pow`,
+     `relaygroup`, `sync`, plus the shared `headless/` helpers. See
+     `cli/tests/README.md`.
      None run in CI yet (the relay-backed ones need Rust + a ~3 min
      cold `nostr-rs-relay` build).
    - **JVM unit suite** at `cli/src/test/kotlin/` — `Args` parsing,

@@ -307,14 +307,46 @@ default search relays.
 
 ### Git (NIP-34)
 
-nak's `clone`/`push`/`pull` (git-packfile transport over relays/GRASP) are out of scope — these are the metadata + collaboration events.
+`amy git` mirrors the pure-Nostr surface of [`ngit`](https://github.com/DanConwayDev/ngit-cli)
+and `nak git`: repository announcements + state, patches, pull requests, issues,
+threaded NIP-22 comments, and status updates. The git **packfile** transport
+(`clone`/`fetch`/`push` of real git objects to clone/GRASP servers) is out of
+scope — that needs a git plumbing layer, not an event builder — so `amy git`
+publishes and reads the collaboration events, and you clone/push with `git`
+itself (or `ngit`).
+
+Every write verb accepts `[--relay URL[,URL]]` to override the target relays;
+the default is the repo's advertised relays, else your outbox.
+
+**Repository**
 
 | Command | What it does |
 |---|---|
-| `amy git announce --name N [--description D] [--clone URL[,URL]] [--web URL[,URL]] [--relay URL[,URL]] [--maintainer HEX[,HEX]] [--hashtag T[,T]] [--earliest-commit C] [--d ID]` | Publish a kind:30617 repository announcement. |
+| `amy git announce --name N [--description D] [--clone URL[,URL]] [--web URL[,URL]] [--relay URL[,URL]] [--maintainer HEX[,HEX]] [--hashtag T[,T]] [--earliest-commit C] [--personal-fork] [--d ID]` | Publish a kind:30617 repository announcement. |
+| `amy git state REPO\|IDENTIFIER [--head BRANCH] [--branch name=commit[,…]] [--tag name=commit[,…]]` | Publish a kind:30618 repository state (branch/tag tips + HEAD). |
 | `amy git list [USER]` | List a user's repo announcements (defaults to self). |
 | `amy git show NADDR\|kind:pubkey:id` | Print one repo announcement (cache-first). |
-| `amy git issue NADDR\|coords --subject S [BODY] [--hashtag T[,T]]` | Publish a kind:1621 issue against a repo. BODY from arg or stdin. |
+
+**Issues, patches & pull requests**
+
+| Command | What it does |
+|---|---|
+| `amy git issue REPO --subject S [BODY] [--hashtag T[,T]]` | Publish a kind:1621 issue. BODY from arg or stdin. |
+| `amy git patch REPO [--file PATH] [--root\|--root-revision] [--commit C] [--parent-commit P] [--in-reply-to ID]` | Publish a kind:1617 patch. Body is `git format-patch` output from `--file` or stdin. |
+| `amy git pr REPO --commit TIP --clone URL[,URL] [--subject S] [--branch-name N] [--merge-base C] [--label L[,L]] [DESC]` | Publish a kind:1618 pull request (references a pushed branch tip by clone URL + commit). |
+| `amy git pr-update PR --commit TIP --clone URL[,URL] [--merge-base C]` | Publish a kind:1619 update to a pull request's tip. |
+| `amy git issues\|patches\|prs REPO [--open\|--applied\|--closed\|--draft\|--status a,b] [--limit N]` | List a repo's issues / patches / PRs with their derived status. |
+| `amy git thread EVENT_ID` | Print one item plus its status timeline and comments. |
+
+**Comments & status**
+
+| Command | What it does |
+|---|---|
+| `amy git comment TARGET [BODY]` | Reply to an issue/patch/PR/repo with a NIP-22 kind:1111 comment. BODY from arg or stdin. |
+| `amy git open TARGET [MSG]` | Publish a kind:1630 status (open / reopen / ready-for-review). |
+| `amy git applied TARGET [MSG] [--merge-commit C] [--commit C[,C]] [--patch ID[,ID]]` | Publish a kind:1631 status (applied / merged / resolved). Aliases: `merged`, `resolved`. |
+| `amy git close TARGET [MSG]` | Publish a kind:1632 status (closed). |
+| `amy git draft TARGET [MSG]` | Publish a kind:1633 status (draft). |
 
 ### Podcasts (NIP-F4)
 

@@ -1,0 +1,211 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.cli.commands
+
+import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.Context
+import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
+
+/**
+ * Read-side `amy git` verbs — list a repository's issues / patches / pull
+ * requests with their derived status, and print one collaboration thread with
+ * its status timeline and comments. All read-only (anonymous-capable).
+ */
+object GitReadCommands {
+    private val STATUS_KINDS =
+        listOf(
+            GitStatusEvent.KIND_OPEN,
+            GitStatusEvent.KIND_APPLIED,
+            GitStatusEvent.KIND_CLOSED,
+            GitStatusEvent.KIND_DRAFT,
+        )
+
+    suspend fun issues(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int = listItems(dataDir, rest, GitIssueEvent.KIND)
+
+    suspend fun patches(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int = listItems(dataDir, rest, GitPatchEvent.KIND)
+
+    suspend fun prs(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int = listItems(dataDir, rest, GitPullRequestEvent.KIND)
+
+    /** Shared list path for issues (1621) / patches (1617) / pull requests (1618). */
+    private suspend fun listItems(
+        dataDir: DataDir,
+        rest: Array<String>,
+        itemKind: Int,
+    ): Int {
+        val args = Args(rest)
+        val coord = args.positional(0, "repo-naddr-or-coordinates")
+        val addr =
+            GitSupport.resolveAddress(coord)
+                ?: return Output.error("bad_args", "expected an naddr or kind:pubkey:identifier")
+        val limit = args.intFlag("limit", 100)
+        val wanted = statusFilter(args)
+        args.rejectUnknown("relay")
+
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+            val repoAddress = GitSupport.repoCoordinate(addr)
+            val relays = RawEventSupport.queryTargets(ctx, args)
+            // One drain pulls the items AND their status events (both `a`-tag the repo).
+            val received =
+                ctx.drain(
+                    relays.associateWith {
+                        listOf(Filter(kinds = listOf(itemKind) + STATUS_KINDS, tags = mapOf("a" to listOf(repoAddress)), limit = limit + 200))
+                    },
+                )
+            val events = received.map { it.second }
+            val authorities = repoAuthorities(ctx, addr, args)
+            val statuses = events.filterIsInstance<GitStatusEvent>()
+
+            val items =
+                events
+                    .filter { it.kind == itemKind }
+                    .distinctBy { it.id }
+                    .sortedByDescending { it.createdAt }
+                    .map { item ->
+                        val status = latestStatus(item, statuses, authorities)
+                        GitSupport.targetSummary(item) + mapOf("status" to status)
+                    }.filter { wanted == null || it["status"] in wanted }
+                    .take(limit)
+
+            Output.emit(mapOf("repository" to repoAddress, "count" to items.size, "items" to items))
+            return 0
+        }
+    }
+
+    /**
+     * `amy git thread TARGET` — the target event plus its status timeline and
+     * NIP-22 comments (and legacy kind:1622 replies).
+     */
+    suspend fun thread(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val ref = args.positional(0, "target-event-id")
+        val id =
+            GitSupport.resolveEventId(ref)
+                ?: return Output.error("bad_args", "expected a note/nevent/64-hex event id")
+        args.rejectUnknown("relay")
+
+        Context.openOrAnonymous(dataDir).use { ctx ->
+            ctx.prepare()
+            val target =
+                GitSupport.fetchEvent(ctx, id, args)
+                    ?: return Output.error("not_found", "no event found for $ref")
+            val relays = RawEventSupport.queryTargets(ctx, args)
+            // Everything that `e`-references the target: statuses, comments, replies.
+            val related =
+                ctx
+                    .drain(
+                        relays.associateWith {
+                            listOf(Filter(kinds = STATUS_KINDS + listOf(CommentEvent.KIND, GitReplyEvent.KIND), tags = mapOf("e" to listOf(id))))
+                        },
+                    ).map { it.second }
+                    .distinctBy { it.id }
+
+            val repoATag = GitSupport.repositoryOf(target)
+            val authorities = repoATag?.let { repoAuthorities(ctx, Address(it.kind, it.pubKeyHex, it.dTag), args) } ?: setOf(target.pubKey)
+            val statuses = related.filterIsInstance<GitStatusEvent>().filter { it.rootEventId() == id }
+            val comments =
+                related
+                    .filter { it.kind == CommentEvent.KIND || it.kind == GitReplyEvent.KIND }
+                    .sortedBy { it.createdAt }
+                    .map { mapOf("event_id" to it.id, "kind" to it.kind, "author" to it.pubKey, "created_at" to it.createdAt, "content" to it.content) }
+
+            Output.emit(
+                GitSupport.targetSummary(target) +
+                    mapOf(
+                        "content" to target.content,
+                        "status" to latestStatus(target, statuses, authorities),
+                        "status_events" to
+                            statuses.sortedBy { it.createdAt }.map {
+                                mapOf("event_id" to it.id, "status" to GitSupport.statusLabel(it.kind), "author" to it.pubKey, "created_at" to it.createdAt)
+                            },
+                        "comments" to comments,
+                    ),
+            )
+            return 0
+        }
+    }
+
+    // ------------------------------------------------------------------
+
+    /** The set of pubkeys whose status is authoritative for a repo: the owner + declared maintainers. */
+    private suspend fun repoAuthorities(
+        ctx: Context,
+        addr: Address,
+        args: Args,
+    ): Set<String> {
+        val repo = GitSupport.fetchRepo(ctx, addr, args)
+        return buildSet {
+            add(addr.pubKeyHex)
+            repo?.maintainers()?.let { addAll(it) }
+        }
+    }
+
+    /**
+     * The authoritative status label for [item]: the newest status event (by
+     * `created_at`) that `e`-roots this item and is signed by the item author,
+     * the repo owner, or a maintainer. Defaults to `open` when none exists.
+     */
+    private fun latestStatus(
+        item: Event,
+        statuses: List<GitStatusEvent>,
+        authorities: Set<String>,
+    ): String {
+        val allowed = authorities + item.pubKey
+        val newest =
+            statuses
+                .filter { it.rootEventId() == item.id && it.pubKey in allowed }
+                .maxByOrNull { it.createdAt }
+        return GitSupport.statusLabel(newest?.kind)
+    }
+
+    /** Translate `--status a,b` plus the `--open/--applied/--closed/--draft/--all` bools into a wanted set (null = all). */
+    private fun statusFilter(args: Args): Set<String>? {
+        val explicit = GitSupport.csv(args, "status").toMutableSet()
+        if (args.bool("open")) explicit.add("open")
+        if (args.bool("applied")) explicit.add("applied")
+        if (args.bool("closed")) explicit.add("closed")
+        if (args.bool("draft")) explicit.add("draft")
+        args.bool("all") // consumed; means "no filter"
+        return explicit.takeIf { it.isNotEmpty() }
+    }
+}

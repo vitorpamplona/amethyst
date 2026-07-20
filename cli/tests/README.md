@@ -2,7 +2,7 @@
 
 Shell-based end-to-end harnesses that drive the `amy` CLI binary — against a
 loopback `nostr-rs-relay`, an embedded `amy serve` relay, live public servers,
-or no relay at all, depending on the suite. Ten directories:
+or no relay at all, depending on the suite. Eleven directories:
 
 ```
 cli/tests/
@@ -19,6 +19,8 @@ cli/tests/
 │   ├── dm-interop-headless.sh
 │   ├── setup.sh                    # preflight + identities
 │   └── tests-dm.sh
+├── git/                   # NIP-34 git collaboration vs embedded `amy serve`
+│   └── git-nip34-headless.sh
 ├── marmot/                # Marmot / MLS group-messaging interop
 │   ├── marmot-interop.sh           # interactive — prompts Amethyst Android UI
 │   ├── marmot-interop-headless.sh  # zero-prompt
@@ -65,6 +67,12 @@ Suite notes:
 - **`sync/sync-deletions-headless.sh`** proves NIP-77 deletion propagation
   both directions (plus the `--no-sync-deletions` opt-out) against
   `amy serve`, with one `$HOME` per account so stores don't share.
+- **`git/git-nip34-headless.sh`** drives the full NIP-34 collaboration surface
+  against `amy serve`: announce (30617) + state (30618), issue (1621), patch
+  (1617), pull request (1618) + update (1619), NIP-22 comment (1111), and
+  status events (1630-1633), then asserts the `issues`/`patches`/`prs`/`thread`
+  reads derive the right status (a closed issue reads `closed`, an applied PR
+  reads `applied`) and that `--open`/`--closed` filter correctly.
 
 The Marmot harnesses come in two flavours, same scenarios:
 
