@@ -2494,7 +2494,7 @@ class Account(
     /**
      * Remove [removed] from the community absolutely (CORD-06 Refounding): ban them,
      * roll the `community_root`, re-key every retained member (Guestbook membership ∪
-     * the privileged roster ∪ self) via kind-3303 blobs, and republish the compacted
+     * observed authors ∪ the privileged roster ∪ self) via kind-3303 blobs, and republish the compacted
      * Control Plane under the new root. A removed member keeps the prior root (so
      * their history stays readable) but receives no blob, so they can never decrypt
      * anything published after the rotation.
@@ -2523,10 +2523,19 @@ class Account(
             publishConcordWrap(session.entry, banWrap)
         }
 
-        // 2. Recipient set: everyone we're keeping — Guestbook joins ∪ roster ∪ self, minus the
-        //    removed and the already-banned.
+        // 2. Recipient set: everyone we're keeping, minus the removed and the already-banned.
+        //    Uses allMembers() — Guestbook joins ∪ OBSERVED AUTHORS ∪ roster ∪ owner — not just the
+        //    Guestbook set. Most members never send a Guestbook Join (Amethyst announces one, other
+        //    clients need not), so building the set without observed authors silently expelled every
+        //    member who had only ever posted: they hold no role, receive no blob, and the Refounding
+        //    strands them. That mainly hit cross-client communities, where Armada members are the
+        //    bulk of the roster.
+        //
+        //    Still a floor, not a census (see allMembers): a member who joined without a Guestbook
+        //    motion, holds no role, and has never posted leaves no trace to find, so a Refounding
+        //    cannot re-key them. Stranded recovery is what gets those members back.
         val recipients =
-            (session.members.value + authority.roleHolders() + state.ownerPubKey + signer.pubKey)
+            (session.allMembers() + signer.pubKey)
                 .mapTo(HashSet()) { it.lowercase() }
                 .apply {
                     removeAll(removedLower)

@@ -153,9 +153,25 @@ object ConcordInviteBundle {
     }
 
     /**
-     * Validates that an [invite]'s owner + salt actually reproduce its
-     * community_id (CORD-02 self-certification), so a bundle can't smuggle a false
-     * owner or a fake key for a real community.
+     * Validates that an [invite]'s owner + salt actually reproduce its community_id
+     * (CORD-02 self-certification), so a bundle cannot smuggle a false OWNER.
+     *
+     * It does NOT bind `community_root`, and nothing here proves the bundle's minter is
+     * a member of the community it names. `community_id` commits only to (owner, salt) —
+     * both public in any invite — so an attacker can mint a bundle carrying a real
+     * community's id, owner and salt alongside a root of their own. A joiner adopts that
+     * root, believes they are in the real community, and posts into planes the attacker
+     * can read.
+     *
+     * This is a CORD-05 limitation rather than an implementation gap: Armada's
+     * `validateBundle` checks exactly the same thing and likewise leaves the root
+     * unbound, so a stricter unilateral rule here would break interop without
+     * protecting anyone. Verifying the adopted root's control plane does not close it
+     * either — sealed editions carry the owner's own signature, so an attacker can
+     * re-wrap genuine owner editions into their plane, which is precisely what a
+     * legitimate compaction does. Closing it needs a spec change: commit the root into
+     * the self-certifying id, or require the bundle to be signed by a roster-authorized
+     * member. Raise with the Concord/Armada authors before diverging.
      */
     fun validate(invite: CommunityInvite): Boolean {
         val owner = invite.owner.hexToByteArrayOrNull() ?: return false
