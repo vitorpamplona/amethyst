@@ -43,7 +43,41 @@ data class BlossomPaymentRequired(
     /** True when the server offered at least one payment method we could attempt. */
     fun hasPaymentOption(): Boolean = !cashu.isNullOrBlank() || !lightning.isNullOrBlank()
 
+    /**
+     * [reason] rendered safe to show in a dialog.
+     *
+     * `X-Reason` is server-controlled text displayed next to a Pay button, so a
+     * hostile server would otherwise use it to assert its own amount ("Pay 1
+     * sat"), inject blank lines to push the real wording off screen, or run
+     * control characters / bidi overrides through the label. This strips every
+     * ISO control character (newlines, tabs, NUL) plus the Unicode bidi
+     * overrides, collapses the resulting whitespace, and clamps the length.
+     *
+     * The caller must still present the result as *the server's* words — never
+     * as Amethyst's own — because the content itself remains untrusted.
+     */
+    fun sanitizedReason(maxLength: Int = MAX_REASON_LENGTH): String? {
+        val raw = reason ?: return null
+        val cleaned =
+            raw
+                .map { if (it.isISOControl() || it in BIDI_OVERRIDES) ' ' else it }
+                .joinToString("")
+                .replace(WHITESPACE_RUN, " ")
+                .trim()
+
+        if (cleaned.isEmpty()) return null
+        return if (cleaned.length > maxLength) cleaned.take(maxLength).trimEnd() + "…" else cleaned
+    }
+
     companion object {
+        /** Long enough for a real explanation, short enough that it can't crowd out our own text. */
+        const val MAX_REASON_LENGTH = 200
+
+        /** LRE/RLE/PDF/LRO/RLO and the isolate family — invisible, and they reorder what follows. */
+        private val BIDI_OVERRIDES = charArrayOf('‪', '‫', '‬', '‭', '‮', '⁦', '⁧', '⁨', '⁩', '‏', '‎')
+
+        private val WHITESPACE_RUN = Regex("\\s+")
+
         /**
          * Reads the BUD-07 headers from a 402 response. [header] returns the value
          * for a header name (case-insensitive at the transport layer), or null.

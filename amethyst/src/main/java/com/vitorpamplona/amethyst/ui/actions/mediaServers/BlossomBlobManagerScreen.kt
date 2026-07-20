@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -105,7 +106,7 @@ fun BlossomBlobManagerScreen(
         BlossomPaymentDialog(
             host = pending.targetHost,
             amountSats = pending.amountSats,
-            reason = pending.payment.reason,
+            reason = pending.payment.sanitizedReason(),
             onConfirm = { vm.confirmPendingPayment() },
             onDismiss = { vm.cancelPendingPayment() },
         )
@@ -419,13 +420,21 @@ private fun BlossomPaymentDialog(
         icon = { Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, tint = MaterialTheme.colorScheme.allGoodColor) },
         title = { Text(stringRes(R.string.blossom_payment_title)) },
         text = {
-            Text(
-                text =
-                    listOfNotNull(
-                        stringRes(R.string.blossom_payment_message, host),
-                        reason,
-                    ).joinToString("\n\n"),
-            )
+            Column {
+                Text(text = stringRes(R.string.blossom_payment_message, host))
+                // X-Reason is server-controlled: it is sanitized upstream and rendered
+                // here attributed to the server, in a dimmer italic, so it can never be
+                // mistaken for Amethyst's own wording (e.g. a fake "Pay 1 sat").
+                reason?.let {
+                    Spacer(Modifier.size(12.dp))
+                    Text(
+                        text = stringRes(R.string.blossom_payment_server_says, host, it),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         },
         confirmButton = {
             FilledTonalButton(onClick = onConfirm) {

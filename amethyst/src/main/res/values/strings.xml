@@ -1629,6 +1629,7 @@
     <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
     <string name="blossom_payment_title">Payment required</string>
     <string name="blossom_payment_message">%1$s charges a lightning payment to store this file. Pay from your connected wallet to continue.</string>
+    <string name="blossom_payment_server_says">%1$s says: “%2$s”</string>
     <string name="blossom_pay">Pay</string>
     <plurals name="blossom_pay_sats">
         <item quantity="one">Pay %1$d sat</item>

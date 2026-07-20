@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomPaymentHandler
+import com.vitorpamplona.amethyst.service.uploads.blossom.PaymentPromptLedger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -128,6 +129,13 @@ class BlossomBlobManagerViewModel : ViewModel() {
     val pendingPayment = _pendingPayment.asStateFlow()
 
     private var resultCollectorStarted = false
+
+    /**
+     * Caps BUD-07 payment prompts at one per (blob, server) per user-initiated
+     * mirror, so a server that keeps replying 402 after being paid cannot drive an
+     * unbounded pay-prompt cycle. See [PaymentPromptLedger].
+     */
+    private val promptLedger = PaymentPromptLedger()
 
     fun init(accountViewModel: AccountViewModel) {
         this.account = accountViewModel.account
@@ -299,8 +307,17 @@ class BlossomBlobManagerViewModel : ViewModel() {
         }
     }
 
-    /** BUD-04: mirror a blob to every server that doesn't have it; each pill spins then turns green. */
+    /**
+     * BUD-04: mirror a blob to every server that doesn't have it; each pill spins
+     * then turns green. This is the user-initiated entry point, so it resets the
+     * "already asked for payment" ledger — see [promptedForPayment].
+     */
     fun mirrorToMissing(row: BlobRow) {
+        promptLedger.beginUserAction()
+        mirrorMissingTargets(row)
+    }
+
+    private fun mirrorMissingTargets(row: BlobRow) {
         val source = row.url ?: return
         val targets = currentRow(row.hash)?.missingServers ?: row.missingServers
         if (targets.isEmpty()) return
@@ -313,6 +330,14 @@ class BlossomBlobManagerViewModel : ViewModel() {
                 } catch (e: BlossomPaymentException) {
                     setServerState(row.hash, target, PresenceState.MISSING)
                     if (BlossomPaymentHandler.canPay(account, e.payment)) {
+                        // Bounded: a server that pockets the preimage and replies 402
+                        // again must not be able to spin up an endless pay-prompt
+                        // cycle. One prompt per target per user-initiated mirror.
+                        if (!promptLedger.shouldPrompt(row.hash, target)) {
+                            Log.w("BlossomBlobManager", "mirror to $target asked for payment again after being paid; not re-prompting")
+                            _error.value = "${hostOf(target)} asked for payment again after being paid. Amethyst stopped to avoid paying twice."
+                            continue
+                        }
                         _pendingPayment.value =
                             PendingMirrorPayment(row.hash, source, target, hostOf(target), e.payment, BlossomPaymentHandler.amountSats(e.payment))
                         return@launch
@@ -369,12 +394,31 @@ class BlossomBlobManagerViewModel : ViewModel() {
         _pendingPayment.value = null
         viewModelScope.launch(Dispatchers.IO) {
             setServerState(pending.hash, pending.target, PresenceState.PENDING)
-            val proof = BlossomPaymentHandler.pay(account, pending.payment)
-            if (proof == null) {
-                setServerState(pending.hash, pending.target, PresenceState.MISSING)
-                _error.value = "Payment failed or was not confirmed by the wallet."
-                return@launch
-            }
+            // pending.amountSats is exactly what the dialog showed; pay() re-derives
+            // the amount from the invoice and refuses if the two disagree or the
+            // amount is above the cap.
+            val result = BlossomPaymentHandler.pay(account, pending.payment, pending.amountSats)
+            val proof =
+                when (result) {
+                    is BlossomPaymentHandler.PayResult.Paid -> result.proof
+                    is BlossomPaymentHandler.PayResult.Refused -> {
+                        setServerState(pending.hash, pending.target, PresenceState.MISSING)
+                        _error.value = result.reason
+                        return@launch
+                    }
+                    BlossomPaymentHandler.PayResult.TimedOut -> {
+                        setServerState(pending.hash, pending.target, PresenceState.MISSING)
+                        _error.value =
+                            "Your wallet did not confirm in time. If the payment does go through, retry the mirror — " +
+                            "Amethyst will not send this invoice again."
+                        return@launch
+                    }
+                    BlossomPaymentHandler.PayResult.Unavailable -> {
+                        setServerState(pending.hash, pending.target, PresenceState.MISSING)
+                        _error.value = "Payment failed or was not confirmed by the wallet."
+                        return@launch
+                    }
+                }
             try {
                 mirrorOne(pending.sourceUrl, pending.hash, currentRow(pending.hash)?.size, pending.target, proof)
                 setServerState(pending.hash, pending.target, PresenceState.PRESENT)
@@ -382,8 +426,9 @@ class BlossomBlobManagerViewModel : ViewModel() {
                 setServerState(pending.hash, pending.target, PresenceState.MISSING)
                 Log.w("BlossomBlobManager", "paid mirror to ${pending.target} failed", e)
             }
-            // Continue with any remaining missing servers (which may prompt again).
-            currentRow(pending.hash)?.let { mirrorToMissing(it) }
+            // Continue with any remaining missing servers. Targets already prompted
+            // in this action (including this one) will NOT prompt again.
+            currentRow(pending.hash)?.let { mirrorMissingTargets(it) }
         }
     }
 
