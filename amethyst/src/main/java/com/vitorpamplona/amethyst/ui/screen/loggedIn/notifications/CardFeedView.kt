@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -104,14 +105,20 @@ fun RenderCardFeed(
     routeForLastRead: String,
     scrollToEventId: String? = null,
     headerContent: (@Composable () -> Unit)? = null,
+    // Whether THIS feed drives the shared account history pager. False for an off-screen split tab / second
+    // pane, so only the feed the user is actually looking at pages the pager (see #2 in the audit).
+    drivesPaging: Boolean = true,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
     // A genuinely empty feed has no rows for the look-ahead buffer driver to measure, so step every relay
     // one page at a time to hunt for the first notifications. Once cards appear the buffer driver takes
-    // over. Gated on Empty only (never the transient Loading navigation flashes through).
+    // over. Gated on Empty only (never the transient Loading navigation flashes through), and only for the
+    // active feed so an off-screen tab doesn't hunt on the shared pager.
     val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
-    BootstrapNotificationHistoryWhenEmpty(feedState is CardFeedState.Empty, history.loadingMore, history.status) { history.advanceAll() }
+    if (drivesPaging) {
+        BootstrapNotificationHistoryWhenEmpty(feedState is CardFeedState.Empty, history.loadingMore, history.status) { history.advanceAll() }
+    }
 
     // Direct switch instead of CrossfadeIfEnabled: the crossfade's `currentlyVisible`
     // accumulator can leave a previous `Loaded` instance composed alongside the new
@@ -137,6 +144,7 @@ fun RenderCardFeed(
                 nav = nav,
                 scrollToEventId = scrollToEventId,
                 headerContent = headerContent,
+                drivesPaging = drivesPaging,
             )
         }
 
@@ -170,6 +178,7 @@ private fun FeedLoaded(
     nav: INav,
     scrollToEventId: String? = null,
     headerContent: (@Composable () -> Unit)? = null,
+    drivesPaging: Boolean = true,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
@@ -199,17 +208,35 @@ private fun FeedLoaded(
             totalItems > 0 && lastVisibleIndex >= totalItems - NOTIFICATION_LOOKAHEAD_BUFFER
         }
     }
-    // Re-evaluated when the buffer runs low, a page settles (loadingMore falls), or paging exhausts — so a
-    // single page that doesn't refill the whole buffer keeps pulling the next until it does or relays run dry.
-    LaunchedEffect(shouldLoadMore, loadingMore, exhausted) {
-        if (shouldLoadMore && !loadingMore && !exhausted) history.advanceAll()
+
+    // Bound the eager fill. Pages are pulled in events but the buffer is counted in rows, and notifications
+    // collapse heavily into cards — so on a dense account a page can add very few rows, and an uncapped fill
+    // would keep pulling until it downloaded the whole history to reach the row target. Cap the consecutive
+    // pages pulled WITHOUT the user scrolling; scrolling (firstVisibleItemIndex moving) resets the budget so
+    // paging resumes as the buffer is consumed. From position 0 this still preloads the full look-ahead for a
+    // normal account (1–2 pages), yet a dense whale can't burst-download everything on open.
+    val firstVisibleIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+    var pagesThisBurst by remember { mutableIntStateOf(0) }
+    LaunchedEffect(firstVisibleIndex) { pagesThisBurst = 0 }
+
+    // Re-evaluated when the buffer runs low, a page settles (loadingMore falls), paging exhausts, this feed
+    // (de)activates, or the burst budget changes — so a page that doesn't refill the buffer keeps pulling the
+    // next (up to the burst cap) until the buffer is full or relays run dry. Only the active feed drives, so
+    // an off-screen tab / second pane doesn't page the shared account pager the user isn't looking at.
+    LaunchedEffect(drivesPaging, shouldLoadMore, loadingMore, exhausted, pagesThisBurst) {
+        if (drivesPaging && shouldLoadMore && !loadingMore && !exhausted && pagesThisBurst < NOTIFICATION_MAX_PAGES_PER_BURST) {
+            history.advanceAll()
+            pagesThisBurst++
+        }
     }
 
-    // Auto-retry faulty relays with backoff. The buffer driver above stops once every relay is done-or-
-    // stalled (exhausted); when some are merely stalled (a slow/unreachable relay, not a real end) this
-    // keeps re-advancing them so recovery doesn't depend on the user scrolling to the marker or reopening.
-    // A single non-restarting effect so the backoff survives the transient in-flight blips each retry causes.
-    LaunchedEffect(history) {
+    // Auto-retry faulty relays with backoff, only while this feed drives paging. The buffer driver above
+    // stops once every relay is done-or-stalled (exhausted); when some are merely stalled (a slow/unreachable
+    // relay, not a real end) this keeps re-advancing them so recovery doesn't depend on the user scrolling to
+    // the marker or reopening. A single non-restarting loop so the backoff survives the transient in-flight
+    // blips each retry causes.
+    LaunchedEffect(history, drivesPaging) {
+        if (!drivesPaging) return@LaunchedEffect
         var backoffMs = STALLED_RETRY_MIN_MS
         while (true) {
             history.status.first { it.exhausted && it.stalledCount > 0 } // park until stuck on a stalled relay
@@ -242,7 +269,7 @@ private fun FeedLoaded(
     // frontier ahead, i.e. that relay stalled or the feed is genuinely at its end), step that one relay.
     // A done relay drives nothing. This is the recovery path the buffer driver above can't cover once every
     // relay is stalled (exhausted) — scrolling to the stalled marker retries it, no hammering.
-    if (limits.isNotEmpty()) {
+    if (drivesPaging && limits.isNotEmpty()) {
         RelayReachSentinels(limits, listState) { index -> items.list.getOrNull(index - leadingItemCount)?.createdAt() }
     }
 
@@ -404,6 +431,11 @@ private const val BOOTSTRAP_DEBOUNCE_MS = 1200L
 // How many already-loaded rows to keep below the last visible one before pulling the next older page.
 // Large on purpose: the feed reads as infinite scroll, the user practically never reaches the bottom.
 private const val NOTIFICATION_LOOKAHEAD_BUFFER = 100
+
+// Cap on consecutive pages pulled to fill the buffer WITHOUT the user scrolling (the budget resets on
+// scroll). Generous so a normal account preloads the full look-ahead from the top in 1–2 pages, while a
+// dense account whose events collapse into few cards is bounded instead of burst-downloading everything.
+private const val NOTIFICATION_MAX_PAGES_PER_BURST = 6
 
 // Backoff bounds for auto-retrying stalled (slow/unreachable) relays: first retry ~3s after a stall,
 // doubling up to ~30s, so a faulty relay is retried gently but keeps a chance to recover on its own.
