@@ -432,8 +432,30 @@ class NappletBrowserActivity : ComponentActivity() {
             // Record only a clean http(s) main-frame load — never a typed-but-failed address.
             if (!mainFrameLoadFailed && (url.startsWith("https://") || url.startsWith("http://"))) {
                 recordHistory(url, view.title)
+                scheduleFaviconSniff(view, url)
             }
         }
+    }
+
+    /**
+     * Second-chance favicon capture for pages `onReceivedIcon` never fires for (SVG-only declarations —
+     * WebView does not rasterize those into the callback). Deliberately delayed so the WebView's own
+     * raster path, which usually lands shortly after the page finishes, gets first claim on the host;
+     * if it did, [lastIconHost] is already set and we skip out entirely.
+     */
+    private fun scheduleFaviconSniff(
+        view: WebView,
+        url: String,
+    ) {
+        val host = OmniboxInput.hostOf(url) ?: return
+        view.postDelayed({
+            if (mainFrameLoadFailed || host == lastIconHost || view.url != url) return@postDelayed
+            NappletFaviconSniffer.capture(view) { sniffedHost, bytes ->
+                if (sniffedHost == lastIconHost) return@capture
+                lastIconHost = sniffedHost
+                recordIconBytes(sniffedHost, bytes)
+            }
+        }, FAVICON_SNIFF_DELAY_MS)
     }
 
     /** Relays a successfully loaded page to the main-process broker for the device-local visit history. */
@@ -470,6 +492,14 @@ class NappletBrowserActivity : ComponentActivity() {
                     out.toByteArray()
                 }
             }.getOrNull() ?: return
+        recordIconBytes(host, bytes)
+    }
+
+    /** Relays already-encoded icon bytes (PNG/ICO/… or SVG source) to the broker as [host]'s favicon. */
+    private fun recordIconBytes(
+        host: String,
+        bytes: ByteArray,
+    ) {
         val msg =
             Message.obtain(null, NappletIpc.MSG_RECORD_ICON).apply {
                 data =
@@ -753,6 +783,9 @@ class NappletBrowserActivity : ComponentActivity() {
 
         /** Max favicon edge (px) before sending over IPC — keeps the PNG tiny, well under the Binder limit. */
         private const val ICON_MAX_PX = 96
+
+        /** Grace period after page-finish before the declared-icon sniff runs, so `onReceivedIcon` wins first. */
+        private const val FAVICON_SNIFF_DELAY_MS = 1_200L
 
         private const val EXTRA_URL = "url"
         private const val EXTRA_PROXY_PORT = "proxyPort"

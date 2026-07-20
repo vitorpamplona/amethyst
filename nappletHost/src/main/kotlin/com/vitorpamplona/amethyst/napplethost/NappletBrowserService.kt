@@ -46,6 +46,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
@@ -97,6 +98,11 @@ class NappletBrowserService : Service() {
         // Last main-frame error state, pushed to the client so it can show an error/retry overlay over
         // the surface (the embedded surface has no error page of its own).
         var loadFailed = false
+
+        // Host whose favicon this tab already relayed. A page fires the icon callbacks several times, and
+        // both capture paths (WebView raster + declared-icon sniff) can land for the same visit, so this
+        // keeps it to one relay per host per visit. Re-armed when the host changes.
+        var lastIconHost: String? = null
 
         // Per visited origin: its broker-minted launch token, the requests queued until it arrives, and
         // the origins a mint is already in flight for — so NIP-07 consent is scoped per site, per tab.
@@ -328,6 +334,22 @@ class NappletBrowserService : Service() {
     private inner class BrowserChromeClient(
         private val tab: BrowserTab?,
     ) : WebChromeClient() {
+        /**
+         * The embedded surface captures favicons just like the full-screen browser does — a site pinned
+         * to a tab but never opened full-screen would otherwise never contribute an icon at all.
+         */
+        override fun onReceivedIcon(
+            view: WebView,
+            icon: Bitmap?,
+        ) {
+            val tab = tab ?: return
+            if (icon == null || tab.loadFailed) return
+            val host = OmniboxInput.hostOf(view.url ?: return) ?: return
+            if (host == tab.lastIconHost) return
+            tab.lastIconHost = host
+            recordIcon(host, icon)
+        }
+
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
             if (tab == null) return false
             pushConsoleLog(
@@ -385,6 +407,8 @@ class NappletBrowserService : Service() {
         ) {
             // A new main-frame navigation cleared any prior error.
             tab?.loadFailed = false
+            // Re-arm favicon capture when the host changes, so a same-host in-page nav doesn't re-send.
+            if (tab != null && OmniboxInput.hostOf(url) != tab.lastIconHost) tab.lastIconHost = null
             pushUrl(tab, view)
             pushLoadState(tab, view, isLoading = true)
         }
@@ -401,6 +425,7 @@ class NappletBrowserService : Service() {
         ) {
             pushUrl(tab, view)
             pushLoadState(tab, view, isLoading = false)
+            if (url.startsWith("https://") || url.startsWith("http://")) scheduleFaviconSniff(tab, view, url)
         }
 
         override fun onReceivedError(
@@ -551,6 +576,60 @@ class NappletBrowserService : Service() {
         if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
     }
 
+    /**
+     * Second-chance favicon capture for pages `onReceivedIcon` never fires for (SVG-only declarations —
+     * WebView does not rasterize those into the callback). Delayed so the WebView's own raster path,
+     * which usually lands just after page-finish, gets first claim on the host.
+     */
+    private fun scheduleFaviconSniff(
+        tab: BrowserTab?,
+        view: WebView,
+        url: String,
+    ) {
+        if (tab == null) return
+        val host = OmniboxInput.hostOf(url) ?: return
+        view.postDelayed({
+            if (tabs[tab.sessionId] !== tab || tab.loadFailed || host == tab.lastIconHost || view.url != url) return@postDelayed
+            NappletFaviconSniffer.capture(view) { sniffedHost, bytes ->
+                if (sniffedHost == tab.lastIconHost) return@capture
+                tab.lastIconHost = sniffedHost
+                recordIconBytes(sniffedHost, bytes)
+            }
+        }, FAVICON_SNIFF_DELAY_MS)
+    }
+
+    /** Scales [icon] down and relays it to the broker as the favicon for [host] (PNG bytes over IPC). */
+    private fun recordIcon(
+        host: String,
+        icon: Bitmap,
+    ) {
+        val bytes =
+            runCatching {
+                val scaled = if (icon.width > ICON_MAX_PX || icon.height > ICON_MAX_PX) icon.scale(ICON_MAX_PX, ICON_MAX_PX) else icon
+                ByteArrayOutputStream().use { out ->
+                    scaled.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    out.toByteArray()
+                }
+            }.getOrNull() ?: return
+        recordIconBytes(host, bytes)
+    }
+
+    /** Relays already-encoded icon bytes (PNG/ICO/… or SVG source) to the broker as [host]'s favicon. */
+    private fun recordIconBytes(
+        host: String,
+        bytes: ByteArray,
+    ) {
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_RECORD_ICON).apply {
+                data =
+                    Bundle().apply {
+                        putString(NappletIpc.KEY_ICON_HOST, host)
+                        putByteArray(NappletIpc.KEY_ICON_BYTES, bytes)
+                    }
+            }
+        if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
+    }
+
     private fun sendToBroker(msg: Message) {
         try {
             brokerMessenger?.send(msg)
@@ -603,5 +682,11 @@ class NappletBrowserService : Service() {
     private companion object {
         private const val TAG = "NappletBrowserService"
         private const val ABOUT_BLANK = "about:blank"
+
+        /** Max favicon edge (px) before sending over IPC — keeps the PNG tiny, well under the Binder limit. */
+        private const val ICON_MAX_PX = 96
+
+        /** Grace period after page-finish before the declared-icon sniff runs, so `onReceivedIcon` wins first. */
+        private const val FAVICON_SNIFF_DELAY_MS = 1_200L
     }
 }
