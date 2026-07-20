@@ -22,6 +22,7 @@
     <string name="channel_image">頻道圖片</string>
     <string name="referenced_event_not_found">未找到相關事件</string>
     <string name="could_not_decrypt_the_message">無法解密消息</string>
+    <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="group_picture">群組圖片</string>
     <string name="explicit_content">露骨內容</string>
     <string name="relay_notice">Relay 通知</string>
@@ -690,6 +691,7 @@
     <string name="napplet_consent_query">此 nApplet 想要從您的 relay 讀取事件。</string>
     <string name="napplet_consent_storage">此 nApplet 想要使用其私有儲存空間。</string>
     <string name="napplet_consent_pay">此 nApplet 想要支付一筆 Lightning 發票。</string>
+    <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <string name="napplet_consent_resource">此 nApplet 想要擷取一個網路資源。</string>
     <string name="napplet_consent_upload">此 nApplet 想要上傳檔案至您的媒體伺服器。</string>
     <string name="napplet_consent_notify">此 nApplet 想要向您顯示通知。</string>
@@ -697,11 +699,24 @@
     <plurals name="napplet_consent_pay_amount">
         <item quantity="other">此 nApplet 想要支付一筆 %1$d sats 的 Lightning 發票。</item>
     </plurals>
+    <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
+         kind-only summary would hide what is actually being signed. These replaceable lists are
+         already cached on the account, so the dialog diffs the proposed list against the current
+         one and reports what actually changes rather than a raw total. -->
+    <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
+         the display name, shown next to their avatar. -->
+    <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
     <!-- Signer trust levels -->
     <!-- Signer per-op consent dialog -->
     <!-- Signer op labels -->
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
+    <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
     <!-- NIP-46 remote signer (bunker) -->
     <!-- Relay Authentication (NIP-42) settings -->

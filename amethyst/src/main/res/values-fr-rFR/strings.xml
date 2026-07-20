@@ -25,6 +25,7 @@
     <string name="channel_image">Image du canal</string>
     <string name="referenced_event_not_found">référence de l\'évènement non trouvée</string>
     <string name="could_not_decrypt_the_message">Impossible de déchiffrer le message</string>
+    <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="group_picture">Image de groupe</string>
     <string name="explicit_content">Contenu choquant</string>
     <string name="relay_notice">Annonce du serveur</string>
@@ -721,6 +722,7 @@
     <string name="napplet_consent_query">Ce nApplet veut lire des événements depuis vos relais.</string>
     <string name="napplet_consent_storage">Ce nApplet veut utiliser son stockage privé.</string>
     <string name="napplet_consent_pay">Ce nApplet veut payer une facture Lightning.</string>
+    <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <string name="napplet_consent_resource">Ce nApplet veut récupérer une ressource web.</string>
     <string name="napplet_consent_upload">Ce nApplet veut téléverser un fichier sur votre serveur multimédia.</string>
     <string name="napplet_consent_notify">Ce nApplet veut vous afficher des notifications.</string>
@@ -729,6 +731,15 @@
         <item quantity="one">Ce nApplet veut payer une facture Lightning de %1$d sat.</item>
         <item quantity="other">Ce nApplet veut payer une facture Lightning de %1$d sats.</item>
     </plurals>
+    <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
+         kind-only summary would hide what is actually being signed. These replaceable lists are
+         already cached on the account, so the dialog diffs the proposed list against the current
+         one and reports what actually changes rather than a raw total. -->
+    <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
+         the display name, shown next to their avatar. -->
+    <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Se connecter à Nostr</string>
     <!-- Signer trust levels -->
@@ -760,6 +771,10 @@
     <string name="napplet_op_encrypt">chiffrer un message</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">lire vos messages privés</string>
+    <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Applications connectées</string>
     <string name="napplet_permissions_revoke_all">Révoquer toutes les autorisations</string>
