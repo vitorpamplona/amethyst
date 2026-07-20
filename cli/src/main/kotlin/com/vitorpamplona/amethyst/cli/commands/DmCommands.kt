@@ -137,7 +137,7 @@ object DmCommands {
     ): Int {
         val args = Args(rest)
         val allowFallback = args.bool("allow-fallback")
-        args.rejectUnknown("file", "server", "mime-type", "key", "nonce", "hash", "original-hash", "size", "dim", "blurhash")
+        args.rejectUnknown("file", "server", FLAG_MIME_TYPE, "key", "nonce", "hash", "original-hash", "size", "dim", "blurhash")
         val recipientInput = args.positionalOrNull(0) ?: return Output.error("bad_args", USAGE_SEND_FILE)
 
         Context.open(dataDir).use { ctx ->
@@ -186,7 +186,7 @@ object DmCommands {
                 Output.error("upload_failed", "Blossom server $server returned no URL")
                 return null
             }
-        val mimeType = args.flag("mime-type") ?: uploaded.metadata.mimeType
+        val mimeType = args.flag(FLAG_MIME_TYPE) ?: uploaded.metadata.mimeType
         val dimension =
             uploaded.metadata.width?.let { w ->
                 uploaded.metadata.height?.let { h ->
@@ -247,7 +247,7 @@ object DmCommands {
                 Output.error("bad_args", "--nonce must be hex (got ${nonceHex.length} chars)")
                 return null
             }
-        val mimeType = args.flag("mime-type")
+        val mimeType = args.flag(FLAG_MIME_TYPE)
         val hash = args.flag("hash")
         val originalHash = args.flag("original-hash")
         val size = args.flag("size")?.toIntOrNull()
@@ -281,6 +281,8 @@ object DmCommands {
             )
         return result to emptyMap()
     }
+
+    private const val FLAG_MIME_TYPE = "mime-type"
 
     private const val USAGE_SEND_FILE: String =
         "dm send-file <recipient> [--file PATH --server URL | URL --key HEX --nonce HEX] " +

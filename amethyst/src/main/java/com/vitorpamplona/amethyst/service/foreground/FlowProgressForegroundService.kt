@@ -91,13 +91,17 @@ abstract class FlowProgressForegroundService<T> : Service() {
     protected abstract fun cancelAll()
 
     /** Called for every emission before [render]; use to update derived subclass state. */
-    protected open fun onEmission(value: T) {}
+    protected open fun onEmission(value: T) {
+        // No-op by default: only subclasses that keep derived state need this hook.
+    }
 
     /** Only consulted for the [refreshMs] clock loop; skip re-renders when nothing is moving. */
     protected open fun needsClockRefresh(value: T): Boolean = true
 
     /** One-time setup once the watch loop starts (e.g. a benchmark). */
-    protected open fun onStarted() {}
+    protected open fun onStarted() {
+        // No-op by default: only subclasses with one-time setup (e.g. a benchmark) override this.
+    }
 
     /** How to draw the progress bar of the card. */
     sealed interface Bar {

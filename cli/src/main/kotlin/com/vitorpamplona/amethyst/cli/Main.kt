@@ -164,8 +164,11 @@ class AwaitTimeout(
  */
 private val STRICT_ACCOUNT_VERBS = setOf("init", "create", "login", "logoff", "whoami")
 
+private const val HELP_FLAG = "--help"
+private const val HELP_FLAG_SHORT = "-h"
+
 private suspend fun dispatch(argv: Array<String>): Int {
-    if (argv.firstOrNull() == "--help" || argv.firstOrNull() == "-h") {
+    if (argv.firstOrNull() == HELP_FLAG || argv.firstOrNull() == HELP_FLAG_SHORT) {
         printUsage()
         return 0
     }
@@ -203,9 +206,9 @@ private suspend fun dispatch(argv: Array<String>): Int {
     // becomes a plain leading --help, so `amy notes post "hi" --help` prints
     // usage instead of publishing, and no command can forget to honor it.
     // (`--` still lets you pass the literal text: `amy notes post -- --help`.)
-    val helpIdx = tail.indexOfFirst { it == "--" || it == "--help" || it == "-h" }
+    val helpIdx = tail.indexOfFirst { it == "--" || it == HELP_FLAG || it == HELP_FLAG_SHORT }
     if (helpIdx >= 0 && tail[helpIdx] != "--") {
-        tail = arrayOf("--help")
+        tail = arrayOf(HELP_FLAG)
     }
 
     // `use` operates on `<root>/current` directly and must work even
