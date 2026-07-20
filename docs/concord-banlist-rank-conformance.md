@@ -1,6 +1,7 @@
 # Concord: the Banlist is not rank-gated in any implementation (CORD-04 conformance)
 
-**Status:** conformance bug, reproduced in Amethyst, present by inspection in Armada.
+**Status:** conformance bug. Reproduced in Amethyst and **fixed there** (see §6); present by
+inspection in Armada.
 **Severity:** privilege escalation. Any `BAN` holder can neutralise every authority above them,
 including the owner.
 **Reported by:** Amethyst (MIT), 2026-07-20. Findings verified by unit test; see "Evidence" below.
@@ -193,29 +194,34 @@ Separately, please rule on **#3**: whether a banned npub's Banlist edition is ho
 §4 ("drops every event from a banned npub — message, reaction, edit, or authority action") is that it
 must not be, but the fixpoint ordering needs to be stated for that to be implementable consistently.
 
-## 6. A note on rollout
+## 6. Rollout status
 
-This is a consensus-affecting change: a client that enforces the rank rule will ignore bans that a
-client which does not will honor, so the Banlist can diverge between implementations until both
-sides ship. We would rather coordinate that than race it.
+**Amethyst enforces the rule described in §5 as of this report** — both on the fold
+(`AuthorityResolver`) and on what it will author (UI + the ban/unban write path, which now reads the
+*honored* banlist so an unauthorized entry can never be laundered into a list we sign).
 
-Amethyst has therefore **not** changed its fold. We have only stopped our UI from *authoring* a ban
-the actor does not outrank — which restricts what we write, never what we accept, and so cannot
-diverge anyone's view. We are ready to enforce on the fold as soon as there is agreement on the rule
-above and a rough sense of timing.
+We're flagging the consequence plainly: this is consensus-affecting. Until Armada ships the same
+rule, the two clients can show different banlists — Amethyst will ignore a ban that Armada honors
+whenever the signer did not outrank the target. We judged shipping the spec-conformant behaviour
+better than continuing to honor an escalation, but we recognise that is a decision with a cost for
+your users as well as ours, and we're happy to discuss timing, or to adjust if you read §3/§5
+differently than we do.
+
+If it is useful, our implementation is MIT and the delta rule is about 40 lines in
+`AuthorityResolver.resolve`; you're welcome to lift the approach outright.
 
 ## 7. Evidence
 
 Reproductions live in Amethyst's `AuthorityResolverTest`
-(`quartz/src/commonTest/kotlin/com/vitorpamplona/quartz/concord/cord04Roles/`), currently `@Ignore`d
-with this issue as the reason so they document the invariant without failing the build:
+(`quartz/src/commonTest/kotlin/com/vitorpamplona/quartz/concord/cord04Roles/`). Each failed before
+the change and passes after it:
 
 - `aBanHolderCannotBanAMemberItDoesNotOutrank`
 - `aBanHolderCannotBanTheOwner`
-- `anUnrankedBanIsDroppedWithoutOrphaningTheRestOfTheList` (asserts the "ignore, don't reject"
-  semantics proposed above)
+- `anUnrankedBanIsDroppedWithoutOrphaningTheRestOfTheList` (pins the "ignore, don't reject"
+  semantics of §5)
 
-Two companion tests, which pass today, pin the behaviour a fix must preserve:
+Two companions pin the behaviour the fix had to preserve, and passed throughout:
 
 - `aBanHolderStillBansThoseItOutranks`
 - `theOwnerBansAnyone`

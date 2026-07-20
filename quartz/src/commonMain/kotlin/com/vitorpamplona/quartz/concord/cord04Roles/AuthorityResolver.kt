@@ -256,13 +256,74 @@ class AuthorityResolver private constructor(
 
             fun banGate(e: ControlEdition): Boolean = e.author.lowercase() == ownerLower || effectivePermissionsOf(e.author.lowercase()).has(ConcordPermissions.BAN)
             val authorizedBanlist = allBanlist.filter(::banGate)
+
+            // CORD-04 §3's rank rule binds "every action", and it names banning as its example ("an
+            // admin cannot ban a peer admin"); §5 step 3 restates it. Only §4, which defines the
+            // Banlist, states the BAN-bit half alone — which is why every implementation (ours and
+            // Armada's) shipped the bit check without the rank check, letting the most junior BAN
+            // holder ban the admins above them and the owner. See
+            // docs/concord-banlist-rank-conformance.md.
+            //
+            // The rule is stated per TARGET, but the Banlist is one whole-list document, so it is
+            // enforced as a DELTA rule: an edition may only add or remove npubs its signer strictly
+            // outranks. Entries it may not act on are ignored and the rest of the edition applies —
+            // rejecting the whole edition would discard the bulk-ban §4 recommends as the collision
+            // remedy, and would let a rogue grief the list by forcing rejections.
+            fun canBanTarget(
+                author: String,
+                target: String,
+            ): Boolean {
+                // Position 0 is "supreme and unremovable" (§2) and nothing may outrank it, so the
+                // owner is never a valid target — not even for themselves.
+                if (target == ownerLower) return false
+                if (author == ownerLower) return true
+                if (!effectivePermissionsOf(author).has(ConcordPermissions.BAN)) return false
+                val authorRank = rankOf(author) ?: return false
+                val targetRank = rankOf(target) ?: Long.MAX_VALUE // no roles ⇒ lowest authority
+                return authorRank < targetRank
+            }
+
+            val byHash = allBanlist.associateBy { it.hashHex }
+            val effective = HashMap<String, Set<String>>()
+
+            // The list an edition actually establishes: its parent's effective list, plus only the
+            // additions its signer may make and minus only the removals its signer may make. Walks
+            // the parent chain, so it is memoized; `visiting` also terminates a prevHash cycle.
+            fun effectiveList(
+                edition: ControlEdition,
+                visiting: MutableSet<String>,
+            ): Set<String> {
+                effective[edition.hashHex]?.let { return it }
+                if (!visiting.add(edition.hashHex)) return emptySet()
+
+                val parent = edition.prevHash?.toHexKey()?.let { byHash[it] }
+                val base = parent?.let { effectiveList(it, visiting) } ?: emptySet()
+                val author = edition.author.lowercase()
+                val claimed = ConcordJson.decodeBanlist(edition.content)?.mapTo(HashSet()) { it.lowercase() }
+
+                // A malformed body changes nothing rather than clearing the list.
+                val result =
+                    if (claimed == null) {
+                        base
+                    } else {
+                        val out = HashSet(base)
+                        for (added in claimed - base) if (canBanTarget(author, added)) out.add(added)
+                        for (removed in base - claimed) if (canBanTarget(author, removed)) out.remove(removed)
+                        out
+                    }
+
+                visiting.remove(edition.hashHex)
+                effective[edition.hashHex] = result
+                return result
+            }
+
             val banned = HashSet<String>()
             // Candidate-then-gate, like roles and grants: an unauthorized banlist edition in the
             // middle of the chain must not orphan the authorized ones chained above it (which, on
             // a banlist, would silently resurrect every ban a later unban had cleared).
             val banHead = EditionFold.foldEntityGated(allBanlist, gate = ::banGate)
             if (banHead != null) {
-                ConcordJson.decodeBanlist(banHead.content)?.forEach { banned.add(it.lowercase()) }
+                banned.addAll(effectiveList(banHead, HashSet()))
                 // Ancestry is a STRUCTURAL fact, so it is walked over the full pool: an unauthorized
                 // edition on the head's back-chain still supersedes what is beneath it, and walking
                 // only the authorized subset would stop there and mis-read those genuine ancestors as
@@ -270,7 +331,7 @@ class AuthorityResolver private constructor(
                 val ancestry = banlistAncestry(banHead, allBanlist)
                 for (edition in authorizedBanlist) {
                     if (edition.hashHex !in ancestry) {
-                        ConcordJson.decodeBanlist(edition.content)?.forEach { banned.add(it.lowercase()) }
+                        banned.addAll(effectiveList(edition, HashSet()))
                     }
                 }
             }

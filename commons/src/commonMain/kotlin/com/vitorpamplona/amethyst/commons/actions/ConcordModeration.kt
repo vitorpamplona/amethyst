@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -213,16 +214,20 @@ object ConcordModeration {
         owner: HexKey,
     ): Event = setBanlist(actor, controlPlane, communityId, currentBanned(current, communityId, owner) - member.lowercase(), current, createdAt, citation, owner)
 
-    /** The current banlist union across the head editions (lowercase hex). */
+    /**
+     * The current banlist union across the head editions (lowercase hex).
+     *
+     * Read through the [AuthorityResolver] rather than by decoding the head's content directly, so
+     * this is the *honored* banlist: the resolver heals concurrent forks into the union (CORD-04 §4
+     * re-heal) and drops entries whose signer did not outrank them (§3's rank rule, enforced as a
+     * delta rule). Decoding the raw head instead would make every ban/unban we author re-publish
+     * entries our own fold refuses — laundering an unauthorized ban into a list signed by us.
+     */
     fun currentBanned(
         current: List<ControlEdition>,
         communityId: ByteArray,
         owner: HexKey,
-    ): Set<HexKey> {
-        val entityId = ConcordKeyDerivation.banlistCoordinate(communityId)
-        val head = headOf(current, entityId, owner)
-        return head?.let { ConcordJson.decodeBanlist(it.content) }?.mapTo(HashSet()) { it.lowercase() } ?: emptySet()
-    }
+    ): Set<HexKey> = AuthorityResolver.resolve(current, owner).bannedMembers()
 
     private suspend fun setBanlist(
         actor: NostrSigner,
