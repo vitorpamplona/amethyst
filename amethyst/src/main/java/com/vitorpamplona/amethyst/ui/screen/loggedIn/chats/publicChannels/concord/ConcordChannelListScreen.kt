@@ -126,6 +126,41 @@ fun ConcordChannelListScreen(
     var inviteLink by remember { mutableStateOf<String?>(null) }
     var minting by remember { mutableStateOf(false) }
 
+    // Prefer the folded metadata name, then the stored community name from the list entry (always
+    // present from the join/create — this is what shows everywhere else). Fall back to the app name
+    // only if neither exists (should be unreachable), never as the normal "metadata hasn't folded
+    // yet" placeholder — that showed "Amy Debug".
+    val communityName =
+        state?.metadata?.name
+            ?: session?.entry?.name?.ifBlank { null }
+            ?: stringRes(com.vitorpamplona.amethyst.R.string.app_name)
+
+    // Owner from the list entry, not the folded authority: a community whose relays are dead never
+    // folds a Control Plane, and that is exactly the case where leaving matters most.
+    val isOwner = session?.entry?.owner == account.signer.pubKey
+
+    // Read once here (it is @Composable) so the post-leave navigation can use it from a callback.
+    val canPop = nav.canPop()
+    var showLeave by remember { mutableStateOf(false) }
+
+    if (showLeave) {
+        ConcordLeaveDialog(
+            communityName = communityName,
+            isOwner = isOwner,
+            onDismiss = { showLeave = false },
+            onConfirm = {
+                showLeave = false
+                // Fire-and-forget: the list edit is local + a best-effort publish to our own outbox,
+                // so we never hold the user behind a spinner waiting on a relay that may be dead.
+                accountViewModel.leaveConcordCommunity(communityId)
+                // Don't strand the user on the server view of a community they just left. Popping is
+                // right when we were pushed here; when this community is a bottom-nav root there is
+                // nothing to pop, so restart the stack on the Concord hub.
+                if (canPop) nav.popBack() else nav.newStack(Route.Concords)
+            },
+        )
+    }
+
     // Channel create/rename/delete are gated on MANAGE_CHANNELS (or owner) — the same predicate the
     // fold enforces, so an unauthorized action would be a silent no-op we shouldn't even offer.
     val canManageChannels =
@@ -185,20 +220,10 @@ fun ConcordChannelListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    // Prefer the folded metadata name, then the stored community name from the list
-                    // entry (always present from the join/create — this is what shows everywhere else).
-                    // Fall back to the app name only if neither exists (should be unreachable), never as
-                    // the normal "metadata hasn't folded yet" placeholder — that showed "Amy Debug".
-                    val title =
-                        state?.metadata?.name
-                            ?: session?.entry?.name?.ifBlank { null }
-                            ?: stringRes(com.vitorpamplona.amethyst.R.string.app_name)
-                    Text(title, maxLines = 1)
-                },
+                title = { Text(communityName, maxLines = 1) },
                 navigationIcon = {
                     // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
-                    if (nav.canPop()) {
+                    if (canPop) {
                         IconButton(onClick = { nav.popBack() }) {
                             SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
                         }
@@ -235,6 +260,27 @@ fun ConcordChannelListScreen(
                         },
                     ) {
                         SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_action))
+                    }
+
+                    // Overflow, mirroring the NIP-29 relay-group top bar: destructive membership
+                    // actions live behind the menu, never as a one-tap icon.
+                    var menuOpen by remember { mutableStateOf(false) }
+                    IconButton(onClick = { menuOpen = true }) {
+                        SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.more_options))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_community),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                showLeave = true
+                            },
+                        )
                     }
                 },
             )
@@ -470,6 +516,50 @@ private fun rememberConcordDisplayName(
     val user = remember(hex) { accountViewModel.checkGetOrCreateUser(hex) } ?: return remember(hex) { hex.take(8) }
     val name by observeUserName(user, accountViewModel)
     return name
+}
+
+/**
+ * Confirms leaving a community. Deliberately explicit about the blast radius: leaving is a private
+ * edit of *this account's* kind-13302 list — nobody is told, no roster changes — but it also drops
+ * the entry that carries the community's keys, so history this account can no longer derive may be
+ * gone for good. The owner gets an extra line: the entry is the only place their owner salt lives,
+ * so leaving is what actually retires the community for them.
+ */
+@Composable
+private fun ConcordLeaveDialog(
+    communityName: String,
+    isOwner: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_message, communityName))
+                if (isOwner) {
+                    Text(
+                        stringRes(com.vitorpamplona.amethyst.R.string.concord_leave_owner_warning),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    stringRes(com.vitorpamplona.amethyst.R.string.leave),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(com.vitorpamplona.amethyst.R.string.cancel))
+            }
+        },
+    )
 }
 
 /** A pending channel create ([channelIdHex] null) or rename target. */

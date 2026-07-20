@@ -1580,6 +1580,15 @@ class AccountViewModel(
 
     fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
 
+    /**
+     * Drop a Concord community from this account's private kind-13302 list. Fire-and-forget on the
+     * signer dispatcher: the removal lands in the local cache (so the UI updates immediately) and the
+     * new list event is best-effort published to our outbox. Nothing here waits on a relay, which is
+     * what makes leaving a community whose own relays are dead work at all — the list lives in *our*
+     * outbox, not in the community's relays.
+     */
+    fun leaveConcordCommunity(communityId: String) = launchSigner { account.leaveConcordCommunity(communityId) }
+
     fun createRelayGroup(
         relay: NormalizedRelayUrl,
         groupId: String,
