@@ -326,6 +326,8 @@ the default is the repo's advertised relays, else your outbox.
 | `amy git state REPO\|IDENTIFIER [--head BRANCH] [--branch name=commit[,…]] [--tag name=commit[,…]]` | Publish a kind:30618 repository state (branch/tag tips + HEAD). |
 | `amy git list [USER]` | List a user's repo announcements (defaults to self). |
 | `amy git show NADDR\|kind:pubkey:id` | Print one repo announcement (cache-first). |
+| `amy git grasp list [USER]` | List a user's kind:10317 GRASP hosting-server list (defaults to self). |
+| `amy git grasp set URL[,URL]` | Publish your GRASP hosting-server list (preference order — where PR tips get pushed). |
 
 **Issues, patches & pull requests**
 

@@ -632,6 +632,7 @@ private fun printUsage() {
         |      [--tag n=c[,…]]
         |  git list [USER]                              list a user's repo announcements (default self)
         |  git show NADDR|kind:pubkey:id                print one repo announcement
+        |  git grasp list [USER] | set URL[,URL]        GRASP hosting-server list (kind 10317)
         |  git issue REPO --subject S [BODY]            publish a kind:1621 issue against a repo
         |      [--hashtag T[,T]]                          (BODY from arg or stdin)
         |  git patch REPO [--file P] [--root]           publish a kind:1617 patch (format-patch/stdin)

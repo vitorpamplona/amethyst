@@ -131,6 +131,13 @@ info "state: $STATE"
 assert_eq "$(echo "$STATE" | jq -r '.branches')" "2" state.branches "two branch refs"
 assert_eq "$(echo "$STATE" | jq -r '.head')" "main" state.head "HEAD=main"
 
+# GRASP server list (10317) round-trip.
+GRASP="$(M git grasp set "wss://grasp.example.com,wss://grasp2.example.com" --relay "$RELAY_URL")"
+assert_eq "$(echo "$GRASP" | jq -r '.kind')" "10317" grasp.kind "grasp list is kind 10317"
+GRASP_READ="$(M git grasp list --relay "$RELAY_URL")"
+assert_eq "$(echo "$GRASP_READ" | jq -r '.count')" "2" grasp.count "two grasp servers read back"
+assert_eq "$(echo "$GRASP_READ" | jq -r '.grasps[0]')" "wss://grasp.example.com" grasp.order "preference order preserved"
+
 # =============================================================================
 # Issue (1621) + patch (1617) + PR (1618) + PR update (1619)
 # =============================================================================
