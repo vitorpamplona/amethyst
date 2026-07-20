@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintUrlException
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
@@ -45,14 +46,23 @@ import kotlin.coroutines.cancellation.CancellationException
  * it also picks up NUT-02 per-input fee handling for free.
  */
 class MeltProcessor {
+    /**
+     * @param knownWalletMints the mint URLs of the user's own NIP-60 wallet. A token
+     *   pointing at one of those was, by definition, issued by a mint the user
+     *   deliberately added, so it is exempt from the private-address block that
+     *   [com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintUrlValidator] applies
+     *   to arbitrary pasted tokens (a self-hosted mint on the LAN is legitimate).
+     */
     suspend fun melt(
         token: CashuToken,
         lud16: String,
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
+        knownWalletMints: Set<String> = emptySet(),
     ): MeltResult {
         try {
-            val ops = CashuMintOperations(MintHttpClient(token.mint, okHttpClient))
+            val isOwnMint = knownWalletMints.any { it.trim().trimEnd('/').equals(token.mint.trim().trimEnd('/'), ignoreCase = true) }
+            val ops = CashuMintOperations(MintHttpClient(token.mint, userConfigured = isOwnMint, okHttpClient = okHttpClient))
             val proofs = token.proofs
 
             // A Lightning address must commit to an amount before we know the
@@ -106,6 +116,14 @@ class MeltProcessor {
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             if (e is LightningAddressResolver.LightningAddressError) throw e
+            // The mint URL was refused before any request went out: this is OUR
+            // message, not the mint's, so don't dress it up as "the mint said".
+            if (e is MintUrlException) {
+                throw LightningAddressResolver.LightningAddressError(
+                    stringRes(context, R.string.cashu_unsafe_mint_url),
+                    stringRes(context, R.string.cashu_unsafe_mint_url_explainer, e.message),
+                )
+            }
             throw LightningAddressResolver.LightningAddressError(
                 stringRes(context, R.string.cashu_failed_redemption),
                 stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),

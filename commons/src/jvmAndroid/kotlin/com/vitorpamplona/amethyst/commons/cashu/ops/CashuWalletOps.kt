@@ -125,7 +125,9 @@ class CashuWalletOps(
 
     private fun ops(mintUrl: String): CashuMintOperations =
         opsCache.getOrPut(mintUrl.trimEnd('/')) {
-            CashuMintOperations(MintHttpClient(mintUrl, okHttpClient), secretFactory)
+            // userConfigured: these are the mints of the user's own NIP-60 wallet,
+            // added deliberately, so a self-hosted mint on the LAN stays usable.
+            CashuMintOperations(MintHttpClient(mintUrl, userConfigured = true, okHttpClient = okHttpClient), secretFactory)
         }
 
     /**
@@ -923,8 +925,11 @@ class CashuWalletOps(
      * is typo'd, points at a non-Cashu host, or is otherwise unreachable.
      *
      * Throws on failure so the UI can surface the underlying reason.
+     *
+     * `userConfigured = true`: the URL was typed by the user into the Add-Mint UI,
+     * so a self-hosted mint on the LAN is a legitimate target here.
      */
-    suspend fun pingMint(mintUrl: String): String? = MintHttpClient(mintUrl, okHttpClient).info().name
+    suspend fun pingMint(mintUrl: String): String? = MintHttpClient(mintUrl, userConfigured = true, okHttpClient = okHttpClient).info().name
 
     /**
      * Fetch the currently-active keyset id for [mintUrl]. Cheap wrapper

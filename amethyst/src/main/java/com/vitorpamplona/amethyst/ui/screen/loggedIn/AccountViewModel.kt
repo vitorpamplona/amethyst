@@ -2380,7 +2380,18 @@ class AccountViewModel(
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val meltResult = MeltProcessor().melt(token, lud16, httpClientBuilder::okHttpClientForMoney, context)
+                    val meltResult =
+                        MeltProcessor().melt(
+                            token,
+                            lud16,
+                            httpClientBuilder::okHttpClientForMoney,
+                            context,
+                            // Mints the user deliberately added are exempt from the
+                            // private-address block (self-hosted LAN mints are legit).
+                            knownWalletMints =
+                                account.cashuWalletState.mints.value
+                                    .toSet(),
+                        )
                     onDone(
                         stringRes(context, R.string.cashu_successful_redemption),
                         stringRes(

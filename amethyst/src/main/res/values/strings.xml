@@ -2605,6 +2605,8 @@
 
     <string name="cashu_failed_redemption">Could not redeem Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint provided the following error message: %1$s</string>
+    <string name="cashu_unsafe_mint_url">Unsafe Cashu mint address</string>
+    <string name="cashu_unsafe_mint_url_explainer">Amethyst did not contact this token\'s mint. %1$s</string>
 
     <string name="cashu_successful_redemption">Cashu Received</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats were sent to your wallet. (Fees: %2$s sats)</string>
