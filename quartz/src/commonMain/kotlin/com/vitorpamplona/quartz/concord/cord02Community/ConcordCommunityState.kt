@@ -27,8 +27,10 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
+import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.asFloor
 
 /** A channel id paired with its current folded definition. */
 class ConcordChannel(
@@ -56,11 +58,69 @@ class ConcordCommunityState(
     val dissolved: Boolean,
 ) {
     companion object {
+        /**
+         * The permission bit an edition of each entity kind must be authored under.
+         * `null` means owner-only (no bit grants it). Mirrors the per-kind gating
+         * [fold] applies before the structural fold.
+         */
+        private fun requiredPermission(kind: ControlEntityKind): Int? =
+            when (kind) {
+                ControlEntityKind.METADATA -> ConcordPermissions.MANAGE_METADATA
+                ControlEntityKind.CHANNEL -> ConcordPermissions.MANAGE_CHANNELS
+                ControlEntityKind.ROLE, ControlEntityKind.GRANT -> ConcordPermissions.MANAGE_ROLES
+                ControlEntityKind.BANLIST -> ConcordPermissions.BAN
+                ControlEntityKind.INVITE_LIVE, ControlEntityKind.INVITE_REGISTRY, ControlEntityKind.INVITE_REVOKED -> ConcordPermissions.CREATE_INVITE
+                ControlEntityKind.DISSOLVED -> null
+            }
+
+        /**
+         * The authority-gated structural head of **every** control entity, keyed by
+         * [ControlEdition.entityIdHex] — the source of the anti-rollback [EntityFloor]s a
+         * client carries across a CORD-06 Refounding.
+         *
+         * It is deliberately gated the same way [fold] gates each entity kind (and, for
+         * [ControlEntityKind.DISSOLVED], owner-only): an *ungated* head map would let any
+         * ex-member who still holds a rotated-out root mint a high-version edition on the
+         * old Control Plane and thereby raise our floor, freezing the entity for us. The
+         * floor must only ever remember editions we would actually have honored.
+         */
+        fun authorizedHeads(
+            editions: Collection<ControlEdition>,
+            ownerPubKey: String,
+            floors: Map<String, EntityFloor> = emptyMap(),
+        ): Map<String, EntityFloor> {
+            val pool = EditionFold.admissible(editions, floors)
+            val authority = AuthorityResolver.resolve(pool, ownerPubKey)
+            val out = HashMap<String, EntityFloor>(floors)
+            for ((kind, list) in pool.groupBy { it.entityKind }) {
+                val bit = requiredPermission(kind)
+                val gated =
+                    list.filter {
+                        authority.isOwner(it.author) || (bit != null && authority.hasPermission(it.author, bit))
+                    }
+                for ((entity, head) in EditionFold.fold(gated, floors)) {
+                    // Monotonic: a floor only ever rises. Folding epoch by epoch, an entity the
+                    // newer epoch never mentions keeps the version the older one reached.
+                    val prior = out[entity]
+                    if (prior == null || head.version >= prior.version) out[entity] = head.asFloor()
+                }
+            }
+            return out
+        }
+
         fun fold(
             editions: Collection<ControlEdition>,
             ownerPubKey: String,
+            floors: Map<String, EntityFloor> = emptyMap(),
         ): ConcordCommunityState {
-            val heads = EditionFold.fold(editions).values
+            // Everything below folds a *derived* view of the same editions (the resolver's
+            // authority chains, the per-kind gated folds), so the anti-rollback floor is applied
+            // once, up front, on the shared pool: a rolled-back edition is never seen by any of
+            // them, and the head we already folded is re-seated so the entity keeps its state.
+            @Suppress("NAME_SHADOWING")
+            val editions = EditionFold.admissible(editions, floors)
+
+            val heads = EditionFold.fold(editions, floors).values
             // Resolve authority from the FULL edition set (not the structural heads): the resolver
             // folds each role/grant chain through authorized editions only, so a rogue higher-version
             // edition can't supersede a legit one before authority is even judged.
@@ -84,7 +144,7 @@ class ConcordCommunityState(
             // authorized editions, then take the highest-version head (guarding against strays).
             val metadata =
                 EditionFold
-                    .fold(editorsWith(ControlEntityKind.METADATA, ConcordPermissions.MANAGE_METADATA))
+                    .fold(editorsWith(ControlEntityKind.METADATA, ConcordPermissions.MANAGE_METADATA), floors)
                     .values
                     .maxByOrNull { it.version }
                     ?.let { ConcordJson.decodeOrNull<MetadataEntity>(it.content) }
@@ -92,7 +152,7 @@ class ConcordCommunityState(
             // Channels are gated by MANAGE_CHANNELS. Fold each channel entity from its authorized
             // editions only, dropping the tombstoned ones.
             val channels = LinkedHashMap<String, ConcordChannel>()
-            for (head in EditionFold.fold(editorsWith(ControlEntityKind.CHANNEL, ConcordPermissions.MANAGE_CHANNELS)).values) {
+            for (head in EditionFold.fold(editorsWith(ControlEntityKind.CHANNEL, ConcordPermissions.MANAGE_CHANNELS), floors).values) {
                 val def = ConcordJson.decodeOrNull<ChannelEntity>(head.content) ?: continue
                 if (def.deleted) continue
                 channels[head.entityIdHex] = ConcordChannel(head.entityIdHex, def)

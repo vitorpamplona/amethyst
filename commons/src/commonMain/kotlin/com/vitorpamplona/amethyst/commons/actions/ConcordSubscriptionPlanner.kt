@@ -55,11 +55,31 @@ data class ConcordPlaneSub(
  * ([channelPlaneSubs]).
  */
 object ConcordSubscriptionPlanner {
-    /** Control-plane subscriptions for every joined community (known from the entry alone). */
+    /**
+     * Control-plane subscriptions for every joined community (known from the entry alone) — at
+     * the current epoch **plus** every prior epoch the account still holds a root for.
+     *
+     * The prior-epoch Control Planes are what a CORD-06 Refounding's compacted head is checked
+     * against: the rotator picks which edition per entity survives the rotation, so without the
+     * old planes a client has no memory of the versions it already folded and a rotator can roll
+     * an entity backwards (restore a revoked role, clear a banlist) with genuine signatures. See
+     * `ConcordCommunitySession.historicalControlPlaneAddresses`.
+     */
     fun controlPlaneSubs(entries: List<ConcordCommunityListEntry>): List<ConcordPlaneSub> =
-        entries.map { e ->
-            val cp = ConcordActions.controlPlane(e.root.hexToByteArray(), e.id.hexToByteArray(), e.rootEpoch)
-            ConcordPlaneSub(channelId = null, pubKeyHex = cp.publicKeyHex, relays = normalize(e.relays))
+        entries.flatMap { e ->
+            val communityId = e.id.hexToByteArray()
+            val relays = normalize(e.relays)
+            val cp = ConcordActions.controlPlane(e.root.hexToByteArray(), communityId, e.rootEpoch)
+            val historical =
+                e.heldRoots
+                    .filter { it.epoch < e.rootEpoch }
+                    .sortedByDescending { it.epoch }
+                    .take(ConcordActions.MAX_BACKFILL_EPOCHS)
+                    .mapNotNull { held ->
+                        val key = runCatching { ConcordActions.controlPlane(held.key.hexToByteArray(), communityId, held.epoch) }.getOrNull() ?: return@mapNotNull null
+                        ConcordPlaneSub(channelId = null, pubKeyHex = key.publicKeyHex, relays = relays)
+                    }
+            listOf(ConcordPlaneSub(channelId = null, pubKeyHex = cp.publicKeyHex, relays = relays)) + historical
         }
 
     /**
