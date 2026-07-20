@@ -32,11 +32,14 @@ RELAY_HOST="127.0.0.1"
 RELAY_PORT="${RELAY_PORT:-7793}"
 RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"
 NO_BUILD=0
+LIVE=0
+LIVE_REPO="${LIVE_REPO:-https://github.com/octocat/Hello-World.git}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --port)     RELAY_PORT="$2"; RELAY_URL="ws://$RELAY_HOST:$RELAY_PORT"; shift ;;
     --no-build) NO_BUILD=1 ;;
+    --live)     LIVE=1 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
   shift
@@ -203,6 +206,26 @@ info "thread: $THREAD"
 assert_eq "$(echo "$THREAD" | jq -r '.status')" "closed" thread.status "thread shows closed"
 assert_eq "$(echo "$THREAD" | jq -r '.status_events | length')" "1" thread.status_events "one status event in timeline"
 assert_eq "$(echo "$THREAD" | jq -r '.comments | length')" "1" thread.comments "one comment in thread"
+
+# =============================================================================
+# Read repo content over git smart-HTTP (--live only — needs a reachable host).
+# =============================================================================
+if [[ "$LIVE" -eq 1 ]]; then
+  banner "live: git browse / cat / log ($LIVE_REPO)"
+  BROWSE="$(M git browse "$LIVE_REPO" --json)"
+  info "browse: $BROWSE"
+  assert_nonempty "$(echo "$BROWSE" | jq -r '.head_commit')" live.browse "browse resolves a head commit"
+  FIRST_FILE="$(echo "$BROWSE" | jq -r '.entries[] | select(.type=="file") | .name' | head -1)"
+  if [[ -n "$FIRST_FILE" ]]; then
+    CAT="$(M git cat "$LIVE_REPO" "$FIRST_FILE" --json)"
+    assert_eq "$(echo "$CAT" | jq -r '.path')" "$FIRST_FILE" live.cat "cat returns the requested file"
+    assert_nonempty "$(echo "$CAT" | jq -r '.oid')" live.cat_oid "cat resolves a blob oid"
+  fi
+  LOG="$(M git log "$LIVE_REPO" --depth 2 --json)"
+  assert_nonempty "$(echo "$LOG" | jq -r '.commits[0].oid')" live.log "log returns at least one commit"
+else
+  skip_msg "live git smart-HTTP reads (browse/cat/log) — pass --live to run"
+fi
 
 grep -q $'\tfail\t' "$RESULTS_FILE" && exit 1
 exit 0

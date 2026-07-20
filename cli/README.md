@@ -329,6 +329,18 @@ the default is the repo's advertised relays, else your outbox.
 | `amy git grasp list [USER]` | List a user's kind:10317 GRASP hosting-server list (defaults to self). |
 | `amy git grasp set URL[,URL]` | Publish your GRASP hosting-server list (preference order — where PR tips get pushed). |
 
+**Read repository content** (git smart-HTTP v2, read-only — needs a reachable git host)
+
+`REPO` here is a repo coordinate/naddr (whose announcement supplies the clone
+URL) **or** a raw `http(s)` clone URL. This is the git-object read side of
+`nak git download` / a shallow clone; pushing objects back is out of scope.
+
+| Command | What it does |
+|---|---|
+| `amy git browse REPO [PATH] [--ref R] [--clone URL]` | List a repo's tree entries at PATH (default: root). |
+| `amy git cat REPO PATH [--ref R] [--out FILE]` | Print a file's contents at a ref (or write raw bytes to `--out`). |
+| `amy git log REPO [--ref R] [--depth N] [--clone URL]` | Recent commit history, most recent first. |
+
 **Issues, patches & pull requests**
 
 | Command | What it does |

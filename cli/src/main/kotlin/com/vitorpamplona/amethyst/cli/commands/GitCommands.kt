@@ -61,6 +61,11 @@ object GitCommands {
         |  git show NADDR|kind:pubkey:id                  print one repo announcement
         |  git grasp list [USER] | set URL[,URL]          a user's GRASP hosting-server list (kind 10317)
         |
+        |Read repo content (git smart-HTTP, read-only — needs a reachable git host):
+        |  git browse REPO [PATH] [--ref R] [--clone URL] list a repo's tree at PATH (default root)
+        |  git cat REPO PATH [--ref R] [--out FILE]       print (or write) a file's contents at a ref
+        |  git log REPO [--ref R] [--depth N]             recent commit history (most recent first)
+        |
         |Issues / patches / pull requests:
         |  git issue REPO --subject S [BODY]              publish a kind:1621 issue (BODY arg or stdin)
         |      [--hashtag T[,T]]
@@ -90,13 +95,16 @@ object GitCommands {
         route(
             "git",
             tail,
-            "git <announce|state|list|show|grasp|issue|patch|pr|comment|open|applied|close|draft|issues|patches|prs|thread>",
+            "git <announce|state|list|show|grasp|browse|cat|log|issue|patch|pr|comment|open|applied|close|draft|issues|patches|prs|thread>",
             mapOf(
                 "announce" to { rest -> announce(dataDir, rest) },
                 "state" to { rest -> state(dataDir, rest) },
                 "list" to { rest -> list(dataDir, rest) },
                 "show" to { rest -> show(dataDir, rest) },
                 "grasp" to { rest -> GitGraspCommands.dispatch(dataDir, rest) },
+                "browse" to { rest -> GitBrowseCommands.browse(dataDir, rest) },
+                "cat" to { rest -> GitBrowseCommands.cat(dataDir, rest) },
+                "log" to { rest -> GitBrowseCommands.log(dataDir, rest) },
                 "issue" to { rest -> issue(dataDir, rest) },
                 "issues" to { rest -> GitReadCommands.issues(dataDir, rest) },
                 "patch" to { rest -> GitPatchCommands.patch(dataDir, rest) },
