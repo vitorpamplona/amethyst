@@ -23,11 +23,17 @@ package com.vitorpamplona.quartz.concord.cord04Roles
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions.Companion.BAN
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions.Companion.KICK
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+
+private const val KNOWN_GAP =
+    "CORD-04 does not rank-gate BANLIST contents and Armada's banlistGate is rank-blind too; " +
+        "enforcing it here would diverge from every other client. Amethyst refuses to AUTHOR such " +
+        "a ban instead. Un-ignore when the spec closes this."
 
 class AuthorityResolverTest {
     private val owner = "0f".repeat(32)
@@ -504,5 +510,85 @@ class AuthorityResolverTest {
         val above = AuthorityResolver.resolve(base + listOf(v0, danglingV9), owner)
         assertEquals(setOf(adminRole), above.rolesOf(alice))
         assertEquals(1L, above.rank(alice))
+    }
+
+    // ---- Rank gating on the banlist (CORD-04 "equal cannot act on equal") ----
+    //
+    // CORD-04 rank-gates ROLE and GRANT editions, but a BANLIST edition is a single whole-list
+    // entity, so no client rank-checks the *contents* of the list — the gate is the author's BAN
+    // bit alone. Armada does exactly the same: its `banlistGate` calls the rank-blind
+    // `isAuthorized(.., Permissions.BAN)`, even though its role path uses the rank-aware
+    // `canActOnPosition`. Enforcing rank on the fold unilaterally would make us ignore bans every
+    // other client honors, so the three @Ignore-d tests below record the gap instead of asserting
+    // a fix. Amethyst restricts what it will *author* (Account.concordBanTarget and the Members
+    // roster both route through canActOn); closing it for real needs a spec change.
+
+    // A moderator that holds BAN but sits BELOW an admin. The banlist is a single whole-list
+    // entity, so nothing about the *content* of the list is rank-checked — only the author's bit.
+    private val modWithBanJson = """{"name":"Mod","position":5,"permissions":"24"}""" // KICK|BAN
+
+    private fun rankedBanScenario(vararg extra: ControlEdition) =
+        AuthorityResolver.resolve(
+            listOf(
+                role(adminRole, adminJson), // position 1
+                role(modRole, modWithBanJson), // position 5, holds BAN
+                grant("31".repeat(32), alice, listOf(adminRole), granter = owner),
+                grant("32".repeat(32), bob, listOf(modRole), granter = owner),
+            ) + extra,
+            owner,
+        )
+
+    @Test
+    @Ignore(KNOWN_GAP)
+    fun aBanHolderCannotBanAMemberItDoesNotOutrank() {
+        // FAILS TODAY, deliberately unfixed. A rank-5 moderator bans the rank-1 admin above them and
+        // the fold accepts it — privilege escalation, not a no-op: the admin then loses every
+        // permission, because hasPermission() is `!isBanned && ..`.
+        val r = rankedBanScenario(banlistBy(bob, "mod-bans-admin", alice))
+
+        assertFalse(r.canActOn(bob, alice, BAN), "the rule itself: a moderator cannot act on an admin")
+        assertFalse(r.isBanned(alice), "so the fold must not honor the moderator's ban of the admin")
+    }
+
+    @Test
+    @Ignore(KNOWN_GAP)
+    fun aBanHolderCannotBanTheOwner() {
+        // The owner is unremovable (canActOn refuses them as a target), but the banlist is just a
+        // list of keys. Banning the owner does not cost them fold authority (banGate/authorizedHeads
+        // short-circuit on isOwner), yet hasPermission() is `!isBanned && ...`, so canActOn(owner, ..)
+        // goes false and the owner loses every rank-gated action.
+        val r = rankedBanScenario(banlistBy(bob, "mod-bans-owner", owner))
+
+        assertFalse(r.isBanned(owner), "the owner must never be bannable")
+        assertTrue(r.canActOn(owner, bob, BAN), "and must keep authority over everyone")
+    }
+
+    @Test
+    fun aBanHolderStillBansThoseItOutranks() {
+        // The gate must not over-correct: carol holds no role at all (rank = lowest), so the
+        // moderator outranks her and the ban must land.
+        val r = rankedBanScenario(banlistBy(bob, "mod-bans-plain-member", carol))
+
+        assertTrue(r.canActOn(bob, carol, BAN))
+        assertTrue(r.isBanned(carol), "a moderator must still ban a plain member")
+    }
+
+    @Test
+    fun theOwnerBansAnyone() {
+        val r = rankedBanScenario(banlistBy(owner, "owner-bans-admin", alice))
+
+        assertTrue(r.isBanned(alice), "the owner outranks everyone")
+    }
+
+    @Test
+    @Ignore(KNOWN_GAP)
+    fun anUnrankedBanIsDroppedWithoutOrphaningTheRestOfTheList() {
+        // The moderator bans the admin AND a plain member in one edition. The edition is the head of
+        // the chain, so rejecting it wholesale would also lose the legitimate ban of carol. Only the
+        // entries the author does not outrank may be dropped.
+        val r = rankedBanScenario(banlistBy(bob, "mod-bans-both", alice, carol))
+
+        assertFalse(r.isBanned(alice), "the part it does not outrank is dropped")
+        assertTrue(r.isBanned(carol), "the part it does outrank still lands")
     }
 }

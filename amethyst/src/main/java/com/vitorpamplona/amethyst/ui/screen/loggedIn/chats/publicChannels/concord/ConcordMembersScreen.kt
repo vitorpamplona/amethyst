@@ -188,6 +188,13 @@ fun ConcordMembersScreen(
                         isSelf = entry.pubkey.equals(myPubKey, ignoreCase = true),
                         viewerIsOwner = iAmOwner,
                         viewerCanBan = iCanBan,
+                        // Ban/Remove are rank-gated the same way Roles… is. The owner short-circuits
+                        // because canActOn begins at hasPermission, which is false while banned, and
+                        // a rogue BAN holder can currently banlist the owner — see the note on
+                        // Account.concordBanTarget.
+                        canBanTarget =
+                            iAmOwner ||
+                                state?.authority?.canActOn(myPubKey, entry.pubkey, ConcordPermissions.BAN) == true,
                         viewerCanManageRoles = iCanManageRoles,
                         // canActOn folds the whole rank rule for us: we hold MANAGE_ROLES, we're not
                         // banned, the target isn't the owner (unremovable), and we strictly outrank
@@ -211,6 +218,7 @@ private fun ConcordMemberRow(
     isSelf: Boolean,
     viewerIsOwner: Boolean,
     viewerCanBan: Boolean,
+    canBanTarget: Boolean,
     viewerCanManageRoles: Boolean,
     canManageRolesOnTarget: Boolean,
     assignableRoles: List<AssignableRole>,
@@ -222,12 +230,13 @@ private fun ConcordMemberRow(
     val isBanned = entry.membership == ConcordMembership.BANNED
     val isAdmin = entry.membership == ConcordMembership.ADMIN
 
-    // Owner can promote/demote anyone but the owner; ban is available to owner + BAN holders,
-    // never against the owner or yourself. A banned user only offers "unban".
+    // Owner can promote/demote anyone but the owner; ban is available to owner + BAN holders that
+    // strictly outrank the target, never against the owner or yourself. A banned user only offers
+    // "unban" — and unban is rank-gated too, so whoever cannot ban you cannot lift your ban either.
     val canToggleAdmin = viewerIsOwner && !isOwnerTarget && !isBanned && !isSelf
-    val canBan = viewerCanBan && !isOwnerTarget && !isSelf
+    val canBan = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf
     // Hard removal (CORD-06 Refounding) rotates the community key; same authority as ban.
-    val canRemove = viewerCanBan && !isOwnerTarget && !isSelf
+    val canRemove = viewerCanBan && canBanTarget && !isOwnerTarget && !isSelf
     // Shown to any MANAGE_ROLES holder, but disabled with a reason when this particular
     // member (or every defined role) is out of our reach — a grant we don't outrank
     // publishes fine and is then dropped by every client's fold, so a silently no-op

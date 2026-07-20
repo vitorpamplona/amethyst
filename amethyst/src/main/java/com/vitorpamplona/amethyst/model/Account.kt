@@ -2454,10 +2454,19 @@ class Account(
 
     /**
      * If [note] is a Concord channel message whose author this account is allowed to
-     * ban — the actor is the owner or holds the BAN permission, and the target is
-     * neither the owner nor the actor — returns `(communityId, memberHex)`. Null
-     * otherwise, so the UI shows the Ban action only when it would actually take
-     * effect on fold.
+     * ban — the actor outranks the target and holds the BAN permission, and the target
+     * is neither the owner nor the actor — returns `(communityId, memberHex)`. Null
+     * otherwise, so the UI offers Ban only where we are willing to act.
+     *
+     * The rank half is ours alone. CORD-04 rank-gates role grants (`canActOn`) but the
+     * BANLIST is a single whole-list entity, so neither this client's fold nor Armada's
+     * rank-checks the *contents* of a banlist edition — both gate only on the author's
+     * BAN bit (Armada: `banlistGate` → `isAuthorized(.., Permissions.BAN)`, while its
+     * role path uses the rank-aware `canActOnPosition`). A moderator's ban of an admin
+     * above them is therefore *accepted* by every client today. Since we cannot refuse
+     * such a ban without diverging from Armada, we at least refuse to author one — this
+     * restricts what we write, never what we accept, so it cannot split consensus.
+     * Enforcing it on the fold needs a spec change; see the QA plan's open findings.
      */
     fun concordBanTarget(note: Note): Pair<String, HexKey>? {
         val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return null
@@ -2471,7 +2480,11 @@ class Account(
                 ?.value
                 ?.authority ?: return null
         if (authority.isOwner(author)) return null
-        val canBan = authority.isOwner(signer.pubKey) || authority.effectivePermissions(signer.pubKey).has(ConcordPermissions.BAN)
+        // The owner short-circuits rather than going through canActOn: canActOn starts at
+        // hasPermission, which is false while banned, and a rogue BAN holder *can* currently put
+        // the owner on the banlist (see the KDoc) — routing the owner through it would let them be
+        // locked out of moderating their own community.
+        val canBan = authority.isOwner(signer.pubKey) || authority.canActOn(signer.pubKey, author, ConcordPermissions.BAN)
         return if (canBan) communityId to author else null
     }
 
