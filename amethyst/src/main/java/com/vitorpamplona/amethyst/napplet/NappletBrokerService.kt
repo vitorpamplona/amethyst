@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
-import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
@@ -78,8 +77,10 @@ import kotlinx.coroutines.launch
 class NappletBrokerService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // One ledger for the whole service lifetime: persistent grants on disk, session grants in RAM.
-    private val ledger by lazy { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore, Amethyst.instance.nappletAccountScope) }
+    // Persistent grants on disk, session grants in RAM. Shared app-wide (see AppModules) so the
+    // Connected Apps screens revoke the very grants this broker consults; session grants are dropped
+    // in onDestroy, which is the "all applet surfaces closed" boundary.
+    private val ledger get() = Amethyst.instance.nappletPermissionLedger
 
     // Per-app internal-signer permission ledger (policy + per-op overrides). Lazy so it's only
     // instantiated in the main process where the signer lives; never touched from :napplet.
@@ -89,9 +90,6 @@ class NappletBrokerService : Service() {
     private val storage by lazy { DataStoreNappletStorage(applicationContext, Amethyst.instance.nappletAccountScope) }
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
-
-    // The broker for the current account, rebuilt only on account switch (see broker()).
-    private var cachedBroker: Pair<Account, NappletBroker>? = null
 
     // Live relay subscriptions, keyed by the applet's subId. The account comes per-open from the
     // requesting surface's launch token, so a surface's REQs always target the account it acts as.
@@ -120,6 +118,13 @@ class NappletBrokerService : Service() {
     override fun onDestroy() {
         liveSubscriptions.closeAll()
         identityWatch.stop()
+        // Every applet/browser surface has unbound, so the "session" the user granted for is over.
+        // The ledger and the broker cache are now app-wide singletons that outlive this service, so
+        // their in-memory session grants have to be dropped explicitly here — that keeps the lifetime
+        // the consent dialog promises ("allow for this session") instead of letting it become
+        // "allow until the app process dies".
+        dropCachedBroker()
+        Amethyst.instance.nappletPermissionLedger.endSession()
         // Drop any foreground holds this broker still owns so they don't leak past the service.
         synchronized(foregroundLeases) {
             repeat(foregroundLeases.size) { SandboxForegroundHold.release() }
@@ -359,23 +364,24 @@ class NappletBrokerService : Service() {
      * Returns null when that account is no longer loaded (logged out), so requests fail closed
      * rather than silently falling back to someone else's key.
      */
-    @Synchronized
     private fun brokerFor(accountPubKey: HexKey): NappletBroker? {
         val account = accountFor(accountPubKey) ?: return null
-        cachedBroker?.let { (acc, broker) -> if (acc === account) return broker }
-        val broker =
-            AccountNappletGateways(
-                account = account,
-                context = applicationContext,
-                ledger = ledger,
-                storage = storage,
-                // Per-applet Tor decision (see NappletResourceFetcher): the shared manager routes
-                // through Tor when asked + active, and falls back to clearnet otherwise.
-                httpClient = { useProxy -> Amethyst.instance.okHttpClients.getHttpClient(useProxy) },
-                signerLedger = signerLedger,
-            ).broker()
-        cachedBroker = account to broker
-        return broker
+        synchronized(brokerLock) {
+            cachedBroker?.let { (acc, broker) -> if (acc === account) return broker }
+            val broker =
+                AccountNappletGateways(
+                    account = account,
+                    context = applicationContext,
+                    ledger = ledger,
+                    storage = storage,
+                    // Per-applet Tor decision (see NappletResourceFetcher): the shared manager routes
+                    // through Tor when asked + active, and falls back to clearnet otherwise.
+                    httpClient = { useProxy -> Amethyst.instance.okHttpClients.getHttpClient(useProxy) },
+                    signerLedger = signerLedger,
+                ).broker()
+            cachedBroker = account to broker
+            return broker
+        }
     }
 
     /**
@@ -430,6 +436,38 @@ class NappletBrokerService : Service() {
     }
 
     companion object {
+        /**
+         * Guards [cachedBroker]. Both live on the companion rather than the service instance so the
+         * Connected Apps UI can reach the running broker to revoke its live session grants — the
+         * screens are plain composables with no binder to this service, and the broker is the only
+         * holder of the in-memory "allow for this session" signer grants.
+         *
+         * Main-process only, like the sibling `Napplet*Registry` objects: the `:napplet` process gets
+         * its own (unused, empty) copy of these statics and must never touch them.
+         */
+        private val brokerLock = Any()
+
+        // The broker for the current account, rebuilt only on account switch (see brokerFor()).
+        private var cachedBroker: Pair<Account, NappletBroker>? = null
+
+        /**
+         * Drops the live "allow for this session" signer grants the running broker holds for
+         * [coordinate] (the bare app coordinate). Called when the user revokes or forgets an app in
+         * Connected Apps: without it the persisted grants are cleared but the in-memory session ones
+         * keep authorizing signatures until the broker dies, so a revoked app goes on signing.
+         *
+         * No-op when no broker has been built yet (no applet has run this process).
+         */
+        suspend fun revokeSessionGrants(coordinate: String) {
+            val broker = synchronized(brokerLock) { cachedBroker?.second } ?: return
+            broker.revokeSessionGrants(coordinate)
+        }
+
+        /** Forgets the cached broker, dropping every session grant it holds. */
+        private fun dropCachedBroker() {
+            synchronized(brokerLock) { cachedBroker = null }
+        }
+
         /**
          * Sentinel "author" for a browser-mode per-origin identity. The real key is the visited origin,
          * carried in the identity's identifier (which the consent dialog shows); this constant only fills

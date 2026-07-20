@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
+import com.vitorpamplona.amethyst.napplet.NappletBrokerService
 import com.vitorpamplona.amethyst.napplet.counterpartyLabel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
@@ -118,7 +119,7 @@ fun ConnectedAppDetailScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore, Amethyst.instance.nappletAccountScope) }
+    val capabilityLedger = Amethyst.instance.nappletPermissionLedger
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
     val untitled = stringResource(CommonsR.string.napplet_untitled)
 
@@ -239,7 +240,14 @@ fun ConnectedAppDetailScreen(
                             OpOverrideRow(
                                 opKey = opKey,
                                 decision = decision,
-                                onRevoke = { mutate { signerLedger.revokeOpDecision(coordinate, NostrSignerOp.fromKey(opKey) ?: return@mutate) } },
+                                onRevoke = {
+                                    mutate {
+                                        signerLedger.revokeOpDecision(coordinate, NostrSignerOp.fromKey(opKey) ?: return@mutate)
+                                        // The persisted override is gone, but a live "allow for this session"
+                                        // grant would keep authorizing this app until the broker dies.
+                                        NappletBrokerService.revokeSessionGrants(coordinate)
+                                    }
+                                },
                             )
                         }
                     }
@@ -295,6 +303,11 @@ fun ConnectedAppDetailScreen(
                             signerLedger.revokeAll(coordinate)
                         }
                         capabilityLedger.revokeAll(identity)
+                        // Forgetting an app has to stop it signing *now*. The two ledgers above only
+                        // drop persisted + capability grants; the broker separately holds the signer's
+                        // in-memory "allow for this session" grants, which would otherwise keep the
+                        // app authorized for as long as any applet surface stays open.
+                        NappletBrokerService.revokeSessionGrants(coordinate)
                     }
                     nav.popBack()
                 },

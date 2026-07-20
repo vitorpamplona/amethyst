@@ -470,7 +470,10 @@ class NappletBroker(
      * an "always allow" granted by one npub can never authorize signing under another. The bare
      * [NappletIdentity.coordinate] stays the app's display/UI identity and is unchanged.
      */
-    private fun signerCoordinateFor(identity: NappletIdentity): String = "napplet:${signer.pubKey}:${identity.coordinate}"
+    private fun signerCoordinateFor(identity: NappletIdentity): String = signerCoordinateFor(identity.coordinate)
+
+    /** [signerCoordinateFor] for a bare app coordinate — what the Connected Apps UI holds. */
+    private fun signerCoordinateFor(coordinate: String): String = "napplet:${signer.pubKey}:$coordinate"
 
     /**
      * Namespaces an in-memory session grant to the applet that was actually prompted for. Mirrors
@@ -485,10 +488,20 @@ class NappletBroker(
     /**
      * Drops every live session grant held for [coordinate], so revoking an app takes effect
      * immediately instead of lingering until this broker instance dies.
+     *
+     * [coordinate] is the **bare** app coordinate (`<author>:<identifier>`, or `browser:<origin>`)
+     * — the identity the Connected Apps UI holds. Session keys are stored under the
+     * account-namespaced [signerCoordinateFor] form, so this namespaces before matching; comparing
+     * the bare coordinate against those keys would silently match nothing and revoke nothing.
+     *
+     * Also clears any post-Cancel re-prompt suppression for the app: after an explicit revoke the
+     * user's next interaction should prompt, not be dropped by a cooldown from before.
      */
     suspend fun revokeSessionGrants(coordinate: String) {
         signerConsentLock.withLock {
-            sessionAllows.removeAll { it.startsWith("$coordinate|") }
+            val prefix = "${signerCoordinateFor(coordinate)}|"
+            sessionAllows.removeAll { it.startsWith(prefix) }
+            cancelledUntil.remove(coordinate)
         }
     }
 
