@@ -221,7 +221,15 @@ fun ConnectedAppDetailScreen(
                 PolicyPicker(
                     selected = current.signerPolicy,
                     onSelect = { newPolicy ->
-                        mutate { signerLedger.setPolicy(coordinate, newPolicy) }
+                        mutate {
+                            signerLedger.setPolicy(coordinate, newPolicy)
+                            // Live session grants are consulted BEFORE the policy, so tightening an app
+                            // to PARANOID would not have stopped it signing — the grant it already holds
+                            // short-circuits the check the new policy would fail. Changing the trust
+                            // level is a decision about how this app is treated from now on, so drop
+                            // what it is holding and let the new policy actually apply.
+                            NappletBrokerService.revokeSessionGrants(coordinate)
+                        }
                     },
                 )
             }
