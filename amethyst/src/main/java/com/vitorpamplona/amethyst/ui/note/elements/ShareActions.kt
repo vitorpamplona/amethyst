@@ -38,8 +38,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
  * both from the reaction-row Share button and from the note's 3-dot menu).
  *
  * Only the true "send it somewhere" options live here — browser link, image
- * file, image URL. The copy-to-clipboard options stay in the 3-dot menu, so
- * they are intentionally NOT part of this shared element.
+ * file, image URL, and the display-only QR code. The copy-to-clipboard
+ * options stay in the 3-dot menu, so they are intentionally NOT part of this
+ * shared element.
  *
  * Callers only render these for non-private notes: every option exposes the
  * note publicly (a shareable web link, or an image of it), which must never
@@ -74,6 +75,10 @@ fun ShareActionRows(
     }
     M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image_url)) {
         nav.nav(Route.ShareNoteAsImage(shareId))
+        onDismiss()
+    }
+    M3ActionRow(icon = MaterialSymbols.QrCode2, text = stringRes(R.string.share_as_qr)) {
+        nav.nav(Route.ShareNoteAsQr(shareId))
         onDismiss()
     }
 }
