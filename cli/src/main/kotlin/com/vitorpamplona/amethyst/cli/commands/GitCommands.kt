@@ -75,6 +75,8 @@ object GitCommands {
         |  git patch REPO [--file PATH]                   publish a kind:1617 patch (git format-patch
         |      [--root|--root-revision] [--commit C]        from --file or stdin)
         |      [--parent-commit P] [--in-reply-to ID]
+        |  git apply PATCH_ID [--check|--print]           apply a fetched kind:1617 patch to the local tree
+        |      [--repo PATH]                                (default: `git am`; --check dry-runs; --print emits it)
         |  git pr REPO --commit TIP --clone URL[,URL]     publish a kind:1618 pull request [DESC arg]
         |      [--subject S] [--branch-name N] [--merge-base C] [--label L[,L]]
         |  git pr-update PR --commit TIP --clone URL[,URL] publish a kind:1619 pull-request update
@@ -82,8 +84,9 @@ object GitCommands {
         |      [--open|--applied|--closed|--draft|--status a,b] [--limit N]
         |  git thread EVENT_ID                            print one item + its status timeline + comments
         |
-        |Comments & status:
+        |Comments, labels & status:
         |  git comment TARGET [BODY]                      NIP-22 kind:1111 comment (BODY arg or stdin)
+        |  git label TARGET LABEL[,LABEL] [--namespace N] NIP-32 kind:1985 labels on an issue/patch/PR
         |  git open|applied|close|draft TARGET [MESSAGE]  publish a kind:1630/1631/1632/1633 status
         |      applied: [--merge-commit C] [--commit C[,C]] [--patch ID[,ID]]
         |
@@ -98,7 +101,7 @@ object GitCommands {
         route(
             "git",
             tail,
-            "git <init|announce|state|list|show|grasp|browse|cat|log|issue|patch|pr|comment|open|applied|close|draft|issues|patches|prs|thread>",
+            "git <init|announce|state|list|show|grasp|browse|cat|log|issue|patch|apply|pr|comment|label|open|applied|close|draft|issues|patches|prs|thread>",
             mapOf(
                 "init" to { rest -> GitInitCommand.init(dataDir, rest) },
                 "announce" to { rest -> announce(dataDir, rest) },
@@ -118,6 +121,8 @@ object GitCommands {
                 "prs" to { rest -> GitReadCommands.prs(dataDir, rest) },
                 "thread" to { rest -> GitReadCommands.thread(dataDir, rest) },
                 "comment" to { rest -> GitCommentCommand.comment(dataDir, rest) },
+                "label" to { rest -> GitLabelCommand.label(dataDir, rest) },
+                "apply" to { rest -> GitApplyCommand.apply(dataDir, rest) },
                 "open" to { rest -> GitStatusCommands.open(dataDir, rest) },
                 "applied" to { rest -> GitStatusCommands.applied(dataDir, rest) },
                 "merged" to { rest -> GitStatusCommands.applied(dataDir, rest) },

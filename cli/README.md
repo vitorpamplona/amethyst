@@ -348,6 +348,7 @@ URL) **or** a raw `http(s)` clone URL. This is the git-object read side of
 |---|---|
 | `amy git issue REPO --subject S [BODY] [--hashtag T[,T]]` | Publish a kind:1621 issue. BODY from arg or stdin. |
 | `amy git patch REPO [--file PATH] [--root\|--root-revision] [--commit C] [--parent-commit P] [--in-reply-to ID]` | Publish a kind:1617 patch. Body is `git format-patch` output from `--file` or stdin. |
+| `amy git apply PATCH_ID [--check\|--print] [--repo PATH]` | Fetch a kind:1617 patch and apply it to the local working tree (`git am`); `--check` dry-runs, `--print` emits the patch. |
 | `amy git pr REPO --commit TIP --clone URL[,URL] [--subject S] [--branch-name N] [--merge-base C] [--label L[,L]] [DESC]` | Publish a kind:1618 pull request (references a pushed branch tip by clone URL + commit). |
 | `amy git pr-update PR --commit TIP --clone URL[,URL] [--merge-base C]` | Publish a kind:1619 update to a pull request's tip. |
 | `amy git issues\|patches\|prs REPO [--open\|--applied\|--closed\|--draft\|--status a,b] [--limit N]` | List a repo's issues / patches / PRs with their derived status. |
@@ -358,6 +359,7 @@ URL) **or** a raw `http(s)` clone URL. This is the git-object read side of
 | Command | What it does |
 |---|---|
 | `amy git comment TARGET [BODY]` | Reply to an issue/patch/PR/repo with a NIP-22 kind:1111 comment. BODY from arg or stdin. |
+| `amy git label TARGET LABEL[,LABEL] [--namespace N]` | Attach NIP-32 kind:1985 labels to an issue/patch/PR (namespace defaults to `ugc`). |
 | `amy git open TARGET [MSG]` | Publish a kind:1630 status (open / reopen / ready-for-review). |
 | `amy git applied TARGET [MSG] [--merge-commit C] [--commit C[,C]] [--patch ID[,ID]]` | Publish a kind:1631 status (applied / merged / resolved). Aliases: `merged`, `resolved`. |
 | `amy git close TARGET [MSG]` | Publish a kind:1632 status (closed). |

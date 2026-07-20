@@ -645,6 +645,8 @@ private fun printUsage() {
         |      [--subject S] [--branch-name N] [--merge-base C] [--label L[,L]]
         |  git pr-update PR --commit TIP --clone URL    publish a kind:1619 pull-request update
         |  git comment TARGET [BODY]                    NIP-22 kind:1111 comment on issue/patch/PR/repo
+        |  git label TARGET LABEL[,LABEL]               NIP-32 kind:1985 labels on an issue/patch/PR
+        |  git apply PATCH_ID [--check|--print]         apply a fetched kind:1617 patch to the local tree
         |  git open|applied|close|draft TARGET [MSG]    publish a kind:1630/1631/1632/1633 status
         |  git issues|patches|prs REPO                  list a repo's issues/patches/PRs + status
         |      [--open|--applied|--closed|--draft] [--limit N]

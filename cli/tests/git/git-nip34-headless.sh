@@ -182,11 +182,40 @@ banner "comment + status"
 CMT="$(M git comment "$ISSID" "thanks for reporting" --relay "$RELAY_URL")"
 assert_eq "$(echo "$CMT" | jq -r '.kind')" "1111" comment.kind "comment is NIP-22 kind 1111"
 
+LABEL="$(M git label "$ISSID" "bug,help-wanted" --relay "$RELAY_URL")"
+assert_eq "$(echo "$LABEL" | jq -r '.kind')" "1985" label.kind "label is NIP-32 kind 1985"
+assert_eq "$(echo "$LABEL" | jq -r '.labels | length')" "2" label.count "two labels attached"
+
 CLOSE="$(M git close "$ISSID" "wontfix" --relay "$RELAY_URL")"
 assert_eq "$(echo "$CLOSE" | jq -r '.kind')" "1632" close.kind "close status is kind 1632"
 
 APPLIED="$(M git applied "$PRID" "merged it" --merge-commit feed99 --commit feed02 --relay "$RELAY_URL")"
 assert_eq "$(echo "$APPLIED" | jq -r '.kind')" "1631" applied.kind "applied status is kind 1631"
+
+# =============================================================================
+# git apply — publish a real patch and apply it to a local working tree
+# =============================================================================
+banner "git apply (nostr patch → local git am)"
+SCRATCH="$(mk_home)/scratch"
+git init -q "$SCRATCH"
+git -C "$SCRATCH" config user.email a@b.c
+git -C "$SCRATCH" config user.name t
+echo "line1" >"$SCRATCH/f.txt"
+git -C "$SCRATCH" add f.txt
+git -C "$SCRATCH" commit -qm "init"
+# Make a real commit, capture its format-patch, then roll it back so `apply` can re-add it.
+echo "line2" >>"$SCRATCH/f.txt"
+git -C "$SCRATCH" commit -qam "add line2"
+PATCHTXT="$(git -C "$SCRATCH" format-patch -1 --stdout)"
+git -C "$SCRATCH" reset -q --hard HEAD~1
+APATCH="$(printf '%s' "$PATCHTXT" | M git patch "$ADDR" --root --relay "$RELAY_URL")"
+APID="$(echo "$APATCH" | jq -r '.event_id')"
+CHECK="$(M git apply "$APID" --check --repo "$SCRATCH")"
+assert_eq "$(echo "$CHECK" | jq -r '.mode')" "check" apply.check "apply --check dry-runs cleanly"
+APPLY="$(M git apply "$APID" --repo "$SCRATCH")"
+info "apply: $APPLY"
+assert_eq "$(echo "$APPLY" | jq -r '.applied')" "true" apply.applied "patch applied via git am"
+assert_eq "$(git -C "$SCRATCH" log --oneline | head -1 | sed 's/^[0-9a-f]* //')" "add line2" apply.commit "commit landed in the working tree"
 
 # =============================================================================
 # Status-deriving reads

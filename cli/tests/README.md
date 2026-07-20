@@ -72,10 +72,11 @@ Suite notes:
   git checkout (announce + state derived via `git`), announce (30617) + state
   (30618) + GRASP list (10317),
   issue (1621), patch (1617), pull request (1618) + update (1619), NIP-22
-  comment (1111), and status events (1630-1633), then asserts the
-  `issues`/`patches`/`prs`/`thread` reads derive the right status (a closed
-  issue reads `closed`, an applied PR reads `applied`) and that
-  `--open`/`--closed` filter correctly. Pass `--live` to additionally exercise
+  comment (1111), NIP-32 label (1985), and status events (1630-1633). It also
+  publishes a real `git format-patch` and `git apply`s it back into a scratch
+  working tree, and asserts the `issues`/`patches`/`prs`/`thread` reads derive
+  the right status (a closed issue reads `closed`, an applied PR reads
+  `applied`) and that `--open`/`--closed` filter correctly. Pass `--live` to additionally exercise
   the git smart-HTTP reads (`git browse`/`cat`/`log`) against a real public
   repo (`$LIVE_REPO`, default octocat/Hello-World) — skipped by default since
   it needs a reachable git host.
