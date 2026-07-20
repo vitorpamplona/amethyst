@@ -124,6 +124,76 @@ class AuthorityResolverTest {
     }
 
     @Test
+    fun aRevokeCannotStripAMemberWhoOutranksTheGranter() {
+        // A revoke carries no role ids, and "outrank every assigned role" is vacuously true over an
+        // empty list — so without a check on the TARGET's standing rank, any MANAGE_ROLES holder could
+        // strip anyone, the owner's admins included. Armada gates this the same way: a grant is an
+        // action ON the member, so demotion must be at least as hard as promotion.
+        val modWithManageRoles = """{"name":"Mod","position":5,"permissions":"9"}""" // KICK|MANAGE_ROLES
+        val adminGrantId = "31".repeat(32)
+        val adminGrant = grant(adminGrantId, alice, listOf(adminRole), granter = owner)
+        val revokeByMod =
+            ControlEdition(
+                ControlEntityKind.GRANT,
+                adminGrantId.hexToByteArray(),
+                1,
+                adminGrant.hash,
+                null,
+                """{"member":"$alice","role_ids":[]}""", // strip the admin
+                bob, // position 5, holds MANAGE_ROLES but is outranked by Alice
+                "grant-$adminGrantId-revoke",
+                1,
+            )
+
+        val r =
+            AuthorityResolver.resolve(
+                listOf(
+                    role(adminRole, adminJson), // position 1
+                    role(modRole, modWithManageRoles), // position 5
+                    adminGrant,
+                    grant("32".repeat(32), bob, listOf(modRole), granter = owner),
+                    revokeByMod,
+                ),
+                owner,
+            )
+
+        assertEquals(1L, r.rank(alice), "a moderator must not be able to demote an admin above it")
+    }
+
+    @Test
+    fun anAdminCanStillRevokeAMemberBeneathIt() {
+        // The gate must not block legitimate moderation: an admin may revoke a moderator's roles.
+        val modGrantId = "32".repeat(32)
+        val modGrant = grant(modGrantId, bob, listOf(modRole), granter = owner)
+        val revokeByAdmin =
+            ControlEdition(
+                ControlEntityKind.GRANT,
+                modGrantId.hexToByteArray(),
+                1,
+                modGrant.hash,
+                null,
+                """{"member":"$bob","role_ids":[]}""",
+                alice, // admin at position 1, outranks Bob at 5
+                "grant-$modGrantId-revoke",
+                1,
+            )
+
+        val r =
+            AuthorityResolver.resolve(
+                listOf(
+                    role(adminRole, adminJson),
+                    role(modRole, modJson),
+                    grant("31".repeat(32), alice, listOf(adminRole), granter = owner),
+                    modGrant,
+                    revokeByAdmin,
+                ),
+                owner,
+            )
+
+        assertNull(r.rank(bob), "an admin may still revoke a moderator beneath it")
+    }
+
+    @Test
     fun aManageRolesHolderCanStillManageRolesBeneathIt() {
         // The gate must not break legitimate delegation: an admin may still edit a role below its rank.
         val modV0 = role(modRole, modJson)

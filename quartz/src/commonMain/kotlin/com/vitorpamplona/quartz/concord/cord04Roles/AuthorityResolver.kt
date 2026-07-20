@@ -212,8 +212,15 @@ class AuthorityResolver private constructor(
                                 if (!holdsManageRoles(granter)) return@filter false
                                 val granterRank = rankOf(granter) ?: return@filter false
                                 val g = ConcordJson.decodeOrNull<GrantEntity>(e.content) ?: return@filter false
-                                // Must strictly outrank each assigned role that actually exists.
-                                g.roleIds.all { rid -> newRoles[rid]?.let { granterRank < it.position } ?: true }
+                                // Must strictly outrank each assigned role that actually exists...
+                                if (!g.roleIds.all { rid -> newRoles[rid]?.let { granterRank < it.position } ?: true }) return@filter false
+                                // ...and outrank the member being edited. A grant is an action ON that
+                                // member, and a REVOKE carries no role ids at all — `all {}` over an
+                                // empty list is vacuously true, so without this any MANAGE_ROLES holder
+                                // could strip anyone's roles, the owner's admins included. Demotion has
+                                // to be at least as hard as promotion.
+                                val targetRank = rankOf(g.member.lowercase())
+                                targetRank == null || granterRank < targetRank
                             },
                         ) ?: continue
                     val g = ConcordJson.decodeOrNull<GrantEntity>(head.content) ?: continue

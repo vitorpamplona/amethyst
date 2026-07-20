@@ -2607,14 +2607,19 @@ class Account(
      * session rebuilds at the new epoch and its next-rekey address moves on, so a stale
      * wrap never re-triggers. Called on every Concord revision tick.
      *
+     * Authority is the roster, never key possession: any non-banned BAN-holder may
+     * rotate, including for the owner. The owner deliberately does NOT refuse a root
+     * authored by someone else — refusing would strand the owner alone on the dead
+     * epoch whenever an admin legitimately rotates, and would diverge from Armada,
+     * which forks a community across clients. Self-escalation to BAN is prevented
+     * upstream by the role rank gate in AuthorityResolver.
+     *
      * KNOWN LIMIT — a rotation carries only (newRoot, newEpoch, rotator); there is no
-     * recipient list, so a receiver cannot tell who was left out. A BAN-holder can
-     * therefore still evict the OWNER by simply omitting them: every other member
-     * adopts, the owner receives nothing and is stranded on the old epoch. Refusing a
-     * foreign rotation as the owner (above) stops the worse variant — being carried
-     * onto an attacker-minted root — but not exclusion. Closing that needs a protocol
-     * change: a recipient commitment the receiver can check the owner against, or
-     * owner co-signing of a rotation. Tracked for CORD-06.
+     * recipient list, so a receiver cannot tell who was left out, and a BAN-holder can
+     * evict anyone (the owner included) by omission. Armada does not prevent this
+     * either; it *recovers* from it, re-resolving the invite link the member joined
+     * through and merging forward to the higher epoch ("stranded recovery"). Amethyst
+     * has no equivalent yet, so a stranded member stays stranded. Tracked for CORD-06.
      */
     private suspend fun drainConcordRekeys() {
         if (!isWriteable()) return
@@ -2632,12 +2637,6 @@ class Account(
                 ) ?: continue
             if (received.newEpoch <= entry.rootEpoch) continue
             val authority = session.state.value?.authority ?: continue
-
-            // The owner never adopts a root someone else minted. A rotation replaces the community
-            // root, so a rotator who includes the owner as a recipient would hand themselves the keys
-            // to the owner's own community — the owner would follow them onto an attacker-chosen
-            // epoch. The owner changes epoch only by rotating themselves.
-            if (authority.isOwner(signer.pubKey) && !received.rotator.equals(signer.pubKey, ignoreCase = true)) continue
 
             // hasPermission, not effectivePermissions: the latter ignores the banlist, so a BAN-holder
             // who has themselves been banned could still rotate the whole community.
