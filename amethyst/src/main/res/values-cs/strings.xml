@@ -31,6 +31,7 @@
     <string name="channel_image">Obrázek kanálu</string>
     <string name="referenced_event_not_found">Odkazovaná událost nebyla nalezena</string>
     <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
+    <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="group_picture">Obrázek skupiny</string>
     <string name="explicit_content">Explicitní obsah</string>
     <string name="relay_notice">Oznámení relé</string>
@@ -832,6 +833,7 @@
     <string name="napplet_consent_query">Tento nApplet chce číst eventy z vašich relays.</string>
     <string name="napplet_consent_storage">Tento nApplet chce používat své soukromé úložiště.</string>
     <string name="napplet_consent_pay">Tento nApplet chce zaplatit Lightning fakturu.</string>
+    <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <string name="napplet_consent_resource">Tento nApplet chce načíst webový zdroj.</string>
     <string name="napplet_consent_upload">Tento nApplet chce nahrát soubor na váš mediální server.</string>
     <string name="napplet_consent_notify">Tento nApplet vám chce zobrazovat oznámení.</string>
@@ -842,6 +844,15 @@
         <item quantity="many">Tento nApplet chce zaplatit Lightning fakturu za %1$d sats.</item>
         <item quantity="other">Tento nApplet chce zaplatit Lightning fakturu za %1$d sats.</item>
     </plurals>
+    <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
+         kind-only summary would hide what is actually being signed. These replaceable lists are
+         already cached on the account, so the dialog diffs the proposed list against the current
+         one and reports what actually changes rather than a raw total. -->
+    <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
+         the display name, shown next to their avatar. -->
+    <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Připojit k Nostr</string>
     <string name="napplet_connect_subtitle">se chce připojit k vašemu účtu Nostr</string>
@@ -877,6 +888,10 @@
     <string name="napplet_op_encrypt">zašifrovat zprávu</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">číst vaše soukromé zprávy</string>
+    <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Připojené aplikace</string>
     <string name="napplet_permissions_revoke_all">Odvolat všechna oprávnění</string>
