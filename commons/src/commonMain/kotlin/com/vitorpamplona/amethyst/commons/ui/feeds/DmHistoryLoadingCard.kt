@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.action_dismiss
+import com.vitorpamplona.amethyst.commons.resources.action_try_again
 import com.vitorpamplona.amethyst.commons.resources.chats_history_all_caught_up
 import com.vitorpamplona.amethyst.commons.resources.chats_history_by_relay
 import com.vitorpamplona.amethyst.commons.resources.chats_history_incomplete
@@ -377,14 +378,32 @@ private fun relayShortName(relay: NormalizedRelayUrl): String =
 fun RelayReachDetailDialog(
     cursors: List<RelayReachCursor>,
     formatReachDate: (epochSeconds: Long) -> String,
+    // When provided and at least one relay is stalled, the dialog offers a "Try Again" action that
+    // re-advances the stalled relays on demand (and suppresses the "retries on reopen" hint, since the
+    // caller retries actively). Null keeps the passive, dismiss-only dialog (the DM callers).
+    onRetry: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val rows = remember(cursors) { cursors.sortedBy { it.reachedUntil } }
+    val showRetry = onRetry != null && rows.any { it.state == RelayReachState.STALLED }
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_dismiss)) }
+            if (showRetry) {
+                TextButton(onClick = {
+                    onRetry?.invoke()
+                    onDismiss()
+                }) { Text(stringResource(Res.string.action_try_again)) }
+            } else {
+                TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_dismiss)) }
+            }
         },
+        dismissButton =
+            if (showRetry) {
+                { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_dismiss)) } }
+            } else {
+                null
+            },
         title = { Text(stringResource(Res.string.chats_history_by_relay)) },
         text = {
             Column(
@@ -425,7 +444,9 @@ fun RelayReachDetailDialog(
                                 maxLines = 1,
                             )
                         }
-                        if (c.state == RelayReachState.STALLED) StalledRetryHint()
+                        // The passive "retries on reopen" caption only applies without an active Try Again
+                        // action; with one, the button (and the caller's auto-retry) covers it.
+                        if (c.state == RelayReachState.STALLED && onRetry == null) StalledRetryHint()
                     }
                 }
             }

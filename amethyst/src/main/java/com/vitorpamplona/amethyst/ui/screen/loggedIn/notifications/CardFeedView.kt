@@ -92,6 +92,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun RenderCardFeed(
@@ -204,6 +205,26 @@ private fun FeedLoaded(
         if (shouldLoadMore && !loadingMore && !exhausted) history.advanceAll()
     }
 
+    // Auto-retry faulty relays with backoff. The buffer driver above stops once every relay is done-or-
+    // stalled (exhausted); when some are merely stalled (a slow/unreachable relay, not a real end) this
+    // keeps re-advancing them so recovery doesn't depend on the user scrolling to the marker or reopening.
+    // A single non-restarting effect so the backoff survives the transient in-flight blips each retry causes.
+    LaunchedEffect(history) {
+        var backoffMs = STALLED_RETRY_MIN_MS
+        while (true) {
+            history.status.first { it.exhausted && it.stalledCount > 0 } // park until stuck on a stalled relay
+            while (true) {
+                delay(backoffMs)
+                val s = history.status.value
+                if (!(s.exhausted && s.stalledCount > 0)) break // recovered (a relay answered, or scroll retried)
+                history.advanceAll()
+                history.loadingMore.first { !it } // let the retry settle before escalating
+                backoffMs = (backoffMs * 2).coerceAtMost(STALLED_RETRY_MAX_MS)
+            }
+            backoffMs = STALLED_RETRY_MIN_MS // reset for the next stall
+        }
+    }
+
     // One cursor per relay: its reached depth, state (reaching / stalled / done) and the advance() that pulls
     // its next page. A done relay's marker sinks to the oldest end reading "fully loaded".
     val limits =
@@ -228,7 +249,8 @@ private fun FeedLoaded(
     // The relays behind a tapped in-stream marker; non-null shows the per-relay breakdown popup.
     var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }
     syncDetail?.let { detail ->
-        RelayReachDetailDialog(detail, ::formatHistoryReachDate) { syncDetail = null }
+        // Tap-through offers a Try Again on stalled relays, so a user who sees a bad relay can act on it.
+        RelayReachDetailDialog(detail, ::formatHistoryReachDate, onRetry = { history.advanceAll() }) { syncDetail = null }
     }
 
     StickToTopOnPrepend(listState, items.list.firstOrNull()?.id())
@@ -382,6 +404,11 @@ private const val BOOTSTRAP_DEBOUNCE_MS = 1200L
 // How many already-loaded rows to keep below the last visible one before pulling the next older page.
 // Large on purpose: the feed reads as infinite scroll, the user practically never reaches the bottom.
 private const val NOTIFICATION_LOOKAHEAD_BUFFER = 100
+
+// Backoff bounds for auto-retrying stalled (slow/unreachable) relays: first retry ~3s after a stall,
+// doubling up to ~30s, so a faulty relay is retried gently but keeps a chance to recover on its own.
+private const val STALLED_RETRY_MIN_MS = 3_000L
+private const val STALLED_RETRY_MAX_MS = 30_000L
 
 private fun reachState(p: RelayPagingProgress): RelayReachState =
     when {
