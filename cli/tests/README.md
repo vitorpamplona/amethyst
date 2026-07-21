@@ -2,7 +2,7 @@
 
 Shell-based end-to-end harnesses that drive the `amy` CLI binary — against a
 loopback `nostr-rs-relay`, an embedded `amy serve` relay, live public servers,
-or no relay at all, depending on the suite. Ten directories:
+or no relay at all, depending on the suite. Eleven directories:
 
 ```
 cli/tests/
@@ -19,6 +19,8 @@ cli/tests/
 │   ├── dm-interop-headless.sh
 │   ├── setup.sh                    # preflight + identities
 │   └── tests-dm.sh
+├── git/                   # NIP-34 git collaboration vs embedded `amy serve`
+│   └── git-nip34-headless.sh
 ├── marmot/                # Marmot / MLS group-messaging interop
 │   ├── marmot-interop.sh           # interactive — prompts Amethyst Android UI
 │   ├── marmot-interop-headless.sh  # zero-prompt
@@ -65,6 +67,19 @@ Suite notes:
 - **`sync/sync-deletions-headless.sh`** proves NIP-77 deletion propagation
   both directions (plus the `--no-sync-deletions` opt-out) against
   `amy serve`, with one `$HOME` per account so stores don't share.
+- **`git/git-nip34-headless.sh`** drives the full NIP-34 collaboration surface
+  against `amy serve`: `git init` bootstrapping a repo from the harness's own
+  git checkout (announce + state derived via `git`), announce (30617) + state
+  (30618) + GRASP list (10317),
+  issue (1621), patch (1617), pull request (1618) + update (1619), NIP-22
+  comment (1111), NIP-32 label (1985), and status events (1630-1633). It also
+  publishes a real `git format-patch` and `git apply`s it back into a scratch
+  working tree, and asserts the `issues`/`patches`/`prs`/`thread` reads derive
+  the right status (a closed issue reads `closed`, an applied PR reads
+  `applied`) and that `--open`/`--closed` filter correctly. Pass `--live` to additionally exercise
+  the git smart-HTTP reads (`git browse`/`cat`/`log`) against a real public
+  repo (`$LIVE_REPO`, default octocat/Hello-World) — skipped by default since
+  it needs a reachable git host.
 
 The Marmot harnesses come in two flavours, same scenarios:
 

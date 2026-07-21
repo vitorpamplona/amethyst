@@ -38,11 +38,16 @@ fun TagArrayBuilder<GitPullRequestEvent>.repository(rep: ATag) = addUnique(rep.t
 
 fun TagArrayBuilder<GitPullRequestEvent>.repository(rep: EventHintBundle<GitRepositoryEvent>) = addUnique(rep.toATag().toATagArray())
 
-fun TagArrayBuilder<GitPullRequestEvent>.euc(commit: String) = addUnique(EucTag.assemble(commit))
+// NIP-34 pull requests use the plain `["r", <commit>]` shape; the `"euc"` marker
+// is only on the kind-30617 announcement (see the patch builder for the rationale).
+fun TagArrayBuilder<GitPullRequestEvent>.euc(commit: String) = addUnique(arrayOf(EucTag.TAG_NAME, commit))
 
 fun TagArrayBuilder<GitPullRequestEvent>.currentCommit(commit: String) = addUnique(CurrentCommitTag.assemble(commit))
 
 fun TagArrayBuilder<GitPullRequestEvent>.cloneUrl(url: String) = add(CloneTag.assemble(url))
+
+/** Emit all clone URLs as one NIP-34 multi-value `["clone", url1, url2, …]` tag (the spec/ngit form). */
+fun TagArrayBuilder<GitPullRequestEvent>.cloneUrls(urls: List<String>) = addUnique(CloneTag.assemble(urls))
 
 fun TagArrayBuilder<GitPullRequestEvent>.subject(subject: String) = addUnique(SubjectTag.assemble(subject))
 

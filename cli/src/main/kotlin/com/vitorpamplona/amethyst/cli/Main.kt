@@ -624,14 +624,34 @@ private fun printUsage() {
         |  blossom mirror --server URL SOURCE-URL       ask the server to mirror a blob (BUD-04)
         |
         |Git (NIP-34):
+        |  git init [--name N] [--clone URL]            bootstrap a repo from the local git checkout
+        |      [--no-state] [--repo PATH]                 (derives fields via `git`; publishes 30617+30618)
         |  git announce --name N [--description D]      publish a kind:30617 repo announcement
         |      [--clone URL[,URL]] [--web URL[,URL]]     (--d sets the identifier; defaults to name)
         |      [--relay URL[,URL]] [--maintainer HEX[,]]
         |      [--hashtag T[,T]] [--earliest-commit C] [--d ID]
+        |  git state REPO [--head B] [--branch n=c[,…]] publish a kind:30618 repository state
+        |      [--tag n=c[,…]]
         |  git list [USER]                              list a user's repo announcements (default self)
         |  git show NADDR|kind:pubkey:id                print one repo announcement
-        |  git issue NADDR|coords --subject S [BODY]    publish a kind:1621 issue against a repo
-        |      [--hashtag T[,T]] [--relay URL[,URL]]     (BODY from arg or stdin)
+        |  git grasp list [USER] | set URL[,URL]        GRASP hosting-server list (kind 10317)
+        |  git browse REPO [PATH] | cat REPO PATH       read repo tree/file over git smart-HTTP
+        |  git log REPO [--depth N]                     recent commit history (read-only)
+        |  git issue REPO --subject S [BODY]            publish a kind:1621 issue against a repo
+        |      [--hashtag T[,T]]                          (BODY from arg or stdin)
+        |  git patch REPO [--file P] [--root]           publish a kind:1617 patch (format-patch/stdin)
+        |      [--commit C] [--parent-commit P] [--in-reply-to ID]
+        |  git pr REPO --commit TIP --clone URL[,URL]   publish a kind:1618 pull request [DESC]
+        |      [--subject S] [--branch-name N] [--merge-base C] [--label L[,L]]
+        |  git pr-update PR --commit TIP --clone URL    publish a kind:1619 pull-request update
+        |  git comment TARGET [BODY]                    NIP-22 kind:1111 comment on issue/patch/PR/repo
+        |  git label TARGET LABEL[,LABEL]               NIP-32 kind:1985 labels on an issue/patch/PR
+        |  git apply PATCH_ID [--check|--print]         apply a fetched kind:1617 patch to the local tree
+        |  git open|applied|close|draft TARGET [MSG]    publish a kind:1630/1631/1632/1633 status
+        |  git issues|patches|prs REPO                  list a repo's issues/patches/PRs + status
+        |      [--open|--applied|--closed|--draft] [--limit N]
+        |  git thread EVENT_ID                          print an item + status timeline + comments
+        |  (git-packfile clone/push transport is out of scope — see cli/ROADMAP.md)
         |
         |Podcasts (NIP-F4):
         |  podcast metadata --title T --image URL        publish kind:10154 show metadata

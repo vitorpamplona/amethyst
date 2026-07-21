@@ -87,7 +87,9 @@ class GitPullRequestEvent(
 
     fun currentCommit(): String? = tags.firstNotNullOfOrNull(CurrentCommitTag::parse)
 
-    fun cloneUrls(): List<String> = tags.mapNotNull(CloneTag::parse)
+    // Tolerant of both the NIP-34 spec form (one multi-value `["clone", a, b]` tag,
+    // which ngit emits) and the legacy repeated form; deduped.
+    fun cloneUrls(): List<String> = tags.flatMap(CloneTag::parseAll).distinct()
 
     fun subject(): String? = tags.firstNotNullOfOrNull(SubjectTag::parse)
 
@@ -138,7 +140,7 @@ class GitPullRequestEvent(
             pTag(repository.event.pubKey, repository.authorHomeRelay)
             if (notify.isNotEmpty()) pTags(notify)
             currentCommit(currentCommit)
-            cloneUrls.forEach { cloneUrl(it) }
+            if (cloneUrls.isNotEmpty()) cloneUrls(cloneUrls)
             subject?.let { subject(it) }
             if (labels.isNotEmpty()) hashtags(labels)
             branchName?.let { branchName(it) }

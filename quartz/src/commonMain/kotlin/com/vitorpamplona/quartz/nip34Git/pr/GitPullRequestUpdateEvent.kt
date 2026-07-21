@@ -81,7 +81,8 @@ class GitPullRequestUpdateEvent(
 
     fun currentCommit(): String? = tags.firstNotNullOfOrNull(CurrentCommitTag::parse)
 
-    fun cloneUrls(): List<String> = tags.mapNotNull(CloneTag::parse)
+    // Tolerant of both the multi-value and legacy repeated `clone` forms; deduped.
+    fun cloneUrls(): List<String> = tags.flatMap(CloneTag::parseAll).distinct()
 
     fun earliestUniqueCommit(): String? = tags.firstOrNull { it.size > 1 && it[0] == "r" && it[1].isNotEmpty() }?.get(1)
 
@@ -119,7 +120,7 @@ class GitPullRequestUpdateEvent(
             pTag(repository.event.pubKey, repository.authorHomeRelay)
             if (notify.isNotEmpty()) pTags(notify)
             currentCommit(currentCommit)
-            cloneUrls.forEach { cloneUrl(it) }
+            if (cloneUrls.isNotEmpty()) cloneUrls(cloneUrls)
             mergeBase?.let { mergeBase(it) }
             initializer()
         }

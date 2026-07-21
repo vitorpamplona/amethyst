@@ -36,11 +36,13 @@ fun TagArrayBuilder<GitRepositoryEvent>.description(description: String) = addUn
 
 fun TagArrayBuilder<GitRepositoryEvent>.webUrl(webUrl: String) = add(WebTag.assemble(webUrl))
 
-fun TagArrayBuilder<GitRepositoryEvent>.webUrls(webUrls: List<String>) = addAll(webUrls.map(WebTag::assemble))
+/** Emit all browse URLs as one NIP-34 multi-value `["web", url1, url2, …]` tag (the spec/ngit form). */
+fun TagArrayBuilder<GitRepositoryEvent>.webUrls(webUrls: List<String>) = addUnique(WebTag.assemble(webUrls))
 
 fun TagArrayBuilder<GitRepositoryEvent>.cloneUrl(cloneUrl: String) = add(CloneTag.assemble(cloneUrl))
 
-fun TagArrayBuilder<GitRepositoryEvent>.cloneUrls(cloneUrls: List<String>) = addAll(cloneUrls.map(CloneTag::assemble))
+/** Emit all clone URLs as one NIP-34 multi-value `["clone", url1, url2, …]` tag (the spec/ngit form). */
+fun TagArrayBuilder<GitRepositoryEvent>.cloneUrls(cloneUrls: List<String>) = addUnique(CloneTag.assemble(cloneUrls))
 
 fun TagArrayBuilder<GitRepositoryEvent>.relays(relays: List<String>) = addUnique(RelaysTag.assemble(relays))
 

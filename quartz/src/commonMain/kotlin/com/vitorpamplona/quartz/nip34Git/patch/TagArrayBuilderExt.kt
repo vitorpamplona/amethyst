@@ -38,12 +38,12 @@ fun TagArrayBuilder<GitPatchEvent>.repository(rep: EventHintBundle<GitRepository
 
 /**
  * Adds the earliest-unique-commit `r` tag used by patches to point at the
- * target repository. NIP-34 uses the plain `["r", <commit>]` shape for
- * patches (unlike the repository announcement which marks the tag with
- * `euc`). We also emit the marked form so the same event can be matched by
- * implementations that look for the marker.
+ * target repository. NIP-34 uses the plain `["r", <commit>]` shape for patches
+ * — the `"euc"` marker appears only on the kind-30617 repository announcement
+ * (confirmed against the ngit reference implementation). A `#r` filter still
+ * matches either shape (both key off the value at index 1).
  */
-fun TagArrayBuilder<GitPatchEvent>.euc(commit: String) = addUnique(EucTag.assemble(commit))
+fun TagArrayBuilder<GitPatchEvent>.euc(commit: String) = addUnique(arrayOf(EucTag.TAG_NAME, commit))
 
 fun TagArrayBuilder<GitPatchEvent>.commit(commit: String) = addUnique(CommitTag.assemble(commit))
 
