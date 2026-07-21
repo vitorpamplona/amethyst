@@ -18,31 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.buzz.forum
+package com.vitorpamplona.quartz.buzz.threading
 
-import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
-
-/** The `h` channel tag (NIP-29) scoping a Buzz forum event to its channel UUID. */
-fun <T : Event> TagArrayBuilder<T>.forumChannel(channelId: String) = addUnique(GroupIdTag.assemble(channelId))
-
-/** A `p` mention per pubkey, deduplicated. Mirrors `mention_tags` in `builders.rs`. */
-fun <T : Event> TagArrayBuilder<T>.forumMentions(mentions: List<HexKey>) = mentions.forEach { addUniqueValueIfNew(PTag.assemble(it, null)) }
-
-/** The `e` tag naming a forum vote's target event. */
-fun <T : Event> TagArrayBuilder<T>.forumVoteTarget(targetEventId: HexKey) = addUnique(ETag.assemble(targetEventId, null, null))
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 
 /**
- * NIP-10 thread e-tags for a forum comment. Buzz threads streams and forum comments
- * identically (`thread_tags` in `builders.rs`), so this delegates to the shared
- * [buzzThread] verb.
+ * Buzz's NIP-10 thread e-tags, shared by stream messages (40002) and forum comments
+ * (45003) — both mirror `thread_tags` in `buzz-sdk/src/builders.rs`:
+ * - direct reply (`root == parent`): one `["e", root, "", "reply"]`
+ * - nested reply (`root != parent`): `["e", root, "", "root"]` + `["e", parent, "", "reply"]`
+ *
+ * The empty relay slot is emitted verbatim so the marker stays at index 3, matching the
+ * reference wire form. ([MarkedETag.assemble] cannot be used here: its `arrayOfNotNull`
+ * drops the null relay slot, sliding the marker into index 2.)
  */
-fun <T : Event> TagArrayBuilder<T>.forumThread(
+fun <T : Event> TagArrayBuilder<T>.buzzThread(
     rootEventId: HexKey,
     parentEventId: HexKey,
-) = buzzThread(rootEventId, parentEventId)
+) = if (rootEventId == parentEventId) {
+    add(arrayOf(MarkedETag.TAG_NAME, rootEventId, "", MarkedETag.MARKER.REPLY.code))
+} else {
+    add(arrayOf(MarkedETag.TAG_NAME, rootEventId, "", MarkedETag.MARKER.ROOT.code))
+    add(arrayOf(MarkedETag.TAG_NAME, parentEventId, "", MarkedETag.MARKER.REPLY.code))
+}

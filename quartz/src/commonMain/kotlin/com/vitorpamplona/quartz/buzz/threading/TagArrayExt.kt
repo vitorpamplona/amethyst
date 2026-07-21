@@ -18,28 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.buzz.forum
+package com.vitorpamplona.quartz.buzz.threading
 
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 
-/** The `h` channel UUID this forum event belongs to. */
-fun TagArray.forumChannel(): String? = firstTagValue(GroupIdTag.TAG_NAME)
+/**
+ * Positional reader for Buzz's thread e-tags (`["e", id, "", "root"|"reply"]`).
+ * [MarkedETag.parse] rejects the empty relay slot Buzz emits, so the marker is read
+ * positionally: index 3 in the canonical 4-element form, tolerating the relay-less
+ * 3-element form (`["e", id, "reply"]`) with the marker at index 2.
+ */
+private fun Array<String>.buzzMarkedEventId(marker: MarkedETag.MARKER): HexKey? {
+    if (size < 3 || this[0] != MarkedETag.TAG_NAME || this[1].length != 64) return null
+    val code = marker.code
+    return if ((size >= 4 && this[3] == code) || this[2] == code) this[1] else null
+}
 
-/** The `p` mentions carried by a forum post/comment. */
-fun TagArray.forumMentions(): List<HexKey> = mapNotNull(PTag::parseKey)
+/** The thread root this event replies under, from its marked `root` e-tag. */
+fun TagArray.buzzThreadRoot(): HexKey? = firstNotNullOfOrNull { it.buzzMarkedEventId(MarkedETag.MARKER.ROOT) }
 
-/** The `e` target event of a forum vote (`kind:45002`). */
-fun TagArray.forumVoteTarget(): HexKey? = firstNotNullOfOrNull(ETag::parseId)
-
-/** The NIP-10 `root`-marked thread event id of a forum comment (null for a direct reply). */
-fun TagArray.forumThreadRoot(): HexKey? = buzzThreadRoot()
-
-/** The NIP-10 `reply`-marked immediate-parent event id of a forum comment. */
-fun TagArray.forumThreadReply(): HexKey? = buzzThreadReply()
+/** The direct parent this event replies to, from its marked `reply` e-tag. */
+fun TagArray.buzzThreadReply(): HexKey? = firstNotNullOfOrNull { it.buzzMarkedEventId(MarkedETag.MARKER.REPLY) }

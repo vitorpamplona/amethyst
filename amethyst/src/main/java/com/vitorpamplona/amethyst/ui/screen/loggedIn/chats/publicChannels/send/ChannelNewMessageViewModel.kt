@@ -70,6 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.threading.buzzThread
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
@@ -87,6 +89,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -688,16 +691,13 @@ open class ChannelNewMessageViewModel :
                 // clients send. Checked BEFORE RelayGroupChannel: Buzz is a subclass.
                 StreamMessageV2Event.build(channel.groupId.id, tagger.message) {
                     replyTo.value?.let { parent ->
-                        val parentRoot =
-                            parent.event
-                                ?.tags
-                                ?.firstOrNull { it.size >= 4 && it[0] == "e" && it[3] == "root" }
-                                ?.get(1)
-                        if (parentRoot != null && parentRoot != parent.idHex) {
-                            add(arrayOf("e", parentRoot, "", "root"))
-                        }
-                        add(arrayOf("e", parent.idHex, "", "reply"))
-                        parent.author?.pubkeyHex?.let { add(arrayOf("p", it)) }
+                        // Replying inside the parent's thread: the parent's own root
+                        // marker (when it is itself a reply) becomes our root, else the
+                        // parent starts the thread. buzzThread collapses to a single
+                        // "reply" marker when root == parent, per thread_tags.
+                        val root = parent.event?.tags?.buzzThreadRoot() ?: parent.idHex
+                        buzzThread(root, parent.idHex)
+                        parent.author?.pubkeyHex?.let { pTag(PTag(it)) }
                     }
 
                     hashtags(findHashtags(tagger.message))

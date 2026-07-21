@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -67,13 +68,29 @@ class BuzzTimelineKindsTest {
     }
 
     @Test
-    fun openChatTailFilterCarriesBuzzKindsOnlyOnBuzzRelays() {
+    fun openChatTailAlwaysCarriesBuzzKindsAsDialectBootstrap() {
+        // The single-group open-channel REQ is what DISCOVERS the dialect: with no
+        // filter asking for a Buzz kind, none ever arrives and the relay is never
+        // marked. It therefore always includes the Buzz kinds, even unmarked.
+        val vanillaFilter = buildRelayGroupOpenChatTailFilter(GroupId("g1", vanillaRelay), sinceEpoch = 0L)
+        assertTrue(vanillaFilter.filter.kinds!!.contains(StreamMessageV2Event.KIND))
+    }
+
+    @Test
+    fun fleetWideJoinedTailWidensOnlyOnMarkedRelays() {
         BuzzRelayDialect.mark(buzzRelay)
 
-        val buzzFilter = buildRelayGroupOpenChatTailFilter(GroupId("g1", buzzRelay), sinceEpoch = 0L)
-        val vanillaFilter = buildRelayGroupOpenChatTailFilter(GroupId("g1", vanillaRelay), sinceEpoch = 0L)
+        val filters =
+            buildRelayGroupJoinedChatTailFilters(
+                listOf(
+                    GroupTag("g1", buzzRelay.url),
+                    GroupTag("g2", vanillaRelay.url),
+                ),
+                sinceEpoch = 0L,
+            )
 
-        assertTrue(buzzFilter.filter.kinds!!.contains(StreamMessageV2Event.KIND))
-        assertFalse(vanillaFilter.filter.kinds!!.contains(StreamMessageV2Event.KIND))
+        val byRelay = filters.associateBy { it.relay }
+        assertTrue(byRelay[buzzRelay]!!.filter.kinds!!.contains(StreamMessageV2Event.KIND))
+        assertFalse(byRelay[vanillaRelay]!!.filter.kinds!!.contains(StreamMessageV2Event.KIND))
     }
 }

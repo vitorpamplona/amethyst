@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -189,6 +191,71 @@ class BuzzRelayLiveInteropTest {
             assertEquals(msg.id, echoed.id, "round-tripped event must be byte-identical (same id)")
             frames.nextOf("EOSE")
             ws.close(1000, "done")
+        }
+    }
+
+    /**
+     * The workspace lifecycle Amethyst's group UI drives: discover the channel via its
+     * relay-signed 39000 metadata, join it with a NIP-29 kind-9021 request from a
+     * different member, post into it, then leave with kind-9022 — all against the real
+     * relay, using the exact Quartz events the UI sends.
+     */
+    @Test
+    fun discoverJoinPostAndLeave() {
+        if (!envReady() || ownerSk == null) {
+            println("SKIP: BUZZ_RELAY_WS / BUZZ_MEMBER_SK / BUZZ_OWNER_SK not set")
+            return
+        }
+        runBlocking {
+            val creator = NostrSignerInternal(KeyPair(memberSk!!.hexToByteArray()))
+            val (ws, frames) = authedSocket(creator)
+
+            val channelId = UUID.randomUUID().toString()
+            val create =
+                creator.sign(
+                    CreateGroupEvent.build(channelId) {
+                        add(arrayOf("name", "amethyst-lifecycle"))
+                    },
+                )
+            ws.send("""["EVENT",${create.toJson()}]""")
+            assertTrue("true" in frames.nextOf("OK"))
+
+            // SEE: the relay-signed kind-39000 discovery metadata must be queryable —
+            // this is what materializes the channel in Amethyst's group directory.
+            ws.send("""["REQ","meta",{"kinds":[39000],"#d":["$channelId"]}]""")
+            val metaFrame = frames.nextOf("EVENT")
+            val meta = Event.fromJson(metaFrame.substringAfter(",\"meta\",").dropLast(1))
+            assertEquals(39000, meta.kind)
+            assertTrue(
+                meta.tags.any { it.size > 1 && it[0] == "d" && it[1] == channelId },
+                "39000 must be addressed by the channel id",
+            )
+            frames.nextOf("EOSE")
+
+            // JOIN: a different workspace member requests membership with kind 9021 —
+            // the same event Amethyst's NIP-29 Join button sends.
+            val joiner = NostrSignerInternal(KeyPair(ownerSk.hexToByteArray()))
+            val (ws2, frames2) = authedSocket(joiner)
+            val join =
+                joiner.sign(
+                    JoinRequestEvent.build(channelId),
+                )
+            ws2.send("""["EVENT",${join.toJson()}]""")
+            val joinOk = frames2.nextOf("OK")
+            assertTrue("true" in joinOk, "join (9021) should be accepted: $joinOk")
+
+            // POST: the joiner can now publish a 40002 into the channel.
+            val msg = joiner.sign(StreamMessageV2Event.build(channelId, "joined and posting"))
+            ws2.send("""["EVENT",${msg.toJson()}]""")
+            assertTrue("true" in frames2.nextOf("OK"), "post after join should be accepted")
+
+            // LEAVE: kind 9022, the NIP-29 leave request.
+            val leave = joiner.sign(LeaveRequestEvent.build(channelId))
+            ws2.send("""["EVENT",${leave.toJson()}]""")
+            assertTrue("true" in frames2.nextOf("OK"), "leave (9022) should be accepted")
+
+            ws.close(1000, "done")
+            ws2.close(1000, "done")
         }
     }
 

@@ -180,7 +180,15 @@ fun buildRelayGroupJoinedChatTailFilters(
         )
     }
 
-/** The recent-chat live tail for a single open group, `#h`-scoped on its host relay. */
+/**
+ * The recent-chat live tail for a single open group, `#h`-scoped on its host relay.
+ *
+ * Always requests the FULL kind set (NIP-29 + Buzz): this single-group REQ is the
+ * dialect-detection bootstrap. Fleet-wide subs only widen once [BuzzRelayDialect] marks
+ * the relay, but the mark comes from consuming a Buzz kind — which never arrives if no
+ * filter asks for one. Opening a channel is explicit user intent on one group, so the
+ * wider ask is cheap, and on a vanilla relay the extra kinds simply match nothing.
+ */
 fun buildRelayGroupOpenChatTailFilter(
     groupId: GroupId,
     sinceEpoch: Long,
@@ -189,7 +197,7 @@ fun buildRelayGroupOpenChatTailFilter(
         relay = groupId.relayUrl,
         filter =
             Filter(
-                kinds = relayGroupTimelineKinds(groupId.relayUrl),
+                kinds = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
             ),
