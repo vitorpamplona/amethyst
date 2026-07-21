@@ -31,10 +31,11 @@ import kotlin.test.assertEquals
  * loudly instead of the store silently breaking search on delete.
  *
  *  - `content=''` **contentless** table with `contentless_delete=1`: lets the
- *    index drop the duplicated content column yet still delete rows (the
- *    `fts_foreign_key` trigger needs it).
- *  - explicit `rowid` on insert + `ORDER BY rowid DESC LIMIT n`: the
- *    early-terminating recency search path.
+ *    index drop the duplicated content column yet still delete rows by rowid
+ *    (the `fts_foreign_key` trigger needs it).
+ *  - explicit `rowid` on insert (= `event_headers.row_id`): the join key and
+ *    the O(log n) delete key.
+ *  - bm25 `rank` on a contentless table, through a join: NIP-50 relevance order.
  *  - `'merge'` / `'optimize'` maintenance commands: segment compaction.
  */
 class Fts5CapabilityProbe {
@@ -59,6 +60,40 @@ class Fts5CapabilityProbe {
             }
             // Deleted 50 is gone; the rest come back newest-rowid first.
             assertEquals(listOf(200L, 100L), order)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun bm25RankWorksOnContentlessTableInAJoin() {
+        // NIP-50 orders by relevance, not created_at. Verify FTS5 bm25 `rank`
+        // works on a contentless table and is reachable through the same
+        // join-back-to-base-table shape the store's search query uses.
+        val db = BundledSQLiteDriver().open(":memory:")
+        try {
+            db.execSQL("CREATE TABLE headers (row_id INTEGER PRIMARY KEY, created_at INTEGER, tag TEXT)")
+            db.execSQL("CREATE VIRTUAL TABLE fts USING fts5(content, content='', contentless_delete=1)")
+            // row 10: term appears 3× in a short doc (most relevant).
+            // row 20: term once in a long doc (least relevant) but NEWER.
+            db.execSQL("INSERT INTO headers VALUES (10, 100, 'A')")
+            db.execSQL("INSERT INTO fts(rowid, content) VALUES (10, 'needle needle needle')")
+            db.execSQL("INSERT INTO headers VALUES (20, 999, 'B')")
+            db.execSQL("INSERT INTO fts(rowid, content) VALUES (20, 'needle alpha beta gamma delta epsilon zeta eta')")
+
+            // created_at DESC would return B (999) first; relevance returns A.
+            val byRank = ArrayList<String>()
+            db
+                .prepare(
+                    """
+                    SELECT headers.tag FROM headers
+                    INNER JOIN fts ON headers.row_id = fts.rowid
+                    WHERE fts MATCH 'needle'
+                    ORDER BY fts.rank
+                    LIMIT 10
+                    """.trimIndent(),
+                ).use { while (it.step()) byRank.add(it.getText(0)) }
+            assertEquals(listOf("A", "B"), byRank, "bm25 rank must put the more relevant (shorter, higher-tf) doc first")
         } finally {
             db.close()
         }

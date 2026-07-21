@@ -40,13 +40,12 @@ import kotlin.test.Test
  *     contentless schema keys deletes off the rowid (= event_headers.row_id),
  *     an O(log n) primary-key seek. Every event removal fires this trigger
  *     (replaceable rotation, kind-5, expiration, right-to-vanish).
- *  2. **Search scaling — the limit.** `MATCH … ORDER BY created_at DESC
- *     LIMIT n` must materialize + sort *every* matching document (FTS5 only
- *     early-terminates on its own rowid, and NIP-01's `limit` requires newest
- *     *by created_at*), so search cost grows with the match set. Segment
- *     `optimize` compacts the index but does not change that; corpus-
- *     independent search needs an external engine. Shown fragmented vs
- *     optimized to size the (secondary) compaction effect.
+ *  2. **Search scaling — the limit.** `MATCH … ORDER BY rank LIMIT n` (NIP-50
+ *     relevance ordering, bm25) must score *every* matching document, so
+ *     search cost grows with the match set regardless of ordering (created_at
+ *     has the same shape). Segment `optimize` compacts the index but does not
+ *     change that; corpus-independent search needs an external engine. Shown
+ *     fragmented vs optimized to size the (secondary) compaction effect.
  *
  * Size search with `-DftsBenchScale=N` (default 1). Not an assertion test.
  */

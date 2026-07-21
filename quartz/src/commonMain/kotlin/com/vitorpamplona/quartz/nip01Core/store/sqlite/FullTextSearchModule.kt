@@ -49,12 +49,16 @@ import com.vitorpamplona.quartz.utils.EventFactory
  *    external-content — which reads the source column from the base table —
  *    cannot express it; contentless is the correct primitive.
  *
- * Search still orders by `event_headers.created_at DESC` (NIP-01 `limit`
- * semantics: the newest events *by created_at*), joining back to
- * `event_headers` on `row_id = event_fts.rowid`. FTS5 cannot early-terminate
- * that — it materializes and sorts all matches — so search latency still
- * grows with the match set; corpus-independent search needs an external
- * engine, not this index.
+ * Search results are ordered by **relevance**, per NIP-50 ("descending order
+ * by quality of search result ... not by the usual `.created_at`", limit
+ * applied after the score) — via FTS5 bm25 (`ORDER BY event_fts.rank`), with
+ * `created_at DESC` only as a tie-break. This is [QueryBuilder.makeSimpleSearch]
+ * (the `search [+ kinds/authors/since/until] + limit` shape); the rarer
+ * `search + specific tag` combination still sorts by `created_at` (its row-id
+ * subquery can't carry the rank through), and the negentropy snapshot keeps
+ * `created_at` (a sync set, not a ranked result). bm25 must score every match,
+ * so search latency still grows with the match set regardless of ordering;
+ * corpus-independent search needs an external engine, not this index.
  *
  * When [enabled] is `false` the module becomes an inert no-op: no
  * `event_fts` virtual table and no `fts_foreign_key` delete trigger are

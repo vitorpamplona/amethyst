@@ -1005,7 +1005,13 @@ class QueryBuilder(
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }
-                append("\nORDER BY event_headers.created_at DESC")
+                // NIP-50: search results are ordered by relevance ("quality of
+                // search result"), not created_at, and the limit is applied
+                // after the score. FTS5 exposes bm25 as the `rank` column (more
+                // negative = more relevant), so ORDER BY rank ascending is
+                // best-match-first. created_at DESC is only a tie-break so
+                // equally-relevant matches come newest-first deterministically.
+                append("\nORDER BY ${fts.tableName}.rank, event_headers.created_at DESC")
                 if (indexStrategy.useAndIndexIdOnOrderBy) {
                     append(", event_headers.id ASC")
                 }

@@ -714,7 +714,7 @@ class QueryAssemblerTest : BaseDBTest() {
                     SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers
                     INNER JOIN event_fts ON event_headers.row_id = event_fts.rowid
                     WHERE (event_fts MATCH "keywords") AND (event_headers.pubkey IN ("7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d", "f3ac434d61bc0f491a814782ccfdf9c439dae1f0bde9097ad4a245f4c495cd14", "12ae0fd81c85e1e7d9ed096397dc3129849425fe6f8afce7213ebf38ddfc6ca9"))
-                    ORDER BY event_headers.created_at DESC, event_headers.id ASC
+                    ORDER BY event_fts.rank, event_headers.created_at DESC, event_headers.id ASC
                     ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     └── USE TEMP B-TREE FOR ORDER BY
@@ -727,7 +727,7 @@ class QueryAssemblerTest : BaseDBTest() {
                     SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers
                     INNER JOIN event_fts ON event_headers.row_id = event_fts.rowid
                     WHERE (event_fts MATCH "keywords") AND (event_headers.pubkey IN ("7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d", "f3ac434d61bc0f491a814782ccfdf9c439dae1f0bde9097ad4a245f4c495cd14", "12ae0fd81c85e1e7d9ed096397dc3129849425fe6f8afce7213ebf38ddfc6ca9"))
-                    ORDER BY event_headers.created_at DESC
+                    ORDER BY event_fts.rank, event_headers.created_at DESC
                     ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     └── USE TEMP B-TREE FOR ORDER BY
@@ -741,7 +741,7 @@ class QueryAssemblerTest : BaseDBTest() {
     fun testKindAndSearch() =
         forEachDB { db ->
             val filter = Filter(kinds = listOf(1, 1111, 10000), search = "keywords")
-            val orderBy = if (db.indexStrategy.useAndIndexIdOnOrderBy) "event_headers.created_at DESC, event_headers.id ASC" else "event_headers.created_at DESC"
+            val orderBy = if (db.indexStrategy.useAndIndexIdOnOrderBy) "event_fts.rank, event_headers.created_at DESC, event_headers.id ASC" else "event_fts.rank, event_headers.created_at DESC"
             assertEquals(
                 """
                 SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers

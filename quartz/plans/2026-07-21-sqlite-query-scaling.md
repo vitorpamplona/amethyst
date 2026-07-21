@@ -9,13 +9,13 @@ flat. Two of those (author-timeline, follow-feed) were already addressed
 the report under the *client* `DefaultIndexingStrategy` rather than
 `relayIndexingStrategy()`. This change adds the **large-IN tag watcher** to the
 merge executor, fixes the **FTS delete path** (which degraded with corpus
-size) and shrinks the FTS index, and fixes a **statement-cache** miss the merge
-paths hit.
+size) and shrinks the FTS index, fixes **NIP-50 search ordering** (it was
+sorting by `created_at`, not relevance), and fixes a **statement-cache** miss
+the merge paths hit.
 
-It does **not** fix NIP-50 *search* latency: that is bounded by the
-`created_at`-ordered sort over all matches, which FTS5 can't early-terminate
-while staying NIP-01-compliant (see §1). Corpus-independent search is an
-external-engine job.
+It does **not** fix NIP-50 *search* latency: bm25 relevance scoring (like the
+old `created_at` sort) must visit every match, so search cost still grows with
+the match set (§1). Corpus-independent search is an external-engine job.
 
 Everything here is read/size work; the write path and on-disk index set are
 unchanged except the FTS table, which gets *smaller* and deletes faster.
@@ -58,18 +58,28 @@ in-memory:
 By-column grows ~linearly with the table (O(n)/delete); by-rowid is flat —
 ~78× at 8k rows and widening.
 
-**Search is deliberately unchanged and still `created_at`-ordered.** NIP-01's
-`limit` requires the newest events *by `created_at`*, and FTS5 only
-early-terminates on its own rowid — so `MATCH … ORDER BY created_at DESC LIMIT
-n` still materializes and sorts every match, and search latency still grows
-with the match set (the report's 18× curve). An earlier draft added a
-`searchOrderByRowId` flag that ordered by the FTS rowid to get O(limit) search;
-that is *ingestion* order, which returns the wrong events under a limit once
-ingestion diverges from `created_at` (any historical sync) — a NIP-01
-violation — so it was removed. `optimize` compacts the index but does not
-change the asymptotics (measured within noise at 100k/200k). Corpus-independent
-search is genuinely an external-engine job (the Vespa side of the report), not
-this index.
+**Search ordering fixed to relevance (NIP-50), which the store was getting
+wrong.** NIP-50 says results are returned "in descending order by quality of
+search result ... not by the usual `.created_at`", with the limit applied after
+the score — but the store sorted search by `created_at DESC` (pre-existing).
+`makeSimpleSearch` (the `search [+ kinds/authors/since/until] + limit` shape)
+now orders by FTS5 bm25 (`ORDER BY event_fts.rank`, `created_at DESC` as a
+tie-break), verified against a stronger-but-older match outranking a
+weaker-but-newer one (`SearchRelevanceOrderTest`, `Fts5CapabilityProbe`). The
+rarer `search + specific tag` shape and the negentropy snapshot still sort by
+`created_at` (the row-id subquery can't carry rank through; negentropy is a
+sync set, not a ranked result) — a documented follow-up.
+
+An earlier draft of *this* change instead added a `searchOrderByRowId` flag
+(order by the FTS rowid for O(limit) search); that is *ingestion* order — wrong
+events under a limit once ingestion diverges from time order, and not relevance
+either — so it was removed.
+
+This is a **correctness** fix, not a scaling one: bm25 (like the created_at
+sort) must score every match, so search latency still grows with the match set
+(the report's 18× curve) and `optimize` doesn't change the asymptotics
+(measured within noise at 100k/200k). Corpus-independent search is genuinely an
+external-engine job (the Vespa side of the report), not this index.
 
 Migration (v4→v5): the old rowids can't be remapped, so `event_fts` is dropped
 and rebuilt — synchronous stores rebuild in the upgrade transaction (client
