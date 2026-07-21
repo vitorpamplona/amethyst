@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.prodbench
 
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
@@ -29,23 +31,24 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 
 /**
- * Isolates the NIP-50 search-scaling curve the scale-curve report flagged
- * (FTS5 falling ~18× from 25k→400k events) and the two levers against it:
+ * Two measurements around the contentless FTS index, motivating the v4→v5
+ * schema change and being honest about what it does and does not fix.
  *
- *  1. **segment compaction** (`INSERT INTO event_fts(event_fts) VALUES
- *     ('optimize')`). Incremental inserts leave the index as many small
- *     segments and a MATCH queries every one; measured fragmented vs
- *     optimized.
- *  2. **rowid ordering** ([DefaultIndexingStrategy.searchOrderByRowId]).
- *     `ORDER BY created_at DESC` must materialize + sort *every* document
- *     matching the term (cost grows with the corpus); `ORDER BY
- *     event_fts.rowid DESC LIMIT n` early-terminates — O(limit).
+ *  1. **Delete scaling — the win.** The old `fts5(event_header_row_id,
+ *     content)` schema had the `fts_foreign_key` trigger delete by a regular
+ *     FTS column, which FTS5 cannot seek (it scans, O(n) per delete). The
+ *     contentless schema keys deletes off the rowid (= event_headers.row_id),
+ *     an O(log n) primary-key seek. Every event removal fires this trigger
+ *     (replaceable rotation, kind-5, expiration, right-to-vanish).
+ *  2. **Search scaling — the limit.** `MATCH … ORDER BY created_at DESC
+ *     LIMIT n` must materialize + sort *every* matching document (FTS5 only
+ *     early-terminates on its own rowid, and NIP-01's `limit` requires newest
+ *     *by created_at*), so search cost grows with the match set. Segment
+ *     `optimize` compacts the index but does not change that; corpus-
+ *     independent search needs an external engine. Shown fragmented vs
+ *     optimized to size the (secondary) compaction effect.
  *
- * The seed injects a common term into ~1% of events, so the match set — and
- * thus the created_at sort — grows with the corpus while the limit stays 50.
- *
- * Size with `-DftsBenchScale=N` (default 1). Not an assertion test; run
- * explicitly and read stdout.
+ * Size search with `-DftsBenchScale=N` (default 1). Not an assertion test.
  */
 class FtsSearchScalingBenchmark {
     companion object {
@@ -95,42 +98,77 @@ class FtsSearchScalingBenchmark {
         return events
     }
 
+    private inline fun timeMs(block: () -> Unit): Double {
+        val start = System.nanoTime()
+        block()
+        return (System.nanoTime() - start) / 1e6
+    }
+
+    private fun SQLiteConnection.exec(sql: String) = prepare(sql).use { it.step() }
+
+    @Test
+    fun deleteByColumnVsByRowid() {
+        // Old-schema (delete by FTS column) vs contentless (delete by rowid),
+        // 500 deletes at two table sizes. By-column should grow with the
+        // table; by-rowid should stay flat.
+        println("─ FtsSearchScalingBenchmark.delete (500 deletes) ─")
+        println("  %-9s %14s %14s".format("rows", "byColumn", "byRowid"))
+        for (n in listOf(2_000 * SCALE, 8_000 * SCALE)) {
+            val db = BundledSQLiteDriver().open(":memory:")
+            try {
+                db.exec("CREATE VIRTUAL TABLE col USING fts5(event_header_row_id, content)")
+                db.exec("CREATE VIRTUAL TABLE row USING fts5(content, content='', contentless_delete=1)")
+                for (i in 1..n) {
+                    db.prepare("INSERT INTO col(event_header_row_id, content) VALUES (?, 'alpha beta gamma')").use {
+                        it.bindLong(1, i.toLong())
+                        it.step()
+                    }
+                    db.prepare("INSERT INTO row(rowid, content) VALUES (?, 'alpha beta gamma')").use {
+                        it.bindLong(1, i.toLong())
+                        it.step()
+                    }
+                }
+                val byColumn =
+                    timeMs {
+                        for (i in 1..500) {
+                            db.prepare("DELETE FROM col WHERE event_header_row_id = ?").use {
+                                it.bindLong(1, i.toLong())
+                                it.step()
+                            }
+                        }
+                    }
+                val byRowid =
+                    timeMs {
+                        for (i in 1..500) {
+                            db.prepare("DELETE FROM row WHERE rowid = ?").use {
+                                it.bindLong(1, i.toLong())
+                                it.step()
+                            }
+                        }
+                    }
+                println("  %-9s %11.2f ms %11.2f ms".format("${n / 1000}k", byColumn, byRowid))
+            } finally {
+                db.close()
+            }
+        }
+    }
+
     @Test
     fun searchScaling() =
         runBlocking {
-            println("─ FtsSearchScalingBenchmark (scale=$SCALE, limit=50) ─")
-            println("  %-9s %14s %14s %14s".format("corpus", "createdAt/frag", "createdAt/opt", "rowid/opt"))
+            println("─ FtsSearchScalingBenchmark.search (created_at DESC, limit=50) ─")
+            println("  %-9s %16s %16s".format("corpus", "fragmented", "optimized"))
             for (size in SIZES) {
-                val events = seed(size)
-
-                val createdAt = EventStore(dbName = null, indexStrategy = DefaultIndexingStrategy())
-                val rowId = EventStore(dbName = null, indexStrategy = DefaultIndexingStrategy(searchOrderByRowId = true))
+                val store = EventStore(dbName = null, indexStrategy = DefaultIndexingStrategy())
                 try {
-                    // Insert in 10k chunks → many FTS segments (fragmented).
-                    events.chunked(10_000).forEach {
-                        createdAt.batchInsert(it)
-                        rowId.batchInsert(it)
-                    }
-
+                    seed(size).chunked(10_000).forEach { store.batchInsert(it) }
                     val f = Filter(search = NEEDLE, limit = 50)
-                    val frag = time(createdAt, f)
-
-                    createdAt.store.reindexFullTextSearch() // rebuild + optimize()
-                    rowId.store.reindexFullTextSearch()
-                    val optCreatedAt = time(createdAt, f)
-                    val optRowId = time(rowId, f)
-
-                    println(
-                        "  %-9s %12.2f ms %12.2f ms %12.2f ms".format(
-                            if (size >= 1000) "${size / 1000}k" else "$size",
-                            frag,
-                            optCreatedAt,
-                            optRowId,
-                        ),
-                    )
+                    val frag = time(store, f)
+                    store.store.reindexFullTextSearch() // rebuild + optimize()
+                    val opt = time(store, f)
+                    println("  %-9s %13.2f ms %13.2f ms".format("${size / 1000}k", frag, opt))
                 } finally {
-                    createdAt.close()
-                    rowId.close()
+                    store.close()
                 }
             }
         }

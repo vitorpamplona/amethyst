@@ -35,17 +35,26 @@ import com.vitorpamplona.quartz.utils.EventFactory
  * `contentless_delete=1`) whose `rowid` is the event's
  * `event_headers.row_id`. Two consequences:
  *
+ *  - **Deletes.** The `fts_foreign_key` trigger deletes by `rowid` (an FTS5
+ *    primary-key seek, O(log n)). The old `fts5(event_header_row_id,
+ *    content)` schema deleted by a *regular* column, which FTS5 cannot seek —
+ *    it scans the whole index per delete (O(n)), so deletion throughput
+ *    degraded with corpus size. Every event removal fires this trigger
+ *    (replaceable rotation, kind-5, expiration, right-to-vanish), so the
+ *    seek matters. Measured `Fts5CapabilityProbe`/`FtsSearchScalingBenchmark`:
+ *    ~78× at 8k rows and widening with the table.
  *  - **Size.** A contentless table stores only the inverted index, not a
- *    second copy of the tokenized text (the old `fts5(event_header_row_id,
- *    content)` schema kept the content verbatim). The indexed text is
- *    *derived* ([SearchableEvent.indexableContent], not any raw column), so
- *    FTS5 external-content — which reads the source column from the base
- *    table — cannot express it; contentless is the correct primitive.
- *  - **Ordering.** With `rowid = event_headers.row_id`,
- *    `ORDER BY event_fts.rowid DESC LIMIT n` early-terminates off the FTS
- *    doclist ([IndexingStrategy.searchOrderByRowId]); the default
- *    `created_at DESC` ordering still works via the join back to
- *    `event_headers` but must sort all matches.
+ *    second copy of the tokenized text. The indexed text is *derived*
+ *    ([SearchableEvent.indexableContent], not any raw column), so FTS5
+ *    external-content — which reads the source column from the base table —
+ *    cannot express it; contentless is the correct primitive.
+ *
+ * Search still orders by `event_headers.created_at DESC` (NIP-01 `limit`
+ * semantics: the newest events *by created_at*), joining back to
+ * `event_headers` on `row_id = event_fts.rowid`. FTS5 cannot early-terminate
+ * that — it materializes and sorts all matches — so search latency still
+ * grows with the match set; corpus-independent search needs an external
+ * engine, not this index.
  *
  * When [enabled] is `false` the module becomes an inert no-op: no
  * `event_fts` virtual table and no `fts_foreign_key` delete trigger are

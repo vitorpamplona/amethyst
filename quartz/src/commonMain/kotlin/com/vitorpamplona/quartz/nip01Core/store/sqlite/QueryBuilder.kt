@@ -1005,18 +1005,9 @@ class QueryBuilder(
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }
-                if (indexStrategy.searchOrderByRowId) {
-                    // The FTS rowid is event_headers.row_id (ingestion order).
-                    // Ordering by it lets FTS5 walk the doclist newest-first
-                    // and stop at LIMIT — O(limit) — instead of materializing
-                    // and sorting every match by created_at. See
-                    // IndexingStrategy.searchOrderByRowId for the trade-off.
-                    append("\nORDER BY ${fts.tableName}.rowid DESC")
-                } else {
-                    append("\nORDER BY event_headers.created_at DESC")
-                    if (indexStrategy.useAndIndexIdOnOrderBy) {
-                        append(", event_headers.id ASC")
-                    }
+                append("\nORDER BY event_headers.created_at DESC")
+                if (indexStrategy.useAndIndexIdOnOrderBy) {
+                    append(", event_headers.id ASC")
                 }
                 if (limit != null) {
                     append("\nLIMIT ")

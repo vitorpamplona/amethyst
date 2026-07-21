@@ -132,32 +132,6 @@ interface IndexingStrategy {
     val indexFullTextSearch: Boolean
 
     /**
-     * Order NIP-50 search results by the FTS index rowid (= event row_id,
-     * i.e. **ingestion order**) instead of `created_at DESC`.
-     *
-     * The `event_fts` rowid is the event's `event_headers.row_id`, so
-     * `ORDER BY event_fts.rowid DESC LIMIT n` walks the FTS doclist
-     * newest-rowid-first and stops at the limit — **O(limit)** — where the
-     * default `ORDER BY created_at DESC` must materialize *every* document
-     * matching the term and sort it (cost grows with the whole corpus; the
-     * NIP-50 curve that falls ~18× from 25k→400k events). The unconditional
-     * contentless-index + segment-merge changes already shrink and speed the
-     * default path; this flag is the one that makes search cost independent
-     * of corpus size.
-     *
-     * The trade-off is semantic: ingestion order ≈ `created_at` order only
-     * while events arrive roughly in time order. A relay that bulk-syncs
-     * historical events (NIP-77) ingests old events late, so "newest rowid"
-     * and "newest created_at" diverge during/after a sync. Leave it **off**
-     * (the default) where strict recency ordering matters; turn it **on**
-     * for stores that want corpus-independent search latency and accept
-     * recently-ingested-first ordering. Only affects the simple-search query
-     * shape (`search [+ kinds/authors] + limit`); tag∩search and the
-     * negentropy snapshot path keep `created_at` ordering.
-     */
-    val searchOrderByRowId: Boolean get() = false
-
-    /**
      * Maintain an always-current in-memory `(created_at, id)` set (a
      * [com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex]) so
      * NIP-77 NEG-OPENs over the full corpus skip the scan + O(n log n)
@@ -186,7 +160,6 @@ class DefaultIndexingStrategy(
     override val useAndIndexIdOnOrderBy: Boolean = false,
     override val indexFullTextSearch: Boolean = true,
     override val deferFullTextSearchIndexing: Boolean = false,
-    override val searchOrderByRowId: Boolean = false,
     override val maintainLiveNegentropyIndex: Boolean = false,
 ) : IndexingStrategy {
     override fun shouldIndex(

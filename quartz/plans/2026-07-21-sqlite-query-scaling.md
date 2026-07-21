@@ -7,63 +7,69 @@ ingest 16×, author-timeline 13×, follow-feed 2.4× — while point reads staye
 flat. Two of those (author-timeline, follow-feed) were already addressed
 (the pubkey-alone index and `MergeQueryExecutor`) and mostly reflect running
 the report under the *client* `DefaultIndexingStrategy` rather than
-`relayIndexingStrategy()`. This change takes the two structural read shapes
-that were still corpus-bound: **NIP-50 search** and the **large-IN tag
-watcher**, plus a statement-cache fix the merge paths needed.
+`relayIndexingStrategy()`. This change adds the **large-IN tag watcher** to the
+merge executor, fixes the **FTS delete path** (which degraded with corpus
+size) and shrinks the FTS index, and fixes a **statement-cache** miss the merge
+paths hit.
+
+It does **not** fix NIP-50 *search* latency: that is bounded by the
+`created_at`-ordered sort over all matches, which FTS5 can't early-terminate
+while staying NIP-01-compliant (see §1). Corpus-independent search is an
+external-engine job.
 
 Everything here is read/size work; the write path and on-disk index set are
-unchanged except the FTS table, which gets *smaller*.
+unchanged except the FTS table, which gets *smaller* and deletes faster.
 
-## 1. NIP-50 search — contentless FTS5 + optional rowid ordering + segment merge
+## 1. FTS — contentless index (fast deletes + smaller), NOT a search-scaling fix
 
 The old index was `fts5(event_header_row_id, content)`: it stored a second
-copy of the tokenized text, and its rowid was auto-assigned (unrelated to the
-event). Search ran `… event_fts MATCH ? ORDER BY event_headers.created_at DESC
-LIMIT n`, which must materialize **every** document matching the term and sort
-it — cost grows with the whole corpus. That is the 18× curve.
+copy of the tokenized text, its rowid was auto-assigned (unrelated to the
+event), and — the real problem — the `fts_foreign_key` delete trigger deleted
+by the `event_header_row_id` *column*, which FTS5 cannot seek, so it **scanned
+the whole index per delete**.
 
-Three changes (`FullTextSearchModule`, `IndexingStrategy`, `QueryBuilder`,
-DB version 4→5):
+Changes (`FullTextSearchModule`, `QueryBuilder`, DB version 4→5):
 
+- **rowid = `event_headers.row_id`.** Set explicitly on every insert; the
+  delete trigger, reindex, and catch-up paths key off it. Deletes become an
+  O(log n) primary-key seek instead of an O(n) column scan. This is the win:
+  every event removal fires the trigger — replaceable rotation, kind-5,
+  expiration, right-to-vanish — so on the old schema deletion throughput
+  degraded with corpus size.
 - **Contentless** (`fts5(content, content='', contentless_delete=1)`). The
   indexed text is *derived* (`SearchableEvent.indexableContent()`, not a raw
   column), so FTS5 **external-content** — which re-reads the source column from
   the base table — cannot express it; **contentless** is the correct primitive.
-  It drops the stored content copy (index shrinks) and, with
-  `contentless_delete=1`, still supports the `fts_foreign_key` delete trigger.
-- **rowid = `event_headers.row_id`.** Set explicitly on every insert. The
-  delete trigger and reindex/catch-up paths all key off it, so the join is
-  `event_headers.row_id = event_fts.rowid` with no stored linkage column.
-- **`searchOrderByRowId`** (new `IndexingStrategy` flag, **default off**). When
-  on, simple search orders by `event_fts.rowid DESC LIMIT n`, which FTS5
-  early-terminates off the doclist — **O(limit)**, corpus-independent. rowid is
-  *ingestion* order, so this ≈ recency only while events arrive in time order;
-  a relay that bulk-syncs history (NIP-77) diverges, which is why it is off by
-  default and left off for geode. Only the simple-search shape changes; tag∩
-  search and the negentropy snapshot keep `created_at`.
-- **Segment compaction.** `reindexAll` finishes with a full `'optimize'`, and
-  the periodic `SQLiteEventStore.optimize()` (geode's maintenance tick) folds
-  in a bounded `'merge'`, so incremental / deferred-catch-up inserts don't
-  leave the index as many small segments.
+  It drops the stored content copy (index shrinks) and `contentless_delete=1`
+  keeps the delete trigger working.
+- **Segment compaction.** `reindexAll` finishes with `'optimize'`, and the
+  periodic `SQLiteEventStore.optimize()` (geode's maintenance tick) folds in a
+  bounded `'merge'`, so incremental / deferred-catch-up inserts don't leave the
+  index as many small segments.
 
-Measured — `FtsSearchScalingBenchmark` (jvmTest prodbench), search a term in
-~1% of events, `limit=50`, in-memory:
+Delete cost — `FtsSearchScalingBenchmark.deleteByColumnVsByRowid`, 500 deletes,
+in-memory:
 
-| corpus | created_at, fragmented | created_at, optimized | **rowid, optimized** |
-|---|---:|---:|---:|
-| 50k | 1.92 ms | 1.16 ms | **0.26 ms** |
-| 100k | 2.16 ms | 2.23 ms | **0.22 ms** |
-| 200k | 4.33 ms | 4.26 ms | **0.22 ms** |
+| rows | by column (old) | by rowid (new) |
+|---|---:|---:|
+| 2k | 91.8 ms | 6.6 ms |
+| 8k | 362.0 ms | 4.7 ms |
 
-- **rowid ordering is the corpus-independence lever**: flat ~0.22 ms vs
-  created_at's 1.16 → 4.26 ms (grows with the match set) — ~19× at 200k, and
-  the gap keeps widening. This is the direct answer to the search curve, for
-  deployments that accept ingestion-order results.
-- **segment `optimize`** helps most at small sizes / right after bulk
-  incremental inserts (1.92 → 1.16 ms at 50k); FTS5 `automerge` already caps
-  fragmentation in steady state, so at 100k/200k here it is within noise. It is
-  a cheap, unconditional safety net (biggest for the deferred relay path, whose
-  catch-up commits in 1k batches), not the main lever.
+By-column grows ~linearly with the table (O(n)/delete); by-rowid is flat —
+~78× at 8k rows and widening.
+
+**Search is deliberately unchanged and still `created_at`-ordered.** NIP-01's
+`limit` requires the newest events *by `created_at`*, and FTS5 only
+early-terminates on its own rowid — so `MATCH … ORDER BY created_at DESC LIMIT
+n` still materializes and sorts every match, and search latency still grows
+with the match set (the report's 18× curve). An earlier draft added a
+`searchOrderByRowId` flag that ordered by the FTS rowid to get O(limit) search;
+that is *ingestion* order, which returns the wrong events under a limit once
+ingestion diverges from `created_at` (any historical sync) — a NIP-01
+violation — so it was removed. `optimize` compacts the index but does not
+change the asymptotics (measured within noise at 100k/200k). Corpus-independent
+search is genuinely an external-engine job (the Vespa side of the report), not
+this index.
 
 Migration (v4→v5): the old rowids can't be remapped, so `event_fts` is dropped
 and rebuilt — synchronous stores rebuild in the upgrade transaction (client
@@ -118,6 +124,6 @@ reuse, and cap overflow → uncached fallback.
   whose asserted EXPLAIN output updated for the new join column
   (`event_fts.rowid`) and the contentless table's virtual-index marker
   (`0:M2`→`0:M1`).
-- Defaults preserved: `searchOrderByRowId` off, so existing deployments keep
-  exact `created_at DESC` search ordering; the size + optimize wins are
-  unconditional.
+- Search ordering unchanged: still exact `created_at DESC` (NIP-01 `limit`
+  semantics); the delete + size + optimize wins are unconditional and
+  spec-neutral.
