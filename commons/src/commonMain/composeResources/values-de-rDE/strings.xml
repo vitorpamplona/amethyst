@@ -141,5 +141,4 @@
         <item quantity="one">%1$d Termin</item>
         <item quantity="other">%1$d Termine</item>
     </plurals>
-    <string name="podcast_value_for_value">Value-for-Value</string>
 </resources>

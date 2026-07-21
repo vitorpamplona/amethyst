@@ -26,6 +26,7 @@
     <string name="referenced_event_not_found">Refererad händelse hittades inte</string>
     <string name="could_not_decrypt_the_message">Kunde inte dekryptera meddelandet</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <string name="chat_preview_decrypting">Dekrypterar…</string>
     <string name="group_picture">Grupp bild</string>
     <string name="explicit_content">Explicit Innehåll</string>
     <string name="relay_notice">Relay-meddelande</string>
@@ -302,6 +303,10 @@
     <string name="concord_invite_failed_invalid">Den här inbjudningslänken är ogiltig eller kan inte öppnas med det här kontot.</string>
     <string name="concord_invite_failed_incompatible">Den här inbjudningslänken kan inte öppnas. Den kan vara föråldrad eller redan ersatt av en nyare, eller skapad med en nyare version av appen. Be om en ny inbjudningslänk.</string>
     <string name="concord_invite_failed_revoked">Den här inbjudningslänken har återkallats och kan inte längre användas. Be om en ny.</string>
+    <string name="concord_invite_failed_expired">Den här inbjudningslänken har upphört att gälla och kan inte längre användas. Be om en ny länk.</string>
+    <string name="concord_invite_preview_unknown_name">Gemenskapens namn visas först efter att du gått med</string>
+    <string name="concord_invite_preview_explainer">Att gå med ansluter till inbjudningens reläer, publicerar ett anslutningsmeddelande signerat av ditt konto och lägger till gemenskapen i din lista. Inget skickas förrän du trycker på Gå med.</string>
+    <string name="concord_invite_preview_relays">Reläer som inbjudan kommer att kontakta: %1$s</string>
     <string name="concord_home_title">Concord-kanaler</string>
     <string name="concord_home_empty">Du har inte gått med i några Concord-kanaler än. Skapa en, eller öppna en inbjudningslänk.</string>
     <string name="concord_channels_empty">Inga kanaler än.</string>
@@ -317,6 +322,10 @@
     <string name="concord_channel_delete_title">Radera kanal?</string>
     <string name="concord_channel_delete_message">Radera #%1$s? Detta kan inte ångras och kanalen kan inte återskapas med samma id.</string>
     <string name="concord_channel_delete_confirm">Radera</string>
+    <string name="concord_leave_community">Lämna gemenskapen</string>
+    <string name="concord_leave_title">Lämna gemenskapen?</string>
+    <string name="concord_leave_message">Lämna %1$s? Den tas bort från det här kontots lista och slutar synkas på dina enheter. Gemenskapen meddelas inte och du tas inte bort från dess medlemslista. Meddelanden som du inte längre kan dekryptera kan gå förlorade, och du kan bara återvända med en ny inbjudan.</string>
+    <string name="concord_leave_owner_warning">Du skapade den här gemenskapen. Att lämna raderar den inte och överlämnar den inte till någon annan, men det kasserar ägarnyckeln som lagras i din lista — du skulle inte kunna hantera den igen.</string>
     <string name="concord_edit_relays_desc">Var den här gemenskapens krypterade plan publiceras och läses.</string>
     <string name="concord_typing_one">%1$s skriver…</string>
     <string name="concord_typing_two">%1$s och %2$s skriver…</string>
@@ -361,6 +370,13 @@
     <string name="concord_members_remove_title">Ta bort medlem?</string>
     <string name="concord_members_remove_message">Detta roterar gemenskapens krypteringsnyckel så att den här medlemmen inte längre kan läsa något som skickas därefter. Alla andra får automatiskt en ny nyckel. Detta kan inte ångras.</string>
     <string name="concord_members_remove_confirm">Ta bort</string>
+    <string name="concord_members_roles">Roller…</string>
+    <string name="concord_members_roles_title">Tilldela roller</string>
+    <string name="concord_members_roles_message">Välj alla roller som den här medlemmen ska ha. Att avmarkera en roll tar bort den.</string>
+    <string name="concord_members_roles_save">Spara</string>
+    <string name="concord_members_roles_out_of_reach">Du har inte högre rang än den här medlemmen</string>
+    <string name="concord_members_roles_none_assignable">Inga roller som du kan tilldela</string>
+    <string name="concord_members_roles_failed">Kunde inte uppdatera den här medlemmens roller.</string>
     <string name="concord_role_owner">Ägare</string>
     <string name="concord_role_admin">Administratör</string>
     <string name="concord_role_banned">Bannlyst</string>
@@ -485,6 +501,15 @@
     <string name="share_as_image_url">Dela som bild-URL</string>
     <string name="share_as_image_generating">Genererar förhandsvisning…</string>
     <string name="share_as_image_watermark">Delad via Amethyst</string>
+    <string name="share_as_qr">Dela som QR</string>
+    <string name="share_as_qr_mode_web">Webblänk</string>
+    <string name="share_as_qr_mode_nostr">Nostr-länk</string>
+    <string name="share_as_qr_hint_web">Skanna med valfri telefonkamera</string>
+    <string name="share_as_qr_hint_nostr">Skanna med en Nostr-app</string>
+    <string name="share_as_qr_kind_picture">Bild</string>
+    <string name="share_as_qr_code_description_web">QR-kod med en webblänk till den här noten</string>
+    <string name="share_as_qr_code_description_nostr">QR-kod med en Nostr-länk till den här noten</string>
+    <string name="share_as_qr_thumbnail_hidden_sensitive">Miniatyrbild dold för känsligt innehåll</string>
     <string name="quick_action_copy_user_id">Användar ID</string>
     <string name="quick_action_copy_note_id">Antecknings ID</string>
     <string name="quick_action_copy_text">Kopiera Text</string>
@@ -810,6 +835,7 @@
     <string name="napplet_consent_storage">Det här nApplet vill använda sin privata lagring.</string>
     <string name="napplet_consent_pay">Det här nApplet vill betala en Lightning-faktura.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">⚠ Den här nApplet vill betala en Lightning-faktura som anger INGET belopp — betalningsmottagaren avgör hur mycket som tas. Tillåt detta endast om du litar på den.</string>
     <string name="napplet_consent_resource">Det här nApplet vill hämta en webbresurs.</string>
     <string name="napplet_consent_upload">Det här nApplet vill ladda upp en fil till din medieserver.</string>
     <string name="napplet_consent_notify">Det här nApplet vill visa dig aviseringar.</string>
@@ -822,11 +848,56 @@
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
          one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">följer %1$d nytt konto</item>
+        <item quantity="other">följer %1$d nya konton</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">SLUTAR FÖLJA %1$d konto</item>
+        <item quantity="other">SLUTAR FÖLJA %1$d konton</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">lägger till %1$d relä</item>
+        <item quantity="other">lägger till %1$d reläer</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">TAR BORT %1$d relä</item>
+        <item quantity="other">TAR BORT %1$d reläer</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">tystar %1$d person till</item>
+        <item quantity="other">tystar %1$d personer till</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">SLUTAR TYSTA %1$d person</item>
+        <item quantity="other">SLUTAR TYSTA %1$d personer</item>
+    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">⚠ Detta följer %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠ Detta SLUTAR FÖLJA %1$s.</string>
+    <string name="napplet_consent_diff_mute_one">⚠ Detta tystar %1$s.</string>
+    <string name="napplet_consent_diff_unmute_one">⚠ Detta SLUTAR TYSTA %1$s.</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">⚠ Detta skriver om din följlista: %1$s.</string>
+    <string name="napplet_consent_diff_relays">⚠ Detta skriver om din relälista: %1$s. Dina inlägg och läsningar flyttas med den.</string>
+    <string name="napplet_consent_diff_mutes">⚠ Detta skriver om din tystningslista: %1$s. Tystade ord och hashtaggar visas inte här — tryck på “Visa händelse” för hela listan.</string>
+    <string name="napplet_consent_diff_joiner">%1$s och %2$s</string>
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">Detta återpublicerar din befintliga lista oförändrad.</string>
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">⚠ Detta skriver en lista med %1$d post. Amethyst har ingen cachad kopia att jämföra med.</item>
+        <item quantity="other">⚠ Detta skriver en lista med %1$d poster. Amethyst har ingen cachad kopia att jämföra med.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">⚠ Detta begär radering av %1$d av dina händelser.</item>
+        <item quantity="other">⚠ Detta begär radering av %1$d av dina händelser.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">Bär %1$d tagg. Tryck på “Visa händelse” för att se exakt vad som skulle signeras.</item>
+        <item quantity="other">Bär %1$d taggar. Tryck på “Visa händelse” för att se exakt vad som skulle signeras.</item>
+    </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Anslut till Nostr</string>
     <string name="napplet_connect_subtitle">vill ansluta till ditt Nostr-konto</string>
@@ -863,9 +934,13 @@
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">läsa dina privata meddelanden</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">läsa dina privata meddelanden med %1$s</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">Tillåt alltid för %1$s</string>
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">Amethyst kunde inte dekryptera det här meddelandet. Det kanske inte är adresserat till det här kontot.</string>
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">Meddelanden med</string>
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Anslutna appar</string>
     <string name="napplet_permissions_revoke_all">Återkalla alla behörigheter</string>
@@ -1489,6 +1564,39 @@
     <string name="local_blossom_cache_profile_pics_only">Cacha endast profilbilder</string>
     <string name="local_blossom_cache_profile_pics_only_caption">Begränsa den lokala cachen till profilbilder. Bilder och videor i flödet hämtas direkt från originalservrarna.</string>
     <string name="no_blossom_server_message">Du har inga Blossom servrar satta. Du kan använda Amethyst\'s lista, eller lägga till en nedan ↓</string>
+    <string name="media_servers_upload_section">Uppladdningsbeteende</string>
+    <string name="blossom_mirror_uploads">Spegla uppladdningar</string>
+    <string name="blossom_mirror_uploads_caption">Efter uppladdning kopieras filen till dina andra Blossom-servrar så att den förblir tillgänglig om en går offline.</string>
+    <string name="blossom_optimize_media">Optimera media på servern</string>
+    <string name="blossom_optimize_media_caption">Ladda upp via serverns /media-slutpunkt så att den kan ta bort metadata och komprimera filen. Den lagrade filen kan skilja sig från originalet.</string>
+    <string name="manage_stored_files">Hantera lagrade filer</string>
+    <string name="my_blossom_data">Mina Blossom-filer</string>
+    <string name="blossom_refresh">Uppdatera</string>
+    <string name="blossom_sync_all">Synka alla</string>
+    <string name="blossom_sync_gaps">Några av dina filer finns inte på alla dina servrar ännu.</string>
+    <string name="blossom_syncing">Kopierar dina filer mellan servrar…</string>
+    <string name="blossom_sync_done">Synkning klar</string>
+    <string name="blossom_sync_cancel">Avbryt</string>
+    <string name="blossom_sync_channel_name">Blossom-synk</string>
+    <string name="blossom_sync_channel_description">Visar förloppet medan dina filer kopieras mellan dina Blossom-servrar.</string>
+    <string name="manage_stored_files_empty">Inga lagrade filer hittades på dina Blossom-servrar.</string>
+    <string name="blossom_mirror_to_missing">Spegla till saknade</string>
+    <string name="blossom_delete_from">Ta bort från…</string>
+    <string name="blossom_delete_from_host">Ta bort från %1$s</string>
+    <string name="blossom_report">Rapportera</string>
+    <string name="blossom_open">Öppna</string>
+    <string name="blossom_payment_required">Den här servern kräver betalning för uppladdning: %1$s</string>
+    <string name="blossom_payment_title">Betalning krävs</string>
+    <string name="blossom_payment_message">%1$s tar ut en Lightning-betalning för att lagra den här filen. Betala från din anslutna plånbok för att fortsätta.</string>
+    <string name="blossom_payment_server_says">%1$s säger: “%2$s”</string>
+    <string name="blossom_pay">Betala</string>
+    <plurals name="blossom_pay_sats">
+        <item quantity="one">Betala %1$d sat</item>
+        <item quantity="other">Betala %1$d sats</item>
+    </plurals>
+    <string name="blossom_report_title">Rapportera blob</string>
+    <string name="blossom_report_comment_hint">Anledning (valfritt)</string>
+    <string name="blossom_send">Skicka</string>
     <string name="recommended_media_servers">Rekommenderade Mediaservrar</string>
     <string name="built_in_servers_description">Amethysts standardlista. Du kan lägga till dem individuellt eller lägga till listan.</string>
     <string name="use_default_servers">Använd standardlistan</string>
@@ -1532,6 +1640,11 @@
     <string name="follow_list_kind3follows_users_only">Alla Användare Följare</string>
     <string name="follow_list_kind3_follows_users_only">Standard Följ-Lista</string>
     <string name="follow_list_aroundme">Runt mig</string>
+    <string name="follow_list_teleport">Teleportera till en plats…</string>
+    <string name="follow_geohash">Följ den här platsen</string>
+    <string name="unfollow_geohash">Sluta följa den här platsen</string>
+    <string name="geo_post_posting_to">Publicerar till</string>
+    <string name="geo_post_change_place">Ändra</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_curated">Kurerad</string>
     <string name="follow_list_mine">Mina</string>
@@ -1942,6 +2055,10 @@
     <string name="default_relays_longer">Återställ till standardinställningar</string>
     <string name="geohash_title">Exponera plats som </string>
     <string name="geohash_explainer">Lägger till en Geohash av din plats i inlägget. Allmänheten kommer att veta att du befinner dig inom 5 km från nuvarande plats</string>
+    <string name="geohash_teleport_title">Teleportera</string>
+    <string name="geohash_teleport_action">✈  Teleportera hit</string>
+    <string name="location_pick_on_map">Välj en plats på kartan</string>
+    <string name="location_change_place">Ändra plats på kartan</string>
     <string name="geohash_exclusive">Plats-exklusivt inlägg</string>
     <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
     <string name="hashtag_exclusive">Hashtag-exklusivt inlägg</string>
@@ -2134,7 +2251,19 @@
     <string name="relay_group_field_topics_hint">bitcoin, nostr, konst</string>
     <string name="relay_group_field_geohash">Plats (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_location_add">Lägg till en plats</string>
+    <string name="relay_group_location_add_desc">Fäst din grupp på en karta så att folk i närheten kan upptäcka den.</string>
+    <string name="relay_group_location_edit">Ändra plats</string>
+    <string name="relay_group_location_clear">Ta bort plats</string>
+    <string name="relay_group_location_manual">Ange en geohash manuellt</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
+    <string name="location_picker_title">Välj plats</string>
+    <string name="location_picker_hint">Flytta kartan, sök efter en plats eller använd din nuvarande plats.</string>
+    <string name="location_picker_search_hint">Sök efter en stad eller adress</string>
+    <string name="location_picker_search_empty">Ingen matchande plats hittades.</string>
+    <string name="location_picker_use_mine">Använd min nuvarande plats</string>
+    <string name="location_picker_area">Områdesstorlek</string>
+    <string name="location_picker_confirm">Använd den här platsen</string>
     <string name="relay_group_section_structure">Struktur</string>
     <string name="relay_group_parent_desc">Placera den här gruppen under en överordnad för att bygga en hierarki.</string>
     <string name="relay_group_parent_label">Överordnad grupp</string>
@@ -2157,6 +2286,8 @@
     <string name="relay_group_discovery_empty_filtered">Inga grupper hittades för det här filtret ännu.</string>
     <string name="relay_group_favorite_relay">Favoritmarkera det här reläet</string>
     <string name="relay_group_threads_empty">Inga trådar ännu. Starta en med +-knappen.</string>
+    <string name="relay_group_threads_loading_older">Läser in äldre trådar…</string>
+    <string name="relay_group_threads_all_caught_up">Inga äldre trådar</string>
     <string name="relay_group_thread_new">Ny tråd</string>
     <string name="relay_group_thread_untitled">Namnlös</string>
     <string name="relay_group_thread_title_label">Titel</string>
@@ -2270,6 +2401,8 @@
     <string name="error_dialog_pay_withdraw_error">Kunde inte ta ut</string>
     <string name="cashu_failed_redemption">Kunde inte lösa in Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint gav följande felmeddelande: %1$s</string>
+    <string name="cashu_unsafe_mint_url">Osäker Cashu-mint-adress</string>
+    <string name="cashu_unsafe_mint_url_explainer">Amethyst kontaktade inte den här tokenens mint. %1$s</string>
     <string name="cashu_successful_redemption">Cashu mottagen</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats skickades till din plånbok. (Avgifter: %2$s sats)</string>
     <string name="cashu_no_wallet_found">Ingen kompatibel Cashu-plånbok hittades på systemet</string>
@@ -4070,139 +4203,4 @@
     <string name="new_conversation_location_pro_1">Anonym — en engångsidentitet per område, aldrig din npub.</string>
     <string name="new_conversation_location_pro_2">Bitchat-kompatibel; når närliggande användare på samma reläer.</string>
     <string name="new_conversation_location_con_1">Offentlig och flyktig — ingen historik, alla i cellen kan läsa den.</string>
-    <string name="blossom_delete_from">Ta bort från…</string>
-    <string name="blossom_delete_from_host">Ta bort från %1$s</string>
-    <string name="blossom_mirror_to_missing">Spegla till saknade</string>
-    <string name="blossom_mirror_uploads">Spegla uppladdningar</string>
-    <string name="blossom_mirror_uploads_caption">Efter uppladdning kopieras filen till dina andra Blossom-servrar så att den förblir tillgänglig om en går offline.</string>
-    <string name="blossom_open">Öppna</string>
-    <string name="blossom_optimize_media">Optimera media på servern</string>
-    <string name="blossom_optimize_media_caption">Ladda upp via serverns /media-slutpunkt så att den kan ta bort metadata och komprimera filen. Den lagrade filen kan skilja sig från originalet.</string>
-    <string name="blossom_pay">Betala</string>
-    <string name="blossom_payment_message">%1$s tar ut en Lightning-betalning för att lagra den här filen. Betala från din anslutna plånbok för att fortsätta.</string>
-    <string name="blossom_payment_required">Den här servern kräver betalning för uppladdning: %1$s</string>
-    <string name="blossom_payment_server_says">%1$s säger: “%2$s”</string>
-    <string name="blossom_payment_title">Betalning krävs</string>
-    <string name="blossom_refresh">Uppdatera</string>
-    <string name="blossom_report">Rapportera</string>
-    <string name="blossom_report_comment_hint">Anledning (valfritt)</string>
-    <string name="blossom_report_title">Rapportera blob</string>
-    <string name="blossom_send">Skicka</string>
-    <string name="blossom_sync_all">Synka alla</string>
-    <string name="blossom_sync_cancel">Avbryt</string>
-    <string name="blossom_sync_channel_description">Visar förloppet medan dina filer kopieras mellan dina Blossom-servrar.</string>
-    <string name="blossom_sync_channel_name">Blossom-synk</string>
-    <string name="blossom_sync_done">Synkning klar</string>
-    <string name="blossom_sync_gaps">Några av dina filer finns inte på alla dina servrar ännu.</string>
-    <string name="blossom_syncing">Kopierar dina filer mellan servrar…</string>
-    <string name="cashu_unsafe_mint_url">Osäker Cashu-mint-adress</string>
-    <string name="cashu_unsafe_mint_url_explainer">Amethyst kontaktade inte den här tokenens mint. %1$s</string>
-    <string name="chat_preview_decrypting">Dekrypterar…</string>
-    <string name="concord_invite_failed_expired">Den här inbjudningslänken har upphört att gälla och kan inte längre användas. Be om en ny länk.</string>
-    <string name="concord_invite_preview_explainer">Att gå med ansluter till inbjudningens reläer, publicerar ett anslutningsmeddelande signerat av ditt konto och lägger till gemenskapen i din lista. Inget skickas förrän du trycker på Gå med.</string>
-    <string name="concord_invite_preview_relays">Reläer som inbjudan kommer att kontakta: %1$s</string>
-    <string name="concord_invite_preview_unknown_name">Gemenskapens namn visas först efter att du gått med</string>
-    <string name="concord_leave_community">Lämna gemenskapen</string>
-    <string name="concord_leave_message">Lämna %1$s? Den tas bort från det här kontots lista och slutar synkas på dina enheter. Gemenskapen meddelas inte och du tas inte bort från dess medlemslista. Meddelanden som du inte längre kan dekryptera kan gå förlorade, och du kan bara återvända med en ny inbjudan.</string>
-    <string name="concord_leave_owner_warning">Du skapade den här gemenskapen. Att lämna raderar den inte och överlämnar den inte till någon annan, men det kasserar ägarnyckeln som lagras i din lista — du skulle inte kunna hantera den igen.</string>
-    <string name="concord_leave_title">Lämna gemenskapen?</string>
-    <string name="concord_members_roles">Roller…</string>
-    <string name="concord_members_roles_failed">Kunde inte uppdatera den här medlemmens roller.</string>
-    <string name="concord_members_roles_message">Välj alla roller som den här medlemmen ska ha. Att avmarkera en roll tar bort den.</string>
-    <string name="concord_members_roles_none_assignable">Inga roller som du kan tilldela</string>
-    <string name="concord_members_roles_out_of_reach">Du har inte högre rang än den här medlemmen</string>
-    <string name="concord_members_roles_save">Spara</string>
-    <string name="concord_members_roles_title">Tilldela roller</string>
-    <string name="follow_geohash">Följ den här platsen</string>
-    <string name="follow_list_teleport">Teleportera till en plats…</string>
-    <string name="geo_post_change_place">Ändra</string>
-    <string name="geo_post_posting_to">Publicerar till</string>
-    <string name="geohash_teleport_action">✈  Teleportera hit</string>
-    <string name="geohash_teleport_title">Teleportera</string>
-    <string name="location_change_place">Ändra plats på kartan</string>
-    <string name="location_pick_on_map">Välj en plats på kartan</string>
-    <string name="location_picker_area">Områdesstorlek</string>
-    <string name="location_picker_confirm">Använd den här platsen</string>
-    <string name="location_picker_hint">Flytta kartan, sök efter en plats eller använd din nuvarande plats.</string>
-    <string name="location_picker_search_empty">Ingen matchande plats hittades.</string>
-    <string name="location_picker_search_hint">Sök efter en stad eller adress</string>
-    <string name="location_picker_title">Välj plats</string>
-    <string name="location_picker_use_mine">Använd min nuvarande plats</string>
-    <string name="manage_stored_files">Hantera lagrade filer</string>
-    <string name="manage_stored_files_empty">Inga lagrade filer hittades på dina Blossom-servrar.</string>
-    <string name="media_server_status_offline">Offline</string>
-    <string name="media_server_status_online">Online</string>
-    <string name="media_servers_upload_section">Uppladdningsbeteende</string>
-    <string name="my_blossom_data">Mina Blossom-filer</string>
-    <string name="napplet_consent_diff_follow_one">⚠ Detta följer %1$s.</string>
-    <string name="napplet_consent_diff_follows">⚠ Detta skriver om din följlista: %1$s.</string>
-    <string name="napplet_consent_diff_joiner">%1$s och %2$s</string>
-    <string name="napplet_consent_diff_mute_one">⚠ Detta tystar %1$s.</string>
-    <string name="napplet_consent_diff_mutes">⚠ Detta skriver om din tystningslista: %1$s. Tystade ord och hashtaggar visas inte här — tryck på “Visa händelse” för hela listan.</string>
-    <string name="napplet_consent_diff_none">Detta återpublicerar din befintliga lista oförändrad.</string>
-    <string name="napplet_consent_diff_relays">⚠ Detta skriver om din relälista: %1$s. Dina inlägg och läsningar flyttas med den.</string>
-    <string name="napplet_consent_diff_unfollow_one">⚠ Detta SLUTAR FÖLJA %1$s.</string>
-    <string name="napplet_consent_diff_unmute_one">⚠ Detta SLUTAR TYSTA %1$s.</string>
-    <string name="napplet_consent_pay_no_amount">⚠ Den här nApplet vill betala en Lightning-faktura som anger INGET belopp — betalningsmottagaren avgör hur mycket som tas. Tillåt detta endast om du litar på den.</string>
-    <string name="napplet_op_decrypt_from">läsa dina privata meddelanden med %1$s</string>
-    <string name="nip46_signer_allow_always_for">Tillåt alltid för %1$s</string>
-    <string name="nip46_signer_decrypt_failed">Amethyst kunde inte dekryptera det här meddelandet. Det kanske inte är adresserat till det här kontot.</string>
-    <string name="nip46_signer_messages_with">Meddelanden med</string>
-    <string name="relay_group_location_add">Lägg till en plats</string>
-    <string name="relay_group_location_add_desc">Fäst din grupp på en karta så att folk i närheten kan upptäcka den.</string>
-    <string name="relay_group_location_clear">Ta bort plats</string>
-    <string name="relay_group_location_edit">Ändra plats</string>
-    <string name="relay_group_location_manual">Ange en geohash manuellt</string>
-    <string name="relay_group_threads_all_caught_up">Inga äldre trådar</string>
-    <string name="relay_group_threads_loading_older">Läser in äldre trådar…</string>
-    <string name="share_as_qr">Dela som QR</string>
-    <string name="share_as_qr_code_description_nostr">QR-kod med en Nostr-länk till den här noten</string>
-    <string name="share_as_qr_code_description_web">QR-kod med en webblänk till den här noten</string>
-    <string name="share_as_qr_hint_nostr">Skanna med en Nostr-app</string>
-    <string name="share_as_qr_hint_web">Skanna med valfri telefonkamera</string>
-    <string name="share_as_qr_kind_picture">Bild</string>
-    <string name="share_as_qr_mode_nostr">Nostr-länk</string>
-    <string name="share_as_qr_mode_web">Webblänk</string>
-    <string name="share_as_qr_thumbnail_hidden_sensitive">Miniatyrbild dold för känsligt innehåll</string>
-    <string name="unfollow_geohash">Sluta följa den här platsen</string>
-    <plurals name="blossom_pay_sats">
-        <item quantity="one">Betala %1$d sat</item>
-        <item quantity="other">Betala %1$d sats</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_follow_added">
-        <item quantity="one">följer %1$d nytt konto</item>
-        <item quantity="other">följer %1$d nya konton</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_follow_removed">
-        <item quantity="one">SLUTAR FÖLJA %1$d konto</item>
-        <item quantity="other">SLUTAR FÖLJA %1$d konton</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_mute_added">
-        <item quantity="one">tystar %1$d person till</item>
-        <item quantity="other">tystar %1$d personer till</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_mute_removed">
-        <item quantity="one">SLUTAR TYSTA %1$d person</item>
-        <item quantity="other">SLUTAR TYSTA %1$d personer</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_no_baseline">
-        <item quantity="one">⚠ Detta skriver en lista med %1$d post. Amethyst har ingen cachad kopia att jämföra med.</item>
-        <item quantity="other">⚠ Detta skriver en lista med %1$d poster. Amethyst har ingen cachad kopia att jämföra med.</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_relay_added">
-        <item quantity="one">lägger till %1$d relä</item>
-        <item quantity="other">lägger till %1$d reläer</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_relay_removed">
-        <item quantity="one">TAR BORT %1$d relä</item>
-        <item quantity="other">TAR BORT %1$d reläer</item>
-    </plurals>
-    <plurals name="napplet_consent_effect_deletes">
-        <item quantity="one">⚠ Detta begär radering av %1$d av dina händelser.</item>
-        <item quantity="other">⚠ Detta begär radering av %1$d av dina händelser.</item>
-    </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Bär %1$d tagg. Tryck på “Visa händelse” för att se exakt vad som skulle signeras.</item>
-        <item quantity="other">Bär %1$d taggar. Tryck på “Visa händelse” för att se exakt vad som skulle signeras.</item>
-    </plurals>
 </resources>
