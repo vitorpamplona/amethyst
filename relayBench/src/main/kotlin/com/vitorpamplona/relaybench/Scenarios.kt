@@ -70,11 +70,11 @@ object Scenarios {
         }
 
         val topAuthors = notesByAuthor.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }).map { it.key }
-        val hottestThread =
+        val hotNotes =
             eTagRefs.entries
                 .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-                .firstOrNull()
-                ?.key
+                .map { it.key }
+        val hottestThread = hotNotes.firstOrNull()
         val mostMentioned =
             pTagRefs.entries
                 .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
@@ -85,6 +85,23 @@ object Scenarios {
                 .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
                 .firstOrNull()
                 ?.key
+
+        // The author that most often tags the most-mentioned pubkey — a
+        // conversation pair for the tag ∩ author (DM-room) query shape.
+        val conversationPeer =
+            mostMentioned?.let { me ->
+                val byAuthor = HashMap<String, Int>()
+                for (e in events) {
+                    if (e.kind != 1 || e.pubKey == me) continue
+                    if (e.tags.any { it.size >= 2 && it[0] == "p" && it[1] == me }) {
+                        byAuthor.merge(e.pubKey, 1, Int::plus)
+                    }
+                }
+                byAuthor.entries
+                    .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                    .firstOrNull()
+                    ?.key
+            }
 
         // Evenly spread sample of note ids — a "fetch these 100 events" batch.
         val idSample =
@@ -156,6 +173,33 @@ object Scenarios {
                         "notifications",
                         "events tagging the most-mentioned pubkey (notifications tab)",
                         Filter(kinds = listOf(1, 6, 7, 9735), tags = mapOf("p" to listOf(it)), limit = 500),
+                    ),
+                )
+            }
+            if (mostMentioned != null && conversationPeer != null) {
+                // The tag ∩ author ∩ kind shape (65 client assembler call
+                // sites: NIP-04 DM rooms, reports-by-follows, follows-scoped
+                // community feeds). Modeled on kind 1 because public corpora
+                // carry no DMs; the index path exercised is identical.
+                add(
+                    Scenario(
+                        "conversation",
+                        "notes by one author tagging the most-mentioned pubkey (DM-room shape)",
+                        Filter(kinds = listOf(1), authors = listOf(conversationPeer), tags = mapOf("p" to listOf(mostMentioned)), limit = 500),
+                    ),
+                )
+            }
+            if (hotNotes.size > 1) {
+                // Large-IN tag watcher: per-value streams come sorted off the
+                // tag index but their union does not, exposing whether the
+                // store collects+sorts or merges. 150 values stays inside
+                // strfry's default 200-element filter cap.
+                val watched = hotNotes.take(150)
+                add(
+                    Scenario(
+                        "reactions-watch",
+                        "reactions on the ${watched.size} hottest notes (visible-feed reaction watcher)",
+                        Filter(kinds = listOf(7), tags = mapOf("e" to watched), limit = 500),
                     ),
                 )
             }

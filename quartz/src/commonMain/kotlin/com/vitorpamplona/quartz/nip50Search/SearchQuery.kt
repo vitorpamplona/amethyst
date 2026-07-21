@@ -202,8 +202,20 @@ fun Filter.strippingSearchExtensions(): Filter {
 /**
  * Applies [strippingSearchExtensions] to every filter, returning this
  * same list when no filter carried extension tokens.
+ *
+ * This runs on every REQ/COUNT/snapshot, and the overwhelming majority
+ * carry no `search` term at all, so the no-search case must not allocate:
+ * bail before building any list when nothing could be stripped.
  */
 fun List<Filter>.strippingSearchExtensions(): List<Filter> {
+    var hasSearch = false
+    for (i in indices) {
+        if (!this[i].search.isNullOrEmpty()) {
+            hasSearch = true
+            break
+        }
+    }
+    if (!hasSearch) return this
     var changed = false
     val out =
         map {

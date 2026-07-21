@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +43,18 @@ class LocalRelayStore(
 ) : AutoCloseable {
     companion object {
         val LOCAL_RELAY_URL: NormalizedRelayUrl = NormalizedRelayUrl("ws://localhost/amethyst-local/")
+
+        /**
+         * Client defaults plus the authors-without-kinds index: shared
+         * ViewModels (`Nip65RelayListViewModel`, `PrivateOutboxRelayListViewModel`,
+         * `VanishRequestsState`) replay `authors`-only filters against this
+         * store, which full-scan without `(pubkey, created_at)` — the
+         * `(kind, pubkey, …)` index can't serve them, pubkey is its second
+         * column. A personal store is small, so the extra insert cost is
+         * negligible; existing DBs get the index built on next open via
+         * `ensureOptionalIndexes`.
+         */
+        val INDEX_STRATEGY = DefaultIndexingStrategy(indexEventsByPubkeyAlone = true)
     }
 
     private fun dbDir(pubKeyHex: String): File = File(homeDir, ".amethyst/accounts/${pubKeyHex.take(8)}")
@@ -87,14 +100,14 @@ class LocalRelayStore(
             dir.mkdirs()
             val path = File(dir, "events.db").absolutePath
             try {
-                store = EventStore(dbName = path, relay = LOCAL_RELAY_URL)
+                store = EventStore(dbName = path, relay = LOCAL_RELAY_URL, indexStrategy = INDEX_STRATEGY)
                 _lastError.value = null
                 refreshStats()
             } catch (e: Exception) {
                 Log.w("LocalRelayStore") { "DB open failed, recreating: ${e.message}" }
                 try {
                     deleteDbFiles(path)
-                    store = EventStore(dbName = path, relay = LOCAL_RELAY_URL)
+                    store = EventStore(dbName = path, relay = LOCAL_RELAY_URL, indexStrategy = INDEX_STRATEGY)
                     _lastError.value = "Database was recreated: ${e.message}"
                 } catch (e2: Exception) {
                     _lastError.value = "Cannot open local store: ${e2.message}"

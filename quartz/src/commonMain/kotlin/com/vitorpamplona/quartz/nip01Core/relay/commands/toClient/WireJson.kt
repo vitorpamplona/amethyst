@@ -20,28 +20,17 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
-class EoseMessage(
-    val subId: String,
-) : Message {
-    override fun label() = LABEL
-
-    /**
-     * Wire form is `["EOSE","<subId>"]` — sent once per REQ, so it is on
-     * the per-subscription floor. Splice it directly when [subId] needs no
-     * escaping (the common case: client-chosen sub ids are short ASCII),
-     * skipping the generic serializer's node tree. Byte-identical output;
-     * any exotic subId falls back.
-     */
-    override fun toJson(): String {
-        if (!isEscapeFreeAscii(subId)) return super.toJson()
-        return buildString(subId.length + 12) {
-            append("[\"EOSE\",\"")
-            append(subId)
-            append("\"]")
-        }
+/**
+ * True when every char of [s] is printable ASCII (0x20–0x7e) and not a JSON
+ * metacharacter (`"` / `\`) — i.e. exactly the bytes a JSON string encoder
+ * would emit verbatim between the quotes. Frame builders use this to gate a
+ * direct-`buildString` fast path against the generic serializer: when it holds
+ * the spliced output is byte-identical, and any exotic value (control chars,
+ * quotes, non-ASCII) falls back to the escaping serializer.
+ */
+internal fun isEscapeFreeAscii(s: String): Boolean {
+    for (c in s) {
+        if (c < ' ' || c > '~' || c == '"' || c == '\\') return false
     }
-
-    companion object {
-        const val LABEL = "EOSE"
-    }
+    return true
 }

@@ -83,6 +83,8 @@ val store = EventStore(
 
 By default, all single-letter tags with values are indexed. Override `shouldIndex(kind, tag)` for custom behavior. More indexes = faster queries but larger database.
 
+Flag flips are safe on existing databases: any flag-gated index the strategy wants but the on-disk schema lacks is created on the next open (idempotent `CREATE INDEX IF NOT EXISTS`, one-time build cost) — no schema version bump involved. Disabling a flag never drops an existing index.
+
 `indexFullTextSearch` defaults to `true` and controls the NIP-50 full-text index (`event_fts`). Set it to `false` when search is served elsewhere (e.g. a Vespa backend, or a `SearchEventSource` as shown below): inserts skip the FTS tokenization cost, no `event_fts` table/trigger is created, and any filter carrying a non-empty `search` term returns no matches.
 
 ## Non-Storage Relays (search, redirector, computed)

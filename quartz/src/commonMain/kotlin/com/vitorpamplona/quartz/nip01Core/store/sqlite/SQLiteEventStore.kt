@@ -160,6 +160,11 @@ class SQLiteEventStore(
                         setUserVersion(this, DATABASE_VERSION)
                     }
                 }
+                // Flag-gated indexes are runtime config, not schema: a
+                // deployment that flips an IndexingStrategy flag on an
+                // existing DB gets the index built here (idempotent,
+                // one-time cost), with no user_version bump involved.
+                eventIndexModule.ensureOptionalIndexes(db)
             },
         )
     }

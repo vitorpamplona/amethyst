@@ -74,12 +74,56 @@ class LiveEventStore(
      * One live REQ subscription. Carries the filters (for the
      * post-index `match` re-check needed for negative constraints
      * like `since` / `until` / `tagsAll`) and the delivery callback
-     * the index dispatches into. Identity-keyed inside [FilterIndex].
+     * the index dispatches into. [deliver] receives the event and its
+     * pre-serialized wire body (memoized once per fanout across all
+     * matching subscribers). Identity-keyed inside [FilterIndex].
      */
     private class LiveSubscription(
         val filters: List<Filter>,
-        val deliver: (Event) -> Unit,
+        val deliver: (Event, String) -> Unit,
     )
+
+    /**
+     * Replay-dedupe set for one REQ. During the historical replay the
+     * store's ids are [record]ed here so the concurrent live path can
+     * drop an event the replay also emitted; after EOSE the set is
+     * [release]d and the live path forwards everything.
+     *
+     * Written from the replay coroutine and read from the [IngestQueue]
+     * drain coroutine (via `fanout`), so every access takes a tiny spin
+     * lock — [locked] is `inline`, so the per-row `record` / `isDuplicate`
+     * calls allocate no closure. The backing `HashSet` is created empty
+     * up front (so the register-before-replay race guarantee holds) but
+     * the JVM defers its table allocation to the first `add`, so a
+     * zero-row replay costs only the empty set object, not a sized table.
+     * It MUST stay a mutable set under a lock, never a copy-on-add
+     * immutable set — `set + id` per row made large replays O(n²).
+     */
+    private class SeenIds {
+        private val lock = AtomicBoolean(false)
+        private var ids: HashSet<String>? = HashSet()
+
+        private inline fun <R> locked(block: () -> R): R {
+            while (lock.exchange(true)) {
+                while (lock.load()) { }
+            }
+            try {
+                return block()
+            } finally {
+                lock.store(false)
+            }
+        }
+
+        fun record(id: String) {
+            locked { ids?.add(id) }
+        }
+
+        fun isDuplicate(id: String): Boolean = locked { ids?.contains(id) ?: false }
+
+        fun release() {
+            locked { ids = null }
+        }
+    }
 
     /**
      * Fire-and-forget enqueue: hand [event] to the [IngestQueue] and
@@ -149,9 +193,17 @@ class LiveEventStore(
      * batch writer.
      */
     private fun fanout(event: Event) {
-        for (sub in index.candidatesFor(event)) {
+        val candidates = index.candidatesFor(event)
+        if (candidates.isEmpty()) return
+        // Serialize the wire body at most once for this event, no matter
+        // how many subscriptions match it — the old path re-serialized the
+        // whole event per matching subscriber, so a note landing in N live
+        // feeds paid N identical Jackson passes. Lazy so a fanout that
+        // matches nothing (index over-approximates) serializes nothing.
+        var body: String? = null
+        for (sub in candidates) {
             if (sub.filters.any { it.match(event) }) {
-                sub.deliver(event)
+                sub.deliver(event, body ?: event.toJson().also { body = it })
             }
         }
     }
@@ -178,61 +230,33 @@ class LiveEventStore(
         onEose: () -> Unit,
     ) {
         drainFtsIfSearching(filters)
-        // During the historical replay, record ids the store has
-        // emitted so the live path can dedupe. The index registers
-        // *before* the replay starts (otherwise an event accepted
-        // mid-replay would slip past the live path entirely — same
-        // race the previous SharedFlow-based implementation closed
-        // with `onSubscription`).
-        //
-        // The set is read from the [IngestQueue] drain coroutine (in
-        // `deliver`, called synchronously from `fanout`) and written
-        // from this coroutine (the historical-replay closure below),
-        // so access is guarded by a tiny spin lock (contains/add,
-        // never I/O). It MUST be a mutable set under a lock, not an
-        // immutable Set under an AtomicReference with copy-on-add:
-        // `set + id` copies the whole set per streamed event, which
-        // made large replays accidentally O(n²) — a 100k-event REQ
-        // crawled at ~700 events/s and the rate degraded as the
-        // response grew (see the plan doc's giant-REQ finding).
-        //
-        // Once cleared to null after EOSE, `deliver` short-circuits
-        // and every live event is forwarded.
-        val seenLock = AtomicBoolean(false)
-        var seenIds: HashSet<String>? = HashSet(1024)
-
-        fun <R> seenLocked(block: () -> R): R {
-            while (seenLock.exchange(true)) {
-                while (seenLock.load()) { }
-            }
-            try {
-                return block()
-            } finally {
-                seenLock.store(false)
-            }
-        }
+        // The index registers *before* the replay starts (otherwise an
+        // event accepted mid-replay would slip past the live path entirely
+        // — same race the previous SharedFlow-based implementation closed
+        // with `onSubscription`), and [SeenIds] bridges the two coroutines:
+        // the replay records ids here, the live `deliver` drops duplicates,
+        // and after EOSE the set is released so every live event forwards.
+        val seen = SeenIds()
 
         val sub =
             LiveSubscription(
                 filters = filters,
-                deliver = { event ->
-                    val duplicate = seenLocked { seenIds?.contains(event.id) ?: false }
-                    if (duplicate) return@LiveSubscription
-                    onEach(event)
+                deliver = { event, _ ->
+                    if (!seen.isDuplicate(event.id)) onEach(event)
                 },
             )
 
         index.register(filters, sub)
         try {
             store.query<Event>(filters.strippingSearchExtensions()) { event ->
-                seenLocked { seenIds?.add(event.id) }
+                seen.record(event.id)
                 onEach(event)
             }
             onEose()
             // Drop the dedupe set so the live path stops paying for
             // it. From this point the index drives delivery and
             // duplicates are no longer possible.
-            seenLocked { seenIds = null }
+            seen.release()
             // Suspend until the caller's coroutine is cancelled
             // (e.g. NIP-01 CLOSE or connection drop). The `finally`
             // unregisters from the index.
@@ -255,42 +279,28 @@ class LiveEventStore(
         ctx: RequestContext,
         filters: List<Filter>,
         onEachStored: (RawEvent) -> Unit,
-        onEachLive: (Event) -> Unit,
+        onEachLive: (Event, String) -> Unit,
         onEose: () -> Unit,
     ) {
         drainFtsIfSearching(filters)
-        val seenLock = AtomicBoolean(false)
-        var seenIds: HashSet<String>? = HashSet(1024)
-
-        fun <R> seenLocked(block: () -> R): R {
-            while (seenLock.exchange(true)) {
-                while (seenLock.load()) { }
-            }
-            try {
-                return block()
-            } finally {
-                seenLock.store(false)
-            }
-        }
+        val seen = SeenIds()
 
         val sub =
             LiveSubscription(
                 filters = filters,
-                deliver = { event ->
-                    val duplicate = seenLocked { seenIds?.contains(event.id) ?: false }
-                    if (duplicate) return@LiveSubscription
-                    onEachLive(event)
+                deliver = { event, body ->
+                    if (!seen.isDuplicate(event.id)) onEachLive(event, body)
                 },
             )
 
         index.register(filters, sub)
         try {
             store.rawQuery(filters.strippingSearchExtensions()) { raw ->
-                seenLocked { seenIds?.add(raw.id) }
+                seen.record(raw.id)
                 onEachStored(raw)
             }
             onEose()
-            seenLocked { seenIds = null }
+            seen.release()
             awaitCancellation()
         } finally {
             index.unregister(sub)

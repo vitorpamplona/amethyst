@@ -78,9 +78,9 @@ interface SessionBackend {
         ctx: RequestContext,
         filters: List<Filter>,
         onEachStored: (RawEvent) -> Unit,
-        onEachLive: (Event) -> Unit,
+        onEachLive: (Event, String) -> Unit,
         onEose: () -> Unit,
-    ): Unit = query(ctx, filters, onEachLive, onEose)
+    ): Unit = query(ctx, filters, { onEachLive(it, it.toJson()) }, onEose)
 
     /** Answers a NIP-45 COUNT with an exact cardinality for the caller in [ctx]. */
     suspend fun count(
