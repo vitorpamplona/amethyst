@@ -3288,6 +3288,7 @@
     <string name="chat_system_created_channel">%1$s created the channel %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s created the channel</string>
     <string name="chat_system_updated_channel">%1$s updated the channel profile</string>
+    <string name="buzz_message_edited">(edited)</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>

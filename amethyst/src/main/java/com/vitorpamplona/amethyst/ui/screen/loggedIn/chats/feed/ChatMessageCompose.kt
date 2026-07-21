@@ -56,6 +56,8 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzEditedNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
@@ -65,8 +67,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeBuzzEdit
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -129,6 +133,9 @@ fun ChatroomMessageCompose(
                 RenderChatClip(baseNote, accountViewModel, nav)
             } else if (event is ChannelCreateEvent || event is ChannelMetadataEvent) {
                 RenderChannelAdminSystemMessage(baseNote, accountViewModel, nav)
+            } else if (event is SystemMessageEvent) {
+                // Buzz kind-40099: relay-signed room narration (join/leave/topic).
+                RenderBuzzSystemMessage(baseNote)
             } else {
                 NormalChatNote(
                     baseNote,
@@ -582,7 +589,17 @@ fun NoteRow(
             note.event is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
-            else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+            else -> {
+                // Buzz channels overlay kind-40003 edits on their messages: when one
+                // exists, render the newest edit's content instead of the stale
+                // original. Null for every non-Buzz chat surface.
+                val buzzEdit = observeBuzzEdit(note)
+                if (buzzEdit != null) {
+                    RenderBuzzEditedNote(note, buzzEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                } else {
+                    RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                }
+            }
         }
     }
 }

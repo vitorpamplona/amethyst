@@ -163,5 +163,9 @@ class BuzzWorkspaceChannelTest {
                 channel.effectiveContentFor(original.id),
             )
             assertEquals(edit2.id, channel.editFor(original.id)?.idHex)
+
+            // Buzz semantics: edits are overlays, never timeline rows of their own.
+            assertFalse("edit events must not be attached as timeline rows", channel.notes.containsKey(edit1.id))
+            assertFalse("edit events must not be attached as timeline rows", channel.notes.containsKey(edit2.id))
         }
 }

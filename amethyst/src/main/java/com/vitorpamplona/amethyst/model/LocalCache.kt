@@ -2130,9 +2130,11 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean =
-        consumeBuzzTimelineEvent(event, relay, wasVerified).also {
-            // A 40003 replaces an earlier message's content: track the overlay so the
-            // UI never renders superseded text as current.
+        // Buzz's own timeline set excludes 40003: an edit is an OVERLAY replacing an
+        // earlier message's content, never a row of its own. Store it (queryable,
+        // dialect-marking) and record the overlay, but do NOT attach it to the
+        // channel timeline or it renders as a duplicate message.
+        consumeBuzzRegularEvent(event, relay, wasVerified).also {
             val target = event.editedMessage() ?: return@also
             val editNote = getOrCreateNote(event.id)
             if (editNote.event != null) {

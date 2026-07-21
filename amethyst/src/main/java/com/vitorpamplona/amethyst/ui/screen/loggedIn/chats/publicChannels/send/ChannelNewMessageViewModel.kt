@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -68,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
@@ -673,6 +675,39 @@ open class ChannelNewMessageViewModel :
                     imetas(usedAttachments)
 
                     replyTo.value?.idHex?.let { add(arrayOf("e", it, "", "reply")) }
+                }
+            }
+
+            channel is BuzzWorkspaceChannel -> {
+                // Buzz workspace message: the native kind is 40002 (stream message v2)
+                // scoped with the group's `h` tag; Buzz threads replies with NIP-10
+                // marked e-tags (["e", root, "", "root"] + ["e", parent, "", "reply"],
+                // collapsing to a single "reply" when the parent IS the root — mirrors
+                // thread_tags in buzz-sdk builders.rs) plus a `p` notify to the parent
+                // author. Kind 9 would also render in Buzz, but 40002 is what its own
+                // clients send. Checked BEFORE RelayGroupChannel: Buzz is a subclass.
+                StreamMessageV2Event.build(channel.groupId.id, tagger.message) {
+                    replyTo.value?.let { parent ->
+                        val parentRoot =
+                            parent.event
+                                ?.tags
+                                ?.firstOrNull { it.size >= 4 && it[0] == "e" && it[3] == "root" }
+                                ?.get(1)
+                        if (parentRoot != null && parentRoot != parent.idHex) {
+                            add(arrayOf("e", parentRoot, "", "root"))
+                        }
+                        add(arrayOf("e", parent.idHex, "", "reply"))
+                        parent.author?.pubkeyHex?.let { add(arrayOf("p", it)) }
+                    }
+
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
                 }
             }
 
