@@ -94,6 +94,8 @@ kotlin {
         // Forward the negentropy-benchmark corpus size to the test JVM.
         System.getProperty("negBenchN")?.let { systemProperty("negBenchN", it) }
         System.getProperty("followBenchScale")?.let { systemProperty("followBenchScale", it) }
+        System.getProperty("tagBenchScale")?.let { systemProperty("tagBenchScale", it) }
+        System.getProperty("fsBenchScale")?.let { systemProperty("fsBenchScale", it) }
         // Opt-in JFR profiling of a benchmark run (-PnegProfile=/tmp/neg.jfr).
         (project.findProperty("negProfile") as? String)?.let {
             jvmArgs("-XX:+FlightRecorder", "-XX:StartFlightRecording=filename=$it,settings=profile,dumponexit=true")
