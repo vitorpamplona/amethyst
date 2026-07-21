@@ -340,7 +340,20 @@ class RelaySession(
                                     },
                                 )
                             },
-                            onEachLive = { event -> send(EventMessage(cmd.subId, event)) },
+                            // Live events arrive with their wire body already
+                            // serialized (once per event, shared across every
+                            // matching subscription): splice it into the same
+                            // per-sub frame prefix as the stored replay, no
+                            // per-event EventMessage or re-serialize.
+                            onEachLive = { _, body ->
+                                sendRaw(
+                                    buildString(framePrefix.length + body.length + 1) {
+                                        append(framePrefix)
+                                        append(body)
+                                        append(']')
+                                    },
+                                )
+                            },
                             onEose = { send(EoseMessage(cmd.subId)) },
                         )
                     }
