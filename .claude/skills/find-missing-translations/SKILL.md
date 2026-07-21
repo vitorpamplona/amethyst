@@ -332,6 +332,35 @@ When adding translated strings to locale files:
 
 - **Append new strings at the bottom** of the file, just before the closing `</resources>` tag.
 - Do NOT try to insert them in alphabetical or matching order — a separate process handles ordering.
+- **Insert into each locale ONLY the keys missing from *that* locale — never a shared "union" block.** Because Crowdin strips keys asymmetrically (Step 2), a key you translate may already exist in some target locales. If you compute one union set of missing keys, translate it, and paste the *same* block into every locale, you will create **duplicate keys** in whichever locales already had them. Drive the insertion off the **per-locale** diff, not the union:
+
+  ```bash
+  # For each locale, insert only the keys comm -23 reports missing FOR THAT LOCALE.
+  for l in cs de-rDE sv-rSE pt-rBR; do
+    missing=$(comm -23 \
+      <(grep '<string name=' $base/values/strings.xml | grep -v 'translatable="false"' \
+        | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
+      <(grep '<string name=' $base/values-$l/strings.xml \
+        | sed 's/.*name="\([^"]*\)".*/\1/' | sort))
+    # ... append ONLY the $missing keys' translations to values-$l/strings.xml ...
+  done
+  ```
+
+  (This bit us on 2026-07-21: `ps1_save_block`, `podcast_value_for_value`, and `chats_history_relays` were each missing in only *some* commons locales, but the same 3-key block was pasted into all four — producing duplicates in the locales that already had them.)
+
+- **After inserting, verify each edited file has no duplicate keys AND is well-formed XML — before you call the task done.** A duplicate key is not a warning: the `commons` tree's Compose-resources build task fails hard on it (`convertXmlValueResourcesForCommonMain: … Duplicated key '…'`), which breaks the build for everyone. Quick post-insertion gate over every file you touched:
+
+  ```bash
+  for f in <every edited strings.xml>; do
+    dups=$(grep -oE '<(string|plurals) name="[^"]*"' "$f" \
+      | sed 's/.*name="\([^"]*\)"/\1/' | sort | uniq -d)
+    [ -n "$dups" ] && echo "DUP in $f: $dups"
+    python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('$f')" \
+      || echo "MALFORMED $f"
+  done
+  # For a commons change, also run the build task that enforces this:
+  #   ./gradlew :commons:convertXmlValueResourcesForCommonMain
+  ```
 
 ## Common Mistakes
 
@@ -344,6 +373,7 @@ When adding translated strings to locale files:
 - **Trusting a git "sync-timestamp" heuristic to pre-filter the list** — this skill used to skip keys added before the last `New Crowdin translations` commit, on the theory that Crowdin had already "decided" them. It was dropped: a key added shortly before an export that translators hadn't reached yet is genuinely missing, so the heuristic silently dropped real work. Use the raw on-disk diff and reconcile against the Crowdin web UI's untranslated count instead.
 - **Adding source-identical fallbacks locally** — they get overwritten on the next Crowdin sync. Android falls back to `values/strings.xml` at runtime anyway, so a key intentionally kept as English already renders correctly. Skip these by inspection (brand terms, loanwords, `v%1$s`-style strings); don't translate them to an identical value.
 - **Skipping per-locale diffs when only diffing cs** — Crowdin can strip different keys in different locales (each translator's choice), so cs is not a reliable upper bound. Diff each target locale and union the results.
+- **Pasting the union set of missing keys into every locale → duplicate keys** — the union is the right set to *translate*, but the wrong set to *insert*. A key missing in only some locales, inserted into all of them, duplicates in the ones that already had it. Drive each file's insertion off its own per-locale diff (see Step 6). In `commons`, a duplicate key is build-breaking: `convertXmlValueResourcesForCommonMain` fails with `Duplicated key '…'`. **Always run the post-insertion duplicate + XML-wellformedness gate in Step 6 before declaring done.** (Happened 2026-07-21 with `ps1_save_block` / `podcast_value_for_value` / `chats_history_relays`.)
 - **Inserting strings in a specific position** — always append at the bottom; ordering is handled separately
 - **Hardcoding `"1"` in a `<plurals>` `quantity="one"` item** — always use the count placeholder; otherwise non-English `one` categories produce wrong text
 - **Copying English's `one`/`other` set into every locale** — each language must include all CLDR plural categories it uses (e.g. Czech needs `one`, `few`, `many`, `other`)
