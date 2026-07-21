@@ -302,6 +302,21 @@ Do this before considering the task complete.
   `forEach`/`map`/`filter`/`any` — the `fast*` variants allocate no iterator,
   no intermediate list, and no lambda object. Don't "modernize" those into
   stdlib collection calls; match the surrounding hot-path style.
+- **Never put raw invisible/bidirectional Unicode characters in source files**
+  — write them as `\uXXXX` escapes instead (`'\u202E'`, `Regex("[\u200B-\u200D\uFEFF]")`).
+  This covers the bidi family Sonar's Trojan-Source rule (CVE-2021-42574)
+  flags — U+202A–U+202E, the isolates U+2066–U+2069, U+200E/U+200F, U+061C —
+  plus zero-width characters (U+200B–U+200D, U+FEFF, U+2060). The escape
+  compiles to the identical codepoint, so behaviour is unchanged; the point is
+  that the file on disk stays visually unambiguous. Applies even when the
+  character is *intentional* (sanitizer strip-lists, adversarial test
+  payloads) — that's data, and escapes express it just as well. Exceptions:
+  U+200D as part of a real emoji ZWJ sequence in test data (👩‍👧 — functional,
+  not a bidi control), and LRM/RLM inside Crowdin-managed `strings.xml`
+  translations (legitimate RTL typography; don't touch those files by hand
+  anyway). Note the tooling trap: the Edit tool may normalise a typed
+  `\uXXXX` back into the raw character — if that happens, do the replacement
+  at byte level (`perl -CSD -pe 's/\x{202E}/\\u202E/g'`).
 
 ### Navigation Shell
 - **Desktop**: Sidebar + main content area

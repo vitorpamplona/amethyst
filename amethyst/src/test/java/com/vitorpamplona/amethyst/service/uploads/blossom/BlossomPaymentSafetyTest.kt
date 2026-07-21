@@ -215,9 +215,9 @@ class BlossomPaymentSafetyTest {
 
     @Test
     fun reasonBidiOverridesAreRemoved() {
-        val clean = challenge(invoice1000Sats, reason = "fee ‮reversed‬ text").sanitizedReason()!!
-        assertFalse(clean.contains('‮'))
-        assertFalse(clean.contains('‬'))
+        val clean = challenge(invoice1000Sats, reason = "fee \u202Ereversed\u202C text").sanitizedReason()!!
+        assertFalse(clean.contains('\u202E'))
+        assertFalse(clean.contains('\u202C'))
     }
 
     @Test

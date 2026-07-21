@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.moderation.notifications
 
 private val CONTROL_CHARS = Regex("\\p{Cntrl}")
-private val RTL_OVERRIDES = Regex("[‪-‮⁦-⁩]")
-private val ZERO_WIDTH = Regex("[​-‍﻿]")
+private val RTL_OVERRIDES = Regex("[\u202A-\u202E\u2066-\u2069]")
+private val ZERO_WIDTH = Regex("[\u200B-\u200D\uFEFF]")
 private val WHITESPACE = Regex("\\s+")
 private val URL_PATTERN = Regex("https?://\\S+")
 

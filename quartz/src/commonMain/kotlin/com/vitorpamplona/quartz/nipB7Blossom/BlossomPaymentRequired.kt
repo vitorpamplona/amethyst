@@ -74,7 +74,7 @@ data class BlossomPaymentRequired(
         const val MAX_REASON_LENGTH = 200
 
         /** LRE/RLE/PDF/LRO/RLO and the isolate family — invisible, and they reorder what follows. */
-        private val BIDI_OVERRIDES = charArrayOf('‪', '‫', '‬', '‭', '‮', '⁦', '⁧', '⁨', '⁩', '‏', '‎')
+        private val BIDI_OVERRIDES = charArrayOf('\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2066', '\u2067', '\u2068', '\u2069', '\u200F', '\u200E')
 
         private val WHITESPACE_RUN = Regex("\\s+")
 
