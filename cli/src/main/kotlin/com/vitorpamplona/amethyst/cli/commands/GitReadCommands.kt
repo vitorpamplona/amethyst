@@ -26,12 +26,15 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
@@ -47,6 +50,12 @@ object GitReadCommands {
             GitStatusEvent.KIND_CLOSED,
             GitStatusEvent.KIND_DRAFT,
         )
+
+    /** Idle timeout for the list reads — tighter than `drainAllPages`' 30s default so a dead relay can't stall a list. */
+    private const val READ_TIMEOUT_MS = 12_000L
+
+    /** Max event ids per `#e` status filter — many relays cap tag-filter values around 100, so stay well under. */
+    private const val STATUS_ID_CHUNK = 50
 
     suspend fun issues(
         dataDir: DataDir,
@@ -81,16 +90,21 @@ object GitReadCommands {
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val repoAddress = GitSupport.repoCoordinate(addr)
-            val relays = RawEventSupport.queryTargets(ctx, args)
+            // Fetch the announcement once: it supplies both the maintainer set
+            // (status authority) AND the advertised relays the events actually live
+            // on. Reading only from general relays misses GRASP-hosted repos.
+            val repo = GitSupport.fetchRepo(ctx, addr, args)
+            val relays = GitSupport.readTargets(ctx, repo, args)
 
-            // Two queries so item volume and status volume never starve each other
-            // (a busy repo can have far more status events than items). First page
-            // the items to the limit; then fetch exactly the status events that
-            // `e`-reference those items, so derived status is never truncated away.
+            // Two queries so item volume and status volume never starve each other.
+            // Items are paged to the limit; statuses are fetched separately by the
+            // items' ids so derived status is never truncated by item volume.
             val itemEvents =
                 ctx
-                    .drainAllPages(relays.associateWith { listOf(Filter(kinds = listOf(itemKind), tags = mapOf("a" to listOf(repoAddress)), limit = limit)) })
-                    .asSequence()
+                    .drainAllPages(
+                        relays.associateWith { listOf(Filter(kinds = listOf(itemKind), tags = mapOf("a" to listOf(repoAddress)), limit = limit)) },
+                        timeoutMs = READ_TIMEOUT_MS,
+                    ).asSequence()
                     .map { it.second }
                     .filter { it.kind == itemKind }
                     .distinctBy { it.id }
@@ -98,22 +112,12 @@ object GitReadCommands {
                     .take(limit)
                     .toList()
 
-            val itemIds = itemEvents.map { it.id }
-            val statuses =
-                if (itemIds.isEmpty()) {
-                    emptyList()
-                } else {
-                    ctx
-                        .drain(relays.associateWith { listOf(Filter(kinds = STATUS_KINDS, tags = mapOf("e" to itemIds))) })
-                        .map { it.second }
-                        .filterIsInstance<GitStatusEvent>()
-                        .distinctBy { it.id }
-                }
-            val authorities = repoAuthorities(ctx, addr, args)
+            val statusesByRoot = fetchStatusesFor(ctx, relays, itemEvents.map { it.id }).groupBy { it.rootEventId() }
+            val authorities = repoAuthorities(repo, addr)
 
             val items =
                 itemEvents
-                    .map { item -> GitSupport.targetSummary(item) + mapOf("status" to latestStatus(item, statuses, authorities)) }
+                    .map { item -> GitSupport.targetSummary(item) + mapOf("status" to latestStatus(item, statusesByRoot, authorities)) }
                     .filter { wanted == null || it["status"] in wanted }
 
             Output.emit(mapOf("repository" to repoAddress, "count" to items.size, "items" to items))
@@ -124,6 +128,10 @@ object GitReadCommands {
     /**
      * `amy git thread TARGET` — the target event plus its status timeline and
      * NIP-22 comments (and legacy kind:1622 replies).
+     *
+     * Scope: first-level replies/statuses that `e`-reference the target. Nested
+     * comment trees and PR-update (1619) events (which use NIP-22 uppercase `E`)
+     * are out of scope here.
      */
     suspend fun thread(
         dataDir: DataDir,
@@ -141,7 +149,9 @@ object GitReadCommands {
             val target =
                 GitSupport.fetchEvent(ctx, id, args)
                     ?: return Output.error("not_found", "no event found for $ref")
-            val relays = RawEventSupport.queryTargets(ctx, args)
+            val repoATag = GitSupport.repositoryOf(target)
+            val repo = repoATag?.let { GitSupport.fetchRepo(ctx, Address(it.kind, it.pubKeyHex, it.dTag), args) }
+            val relays = GitSupport.readTargets(ctx, repo, args)
             // Everything that `e`-references the target: statuses, comments, replies.
             val related =
                 ctx
@@ -149,12 +159,13 @@ object GitReadCommands {
                         relays.associateWith {
                             listOf(Filter(kinds = STATUS_KINDS + listOf(CommentEvent.KIND, GitReplyEvent.KIND), tags = mapOf("e" to listOf(id))))
                         },
+                        timeoutMs = READ_TIMEOUT_MS,
                     ).map { it.second }
                     .distinctBy { it.id }
 
-            val repoATag = GitSupport.repositoryOf(target)
-            val authorities = repoATag?.let { repoAuthorities(ctx, Address(it.kind, it.pubKeyHex, it.dTag), args) } ?: setOf(target.pubKey)
+            val authorities = repoATag?.let { repoAuthorities(repo, Address(it.kind, it.pubKeyHex, it.dTag)) } ?: setOf(target.pubKey)
             val statuses = related.filterIsInstance<GitStatusEvent>().filter { it.rootEventId() == id }
+            val statusesByRoot = statuses.groupBy { it.rootEventId() }
             val comments =
                 related
                     .filter { it.kind == CommentEvent.KIND || it.kind == GitReplyEvent.KIND }
@@ -165,7 +176,7 @@ object GitReadCommands {
                 GitSupport.targetSummary(target) +
                     mapOf(
                         "content" to target.content,
-                        "status" to latestStatus(target, statuses, authorities),
+                        "status" to latestStatus(target, statusesByRoot, authorities),
                         "status_events" to
                             statuses.sortedBy { it.createdAt }.map {
                                 mapOf("event_id" to it.id, "status" to GitSupport.statusLabel(it.kind), "author" to it.pubKey, "created_at" to it.createdAt)
@@ -179,34 +190,56 @@ object GitReadCommands {
 
     // ------------------------------------------------------------------
 
-    /** The set of pubkeys whose status is authoritative for a repo: the owner + declared maintainers. */
-    private suspend fun repoAuthorities(
+    /**
+     * Fetch the status events that `e`-reference [itemIds]. Chunked to stay under
+     * relay tag-filter value caps, and paged (`drainAllPages`) so a heavily
+     * reopened/closed item's older status can't fall off a single page.
+     */
+    private suspend fun fetchStatusesFor(
         ctx: Context,
+        relays: Set<NormalizedRelayUrl>,
+        itemIds: List<HexKey>,
+    ): List<GitStatusEvent> {
+        if (itemIds.isEmpty()) return emptyList()
+        return itemIds
+            .chunked(STATUS_ID_CHUNK)
+            .flatMap { chunk ->
+                ctx
+                    .drainAllPages(
+                        relays.associateWith { listOf(Filter(kinds = STATUS_KINDS, tags = mapOf("e" to chunk))) },
+                        timeoutMs = READ_TIMEOUT_MS,
+                    ).map { it.second }
+            }.filterIsInstance<GitStatusEvent>()
+            .distinctBy { it.id }
+    }
+
+    /** The set of pubkeys whose status is authoritative for a repo: the owner + declared maintainers. */
+    private fun repoAuthorities(
+        repo: GitRepositoryEvent?,
         addr: Address,
-        args: Args,
-    ): Set<String> {
-        val repo = GitSupport.fetchRepo(ctx, addr, args)
-        return buildSet {
+    ): Set<HexKey> =
+        buildSet {
             add(addr.pubKeyHex)
             repo?.maintainers()?.let { addAll(it) }
         }
-    }
 
     /**
      * The authoritative status label for [item]: the newest status event (by
-     * `created_at`) that `e`-roots this item and is signed by the item author,
-     * the repo owner, or a maintainer. Defaults to `open` when none exists.
+     * `created_at`, id as a deterministic tie-break) that `e`-roots this item and
+     * is signed by the item author, the repo owner, or a maintainer. Defaults to
+     * `open` when none exists. [statusesByRoot] is pre-grouped by root event id so
+     * this is an O(1) lookup instead of an O(items × statuses) rescan.
      */
     private fun latestStatus(
         item: Event,
-        statuses: List<GitStatusEvent>,
-        authorities: Set<String>,
+        statusesByRoot: Map<HexKey?, List<GitStatusEvent>>,
+        authorities: Set<HexKey>,
     ): String {
         val allowed = authorities + item.pubKey
         val newest =
-            statuses
-                .filter { it.rootEventId() == item.id && it.pubKey in allowed }
-                .maxByOrNull { it.createdAt }
+            statusesByRoot[item.id]
+                ?.filter { it.pubKey in allowed }
+                ?.maxWithOrNull(compareBy({ it.createdAt }, { it.id }))
         return GitSupport.statusLabel(newest?.kind)
     }
 

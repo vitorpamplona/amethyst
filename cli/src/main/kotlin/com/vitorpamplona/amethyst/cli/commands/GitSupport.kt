@@ -129,13 +129,44 @@ object GitSupport {
         repo: GitRepositoryEvent?,
         args: Args,
     ): Set<NormalizedRelayUrl> {
+        val flag = RawEventSupport.relayFlag(args)
+        if (flag.isNotEmpty()) return flag
         val advertised =
             repo
                 ?.relays()
                 ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
                 ?.toSet()
                 .orEmpty()
-        return RawEventSupport.relayFlag(args).ifEmpty { advertised }.ifEmpty { ctx.outboxRelays() }
+        if (advertised.isNotEmpty()) return advertised
+        // Falling back to the account outbox: the repo couldn't be resolved or
+        // advertises no relays, so a maintainer watching only the repo's NIP-34
+        // relays may never see this event. Say so instead of reporting silent success.
+        System.err.println(
+            "[git] warning: no repository relays known — delivering to your outbox. " +
+                "A maintainer watching only the repo's relays may not see this; pass --relay to target them.",
+        )
+        return ctx.outboxRelays()
+    }
+
+    /**
+     * Where to READ a repo's collaboration events from: the account's query
+     * relays (explicit `--relay`, else outbox, else bootstrap) UNION the repo
+     * announcement's own advertised `relays` — the NIP-34 monitored set where
+     * patches/issues/statuses actually live. Without the union, a repo hosted on
+     * GRASP/git-specific relays (which general relays don't mirror) reads empty.
+     */
+    suspend fun readTargets(
+        ctx: Context,
+        repo: GitRepositoryEvent?,
+        args: Args,
+    ): Set<NormalizedRelayUrl> {
+        val advertised =
+            repo
+                ?.relays()
+                ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                ?.toSet()
+                .orEmpty()
+        return RawEventSupport.queryTargets(ctx, args) + advertised
     }
 
     /** Parse a `--flag a,b,c` CSV flag into a trimmed, non-empty list. */

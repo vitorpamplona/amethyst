@@ -99,8 +99,9 @@ object GitApplyCommand {
         repoDir: File,
         input: String?,
         vararg gitArgs: String,
-    ): Pair<Int, String> =
-        try {
+    ): Pair<Int, String> {
+        var writer: Thread? = null
+        return try {
             val proc =
                 ProcessBuilder(listOf("git", *gitArgs))
                     .directory(repoDir)
@@ -109,18 +110,23 @@ object GitApplyCommand {
             // Feed stdin on a separate thread while we drain stdout on this one: a
             // large patch (bigger than the OS pipe buffer) would otherwise deadlock
             // — git blocks writing output we haven't read, we block writing stdin.
-            val writer =
+            // The patch was decoded as UTF-8, so write it back as UTF-8 (not the JVM
+            // default charset, which would corrupt non-ASCII filenames/messages).
+            writer =
                 if (input != null) {
-                    thread(name = "git-stdin") { runCatching { proc.outputStream.use { it.write(input.toByteArray()) } } }
+                    thread(name = "git-stdin") { runCatching { proc.outputStream.use { it.write(input.toByteArray(Charsets.UTF_8)) } } }
                 } else {
                     proc.outputStream.close()
                     null
                 }
             val out = proc.inputStream.readBytes().decodeToString()
-            val code = proc.waitFor()
-            writer?.join()
-            code to out
+            proc.waitFor() to out
         } catch (e: Exception) {
             1 to (e.message ?: "could not run git (is it installed and is this a git repo?)")
+        } finally {
+            // Always join so a non-daemon stdin thread can't outlive the call (e.g.
+            // under the in-process test harness, which doesn't exitProcess).
+            writer?.join()
         }
+    }
 }

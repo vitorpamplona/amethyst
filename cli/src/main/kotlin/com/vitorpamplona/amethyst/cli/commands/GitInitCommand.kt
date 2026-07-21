@@ -119,11 +119,17 @@ object GitInitCommand {
                 if (refs.isNotEmpty() || head != null) {
                     val stateTemplate = GitRepositoryStateEvent.build(dTag = identifier, refs = refs, head = head)
                     val signedState = ctx.signer.sign(stateTemplate)
-                    ctx.publish(signedState, targets)
+                    // Surface the state publish result separately (state_*) rather than
+                    // dropping it — otherwise a fully-rejected 30618 reads as success.
+                    val stateAck = ctx.publish(signedState, targets)
                     result["state_event_id"] = signedState.id
                     result["branches"] = refs.count { it.kind == RefTag.Kind.BRANCH }
                     result["tags"] = refs.count { it.kind == RefTag.Kind.TAG }
                     result["head"] = head
+                    result.putAll(RawEventSupport.ackFields(stateAck).mapKeys { "state_${it.key}" })
+                    if (stateAck.isNotEmpty() && stateAck.none { it.value.accepted }) {
+                        System.err.println("[git init] warning: no relay accepted the repository-state (30618) event — branches/tags/HEAD were not delivered.")
+                    }
                 }
             }
             Output.emit(result + RawEventSupport.ackFields(ackAnnounce))
@@ -180,7 +186,15 @@ object GitInitCommand {
                 val path = rest.substringAfter(':')
                 "https://$host/$path"
             }
-            url.startsWith("ssh://git@") -> "https://" + url.removePrefix("ssh://git@")
+            url.startsWith("ssh://git@") -> {
+                // ssh://git@host[:port]/owner/repo.git → https://host/owner/repo.git
+                // (drop the SSH port; carrying it into the https URL makes it unreachable).
+                val rest = url.removePrefix("ssh://git@")
+                val slash = rest.indexOf('/')
+                val hostPort = if (slash >= 0) rest.take(slash) else rest
+                val path = if (slash >= 0) rest.substring(slash) else ""
+                "https://${hostPort.substringBefore(':')}$path"
+            }
             else -> url
         }
 
