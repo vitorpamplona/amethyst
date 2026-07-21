@@ -22,6 +22,7 @@
 
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
@@ -349,6 +350,7 @@ class EventFactory {
             when (kind) {
                 AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                AgentTurnMetricEvent.KIND -> AgentTurnMetricEvent(id, pubKey, createdAt, tags, content, sig)
                 AppCurationSetEvent.KIND -> AppCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AppDefinitionEvent.KIND -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 AppRecommendationEvent.KIND -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
