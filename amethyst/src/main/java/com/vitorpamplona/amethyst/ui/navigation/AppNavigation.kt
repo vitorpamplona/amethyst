@@ -153,6 +153,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.N
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabAccountWatcher
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
@@ -334,6 +335,10 @@ fun AppNavigation(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
                         .collectAsStateWithLifecycle()
+                    // Move every embedded app to the new account on a switch. Mounted before the layer and
+                    // the preloader so the previous account's sessions are dropped ahead of the first sweep
+                    // (an embed WebView's storage profile is fixed at construction, so it must be rebuilt).
+                    EmbeddedTabAccountWatcher()
                     EmbeddedTabLayer(bottomBarItems.favoriteIds())
                     // Warm every pinned tab at startup so the first tap is instant (content already local).
                     EmbeddedTabPreloader(accountViewModel)

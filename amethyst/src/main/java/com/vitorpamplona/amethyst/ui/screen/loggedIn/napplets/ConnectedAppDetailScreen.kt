@@ -82,6 +82,8 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel
+import com.vitorpamplona.amethyst.napplet.NappletBrokerService
+import com.vitorpamplona.amethyst.napplet.counterpartyLabel
 import com.vitorpamplona.amethyst.napplet.descriptionRes
 import com.vitorpamplona.amethyst.napplet.labelRes
 import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
@@ -117,7 +119,7 @@ fun ConnectedAppDetailScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val capabilityLedger = remember { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore) }
+    val capabilityLedger = Amethyst.instance.nappletPermissionLedger
     val signerLedger = remember { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
     val untitled = stringResource(CommonsR.string.napplet_untitled)
 
@@ -219,7 +221,15 @@ fun ConnectedAppDetailScreen(
                 PolicyPicker(
                     selected = current.signerPolicy,
                     onSelect = { newPolicy ->
-                        mutate { signerLedger.setPolicy(coordinate, newPolicy) }
+                        mutate {
+                            signerLedger.setPolicy(coordinate, newPolicy)
+                            // Live session grants are consulted BEFORE the policy, so tightening an app
+                            // to PARANOID would not have stopped it signing — the grant it already holds
+                            // short-circuits the check the new policy would fail. Changing the trust
+                            // level is a decision about how this app is treated from now on, so drop
+                            // what it is holding and let the new policy actually apply.
+                            NappletBrokerService.revokeSessionGrants(coordinate)
+                        }
                     },
                 )
             }
@@ -238,7 +248,14 @@ fun ConnectedAppDetailScreen(
                             OpOverrideRow(
                                 opKey = opKey,
                                 decision = decision,
-                                onRevoke = { mutate { signerLedger.revokeOpDecision(coordinate, NostrSignerOp.fromKey(opKey) ?: return@mutate) } },
+                                onRevoke = {
+                                    mutate {
+                                        signerLedger.revokeOpDecision(coordinate, NostrSignerOp.fromKey(opKey) ?: return@mutate)
+                                        // The persisted override is gone, but a live "allow for this session"
+                                        // grant would keep authorizing this app until the broker dies.
+                                        NappletBrokerService.revokeSessionGrants(coordinate)
+                                    }
+                                },
                             )
                         }
                     }
@@ -294,6 +311,11 @@ fun ConnectedAppDetailScreen(
                             signerLedger.revokeAll(coordinate)
                         }
                         capabilityLedger.revokeAll(identity)
+                        // Forgetting an app has to stop it signing *now*. The two ledgers above only
+                        // drop persisted + capability grants; the broker separately holds the signer's
+                        // in-memory "allow for this session" grants, which would otherwise keep the
+                        // app authorized for as long as any applet surface stays open.
+                        NappletBrokerService.revokeSessionGrants(coordinate)
                     }
                     nav.popBack()
                 },
@@ -703,6 +725,7 @@ private fun NostrSignerOp.opLabel(): String =
         is NostrSignerOp.SignKind -> stringResource(R.string.napplet_op_sign_kind, kind)
         NostrSignerOp.Encrypt -> stringResource(R.string.napplet_op_encrypt)
         NostrSignerOp.Decrypt -> stringResource(R.string.napplet_op_decrypt)
+        is NostrSignerOp.DecryptFrom -> stringResource(R.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
     }
 
 @Composable

@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
-import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
@@ -50,7 +49,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.screen.AccountState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -78,32 +77,37 @@ import kotlinx.coroutines.launch
 class NappletBrokerService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // One ledger for the whole service lifetime: persistent grants on disk, session grants in RAM.
-    private val ledger by lazy { NappletPermissionLedger(Amethyst.instance.nappletPermissionStore) }
+    // Persistent grants on disk, session grants in RAM. Shared app-wide (see AppModules) so the
+    // Connected Apps screens revoke the very grants this broker consults; session grants are dropped
+    // in onDestroy, which is the "all applet surfaces closed" boundary.
+    private val ledger get() = Amethyst.instance.nappletPermissionLedger
 
     // Per-app internal-signer permission ledger (policy + per-op overrides). Lazy so it's only
     // instantiated in the main process where the signer lives; never touched from :napplet.
     private val signerLedger by lazy { NostrSignerPermissionLedger(Amethyst.instance.signerPermissionStore) }
 
-    // Per-applet sandboxed key-value store (namespaced by coordinate inside the impl).
-    private val storage by lazy { DataStoreNappletStorage(applicationContext) }
+    // Per-applet sandboxed key-value store (namespaced by account + coordinate inside the impl).
+    private val storage by lazy { DataStoreNappletStorage(applicationContext, Amethyst.instance.nappletAccountScope) }
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
-    // The broker for the current account, rebuilt only on account switch (see broker()).
-    private var cachedBroker: Pair<Account, NappletBroker>? = null
-
-    // Live relay subscriptions, keyed by the applet's subId; reads the current account live.
-    private val liveSubscriptions = NappletLiveSubscriptions { Amethyst.instance.sessionManager.loggedInAccount() }
+    // Live relay subscriptions, keyed by the applet's subId. The account comes per-open from the
+    // requesting surface's launch token, so a surface's REQs always target the account it acts as.
+    private val liveSubscriptions = NappletLiveSubscriptions()
 
     // The app-wide inc pub/sub bus: routes inc.emit between live napplet sessions as inc.event pushes.
     private val incBus = NappletIncBus { replyTo, payload -> push(replyTo, payload) }
 
-    // Streams identity.changed pushes (account switch / connect / disconnect) to a watching applet.
+    // Streams identity.changed to a watching applet. Bound to the surface's LAUNCH account, not the
+    // app's active one: a surface acts as the account that opened it for its whole life, so switching
+    // accounts elsewhere is not an identity change *for it*. Announcing the newly-active pubkey here
+    // would tell a page it had become someone else while its signatures still came back as the
+    // original — the same desync the launch binding exists to prevent. What this does still report is
+    // that account going away (logout/removal), which emits "".
     private val identityWatch =
-        NappletIdentityWatch(scope) {
-            Amethyst.instance.sessionManager.accountContent
-                .map { (it as? AccountState.LoggedIn)?.account?.signer?.pubKey ?: "" }
+        NappletIdentityWatch(scope) { boundPubKey ->
+            Amethyst.instance.accountsCache.accounts
+                .map { loaded -> if (loaded.containsKey(boundPubKey)) boundPubKey else "" }
         }
 
     // Binding is restricted to our own UID by exported=false in the manifest, enforced by the OS.
@@ -114,6 +118,13 @@ class NappletBrokerService : Service() {
     override fun onDestroy() {
         liveSubscriptions.closeAll()
         identityWatch.stop()
+        // Every applet/browser surface has unbound, so the "session" the user granted for is over.
+        // The ledger and the broker cache are now app-wide singletons that outlive this service, so
+        // their in-memory session grants have to be dropped explicitly here — that keeps the lifetime
+        // the consent dialog promises ("allow for this session") instead of letting it become
+        // "allow until the app process dies".
+        dropCachedBroker()
+        Amethyst.instance.nappletPermissionLedger.endSession()
         // Drop any foreground holds this broker still owns so they don't leak past the service.
         synchronized(foregroundLeases) {
             repeat(foregroundLeases.size) { SandboxForegroundHold.release() }
@@ -241,7 +252,10 @@ class NappletBrokerService : Service() {
             val replyTo = msg.replyTo ?: return true
             val origin = data.getString(NappletIpc.KEY_BROWSER_ORIGIN)?.takeIf { it.isNotBlank() } ?: return true
             val identity = NappletIdentity(authorPubKey = BROWSER_IDENTITY_AUTHOR, identifier = origin)
-            val token = NappletLaunchRegistry.register(identity, setOf(NappletCapability.IDENTITY, NappletCapability.RELAY))
+            // Bind to the account active at mint time: a browser token minted for one account must
+            // never sign as another if the user switches while the page is still open.
+            val mintAccount = Amethyst.instance.sessionManager.loggedInAccount() ?: return true
+            val token = NappletLaunchRegistry.register(identity, setOf(NappletCapability.IDENTITY, NappletCapability.RELAY), mintAccount.pubKey)
             val response =
                 Message.obtain(null, NappletIpc.MSG_BROWSER_TOKEN).apply {
                     this.data =
@@ -278,17 +292,20 @@ class NappletBrokerService : Service() {
             // The shared, host-agnostic router owns decode → broker → encode and the subscribe-vs-reply
             // decision (it stays wire-identical with the future desktop host). This service only supplies
             // the broker, the Messenger transport, and the live relay subscription each Outcome implies.
-            val broker = broker()
+            // The launch token decides whose key signs — not the active account. A surface opened by
+            // one account can never be handed another's signer, even while it stays open across a switch.
+            val broker = brokerFor(session.accountPubKey)
             if (broker == null) {
-                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("No account is signed in.")))
+                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("That account is no longer signed in.")))
                 return@launch
             }
             when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload)) {
                 is NappletRequestRouter.Outcome.Ignore -> {}
                 is NappletRequestRouter.Outcome.Reply -> reply(replyTo, requestId, outcome.payload)
-                is NappletRequestRouter.Outcome.OpenSubscription -> liveSubscriptions.open(outcome.subId, outcome.filters) { push(replyTo, it) }
+                is NappletRequestRouter.Outcome.OpenSubscription ->
+                    liveSubscriptions.open(outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(outcome.subId)
-                is NappletRequestRouter.Outcome.WatchIdentity -> identityWatch.start { push(replyTo, it) }
+                is NappletRequestRouter.Outcome.WatchIdentity -> identityWatch.start(session.accountPubKey) { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.UnwatchIdentity -> identityWatch.stop()
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
                 is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
@@ -327,28 +344,44 @@ class NappletBrokerService : Service() {
             }
     }
 
+    /** The launched-as account, or null once it is no longer loaded. */
+    private fun accountFor(accountPubKey: HexKey): Account? = Amethyst.instance.accountsCache.accounts.value[accountPubKey]
+
     /**
-     * The broker for the *currently* signed-in account, cached and rebuilt only when the account
-     * changes (reference identity). The gateways capture the account and read its flows live, so a
-     * cached broker stays correct across requests without per-request allocation.
+     * The broker for the account a surface was LAUNCHED as — [NappletLaunchRegistry.Session.accountPubKey],
+     * never whichever account is active right now.
+     *
+     * Resolving live was wrong in a way that defeated per-account isolation: a full-screen host is a
+     * separate activity that an account switch does not tear down, so its WebView kept account A's
+     * cookies while requests were signed by B. The page displayed one identity while another signed,
+     * and B's session was written into A's storage jar — after which even the embedded tab, which is
+     * rebuilt correctly, showed the wrong account.
+     *
+     * Binding to the launch account satisfies both halves of the rule with no extra machinery:
+     * embedded surfaces are torn down and re-minted on a switch, so they follow the active account,
+     * while a full-screen surface stays on the account it was opened with.
+     *
+     * Returns null when that account is no longer loaded (logged out), so requests fail closed
+     * rather than silently falling back to someone else's key.
      */
-    @Synchronized
-    private fun broker(): NappletBroker? {
-        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
-        cachedBroker?.let { (acc, broker) -> if (acc === account) return broker }
-        val broker =
-            AccountNappletGateways(
-                account = account,
-                context = applicationContext,
-                ledger = ledger,
-                storage = storage,
-                // Per-applet Tor decision (see NappletResourceFetcher): the shared manager routes
-                // through Tor when asked + active, and falls back to clearnet otherwise.
-                httpClient = { useProxy -> Amethyst.instance.okHttpClients.getHttpClient(useProxy) },
-                signerLedger = signerLedger,
-            ).broker()
-        cachedBroker = account to broker
-        return broker
+    private fun brokerFor(accountPubKey: HexKey): NappletBroker? {
+        val account = accountFor(accountPubKey) ?: return null
+        synchronized(brokerLock) {
+            cachedBroker?.let { (acc, broker) -> if (acc === account) return broker }
+            val broker =
+                AccountNappletGateways(
+                    account = account,
+                    context = applicationContext,
+                    ledger = ledger,
+                    storage = storage,
+                    // Per-applet Tor decision (see NappletResourceFetcher): the shared manager routes
+                    // through Tor when asked + active, and falls back to clearnet otherwise.
+                    httpClient = { useProxy -> Amethyst.instance.okHttpClients.getHttpClient(useProxy) },
+                    signerLedger = signerLedger,
+                ).broker()
+            cachedBroker = account to broker
+            return broker
+        }
     }
 
     /**
@@ -403,6 +436,38 @@ class NappletBrokerService : Service() {
     }
 
     companion object {
+        /**
+         * Guards [cachedBroker]. Both live on the companion rather than the service instance so the
+         * Connected Apps UI can reach the running broker to revoke its live session grants — the
+         * screens are plain composables with no binder to this service, and the broker is the only
+         * holder of the in-memory "allow for this session" signer grants.
+         *
+         * Main-process only, like the sibling `Napplet*Registry` objects: the `:napplet` process gets
+         * its own (unused, empty) copy of these statics and must never touch them.
+         */
+        private val brokerLock = Any()
+
+        // The broker for the current account, rebuilt only on account switch (see brokerFor()).
+        private var cachedBroker: Pair<Account, NappletBroker>? = null
+
+        /**
+         * Drops the live "allow for this session" signer grants the running broker holds for
+         * [coordinate] (the bare app coordinate). Called when the user revokes or forgets an app in
+         * Connected Apps: without it the persisted grants are cleared but the in-memory session ones
+         * keep authorizing signatures until the broker dies, so a revoked app goes on signing.
+         *
+         * No-op when no broker has been built yet (no applet has run this process).
+         */
+        suspend fun revokeSessionGrants(coordinate: String) {
+            val broker = synchronized(brokerLock) { cachedBroker?.second } ?: return
+            broker.revokeSessionGrants(coordinate)
+        }
+
+        /** Forgets the cached broker, dropping every session grant it holds. */
+        private fun dropCachedBroker() {
+            synchronized(brokerLock) { cachedBroker = null }
+        }
+
         /**
          * Sentinel "author" for a browser-mode per-origin identity. The real key is the visited origin,
          * carried in the identity's identifier (which the consent dialog shows); this constant only fills

@@ -32,14 +32,20 @@ import kotlinx.coroutines.flow.first
 private val Context.nappletStorageDataStore by preferencesDataStore(name = "napplet_storage")
 
 /**
- * DataStore-backed [NappletStorage]. Every key is prefixed with the applet's coordinate, so one
- * napplet's keys can never collide with another's, and this store is entirely separate from the
- * app's own preferences.
+ * DataStore-backed [NappletStorage]. Every key is prefixed with the **active account** and then the
+ * applet's coordinate, so one napplet's keys can never collide with another's, one account's data is
+ * never visible to another, and this store is entirely separate from the app's own preferences.
+ *
+ * [accountPubKey] is read at call time rather than captured, so switching accounts moves reads and
+ * writes to the new namespace with no rebuild — an embedded applet always sees the current account's
+ * data and never the previous one's.
  */
 class DataStoreNappletStorage(
     private val dataStore: DataStore<Preferences>,
+    private val accountPubKey: () -> String,
 ) : NappletStorage {
-    constructor(context: Context) : this(context.applicationContext.nappletStorageDataStore)
+    constructor(context: Context, accountPubKey: () -> String) :
+        this(context.applicationContext.nappletStorageDataStore, accountPubKey)
 
     override suspend fun get(
         coordinate: String,
@@ -62,7 +68,9 @@ class DataStoreNappletStorage(
     }
 
     override suspend fun keys(coordinate: String): List<String> {
-        val prefix = "$coordinate "
+        // Must match keyOf's separator exactly. This filtered on a space while keys are written
+        // with NUL, so no key could ever match and keys() always returned an empty list.
+        val prefix = prefixOf(coordinate)
         return dataStore.data
             .first()
             .asMap()
@@ -72,8 +80,11 @@ class DataStoreNappletStorage(
             .map { it.removePrefix(prefix) }
     }
 
+    /** Account first, then applet: isolates accounts from each other, and applets within an account. */
+    private fun prefixOf(coordinate: String) = "${accountPubKey()}\u0000$coordinate\u0000"
+
     private fun keyOf(
         coordinate: String,
         key: String,
-    ) = stringPreferencesKey("$coordinate\u0000$key")
+    ) = stringPreferencesKey(prefixOf(coordinate) + key)
 }

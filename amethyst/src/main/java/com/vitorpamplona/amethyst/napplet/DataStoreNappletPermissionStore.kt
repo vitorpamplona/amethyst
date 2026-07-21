@@ -41,12 +41,21 @@ private val Context.nappletPermissionsDataStore by preferencesDataStore(name = "
  */
 class DataStoreNappletPermissionStore(
     private val dataStore: DataStore<Preferences>,
+    private val accountPubKey: () -> String,
 ) : NappletPermissionStore {
-    constructor(context: Context) : this(context.applicationContext.nappletPermissionsDataStore)
+    constructor(context: Context, accountPubKey: () -> String) :
+        this(context.applicationContext.nappletPermissionsDataStore, accountPubKey)
+
+    /**
+     * Grants belong to one account. [accountPubKey] is read at call time, so an account switch moves
+     * every read and write to that account's namespace with no rebuild — a grant made by one account
+     * can never authorize another.
+     */
+    private fun scoped(coordinate: String) = "${accountPubKey()}$SEP$coordinate"
 
     override suspend fun load(coordinate: String): Map<NappletCapability, GrantState> {
         val prefs = dataStore.data.first()
-        val prefix = "$coordinate$SEP"
+        val prefix = "${scoped(coordinate)}$SEP"
         val result = mutableMapOf<NappletCapability, GrantState>()
         for ((key, value) in prefs.asMap()) {
             val name = key.name
@@ -68,7 +77,7 @@ class DataStoreNappletPermissionStore(
     }
 
     override suspend fun clear(coordinate: String) {
-        val prefix = "$coordinate$SEP"
+        val prefix = "${scoped(coordinate)}$SEP"
         dataStore.edit { prefs ->
             val toRemove = prefs.asMap().keys.filter { it.name.startsWith(prefix) }
             toRemove.forEach { prefs.remove(it) }
@@ -78,11 +87,15 @@ class DataStoreNappletPermissionStore(
     override suspend fun all(): Map<String, Map<NappletCapability, GrantState>> {
         val prefs = dataStore.data.first()
         val result = mutableMapOf<String, MutableMap<NappletCapability, GrantState>>()
+        val accountPrefix = "${accountPubKey()}$SEP"
         for ((key, value) in prefs.asMap()) {
             val name = key.name
-            // Key is "<coordinate> <CAPABILITY>"; the capability is the final space-delimited token.
-            val capName = name.substringAfterLast(SEP, "")
-            val coordinate = name.substringBeforeLast(SEP, "")
+            // Key is "<account><SEP><coordinate><SEP><CAPABILITY>". Only the active account's grants
+            // are listed, so the Connected Apps screen never surfaces another account's permissions.
+            if (!name.startsWith(accountPrefix)) continue
+            val scoped = name.removePrefix(accountPrefix)
+            val capName = scoped.substringAfterLast(SEP, "")
+            val coordinate = scoped.substringBeforeLast(SEP, "")
             if (capName.isEmpty() || coordinate.isEmpty()) continue
             val capability = runCatching { NappletCapability.valueOf(capName) }.getOrNull() ?: continue
             val grant = runCatching { GrantState.valueOf(value as String) }.getOrNull() ?: continue
@@ -103,7 +116,7 @@ class DataStoreNappletPermissionStore(
     private fun keyOf(
         coordinate: String,
         capability: NappletCapability,
-    ) = stringPreferencesKey("$coordinate$SEP${capability.name}")
+    ) = stringPreferencesKey("${scoped(coordinate)}$SEP${capability.name}")
 
     companion object {
         private const val SEP = "\u0000"

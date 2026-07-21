@@ -127,6 +127,10 @@ class NappletHostActivity : ComponentActivity() {
 
     private var themeType: String = "SYSTEM"
 
+    // Opaque per-account WebView storage-profile name (see NappletWebViewProfile). Null/blank when the
+    // launcher didn't scope one, which lands on the shared default jar.
+    private var webViewProfile: String? = null
+
     // Pre-localized capability labels for the "what it can access" sheet (resolved by the launcher).
     private var capabilityLabels: List<String> = emptyList()
 
@@ -247,6 +251,9 @@ class NappletHostActivity : ComponentActivity() {
         // Built from a context forced to the app theme so its content follows DARK/LIGHT regardless of the
         // device theme (WebView reads the context's theme, not the window's — see nightThemedContext).
         webView = WebView(nightThemedContext(this, themeType))
+        // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
+        // profile has otherwise been used), so the storage partition must be chosen before anything else.
+        NappletWebViewProfile.apply(this, webView, webViewProfile)
         hardenWebView(webView)
         // Theme the WebView's pre-paint background to the app's so it doesn't flash white when the shell
         // mounts. This activity has a themed context, so it resolves the color locally (no IPC needed).
@@ -463,6 +470,7 @@ class NappletHostActivity : ComponentActivity() {
         launchToken = intent.getStringExtra(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
         capabilityLabels = intent.getStringArrayListExtra(NappletHostContract.EXTRA_CAP_LABELS) ?: emptyList()
         themeType = intent.getStringExtra(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" }
+        webViewProfile = intent.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE)
 
         val requires = intent.getStringArrayListExtra(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
         val resolved = resolveRequiredCapabilities(requires)

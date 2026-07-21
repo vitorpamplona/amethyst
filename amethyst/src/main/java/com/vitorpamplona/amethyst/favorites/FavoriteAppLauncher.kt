@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
+import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity
@@ -92,9 +93,20 @@ object FavoriteAppLauncher {
             }
         val isFavorite = FavoriteAppsRegistry.isFavorite("url:$url")
         val intent =
-            NappletBrowserActivity.intent(context, url, proxyPort, useTor, theme = theme, isFavorite = isFavorite).apply {
-                if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+            NappletBrowserActivity
+                .intent(
+                    context,
+                    url,
+                    proxyPort,
+                    useTor,
+                    theme = theme,
+                    isFavorite = isFavorite,
+                    // Opaque per-account storage partition, so a web app can't carry one npub's session
+                    // into another. Derived here (the sandbox never sees the pubkey).
+                    webViewProfile = NappletWebViewProfiles.current(),
+                ).apply {
+                    if (context !is Activity) addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
         context.startActivity(intent)
     }
 

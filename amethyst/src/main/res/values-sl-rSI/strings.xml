@@ -31,6 +31,7 @@
     <string name="channel_image">Slika kanala</string>
     <string name="referenced_event_not_found">Referenčni dogodek ni najden</string>
     <string name="could_not_decrypt_the_message">Dešifriranje sporočila ni uspelo</string>
+    <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="group_picture">Slika skupine</string>
     <string name="explicit_content">Eksplicitna vsebina</string>
     <string name="relay_notice">Obvestilo releja</string>
@@ -312,6 +313,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="already_have_an_account">Že imam Nostr račun?</string>
     <string name="loading_feed">Nalagam vir vsebin</string>
     <string name="loading_account">Račun se nalaga</string>
+    <string name="concord_channels_empty">Še ni kanalov.</string>
     <string name="concord_send_image_title">Pošlji sliko</string>
     <string name="concord_open_channel">Odpri kanal</string>
     <string name="concord_edit_banner_hint">Dodaj pasico</string>
@@ -343,9 +345,29 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="concord_edit_save">Shrani</string>
     <string name="concord_members_title">Člani</string>
     <string name="concord_members_make_admin">Povišaj v administratorja</string>
+    <string name="concord_members_ban">Blokiraj</string>
+    <string name="concord_members_unban">Odstrani blokado</string>
+    <string name="concord_members_remove">Odstrani iz skupnosti</string>
+    <string name="concord_members_remove_title">Odstranim člana?</string>
+    <string name="concord_members_remove_confirm">Odstrani</string>
+    <string name="concord_role_owner">Lastnik</string>
+    <string name="concord_role_admin">Administrator</string>
+    <string name="concord_role_banned">Blokiran</string>
+    <string name="concord_invite_card_join">Pridruži se skupnosti</string>
+    <string name="concord_invite_card_subtitle">Povabilo Concord skupnosti</string>
+    <string name="concord_server_label">Concord</string>
+    <string name="concord_view_grouped">Po skupnosti</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
+    <string name="chat_reply_in_chat">v pogovoru</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <string name="chat_minichat_title">Niz objav</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
+    <plurals name="chat_minichat_reply_count">
+        <item quantity="one">%1$d odgovor</item>
+        <item quantity="two">%1$d odgovora</item>
+        <item quantity="few">%1$d odgovori</item>
+        <item quantity="other">%1$d odgovorov</item>
+    </plurals>
     <string name="chats_history_proto_nip17">šifrirano</string>
     <string name="chats_history_proto_nip04">starejša različica</string>
     <string name="chats_reply_searching_history">Iščem originalno sporočilo…</string>
@@ -783,6 +805,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="napplet_consent_query">Ta nApplet želi prebrati dogodke z vaših relejev.</string>
     <string name="napplet_consent_storage">Ta nApplet želi uporabiti svojo zasebno shrambo.</string>
     <string name="napplet_consent_pay">Ta nApplet želi plačati Lightning račun.</string>
+    <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <string name="napplet_consent_resource">Ta nApplet želi pridobiti spletni vir.</string>
     <string name="napplet_consent_upload">Ta nApplet želi naložiti datoteko na vaš medijski strežnik.</string>
     <string name="napplet_consent_notify">Ta nApplet vam želi prikazati obvestila.</string>
@@ -793,6 +816,15 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         <item quantity="few">Ta nApplet želi plačati Lightning račun za %1$d sate.</item>
         <item quantity="other">Ta nApplet želi plačati Lightning račun za %1$d satov.</item>
     </plurals>
+    <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
+         kind-only summary would hide what is actually being signed. These replaceable lists are
+         already cached on the account, so the dialog diffs the proposed list against the current
+         one and reports what actually changes rather than a raw total. -->
+    <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
+         the display name, shown next to their avatar. -->
+    <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Povezava z Nostrom</string>
     <string name="napplet_connect_subtitle">se želi povezati z vašim nostr računom</string>
@@ -828,6 +860,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="napplet_op_encrypt">Šifriraj sporočilo</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">berem tvoja zasebna sporočila</string>
+    <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Povezane aplikacije</string>
     <string name="napplet_permissions_revoke_all">Prekliči vsa dovoljenja</string>

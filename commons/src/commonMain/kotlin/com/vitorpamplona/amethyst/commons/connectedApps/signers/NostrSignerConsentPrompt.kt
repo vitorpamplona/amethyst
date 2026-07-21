@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.connectedApps.signers
 
+import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 
@@ -47,7 +48,15 @@ sealed interface AppConnectResult {
  * [NostrSignerPermissionLedger] and the bulk capability grant in [NappletBroker][com.vitorpamplona.amethyst.commons.napplet.NappletBroker].
  */
 fun interface NostrConnectPrompt {
-    suspend fun request(identity: NappletIdentity): AppConnectResult
+    /**
+     * [declared] is the capability set the connection would pre-grant. It has to reach the dialog:
+     * accepting bulk-grants every one of them as ALLOW_ALWAYS, so a dialog that showed only the
+     * app's title and icon would be asking for consent to something it never disclosed.
+     */
+    suspend fun request(
+        identity: NappletIdentity,
+        declared: Set<NappletCapability>,
+    ): AppConnectResult
 }
 
 // ---------------------------------------------------------------------------

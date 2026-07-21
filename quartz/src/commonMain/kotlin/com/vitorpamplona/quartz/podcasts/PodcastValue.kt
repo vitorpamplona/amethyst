@@ -66,11 +66,18 @@ class PodcastValue(
         val active = recipients.filter { it.split > 0 && !it.address.isNullOrBlank() }
         if (active.isEmpty()) return emptyList()
 
+        // The value block is attacker-controlled: it comes verbatim from an episode event that anyone
+        // can publish, and `split` is an unvalidated Int. A fee is a PERCENTAGE off the top, so it is
+        // clamped to 100 individually and to whatever budget is left collectively — otherwise a single
+        // `fee:true, split:1000` recipient would be paid 10x the amount the user actually chose, every
+        // minute, while the on-screen running total still showed the intended figure.
         var feeTotalMillis = 0L
         val feeAmounts = HashMap<PodcastValueRecipient, Long>()
         for (recipient in active) {
             if (recipient.fee == true) {
-                val millis = totalMilliSats * recipient.split / 100
+                val percent = recipient.split.coerceAtMost(MAX_FEE_PERCENT)
+                val budgetLeft = totalMilliSats - feeTotalMillis
+                val millis = (totalMilliSats * percent / 100).coerceAtMost(budgetLeft)
                 if (millis > 0) {
                     feeAmounts[recipient] = millis
                     feeTotalMillis += millis
@@ -97,6 +104,9 @@ class PodcastValue(
     }
 
     companion object {
+        /** A fee recipient's split is a percentage off the top; anything above 100 is malformed. */
+        const val MAX_FEE_PERCENT = 100
+
         /**
          * TLV record type for the Podcasting-2.0 keysend metadata blob (the "boostagram"), a JSON
          * object carrying podcast/episode/app/value context. Registered value, used by the whole

@@ -379,6 +379,14 @@ class AccountSessionManager(
                 Log.e("Logoff", "Cannot decode npub for account being logged off; aborting cleanup")
                 return@launch
             }
+            // TODO: also drop this account's WebView storage profile — the cookies/localStorage of every
+            // site it visited survive here, keyed by NappletWebViewProfiles.forPubKey(hex). It CANNOT be
+            // done from this process: WebView profiles live in the WebView data directory, which belongs
+            // to the `:napplet` process (nothing calls setDataDirectorySuffix, so booting WebView here
+            // too would collide on the same directory). Deleting it needs a broker message that has
+            // `:napplet` call ProfileStore.deleteProfile(name) — and that must refuse a profile still in
+            // use by a live WebView. Not wired for this release; there is no existing hook that reaches
+            // the sandbox on account deletion.
             if (accountInfo.npub == currentAccountNPub()) {
                 // Drop the Nest bridge ref before tearing down the
                 // current account so the audio-room activity can't

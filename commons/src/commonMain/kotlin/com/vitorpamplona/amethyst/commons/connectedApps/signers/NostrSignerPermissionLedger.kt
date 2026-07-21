@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -169,7 +168,9 @@ class NostrSignerPermissionLedger(
             is NostrSignerOp.SignKind ->
                 if (op.kind in REASONABLE_SIGN_KINDS) NostrOpDecision.ALLOW else NostrOpDecision.ASK
             NostrSignerOp.Encrypt -> NostrOpDecision.ALLOW
-            NostrSignerOp.Decrypt -> NostrOpDecision.ASK
+            // Decryption always asks under REASONABLE — both the broad grant and the per-counterparty
+            // one, which is only ever created by an explicit "always allow for X" in the dialog.
+            NostrSignerOp.Decrypt, is NostrSignerOp.DecryptFrom -> NostrOpDecision.ASK
         }
 
     companion object {
@@ -187,9 +188,15 @@ class NostrSignerPermissionLedger(
          *  - **zap request** (9734) — moves nothing; it only fetches a Lightning invoice. The payment
          *    itself is the separately-gated `value.payInvoice` capability that prompts on *every* use
          *    regardless of policy.
-         *  - **relay auth** (22242, NIP-42) — an ephemeral proof-of-key bound to a single relay and
-         *    challenge (it cannot be replayed to another relay). Amethyst's own client auto-signs it
-         *    for every logged-in account, so treating it as background noise matches existing behavior.
+         *
+         * **Relay auth (22242) is deliberately NOT here.** It looks harmless — the event is ephemeral
+         * and bound to one relay+challenge, so it cannot be replayed elsewhere. But replay is not the
+         * threat: the requesting app supplies the `relay` and `challenge` tags verbatim, so it can ask
+         * for a *fresh* signature naming any relay it likes, then AUTH to that relay as the user. That
+         * yields read access to whatever the relay gates behind AUTH — notably the user's kind-1059
+         * giftwrap inbox and its full DM metadata — and burns the quota on paid relays, which bill
+         * whoever authenticates. Amethyst auto-signing AUTH for relays *the user configured* is not
+         * the same as letting a third party name the relay.
          *
          * None of the members can silently: spend money, overwrite account configuration (profile 0,
          * contacts 3, relay/mute/bookmark lists are replaceable — a bad write can wipe settings),
@@ -232,7 +239,6 @@ class NostrSignerPermissionLedger(
                 TorrentCommentEvent.KIND, // 2004 — NIP-35 torrent comments
                 HighlightEvent.KIND, // 9802 — highlighted snippets shared publicly
                 LnZapRequestEvent.KIND, // 9734 — Lightning zap request; the payment itself still prompts
-                RelayAuthEvent.KIND, // 22242 — NIP-42 relay auth; ephemeral, bound to one relay+challenge
                 LongTextNoteEvent.KIND, // 30023 — NIP-23 long-form articles (addressable content)
                 StatusEvent.KIND, // 30315 — ephemeral user status / presence
                 WikiNoteEvent.KIND, // 30818 — NIP-54 wiki articles (addressable content)

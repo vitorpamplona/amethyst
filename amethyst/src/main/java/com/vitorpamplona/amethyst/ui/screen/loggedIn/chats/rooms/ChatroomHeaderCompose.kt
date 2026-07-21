@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -58,6 +59,8 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreview
+import com.vitorpamplona.amethyst.commons.model.privateChats.chatPreviewOf
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -762,26 +765,7 @@ private fun UserRoomCompose(
             TimeAgo(lastMessage.createdAt())
         },
         secondRow = {
-            LoadDecryptedContentOrNull(lastMessage, accountViewModel) { content ->
-                if (content != null) {
-                    Text(
-                        content,
-                        color = MaterialTheme.colorScheme.grayText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
-                        modifier = Modifier.weight(1f),
-                    )
-                } else {
-                    Text(
-                        stringRes(R.string.referenced_event_not_found),
-                        color = MaterialTheme.colorScheme.grayText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
+            LastMessagePreview(lastMessage, accountViewModel)
 
             // A sent message I authored counts as read (#1286, #1287); an unsent draft still needs my attention.
             val newestEvent = lastMessage.event
@@ -812,6 +796,51 @@ private fun UserRoomCompose(
                 accountViewModel.toggleChatroomPin(room)
                 popupExpanded = false
             },
+        )
+    }
+}
+
+/**
+ * The one-line preview of the room's newest message.
+ *
+ * NIP-04 rooms carry ciphertext in `event.content`, so the preview may only ever come from the
+ * decryption cache. [chatPreviewOf] keeps the three not-a-body outcomes apart — still decrypting,
+ * never decryptable, and no event at all — so a message that simply hasn't been opened yet isn't
+ * mislabelled as unreadable. The pending state resolves on its own: [LoadDecryptedContentOrNull]
+ * pushes the plaintext into its state as soon as the signer answers.
+ */
+@Composable
+private fun RowScope.LastMessagePreview(
+    lastMessage: Note,
+    accountViewModel: AccountViewModel,
+) {
+    LoadDecryptedContentOrNull(lastMessage, accountViewModel) { content ->
+        // Keyed so a scrolling list doesn't re-scan the DM's `p` tags on every recomposition.
+        val preview =
+            remember(lastMessage.event, content) {
+                chatPreviewOf(
+                    event = lastMessage.event,
+                    decrypted = content,
+                    myPubKey = accountViewModel.account.signer.pubKey,
+                    canDecrypt = accountViewModel.account.isWriteable(),
+                )
+            }
+
+        val text =
+            when (preview) {
+                is ChatPreview.Body -> preview.text
+                ChatPreview.Decrypting -> stringRes(R.string.chat_preview_decrypting)
+                ChatPreview.Undecryptable -> stringRes(R.string.could_not_decrypt_the_message)
+                ChatPreview.Missing -> stringRes(R.string.referenced_event_not_found)
+            }
+
+        Text(
+            text,
+            color = MaterialTheme.colorScheme.grayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            modifier = Modifier.weight(1f),
         )
     }
 }

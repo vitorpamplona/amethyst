@@ -59,12 +59,23 @@ import kotlinx.coroutines.sync.withLock
  * [NostrSigner] surface (`sign`, `nip04/44Encrypt/Decrypt`). Whichever signer
  * the user logged in with is the one that ultimately performs the work.
  *
- * Authorization is delegated to [authorizer]: signing/encryption/decryption are
- * gated, while public/harmless reads (`get_public_key`, `ping`, `get_relays`)
- * always succeed. All failures — decryption, authorization, an unsupported
- * method, or an exception from the signer — are turned into a
- * [BunkerResponseError] carrying the request id, so the client always gets a
- * reply it can correlate.
+ * Authorization is delegated to [authorizer] in two layers:
+ *  - **pairing** ([Nip46RequestAuthorizer.isPaired]) gates the identity reads
+ *    `get_public_key` and `get_relays`. Anyone who obtains the `bunker://` URI
+ *    holds the transport pubkey and the NIP-44 conversation key, so without this
+ *    gate they could ask an unpaired signer *which Nostr account it signs for*
+ *    (and its inbox relay set) without ever knowing the pairing secret — which
+ *    would defeat the transport/identity split the rest of the design maintains.
+ *    `connect` is deliberately NOT gated (it is how pairing happens), and neither
+ *    is `ping`: it only confirms that a signer is alive at a pubkey the caller
+ *    already has, leaks no identity, and clients use it as a pre-flight liveness
+ *    check, so gating it would risk breaking legitimate handshakes for no gain.
+ *  - **per-operation consent** ([Nip46RequestAuthorizer.authorize]) gates
+ *    signing/encryption/decryption.
+ *
+ * All failures — decryption, authorization, an unsupported method, or an
+ * exception from the signer — are turned into a [BunkerResponseError] carrying
+ * the request id, so the client always gets a reply it can correlate.
  *
  * Pairs with [NostrConnectSignerService], which subscribes to the relays,
  * decrypts each kind-24133 request, calls [process], and publishes the reply.
@@ -100,12 +111,20 @@ class BunkerRequestProcessor(
                         is Nip46ConnectDecision.Reject -> BunkerResponseError(request.id, decision.reason)
                     }
 
-                is BunkerRequestGetPublicKey -> BunkerResponsePublicKey(request.id, signer.pubKey)
+                // Identity reads: only for a client that has already paired. See the class doc — an
+                // unpaired holder of the bunker URI must not be able to learn WHICH account this is.
+                is BunkerRequestGetPublicKey ->
+                    ifPaired(clientPubKey, request) {
+                        BunkerResponsePublicKey(request.id, signer.pubKey)
+                    }
 
+                // Liveness only; answers with no identity at all, so it stays open (see class doc).
                 is BunkerRequestPing -> BunkerResponsePong(request.id)
 
                 is BunkerRequestGetRelays ->
-                    BunkerResponseGetRelays(request.id, relays().associate { it.url to ReadWrite(read = true, write = true) })
+                    ifPaired(clientPubKey, request) {
+                        BunkerResponseGetRelays(request.id, relays().associate { it.url to ReadWrite(read = true, write = true) })
+                    }
 
                 is BunkerRequestSign ->
                     ifAuthorized(clientPubKey, request) {
@@ -148,6 +167,22 @@ class BunkerRequestProcessor(
             BunkerResponseError(request.id, "${e::class.simpleName}: ${e.message}")
         }
 
+    /**
+     * Runs [block] only when [clientPubKey] has already paired with this signer (a successful
+     * `connect`). Used for the identity reads, which need no per-op consent but must not answer a
+     * stranger who merely holds the bunker URI.
+     */
+    private suspend inline fun ifPaired(
+        clientPubKey: HexKey,
+        request: BunkerRequest,
+        block: () -> BunkerResponse,
+    ): BunkerResponse =
+        if (authorizer.isPaired(clientPubKey)) {
+            block()
+        } else {
+            BunkerResponseError(request.id, ERROR_NOT_CONNECTED)
+        }
+
     private suspend inline fun ifAuthorized(
         clientPubKey: HexKey,
         request: BunkerRequest,
@@ -171,6 +206,13 @@ class BunkerRequestProcessor(
 
         /** Error result returned when [Nip46RequestAuthorizer.authorize] denies a request. */
         const val ERROR_UNAUTHORIZED: String = "unauthorized"
+
+        /**
+         * Error result returned to a client that has not paired ([Nip46RequestAuthorizer.isPaired])
+         * when it asks for the signer's identity (`get_public_key`, `get_relays`). It must not reveal
+         * whether the account exists, so it says only that this client is not connected.
+         */
+        const val ERROR_NOT_CONNECTED: String = "not connected"
 
         /** Error result returned when the account can no longer sign (logged out / read-only / no signer). */
         const val ERROR_ACCOUNT_UNAVAILABLE: String = "account unavailable"

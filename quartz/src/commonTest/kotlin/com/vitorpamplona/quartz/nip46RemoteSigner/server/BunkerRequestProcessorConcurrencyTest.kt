@@ -114,6 +114,8 @@ class BunkerRequestProcessorConcurrencyTest {
     private class GatedAuthorizer(
         val gateFor: (BunkerRequest) -> CompletableDeferred<Boolean>?,
     ) : Nip46RequestAuthorizer {
+        override suspend fun isPaired(clientPubKey: HexKey) = true
+
         override suspend fun onConnect(
             clientPubKey: HexKey,
             request: BunkerRequestConnect,

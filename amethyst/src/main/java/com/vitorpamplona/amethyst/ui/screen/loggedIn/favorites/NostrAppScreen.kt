@@ -114,7 +114,7 @@ private fun EmbeddedNostrAppTab(
 
     // Mint the verified launch params (a fresh token per resolve); null until the event loads. Re-minted
     // on a theme flip (the params carry the resolved theme into the sandbox host's WebView).
-    val params = remember(coordinate, EmbeddedTabHost.themeEpoch) { FavoriteAppLauncher.embedParams(context, coordinate) }
+    val params = remember(coordinate, EmbeddedTabHost.rebuildEpoch) { FavoriteAppLauncher.embedParams(context, coordinate) }
     if (params == null) {
         UnavailableTab(coordinate, accountViewModel, nav)
         return
@@ -134,7 +134,7 @@ private fun EmbeddedNostrAppTab(
     val isFavorite = remember(apps, coordinate) { apps.any { it.id == "nostr:$coordinate" } }
 
     val controller =
-        remember(id, EmbeddedTabHost.themeEpoch) {
+        remember(id, EmbeddedTabHost.rebuildEpoch) {
             EmbeddedTabFactory.acquireNostrApp(context, coordinate, params, backgroundColor)
         }
 

@@ -59,7 +59,18 @@ object ConcordModCommands {
                         state.roles.map { (id, r) ->
                             mapOf("id" to id, "name" to r.name, "position" to r.position, "permissions" to r.permissions)
                         },
-                    "banned" to ConcordModeration.currentBanned(editions, sc.communityId.hexToByteArray()).toList(),
+                    // The role-holder roster AFTER the authority fixpoint, so a grant that was
+                    // published but dropped on fold (granter didn't outrank the role or the member)
+                    // is visibly absent here rather than looking like it landed.
+                    "grants" to
+                        state.authority.roleHolders().sorted().map { member ->
+                            mapOf(
+                                "member" to member,
+                                "rank" to state.authority.rank(member),
+                                "roles" to state.authority.rolesFor(member).map { it.name },
+                            )
+                        },
+                    "banned" to ConcordModeration.currentBanned(editions, sc.communityId.hexToByteArray(), sc.owner).toList(),
                 ),
             )
             return 0
@@ -84,7 +95,7 @@ object ConcordModCommands {
             val (cp, editions) = load(ctx, sc)
             val roleId = RandomInstance.bytes(32)
             val role = RoleEntity(name = name, position = position, permissions = ConcordPermissions.of(*permBits.toIntArray()).toWire())
-            val wrap = ConcordModeration.defineRole(ctx.signer, cp, roleId, role, editions, TimeUtils.now())
+            val wrap = ConcordModeration.defineRole(ctx.signer, cp, roleId, role, editions, TimeUtils.now(), owner = sc.owner)
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
             Output.emit(mapOf("role_id" to roleId.toHexKey(), "name" to name, "position" to position) + RawEventSupport.ackFields(ack))
@@ -108,7 +119,7 @@ object ConcordModCommands {
             ctx.prepare()
             val member = ctx.requireUserHex(userRef)
             val (cp, editions) = load(ctx, sc)
-            val wrap = ConcordModeration.grant(ctx.signer, cp, sc.communityId.hexToByteArray(), member, listOf(roleId), editions, TimeUtils.now())
+            val wrap = ConcordModeration.grant(ctx.signer, cp, sc.communityId.hexToByteArray(), member, listOf(roleId), editions, TimeUtils.now(), owner = sc.owner)
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
             Output.emit(mapOf("member" to member, "roles" to listOf(roleId)) + RawEventSupport.ackFields(ack))
@@ -146,9 +157,9 @@ object ConcordModCommands {
             val cid = sc.communityId.hexToByteArray()
             val wrap =
                 if (ban) {
-                    ConcordModeration.ban(ctx.signer, cp, cid, member, editions, TimeUtils.now())
+                    ConcordModeration.ban(ctx.signer, cp, cid, member, editions, TimeUtils.now(), owner = sc.owner)
                 } else {
-                    ConcordModeration.unban(ctx.signer, cp, cid, member, editions, TimeUtils.now())
+                    ConcordModeration.unban(ctx.signer, cp, cid, member, editions, TimeUtils.now(), owner = sc.owner)
                 }
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }

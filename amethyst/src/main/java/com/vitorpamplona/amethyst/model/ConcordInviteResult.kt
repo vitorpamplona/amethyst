@@ -48,6 +48,13 @@ sealed interface ConcordInviteResult {
     data object Revoked : ConcordInviteResult
 
     /**
+     * The bundle opened fine, but its `expires_at` has passed. Retrying can't help —
+     * unlike [Revoked] the owner didn't retire the link, it simply timed out, so the
+     * user's next step is to ask for a fresh one.
+     */
+    data object Expired : ConcordInviteResult
+
+    /**
      * The bundle event was found but could not be opened with the link's token —
      * typically because it was minted by a newer/incompatible Concord client whose
      * bundle format this app can't read yet. Retrying can't help.

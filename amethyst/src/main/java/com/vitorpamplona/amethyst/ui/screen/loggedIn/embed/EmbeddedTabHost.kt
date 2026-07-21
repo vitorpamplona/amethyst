@@ -57,12 +57,14 @@ object EmbeddedTabHost {
         private set
 
     /**
-     * Bumped whenever the app's resolved DARK/LIGHT theme flips (see [rebuildAllForTheme]). The embed
-     * WebView's theme is locked in at construction (`nightThemedContext`), so following a theme change
-     * means rebuilding the surface — the favorite screens and the preloader key their acquisition on this
-     * so they re-acquire a freshly-themed session instead of the stale warm one.
+     * Bumped whenever every warm session must be rebuilt from scratch (see [rebuildAll]) — a DARK/LIGHT
+     * theme flip, or an account switch. Both the theme (`nightThemedContext`) and the per-account storage
+     * profile ([com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles]) are locked in at WebView
+     * construction and can't be changed on a live WebView, so following either means building a new one.
+     * The favorite screens and the preloader key their acquisition on this, so they re-acquire a freshly
+     * built session instead of the stale warm one.
      */
-    var themeEpoch by mutableStateOf(0)
+    var rebuildEpoch by mutableStateOf(0)
         private set
 
     /** Window-space bounds of the active tab's reserved content area. */
@@ -169,15 +171,48 @@ object EmbeddedTabHost {
     }
 
     /**
-     * The app theme changed: tear down every warm session (their WebViews are pinned to the old theme)
-     * and bump [themeEpoch] so the visible screen and the preloader re-acquire freshly-themed sessions.
-     * Unlike [evictAll] this keeps [activeId], so the visible tab re-activates the instant its screen
-     * re-acquires — the user just sees the current tab reload in the new theme, not a blanked-out surface.
+     * Something a WebView can only pick up at construction changed (the theme, or the account): tear down
+     * every warm session and bump [rebuildEpoch] so the visible screen and the preloader re-acquire freshly
+     * built sessions. Unlike [evictAll] this keeps [activeId], so the visible tab re-activates the instant
+     * its screen re-acquires — the user just sees the current tab reload, not a blanked-out surface.
      */
-    fun rebuildAllForTheme() {
+    fun rebuildAll() {
         val copy = warm.toList()
         warm.clear()
         copy.forEach { it.controller.teardown() }
-        themeEpoch += 1
+        rebuildEpoch += 1
+    }
+
+    /**
+     * Account the warm sessions were built for, as the opaque WebView storage-profile name (null while
+     * logged out). Kept HERE, next to the sessions it describes, rather than in a composable's `remember`:
+     * the whole logged-in subtree is rebuilt per account (`key(pubKey)` in `SetAccountCentricViewModelStore`),
+     * so a remembered "last applied" value would be re-seeded to the NEW account on the very first
+     * composition after a switch and the change would never be detected.
+     */
+    private var builtForProfile: String? = null
+    private var profileSeeded = false
+
+    /**
+     * Rebuilds every warm session when the active account changes, so all embedded apps follow the switch.
+     *
+     * A WebView's storage profile is fixed at construction (`WebViewCompat.setProfile` throws once it has
+     * loaded content), so a live session can't be re-pointed at the new account's jar — it has to be
+     * rebuilt. Rebuilding is also what makes the tab work at all after a switch: the account-keyed subtree
+     * is recreated, which disposes each session's `SandboxedSdkView` and closes the sandbox-side session,
+     * leaving the warm controller holding an already-consumed (and now dead) adapter. Reused as-is, it
+     * would hand the fresh view no adapter and the tab would render permanently blank.
+     *
+     * Covers tabs that aren't on screen too: every warm session is torn down, and the preloader re-warms
+     * the pinned ones against the new profile, so none can come back still bound to the old account.
+     */
+    fun rebuildIfProfileChanged(profileName: String?) {
+        if (profileSeeded && builtForProfile == profileName) return
+        val isFirstCall = !profileSeeded
+        profileSeeded = true
+        builtForProfile = profileName
+        // Seeding on the first call (app start) must not bump the epoch: nothing is stale yet, and a
+        // needless bump would restart the preload sweep that is just getting going.
+        if (!isFirstCall) rebuildAll()
     }
 }

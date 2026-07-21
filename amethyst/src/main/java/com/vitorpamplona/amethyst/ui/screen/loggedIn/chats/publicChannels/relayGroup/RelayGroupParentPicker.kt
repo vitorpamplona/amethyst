@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -467,8 +468,8 @@ private fun pickCandidates(
         .asSequence()
         .filter { it.groupId.id !in forbidden }
         .filter { it.event != null && isRelaySignedRelayGroup(it, relayInfo) }
-        .sortedBy { it.toBestDisplayName().lowercase() }
         .toList()
+        .sortedBySnapshot { it.toBestDisplayName().lowercase() }
 
 /**
  * The set of group ids reachable as descendants of [rootId] on [relay], following each group's

@@ -24,7 +24,10 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -293,12 +296,153 @@ class NappletBrokerTest {
         var calls = 0
             private set
 
-        override suspend fun request(identity: NappletIdentity): AppConnectResult {
+        /** The capabilities the last call was asked to disclose, so tests can assert the dialog got them. */
+        var lastDeclared: Set<NappletCapability> = emptySet()
+            private set
+
+        override suspend fun request(
+            identity: NappletIdentity,
+            declared: Set<NappletCapability>,
+        ): AppConnectResult {
             val answer = answers[minOf(calls, answers.size - 1)]
+            calls++
+            lastDeclared = declared
+            return answer
+        }
+    }
+
+    /** A per-op signer consent prompt that always answers [answer] and counts its calls. */
+    private class ScriptedSignerPrompt(
+        private val answer: SignerOpGrant,
+    ) : NostrSignerConsentPrompt {
+        var calls = 0
+            private set
+
+        override suspend fun request(
+            identity: NappletIdentity,
+            op: NostrSignerOp,
+            request: NappletRequest,
+        ): SignerOpGrant {
             calls++
             return answer
         }
     }
+
+    @Test
+    fun revokingAnAppDropsItsLiveSessionSignerGrants() =
+        runTest {
+            // Regression: "allow for this session" grants live in the broker, keyed by the
+            // account-namespaced coordinate (`napplet:<signer>:<coordinate>|<op>`), while the
+            // Connected Apps UI only ever holds the BARE coordinate. Revoking used to clear the
+            // persisted ledgers and leave the session grants matching nothing — so a revoked app
+            // kept signing for as long as any applet surface stayed open.
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            // PARANOID asks for every op, so each publish either prompts or rides a session grant.
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowForSession(NostrSignerOp.SignKind(1)))
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+            val publish = NappletRequest.Publish(kind = 1, tags = arrayOf(arrayOf("t", "napplet")), content = "gm")
+
+            // 1. First publish prompts, and the user allows for the session.
+            assertIs<NappletResponse.Published>(broker.handle(applet, publish, allDeclared))
+            assertEquals(1, opPrompt.calls)
+
+            // 2. The session grant carries the next publish with no prompt — that's the point of it.
+            assertIs<NappletResponse.Published>(broker.handle(applet, publish, allDeclared))
+            assertEquals(1, opPrompt.calls)
+
+            // 3. The user revokes the app in Connected Apps, which passes the bare coordinate.
+            broker.revokeSessionGrants(applet.coordinate)
+
+            // 4. ...so the app has to ask again rather than riding the dead grant.
+            assertIs<NappletResponse.Published>(broker.handle(applet, publish, allDeclared))
+            assertEquals(2, opPrompt.calls)
+        }
+
+    @Test
+    fun revokingOneAppLeavesAnotherAppsSessionGrantsAlone() =
+        runTest {
+            // The prefix match must not be so loose that revoking one app disarms every other one
+            // the user is still using.
+            val other = NappletIdentity(authorPubKey = "bb".repeat(32), identifier = "other")
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${other.coordinate}", AppSignerPolicy.PARANOID)
+
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowForSession(NostrSignerOp.SignKind(1)))
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+            val publish = NappletRequest.Publish(kind = 1, tags = arrayOf(arrayOf("t", "napplet")), content = "gm")
+
+            broker.handle(applet, publish, allDeclared) // applet prompts once
+            broker.handle(other, publish, allDeclared) // other prompts once
+            assertEquals(2, opPrompt.calls)
+
+            broker.revokeSessionGrants(applet.coordinate)
+
+            // The other app is untouched and still rides its own session grant.
+            assertIs<NappletResponse.Published>(broker.handle(other, publish, allDeclared))
+            assertEquals(2, opPrompt.calls)
+        }
+
+    @Test
+    fun aGrantFromOneAccountNeverAuthorizesTheSameAppUnderAnother() =
+        runTest {
+            // The signer permission store is shared across accounts (and with NIP-46), so the napplet
+            // coordinate must carry the account. Without that, "always allow" granted by one npub
+            // silently authorized signing under every other npub on the device — which would defeat
+            // the point of keeping a pseudonymous account separate from a real one.
+            val store = InMemoryNostrSignerPermissionStore()
+            val otherSigner = NostrSignerInternal(KeyPair())
+
+            fun brokerFor(who: NostrSignerInternal) =
+                NappletBroker(
+                    signer = who,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = NostrSignerPermissionLedger(store),
+                    nostrConnectPrompt = ScriptedConnectPrompt(AppConnectResult.Connected(AppSignerPolicy.FULL_TRUST)),
+                )
+
+            // Account A connects the applet and fully trusts it.
+            assertEquals(
+                NappletResponse.PublicKey(signer.pubKey),
+                brokerFor(signer).handle(applet, NappletRequest.GetPublicKey, allDeclared),
+            )
+            assertEquals(AppSignerPolicy.FULL_TRUST, store.loadPolicy("napplet:${signer.pubKey}:${applet.coordinate}"))
+
+            // Account B has granted the very same applet nothing.
+            assertNull(store.loadPolicy("napplet:${otherSigner.pubKey}:${applet.coordinate}"))
+
+            // ...so B's broker must run its own first-connect flow rather than inheriting A's trust.
+            val bConnect = ScriptedConnectPrompt(AppConnectResult.Cancelled)
+            val bBroker =
+                NappletBroker(
+                    signer = otherSigner,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    signerLedger = NostrSignerPermissionLedger(store),
+                    nostrConnectPrompt = bConnect,
+                )
+            assertIs<NappletResponse.Denied>(bBroker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(1, bConnect.calls)
+        }
 
     @Test
     fun cancellingFirstConnectThenRetryingRePromptsOnceCooldownLapses() =
@@ -333,7 +477,8 @@ class NappletBrokerTest {
             clock += 10_000L
             assertEquals(NappletResponse.PublicKey(signer.pubKey), broker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
             assertEquals(2, connect.calls)
-            assertEquals(AppSignerPolicy.REASONABLE, signerLedger.store.loadPolicy(applet.coordinate))
+            // Signer grants are stored under the account-scoped coordinate, not the bare one.
+            assertEquals(AppSignerPolicy.REASONABLE, signerLedger.store.loadPolicy("napplet:${signer.pubKey}:${applet.coordinate}"))
         }
 
     @Test

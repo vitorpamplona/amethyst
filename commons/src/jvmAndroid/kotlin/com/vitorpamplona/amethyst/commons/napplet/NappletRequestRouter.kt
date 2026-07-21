@@ -100,9 +100,18 @@ object NappletRequestRouter {
             "resource.cancel" ->
                 return Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
             // identity.watch/unwatch are a push subscription (like relay.subscribe), gated on the
-            // IDENTITY declaration directly — the actual pubkey stream is the host's job.
+            // IDENTITY declaration directly — the actual pubkey stream is the host's job. The
+            // ledger still gets a say: this bypasses NappletBroker.handle, so without an explicit
+            // check a standing IDENTITY denial would not stop the pushes (and would keep leaking
+            // account-switch timing and every npub the user rotates between).
             "identity.watch" ->
-                return if (NappletCapability.IDENTITY in declared) Outcome.WatchIdentity else Outcome.Ignore
+                return if (NappletCapability.IDENTITY in declared &&
+                    !broker.isDenied(identity, NappletCapability.IDENTITY)
+                ) {
+                    Outcome.WatchIdentity
+                } else {
+                    Outcome.Ignore
+                }
             "identity.unwatch" ->
                 return Outcome.UnwatchIdentity
             // inc bus: a topic pub/sub between napplets/services, authorized on the INC declaration

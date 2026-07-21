@@ -116,7 +116,7 @@ private fun EmbeddedWebAppTab(
     // Keyed on the theme epoch too: when the app theme flips, the warm session is torn down and this
     // re-acquires a freshly-themed one (the embed WebView's theme is fixed at construction).
     val controller =
-        remember(id, EmbeddedTabHost.themeEpoch) {
+        remember(id, EmbeddedTabHost.rebuildEpoch) {
             EmbeddedTabFactory.acquireWebApp(context, url, backgroundColor)
         }
 

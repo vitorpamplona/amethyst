@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListDocument
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -73,11 +74,17 @@ class ConcordChannelListState(
 
     fun getConcordList(): ConcordCommunityListEvent? = concordListNote.event as? ConcordCommunityListEvent
 
-    /** Decrypts the current list (or the offline backup) into its entries. */
-    suspend fun entriesWithBackup(note: Note): List<ConcordCommunityListEntry> {
+    /**
+     * Decrypts the current list (or the offline backup) into the full document — entries plus
+     * the residue (unknown keys, tombstones) a read-modify-write has to hand back untouched.
+     */
+    suspend fun documentWithBackup(note: Note): ConcordCommunityListDocument {
         val event = note.event as? ConcordCommunityListEvent ?: settings.concordList()
-        return event?.decrypt(signer) ?: emptyList()
+        return event?.decryptDocument(signer) ?: ConcordCommunityListDocument(emptyList())
     }
+
+    /** Decrypts the current list (or the offline backup) into its entries. */
+    suspend fun entriesWithBackup(note: Note): List<ConcordCommunityListEntry> = documentWithBackup(note).entries
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveCommunities: StateFlow<List<ConcordCommunityListEntry>> =
@@ -106,17 +113,17 @@ class ConcordChannelListState(
         // Seed from the offline backup as well as the live cache event: the saved list is
         // consumed into the cache asynchronously in `init`, so a join that races that load
         // would otherwise start from an empty `current` and wipe every prior membership.
-        val current = entriesWithBackup(concordListNote)
-        val next = current.filterNot { it.id == entry.id } + entry
-        return ConcordCommunityListEvent.create(signer, next)
+        val doc = documentWithBackup(concordListNote)
+        val next = doc.entries.filterNot { it.id == entry.id } + entry
+        return ConcordCommunityListEvent.create(signer, next, residue = doc.residue)
     }
 
     /** Drop the community with [communityId] and return the new list event, or null if none existed. */
     suspend fun unfollow(communityId: String): ConcordCommunityListEvent? {
-        val current = entriesWithBackup(concordListNote)
-        if (current.none { it.id == communityId }) return null
-        val next = current.filterNot { it.id == communityId }
-        return ConcordCommunityListEvent.create(signer, next)
+        val doc = documentWithBackup(concordListNote)
+        if (doc.entries.none { it.id == communityId }) return null
+        val next = doc.entries.filterNot { it.id == communityId }
+        return ConcordCommunityListEvent.create(signer, next, residue = doc.residue)
     }
 
     init {

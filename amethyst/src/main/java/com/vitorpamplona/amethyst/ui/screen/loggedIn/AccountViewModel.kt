@@ -632,6 +632,24 @@ class AccountViewModel(
         if (makeAdmin) account.makeConcordAdmin(communityId, member) else account.removeConcordAdmin(communityId, member)
     }
 
+    /**
+     * Set [member]'s CORD-04 roles in [communityId] to exactly [roleIds] (empty revokes
+     * everything). The Control Plane grant REPLACES the member's role set rather than
+     * merging into it, so [roleIds] must be the *complete* list the member should end up
+     * holding — the caller (the Members roster dialog) preselects their current roles for
+     * that reason. Authority is re-checked at fold time by every client, so the caller must
+     * also have offered only roles it strictly outranks on a member it strictly outranks.
+     */
+    fun setConcordRoles(
+        communityId: String,
+        member: HexKey,
+        roleIds: List<String>,
+    ) = launchSigner {
+        if (!account.grantConcordRole(communityId, member, roleIds)) {
+            toastManager.toast(R.string.concord_members_roles_title, R.string.concord_members_roles_failed)
+        }
+    }
+
     /** Ban/unban [member] from [communityId] (from the Members roster). */
     fun setConcordBan(
         communityId: String,
@@ -1580,6 +1598,15 @@ class AccountViewModel(
 
     fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
 
+    /**
+     * Drop a Concord community from this account's private kind-13302 list. Fire-and-forget on the
+     * signer dispatcher: the removal lands in the local cache (so the UI updates immediately) and the
+     * new list event is best-effort published to our outbox. Nothing here waits on a relay, which is
+     * what makes leaving a community whose own relays are dead work at all — the list lives in *our*
+     * outbox, not in the community's relays.
+     */
+    fun leaveConcordCommunity(communityId: String) = launchSigner { account.leaveConcordCommunity(communityId) }
+
     fun createRelayGroup(
         relay: NormalizedRelayUrl,
         groupId: String,
@@ -2380,7 +2407,18 @@ class AccountViewModel(
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val meltResult = MeltProcessor().melt(token, lud16, httpClientBuilder::okHttpClientForMoney, context)
+                    val meltResult =
+                        MeltProcessor().melt(
+                            token,
+                            lud16,
+                            httpClientBuilder::okHttpClientForMoney,
+                            context,
+                            // Mints the user deliberately added are exempt from the
+                            // private-address block (self-hosted LAN mints are legit).
+                            knownWalletMints =
+                                account.cashuWalletState.mints.value
+                                    .toSet(),
+                        )
                     onDone(
                         stringRes(context, R.string.cashu_successful_redemption),
                         stringRes(

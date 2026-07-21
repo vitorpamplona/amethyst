@@ -97,6 +97,156 @@ class Nip46PermissionAuthorizerTest {
             assertFalse(authorizer.authorize(client, BunkerRequestNip44Decrypt("2", client, "ct")))
         }
 
+    // ---------------------------------------------------------------------
+    // Pairing gate (identity reads)
+    // ---------------------------------------------------------------------
+
+    @Test
+    fun isPairedIsFalseBeforeConnectAndTrueAfter() =
+        runTest {
+            val ledger = ledger()
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, s -> s == "good" })
+
+            assertFalse(authorizer.isPaired(client), "a client that never connected must not read the identity")
+
+            authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "good"))
+
+            assertTrue(authorizer.isPaired(client), "a successful connect pairs the client")
+        }
+
+    @Test
+    fun isPairedStaysFalseAfterARejectedConnect() =
+        runTest {
+            val ledger = ledger()
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, s -> s == "good" })
+
+            authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "wrong"))
+
+            assertFalse(authorizer.isPaired(client))
+        }
+
+    @Test
+    fun forgetUnpairsTheClient() =
+        runTest {
+            val ledger = ledger()
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
+            authorizer.onConnect(client, BunkerRequestConnect(id = "1", remoteKey = client, secret = "x"))
+
+            authorizer.forget(client)
+
+            assertFalse(authorizer.isPaired(client))
+        }
+
+    // ---------------------------------------------------------------------
+    // Per-counterparty decrypt grants
+    // ---------------------------------------------------------------------
+
+    private val alice = "1".repeat(64)
+    private val bob = "2".repeat(64)
+
+    @Test
+    fun aPerCounterpartyDecryptGrantAllowsThatConversationWithoutPrompting() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+            var prompts = 0
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    opConsent = { _, _, _, _ ->
+                        prompts++
+                        SignerOpGrant.DenyOnce
+                    },
+                )
+
+            ledger.setOpDecision(coordinate, NostrSignerOp.DecryptFrom(alice), NostrOpDecision.ALLOW)
+
+            assertTrue(authorizer.authorize(client, BunkerRequestNip44Decrypt("1", alice, "ct")))
+            assertEquals(0, prompts, "a standing narrow grant must not re-prompt")
+        }
+
+    @Test
+    fun aPerCounterpartyDecryptGrantDoesNotLeakToOtherCounterparties() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
+
+            ledger.setOpDecision(coordinate, NostrSignerOp.DecryptFrom(alice), NostrOpDecision.ALLOW)
+
+            assertFalse(authorizer.authorize(client, BunkerRequestNip44Decrypt("1", bob, "ct")), "Bob's messages were never granted")
+        }
+
+    @Test
+    fun aBroadDecryptDenyIsNotOverriddenByANarrowGrant() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+            val authorizer = Nip46PermissionAuthorizer(ledger, signerPubKey = signer, validateSecret = { _, _ -> true })
+
+            ledger.setOpDecision(coordinate, NostrSignerOp.Decrypt, NostrOpDecision.DENY)
+            ledger.setOpDecision(coordinate, NostrSignerOp.DecryptFrom(alice), NostrOpDecision.ALLOW)
+
+            assertFalse(authorizer.authorize(client, BunkerRequestNip44Decrypt("1", alice, "ct")), "an explicit broad DENY is final")
+        }
+
+    @Test
+    fun aNarrowRememberFromTheDialogIsPersistedAndReusedForThatCounterpartyOnly() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+            var prompts = 0
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    // The dialog's "Always allow for Alice" button returns the NARROW op.
+                    opConsent = { _, _, _, _ ->
+                        prompts++
+                        SignerOpGrant.AllowForOp(NostrSignerOp.DecryptFrom(alice))
+                    },
+                )
+
+            assertTrue(authorizer.authorize(client, BunkerRequestNip44Decrypt("1", alice, "ct")))
+            assertEquals(1, prompts)
+
+            // Second request from Alice reuses the stored narrow grant.
+            assertTrue(authorizer.authorize(client, BunkerRequestNip44Decrypt("2", alice, "ct2")))
+            assertEquals(1, prompts, "the narrow grant must be remembered")
+
+            // Bob still prompts (and this prompt would grant Alice again, so it is denied).
+            authorizer.authorize(client, BunkerRequestNip44Decrypt("3", bob, "ct3"))
+            assertEquals(2, prompts, "a different counterparty is a different decision")
+        }
+
+    @Test
+    fun aNarrowSessionGrantIsScopedToItsOwnCounterparty() =
+        runTest {
+            val ledger = ledger()
+            ledger.setPolicy(coordinate, AppSignerPolicy.REASONABLE)
+            var prompts = 0
+            val authorizer =
+                Nip46PermissionAuthorizer(
+                    ledger,
+                    signerPubKey = signer,
+                    validateSecret = { _, _ -> true },
+                    opConsent = { _, _, _, _ ->
+                        prompts++
+                        SignerOpGrant.AllowForSession(NostrSignerOp.DecryptFrom(alice))
+                    },
+                )
+
+            assertTrue(authorizer.authorize(client, BunkerRequestNip44Decrypt("1", alice, "ct")))
+            assertTrue(authorizer.authorize(client, BunkerRequestNip44Decrypt("2", alice, "ct2")))
+            assertEquals(1, prompts, "the session grant covers Alice for the rest of the session")
+
+            authorizer.authorize(client, BunkerRequestNip44Decrypt("3", bob, "ct3"))
+            assertEquals(2, prompts, "and must NOT cover Bob")
+        }
+
     @Test
     fun paranoidAppRefusesEverythingUntilPerOpGrant() =
         runTest {

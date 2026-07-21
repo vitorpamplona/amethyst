@@ -24,7 +24,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.toArgb
@@ -33,19 +33,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
-import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
-import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.yield
-
-// Up to PRELOAD_ATTEMPTS sweeps, PRELOAD_RETRY_MS apart, give a slow napplet event or a still-connecting
-// Tor proxy time to settle before we give up and leave that tab to load on first visit (~45 s total).
-private const val PRELOAD_ATTEMPTS = 15
-private const val PRELOAD_RETRY_MS = 3_000L
 
 /**
  * Warms every bottom-bar favorite at startup so the first tap is instant — the surfaces are built,
@@ -54,7 +43,9 @@ private const val PRELOAD_RETRY_MS = 3_000L
  *
  * Mount once next to [EmbeddedTabLayer]. Draws nothing; it just drives acquisition. Napplet favorites
  * whose events haven't synced yet, and Tor-routed sites whose proxy isn't up yet, are retried for a
- * bounded window (the latter so a clearnet preload can never race ahead of Tor).
+ * bounded window (the latter so a clearnet preload can never race ahead of Tor) — that retry loop, and
+ * everything else that has to suspend, lives in [EmbeddedTabPreloadSweeper]; this composable only kicks
+ * it off, synchronously.
  */
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
@@ -66,40 +57,37 @@ fun EmbeddedTabPreloader(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle()
     val favoriteIds = bottomBarItems.favoriteIds()
 
-    // Give preloaded surfaces a realistic viewport before any tab is visited, so they download as a
-    // full-size page rather than at the 1dp off-screen fallback. The first real visit corrects it.
+    // Subscribe to the epoch here (a read inside a SideEffect wouldn't recompose us), so a bump that lands
+    // outside our apply phase — [EmbeddedTabThemeWatcher] bumps it from a LaunchedEffect — still re-runs the
+    // kickoff below. The SideEffect re-reads it, so a bump in the SAME apply phase is picked up immediately.
+    val observedEpoch = EmbeddedTabHost.rebuildEpoch
+
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
-    LaunchedEffect(configuration) {
+
+    // Give preloaded surfaces a realistic viewport before any tab is visited, so they download as a
+    // full-size page rather than at the 1dp off-screen fallback. The first real visit corrects it.
+    // Synchronous, and declared BEFORE the kickoff, because the kickoff is synchronous too: as a
+    // LaunchedEffect this would now land *after* the first preload and hand it the off-screen fallback.
+    SideEffect {
         with(density) {
             EmbeddedTabHost.seedBoundsIfUnset(Rect(0f, 0f, configuration.screenWidthDp.dp.toPx(), configuration.screenHeightDp.dp.toPx()))
         }
     }
 
-    // Re-warms after a theme flip: [rebuildAllForTheme] tears down the warm sessions and bumps the epoch,
-    // so this sweep re-acquires them in the new theme (keying on the epoch also orders it after the teardown).
-    LaunchedEffect(favoriteIds, backgroundColor, EmbeddedTabHost.themeEpoch) {
-        if (favoriteIds.isEmpty()) return@LaunchedEffect
-        // Hydrate the per-site Tor/open-web choices BEFORE the first preload: a cold start otherwise reads
-        // the bare Tor default and would route a site the user pinned to the open web through Tor (or stall
-        // it waiting for Tor), which is exactly what breaks Tor-incompatible servers.
-        WebAppNetworkRegistry.init(context)
-        NappletNetworkRegistry.init(context)
-        WebAppNetworkRegistry.awaitReady()
-        NappletNetworkRegistry.awaitReady()
-        var attempt = 0
-        while (isActive) {
-            val byId = FavoriteAppsRegistry.favorites.value.associateBy { it.id }
-            var stillPending = false
-            for (id in favoriteIds) {
-                val app = byId[id] ?: continue
-                if (!EmbeddedTabFactory.preload(context, app, backgroundColor)) stillPending = true
-                // Each preload may build + attach a WebView on this (main) thread; yield between favorites
-                // so the startup sweep doesn't monopolize the frame and jank the first paint.
-                yield()
-            }
-            if (!stillPending || ++attempt >= PRELOAD_ATTEMPTS) break
-            delay(PRELOAD_RETRY_MS)
-        }
+    // Re-warms after a theme flip or an account switch: [rebuildAll] tears down the warm sessions and bumps
+    // the epoch, so this sweep re-acquires them freshly built (keying on the epoch also orders it after the
+    // teardown). This is also what re-warms tabs the user never opened, so none survives bound to the old
+    // account's storage profile.
+    //
+    // SideEffect, not LaunchedEffect: [EmbeddedTabAccountWatcher] tears the sessions down in the apply phase
+    // of the switch, and until this sweep runs there is nothing for the tab to show. A LaunchedEffect
+    // dispatches through the composition's scope, and an account switch floods the main thread — the very
+    // congestion that made the watcher itself fire 3-4 s late. Running here re-arms the tabs in the same
+    // frame that dropped them. The epoch is re-read inside the lambda so we see the watcher's bump (its
+    // SideEffect is ordered before ours), and [EmbeddedTabPreloadSweeper.request] is idempotent, so running
+    // on every recomposition is free.
+    SideEffect {
+        EmbeddedTabPreloadSweeper.request(context, favoriteIds, backgroundColor, maxOf(observedEpoch, EmbeddedTabHost.rebuildEpoch))
     }
 }

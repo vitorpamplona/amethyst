@@ -25,6 +25,7 @@
     <string name="channel_image">Csatorna profilképe</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
     <string name="could_not_decrypt_the_message">Nem sikerült visszafejteni az üzenetet</string>
+    <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="group_picture">Csoport profilképe</string>
     <string name="explicit_content">Szókimondó tartalom</string>
     <string name="relay_notice">Átjátszóval kapcsolatos megjegyzések</string>
@@ -811,6 +812,7 @@
     <string name="napplet_consent_query">Ez a nKisalkalmazás eseményeket szeretne olvasni az Ön átjátszóiról.</string>
     <string name="napplet_consent_storage">Ez a nKisalkalmazás az Ön privát tárhelyét szeretné használni.</string>
     <string name="napplet_consent_pay">Ez a nKisalkalmazás ki szeretne fizetni egy Lightning számlát.</string>
+    <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <string name="napplet_consent_resource">Ez a nKisalkalmazás le szeretne kérni egy webes erőforrást.</string>
     <string name="napplet_consent_upload">Ez a nKisalkalmazás fel szeretne tölteni egy fájlt az Ön médiakiszolgálójára.</string>
     <string name="napplet_consent_notify">Ez a nKisalkalmazás értesítéseket szeretne megjeleníteni Önnek.</string>
@@ -819,6 +821,15 @@
         <item quantity="one">Ez a nKisalkalmazás ki szeretne fizetni egy %1$d satoshi értékű Lightning számlát.</item>
         <item quantity="other">Ez a nKisalkalmazás ki szeretne fizetni egy %1$d satoshi értékű Lightning számlát.</item>
     </plurals>
+    <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
+         kind-only summary would hide what is actually being signed. These replaceable lists are
+         already cached on the account, so the dialog diffs the proposed list against the current
+         one and reports what actually changes rather than a raw total. -->
+    <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
+         the display name, shown next to their avatar. -->
+    <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <!-- No cached copy to compare against, so the whole list is what gets written. -->
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Kapcsolódás a NOSTR-hoz</string>
     <string name="napplet_connect_subtitle">szeretne csatlakozni a saját Nostr-fiókjához</string>
@@ -854,6 +865,10 @@
     <string name="napplet_op_encrypt">egy üzenet titkosítása</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">saját privát üzenetek olvasása</string>
+    <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <!-- Label above the counterparty avatar in the decrypt consent dialog -->
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Összekapcsolt alkalmazások</string>
     <string name="napplet_permissions_revoke_all">Minden engedély visszavonása</string>

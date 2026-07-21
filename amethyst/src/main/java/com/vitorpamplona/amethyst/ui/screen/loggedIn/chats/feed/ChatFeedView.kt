@@ -233,6 +233,24 @@ fun ChatFeedLoaded(
                     }
 
                 Column(modifier = itemModifier) {
+                    // A day/subject header belongs ABOVE the message it introduces. `reverseLayout`
+                    // flips the order of the lazy list's items, but NOT the content inside one item:
+                    // this Column still lays out top-to-bottom, so the divisor must be composed
+                    // before the bubble. Composing it after put the header below its own message —
+                    // i.e. visually heading the NEXT (newer) message while showing this one's date,
+                    // which is why a "Jul 1, 2025" header sat on top of a Sep 23 bubble.
+                    NewDateOrSubjectDivisor(older, item)
+
+                    // Per-relay paging markers for the gap toward the next-older message. Older items sit
+                    // ABOVE newer ones under `reverseLayout`, so that gap is the space above this bubble —
+                    // which means these belong before it, for the same reason the divisor does. Composed
+                    // after the bubble they rendered in the gap toward the NEWER message, contradicting the
+                    // bounds they are handed.
+                    markersInGap?.invoke(
+                        item.event?.createdAt,
+                        older?.event?.createdAt,
+                    )
+
                     ChatroomMessageCompose(
                         baseNote = item,
                         routeForLastRead = routeForLastRead,
@@ -245,19 +263,6 @@ fun ChatFeedLoaded(
                         onHighlightFinished = { highlightedNoteId.value = null },
                         groupPosition = watchChatGroupPosition(newer, item, older),
                         previousNoteId = older?.idHex,
-                    )
-
-                    NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
-
-                    // Per-relay paging markers belonging in the gap toward the next-older message. With the
-                    // reverse layout this draws just above the message (the older side), so a relay's marker
-                    // appears right below the oldest message it has reached and slides down as it pages.
-                    markersInGap?.invoke(
-                        item.event?.createdAt,
-                        items.list
-                            .getOrNull(index + 1)
-                            ?.event
-                            ?.createdAt,
                     )
                 }
             }

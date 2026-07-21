@@ -25,6 +25,8 @@
     <string name="channel_image">Channel Image</string>
     <string name="referenced_event_not_found">Referenced event not found</string>
     <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
+    <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <string name="chat_preview_decrypting">Decrypting…</string>
     <string name="group_picture">Group Picture</string>
     <string name="explicit_content">Explicit Content</string>
     <string name="relay_notice">Relay Notice</string>
@@ -312,6 +314,10 @@
     <string name="concord_invite_failed_invalid">This invite link is invalid or can\'t be opened with this account.</string>
     <string name="concord_invite_failed_incompatible">This invite link can\'t be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
+    <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
+    <string name="concord_invite_preview_unknown_name">Community name is only revealed after you join</string>
+    <string name="concord_invite_preview_explainer">Joining connects to this invite\'s relays, publishes a join announcement signed by your account, and adds the community to your list. Nothing is sent until you tap Join.</string>
+    <string name="concord_invite_preview_relays">Relays this invite will contact: %1$s</string>
     <string name="concord_home_title">Concord Channels</string>
     <string name="concord_home_empty">You haven\'t joined any Concord Channels yet. Create one, or open an invite link.</string>
     <string name="concord_channels_empty">No channels yet.</string>
@@ -327,6 +333,10 @@
     <string name="concord_channel_delete_title">Delete channel?</string>
     <string name="concord_channel_delete_message">Delete #%1$s? This can\'t be undone and the channel can\'t be recreated with the same id.</string>
     <string name="concord_channel_delete_confirm">Delete</string>
+    <string name="concord_leave_community">Leave community</string>
+    <string name="concord_leave_title">Leave community?</string>
+    <string name="concord_leave_message">Leave %1$s? It is removed from this account\'s list and stops syncing on your devices. The community is not notified and you are not removed from its member roster. Messages you can no longer decrypt may be unrecoverable, and you can only return with a new invite.</string>
+    <string name="concord_leave_owner_warning">You created this community. Leaving does not delete it or hand it to anyone else, but it discards the owner key stored on your list — you would not be able to manage it again.</string>
     <string name="concord_edit_relays_desc">Where this community\'s encrypted planes are published and read.</string>
     <string name="concord_typing_one">%1$s is typing…</string>
     <string name="concord_typing_two">%1$s and %2$s are typing…</string>
@@ -371,6 +381,13 @@
     <string name="concord_members_remove_title">Remove member?</string>
     <string name="concord_members_remove_message">This rotates the community\'s encryption key so this member can no longer read anything sent afterwards. Everyone else is re-keyed automatically. This can\'t be undone.</string>
     <string name="concord_members_remove_confirm">Remove</string>
+    <string name="concord_members_roles">Roles…</string>
+    <string name="concord_members_roles_title">Assign roles</string>
+    <string name="concord_members_roles_message">Pick every role this member should hold. Unchecking a role removes it.</string>
+    <string name="concord_members_roles_save">Save</string>
+    <string name="concord_members_roles_out_of_reach">You don\'t outrank this member</string>
+    <string name="concord_members_roles_none_assignable">No roles you can assign</string>
+    <string name="concord_members_roles_failed">Could not update this member\'s roles.</string>
     <string name="concord_role_owner">Owner</string>
     <string name="concord_role_admin">Admin</string>
     <string name="concord_role_banned">Banned</string>
@@ -841,6 +858,8 @@
     <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
     <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>
     <string name="napplet_consent_pay">This nApplet wants to pay a Lightning invoice.</string>
+    <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">⚠ This nApplet wants to pay a Lightning invoice that specifies NO amount — the payee decides how much is taken. Only allow this if you trust it.</string>
     <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
     <string name="napplet_consent_upload">This nApplet wants to upload a file to your media server.</string>
     <string name="napplet_consent_notify">This nApplet wants to show you notifications.</string>
@@ -848,6 +867,60 @@
     <plurals name="napplet_consent_pay_amount">
         <item quantity="one">This nApplet wants to pay a Lightning invoice for %1$d sat.</item>
         <item quantity="other">This nApplet wants to pay a Lightning invoice for %1$d sats.</item>
+    </plurals>
+    <!-- Consequence lines for event kinds whose payload lives entirely in the tags, so a
+         kind-only summary would hide what is actually being signed. These replaceable lists are
+         already cached on the account, so the dialog diffs the proposed list against the current
+         one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">follows %1$d new account</item>
+        <item quantity="other">follows %1$d new accounts</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">UNFOLLOWS %1$d account</item>
+        <item quantity="other">UNFOLLOWS %1$d accounts</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">adds %1$d relay</item>
+        <item quantity="other">adds %1$d relays</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">REMOVES %1$d relay</item>
+        <item quantity="other">REMOVES %1$d relays</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">mutes %1$d more person</item>
+        <item quantity="other">mutes %1$d more people</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">UNMUTES %1$d person</item>
+        <item quantity="other">UNMUTES %1$d people</item>
+    </plurals>
+    <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
+         the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">⚠ This follows %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠ This UNFOLLOWS %1$s.</string>
+    <string name="napplet_consent_diff_mute_one">⚠ This mutes %1$s.</string>
+    <string name="napplet_consent_diff_unmute_one">⚠ This UNMUTES %1$s.</string>
+    <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">⚠ This rewrites your follow list: %1$s.</string>
+    <string name="napplet_consent_diff_relays">⚠ This rewrites your relay list: %1$s. Your posts and reads move with it.</string>
+    <string name="napplet_consent_diff_mutes">⚠ This rewrites your mute list: %1$s. Muted words and hashtags are not shown here — tap “Show Event” for the full list.</string>
+    <string name="napplet_consent_diff_joiner">%1$s and %2$s</string>
+    <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">This republishes your existing list unchanged.</string>
+    <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">⚠ This writes a list of %1$d entry. Amethyst has no cached copy to compare against.</item>
+        <item quantity="other">⚠ This writes a list of %1$d entries. Amethyst has no cached copy to compare against.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">⚠ This requests deletion of %1$d of your events.</item>
+        <item quantity="other">⚠ This requests deletion of %1$d of your events.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">Carries %1$d tag. Tap “Show Event” to see exactly what would be signed.</item>
+        <item quantity="other">Carries %1$d tags. Tap “Show Event” to see exactly what would be signed.</item>
     </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Connect to Nostr</string>
@@ -887,6 +960,14 @@
     <string name="napplet_op_encrypt">encrypt a message</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">read your private messages</string>
+    <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">read your private messages with %1$s</string>
+    <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">Always allow for %1$s</string>
+    <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">Amethyst could not decrypt this message. It may not be addressed to this account.</string>
+    <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">Messages with</string>
 
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Connected Apps</string>
@@ -1569,6 +1650,7 @@
     <string name="blossom_payment_required">This server requires payment to upload: %1$s</string>
     <string name="blossom_payment_title">Payment required</string>
     <string name="blossom_payment_message">%1$s charges a lightning payment to store this file. Pay from your connected wallet to continue.</string>
+    <string name="blossom_payment_server_says">%1$s says: “%2$s”</string>
     <string name="blossom_pay">Pay</string>
     <plurals name="blossom_pay_sats">
         <item quantity="one">Pay %1$d sat</item>
@@ -2545,6 +2627,8 @@
 
     <string name="cashu_failed_redemption">Could not redeem Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint provided the following error message: %1$s</string>
+    <string name="cashu_unsafe_mint_url">Unsafe Cashu mint address</string>
+    <string name="cashu_unsafe_mint_url_explainer">Amethyst did not contact this token\'s mint. %1$s</string>
 
     <string name="cashu_successful_redemption">Cashu Received</string>
     <string name="cashu_successful_redemption_explainer">%1$s sats were sent to your wallet. (Fees: %2$s sats)</string>

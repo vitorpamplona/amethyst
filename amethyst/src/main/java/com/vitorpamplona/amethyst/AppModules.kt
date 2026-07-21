@@ -27,6 +27,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
@@ -694,8 +695,32 @@ class AppModules(
     // Per-relay NIP-42 ALLOW/DENY overrides are now per-account (Account.relayAuthPermissions,
     // backed by a file under accounts/<pubkey>/), so there is no app-wide store here anymore.
 
+    /**
+     * The account every napplet/web-app grant and byte of storage is scoped to. Read lazily on each
+     * call (never captured) so an account switch immediately moves embedded apps to the new account's
+     * namespace: an app authorized by one npub is never authorized under another.
+     */
+    val nappletAccountScope: () -> String = { sessionManager.loggedInAccount()?.pubKey ?: "" }
+
     // Singleton stores for napplet permissions — DataStore v1 enforces one instance per file.
-    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext) }
+    val nappletPermissionStore by lazy { DataStoreNappletPermissionStore(appContext, nappletAccountScope) }
+
+    /**
+     * The one napplet permission ledger for the main process. Its persistent half is just the store
+     * above, but it also holds the in-memory ALLOW_SESSION grants — and *those* only work if every
+     * caller shares this instance. The broker service and the Connected Apps screens used to build
+     * a ledger each, so a "Forget"/revoke tapped in the UI cleared the screen's own (always empty)
+     * session map while the grants the broker was actually consulting lived on untouched.
+     *
+     * Session lifetime is bounded by [com.vitorpamplona.amethyst.napplet.NappletBrokerService]'s
+     * onDestroy (all applet/browser surfaces gone), which calls `endSession()`.
+     */
+    val nappletPermissionLedger by lazy { NappletPermissionLedger(nappletPermissionStore, nappletAccountScope) }
+
+    // NOT account-scoped here on purpose: this store is shared with NIP-46, whose coordinates already
+    // carry their owning account (`nip46:<signer>:<client>`) and whose sessions run for a specific
+    // account rather than the active one. The napplet path namespaces its own coordinate the same way
+    // (see NappletBroker.signerCoordinateFor) instead.
     val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appContext) }
 
     // Display + relay info for connected NIP-46 remote-signer clients.
