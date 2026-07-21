@@ -1278,6 +1278,7 @@
     <string name="nest_create_submit">Start space</string>
     <string name="nest_create_schedule_toggle">Schedule for later</string>
     <string name="nest_create_when">Pick a start time</string>
+    <string name="agent_console_title">Agent console</string>
     <string name="nests_servers_title">Nest servers</string>
     <string name="nests_servers_explainer">Choose which MoQ host servers Amethyst publishes your nests to. The first entry is used by default when you start a new space.</string>
     <string name="nests_servers_my_section">Your servers</string>
@@ -2128,6 +2129,7 @@
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
     <string name="nests_servers_search_keywords" translatable="false">audio rooms, live, spaces, rooms</string>
+    <string name="agent_console_search_keywords" translatable="false">buzz, agents, personas, cost, tokens, fleet, ai, turn metrics</string>
     <string name="profile_badges_search_keywords" translatable="false">badges, awards</string>
     <string name="favorite_dvms_search_keywords" translatable="false">dvm, data vending machine, algo, algorithm, feeds</string>
     <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
