@@ -304,6 +304,7 @@ fun ThreadScreen(
                                         relayManager = relayManager,
                                         localCache = localCache,
                                         account = account,
+                                        myPubKeyHex = account?.pubKeyHex,
                                         nwcConnection = nwcConnection,
                                         onReply = { rootNote.event?.let { onReply(it) } },
                                         onZapFeedback = onZapFeedback,

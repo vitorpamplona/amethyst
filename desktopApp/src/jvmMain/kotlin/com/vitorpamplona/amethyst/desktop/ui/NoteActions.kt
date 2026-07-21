@@ -103,6 +103,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -1393,6 +1395,41 @@ private suspend fun reactToNote(
     withContext(Dispatchers.IO) {
         val signedEvent = ReactionAction.reactTo(event, reaction, account.signer)
         relayManager.broadcastToAll(signedEvent)
+    }
+}
+
+/**
+ * Casts a NIP-88 poll vote: builds a kind-1018 [PollResponseEvent] referencing [poll],
+ * signs it, optimistically consumes it locally (so the tally + hasVoted gate flip
+ * immediately), then broadcasts to all relays. The relay echo of the same signed event
+ * is deduped by id, so no double count.
+ *
+ * MUST be launched on a long-lived scope (e.g. `localCache.appScope`) — never a card's
+ * `rememberCoroutineScope()` — so scrolling the poll out of composition between the
+ * local consume and the broadcast can't cancel the send.
+ */
+suspend fun voteOnPoll(
+    poll: PollEvent,
+    responses: Set<String>,
+    account: AccountState.LoggedIn,
+    relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
+) {
+    if (responses.isEmpty()) return
+    withContext(Dispatchers.IO) {
+        val template = PollResponseEvent.build(EventHintBundle(poll), responses)
+        val signed = account.signer.sign(template)
+        localCache.consume(signed, null, wasVerified = true)
+        // Publish to the poll's OWN declared relays (NIP-88 `relay` tags) as well as our
+        // connected relays — the poll author and other viewers read votes from the poll's
+        // relays, which we may not be connected to. broadcastToAll alone would lose the vote
+        // for everyone but us (mirrors the read path in DesktopPollCard.responseRelays).
+        val targetRelays = (poll.relays() + relayManager.connectedRelays.value).toSet()
+        if (targetRelays.isNotEmpty()) {
+            relayManager.publish(signed, targetRelays)
+        } else {
+            relayManager.broadcastToAll(signed)
+        }
     }
 }
 

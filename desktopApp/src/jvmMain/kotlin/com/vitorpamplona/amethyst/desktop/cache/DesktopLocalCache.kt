@@ -58,13 +58,16 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -128,6 +131,17 @@ class DesktopLocalCache : ICacheProvider {
     private val notesByAuthor = ConcurrentHashMap<HexKey, MutableSet<Note>>()
 
     val paymentTracker = NwcPaymentTracker()
+
+    /**
+     * Long-lived, cache-scoped coroutine scope for fire-and-forget work that must
+     * outlive any single composition — e.g. the optimistic-consume → relay-broadcast
+     * pair of a poll vote (see [com.vitorpamplona.amethyst.desktop.ui.voteOnPoll]).
+     * Using a card's [androidx.compose.runtime.rememberCoroutineScope] there would let
+     * scrolling the card out of composition cancel the broadcast after the local consume,
+     * leaving the vote visible locally but never sent. Uses a [SupervisorJob] so one
+     * failed job doesn't tear down the rest.
+     */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun trackNoteAuthor(
         note: Note,
@@ -337,6 +351,14 @@ class DesktopLocalCache : ICacheProvider {
                 consumeBlossomServerList(event, relay)
             }
 
+            is PollEvent -> {
+                consumePoll(event, relay)
+            }
+
+            is PollResponseEvent -> {
+                consumePollResponse(event, relay)
+            }
+
             else -> {
                 false
             }
@@ -452,6 +474,49 @@ class DesktopLocalCache : ICacheProvider {
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
         addQuoteBoosts(event, note, repliesTo)
+        return true
+    }
+
+    /**
+     * Consumes a kind 1068 poll event (NIP-88).
+     * Creates a Note in the cache like a text note, minus reply-linking — a poll is
+     * always a root post. The [Note.pollState] tally is populated by the responses.
+     */
+    private fun consumePoll(
+        event: PollEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        note.loadEvent(event, author, emptyList())
+        trackNoteAuthor(note, event.pubKey)
+        relay?.let { note.addRelay(it) }
+        return true
+    }
+
+    /**
+     * Consumes a kind 1018 poll response event (NIP-88).
+     * Resolves the referenced poll, loads the response note, and links it into the
+     * poll's tally. Mirrors Android `LocalCache.consume(PollResponseEvent)`: the
+     * [com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache.addResponse]
+     * call and the `true` return happen only on a genuinely new event, so a relay echo
+     * of the user's own optimistically-consumed vote can't double-count (id-dedup here
+     * plus `addResponse`'s own containment guard).
+     */
+    private fun consumePollResponse(
+        event: PollResponseEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val pollId = event.poll()?.eventId ?: return false
+        val pollNote = getOrCreateNote(pollId)
+        val responseNote = getOrCreateNote(event.id)
+        if (responseNote.event != null) return false
+        val author = getOrCreateUser(event.pubKey)
+        responseNote.loadEvent(event, author, emptyList())
+        trackNoteAuthor(responseNote, event.pubKey)
+        relay?.let { responseNote.addRelay(it) }
+        pollNote.pollState().addResponse(responseNote)
         return true
     }
 
@@ -821,7 +886,7 @@ class DesktopLocalCache : ICacheProvider {
         requestNote?.let { req -> pending.zappedNote?.addZapPayment(req, note) }
 
         // Invoke callback on IO dispatcher
-        GlobalScope.launch(Dispatchers.IO) {
+        appScope.launch {
             pending.onResponse(event)
         }
 

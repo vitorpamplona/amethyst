@@ -43,6 +43,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -56,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -66,6 +70,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
@@ -114,6 +120,9 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -227,6 +236,14 @@ fun ComposeNoteDialog(
     // publishes an encrypted kind-31234 event so the draft appears on other devices.
     var syncDraft by remember { mutableStateOf(false) }
     var isSavingDraft by remember { mutableStateOf(false) }
+
+    // Poll (NIP-88) composer state. `wantsPoll` gates the poll UI; options start with
+    // two blank fields (a poll needs ≥2 non-blank options to publish).
+    var wantsPoll by remember { mutableStateOf(false) }
+    val pollOptions = remember { mutableStateListOf("", "") }
+    var pollType by remember { mutableStateOf(PollType.SINGLE_CHOICE) }
+    // Optional poll deadline, expressed as seconds-from-now (null = open-ended).
+    var pollDurationDays by remember { mutableStateOf<Int?>(null) }
 
     // Image compression: global default + optional per-post override.
     // Override resets after every successful send so the next post
@@ -377,7 +394,21 @@ fun ComposeNoteDialog(
                     }
 
                 val scheduleAt = scheduledForSec
-                if (postAsPicture) {
+                if (wantsPoll) {
+                    val endsAt =
+                        pollDurationDays?.let { days ->
+                            TimeUtils.now() + days * 24L * 60L * 60L
+                        }
+                    publishPoll(
+                        description = content,
+                        options = pollOptions.map { it.trim() }.filter { it.isNotEmpty() },
+                        pollType = pollType,
+                        endsAt = endsAt,
+                        account = account,
+                        relayManager = relayManager,
+                        relays = selectedRelays,
+                    )
+                } else if (postAsPicture) {
                     val pictureMetas = buildPictureMetas(uploadResults)
                     publishPicture(
                         description = content,
@@ -434,8 +465,9 @@ fun ComposeNoteDialog(
                 Modifier
                     .width(780.dp)
                     // Cap the dialog height so a tall composer (e.g. the schedule
-                    // picker expanded) can't push the Cancel/Schedule buttons off
-                    // screen — the body scrolls instead (see the content Column).
+                    // picker expanded, or the poll composer with many options) can't
+                    // push the Cancel/Publish buttons off screen — the body scrolls
+                    // instead (see the content Column).
                     .heightIn(max = 760.dp)
                     .padding(16.dp)
                     .dragAndDropTarget(shouldStartDragAndDrop = { true }, target = dropTarget)
@@ -458,205 +490,245 @@ fun ComposeNoteDialog(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
-                replyTo?.let { reply ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Replying to: ${reply.content.take(50)}${if (reply.content.length > 50) "..." else ""}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // Scrollable content area so the pinned Cancel/Publish row below stays
+                // reachable even when the poll section grows with many options.
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    replyTo?.let { reply ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Replying to: ${reply.content.take(50)}${if (reply.content.length > 50) "..." else ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
 
-                quoteOf?.let { quoted ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Quoting: ${quoted.content.take(50)}${if (quoted.content.length > 50) "..." else ""}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                    quoteOf?.let { quoted ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Quoting: ${quoted.content.take(50)}${if (quoted.content.length > 50) "..." else ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                Box {
-                    OutlinedTextField(
-                        value = if (postAsPicture) TextFieldValue("") else contentField,
-                        onValueChange = {
-                            contentField = it
-                            errorMessage = null
-                        },
-                        modifier = Modifier.fillMaxWidth().height(if (postAsPicture) 60.dp else 200.dp),
-                        label = {
-                            Text(
-                                if (postAsPicture) "Text disabled for picture posts" else "What's on your mind?",
-                            )
-                        },
-                        placeholder = { Text(if (postAsPicture) "" else "Write your note... (type @ to mention)") },
-                        enabled = !isPosting && !postAsPicture,
-                        maxLines = if (postAsPicture) 1 else 10,
-                    )
+                    Box {
+                        OutlinedTextField(
+                            value = if (postAsPicture) TextFieldValue("") else contentField,
+                            onValueChange = {
+                                contentField = it
+                                errorMessage = null
+                            },
+                            modifier = Modifier.fillMaxWidth().height(if (postAsPicture) 60.dp else 200.dp),
+                            label = {
+                                Text(
+                                    if (postAsPicture) "Text disabled for picture posts" else "What's on your mind?",
+                                )
+                            },
+                            placeholder = { Text(if (postAsPicture) "" else "Write your note... (type @ to mention)") },
+                            enabled = !isPosting && !postAsPicture,
+                            maxLines = if (postAsPicture) 1 else 10,
+                        )
 
-                    // Mention autocomplete dropdown
-                    if (mentionSuggestions.isNotEmpty()) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        ) {
-                            LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
-                                items(mentionSuggestions, key = { it.pubkeyHex }) { user ->
-                                    MentionSuggestionRow(
-                                        user = user,
-                                        onClick = {
-                                            val npub = user.pubkeyNpub()
-                                            val replacement = "nostr:$npub "
-                                            val cursorEnd = contentField.selection.end
-                                            val newText =
-                                                contentField.text.replaceRange(
-                                                    mentionWordStart,
-                                                    cursorEnd,
-                                                    replacement,
-                                                )
-                                            val newCursor = mentionWordStart + replacement.length
-                                            contentField = TextFieldValue(newText, TextRange(newCursor))
-                                            mentionSuggestions = emptyList()
-                                            mentionQuery = null
-                                        },
-                                    )
+                        // Mention autocomplete dropdown
+                        if (mentionSuggestions.isNotEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            ) {
+                                LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
+                                    items(mentionSuggestions, key = { it.pubkeyHex }) { user ->
+                                        MentionSuggestionRow(
+                                            user = user,
+                                            onClick = {
+                                                val npub = user.pubkeyNpub()
+                                                val replacement = "nostr:$npub "
+                                                val cursorEnd = contentField.selection.end
+                                                val newText =
+                                                    contentField.text.replaceRange(
+                                                        mentionWordStart,
+                                                        cursorEnd,
+                                                        replacement,
+                                                    )
+                                                val newCursor = mentionWordStart + replacement.length
+                                                contentField = TextFieldValue(newText, TextRange(newCursor))
+                                                mentionSuggestions = emptyList()
+                                                mentionQuery = null
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // MediaAttachmentRow fills its width, so give it a weighted slot;
-                    // otherwise it consumes the whole Row and pushes the schedule
-                    // button off the right edge (making it invisible).
-                    Box(Modifier.weight(1f)) {
-                        MediaAttachmentRow(
-                            attachedFiles = attachedFiles,
-                            isUploading = uploadState.isUploading,
-                            onAttach = {
-                                val files = DesktopFilePicker.pickMediaFiles()
-                                attachedFiles.addAll(files)
-                            },
-                            onPaste = {
-                                val files = ClipboardPasteHandler.getClipboardFiles()
-                                attachedFiles.addAll(files)
-                            },
-                            onRemove = { attachedFiles.remove(it) },
-                        )
-                    }
-
-                    // Picture posts aren't schedulable in v1 — hide the toggle then.
-                    if (!postAsPicture) {
-                        DesktopScheduleAtButton(
-                            isActive = scheduledForSec != null,
-                            onClick = {
-                                scheduledForSec =
-                                    if (scheduledForSec != null) {
-                                        null
-                                    } else {
-                                        sanitizeScheduleTime(presetInOneHour())
-                                    }
-                            },
-                        )
-                    }
-                }
-
-                if (scheduledForSec != null && !postAsPicture) {
                     Spacer(Modifier.height(8.dp))
-                    DesktopScheduleAtPicker(
-                        scheduledForSec = scheduledForSec ?: 0L,
-                        onChanged = { scheduledForSec = it },
+
+                    // Poll toggle — mutually exclusive with image posting (a poll carries no
+                    // media attachments). Disabled while there are attached files.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FilterChip(
+                            selected = wantsPoll,
+                            onClick = { wantsPoll = !wantsPoll },
+                            enabled = attachedFiles.isEmpty(),
+                            label = { Text("Poll") },
+                            leadingIcon =
+                                if (wantsPoll) {
+                                    { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                } else {
+                                    null
+                                },
+                        )
+                    }
+
+                    if (wantsPoll) {
+                        PollComposerSection(
+                            options = pollOptions,
+                            pollType = pollType,
+                            onPollTypeChange = { pollType = it },
+                            pollDurationDays = pollDurationDays,
+                            onDurationChange = { pollDurationDays = it },
+                        )
+                    }
+
+                    // Media attachment + scheduling — hidden for polls (a poll carries no
+                    // media attachments and isn't schedulable in v1).
+                    if (!wantsPoll) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // MediaAttachmentRow fills its width, so give it a weighted slot;
+                            // otherwise it consumes the whole Row and pushes the schedule
+                            // button off the right edge (making it invisible).
+                            Box(Modifier.weight(1f)) {
+                                MediaAttachmentRow(
+                                    attachedFiles = attachedFiles,
+                                    isUploading = uploadState.isUploading,
+                                    onAttach = {
+                                        val files = DesktopFilePicker.pickMediaFiles()
+                                        attachedFiles.addAll(files)
+                                    },
+                                    onPaste = {
+                                        val files = ClipboardPasteHandler.getClipboardFiles()
+                                        attachedFiles.addAll(files)
+                                    },
+                                    onRemove = { attachedFiles.remove(it) },
+                                )
+                            }
+
+                            // Picture posts aren't schedulable in v1 — hide the toggle then.
+                            if (!postAsPicture) {
+                                DesktopScheduleAtButton(
+                                    isActive = scheduledForSec != null,
+                                    onClick = {
+                                        scheduledForSec =
+                                            if (scheduledForSec != null) {
+                                                null
+                                            } else {
+                                                sanitizeScheduleTime(presetInOneHour())
+                                            }
+                                    },
+                                )
+                            }
+                        }
+
+                        if (scheduledForSec != null && !postAsPicture) {
+                            Spacer(Modifier.height(8.dp))
+                            DesktopScheduleAtPicker(
+                                scheduledForSec = scheduledForSec ?: 0L,
+                                onChanged = { scheduledForSec = it },
+                            )
+                        }
+                    }
+
+                    // Server selector + per-post quality + post type — shown when files are attached
+                    if (attachedFiles.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        ) {
+                            ServerSelector(
+                                servers = effectiveServers,
+                                selectedServer = selectedServer,
+                                onServerSelected = { selectedServer = it },
+                            )
+
+                            // Quality override chip — only when images are attached
+                            // (no point picking a JPEG preset for a video upload).
+                            if (hasImages) {
+                                QualitySelectorChip(
+                                    activeQuality = activeQuality,
+                                    isOverride = perPostQualityOverride != null,
+                                    onSelect = { perPostQualityOverride = it },
+                                    onReset = { perPostQualityOverride = null },
+                                )
+                            }
+
+                            // Post type toggle — only when images are attached
+                            if (hasImages) {
+                                PostTypeSelector(
+                                    isPicture = postAsPicture,
+                                    onToggle = { postAsPicture = it },
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    // Character count
+                    Text(
+                        "${content.length} characters",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    errorMessage?.let { error ->
+                        Spacer(Modifier.height(8.dp))
+                        SelectionContainer {
+                            Text(
+                                error,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+
+                    uploadState.error?.let { error ->
+                        Spacer(Modifier.height(4.dp))
+                        SelectionContainer {
+                            Text(
+                                "Upload error: $error",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    ComposeRelayPicker(
+                        pickerState = pickerState,
+                        selectedRelays = selectedRelays,
+                        onToggleRelay = { url ->
+                            selectedRelays =
+                                if (url in selectedRelays) {
+                                    selectedRelays - url
+                                } else {
+                                    selectedRelays + url
+                                }
+                        },
                     )
                 }
-
-                // Server selector + per-post quality + post type — shown when files are attached
-                if (attachedFiles.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    ) {
-                        ServerSelector(
-                            servers = effectiveServers,
-                            selectedServer = selectedServer,
-                            onServerSelected = { selectedServer = it },
-                        )
-
-                        // Quality override chip — only when images are attached
-                        // (no point picking a JPEG preset for a video upload).
-                        if (hasImages) {
-                            QualitySelectorChip(
-                                activeQuality = activeQuality,
-                                isOverride = perPostQualityOverride != null,
-                                onSelect = { perPostQualityOverride = it },
-                                onReset = { perPostQualityOverride = null },
-                            )
-                        }
-
-                        // Post type toggle — only when images are attached
-                        if (hasImages) {
-                            PostTypeSelector(
-                                isPicture = postAsPicture,
-                                onToggle = { postAsPicture = it },
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(4.dp))
-
-                // Character count
-                Text(
-                    "${content.length} characters",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                errorMessage?.let { error ->
-                    Spacer(Modifier.height(8.dp))
-                    SelectionContainer {
-                        Text(
-                            error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-
-                uploadState.error?.let { error ->
-                    Spacer(Modifier.height(4.dp))
-                    SelectionContainer {
-                        Text(
-                            "Upload error: $error",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                ComposeRelayPicker(
-                    pickerState = pickerState,
-                    selectedRelays = selectedRelays,
-                    onToggleRelay = { url ->
-                        selectedRelays =
-                            if (url in selectedRelays) {
-                                selectedRelays - url
-                            } else {
-                                selectedRelays + url
-                            }
-                    },
-                )
 
                 Spacer(Modifier.height(8.dp))
 
@@ -704,61 +776,74 @@ fun ComposeNoteDialog(
 
                     // Save-as-draft: always writes a local row; optionally publishes a
                     // NIP-37 encrypted event. Local save still succeeds if sync fails.
-                    OutlinedButton(
-                        onClick = {
-                            if (content.isBlank()) {
-                                errorMessage = "Draft cannot be empty"
-                                return@OutlinedButton
-                            }
-                            scope.launch {
-                                isSavingDraft = true
-                                errorMessage = null
-                                var syncError: String? = null
-                                try {
-                                    if (syncDraft) {
-                                        syncError =
-                                            syncDraftToRelays(
-                                                content = content,
-                                                dTag = draftTag,
-                                                account = account,
-                                                relayManager = relayManager,
-                                                replyTo = replyTo,
-                                                quoteOf = quoteOf,
-                                                relays = selectedRelays,
-                                            )
-                                    }
-
-                                    noteDraftStore.save(
-                                        NoteDraft(
-                                            dTag = draftTag,
-                                            content = content,
-                                            updatedAt = TimeUtils.now(),
-                                            synced = syncDraft && syncError == null,
-                                            accountPubkey = account.pubKeyHex,
-                                        ),
-                                    )
-
-                                    if (syncError != null) {
-                                        errorMessage = "Draft saved locally, but sync failed: $syncError"
-                                    } else {
-                                        onDismiss()
-                                    }
-                                } catch (e: Exception) {
-                                    errorMessage = "Failed to save draft: ${e.message}"
-                                } finally {
-                                    isSavingDraft = false
+                    // Not shown while composing a poll — polls aren't draftable in v1.
+                    if (!wantsPoll) {
+                        OutlinedButton(
+                            onClick = {
+                                if (content.isBlank()) {
+                                    errorMessage = "Draft cannot be empty"
+                                    return@OutlinedButton
                                 }
-                            }
-                        },
-                        enabled = !isPosting && !isSavingDraft && content.isNotBlank(),
-                    ) {
-                        Text(if (isSavingDraft) "Saving..." else "Save as draft")
+                                scope.launch {
+                                    isSavingDraft = true
+                                    errorMessage = null
+                                    var syncError: String? = null
+                                    try {
+                                        if (syncDraft) {
+                                            syncError =
+                                                syncDraftToRelays(
+                                                    content = content,
+                                                    dTag = draftTag,
+                                                    account = account,
+                                                    relayManager = relayManager,
+                                                    replyTo = replyTo,
+                                                    quoteOf = quoteOf,
+                                                    relays = selectedRelays,
+                                                )
+                                        }
+
+                                        noteDraftStore.save(
+                                            NoteDraft(
+                                                dTag = draftTag,
+                                                content = content,
+                                                updatedAt = TimeUtils.now(),
+                                                synced = syncDraft && syncError == null,
+                                                accountPubkey = account.pubKeyHex,
+                                            ),
+                                        )
+
+                                        if (syncError != null) {
+                                            errorMessage = "Draft saved locally, but sync failed: $syncError"
+                                        } else {
+                                            onDismiss()
+                                        }
+                                    } catch (e: Exception) {
+                                        errorMessage = "Failed to save draft: ${e.message}"
+                                    } finally {
+                                        isSavingDraft = false
+                                    }
+                                }
+                            },
+                            enabled = !isPosting && !isSavingDraft && content.isNotBlank(),
+                        ) {
+                            Text(if (isSavingDraft) "Saving..." else "Save as draft")
+                        }
+
+                        Spacer(Modifier.width(8.dp))
                     }
 
-                    Spacer(Modifier.width(8.dp))
-
+                    // A poll needs a question (description) and at least two options.
+                    val pollValid = content.isNotBlank() && pollOptions.count { it.trim().isNotEmpty() } >= 2
                     Button(
                         onClick = {
+                            if (wantsPoll) {
+                                if (!pollValid) {
+                                    errorMessage = "A poll needs a question and at least two options"
+                                    return@Button
+                                }
+                                runPublish(null, emptySet())
+                                return@Button
+                            }
                             if (content.isBlank() && attachedFiles.isEmpty()) {
                                 errorMessage = "Note cannot be empty"
                                 return@Button
@@ -786,7 +871,9 @@ fun ComposeNoteDialog(
                             }
                             runPublish(null, emptySet())
                         },
-                        enabled = !isPosting && !isSavingDraft && (content.isNotBlank() || attachedFiles.isNotEmpty()),
+                        enabled =
+                            !isPosting && !isSavingDraft &&
+                                if (wantsPoll) pollValid else (content.isNotBlank() || attachedFiles.isNotEmpty()),
                     ) {
                         Text(
                             when {
@@ -973,6 +1060,40 @@ private suspend fun publishPicture(
             com.vitorpamplona.quartz.nip68Picture.PictureEvent.build(
                 images = images,
                 description = description,
+            ) {
+                hashtags(findHashtags(description))
+            }
+
+        val signedEvent = account.signer.sign(template)
+        relayManager.publish(signedEvent, relays)
+    }
+}
+
+private suspend fun publishPoll(
+    description: String,
+    options: List<String>,
+    pollType: PollType,
+    endsAt: Long?,
+    account: AccountState.LoggedIn,
+    relayManager: DesktopRelayConnectionManager,
+    relays: Set<NormalizedRelayUrl>,
+) {
+    withContext(Dispatchers.IO) {
+        if (account.isReadOnly) {
+            throw IllegalStateException("Cannot post in read-only mode")
+        }
+        require(options.size >= 2) { "A poll needs at least two options" }
+
+        // Deterministic per-position codes; labels come straight from the fields.
+        val optionTags = options.mapIndexed { index, label -> OptionTag(index.toString(), label) }
+
+        val template =
+            PollEvent.build(
+                description = description,
+                options = optionTags,
+                endsAt = endsAt,
+                relays = relays.toList(),
+                pollType = pollType,
             ) {
                 hashtags(findHashtags(description))
             }
@@ -1173,6 +1294,90 @@ private suspend fun syncDraftToRelays(
             e.message ?: "signer unavailable"
         }
     }
+
+/**
+ * Poll composer body: N option fields (add/remove, ≥2), a single/multi choice chip pair,
+ * and an optional duration (deadline) chip row. The description is the main note text field.
+ */
+@Composable
+private fun PollComposerSection(
+    options: SnapshotStateList<String>,
+    pollType: PollType,
+    onPollTypeChange: (PollType) -> Unit,
+    pollDurationDays: Int?,
+    onDurationChange: (Int?) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEachIndexed { index, value ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { options[index] = it },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    placeholder = { Text("Option ${index + 1}") },
+                )
+                IconButton(
+                    onClick = { if (options.size > 2) options.removeAt(index) },
+                    enabled = options.size > 2,
+                ) {
+                    Icon(MaterialSymbols.Close, contentDescription = "Remove option", modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+
+        OutlinedButton(onClick = { options.add("") }) {
+            Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Add option")
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = pollType == PollType.SINGLE_CHOICE,
+                onClick = { onPollTypeChange(PollType.SINGLE_CHOICE) },
+                label = { Text("Single choice") },
+            )
+            FilterChip(
+                selected = pollType == PollType.MULTI_CHOICE,
+                onClick = { onPollTypeChange(PollType.MULTI_CHOICE) },
+                label = { Text("Multiple choice") },
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Ends:", style = MaterialTheme.typography.bodySmall)
+            listOf<Pair<String, Int?>>(
+                "Never" to null,
+                "1d" to 1,
+                "3d" to 3,
+                "7d" to 7,
+            ).forEach { (label, days) ->
+                FilterChip(
+                    selected = pollDurationDays == days,
+                    onClick = { onDurationChange(days) },
+                    label = { Text(label) },
+                    leadingIcon =
+                        if (pollDurationDays == days) {
+                            { Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                        } else {
+                            null
+                        },
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun MentionSuggestionRow(

@@ -37,9 +37,11 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 private fun isFeedNote(event: Event?): Boolean =
     event is TextNoteEvent ||
+        event is PollEvent ||
         event.isRenderableRepost()
 
 private fun List<Note>.deduplicateReposts(): List<Note> =

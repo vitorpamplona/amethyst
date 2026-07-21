@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 data class ContentPreset(
@@ -63,6 +64,7 @@ object KindRegistry {
             "wiki" to listOf(WikiNoteEvent.KIND),
             "classified" to listOf(ClassifiedsEvent.KIND),
             "highlight" to listOf(HighlightEvent.KIND),
+            "poll" to listOf(PollEvent.KIND),
         )
 
     val pseudoKinds: Set<String> = setOf("reply", "media")
@@ -75,6 +77,7 @@ object KindRegistry {
             "Channels" to ContentPreset(kinds = listOf(ChannelCreateEvent.KIND, ChannelMetadataEvent.KIND)),
             "Communities" to ContentPreset(kinds = listOf(CommunityDefinitionEvent.KIND)),
             "Wiki" to ContentPreset(kinds = listOf(WikiNoteEvent.KIND)),
+            "Polls" to ContentPreset(kinds = listOf(PollEvent.KIND)),
         )
 
     fun resolve(alias: String): List<Int>? = aliases[alias.lowercase()]
