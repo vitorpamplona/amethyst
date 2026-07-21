@@ -70,7 +70,7 @@ class ConcordSessionRegistryTest {
             assertTrue(registry.subscribeAddresses().contains(beta.controlPlane.publicKeyHex))
 
             // A genesis control wrap routes to Alpha's session and folds it (STRUCTURAL).
-            alpha.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL, registry.ingest(it)) }
+            alpha.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL_FOLD, registry.ingest(it)) }
             val alphaState = registry.sessionFor(alpha.communityIdHex)!!.state.value
             assertEquals("Alpha", alphaState?.metadata?.name)
 

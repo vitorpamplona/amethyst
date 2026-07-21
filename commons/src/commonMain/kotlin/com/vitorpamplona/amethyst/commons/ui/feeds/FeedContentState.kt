@@ -161,7 +161,14 @@ class FeedContentState(
                                 if (noteEvent != null) {
                                     !cacheProvider.hasBeenDeleted(noteEvent)
                                 } else {
-                                    false
+                                    // An event-less row is a placeholder the filter synthesized for a room
+                                    // that has no message yet — a just-joined Concord channel, NIP-29 group,
+                                    // Marmot group or geohash cell. It carries no event, so it cannot have
+                                    // been deleted, and dropping it here deleted every such row from the
+                                    // Messages list the moment ANY kind-5 landed in an unrelated batch. The
+                                    // row then stayed gone until the next full rebuild, which is why a quiet
+                                    // community looked like it had never loaded at all.
+                                    true
                                 }
                             }.toImmutableList()
                     }

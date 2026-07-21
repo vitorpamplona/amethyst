@@ -150,6 +150,9 @@ class ConcordSessionManager(
         seenOnRelays: Set<NormalizedRelayUrl> = emptySet(),
     ): Boolean {
         val outcome = registry.ingest(wrap, seenOnRelays)
+        // Only the planes that change structure *without* republishing `state`. A control-plane
+        // fold returns STRUCTURAL_FOLD and is bumped by the per-session state watcher instead, which
+        // (since the folded state compares by value) fires only when the fold genuinely changed.
         if (outcome == ConcordIngestOutcome.STRUCTURAL) bumpRevision()
         return outcome.claimed
     }

@@ -62,8 +62,17 @@ enum class ConcordIngestOutcome {
      *  a chat/reaction/reply/delete message landing, or a duplicate wrap. Must NOT bump the revision. */
     NON_STRUCTURAL,
 
-    /** Ours and changed structure: a Control-Plane fold (metadata/channels/membership/authority), a
-     *  guestbook membership change, or a buffered base-rekey. Bumps the revision. */
+    /** Ours and re-folded the Control Plane. The fold republishes [ConcordCommunitySession.state],
+     *  so the session's own state watcher is what bumps the revision — and, because the folded state
+     *  compares by value, only when the fold actually *changed* something. A control wrap that folds
+     *  to an identical state (a prior-epoch wrap that doesn't move the anti-rollback floor, a role
+     *  edition that touches nothing we subscribe on) therefore costs no bump at all. The manager must
+     *  NOT bump on this outcome as well, or every control wrap counts twice. */
+    STRUCTURAL_FOLD,
+
+    /** Ours and changed structure *without* touching [ConcordCommunitySession.state]: a guestbook
+     *  membership change (which republishes `members`) or a buffered base-rekey. No state watcher
+     *  covers these, so the manager bumps the revision directly. */
     STRUCTURAL,
     ;
 
@@ -144,6 +153,22 @@ class ConcordCommunitySession(
 
     // Deduped inbound wraps.
     private val controlWraps = LinkedHashMap<HexKey, Event>()
+
+    /**
+     * Decrypted control editions memoized by wrap id.
+     *
+     * Both [refold] and [controlFloorsLocked] fold their WHOLE buffer on every inbound control
+     * wrap, and turning a wrap into an edition is a NIP-44 open + parse. Re-deriving them each
+     * time made a cold-boot backfill quadratic in decryptions — one measured boot did ~8.6k opens
+     * to ingest 93 control wraps for a single community. Memoizing makes it one open per wrap.
+     *
+     * Wrap ids are unique and a wrap only ever belongs to one plane (it is routed by `pubKey`), so
+     * a single id-keyed map is safe across the current and prior-epoch Control Planes even though
+     * they open under different keys. A wrap that fails to open caches `null` so it is not retried
+     * on every subsequent fold. The wrap buffers are only ever added to, so this tracks their
+     * lifetime exactly and needs no separate eviction.
+     */
+    private val editionByWrapId = HashMap<HexKey, ControlEdition?>()
 
     // Prior-epoch Control Plane address -> (wrapId -> wrap). Kept apart from [controlWraps]: these
     // never join the live fold, they only produce the anti-rollback floor.
@@ -280,7 +305,7 @@ class ConcordCommunitySession(
     fun auxStreamKeys(): List<GroupKey> = listOf(guestbookKey, nextBaseRekeyKey)
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
-    fun controlEditions(): List<ControlEdition> = lock.withLock { ConcordActions.controlEditions(controlWraps.values.toList(), controlPlaneKey) }
+    fun controlEditions(): List<ControlEdition> = lock.withLock { editionsLocked(controlWraps.values.toList(), controlPlaneKey) }
 
     /** The raw Control Plane wraps buffered so far — the input a Refounding compacts (CORD-06 §3). */
     fun controlPlaneWraps(): List<Event> = lock.withLock { controlWraps.values.toList() }
@@ -314,7 +339,7 @@ class ConcordCommunitySession(
                     if (controlWraps.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
                 }
                 refold()
-                return ConcordIngestOutcome.STRUCTURAL
+                return ConcordIngestOutcome.STRUCTURAL_FOLD
             }
             guestbookAddress -> {
                 lock.withLock {
@@ -341,7 +366,7 @@ class ConcordCommunitySession(
                         if (buffer.put(wrap.id, wrap) != null) return ConcordIngestOutcome.NON_STRUCTURAL // dup
                     }
                     refold()
-                    return ConcordIngestOutcome.STRUCTURAL
+                    return ConcordIngestOutcome.STRUCTURAL_FOLD
                 }
                 val current = lock.withLock { channelKeysByAddress[wrap.pubKey] }
                 if (current != null) {
@@ -422,7 +447,7 @@ class ConcordCommunitySession(
                 val wraps = controlWraps.values.toList()
                 val folded =
                     ConcordCommunityState.fold(
-                        ConcordActions.controlEditions(wraps, controlPlaneKey),
+                        editionsLocked(wraps, controlPlaneKey),
                         entry.owner,
                         controlFloorsLocked(),
                     )
@@ -456,6 +481,24 @@ class ConcordCommunitySession(
     }
 
     /**
+     * [wraps] opened into editions through [editionByWrapId], so a wrap is only ever decrypted
+     * once no matter how many folds it participates in. Caller must hold [lock].
+     */
+    private fun editionsLocked(
+        wraps: Collection<Event>,
+        planeKey: GroupKey,
+    ): List<ControlEdition> =
+        wraps.mapNotNull { wrap ->
+            if (editionByWrapId.containsKey(wrap.id)) {
+                editionByWrapId[wrap.id]
+            } else {
+                val edition = ConcordStreamEnvelope.openOrNull(wrap, planeKey)?.let { ControlEdition.fromRumor(it.rumor) }
+                editionByWrapId[wrap.id] = edition
+                edition
+            }
+        }
+
+    /**
      * The per-entity anti-rollback floor: the authority-gated heads of every prior epoch's
      * Control Plane we still hold a root for, folded **oldest epoch first** so each epoch is
      * itself anchored at the one before it and the floor only ever rises.
@@ -472,7 +515,7 @@ class ConcordCommunitySession(
         var floors = emptyMap<String, EntityFloor>()
         for ((address, keyAtEpoch) in historicalControlKeys.entries.sortedBy { it.value.second }) {
             val wraps = historicalControlWraps[address]?.values?.toList() ?: continue
-            val editions = ConcordActions.controlEditions(wraps, keyAtEpoch.first)
+            val editions = editionsLocked(wraps, keyAtEpoch.first)
             if (editions.isEmpty()) continue
             floors = ConcordCommunityState.authorizedHeads(editions, entry.owner, floors)
         }
