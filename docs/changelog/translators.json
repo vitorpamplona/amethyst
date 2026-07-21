@@ -71,7 +71,8 @@
     "markkks": "",
     "helokuntzer": "",
     "Kevin_1": "",
-    "crowdin.pretended462": ""
+    "crowdin.pretended462": "",
+    "rchk": ""
   },
   "sinceLastTag": {
     "tag": "v1.12.6",
@@ -365,6 +366,10 @@
       },
       {
         "user": "Kevin_1",
+        "languages": []
+      },
+      {
+        "user": "rchk",
         "languages": []
       }
     ]
