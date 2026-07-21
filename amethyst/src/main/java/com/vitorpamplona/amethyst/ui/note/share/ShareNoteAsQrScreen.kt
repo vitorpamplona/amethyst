@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -160,19 +161,28 @@ private fun ShareNoteAsQrScreenContent(
                     .semantics { contentDescription = qrContentDescription },
         )
 
-        SingleChoiceSegmentedButtonRow {
+        // Fill the width so each button gets an equal, generous half (a bare
+        // SingleChoiceSegmentedButtonRow shrinks to content and clips longer labels), and pass an
+        // empty `icon` so the selected-state checkmark never steals horizontal room from the
+        // label — selection is already signalled by the fill colour. Both matter for translated
+        // labels, which are often longer than the English "Web link" / "Nostr link".
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             val modes = listOf(QrPayloadMode.Web, QrPayloadMode.Nostr)
             modes.forEachIndexed { index, candidate ->
                 SegmentedButton(
                     selected = mode == candidate,
                     onClick = { mode = candidate },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                    icon = {},
                 ) {
                     Text(
-                        when (candidate) {
-                            QrPayloadMode.Web -> stringRes(R.string.share_as_qr_mode_web)
-                            QrPayloadMode.Nostr -> stringRes(R.string.share_as_qr_mode_nostr)
-                        },
+                        text =
+                            when (candidate) {
+                                QrPayloadMode.Web -> stringRes(R.string.share_as_qr_mode_web)
+                                QrPayloadMode.Nostr -> stringRes(R.string.share_as_qr_mode_nostr)
+                            },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
