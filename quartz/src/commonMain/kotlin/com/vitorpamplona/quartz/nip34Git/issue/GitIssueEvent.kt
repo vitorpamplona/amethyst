@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -130,6 +131,9 @@ class GitIssueEvent(
         ) = eventTemplate(KIND, content, createdAt) {
             subject(subject)
             repository(repository)
+            // NIP-34 issues carry the repository owner as a `p` tag so maintainers
+            // watching `#p` are notified; the same tag patches/PRs already include.
+            pTag(repository.event.pubKey, repository.authorHomeRelay)
             notify(notify)
             hashtags(topics)
 

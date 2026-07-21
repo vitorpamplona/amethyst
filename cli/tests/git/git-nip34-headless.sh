@@ -145,6 +145,21 @@ info "state: $STATE"
 assert_eq "$(echo "$STATE" | jq -r '.branches')" "2" state.branches "two branch refs"
 assert_eq "$(echo "$STATE" | jq -r '.head')" "main" state.head "HEAD=main"
 
+# --- ngit interop: wire-format checks --------------------------------------
+banner "ngit interop wire format"
+# Announce a repo with TWO clone URLs; NIP-34/ngit want ONE multi-value tag.
+IADDR="$(M git announce --name interop --clone https://a.git,https://b.git --web https://a.com,https://b.com --earliest-commit abc123 --relay "$RELAY_URL" | jq -r '.address')"
+IEID="$(M git show "$IADDR" --relay "$RELAY_URL" | jq -r '.event_id')"
+ITAGS="$(M fetch --id "$IEID" --relay "$RELAY_URL")"
+assert_eq "$(echo "$ITAGS" | jq -r '[.events[0].tags[] | select(.[0]=="clone")] | length')" "1" interop.clone_single "clone is one tag (not repeated)"
+assert_eq "$(echo "$ITAGS" | jq -r '.events[0].tags[] | select(.[0]=="clone") | length')" "3" interop.clone_multivalue "clone tag carries both URLs (name + 2 values)"
+# The tolerant reader must round-trip both URLs back.
+assert_eq "$(M git show "$IADDR" --relay "$RELAY_URL" | jq -r '.clone | length')" "2" interop.clone_read "reader returns both clone URLs"
+# Issue must p-tag the repository owner (maintainer routing).
+IISS="$(M git issue "$IADDR" --subject "interop" "b" --relay "$RELAY_URL" | jq -r '.event_id')"
+IOWNER="$(echo "$IADDR" | cut -d: -f2)"
+assert_eq "$(M fetch --id "$IISS" --relay "$RELAY_URL" | jq -r "[.events[0].tags[] | select(.[0]==\"p\" and .[1]==\"$IOWNER\")] | length")" "1" interop.issue_ptag "issue carries the repo owner p tag"
+
 # GRASP server list (10317) round-trip.
 GRASP="$(M git grasp set "wss://grasp.example.com,wss://grasp2.example.com" --relay "$RELAY_URL")"
 assert_eq "$(echo "$GRASP" | jq -r '.kind')" "10317" grasp.kind "grasp list is kind 10317"

@@ -58,14 +58,21 @@ class GitRepositoryEvent(
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     /** First web URL, for backwards compatibility. Prefer [webs]. */
-    fun web() = tags.firstNotNullOfOrNull(WebTag::parse)
+    fun web() = webs().firstOrNull()
 
-    fun webs(): List<String> = tags.mapNotNull(WebTag::parse)
+    /**
+     * All browse URLs. Tolerant of both the NIP-34 spec form (one multi-value
+     * `["web", url1, url2]` tag, which ngit emits) and the legacy repeated
+     * `["web", url1]` / `["web", url2]` form, so a repo announced by any client
+     * round-trips without dropping URLs.
+     */
+    fun webs(): List<String> = tags.flatMap(WebTag::parseAll)
 
     /** First clone URL, for backwards compatibility. Prefer [clones]. */
-    fun clone() = tags.firstNotNullOfOrNull(CloneTag::parse)
+    fun clone() = clones().firstOrNull()
 
-    fun clones(): List<String> = tags.mapNotNull(CloneTag::parse)
+    /** All clone URLs — tolerant of both the multi-value and repeated forms (see [webs]). */
+    fun clones(): List<String> = tags.flatMap(CloneTag::parseAll)
 
     /**
      * Relays the repository author monitors for patches and issues. NIP-34
@@ -131,8 +138,8 @@ class GitRepositoryEvent(
             dTag(dTag)
             name(name)
             description?.let { description(it) }
-            webUrls.forEach { webUrl(it) }
-            cloneUrls.forEach { cloneUrl(it) }
+            if (webUrls.isNotEmpty()) webUrls(webUrls)
+            if (cloneUrls.isNotEmpty()) cloneUrls(cloneUrls)
             if (relays.isNotEmpty()) relays(relays)
             if (maintainers.isNotEmpty()) maintainers(maintainers)
             if (hashtags.isNotEmpty()) hashtags(hashtags)

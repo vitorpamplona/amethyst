@@ -23,6 +23,13 @@ package com.vitorpamplona.quartz.nip34Git.repository.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * NIP-34 repository `clone` tag. The spec encodes clone URLs as a single
+ * multi-value tag — `["clone", "<url1>", "<url2>", ...]` — so [assemble] emits
+ * that form and [parseAll] reads every value. [parse] (first value only) and
+ * the legacy repeated `["clone", "<url>"]` form are still read for backward
+ * compatibility (see `GitRepositoryEvent.clones`).
+ */
 class CloneTag {
     companion object {
         const val TAG_NAME = "clone"
@@ -34,6 +41,16 @@ class CloneTag {
             return tag[1]
         }
 
+        /** Every non-empty URL carried by a single `clone` tag. */
+        fun parseAll(tag: Array<String>): List<String> {
+            ensure(tag.has(1)) { return emptyList() }
+            ensure(tag[0] == TAG_NAME) { return emptyList() }
+            return tag.drop(1).filter { it.isNotEmpty() }
+        }
+
         fun assemble(name: String) = arrayOf(TAG_NAME, name)
+
+        /** The spec form: one tag carrying all clone URLs. */
+        fun assemble(urls: List<String>): Array<String> = (listOf(TAG_NAME) + urls.filter { it.isNotEmpty() }).toTypedArray()
     }
 }
