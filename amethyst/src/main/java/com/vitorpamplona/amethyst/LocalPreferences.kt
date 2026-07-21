@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -168,6 +169,7 @@ private object PrefKeys {
     const val LATEST_GEOHASH_LIST = "latestGeohashList"
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
     const val LATEST_RELAY_GROUP_LIST = "latestRelayGroupList"
+    const val LATEST_CONCORD_LIST = "latestConcordList"
     const val LATEST_TRUST_PROVIDER_LIST = "latestTrustProviderList"
     const val CALLS_ENABLED = "calls_enabled"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
@@ -577,6 +579,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_GEOHASH_LIST, settings.backupGeohashList)
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
                     putOrRemove(PrefKeys.LATEST_RELAY_GROUP_LIST, settings.backupRelayGroupList)
+                    putOrRemove(PrefKeys.LATEST_CONCORD_LIST, settings.backupConcordList)
                     putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
                     putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
                     putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
@@ -763,6 +766,7 @@ object LocalPreferences {
                     val latestGeohashListStr = getString(PrefKeys.LATEST_GEOHASH_LIST, null)
                     val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
                     val latestRelayGroupListStr = getString(PrefKeys.LATEST_RELAY_GROUP_LIST, null)
+                    val latestConcordListStr = getString(PrefKeys.LATEST_CONCORD_LIST, null)
                     val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
                     val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
                     val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
@@ -823,6 +827,7 @@ object LocalPreferences {
                     val latestGeohashList = async { parseEventOrNull<GeohashListEvent>(latestGeohashListStr) }
                     val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
                     val latestRelayGroupList = async { parseEventOrNull<SimpleGroupListEvent>(latestRelayGroupListStr) }
+                    val latestConcordList = async { parseEventOrNull<ConcordCommunityListEvent>(latestConcordListStr) }
                     val latestTrustProviderList = async { parseEventOrNull<TrustProviderListEvent>(latestTrustProviderListStr) }
                     val latestPaymentTargets = async { parseEventOrNull<PaymentTargetsEvent>(latestPaymentTargetsStr) }
                     val latestCashuWallet =
@@ -875,6 +880,7 @@ object LocalPreferences {
                     val latestGeohashListResolved = latestGeohashList.await()
                     val latestEphemeralListResolved = latestEphemeralList.await()
                     val latestRelayGroupListResolved = latestRelayGroupList.await()
+                    val latestConcordListResolved = latestConcordList.await()
                     val latestTrustProviderListResolved = latestTrustProviderList.await()
                     val latestPaymentTargetsResolved = latestPaymentTargets.await()
                     val latestCashuWalletResolved = latestCashuWallet.await()
@@ -969,6 +975,7 @@ object LocalPreferences {
                         backupGeohashList = latestGeohashListResolved,
                         backupEphemeralChatList = latestEphemeralListResolved,
                         backupRelayGroupList = latestRelayGroupListResolved,
+                        backupConcordList = latestConcordListResolved,
                         backupTrustProviderList = latestTrustProviderListResolved,
                         lastReadPerRoute = MutableStateFlow(lastReadPerRouteResolved),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
