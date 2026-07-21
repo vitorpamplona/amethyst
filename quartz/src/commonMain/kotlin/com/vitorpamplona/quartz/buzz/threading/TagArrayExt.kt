@@ -32,8 +32,11 @@ import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
  */
 private fun Array<String>.buzzMarkedEventId(marker: MarkedETag.MARKER): HexKey? {
     if (size < 3 || this[0] != MarkedETag.TAG_NAME || this[1].length != 64) return null
-    val code = marker.code
-    return if ((size >= 4 && this[3] == code) || this[2] == code) this[1] else null
+    // The marker lives at index 3 in the canonical 4-element form. Only fall back to
+    // index 2 for the EXACT 3-element form: on a 4+-element tag, index 2 is the relay
+    // hint, and a hint that happened to read "root"/"reply" would misparse.
+    val markerIndex = if (size == 3) 2 else 3
+    return if (this[markerIndex] == marker.code) this[1] else null
 }
 
 /** The thread root this event replies under, from its marked `root` e-tag. */

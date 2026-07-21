@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceChannel
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
@@ -107,7 +108,11 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageScheduledEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.StreamReminderEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalDeniedEvent
@@ -807,31 +812,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getOrCreateGeohashChannel(geohash: String): GeohashChatChannel = geohashChannels.getOrCreate(geohash) { GeohashChatChannel(geohash) }
 
-    fun getOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel =
-        relayGroupChannels.getOrCreate(key) {
-            // A relay marked as Buzz materializes its groups as workspace channels so
-            // Buzz-only state (edit overlays, canvas) has a home; everything else stays
-            // a plain NIP-29 group. See BuzzRelayDialect.
-            if (BuzzRelayDialect.isBuzz(key.relayUrl)) BuzzWorkspaceChannel(key) else RelayGroupChannel(key)
-        }
-
-    /**
-     * Returns the group's channel as a [BuzzWorkspaceChannel], upgrading a plain
-     * [RelayGroupChannel] in place when the group's relay turns out to speak the Buzz
-     * dialect after the channel was first materialized (e.g. its 39000 metadata arrived
-     * before the first Buzz-kind event). The upgrade migrates the attached timeline
-     * notes; per-relay pagination cursors reset, which only costs a re-page.
-     */
-    private fun getOrUpgradeBuzzChannel(key: GroupId): BuzzWorkspaceChannel {
-        val existing = getOrCreateRelayGroupChannel(key)
-        if (existing is BuzzWorkspaceChannel) return existing
-
-        val upgraded = BuzzWorkspaceChannel(key)
-        existing.notes.forEach { _, note -> upgraded.addNote(note, null) }
-        existing.relays().forEach { upgraded.addRelay(it) }
-        relayGroupChannels.put(key, upgraded)
-        return upgraded
-    }
+    fun getOrCreateRelayGroupChannel(key: GroupId): RelayGroupChannel = relayGroupChannels.getOrCreate(key) { RelayGroupChannel(key) }
 
     fun getConcordChannelIfExists(key: ConcordChannelId): ConcordChannel? = concordChannels.get(key)
 
@@ -1352,6 +1333,16 @@ object LocalCache : ILocalCache, ICacheProvider {
                         .map { it[1] }
                 val qTagTargets = event.quotedEvents().map { it.eventId }
                 (eTagTargets + qTagTargets).mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is StreamMessageV2Event -> {
+                // Buzz threads 40002s with marked root/reply e-tags (thread_tags in
+                // buzz-sdk). Link both so inbound replies render their quote bubble —
+                // we emit these markers on send, so we must also read them.
+                listOfNotNull(
+                    event.tags.buzzThreadRoot(),
+                    event.tags.buzzThreadReply(),
+                ).distinct().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             else -> {
@@ -2084,13 +2075,27 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     /**
+     * Marks the serving relay as Buzz, but only off a VERIFIED event: the mark changes
+     * what the composer sends (40002 vs kind 9) and how new channels on the relay are
+     * treated, so an unverifiable frame from a buggy/hostile relay must not flip it.
+     * The note-has-event check is the same verification gate the attach path uses.
+     */
+    private fun markBuzzIfVerified(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        if (relay != null && getNoteIfExists(event.id)?.event != null) {
+            BuzzRelayDialect.mark(relay)
+        }
+    }
+
+    /**
      * Consume + channel-attach for Buzz workspace timeline kinds (stream messages,
      * diffs, system rows, forum posts, job cards, huddle lifecycle). These kinds only
-     * exist on `block/buzz` relays, so their arrival IS the dialect detection: the
-     * serving relay is marked in [BuzzRelayDialect] and the group's channel is
-     * materialized (or upgraded) as a [BuzzWorkspaceChannel] before the shared NIP-29
-     * attach routes the note into the same one-timeline-per-group channel kind-9 chat
-     * uses. Mixed vanilla/Buzz conversations therefore stay whole.
+     * exist on `block/buzz` relays, so their (verified) arrival IS the dialect
+     * detection. Attachment goes through the SAME shared NIP-29 path kind-9 chat uses
+     * — including its stray-redirect protection — so mixed vanilla/Buzz conversations
+     * share one timeline and non-host strays never mint phantom channels.
      */
     private fun consumeBuzzTimelineEvent(
         event: Event,
@@ -2098,32 +2103,19 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean =
         consumeRegularEvent(event, relay, wasVerified).also {
-            if (relay != null) {
-                BuzzRelayDialect.mark(relay)
-                event.groupId()?.let { getOrUpgradeBuzzChannel(GroupId(it, relay)) }
-            }
+            markBuzzIfVerified(event, relay)
             attachToRelayGroupIfScoped(event, relay)
         }
 
-    /** Store-only consume for Buzz kinds that carry no channel timeline row; still marks the dialect. */
+    /** Store-only consume for Buzz kinds that carry no channel timeline row. */
     private fun consumeBuzzRegularEvent(
         event: Event,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean =
         consumeRegularEvent(event, relay, wasVerified).also {
-            if (relay != null) BuzzRelayDialect.mark(relay)
+            markBuzzIfVerified(event, relay)
         }
-
-    /** The group's [BuzzWorkspaceChannel] for a consumed Buzz event, when resolvable. */
-    private fun buzzChannelFor(
-        event: Event,
-        relay: NormalizedRelayUrl?,
-    ): BuzzWorkspaceChannel? {
-        val groupId = event.groupId() ?: return null
-        if (relay == null) return null
-        return getOrUpgradeBuzzChannel(GroupId(groupId, relay))
-    }
 
     private fun consume(
         event: StreamMessageEditEvent,
@@ -2131,14 +2123,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean =
         // Buzz's own timeline set excludes 40003: an edit is an OVERLAY replacing an
-        // earlier message's content, never a row of its own. Store it (queryable,
-        // dialect-marking) and record the overlay, but do NOT attach it to the
-        // channel timeline or it renders as a duplicate message.
+        // earlier message's content, never a row of its own. Store it and record the
+        // overlay (keyed by the channel's UUID, so own sends with no provenance relay
+        // land too), but do NOT attach it to the timeline.
         consumeBuzzRegularEvent(event, relay, wasVerified).also {
             val target = event.editedMessage() ?: return@also
+            val channelId = event.channel() ?: return@also
             val editNote = getOrCreateNote(event.id)
             if (editNote.event != null) {
-                buzzChannelFor(event, relay)?.addEdit(target, editNote)
+                BuzzWorkspaceStates.getOrCreate(channelId).addEdit(target, editNote)
             }
         }
 
@@ -2147,10 +2140,13 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean =
-        consumeBuzzTimelineEvent(event, relay, wasVerified).also {
+        // The canvas is the channel's single living document, not a chat row: track
+        // only the newest revision as overlay state, never attach it to the timeline.
+        consumeBuzzRegularEvent(event, relay, wasVerified).also {
+            val channelId = event.channel() ?: return@also
             val note = getOrCreateNote(event.id)
             if (note.event != null) {
-                buzzChannelFor(event, relay)?.updateCanvas(note)
+                BuzzWorkspaceStates.getOrCreate(channelId).updateCanvas(note)
             }
         }
 
@@ -3206,6 +3202,13 @@ object LocalCache : ILocalCache, ICacheProvider {
         // grow unbounded with every author who ever heartbeat here.
         if (channel is LiveActivitiesChannel) {
             channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
+        }
+
+        // A Buzz workspace's edit/canvas overlay is keyed off the channel id, outside
+        // `notes`, so the top-N reap never touches it. Drop overlay entries whose target
+        // message was just pruned, else they pin the edit note + author forever.
+        if (channel is RelayGroupChannel) {
+            BuzzWorkspaceStates.getIfExists(channel.groupId.id)?.pruneEdits(channel.notes.keys())
         }
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
@@ -4655,20 +4658,19 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is ApprovalGrantEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is ApprovalDenyEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
 
-                // Buzz ephemeral signals: transient by definition (20000-29999); mark
-                // the dialect but do not pollute the note store with typing/telemetry.
-                is TypingIndicatorEvent -> {
-                    relay?.let { BuzzRelayDialect.mark(it) }
-                    false
-                }
-                is ObserverFrameEvent -> {
-                    relay?.let { BuzzRelayDialect.mark(it) }
-                    false
-                }
-                is HuddleReactionEvent -> {
-                    relay?.let { BuzzRelayDialect.mark(it) }
-                    false
-                }
+                // Buzz relay-signed sidecars and audit projections: store-only, queryable.
+                is AuditEntryEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ChannelSummaryEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is PresenceSnapshotEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+
+                // Buzz ephemeral signals: transient by definition (20000-29999) — do not
+                // pollute the note store, and do NOT mark the dialect from them (they are
+                // never stored, so the verified-mark gate has nothing to check).
+                is TypingIndicatorEvent -> false
+                is ObserverFrameEvent -> false
+                is HuddleReactionEvent -> false
+                // Pairing (24134) is deliberately dialect-neutral: it flows during device
+                // pairing before any workspace relationship is established.
                 is PairingEvent -> false
 
                 is PollEvent -> {

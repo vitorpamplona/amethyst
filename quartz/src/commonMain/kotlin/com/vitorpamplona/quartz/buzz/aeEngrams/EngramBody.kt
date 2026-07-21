@@ -71,20 +71,31 @@ sealed interface EngramBody {
             return if (slug == CORE_SLUG) {
                 JSON.decodeFromString<EngramCoreBody>(json)
             } else {
+                require(isValidMemorySlug(slug)) { "Invalid engram memory slug: $slug" }
                 JSON.decodeFromString<EngramMemoryBody>(json)
             }
         }
+
+        private val MEMORY_SLUG = Regex("^mem/[a-z0-9][a-z0-9_-]{0,63}(/[a-z0-9][a-z0-9_-]{0,63})*$")
+
+        /** NIP-AE memory-slug grammar (`validate_slug` in engram.rs); `core` is handled separately. */
+        fun isValidMemorySlug(slug: String): Boolean = slug.length <= 255 && MEMORY_SLUG.matches(slug)
     }
 }
 
 /**
  * A `mem/…` engram entry. [value] `null` is a tombstone (the entry was deleted),
- * which is encoded as an explicit `"value":null` on the wire.
+ * encoded as an explicit `"value":null` on the wire.
+ *
+ * [value] has NO default on purpose: a memory body that OMITS `value` entirely is
+ * invalid (Buzz's `Body::from_json_bytes` rejects it), not a tombstone. With no
+ * default, kotlinx throws on an absent field, so Amethyst refuses the same bodies
+ * Buzz does instead of silently reading them as a deletion.
  */
 @Serializable
 data class EngramMemoryBody(
     override val slug: String,
-    val value: String? = null,
+    val value: String?,
 ) : EngramBody {
     /** `true` for a tombstone — a memory whose [value] is `null`. */
     fun isTombstone(): Boolean = value == null

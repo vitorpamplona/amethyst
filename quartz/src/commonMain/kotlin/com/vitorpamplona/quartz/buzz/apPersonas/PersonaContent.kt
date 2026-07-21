@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.buzz.apPersonas
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -50,9 +51,12 @@ data class PersonaContent(
     val runtime: String? = null,
     val model: String? = null,
     val provider: String? = null,
-    @SerialName("name_pool") val namePool: List<String> = emptyList(),
+    // NEVER-encode the empty defaults to match Rust's `skip_serializing_if = Vec::is_empty`
+    // (persona_events.rs): emitting `[]` where upstream omits the field would shift the
+    // content bytes and spuriously trip the desktop's persona_content_hash drift check.
+    @EncodeDefault(EncodeDefault.Mode.NEVER) @SerialName("name_pool") val namePool: List<String> = emptyList(),
     @SerialName("respond_to") val respondTo: String? = null,
-    @SerialName("respond_to_allowlist") val respondToAllowlist: List<String> = emptyList(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER) @SerialName("respond_to_allowlist") val respondToAllowlist: List<String> = emptyList(),
     val parallelism: Int? = null,
 ) {
     fun encodeToJson(): String = JSON.encodeToString(this)

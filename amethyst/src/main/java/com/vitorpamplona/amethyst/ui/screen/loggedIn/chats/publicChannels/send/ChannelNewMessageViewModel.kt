@@ -34,7 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceChannel
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -530,7 +531,12 @@ open class ChannelNewMessageViewModel :
         // channel type (NIP-29 groups additionally carry the `h` tag). It carries the same mention/
         // hashtag/quote/emoji/attachment enrichment an inline message does — built from tagger.message,
         // not the raw text — so replying in a thread never silently drops any of them.
-        val minichatParent = replyTo.value?.takeIf { replyMode.value == ReplyMode.MINICHAT }?.event
+        // Buzz relays reject unknown kinds outright, and kind 1111 is not in Buzz's
+        // registry — a minichat comment sent to a workspace channel would be refused
+        // by the relay AFTER the composer already cleared. Buzz replies always go
+        // through the 40002 branch with its thread markers instead.
+        val minichatAllowed = !(channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl))
+        val minichatParent = replyTo.value?.takeIf { minichatAllowed && replyMode.value == ReplyMode.MINICHAT }?.event
         if (minichatParent != null) {
             return CommentEvent.replyBuilder(tagger.message, EventHintBundle(minichatParent, channelRelays.firstOrNull())) {
                 if (channel is RelayGroupChannel) {
@@ -681,21 +687,28 @@ open class ChannelNewMessageViewModel :
                 }
             }
 
-            channel is BuzzWorkspaceChannel -> {
+            channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) -> {
                 // Buzz workspace message: the native kind is 40002 (stream message v2)
                 // scoped with the group's `h` tag; Buzz threads replies with NIP-10
                 // marked e-tags (["e", root, "", "root"] + ["e", parent, "", "reply"],
                 // collapsing to a single "reply" when the parent IS the root — mirrors
                 // thread_tags in buzz-sdk builders.rs) plus a `p` notify to the parent
-                // author. Kind 9 would also render in Buzz, but 40002 is what its own
-                // clients send. Checked BEFORE RelayGroupChannel: Buzz is a subclass.
+                // author. The dialect check comes from BuzzRelayDialect (marked off
+                // verified Buzz events), not a channel subtype: channel instances are
+                // captured by screens for their whole life, so the dialect must be
+                // able to flip mid-session without swapping objects.
                 StreamMessageV2Event.build(channel.groupId.id, tagger.message) {
                     replyTo.value?.let { parent ->
-                        // Replying inside the parent's thread: the parent's own root
-                        // marker (when it is itself a reply) becomes our root, else the
-                        // parent starts the thread. buzzThread collapses to a single
-                        // "reply" marker when root == parent, per thread_tags.
-                        val root = parent.event?.tags?.buzzThreadRoot() ?: parent.idHex
+                        // The parent's root marker (when it is itself a nested reply),
+                        // else the parent's OWN reply target (a direct reply's collapsed
+                        // form carries the root as its "reply" marker — Buzz's relay
+                        // validates ancestry and rejects a mis-derived root), else the
+                        // parent starts the thread.
+                        val parentTags = parent.event?.tags
+                        val root =
+                            parentTags?.buzzThreadRoot()
+                                ?: parentTags?.buzzThreadReply()
+                                ?: parent.idHex
                         buzzThread(root, parent.idHex)
                         parent.author?.pubkeyHex?.let { pTag(PTag(it)) }
                     }

@@ -47,8 +47,12 @@ fun <T : Event> TagArrayBuilder<T>.targetMessage(eventId: HexKey) = add(ETag.ass
 /** Adds a single `p` mention tag. */
 fun <T : Event> TagArrayBuilder<T>.mention(pubkey: HexKey) = addUnique(PTag.assemble(pubkey, null))
 
-/** Adds one `p` mention tag per pubkey. */
-fun <T : Event> TagArrayBuilder<T>.mentions(pubkeys: List<HexKey>) = addAll(pubkeys.map { PTag.assemble(it, null) })
+/**
+ * Adds one `p` mention tag per pubkey, deduplicated — matching `mention_tags` in
+ * buzz-sdk builders.rs (which lowercases + dedupes). Duplicate `p` mentions would
+ * otherwise be wire noise a relay cap could trip on.
+ */
+fun <T : Event> TagArrayBuilder<T>.mentions(pubkeys: List<HexKey>) = pubkeys.forEach { addUniqueValueIfNew(PTag.assemble(it, null)) }
 
 /** Marks the message as a channel-wide broadcast (`["broadcast", "1"]`). */
 fun <T : Event> TagArrayBuilder<T>.broadcast() = addUnique(BroadcastTag.assemble())

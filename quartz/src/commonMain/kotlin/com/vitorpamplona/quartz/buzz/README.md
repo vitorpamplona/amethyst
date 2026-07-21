@@ -126,11 +126,14 @@ kind-filtered, so they can never receive Buzz kinds by accident):
   Detection is event-shape based: the first Buzz-only kind consumed from a relay marks
   it (no false positives — vanilla relays never serve those kinds). NIP-11 marking can
   be added later for pre-connect detection.
-- `commons/.../model/buzz/BuzzWorkspaceChannel.kt` — sibling of `RelayGroupChannel`
-  (which is now `open`). Holds Buzz-only channel state: the kind-40003 **edit overlay**
-  (never render superseded text as current) and the newest kind-40100 **canvas**.
-  Kind-9 chat and kind-40002 stream messages share ONE timeline per group, so
-  mixed-dialect conversations stay whole.
+- `commons/.../model/buzz/BuzzWorkspaceStates.kt` — Buzz-only overlay state (the
+  kind-40003 **edit overlay** — never render superseded text as current — and the
+  newest kind-40100 **canvas**), held in a registry keyed by the channel's UUID,
+  **outside** the channel object. This is deliberate: screens/feeds/composers capture
+  their `RelayGroupChannel` instance for the whole session, so the dialect must be able
+  to flip mid-session without swapping the object (an earlier subclass-swap design froze
+  every live reference). Kind-9 chat and kind-40002 stream messages share ONE
+  `RelayGroupChannel` timeline per group, so mixed-dialect conversations stay whole.
 - `amethyst LocalCache` consumes every registered Buzz kind (they previously fell into
   the "Event Not Supported" branch): timeline kinds attach to the group's
   `BuzzWorkspaceChannel` (materialized dialect-aware, with an in-place upgrade when the
@@ -138,9 +141,12 @@ kind-filtered, so they can never receive Buzz kinds by accident):
   replaceably, the rest store as queryable regular events, and ephemeral signals
   (typing 20002, observer 24200, huddle reactions 24810, pairing 24134) mark the
   dialect but are deliberately not persisted.
-- The group-chat REQ builders (`RelayGroupFilterBuilders`) widen their timeline kind
-  set with 40002/40003/40008/40099 **only for marked relays**, so vanilla NIP-29 REQs
-  are untouched.
+- The group-chat REQ builders (`RelayGroupFilterBuilders`) request 40002/40003/40008/40099
+  **unconditionally** alongside the NIP-29 kinds (they match nothing on a vanilla relay).
+  A dialect-gated version was reverted: gating advanced history cursors past ranges that
+  had been queried without the Buzz kinds, permanently skipping older workspace messages.
+- Dialect marking fires only off a **verified** event (`markBuzzIfVerified`), so an
+  unverifiable frame from a hostile/buggy relay can't flip what the composer sends.
 
 Not yet wired: kind-aware rendering of 40002/40099/diff rows in the chat UI, the
 composer switch (write 40002 on Buzz relays), and NIP-42-at-connect workspace sessions.

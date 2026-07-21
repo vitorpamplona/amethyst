@@ -33,7 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceChannel
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -42,24 +42,24 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatSystemMessage
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
-
-/**
- * The note's [BuzzWorkspaceChannel], when it was gathered by one. Buzz-only rendering
- * (edit overlays, system rows) keys off this; for every other chat surface it is null
- * and rendering falls through to the shared paths.
- */
-fun Note.buzzWorkspaceChannel(): BuzzWorkspaceChannel? = inGatherers?.firstOrNull { it is BuzzWorkspaceChannel } as? BuzzWorkspaceChannel
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 
 /**
  * Observes the newest kind-40003 edit overlaying [note], recomposing when new edits
- * arrive. Returns null when the message is unedited (or not in a Buzz channel).
+ * arrive. Returns null when the message is unedited or has no channel scope.
+ *
+ * Resolution goes through [BuzzWorkspaceStates] keyed by the note's `h` channel id
+ * (a Buzz UUID) rather than any channel object: the state exists independently of
+ * when — or whether — the channel materialized, so a row composed before the first
+ * edit arrived still starts rendering overlays the moment one lands.
  */
 @Composable
 fun observeBuzzEdit(note: Note): Note? {
-    val channel = remember(note) { note.buzzWorkspaceChannel() } ?: return null
+    val channelId = remember(note) { note.event?.groupId() } ?: return null
+    val state = remember(channelId) { BuzzWorkspaceStates.getOrCreate(channelId) }
     // Subscribing to the version counter is what re-runs editFor on new arrivals.
-    val version by channel.editUpdates.collectAsState()
-    return remember(note, version) { channel.editFor(note.idHex) }
+    val version by state.editUpdates.collectAsState()
+    return remember(note, version) { state.editFor(note.idHex) }
 }
 
 /**
@@ -77,7 +77,13 @@ fun RenderBuzzEditedNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val content = editNote.event?.content ?: return
+    // The edit note may still be loading; fall back to the original rendering rather
+    // than committing to an edited branch that would show a blank row.
+    val content = editNote.event?.content
+    if (content == null) {
+        RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+        return
+    }
     val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     Column {

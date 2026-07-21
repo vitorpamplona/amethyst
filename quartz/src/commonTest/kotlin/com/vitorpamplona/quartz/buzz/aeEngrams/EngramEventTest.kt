@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class EngramEventTest {
@@ -56,6 +58,23 @@ class EngramEventTest {
         val body = EngramMemoryBody(slug = "mem/example", value = null)
         assertTrue(body.isTombstone())
         assertEquals("{\"slug\":\"mem/example\",\"value\":null}", body.encodeToJson())
+    }
+
+    @Test
+    fun memoryBodyMissingValueIsRejectedNotReadAsTombstone() {
+        // Buzz's Body::from_json_bytes rejects a memory body with no `value`; Amethyst
+        // must NOT silently decode it as a deletion (data-loss divergence).
+        assertFailsWith<Exception> { EngramBody.decodeFromJson("{\"slug\":\"mem/example\"}") }
+        // An explicit null, by contrast, IS a valid tombstone.
+        val tombstone = EngramBody.decodeFromJson("{\"slug\":\"mem/example\",\"value\":null}")
+        assertTrue((tombstone as EngramMemoryBody).isTombstone())
+    }
+
+    @Test
+    fun invalidMemorySlugIsRejected() {
+        assertFailsWith<Exception> { EngramBody.decodeFromJson("{\"slug\":\"MEM/X\",\"value\":\"a\"}") }
+        assertTrue(EngramBody.isValidMemorySlug("mem/notes/sub-1"))
+        assertFalse(EngramBody.isValidMemorySlug("notes"))
     }
 
     @Test

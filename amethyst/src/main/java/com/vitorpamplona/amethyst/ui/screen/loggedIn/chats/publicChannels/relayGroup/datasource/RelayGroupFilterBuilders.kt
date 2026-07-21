@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
@@ -93,8 +92,11 @@ val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 /**
  * Extra timeline kinds a `block/buzz` workspace relay serves in the same `h`-scoped
  * channels: stream messages v2 (40002), edits (40003), diffs (40008) and system rows
- * (40099). Only requested from relays [BuzzRelayDialect] has marked — harmless
- * elsewhere, but there is no reason to widen every vanilla NIP-29 REQ.
+ * (40099). Requested UNCONDITIONALLY alongside the NIP-29 set — on a vanilla relay the
+ * kinds simply match nothing. A dialect-gated version was tried and reverted: gating
+ * creates a bootstrap hole (nothing asks for a Buzz kind until one is consumed) and a
+ * worse one — history pages fetched before the mark advance their cursors past ranges
+ * queried WITHOUT Buzz kinds, permanently skipping older workspace messages.
  */
 val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
     listOf(
@@ -104,13 +106,8 @@ val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
         SystemMessageEvent.KIND,
     )
 
-/** The timeline kinds to request from [relay]: the NIP-29 set, plus Buzz kinds on Buzz relays. */
-fun relayGroupTimelineKinds(relay: NormalizedRelayUrl): List<Int> =
-    if (BuzzRelayDialect.isBuzz(relay)) {
-        RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS
-    } else {
-        RELAY_GROUP_TIMELINE_KINDS
-    }
+/** The timeline kinds requested for every relay-group REQ (NIP-29 + Buzz; see above). */
+val RELAY_GROUP_ALL_TIMELINE_KINDS = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS
 
 /** Forum-thread kinds shown in a group's Threads tab. */
 val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND)
@@ -173,22 +170,14 @@ fun buildRelayGroupJoinedChatTailFilters(
             relay = relay,
             filter =
                 Filter(
-                    kinds = relayGroupTimelineKinds(relay),
+                    kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                     tags = mapOf(GroupIdTag.TAG_NAME to ids.distinct()),
                     since = sinceEpoch,
                 ),
         )
     }
 
-/**
- * The recent-chat live tail for a single open group, `#h`-scoped on its host relay.
- *
- * Always requests the FULL kind set (NIP-29 + Buzz): this single-group REQ is the
- * dialect-detection bootstrap. Fleet-wide subs only widen once [BuzzRelayDialect] marks
- * the relay, but the mark comes from consuming a Buzz kind — which never arrives if no
- * filter asks for one. Opening a channel is explicit user intent on one group, so the
- * wider ask is cheap, and on a vanilla relay the extra kinds simply match nothing.
- */
+/** The recent-chat live tail for a single open group, `#h`-scoped on its host relay. */
 fun buildRelayGroupOpenChatTailFilter(
     groupId: GroupId,
     sinceEpoch: Long,
@@ -197,7 +186,7 @@ fun buildRelayGroupOpenChatTailFilter(
         relay = groupId.relayUrl,
         filter =
             Filter(
-                kinds = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS,
+                kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
             ),
@@ -220,7 +209,7 @@ fun buildRelayGroupHistoryFilters(
             relay = relay,
             filter =
                 Filter(
-                    kinds = relayGroupTimelineKinds(relay),
+                    kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                     tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                     until = until,
                     limit = limit,

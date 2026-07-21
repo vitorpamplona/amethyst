@@ -20,77 +20,40 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
 /**
- * The group-chat REQ builders widen their timeline kind set with the Buzz stream kinds
- * only for relays [BuzzRelayDialect] has marked — vanilla NIP-29 REQs stay untouched.
+ * Every relay-group timeline REQ carries the Buzz stream kinds unconditionally (they
+ * simply match nothing on a vanilla relay); gating them created a history-cursor bug.
  */
 class BuzzTimelineKindsTest {
     private val buzzRelay = RelayUrlNormalizer.normalizeOrNull("wss://buzz.example.team/")!!
     private val vanillaRelay = RelayUrlNormalizer.normalizeOrNull("wss://groups.example.com/")!!
 
-    @Before
-    fun setup() {
-        BuzzRelayDialect.clearForTesting()
-    }
-
-    @After
-    fun tearDown() {
-        BuzzRelayDialect.clearForTesting()
+    @Test
+    fun theUnifiedTimelineKindSetContainsBothNip29AndBuzz() {
+        assertTrue(RELAY_GROUP_ALL_TIMELINE_KINDS.containsAll(RELAY_GROUP_TIMELINE_KINDS))
+        assertTrue(RELAY_GROUP_ALL_TIMELINE_KINDS.containsAll(BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS))
     }
 
     @Test
-    fun vanillaRelayKeepsThePlainNip29KindSet() {
-        assertEquals(RELAY_GROUP_TIMELINE_KINDS, relayGroupTimelineKinds(vanillaRelay))
-    }
+    fun everyTimelineReqCarriesBuzzKindsUnconditionally() {
+        // The Buzz kinds are requested on EVERY relay-group timeline REQ (open tail,
+        // joined fleet tail), independent of any dialect mark. Gating them created a
+        // history-cursor-skip bug — this pins the unconditional contract.
+        val openTail = buildRelayGroupOpenChatTailFilter(GroupId("g1", vanillaRelay), sinceEpoch = 0L)
+        assertTrue(openTail.filter.kinds!!.contains(StreamMessageV2Event.KIND))
 
-    @Test
-    fun buzzRelayGetsTheExtendedKindSet() {
-        BuzzRelayDialect.mark(buzzRelay)
-
-        val kinds = relayGroupTimelineKinds(buzzRelay)
-        assertTrue(kinds.containsAll(RELAY_GROUP_TIMELINE_KINDS))
-        assertTrue(kinds.containsAll(BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS))
-
-        // The vanilla relay is unaffected by the buzz mark on another relay.
-        assertEquals(RELAY_GROUP_TIMELINE_KINDS, relayGroupTimelineKinds(vanillaRelay))
-    }
-
-    @Test
-    fun openChatTailAlwaysCarriesBuzzKindsAsDialectBootstrap() {
-        // The single-group open-channel REQ is what DISCOVERS the dialect: with no
-        // filter asking for a Buzz kind, none ever arrives and the relay is never
-        // marked. It therefore always includes the Buzz kinds, even unmarked.
-        val vanillaFilter = buildRelayGroupOpenChatTailFilter(GroupId("g1", vanillaRelay), sinceEpoch = 0L)
-        assertTrue(vanillaFilter.filter.kinds!!.contains(StreamMessageV2Event.KIND))
-    }
-
-    @Test
-    fun fleetWideJoinedTailWidensOnlyOnMarkedRelays() {
-        BuzzRelayDialect.mark(buzzRelay)
-
-        val filters =
+        val fleet =
             buildRelayGroupJoinedChatTailFilters(
-                listOf(
-                    GroupTag("g1", buzzRelay.url),
-                    GroupTag("g2", vanillaRelay.url),
-                ),
+                listOf(GroupTag("g1", buzzRelay.url), GroupTag("g2", vanillaRelay.url)),
                 sinceEpoch = 0L,
             )
-
-        val byRelay = filters.associateBy { it.relay }
-        assertTrue(byRelay[buzzRelay]!!.filter.kinds!!.contains(StreamMessageV2Event.KIND))
-        assertFalse(byRelay[vanillaRelay]!!.filter.kinds!!.contains(StreamMessageV2Event.KIND))
+        fleet.forEach { assertTrue(it.filter.kinds!!.contains(StreamMessageV2Event.KIND)) }
     }
 }

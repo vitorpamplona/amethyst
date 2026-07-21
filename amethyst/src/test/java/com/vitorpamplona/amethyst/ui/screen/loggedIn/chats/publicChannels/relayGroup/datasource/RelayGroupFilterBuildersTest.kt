@@ -113,7 +113,9 @@ class RelayGroupFilterBuildersTest {
         assertEquals(2, filters.size)
 
         val a = filters.single { it.relay == relayA }
-        assertEquals(timelineKinds, a.filter.kinds)
+        // The joined tail now always carries the Buzz timeline kinds too (see
+        // RELAY_GROUP_ALL_TIMELINE_KINDS / BuzzTimelineKindsTest).
+        assertEquals(timelineKinds + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS, a.filter.kinds)
         assertEquals(setOf("g1", "g2"), a.filter.tags!!["h"]!!.toSet())
         assertEquals(999L, a.filter.since)
         assertNull("a time-floored tail must NOT cap by count (that is what lets it batch)", a.filter.limit)
