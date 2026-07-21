@@ -31,17 +31,23 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricPayload
+import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
+import com.vitorpamplona.quartz.buzz.aoObserver.tags.FrameTag
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Collections
 
 /**
  * Backing ViewModel for the [AgentConsoleScreen] — the workspace owner's read-only
@@ -74,6 +80,14 @@ class AgentConsoleViewModel : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _observerFrames = MutableStateFlow<List<ObserverRow>>(emptyList())
+    val observerFrames: StateFlow<List<ObserverRow>> = _observerFrames.asStateFlow()
+
+    private var observerJob: Job? = null
+
+    /** Dedups ephemeral frames across relays and re-emissions (accessed off multiple readers). */
+    private val observerSeen = Collections.synchronizedSet(HashSet<HexKey>())
 
     fun bindAccountIfMissing(account: Account) {
         if (this.account != null) return
@@ -157,6 +171,83 @@ class AgentConsoleViewModel : ViewModel() {
         _metrics.value = AgentFleetAggregator.aggregate(decrypted)
     }
 
+    /**
+     * Opens a live subscription to the owner's ephemeral observer telemetry frames
+     * ([ObserverFrameEvent], `kind:24200`, `p` = owner) across every Buzz-dialect relay,
+     * decrypts the `frame:telemetry` bodies, and pushes them newest-first into
+     * [observerFrames] (bounded to [MAX_OBSERVER_ROWS]). Idempotent; call [stopObserving]
+     * to tear the subscription down. Observer frames are never stored by relays or
+     * [LocalCache], so this live REQ is the only way to see them.
+     */
+    fun startObserving() {
+        val account = account ?: return
+        if (observerJob != null) return
+
+        val relays = BuzzRelayDialect.flow.value
+        if (relays.isEmpty()) return
+
+        val signer = account.signer
+        val myPubkey = account.userProfile().pubkeyHex
+        val filter = Filter(kinds = listOf(ObserverFrameEvent.KIND), tags = mapOf("p" to listOf(myPubkey)))
+
+        observerJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                relays.forEach { relay ->
+                    launch {
+                        account.client.subscribeAsFlow(relay, filter).collect { events ->
+                            val fresh =
+                                events
+                                    .filterIsInstance<ObserverFrameEvent>()
+                                    .filter { observerSeen.add(it.id) }
+                            if (fresh.isEmpty()) return@collect
+
+                            val rows =
+                                fresh.mapNotNull { frame ->
+                                    if (frame.frame() != FrameTag.TELEMETRY) return@mapNotNull null
+                                    val payload = frame.decryptTelemetryOrNull(signer) ?: return@mapNotNull null
+                                    ObserverRow(
+                                        seq = payload.seq,
+                                        timestamp = payload.timestamp,
+                                        kind = payload.kind,
+                                        agentPubKey = frame.agentPubKey() ?: frame.pubKey,
+                                        sessionId = payload.sessionId,
+                                        turnId = payload.turnId,
+                                    )
+                                }
+                            if (rows.isNotEmpty()) {
+                                _observerFrames.update { existing ->
+                                    (rows + existing)
+                                        .sortedByDescending { it.timestamp }
+                                        .take(MAX_OBSERVER_ROWS)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+    }
+
+    fun stopObserving() {
+        observerJob?.cancel()
+        observerJob = null
+    }
+
+    override fun onCleared() {
+        stopObserving()
+        super.onCleared()
+    }
+
+    /** One decrypted observer telemetry frame rendered on the Observer tab. */
+    @Immutable
+    data class ObserverRow(
+        val seq: Long,
+        val timestamp: String,
+        val kind: String,
+        val agentPubKey: HexKey,
+        val sessionId: String?,
+        val turnId: String?,
+    )
+
     /** A persona rendered on the Personas tab; a flattened projection of [PersonaEvent]. */
     @Immutable
     data class PersonaCard(
@@ -167,4 +258,9 @@ class AgentConsoleViewModel : ViewModel() {
         val provider: String?,
         val systemPrompt: String?,
     )
+
+    companion object {
+        /** Ring size for the ephemeral observer stream — enough to scroll recent activity. */
+        const val MAX_OBSERVER_ROWS = 200
+    }
 }

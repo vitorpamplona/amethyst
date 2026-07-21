@@ -39,6 +39,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -81,10 +82,19 @@ fun AgentConsoleScreen(
 
     val metrics by viewModel.metrics.collectAsStateWithLifecycle()
     val personas by viewModel.personas.collectAsStateWithLifecycle()
+    val observerFrames by viewModel.observerFrames.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = remember { listOf("Costs", "Personas") }
+    val tabs = remember { listOf("Costs", "Personas", "Observer") }
+
+    // The observer stream is a live REQ; only keep it open while its tab is on screen.
+    if (selectedTab == 2) {
+        DisposableEffect(Unit) {
+            viewModel.startObserving()
+            onDispose { viewModel.stopObserving() }
+        }
+    }
 
     Scaffold(
         topBar = { TopBarWithBackButton("Agent Console", nav) },
@@ -103,7 +113,8 @@ fun AgentConsoleScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 when (selectedTab) {
                     0 -> CostsTab(metrics)
-                    else -> PersonasTab(personas)
+                    1 -> PersonasTab(personas)
+                    else -> ObserverTab(observerFrames)
                 }
 
                 if (isLoading) {
@@ -241,6 +252,56 @@ private fun PersonaCardView(persona: AgentConsoleViewModel.PersonaCard) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ObserverTab(frames: List<AgentConsoleViewModel.ObserverRow>) {
+    if (frames.isEmpty()) {
+        EmptyState("Listening for live agent telemetry (kind:24200). Frames appear here while your agents are running.")
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        items(frames) { frame ->
+            ObserverFrameRow(frame)
+            HorizontalDivider()
+        }
+    }
+}
+
+@Composable
+private fun ObserverFrameRow(frame: AgentConsoleViewModel.ObserverRow) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                text = frame.kind,
+                style = MaterialTheme.typography.titleSmall,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = frame.timestamp,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        val context =
+            buildString {
+                append(shortKey(frame.agentPubKey))
+                frame.sessionId?.let { append("  ·  session ${it.take(8)}") }
+                frame.turnId?.let { append("  ·  turn ${it.take(8)}") }
+                append("  ·  #${frame.seq}")
+            }
+        Text(
+            text = context,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
