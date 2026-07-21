@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
@@ -291,8 +292,16 @@ class RelaySession(
         // Policy may rewrite filters to match the user's access level.
         val filters = (result as PolicyResult.Accepted).cmd.filters
 
+        // UNDISPATCHED: the stored replay runs inline on this coroutine —
+        // the reader-pool acquire doesn't suspend when a connection is
+        // free, so EVENT frames and EOSE go out without a scheduler hop
+        // (SmallReqFloorBenchmark: the hop was most of the dispatch
+        // slice on small REQs). The coroutine first parks at the live
+        // tail (awaitCancellation), which is when launch returns and the
+        // job lands in [subscriptions]; commands on this connection are
+        // processed sequentially, so nothing can target the sub earlier.
         val job =
-            scope.launch {
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
                 try {
                     if (policy.filtersOutgoingEvents) {
                         // Screened path: every event is materialized so the
