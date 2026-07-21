@@ -278,8 +278,30 @@ if [[ "$LIVE" -eq 1 ]]; then
   fi
   LOG="$(M git log "$LIVE_REPO" --depth 2 --json)"
   assert_nonempty "$(echo "$LOG" | jq -r '.commits[0].oid')" live.log "log returns at least one commit"
+
+  # ngit interop against the REAL amethyst repo (published by ngit to relay.ngit.dev).
+  # Proves our reader parses ngit's actual multi-value `clone` tag (4 URLs) — the
+  # exact case the pre-fix reader collapsed to one.
+  banner "live: reading the real ngit-published amethyst repo"
+  NGIT_RELAY="${NGIT_RELAY:-wss://relay.ngit.dev}"
+  NGIT_REPO="30617:460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c:amethyst"
+  RSHOW="$(M git show "$NGIT_REPO" --relay "$NGIT_RELAY")"
+  if [[ -n "$RSHOW" && "$(echo "$RSHOW" | jq -r '.name // empty')" == "amethyst" ]]; then
+    CLONES="$(echo "$RSHOW" | jq -r '.clone | length')"
+    if [[ "$CLONES" -ge 2 ]]; then
+      pass_msg "ngit.clone_multivalue: read $CLONES clone URLs from ngit's multi-value tag"
+      record_result ngit.clone_multivalue pass "$CLONES clone URLs"
+    else
+      fail_msg "ngit.clone_multivalue: only $CLONES clone URL parsed from ngit's multi-value tag"
+      record_result ngit.clone_multivalue fail "expected >=2, got $CLONES"
+    fi
+    RISS="$(M git issues "$NGIT_REPO" --relay "$NGIT_RELAY" --limit 1 | jq -r '.count')"
+    assert_nonempty "$RISS" ngit.issues "read ngit-published issues"
+  else
+    skip_msg "ngit live repo unreachable (relay.ngit.dev) — skipping real-repo interop check"
+  fi
 else
-  skip_msg "live git smart-HTTP reads (browse/cat/log) — pass --live to run"
+  skip_msg "live git smart-HTTP reads (browse/cat/log) + real ngit repo — pass --live to run"
 fi
 
 grep -q $'\tfail\t' "$RESULTS_FILE" && exit 1
