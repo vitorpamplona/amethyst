@@ -44,18 +44,50 @@ hand-transcribed schemas:
 
 Each feature is a sub-package following the standard Quartz per-NIP shape (`<Feature>Event`
 with a `KIND` companion, a `tags/` folder of tag classes, `TagArrayBuilderExt` write-DSL
-verbs, and `TagArrayExt` read accessors), mirroring e.g. `nip88Polls`.
+verbs, and `TagArrayExt` read accessors), mirroring e.g. `nip88Polls`. There is one event
+class per kind, ~78 in total, each registered in `utils/EventFactory.kt` (except the
+conflicts below).
 
-| Package | Buzz NIP | Kind(s) | Status |
-|---|---|---|---|
-| `oaOwnerAttestation` | NIP-OA | `auth` tag (no kind) | ✅ |
-| `amTurnMetrics` | NIP-AM | 44200 | ✅ |
-| `apPersonas` | NIP-AP | 30175 | ⬜ planned |
-| `aeEngrams` | NIP-AE | 30174 | ⬜ planned |
-| `aoObserver` | NIP-AO | 24200 | ⬜ planned |
-| agent identity | — | 10100 / 30176 / 30177 | ⬜ planned |
-| workspace overlays | NIP-PL/RS/ER/DV/WP/IA/CW | 30350 / 30300 / 30622 / 9033 / 903x / 3900x | ⬜ planned |
-| messaging + collab | — | 4000x / 4101x / 4300x / 4500x / 30620+4600x | ⬜ planned |
+| Package | Buzz NIP | Kind(s) |
+|---|---|---|
+| `oaOwnerAttestation` | NIP-OA | `auth` tag (no kind) |
+| `amTurnMetrics` | NIP-AM | 44200 |
+| `aoObserver` | NIP-AO | 24200 |
+| `aeEngrams` | NIP-AE | 30174 |
+| `apPersonas` / `teams` / `managedAgents` / `agentProfiles` | NIP-AP + agent identity | 30175 / 30176 / 30177 / 10100 |
+| `erReminders` / `plPushLease` / `dvDmVisibility` / `wpWorkspaceProfile` | NIP-ER/PL/DV/WP | 30300 / 30350 / 30622 / 9033 |
+| `iaIdentityArchival` / `cwChannelWindow` | NIP-IA / NIP-CW | 9035/9036/8002/8003/13535 / 39005/39006 |
+| `relayAdmin` / `moderation` | admin + moderation | 9030-9032 / 9040-9044, 42000 |
+| `stream` / `stream.sidecars` | stream messaging | 40002-40008, 40099, 40100 / 40901, 40902 |
+| `dm` / `jobs` | DMs / agent jobs | 41001, 41010-41012 / 43001-43006 |
+| `workflow` / `forum` / `notifications` | workflow + social | 30620, 46001-46031 / 45001-45003 / 44100, 44101 |
+| `presence` / `huddles` / `pairing` / `audit` / `media` | presence + misc | 20001, 20002 / 24810, 48100-48106 / 24134 / 48001 / 49001 |
+| `rsReadState` | NIP-RS | (helpers on `AppSpecificDataEvent`, kind 30078) |
+
+### Kind conflicts — implemented but NOT registered in EventFactory
+
+These Buzz kind numbers are already owned by an existing Amethyst/Nostr class, so the
+Buzz model exists (build/parse it explicitly) but the incumbent keeps the `EventFactory`
+dispatch slot:
+
+| Kind | Buzz class | Incumbent (registered) |
+|---|---|---|
+| 9041 | `moderation.ModerationUnbanEvent` | `nip75ZapGoals.GoalEvent` |
+| 20001 | `presence.PresenceUpdateEvent` | `experimental.bitchat.geohash.GeohashPresenceEvent` |
+| 39005 | `cwChannelWindow.ThreadSummaryEvent` | `nip29RelayGroups.metadata.GroupPinnedEvent` |
+| 49001 | `media.MediaUploadEvent` | — (Buzz's own `kind.rs` marks 49001 "Not a relay event kind") |
+| 30078 | `rsReadState` (helpers) | `nip78AppData.AppSpecificDataEvent` (NIP-RS reuses 30078) |
+
+### Confidence: source-confirmed vs. inferred
+
+Most kinds' tags/content are confirmed against a concrete Rust builder or validator. A
+minority are only *reserved* in `kind.rs` with no constructor anywhere in the Buzz repo;
+those are modeled conservatively (tolerant, `ignoreUnknownKeys`) and carry a schema
+caveat in their KDoc. Inferred kinds include: jobs **43001-43006** (reserved, no builder,
+no relay scope — the most speculative), the workflow lifecycle events **46001-46007 /
+46011 / 46012**, stream **40004-40007** and the **40901/40902** sidecars, **48001** audit,
+and **48106** huddle guidelines. Treat these as scaffolding to reconcile once Buzz
+defines them.
 
 ## Owner Attestation (NIP-OA) — implemented
 
