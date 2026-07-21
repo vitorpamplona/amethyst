@@ -49,7 +49,7 @@ class QueryBuilder(
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
             val out = ArrayList<T>(merge.limit!!)
-            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { out.add(it.toEvent()) }
             return out
         }
         return db.runQuery(toSql(filter, hasher(db)))
@@ -62,7 +62,7 @@ class QueryBuilder(
     ) {
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
-            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { onEach(it.toEvent()) }
             return
         }
         db.runQuery(toSql(filter, hasher(db)), onEach)
@@ -102,7 +102,7 @@ class QueryBuilder(
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
             val out = ArrayList<RawEvent>(merge.limit!!)
-            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toRawEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { out.add(it.toRawEvent()) }
             return out
         }
         return db.runRawQuery(toSql(filter, hasher(db)))
@@ -115,7 +115,7 @@ class QueryBuilder(
     ) {
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
-            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toRawEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { onEach(it.toRawEvent()) }
             return
         }
         db.runRawQuery(toSql(filter, hasher(db)), onEach)
@@ -427,7 +427,7 @@ class QueryBuilder(
         val sql =
             buildString {
                 append("SELECT event_headers.id, event_headers.created_at FROM event_headers")
-                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.rowid")
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }
@@ -815,13 +815,13 @@ class QueryBuilder(
                     }
 
                     if (mustJoinSearch) {
-                        append(" INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_tags.event_header_row_id")
+                        append(" INNER JOIN ${fts.tableName} ON ${fts.tableName}.rowid = event_tags.event_header_row_id")
                     }
                 } else if (mustJoinSearch) {
-                    append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName}")
+                    append("SELECT ${fts.tableName}.rowid as row_id FROM ${fts.tableName}")
 
                     if (hasHeaders) {
-                        append(" INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                        append(" INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.rowid")
                     }
                 } else {
                     // no tags and no search.
@@ -1001,13 +1001,22 @@ class QueryBuilder(
         val sql =
             buildString {
                 append("SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers")
-                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.rowid")
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }
-                append("\nORDER BY event_headers.created_at DESC")
-                if (indexStrategy.useAndIndexIdOnOrderBy) {
-                    append(", event_headers.id ASC")
+                if (indexStrategy.searchOrderByRowId) {
+                    // The FTS rowid is event_headers.row_id (ingestion order).
+                    // Ordering by it lets FTS5 walk the doclist newest-first
+                    // and stop at LIMIT — O(limit) — instead of materializing
+                    // and sorting every match by created_at. See
+                    // IndexingStrategy.searchOrderByRowId for the trade-off.
+                    append("\nORDER BY ${fts.tableName}.rowid DESC")
+                } else {
+                    append("\nORDER BY event_headers.created_at DESC")
+                    if (indexStrategy.useAndIndexIdOnOrderBy) {
+                        append(", event_headers.id ASC")
+                    }
                 }
                 if (limit != null) {
                     append("\nLIMIT ")

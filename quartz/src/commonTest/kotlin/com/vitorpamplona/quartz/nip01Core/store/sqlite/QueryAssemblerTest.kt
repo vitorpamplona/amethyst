@@ -238,9 +238,9 @@ class QueryAssemblerTest : BaseDBTest() {
                     INNER JOIN (
                         SELECT row_id FROM (SELECT event_headers.row_id as row_id FROM event_headers ORDER BY event_headers.created_at DESC LIMIT 10)
                         UNION
-                        SELECT row_id FROM (SELECT event_fts.event_header_row_id as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.event_header_row_id WHERE (event_headers.kind IN ("1", "1111")) AND (event_headers.pubkey = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d") AND (event_fts MATCH "keywords") ORDER BY event_headers.created_at DESC LIMIT 100)
+                        SELECT row_id FROM (SELECT event_fts.rowid as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.rowid WHERE (event_headers.kind IN ("1", "1111")) AND (event_headers.pubkey = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d") AND (event_fts MATCH "keywords") ORDER BY event_headers.created_at DESC LIMIT 100)
                         UNION
-                        SELECT row_id FROM (SELECT event_fts.event_header_row_id as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.event_header_row_id WHERE (event_headers.kind = "20") AND (event_fts MATCH "cats") ORDER BY event_headers.created_at DESC LIMIT 30)
+                        SELECT row_id FROM (SELECT event_fts.rowid as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.rowid WHERE (event_headers.kind = "20") AND (event_fts MATCH "cats") ORDER BY event_headers.created_at DESC LIMIT 30)
                     ) AS filtered
                     ON event_headers.row_id = filtered.row_id
                     ORDER BY $orderBy
@@ -252,13 +252,13 @@ class QueryAssemblerTest : BaseDBTest() {
                     │       │   └── SCAN (subquery-1)
                     │       ├── UNION USING TEMP B-TREE
                     │       │   ├── CO-ROUTINE (subquery-3)
-                    │       │   │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M2
+                    │       │   │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     │       │   │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     │       │   │   └── USE TEMP B-TREE FOR ORDER BY
                     │       │   └── SCAN (subquery-3)
                     │       └── UNION USING TEMP B-TREE
                     │           ├── CO-ROUTINE (subquery-5)
-                    │           │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M2
+                    │           │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     │           │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     │           │   └── USE TEMP B-TREE FOR ORDER BY
                     │           └── SCAN (subquery-5)
@@ -275,9 +275,9 @@ class QueryAssemblerTest : BaseDBTest() {
                     INNER JOIN (
                         SELECT row_id FROM (SELECT event_headers.row_id as row_id FROM event_headers ORDER BY event_headers.created_at DESC LIMIT 10)
                         UNION
-                        SELECT row_id FROM (SELECT event_fts.event_header_row_id as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.event_header_row_id WHERE (event_headers.kind IN ("1", "1111")) AND (event_headers.pubkey = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d") AND (event_fts MATCH "keywords") ORDER BY event_headers.created_at DESC LIMIT 100)
+                        SELECT row_id FROM (SELECT event_fts.rowid as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.rowid WHERE (event_headers.kind IN ("1", "1111")) AND (event_headers.pubkey = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d") AND (event_fts MATCH "keywords") ORDER BY event_headers.created_at DESC LIMIT 100)
                         UNION
-                        SELECT row_id FROM (SELECT event_fts.event_header_row_id as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.event_header_row_id WHERE (event_headers.kind = "20") AND (event_fts MATCH "cats") ORDER BY event_headers.created_at DESC LIMIT 30)
+                        SELECT row_id FROM (SELECT event_fts.rowid as row_id FROM event_fts INNER JOIN event_headers ON event_headers.row_id = event_fts.rowid WHERE (event_headers.kind = "20") AND (event_fts MATCH "cats") ORDER BY event_headers.created_at DESC LIMIT 30)
                     ) AS filtered
                     ON event_headers.row_id = filtered.row_id
                     ORDER BY $orderBy
@@ -290,13 +290,13 @@ class QueryAssemblerTest : BaseDBTest() {
                     │       │   └── SCAN (subquery-1)
                     │       ├── UNION USING TEMP B-TREE
                     │       │   ├── CO-ROUTINE (subquery-3)
-                    │       │   │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M2
+                    │       │   │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     │       │   │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     │       │   │   └── USE TEMP B-TREE FOR ORDER BY
                     │       │   └── SCAN (subquery-3)
                     │       └── UNION USING TEMP B-TREE
                     │           ├── CO-ROUTINE (subquery-5)
-                    │           │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M2
+                    │           │   ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     │           │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     │           │   └── USE TEMP B-TREE FOR ORDER BY
                     │           └── SCAN (subquery-5)
@@ -712,10 +712,10 @@ class QueryAssemblerTest : BaseDBTest() {
                 assertEquals(
                     """
                     SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers
-                    INNER JOIN event_fts ON event_headers.row_id = event_fts.event_header_row_id
+                    INNER JOIN event_fts ON event_headers.row_id = event_fts.rowid
                     WHERE (event_fts MATCH "keywords") AND (event_headers.pubkey IN ("7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d", "f3ac434d61bc0f491a814782ccfdf9c439dae1f0bde9097ad4a245f4c495cd14", "12ae0fd81c85e1e7d9ed096397dc3129849425fe6f8afce7213ebf38ddfc6ca9"))
                     ORDER BY event_headers.created_at DESC, event_headers.id ASC
-                    ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M2
+                    ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     └── USE TEMP B-TREE FOR ORDER BY
                     """.trimIndent(),
@@ -725,10 +725,10 @@ class QueryAssemblerTest : BaseDBTest() {
                 assertEquals(
                     """
                     SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers
-                    INNER JOIN event_fts ON event_headers.row_id = event_fts.event_header_row_id
+                    INNER JOIN event_fts ON event_headers.row_id = event_fts.rowid
                     WHERE (event_fts MATCH "keywords") AND (event_headers.pubkey IN ("7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d", "f3ac434d61bc0f491a814782ccfdf9c439dae1f0bde9097ad4a245f4c495cd14", "12ae0fd81c85e1e7d9ed096397dc3129849425fe6f8afce7213ebf38ddfc6ca9"))
                     ORDER BY event_headers.created_at DESC
-                    ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M2
+                    ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                     ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                     └── USE TEMP B-TREE FOR ORDER BY
                     """.trimIndent(),
@@ -745,10 +745,10 @@ class QueryAssemblerTest : BaseDBTest() {
             assertEquals(
                 """
                 SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers
-                INNER JOIN event_fts ON event_headers.row_id = event_fts.event_header_row_id
+                INNER JOIN event_fts ON event_headers.row_id = event_fts.rowid
                 WHERE (event_fts MATCH "keywords") AND (event_headers.kind IN ("1", "1111", "10000"))
                 ORDER BY $orderBy
-                ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M2
+                ├── SCAN event_fts VIRTUAL TABLE INDEX 0:M1
                 ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
                 └── USE TEMP B-TREE FOR ORDER BY
                 """.trimIndent(),

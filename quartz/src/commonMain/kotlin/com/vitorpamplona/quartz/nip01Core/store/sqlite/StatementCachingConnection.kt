@@ -34,46 +34,72 @@ import androidx.sqlite.SQLiteStatement
  * real reset + clearBindings happens on the next checkout). Statements are
  * only truly finalized when the connection itself closes.
  *
+ * Each SQL string caches a small **pool** of handles rather than a single
+ * one, so overlapping checkouts of the *same* SQL all reuse cached handles.
+ * That is exactly the k-way-merge query shape ([MergeQueryExecutor]): it
+ * opens one identical-SQL cursor per author/tag stream — dozens to hundreds
+ * live at once — which a single-handle cache could not serve (every stream
+ * past the first fell back to an uncached prepare). The pool lets a repeated
+ * follow-feed / reactions-watcher REQ reuse its per-stream cursors instead
+ * of re-preparing them each poll.
+ *
  * Constraints, by design of the call sites:
  *  - **Not thread-safe** — same contract as the underlying connection,
- *    which the pool already serializes (single writer under a mutex).
- *  - **No overlapping use of the same SQL** — checking out one SQL string
- *    twice without closing the first use would alias one native handle.
- *    Insert/query paths never nest the same statement; a checkout while
- *    the previous one is still open falls back to an uncached statement.
+ *    which the pool already serializes (single writer under a mutex; each
+ *    reader held by one coroutine at a time).
  */
 class StatementCachingConnection(
     private val delegate: SQLiteConnection,
     /**
-     * Ceiling on retained statements. Query SQL embeds one `?` per filter
-     * element, so shape variety is client-controlled — without a cap a
-     * long-lived relay connection would accumulate native handles without
-     * bound. Once full, unseen SQL just prepares uncached. 256 comfortably
-     * covers the write path's fixed set plus the recurring filter shapes.
+     * Ceiling on retained statements across all SQL strings. Query SQL
+     * embeds one `?` per filter element, so shape variety is
+     * client-controlled — without a cap a long-lived relay connection would
+     * accumulate native handles without bound. Once full, unseen SQL (or an
+     * extra concurrent copy of a cached SQL) just prepares uncached. 512
+     * covers the write path's fixed set, the recurring single-shot filter
+     * shapes, and a few hundred concurrent per-stream merge cursors.
      */
-    private val maxCachedStatements: Int = 256,
+    private val maxCachedStatements: Int = 512,
 ) : SQLiteConnection by delegate {
-    private val cache = HashMap<String, CachedStatement>()
+    // One reusable pool per SQL string. Several entries of the same pool may
+    // be checked out simultaneously (the merge path); a `prepare` reuses the
+    // first free entry, grows the pool while under the global cap, and only
+    // then falls back to an uncached statement.
+    private val cache = HashMap<String, ArrayList<CachedStatement>>()
+    private var cachedCount = 0
 
     override fun prepare(sql: String): SQLiteStatement {
-        val cached =
-            cache[sql] ?: run {
-                if (cache.size >= maxCachedStatements) return delegate.prepare(sql)
-                CachedStatement(delegate.prepare(sql)).also { cache[sql] = it }
+        val pool = cache[sql]
+        if (pool != null) {
+            for (i in pool.indices) {
+                val stmt = pool[i]
+                if (!stmt.checkedOut) {
+                    stmt.checkedOut = true
+                    stmt.clearBindings()
+                    return stmt
+                }
             }
-        if (cached.checkedOut) {
-            // Same SQL prepared while the previous handle is still in use —
-            // stay correct with a plain uncached statement.
-            return delegate.prepare(sql)
+            // Every pooled handle for this SQL is in use — grow if the global
+            // budget allows, else serve an uncached statement.
+            if (cachedCount >= maxCachedStatements) return delegate.prepare(sql)
+            return CachedStatement(delegate.prepare(sql)).also {
+                it.checkedOut = true
+                pool.add(it)
+                cachedCount++
+            }
         }
-        cached.checkedOut = true
-        cached.clearBindings()
-        return cached
+        if (cachedCount >= maxCachedStatements) return delegate.prepare(sql)
+        return CachedStatement(delegate.prepare(sql)).also {
+            it.checkedOut = true
+            cache[sql] = arrayListOf(it)
+            cachedCount++
+        }
     }
 
     override fun close() {
-        cache.values.forEach { runCatching { it.finalize() } }
+        cache.values.forEach { pool -> pool.forEach { runCatching { it.finalize() } } }
         cache.clear()
+        cachedCount = 0
         delegate.close()
     }
 

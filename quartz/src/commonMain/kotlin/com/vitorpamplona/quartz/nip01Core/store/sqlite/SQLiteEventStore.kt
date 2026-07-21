@@ -60,7 +60,7 @@ class SQLiteEventStore(
     val extraPragmas: List<String> = emptyList(),
 ) {
     companion object {
-        const val DATABASE_VERSION = 4
+        const val DATABASE_VERSION = 5
     }
 
     val seedModule = SeedModule()
@@ -213,6 +213,12 @@ class SQLiteEventStore(
                     // watermark seeds at the current MAX(row_id).
                     fullTextSearchModule.createStateTable(db)
                 }
+                4 -> {
+                    // Upgrade from version 4 to 5: the FTS index became a
+                    // contentless table keyed by event_headers.row_id. The old
+                    // rowids can't be remapped, so drop and repopulate.
+                    fullTextSearchModule.migrateV4ToContentless(db)
+                }
             }
         }
     }
@@ -274,6 +280,12 @@ class SQLiteEventStore(
         pool.useWriter { db ->
             db.execSQL("PRAGMA analysis_limit = 400;")
             db.execSQL("PRAGMA optimize;")
+            // Fold a bounded FTS segment merge into the same periodic
+            // maintenance tick: incremental (and deferred catch-up) inserts
+            // leave the NIP-50 index as many small segments, and a MATCH
+            // queries every one. Bounded so the tick stays cheap; a no-op when
+            // there is nothing to merge or FTS is off.
+            fullTextSearchModule.mergeSegments(db)
         }
 
     /**
