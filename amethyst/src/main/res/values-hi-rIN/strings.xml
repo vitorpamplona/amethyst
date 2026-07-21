@@ -26,6 +26,7 @@
     <string name="referenced_event_not_found">उद्धृत घटना अप्राप्त</string>
     <string name="could_not_decrypt_the_message">सन्देश का अरहस्यीकरण असफल</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <string name="chat_preview_decrypting">अरसहस्यीकरण…</string>
     <string name="group_picture">समूह चित्र</string>
     <string name="explicit_content">अभद्र विषयवस्तु</string>
     <string name="relay_notice">पुनःप्रसारक सूचना</string>
@@ -302,6 +303,10 @@
     <string name="concord_invite_failed_invalid">यह आमन्त्रण योजक अमान्य है अथवा इस लेखा द्वारा खोला नहीं जा सकता।</string>
     <string name="concord_invite_failed_incompatible">इस आमन्त्रण को खोला नहीं जा सकता। सम्भावना है कि यह पुराना हो चुका है अथवा नवीनतर द्वारा प्रतिस्थापित अथवा एक नवीनतर क्रमक संस्करण द्वारा बनाया गया। एक नए आमन्त्रण योजक के लिए पूछें।</string>
     <string name="concord_invite_failed_revoked">यह आमन्त्रण योजक निराकृत है तथा अनुपयुक्तव्य। नए के लिए पूछें।</string>
+    <string name="concord_invite_failed_expired">यह आमन्त्रण योजक पुराना हो चुका है तथा अनुपयुक्तव्य। नए योजक के लिए पूछें।</string>
+    <string name="concord_invite_preview_unknown_name">समुदाय नाम आप जुडने के पश्चात ही बताया जाएगा</string>
+    <string name="concord_invite_preview_explainer">जुडने से इस आमन्त्रण के पुनःप्रसारकों से संयोजन किया जाएगा। तथा आपके लेखा से हस्ताक्षरित एक जोड घोषणा  प्रकाशित किया जाएगा। तथा समुदाय को आपकी सूची में जोडा जाएगा। कुछ नहीं भेजा जाएगा जुडें दबाने तक।</string>
+    <string name="concord_invite_preview_relays">पुनःप्रसारक जिनसे सम्पर्क किया जाएगा इस आमन्त्रण द्वारा : %1$s</string>
     <string name="concord_home_title">कोंकोर्ड॰ प्रणाली</string>
     <string name="concord_home_empty">आप किसी भी कोंकोर्ड प्रणाली से जुडे नहीं अब तक। एक बनाएँ अथवा आमन्त्रण योजक खोलें।</string>
     <string name="concord_channels_empty">कोई प्रणाली नहीं अब तक।</string>
@@ -317,6 +322,10 @@
     <string name="concord_channel_delete_title">क्या प्रणाली मिटा दें।</string>
     <string name="concord_channel_delete_message">क्या #%1$s को मिटा दें। इसको पूर्ववत नहीं किया जा सकता। तथा उसी विभेदक के साथ प्रणाली का पुनःउत्पादन नहीं किया जा सकता।</string>
     <string name="concord_channel_delete_confirm">मिटाएँ</string>
+    <string name="concord_leave_community">समुदाय छोडें</string>
+    <string name="concord_leave_title">क्या समुदाय छोडें।</string>
+    <string name="concord_leave_message">क्या %1$s छोडें। इसे हटाया जाएगा इस लेखा की सूची से तथा आपके यन्त्रों पर समचरणीकरण रुक जाएगा। समुदाय को सूचित नहीं किया जाएगा। तथा आपको उसके सदस्य कार्यसूची से हटाया नहीं जाएगा। सन्देश जिनका आप अरहस्यीकरण नहीं कर सकेंगे सम्भाव्यतः पुनःप्राप्तव्य नहीं होंगे। तथा आप केवल नए आमन्त्रण के साथ लौट सकेंगे।</string>
+    <string name="concord_leave_owner_warning">आपने इस समुदाय को बनाया। छोड जाने से यह मिटेगा नहीं। किसी अन्य के हाथ सौंपा नहीं जाएगा। परन्तु स्वत्वधारी कुंचिका जो आपकी सूची में हैं वह हटाया जाएगा। आप आगे से इसका प्रबन्धन नहीं कर पाएँगे।</string>
     <string name="concord_edit_relays_desc">जहाँ इस समुदाय के रहस्यीकृत पत्रों का प्रकाशन तथा पठन किया जाता है।</string>
     <string name="concord_typing_one">%1$s टंकण मध्य…</string>
     <string name="concord_typing_two">%1$s तथा %2$s टंकण मध्य…</string>
@@ -361,6 +370,13 @@
     <string name="concord_members_remove_title">क्या सदस्य हटाएँ।</string>
     <string name="concord_members_remove_message">इस से समुदाय की रहस्यीकरण कुंचिका का वर्तन किया जाएगा जिससे कि यह सदस्य आगे से कुछ भी प्रेषित वस्तु पढ नहीं सकेगा। अन्य सभी स्वचालिततः पुनःकुंचिकायुक्त किए जाएँगे। इसको पूर्ववत नहीं किया जा सकता।</string>
     <string name="concord_members_remove_confirm">हटाएँ</string>
+    <string name="concord_members_roles">भूमिकाएँ…</string>
+    <string name="concord_members_roles_title">भूमिकाएँ सौंपें</string>
+    <string name="concord_members_roles_message">सभी भूमिकाओं का चयन करें जो इस सदस्य को रखना चाहिए। भूमिका अचयनित करने से उसे हटाया जाएगा।</string>
+    <string name="concord_members_roles_save">अभिलेखन</string>
+    <string name="concord_members_roles_out_of_reach">आप श्रेणी में इस सदस्य के पद से ऊपर नहीं</string>
+    <string name="concord_members_roles_none_assignable">कोई भूमिकाएँ नहीं जिन्हें आप सौंप सकते हैं</string>
+    <string name="concord_members_roles_failed">इस सदस्य के भूमिकाओं का अद्यतन करने में असफल।</string>
     <string name="concord_role_owner">स्वत्वधारी</string>
     <string name="concord_role_admin">प्रशासक</string>
     <string name="concord_role_banned">प्रतिबन्धित</string>
@@ -812,6 +828,7 @@
     <string name="napplet_consent_storage">यह नोस्टर संलग्नक्रमक अपना निजी भण्डार का प्रयेग करना चाहता है।</string>
     <string name="napplet_consent_pay">यह नोस्टर संलग्नक्रमक एक लैटनिंग चालान का भुगतान करना चाहता है।</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">सावधान। यह नोस्टरसंलग्नक्रमक एक लैटनिंग चालान का भुगतान करना चाहता है जिसमें कोई मात्रा स्पष्टीकृत नहीं। प्राप्तकर्ता निर्णय करेगा कितना लिया जाएगा। इसे तभी अनुमति दें यदि आप इस पर विश्वास करते हैं।</string>
     <string name="napplet_consent_resource">यह नोस्टर संलग्नक्रमक एक जाल संसाधन लाना चाहता है।</string>
     <string name="napplet_consent_upload">यह नोस्टर संलग्नक्रमक एक अभिलेख को आपके प्रसारसंगणक तक आरोहण करना चाहता है।</string>
     <string name="napplet_consent_notify">यह नोस्टर संलग्नक्रमक आपको सूचनाएँ दिखाना चाहता है।</string>
@@ -824,11 +841,56 @@
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
          one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">%1$d नए लेखा का अनुचरण करता है</item>
+        <item quantity="other">%1$d नए लेखाओं का अनुचरण करता है</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">%1$d लेखा का अनुचरण नहीं करता</item>
+        <item quantity="other">%1$d लेखाओं का अनुचरण नहीं करता</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">%1$d पुनःप्रसारक जोडता है</item>
+        <item quantity="other">%1$d पुनःप्रसारकों को जोडता है</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">%1$d पुनःप्रसारक हटाता है</item>
+        <item quantity="other">%1$d पुनःप्रसारकों को हटाता है</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">%1$d अधिक व्यक्ति मौन करता है</item>
+        <item quantity="other">%1$d अधिक लोगों को मौन करता है</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">%1$d व्यक्ति की मौन अवस्था हटाता है</item>
+        <item quantity="other">%1$d लोगों की मौन अवस्था हटाता है</item>
+    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">सावधान। यह %1$s का अनुचरण करता है।</string>
+    <string name="napplet_consent_diff_unfollow_one">सावधान। यह %1$s का अनुचरण नहीं करता।</string>
+    <string name="napplet_consent_diff_mute_one">सावधान। यह %1$s को मौन करता है।</string>
+    <string name="napplet_consent_diff_unmute_one">सावधान। यह %1$s की मौन अवस्था हटाता है।</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">सावधान। यह आपकी अनुचरण सूची का पुनःलेखन करता है : %1$s।</string>
+    <string name="napplet_consent_diff_relays">सावधान। यह आपकी पुनःप्रसारक सूची का पुनःलेखन करता है : %1$s। आपके पत्र तथा पठनसूची इसके साथ विस्थापित होंगे।</string>
+    <string name="napplet_consent_diff_mutes">सावधान। यह आपकी मौन सूची का पुनःलेखन करता है : %1$s। मौनकृत शब्द तथा विषयसूचक यहाँ नहीं दिखाया जाता। घटना दिखाओ दबाएँ पूर्ण सूची के लिए।</string>
+    <string name="napplet_consent_diff_joiner">%1$s तथा %2$s</string>
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">यह आपकी वर्तमान सूची का पुनःप्रकाशन करता है अपरिवर्तित।</string>
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">सावधान। यह आपकी %1$d प्रविष्ट की सूची का लेखन करता है। अमेथिस्ट में कोई पूर्वस्मृत संस्करण नहीं तुलना करने के लिए।</item>
+        <item quantity="other">सावधान। यह आपकी %1$d प्रविष्टों की सूची का लेखन करता है। अमेथिस्ट में कोई पूर्वस्मृत संस्करण नहीं तुलना करने के लिए।</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
+        <item quantity="other">सावधान। यह आपके घटनाओं में से %1$d को मिटाने का अनुरोध करता है।</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
+        <item quantity="other">%1$d विषयसूचक धारी। घटना दिखाओ दबाएँ यह देखने के लिए कि वस्तुतः क्या हस्ताक्षरित होगा।</item>
+    </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">नोस्टर से संयोजन</string>
     <string name="napplet_connect_subtitle">आपके नोस्टर लेखा के साथ संयोजन करना चाहता है</string>
@@ -865,9 +927,13 @@
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">आपके निजी सन्देशों का पठन</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">आपके निजी सन्देशों का पठन %1$s के द्वारा</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">सर्वदा अनुमत %1$s के लिए</string>
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">अमेथिस्ट द्वारा इस सन्देश का अरहस्यीकरण असफल। सम्भावना है कि यह इस लेखा के प्रति सम्बोधित नहीं।</string>
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">सन्देश इनके साथ</string>
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">संयोजित क्रमक</string>
     <string name="napplet_permissions_revoke_all">सभी अनुमतियों का निराकरण</string>
@@ -1515,6 +1581,7 @@
     <string name="blossom_payment_required">भुगतान आवश्यक इस सेवासंगणक तक आरोहण के लिए : %1$s</string>
     <string name="blossom_payment_title">भुगतान आवश्यक</string>
     <string name="blossom_payment_message">%1$s पर अभिलेख रखने के लिए लैटनिंग भुगतान आवश्यक। आपके संयोजित धनकोष से भुगतान करें आगे बढने के लिए।</string>
+    <string name="blossom_payment_server_says">%1$s कहता है : %2$s</string>
     <string name="blossom_pay">भुगतान</string>
     <plurals name="blossom_pay_sats">
         <item quantity="one">%1$d साट् भुगतान</item>
@@ -2330,6 +2397,8 @@
     <string name="error_dialog_pay_withdraw_error">निकाल नहीं पाए</string>
     <string name="cashu_failed_redemption">काशयू नहीं चुका पाए</string>
     <string name="cashu_failed_redemption_explainer_error_msg">टकसाल ने यह अपक्रम संदेश उपलब्ध किया : %1$s</string>
+    <string name="cashu_unsafe_mint_url">असुरक्षित काशयू टकसाल पता</string>
+    <string name="cashu_unsafe_mint_url_explainer">अमेथिस्ट ने इस अक्षरराशि की टकसाल से सम्पर्क नहीं किया। %1$s</string>
     <string name="cashu_successful_redemption">काशयू प्राप्त</string>
     <string name="cashu_successful_redemption_explainer">%1$s साट्स भेजे गये आपके धनकोष में। (शुल्क : %2$s साट्स)</string>
     <string name="cashu_no_wallet_found">कोई अनुकूल काशयू धनकोष उपलब्ध नहीं यन्त्र में</string>
@@ -2873,7 +2942,7 @@
     <string name="reactions_settings_reorder">पुनःव्यवस्थित करें</string>
     <string name="reactions_settings_reply">उत्तर</string>
     <string name="reactions_settings_reply_description">इस पत्र के लिए उत्तर लिखें</string>
-    <string name="reactions_settings_boost">उद्धृत करें</string>
+    <string name="reactions_settings_boost">उद्धरण</string>
     <string name="reactions_settings_boost_description">पत्र पुनःप्रकाशित करें अथवा टीका लिखें</string>
     <string name="reactions_settings_like">प्रिय</string>
     <string name="reactions_settings_like_description">प्रतिक्रिया करें इस पत्र पर भावचिह्न द्वारा</string>
