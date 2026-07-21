@@ -135,6 +135,34 @@ reuse, and cap overflow → uncached fallback.
   whose asserted EXPLAIN output updated for the new join column
   (`event_fts.rowid`) and the contentless table's virtual-index marker
   (`0:M2`→`0:M1`).
-- Search ordering unchanged: still exact `created_at DESC` (NIP-01 `limit`
-  semantics); the delete + size + optimize wins are unconditional and
-  spec-neutral.
+- Search ordering: bm25 relevance for every search REQ shape — tag-free,
+  `search + tag`, and multi-filter all-search (e.g. the client's
+  search-across-kinds, unioned then deduped by event keeping the best score).
+  Mixed search/non-search multi-filter REQs stay `created_at` (a non-search
+  branch has no defined relevance).
+
+## Audit follow-ups (post-review hardening)
+
+A two-reviewer adversarial audit of the branch found no correctness/data-loss/
+crash bugs; it produced these robustness fixes and one gap-closure:
+
+- **Multi-filter search ordering** (gap): a REQ of several filters that all
+  carry a search term was `created_at`-ordered (the union path). Now
+  relevance-ordered via `unionSubqueriesIfNeeded(projectRank)` — each branch
+  projects `rank`, `UNION ALL` + `GROUP BY row_id MIN(rank)` dedups across
+  branches keeping the best score. Only when every branch is a search branch
+  (and FTS is on); count/delete unions stay single-column.
+- **Merge stream-prep leak** (F1): `prepareAuthorStreams`/`prepareTagStreams`
+  now build cursors through `buildStreams`, which closes any already-prepared
+  statements if a later prepare throws — otherwise a mid-loop failure stranded
+  checked-out, un-reset handles (read locks) in the pooled connection.
+- **Stream-count overflow** (F3): `authors×kinds` / `values×kinds` computed as
+  `Long` so a pathological product can't wrap `Int` back into the eligible
+  band and route a huge fan-out into the merge.
+- **Finalizer footgun** (F2): the pooled statement's `finalize()` was renamed
+  `finalizeStatement()` — a no-arg `finalize()` is the JVM's `Object.finalize`,
+  so the GC could double-close the native handle after explicit close.
+
+Migration cost noted (low/operational, not correctness): the synchronous
+v4→v5 rebuild runs in the upgrade transaction; atomic and kill-safe (rolls
+back to v4), but a very large client store pays a one-time first-open stall.

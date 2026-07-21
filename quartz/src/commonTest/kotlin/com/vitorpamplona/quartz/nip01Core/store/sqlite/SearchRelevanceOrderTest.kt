@@ -115,6 +115,63 @@ class SearchRelevanceOrderTest {
             "0".repeat(128),
         )
 
+    private fun evk(
+        content: String,
+        createdAt: Long,
+        kind: Int,
+    ): Event = EventFactory.create(hexId(++idSeq), "00".repeat(32), createdAt, kind, arrayOf(), content, "0".repeat(128))
+
+    @Test
+    fun multiFilterSearchIsRelevanceOrderedAcrossBranches() =
+        runBlocking {
+            val store = EventStore(dbName = null)
+            try {
+                // Relevance A > B > C, created_at A < B < C (reverse), and the
+                // branches split by kind: A,C are kind 1 (TextNote), B is kind
+                // 1111 (Comment) — both searchable kinds.
+                val a = evk("apple apple apple apple", 1, 1)
+                val b = evk("apple apple apple", 2, 1111)
+                val c = evk("apple filler filler filler filler filler", 3, 1)
+                store.batchInsert(listOf(a, b, c))
+
+                // The client's search-across-kinds shape: one term, two filters.
+                val filters =
+                    listOf(
+                        Filter(search = "apple", kinds = listOf(1), limit = 100),
+                        Filter(search = "apple", kinds = listOf(1111), limit = 100),
+                    )
+                val ids = store.query<Event>(filters).map { it.id }
+                assertEquals(listOf(a.id, b.id, c.id), ids, "multi-filter search must be relevance-ordered across branches")
+            } finally {
+                store.close()
+            }
+        }
+
+    @Test
+    fun multiFilterSearchDedupsEventsMatchingSeveralBranches() =
+        runBlocking {
+            val store = EventStore(dbName = null)
+            try {
+                val x = evk("banana banana banana", 1, 1)
+                val y = evk("banana one", 2, 1)
+                store.batchInsert(listOf(x, y))
+
+                // Overlapping branches: both kind-1 events match BOTH filters.
+                // GROUP BY row_id must fold each to a single ranked row.
+                val filters =
+                    listOf(
+                        Filter(search = "banana", kinds = listOf(1, 6), limit = 100),
+                        Filter(search = "banana", kinds = listOf(1, 2), limit = 100),
+                    )
+                val ids = store.query<Event>(filters).map { it.id }
+                assertEquals(ids.size, ids.toSet().size, "no event may appear twice across branches")
+                assertEquals(listOf(x.id, y.id), ids, "deduped, relevance-ordered")
+                assertEquals(2, store.count(filters), "count parity across the union")
+            } finally {
+                store.close()
+            }
+        }
+
     @Test
     fun searchWithATagIsAlsoRelevanceOrdered() =
         runBlocking {

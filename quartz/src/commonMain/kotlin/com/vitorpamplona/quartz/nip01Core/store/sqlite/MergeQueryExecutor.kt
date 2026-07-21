@@ -125,17 +125,19 @@ internal object MergeQueryExecutor {
         // distinct set.
         val distinctAuthors = authors.distinct().size
         val kinds = filter.kinds
+        // Long product: a pathological authors×kinds could overflow Int and
+        // wrap back into the eligible band, routing a huge fan-out here.
         val streams =
             if (kinds != null && kinds.isNotEmpty()) {
-                distinctAuthors * kinds.distinct().size
+                distinctAuthors.toLong() * kinds.distinct().size
             } else {
                 // authors-only needs the (pubkey, created_at) index to stream.
                 if (!indexStrategy.indexEventsByPubkeyAlone) return -1
-                distinctAuthors
+                distinctAuthors.toLong()
             }
         // A single stream is already the optimal single index seek — let the
         // normal path handle it; only merge when there's something to merge.
-        return if (streams in 2..MAX_STREAMS) streams else -1
+        return if (streams in 2..MAX_STREAMS.toLong()) streams.toInt() else -1
     }
 
     /**
@@ -170,12 +172,12 @@ internal object MergeQueryExecutor {
         val kinds = filter.kinds?.distinct()?.takeIf { it.isNotEmpty() }
         val streams =
             if (kinds != null) {
-                values.size * kinds.size
+                values.size.toLong() * kinds.size
             } else {
                 if (!indexStrategy.indexTagsByCreatedAtAlone) return -1
-                values.size
+                values.size.toLong()
             }
-        return if (streams in 2..MAX_STREAMS) streams else -1
+        return if (streams in 2..MAX_STREAMS.toLong()) streams.toInt() else -1
     }
 
     /** Prepares one bound, newest-first cursor per author stream. */
@@ -199,8 +201,7 @@ internal object MergeQueryExecutor {
         val orderBy =
             if (indexStrategy.useAndIndexIdOnOrderBy) "created_at DESC, id ASC" else "created_at DESC"
 
-        val stmts = ArrayList<SQLiteStatement>((kinds?.size ?: 1) * authors.size)
-        if (kinds != null) {
+        return if (kinds != null) {
             val sql =
                 buildString {
                     append("SELECT ").append(COLS)
@@ -210,16 +211,14 @@ internal object MergeQueryExecutor {
                     if (since != null) append(" AND created_at >= ?")
                     append(" ORDER BY ").append(orderBy)
                 }
-            for (kind in kinds) {
-                for (author in authors) {
-                    val stmt = db.prepare(sql)
-                    var p = 1
-                    stmt.bindLong(p++, kind.toLong())
-                    stmt.bindText(p++, author)
-                    if (until != null) stmt.bindLong(p++, until)
-                    if (since != null) stmt.bindLong(p++, since)
-                    stmts.add(stmt)
-                }
+            buildStreams(kinds.size * authors.size) { i ->
+                val stmt = db.prepare(sql)
+                var p = 1
+                stmt.bindLong(p++, kinds[i / authors.size].toLong())
+                stmt.bindText(p++, authors[i % authors.size])
+                if (until != null) stmt.bindLong(p++, until)
+                if (since != null) stmt.bindLong(p++, since)
+                stmt
             }
         } else {
             val sql =
@@ -231,16 +230,15 @@ internal object MergeQueryExecutor {
                     if (since != null) append(" AND created_at >= ?")
                     append(" ORDER BY ").append(orderBy)
                 }
-            for (author in authors) {
+            buildStreams(authors.size) { i ->
                 val stmt = db.prepare(sql)
                 var p = 1
-                stmt.bindText(p++, author)
+                stmt.bindText(p++, authors[i])
                 if (until != null) stmt.bindLong(p++, until)
                 if (since != null) stmt.bindLong(p++, since)
-                stmts.add(stmt)
+                stmt
             }
         }
-        return stmts
     }
 
     /** Prepares one bound, newest-first cursor per tag-value stream. */
@@ -258,8 +256,7 @@ internal object MergeQueryExecutor {
 
         // The tag cursors stream off event_tags (which has no id column), so
         // the tie order can only be created_at DESC — see the class doc.
-        val stmts = ArrayList<SQLiteStatement>((kinds?.size ?: 1) * values.size)
-        if (kinds != null) {
+        return if (kinds != null) {
             val sql =
                 buildString {
                     append("SELECT ").append(EH_COLS)
@@ -270,17 +267,14 @@ internal object MergeQueryExecutor {
                     if (since != null) append(" AND event_tags.created_at >= ?")
                     append(" ORDER BY event_tags.created_at DESC")
                 }
-            for (value in values) {
-                val tagHash = hasher.hash(tagName, value)
-                for (kind in kinds) {
-                    val stmt = db.prepare(sql)
-                    var p = 1
-                    stmt.bindLong(p++, tagHash)
-                    stmt.bindLong(p++, kind.toLong())
-                    if (until != null) stmt.bindLong(p++, until)
-                    if (since != null) stmt.bindLong(p++, since)
-                    stmts.add(stmt)
-                }
+            buildStreams(values.size * kinds.size) { i ->
+                val stmt = db.prepare(sql)
+                var p = 1
+                stmt.bindLong(p++, hasher.hash(tagName, values[i / kinds.size]))
+                stmt.bindLong(p++, kinds[i % kinds.size].toLong())
+                if (until != null) stmt.bindLong(p++, until)
+                if (since != null) stmt.bindLong(p++, since)
+                stmt
             }
         } else {
             val sql =
@@ -293,17 +287,15 @@ internal object MergeQueryExecutor {
                     if (since != null) append(" AND event_tags.created_at >= ?")
                     append(" ORDER BY event_tags.created_at DESC")
                 }
-            for (value in values) {
-                val tagHash = hasher.hash(tagName, value)
+            buildStreams(values.size) { i ->
                 val stmt = db.prepare(sql)
                 var p = 1
-                stmt.bindLong(p++, tagHash)
+                stmt.bindLong(p++, hasher.hash(tagName, values[i]))
                 if (until != null) stmt.bindLong(p++, until)
                 if (since != null) stmt.bindLong(p++, since)
-                stmts.add(stmt)
+                stmt
             }
         }
-        return stmts
     }
 
     /**
@@ -326,6 +318,32 @@ internal object MergeQueryExecutor {
             // A single event can match several tag values ⇒ dedup by id.
             mergeStreams(prepareTagStreams(db, filter, hasher(db)), filter.limit!!, dedup = true, onRow)
         }
+    }
+
+    /**
+     * Prepares [count] cursors via [prepareOne], closing any already-prepared
+     * statements if a later prepare throws — otherwise a mid-loop failure would
+     * strand checked-out, un-reset handles in the pooled connection (dead
+     * slots holding read locks). On success the caller ([mergeStreams]) owns
+     * closing them.
+     */
+    private inline fun buildStreams(
+        count: Int,
+        prepareOne: (Int) -> SQLiteStatement,
+    ): List<SQLiteStatement> {
+        val stmts = ArrayList<SQLiteStatement>(count)
+        try {
+            for (i in 0 until count) stmts.add(prepareOne(i))
+        } catch (e: Throwable) {
+            for (s in stmts) {
+                try {
+                    s.close()
+                } catch (_: Throwable) {
+                }
+            }
+            throw e
+        }
+        return stmts
     }
 
     /**

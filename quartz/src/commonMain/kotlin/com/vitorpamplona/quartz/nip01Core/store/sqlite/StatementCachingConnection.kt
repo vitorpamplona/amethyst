@@ -97,7 +97,7 @@ class StatementCachingConnection(
     }
 
     override fun close() {
-        cache.values.forEach { pool -> pool.forEach { runCatching { it.finalize() } } }
+        cache.values.forEach { pool -> pool.forEach { runCatching { it.finalizeStatement() } } }
         cache.clear()
         cachedCount = 0
         delegate.close()
@@ -120,6 +120,10 @@ class StatementCachingConnection(
             checkedOut = false
         }
 
-        fun finalize() = delegate.close()
+        // Not named `finalize`: a no-arg `finalize()` is treated by the JVM as
+        // Object.finalize(), so the GC would call it and double-close the
+        // native handle after our explicit close(). This is only ever invoked
+        // explicitly from the connection's close().
+        fun finalizeStatement() = delegate.close()
     }
 }

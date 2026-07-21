@@ -224,7 +224,13 @@ class QueryBuilder(
     ): QuerySpec {
         if (filters.size == 1) return toSql(filters.first(), hasher)
 
-        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher)
+        // A multi-filter search REQ (e.g. the client's search-across-kinds,
+        // all filters sharing one term) must still be NIP-50 relevance-ordered.
+        // Only when EVERY branch is a search branch (and FTS is on, so each has
+        // a rank column) — a non-search branch has no defined relevance, so a
+        // mixed REQ falls back to created_at.
+        val rankSearch = fts.enabled && filters.all { !it.search.isNullOrEmpty() }
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher, projectRank = rankSearch)
 
         return if (rowIdSubqueries == null) {
             QuerySpec(
@@ -233,7 +239,7 @@ class QueryBuilder(
             )
         } else {
             QuerySpec(
-                makeQueryIn(rowIdSubqueries.sql),
+                makeQueryIn(rowIdSubqueries.sql, orderByRank = rankSearch),
                 rowIdSubqueries.args,
             )
         }
@@ -723,16 +729,34 @@ class QueryBuilder(
     fun unionSubqueriesIfNeeded(
         filters: List<Filter>,
         hasher: TagNameValueHasher,
+        // See [prepareRowIDSubQueries]. When set, every branch is a search
+        // branch that also projects a `rank` column; the union keeps one row
+        // per event with its BEST (min) bm25 score so the caller can present
+        // the whole multi-filter search REQ NIP-50-ranked. Callers must only
+        // pass true when all filters carry a search term (else a branch has no
+        // rank column). Off for count/delete, which stay single-column.
+        projectRank: Boolean = false,
     ): QuerySpec? {
         val inner =
             filters.mapNotNull { filter ->
-                prepareRowIDSubQueries(filter, hasher)
+                prepareRowIDSubQueries(filter, hasher, projectRank)
             }
 
         if (inner.isEmpty()) return null
 
-        return if (inner.size == 1) {
-            inner.first()
+        if (inner.size == 1) return inner.first()
+
+        return if (projectRank) {
+            // UNION ALL keeps every (row_id, rank) so an event matching two
+            // branches under different terms isn't dropped before MIN; GROUP BY
+            // then dedups by event keeping the best score.
+            QuerySpec(
+                sql =
+                    "SELECT row_id, MIN(rank) as rank FROM (\n            " +
+                        inner.joinToString("\n            UNION ALL\n            ") { "SELECT row_id, rank FROM (${it.sql})" } +
+                        "\n            ) GROUP BY row_id",
+                args = inner.flatMap { it.args },
+            )
         } else {
             QuerySpec(
                 sql = inner.joinToString("\n            UNION\n            ") { "SELECT row_id FROM (${it.sql})" },

@@ -53,10 +53,12 @@ import com.vitorpamplona.quartz.utils.EventFactory
  * by quality of search result ... not by the usual `.created_at`", limit
  * applied after the score) — via FTS5 bm25 (`ORDER BY event_fts.rank`), with
  * `created_at DESC` only as a tie-break. This holds for *every* search filter:
- * the tag-free shape ([QueryBuilder.makeSimpleSearch]) and `search + tag`
- * (whose row-id subquery carries the rank through via `projectRank`). Only the
- * negentropy snapshot keeps `created_at` — it is a sync set, not a ranked
- * result. bm25 must score every match, so search latency still grows with the
+ * the tag-free shape ([QueryBuilder.makeSimpleSearch]), `search + tag` (whose
+ * row-id subquery carries the rank through via `projectRank`), and a
+ * multi-filter all-search REQ (unioned, deduped by event keeping the best
+ * score). Only the negentropy snapshot — and a multi-filter REQ mixing search
+ * and non-search branches — keep `created_at` (a sync set / a branch with no
+ * defined relevance). bm25 must score every match, so search latency still grows with the
  * match set regardless of ordering; corpus-independent search needs an
  * external engine, not this index.
  *
