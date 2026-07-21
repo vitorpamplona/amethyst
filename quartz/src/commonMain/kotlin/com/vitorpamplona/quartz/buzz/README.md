@@ -89,6 +89,33 @@ no relay scope — the most speculative), the workflow lifecycle events **46001-
 and **48106** huddle guidelines. Treat these as scaffolding to reconcile once Buzz
 defines them.
 
+## Live interoperability — verified against a running Buzz relay
+
+`buzz/interop/BuzzRelayLiveInteropTest.kt` (jvmTest, env-gated so CI skips it) drives a
+**real `buzz-relay`** (Postgres + Redis + MinIO via Buzz's compose, relay via
+`cargo run -p buzz-relay`, members enrolled with `buzz-admin add-member`):
+
+```
+BUZZ_RELAY_WS=ws://localhost:3000 \
+BUZZ_MEMBER_SK=<member sk hex> BUZZ_OWNER_SK=<member sk hex> \
+./gradlew :quartz:jvmTest --tests "*BuzzRelayLiveInteropTest"
+```
+
+Verified end-to-end (relay log shows the ingests):
+- **NIP-42 auth** with a member key, and — critically — **NIP-OA/NIP-AA agent auth**: a
+  brand-new, un-enrolled agent key authenticated using only our owner-signed `auth`
+  tag on the AUTH event (the relay's NIP-OA membership fallback accepted it).
+- **Channel lifecycle**: kind:9007 create (via the existing NIP-29 `CreateGroupEvent` —
+  Buzz channels ARE NIP-29 groups) then kind:40002 publish, `REQ` round-trip with a
+  byte-identical echo (same event id), and `EOSE`.
+
+Interop lessons encoded in the test:
+- Buzz tenancy is **host-bound**: connect with the exact host the community was bound
+  to (`ws://localhost:3000`, not `ws://127.0.0.1:3000`) or the upgrade 404s.
+- `h` tag values must parse as **UUIDs** (`extract_channel_id`); a non-UUID `h` is
+  treated as absent and channel-scoped kinds are rejected.
+- The channel must exist (9007) before channel-scoped kinds are accepted.
+
 ## Owner Attestation (NIP-OA) — implemented
 
 The primitive that makes "agents as first-class members" work without enrolling every
