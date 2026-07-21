@@ -26,6 +26,7 @@
     <string name="referenced_event_not_found">Referenziertes Ereignis nicht gefunden</string>
     <string name="could_not_decrypt_the_message">Nachricht konnte nicht entschlüsselt werden</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <string name="chat_preview_decrypting">Wird entschlüsselt…</string>
     <string name="group_picture">Gruppenbild</string>
     <string name="explicit_content">Anstößiger Inhalt</string>
     <string name="relay_notice">Relay-Hinweis</string>
@@ -302,6 +303,10 @@
     <string name="concord_invite_failed_invalid">Dieser Einladungslink ist ungültig oder kann mit diesem Konto nicht geöffnet werden.</string>
     <string name="concord_invite_failed_incompatible">Dieser Einladungslink kann nicht geöffnet werden. Er ist möglicherweise veraltet, wurde bereits durch einen neueren ersetzt oder mit einer neueren Version der App erstellt. Bitte um einen neuen Einladungslink.</string>
     <string name="concord_invite_failed_revoked">Dieser Einladungslink wurde widerrufen und kann nicht mehr verwendet werden. Bitte um einen neuen.</string>
+    <string name="concord_invite_failed_expired">Dieser Einladungslink ist abgelaufen und kann nicht mehr verwendet werden. Bitte um einen neuen Link.</string>
+    <string name="concord_invite_preview_unknown_name">Der Name der Community wird erst nach dem Beitritt angezeigt</string>
+    <string name="concord_invite_preview_explainer">Beim Beitreten verbindest du dich mit den Relays dieser Einladung, veröffentlichst eine mit deinem Konto signierte Beitrittsankündigung und fügst die Community deiner Liste hinzu. Es wird nichts gesendet, bis du auf Beitreten tippst.</string>
+    <string name="concord_invite_preview_relays">Relays, die diese Einladung kontaktieren wird: %1$s</string>
     <string name="concord_home_title">Concord-Kanäle</string>
     <string name="concord_home_empty">Du bist noch keinen Concord-Kanälen beigetreten. Erstelle einen oder öffne einen Einladungslink.</string>
     <string name="concord_channels_empty">Noch keine Kanäle.</string>
@@ -317,6 +322,10 @@
     <string name="concord_channel_delete_title">Kanal löschen?</string>
     <string name="concord_channel_delete_message">#%1$s löschen? Dies kann nicht rückgängig gemacht werden und der Kanal kann nicht mit derselben ID neu erstellt werden.</string>
     <string name="concord_channel_delete_confirm">Löschen</string>
+    <string name="concord_leave_community">Community verlassen</string>
+    <string name="concord_leave_title">Community verlassen?</string>
+    <string name="concord_leave_message">%1$s verlassen? Sie wird aus der Liste dieses Kontos entfernt und hört auf, sich auf deinen Geräten zu synchronisieren. Die Community wird nicht benachrichtigt und du wirst nicht aus ihrer Mitgliederliste entfernt. Nachrichten, die du nicht mehr entschlüsseln kannst, sind möglicherweise nicht wiederherstellbar, und du kannst nur mit einer neuen Einladung zurückkehren.</string>
+    <string name="concord_leave_owner_warning">Du hast diese Community erstellt. Beim Verlassen wird sie weder gelöscht noch an jemand anderen übergeben, aber der auf deiner Liste gespeicherte Eigentümerschlüssel wird verworfen — du könntest sie nicht mehr verwalten.</string>
     <string name="concord_edit_relays_desc">Wo die verschlüsselten Planes dieser Community veröffentlicht und gelesen werden.</string>
     <string name="concord_typing_one">%1$s schreibt…</string>
     <string name="concord_typing_two">%1$s und %2$s schreiben…</string>
@@ -361,6 +370,13 @@
     <string name="concord_members_remove_title">Mitglied entfernen?</string>
     <string name="concord_members_remove_message">Dies rotiert den Verschlüsselungsschlüssel der Community, sodass dieses Mitglied nichts mehr lesen kann, was danach gesendet wird. Für alle anderen wird der Schlüssel automatisch erneuert. Dies kann nicht rückgängig gemacht werden.</string>
     <string name="concord_members_remove_confirm">Entfernen</string>
+    <string name="concord_members_roles">Rollen…</string>
+    <string name="concord_members_roles_title">Rollen zuweisen</string>
+    <string name="concord_members_roles_message">Wähle jede Rolle aus, die dieses Mitglied haben soll. Das Abwählen einer Rolle entfernt sie.</string>
+    <string name="concord_members_roles_save">Speichern</string>
+    <string name="concord_members_roles_out_of_reach">Du stehst nicht über diesem Mitglied</string>
+    <string name="concord_members_roles_none_assignable">Keine Rollen, die du zuweisen kannst</string>
+    <string name="concord_members_roles_failed">Die Rollen dieses Mitglieds konnten nicht aktualisiert werden.</string>
     <string name="concord_role_owner">Eigentümer</string>
     <string name="concord_role_admin">Administrator</string>
     <string name="concord_role_banned">Gesperrt</string>
@@ -485,6 +501,15 @@
     <string name="share_as_image_url">Als Bild-URL teilen</string>
     <string name="share_as_image_generating">Vorschau wird erstellt…</string>
     <string name="share_as_image_watermark">Geteilt über Amethyst</string>
+    <string name="share_as_qr">Als QR teilen</string>
+    <string name="share_as_qr_mode_web">Web-Link</string>
+    <string name="share_as_qr_mode_nostr">Nostr-Link</string>
+    <string name="share_as_qr_hint_web">Mit jeder Handykamera scannen</string>
+    <string name="share_as_qr_hint_nostr">Mit einer Nostr-App scannen</string>
+    <string name="share_as_qr_kind_picture">Bild</string>
+    <string name="share_as_qr_code_description_web">QR-Code mit einem Web-Link zu dieser Notiz</string>
+    <string name="share_as_qr_code_description_nostr">QR-Code mit einem Nostr-Link zu dieser Notiz</string>
+    <string name="share_as_qr_thumbnail_hidden_sensitive">Vorschaubild bei sensiblen Inhalten ausgeblendet</string>
     <string name="quick_action_copy_user_id">Autoren-ID kopieren</string>
     <string name="quick_action_copy_note_id">Beitrags-ID kopieren</string>
     <string name="quick_action_copy_text">Text kopieren</string>
@@ -812,6 +837,7 @@
     <string name="napplet_consent_storage">Dieses nApplet möchte seinen privaten Speicher verwenden.</string>
     <string name="napplet_consent_pay">Dieses nApplet möchte eine Lightning-Rechnung bezahlen.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">⚠ Dieses nApplet möchte eine Lightning-Rechnung bezahlen, die KEINEN Betrag angibt — der Zahlungsempfänger entscheidet, wie viel entnommen wird. Erlaube dies nur, wenn du ihm vertraust.</string>
     <string name="napplet_consent_resource">Dieses nApplet möchte eine Web-Ressource abrufen.</string>
     <string name="napplet_consent_upload">Dieses nApplet möchte eine Datei auf Ihren Medienserver hochladen.</string>
     <string name="napplet_consent_notify">Dieses nApplet möchte Ihnen Benachrichtigungen anzeigen.</string>
@@ -824,11 +850,56 @@
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
          one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">folgt %1$d neuem Konto</item>
+        <item quantity="other">folgt %1$d neuen Konten</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">ENTFOLGT %1$d Konto</item>
+        <item quantity="other">ENTFOLGT %1$d Konten</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">fügt %1$d Relay hinzu</item>
+        <item quantity="other">fügt %1$d Relays hinzu</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">ENTFERNT %1$d Relay</item>
+        <item quantity="other">ENTFERNT %1$d Relays</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">schaltet %1$d weitere Person stumm</item>
+        <item quantity="other">schaltet %1$d weitere Personen stumm</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">HEBT DIE STUMMSCHALTUNG von %1$d Person AUF</item>
+        <item quantity="other">HEBT DIE STUMMSCHALTUNG von %1$d Personen AUF</item>
+    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">⚠ Dies folgt %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠ Dies ENTFOLGT %1$s.</string>
+    <string name="napplet_consent_diff_mute_one">⚠ Dies stummschaltet %1$s.</string>
+    <string name="napplet_consent_diff_unmute_one">⚠ Dies HEBT DIE STUMMSCHALTUNG von %1$s AUF.</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">⚠ Dies überschreibt deine Folgeliste: %1$s.</string>
+    <string name="napplet_consent_diff_relays">⚠ Dies überschreibt deine Relay-Liste: %1$s. Deine Beiträge und Lesevorgänge ziehen mit um.</string>
+    <string name="napplet_consent_diff_mutes">⚠ Dies überschreibt deine Stummschaltungsliste: %1$s. Stummgeschaltete Wörter und Hashtags werden hier nicht angezeigt — tippe auf “Ereignis anzeigen” für die vollständige Liste.</string>
+    <string name="napplet_consent_diff_joiner">%1$s und %2$s</string>
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">Dies veröffentlicht deine bestehende Liste unverändert erneut.</string>
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">⚠ Dies schreibt eine Liste mit %1$d Eintrag. Amethyst hat keine zwischengespeicherte Kopie zum Vergleich.</item>
+        <item quantity="other">⚠ Dies schreibt eine Liste mit %1$d Einträgen. Amethyst hat keine zwischengespeicherte Kopie zum Vergleich.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
+        <item quantity="other">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">Enthält %1$d Tag. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
+        <item quantity="other">Enthält %1$d Tags. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
+    </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Mit Nostr verbinden</string>
     <string name="napplet_connect_subtitle">möchte sich mit deinem Nostr-Konto verbinden</string>
@@ -865,9 +936,13 @@
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">deine privaten Nachrichten lesen</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">deine privaten Nachrichten mit %1$s lesen</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">Immer erlauben für %1$s</string>
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">Amethyst konnte diese Nachricht nicht entschlüsseln. Sie ist möglicherweise nicht an dieses Konto adressiert.</string>
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">Nachrichten mit</string>
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Verbundene Apps</string>
     <string name="napplet_permissions_revoke_all">Alle Berechtigungen widerrufen</string>
@@ -1491,6 +1566,39 @@
     <string name="local_blossom_cache_profile_pics_only">Nur Profilbilder cachen</string>
     <string name="local_blossom_cache_profile_pics_only_caption">Den lokalen Cache auf Profilbilder beschränken. Feed-Bilder und -Videos werden direkt von den Originalservern geladen.</string>
     <string name="no_blossom_server_message">Du hast keine Blossom Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
+    <string name="media_servers_upload_section">Upload-Verhalten</string>
+    <string name="blossom_mirror_uploads">Uploads spiegeln</string>
+    <string name="blossom_mirror_uploads_caption">Nach dem Hochladen wird die Datei auf deine anderen Blossom-Server kopiert, damit sie verfügbar bleibt, falls einer offline geht.</string>
+    <string name="blossom_optimize_media">Medien auf dem Server optimieren</string>
+    <string name="blossom_optimize_media_caption">Lade über den /media-Endpunkt des Servers hoch, damit dieser Metadaten entfernen und die Datei komprimieren kann. Die gespeicherte Datei kann sich vom Original unterscheiden.</string>
+    <string name="manage_stored_files">Gespeicherte Dateien verwalten</string>
+    <string name="my_blossom_data">Meine Blossom-Dateien</string>
+    <string name="blossom_refresh">Aktualisieren</string>
+    <string name="blossom_sync_all">Alle synchronisieren</string>
+    <string name="blossom_sync_gaps">Einige deiner Dateien liegen noch nicht auf allen deinen Servern.</string>
+    <string name="blossom_syncing">Deine Dateien werden über die Server kopiert…</string>
+    <string name="blossom_sync_done">Synchronisierung abgeschlossen</string>
+    <string name="blossom_sync_cancel">Abbrechen</string>
+    <string name="blossom_sync_channel_name">Blossom-Synchronisierung</string>
+    <string name="blossom_sync_channel_description">Zeigt den Fortschritt beim Kopieren deiner Dateien über deine Blossom-Server hinweg.</string>
+    <string name="manage_stored_files_empty">Keine gespeicherten Dateien auf deinen Blossom-Servern gefunden.</string>
+    <string name="blossom_mirror_to_missing">Auf fehlende spiegeln</string>
+    <string name="blossom_delete_from">Löschen von…</string>
+    <string name="blossom_delete_from_host">Löschen von %1$s</string>
+    <string name="blossom_report">Melden</string>
+    <string name="blossom_open">Öffnen</string>
+    <string name="blossom_payment_required">Dieser Server verlangt eine Zahlung zum Hochladen: %1$s</string>
+    <string name="blossom_payment_title">Zahlung erforderlich</string>
+    <string name="blossom_payment_message">%1$s verlangt eine Lightning-Zahlung, um diese Datei zu speichern. Bezahle aus deiner verbundenen Wallet, um fortzufahren.</string>
+    <string name="blossom_payment_server_says">%1$s sagt: “%2$s”</string>
+    <string name="blossom_pay">Bezahlen</string>
+    <plurals name="blossom_pay_sats">
+        <item quantity="one">%1$d Sat bezahlen</item>
+        <item quantity="other">%1$d Sats bezahlen</item>
+    </plurals>
+    <string name="blossom_report_title">Blob melden</string>
+    <string name="blossom_report_comment_hint">Grund (optional)</string>
+    <string name="blossom_send">Senden</string>
     <string name="recommended_media_servers">Empfohlene Medienserver</string>
     <string name="built_in_servers_description">Amethysts Standardliste. Du kannst einzelne Server hinzufügen oder die gesamte Liste auf einmal übernehmen.</string>
     <string name="use_default_servers">Standardliste verwenden</string>
@@ -1534,6 +1642,11 @@
     <string name="follow_list_kind3follows_users_only">Alle Benutzer Folgen</string>
     <string name="follow_list_kind3_follows_users_only">Standard-Folgenliste</string>
     <string name="follow_list_aroundme">In der Nähe</string>
+    <string name="follow_list_teleport">Zu einem Ort teleportieren…</string>
+    <string name="follow_geohash">Diesem Ort folgen</string>
+    <string name="unfollow_geohash">Diesem Ort nicht mehr folgen</string>
+    <string name="geo_post_posting_to">Veröffentlichen in</string>
+    <string name="geo_post_change_place">Ändern</string>
     <string name="follow_list_global">Weltweit</string>
     <string name="follow_list_curated">Kuratiert</string>
     <string name="follow_list_mine">Meine</string>
@@ -1944,6 +2057,10 @@
     <string name="default_relays_longer">Auf Standardeinstellung zurücksetzen</string>
     <string name="geohash_title">Ort preisgeben als </string>
     <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass du dich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
+    <string name="geohash_teleport_title">Teleportieren</string>
+    <string name="geohash_teleport_action">✈  Hierher teleportieren</string>
+    <string name="location_pick_on_map">Wähle einen Ort auf der Karte</string>
+    <string name="location_change_place">Ort auf der Karte ändern</string>
     <string name="geohash_exclusive">Standort-exklusiver Beitrag</string>
     <string name="geohash_exclusive_explainer">Nur Follower des Ortes werden es sehen. Deine allgemeinen Follower werden es nicht sehen.</string>
     <string name="hashtag_exclusive">Hashtag-exklusive Beitrag</string>
@@ -2136,7 +2253,19 @@
     <string name="relay_group_field_topics_hint">bitcoin, nostr, kunst</string>
     <string name="relay_group_field_geohash">Ort (Geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_location_add">Einen Ort hinzufügen</string>
+    <string name="relay_group_location_add_desc">Markiere deine Gruppe auf einer Karte, damit Leute in der Nähe sie entdecken können.</string>
+    <string name="relay_group_location_edit">Ort ändern</string>
+    <string name="relay_group_location_clear">Ort entfernen</string>
+    <string name="relay_group_location_manual">Einen Geohash manuell eingeben</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
+    <string name="location_picker_title">Ort wählen</string>
+    <string name="location_picker_hint">Verschiebe die Karte, suche nach einem Ort oder verwende deinen aktuellen Standort.</string>
+    <string name="location_picker_search_hint">Nach einer Stadt oder Adresse suchen</string>
+    <string name="location_picker_search_empty">Kein passender Ort gefunden.</string>
+    <string name="location_picker_use_mine">Meinen aktuellen Standort verwenden</string>
+    <string name="location_picker_area">Gebietsgröße</string>
+    <string name="location_picker_confirm">Diesen Ort verwenden</string>
     <string name="relay_group_section_structure">Struktur</string>
     <string name="relay_group_parent_desc">Ordne diese Gruppe einer übergeordneten Gruppe unter, um eine Hierarchie aufzubauen.</string>
     <string name="relay_group_parent_label">Übergeordnete Gruppe</string>
@@ -2159,6 +2288,8 @@
     <string name="relay_group_discovery_empty_filtered">Noch keine Gruppen für diesen Filter gefunden.</string>
     <string name="relay_group_favorite_relay">Dieses Relay favorisieren</string>
     <string name="relay_group_threads_empty">Noch keine Threads. Starte einen mit der +-Schaltfläche.</string>
+    <string name="relay_group_threads_loading_older">Ältere Threads werden geladen…</string>
+    <string name="relay_group_threads_all_caught_up">Keine älteren Threads</string>
     <string name="relay_group_thread_new">Neuer Thread</string>
     <string name="relay_group_thread_untitled">Ohne Titel</string>
     <string name="relay_group_thread_title_label">Titel</string>
@@ -2272,6 +2403,8 @@
     <string name="error_dialog_pay_withdraw_error">Konnte nicht abheben</string>
     <string name="cashu_failed_redemption">Cashu konnte nicht eingelöst werden</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint hat folgende Fehlermeldung geliefert: %1$s</string>
+    <string name="cashu_unsafe_mint_url">Unsichere Cashu-Mint-Adresse</string>
+    <string name="cashu_unsafe_mint_url_explainer">Amethyst hat die Mint dieses Tokens nicht kontaktiert. %1$s</string>
     <string name="cashu_successful_redemption">Cashu erhalten</string>
     <string name="cashu_successful_redemption_explainer">%1$s Sats wurden an Ihre Wallet gesendet. (Gebühren: %2$s Sats)</string>
     <string name="cashu_no_wallet_found">Keine kompatible Cashu-Brieftasche im System gefunden</string>
@@ -4072,139 +4205,4 @@
     <string name="new_conversation_location_pro_1">Anonym — eine Wegwerf-Identität pro Gebiet, niemals dein npub.</string>
     <string name="new_conversation_location_pro_2">Bitchat-kompatibel; erreicht Nutzer in der Nähe auf denselben Relays.</string>
     <string name="new_conversation_location_con_1">Öffentlich und flüchtig — kein Verlauf, jeder in der Zelle kann es lesen.</string>
-    <string name="blossom_delete_from">Löschen von…</string>
-    <string name="blossom_delete_from_host">Löschen von %1$s</string>
-    <string name="blossom_mirror_to_missing">Auf fehlende spiegeln</string>
-    <string name="blossom_mirror_uploads">Uploads spiegeln</string>
-    <string name="blossom_mirror_uploads_caption">Nach dem Hochladen wird die Datei auf deine anderen Blossom-Server kopiert, damit sie verfügbar bleibt, falls einer offline geht.</string>
-    <string name="blossom_open">Öffnen</string>
-    <string name="blossom_optimize_media">Medien auf dem Server optimieren</string>
-    <string name="blossom_optimize_media_caption">Lade über den /media-Endpunkt des Servers hoch, damit dieser Metadaten entfernen und die Datei komprimieren kann. Die gespeicherte Datei kann sich vom Original unterscheiden.</string>
-    <string name="blossom_pay">Bezahlen</string>
-    <string name="blossom_payment_message">%1$s verlangt eine Lightning-Zahlung, um diese Datei zu speichern. Bezahle aus deiner verbundenen Wallet, um fortzufahren.</string>
-    <string name="blossom_payment_required">Dieser Server verlangt eine Zahlung zum Hochladen: %1$s</string>
-    <string name="blossom_payment_server_says">%1$s sagt: “%2$s”</string>
-    <string name="blossom_payment_title">Zahlung erforderlich</string>
-    <string name="blossom_refresh">Aktualisieren</string>
-    <string name="blossom_report">Melden</string>
-    <string name="blossom_report_comment_hint">Grund (optional)</string>
-    <string name="blossom_report_title">Blob melden</string>
-    <string name="blossom_send">Senden</string>
-    <string name="blossom_sync_all">Alle synchronisieren</string>
-    <string name="blossom_sync_cancel">Abbrechen</string>
-    <string name="blossom_sync_channel_description">Zeigt den Fortschritt beim Kopieren deiner Dateien über deine Blossom-Server hinweg.</string>
-    <string name="blossom_sync_channel_name">Blossom-Synchronisierung</string>
-    <string name="blossom_sync_done">Synchronisierung abgeschlossen</string>
-    <string name="blossom_sync_gaps">Einige deiner Dateien liegen noch nicht auf allen deinen Servern.</string>
-    <string name="blossom_syncing">Deine Dateien werden über die Server kopiert…</string>
-    <string name="cashu_unsafe_mint_url">Unsichere Cashu-Mint-Adresse</string>
-    <string name="cashu_unsafe_mint_url_explainer">Amethyst hat die Mint dieses Tokens nicht kontaktiert. %1$s</string>
-    <string name="chat_preview_decrypting">Wird entschlüsselt…</string>
-    <string name="concord_invite_failed_expired">Dieser Einladungslink ist abgelaufen und kann nicht mehr verwendet werden. Bitte um einen neuen Link.</string>
-    <string name="concord_invite_preview_explainer">Beim Beitreten verbindest du dich mit den Relays dieser Einladung, veröffentlichst eine mit deinem Konto signierte Beitrittsankündigung und fügst die Community deiner Liste hinzu. Es wird nichts gesendet, bis du auf Beitreten tippst.</string>
-    <string name="concord_invite_preview_relays">Relays, die diese Einladung kontaktieren wird: %1$s</string>
-    <string name="concord_invite_preview_unknown_name">Der Name der Community wird erst nach dem Beitritt angezeigt</string>
-    <string name="concord_leave_community">Community verlassen</string>
-    <string name="concord_leave_message">%1$s verlassen? Sie wird aus der Liste dieses Kontos entfernt und hört auf, sich auf deinen Geräten zu synchronisieren. Die Community wird nicht benachrichtigt und du wirst nicht aus ihrer Mitgliederliste entfernt. Nachrichten, die du nicht mehr entschlüsseln kannst, sind möglicherweise nicht wiederherstellbar, und du kannst nur mit einer neuen Einladung zurückkehren.</string>
-    <string name="concord_leave_owner_warning">Du hast diese Community erstellt. Beim Verlassen wird sie weder gelöscht noch an jemand anderen übergeben, aber der auf deiner Liste gespeicherte Eigentümerschlüssel wird verworfen — du könntest sie nicht mehr verwalten.</string>
-    <string name="concord_leave_title">Community verlassen?</string>
-    <string name="concord_members_roles">Rollen…</string>
-    <string name="concord_members_roles_failed">Die Rollen dieses Mitglieds konnten nicht aktualisiert werden.</string>
-    <string name="concord_members_roles_message">Wähle jede Rolle aus, die dieses Mitglied haben soll. Das Abwählen einer Rolle entfernt sie.</string>
-    <string name="concord_members_roles_none_assignable">Keine Rollen, die du zuweisen kannst</string>
-    <string name="concord_members_roles_out_of_reach">Du stehst nicht über diesem Mitglied</string>
-    <string name="concord_members_roles_save">Speichern</string>
-    <string name="concord_members_roles_title">Rollen zuweisen</string>
-    <string name="follow_geohash">Diesem Ort folgen</string>
-    <string name="follow_list_teleport">Zu einem Ort teleportieren…</string>
-    <string name="geo_post_change_place">Ändern</string>
-    <string name="geo_post_posting_to">Veröffentlichen in</string>
-    <string name="geohash_teleport_action">✈  Hierher teleportieren</string>
-    <string name="geohash_teleport_title">Teleportieren</string>
-    <string name="location_change_place">Ort auf der Karte ändern</string>
-    <string name="location_pick_on_map">Wähle einen Ort auf der Karte</string>
-    <string name="location_picker_area">Gebietsgröße</string>
-    <string name="location_picker_confirm">Diesen Ort verwenden</string>
-    <string name="location_picker_hint">Verschiebe die Karte, suche nach einem Ort oder verwende deinen aktuellen Standort.</string>
-    <string name="location_picker_search_empty">Kein passender Ort gefunden.</string>
-    <string name="location_picker_search_hint">Nach einer Stadt oder Adresse suchen</string>
-    <string name="location_picker_title">Ort wählen</string>
-    <string name="location_picker_use_mine">Meinen aktuellen Standort verwenden</string>
-    <string name="manage_stored_files">Gespeicherte Dateien verwalten</string>
-    <string name="manage_stored_files_empty">Keine gespeicherten Dateien auf deinen Blossom-Servern gefunden.</string>
-    <string name="media_server_status_offline">Offline</string>
-    <string name="media_server_status_online">Online</string>
-    <string name="media_servers_upload_section">Upload-Verhalten</string>
-    <string name="my_blossom_data">Meine Blossom-Dateien</string>
-    <string name="napplet_consent_diff_follow_one">⚠ Dies folgt %1$s.</string>
-    <string name="napplet_consent_diff_follows">⚠ Dies überschreibt deine Folgeliste: %1$s.</string>
-    <string name="napplet_consent_diff_joiner">%1$s und %2$s</string>
-    <string name="napplet_consent_diff_mute_one">⚠ Dies stummschaltet %1$s.</string>
-    <string name="napplet_consent_diff_mutes">⚠ Dies überschreibt deine Stummschaltungsliste: %1$s. Stummgeschaltete Wörter und Hashtags werden hier nicht angezeigt — tippe auf “Ereignis anzeigen” für die vollständige Liste.</string>
-    <string name="napplet_consent_diff_none">Dies veröffentlicht deine bestehende Liste unverändert erneut.</string>
-    <string name="napplet_consent_diff_relays">⚠ Dies überschreibt deine Relay-Liste: %1$s. Deine Beiträge und Lesevorgänge ziehen mit um.</string>
-    <string name="napplet_consent_diff_unfollow_one">⚠ Dies ENTFOLGT %1$s.</string>
-    <string name="napplet_consent_diff_unmute_one">⚠ Dies HEBT DIE STUMMSCHALTUNG von %1$s AUF.</string>
-    <string name="napplet_consent_pay_no_amount">⚠ Dieses nApplet möchte eine Lightning-Rechnung bezahlen, die KEINEN Betrag angibt — der Zahlungsempfänger entscheidet, wie viel entnommen wird. Erlaube dies nur, wenn du ihm vertraust.</string>
-    <string name="napplet_op_decrypt_from">deine privaten Nachrichten mit %1$s lesen</string>
-    <string name="nip46_signer_allow_always_for">Immer erlauben für %1$s</string>
-    <string name="nip46_signer_decrypt_failed">Amethyst konnte diese Nachricht nicht entschlüsseln. Sie ist möglicherweise nicht an dieses Konto adressiert.</string>
-    <string name="nip46_signer_messages_with">Nachrichten mit</string>
-    <string name="relay_group_location_add">Einen Ort hinzufügen</string>
-    <string name="relay_group_location_add_desc">Markiere deine Gruppe auf einer Karte, damit Leute in der Nähe sie entdecken können.</string>
-    <string name="relay_group_location_clear">Ort entfernen</string>
-    <string name="relay_group_location_edit">Ort ändern</string>
-    <string name="relay_group_location_manual">Einen Geohash manuell eingeben</string>
-    <string name="relay_group_threads_all_caught_up">Keine älteren Threads</string>
-    <string name="relay_group_threads_loading_older">Ältere Threads werden geladen…</string>
-    <string name="share_as_qr">Als QR teilen</string>
-    <string name="share_as_qr_code_description_nostr">QR-Code mit einem Nostr-Link zu dieser Notiz</string>
-    <string name="share_as_qr_code_description_web">QR-Code mit einem Web-Link zu dieser Notiz</string>
-    <string name="share_as_qr_hint_nostr">Mit einer Nostr-App scannen</string>
-    <string name="share_as_qr_hint_web">Mit jeder Handykamera scannen</string>
-    <string name="share_as_qr_kind_picture">Bild</string>
-    <string name="share_as_qr_mode_nostr">Nostr-Link</string>
-    <string name="share_as_qr_mode_web">Web-Link</string>
-    <string name="share_as_qr_thumbnail_hidden_sensitive">Vorschaubild bei sensiblen Inhalten ausgeblendet</string>
-    <string name="unfollow_geohash">Diesem Ort nicht mehr folgen</string>
-    <plurals name="blossom_pay_sats">
-        <item quantity="one">%1$d Sat bezahlen</item>
-        <item quantity="other">%1$d Sats bezahlen</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_follow_added">
-        <item quantity="one">folgt %1$d neuem Konto</item>
-        <item quantity="other">folgt %1$d neuen Konten</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_follow_removed">
-        <item quantity="one">ENTFOLGT %1$d Konto</item>
-        <item quantity="other">ENTFOLGT %1$d Konten</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_mute_added">
-        <item quantity="one">schaltet %1$d weitere Person stumm</item>
-        <item quantity="other">schaltet %1$d weitere Personen stumm</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_mute_removed">
-        <item quantity="one">HEBT DIE STUMMSCHALTUNG von %1$d Person AUF</item>
-        <item quantity="other">HEBT DIE STUMMSCHALTUNG von %1$d Personen AUF</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_no_baseline">
-        <item quantity="one">⚠ Dies schreibt eine Liste mit %1$d Eintrag. Amethyst hat keine zwischengespeicherte Kopie zum Vergleich.</item>
-        <item quantity="other">⚠ Dies schreibt eine Liste mit %1$d Einträgen. Amethyst hat keine zwischengespeicherte Kopie zum Vergleich.</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_relay_added">
-        <item quantity="one">fügt %1$d Relay hinzu</item>
-        <item quantity="other">fügt %1$d Relays hinzu</item>
-    </plurals>
-    <plurals name="napplet_consent_diff_relay_removed">
-        <item quantity="one">ENTFERNT %1$d Relay</item>
-        <item quantity="other">ENTFERNT %1$d Relays</item>
-    </plurals>
-    <plurals name="napplet_consent_effect_deletes">
-        <item quantity="one">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
-        <item quantity="other">⚠ Dies fordert die Löschung von %1$d deiner Ereignisse an.</item>
-    </plurals>
-    <plurals name="napplet_consent_effect_tags">
-        <item quantity="one">Enthält %1$d Tag. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
-        <item quantity="other">Enthält %1$d Tags. Tippe auf “Ereignis anzeigen”, um genau zu sehen, was signiert würde.</item>
-    </plurals>
 </resources>
