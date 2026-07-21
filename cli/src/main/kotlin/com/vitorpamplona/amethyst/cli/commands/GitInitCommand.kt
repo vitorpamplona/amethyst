@@ -53,9 +53,20 @@ object GitInitCommand {
         val toplevel = git(repoDir, "rev-parse", "--show-toplevel")?.let { File(it) }
         val derivedName = toplevel?.name
         val originUrl = git(repoDir, "remote", "get-url", "origin")?.let(::normalizeCloneUrl)
-        // The earliest unique commit is the root commit; `rev-list` prints newest
-        // first, so the last line is the initial commit.
-        val euc = git(repoDir, "rev-list", "--max-parents=0", "HEAD")?.lineSequence()?.lastOrNull { it.isNotBlank() }
+        // The earliest-unique-commit is the repo's mainline (first-parent) root
+        // commit — the cross-fork identity every NIP-34 client must agree on. A
+        // SHALLOW clone cannot know its true root (`rev-list --max-parents=0`
+        // returns the shallow-boundary commits, not the real first commit), so we
+        // must NOT derive a bogus euc there — that would announce the repo under a
+        // wrong identity and fork it away from ngit's view. `--first-parent` keeps
+        // the mainline root deterministic when a history has merged-in subtree roots.
+        val shallow = git(repoDir, "rev-parse", "--is-shallow-repository") == "true"
+        val euc =
+            if (toplevel == null || shallow) {
+                null
+            } else {
+                git(repoDir, "rev-list", "--max-parents=0", "--first-parent", "HEAD")?.lineSequence()?.lastOrNull { it.isNotBlank() }
+            }
 
         val name =
             args.flag("name") ?: derivedName
@@ -63,6 +74,13 @@ object GitInitCommand {
         val identifier = args.flag("d") ?: args.flag("identifier") ?: kebab(name)
         val cloneUrls = GitSupport.csv(args, "clone").ifEmpty { listOfNotNull(originUrl) }
         val earliestCommit = args.flag("earliest-commit") ?: euc
+        if (earliestCommit == null && toplevel != null) {
+            System.err.println(
+                "[git init] warning: could not derive the earliest-unique-commit" +
+                    (if (shallow) " (shallow clone)" else "") +
+                    " — the announcement will omit it. Pass --earliest-commit <root-commit-id> so the repo keeps a stable cross-fork identity.",
+            )
+        }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -132,7 +150,11 @@ object GitInitCommand {
         return branches + tags
     }
 
-    /** Run `git <args>` in [repoDir]; returns trimmed stdout on exit 0, else null (git missing / not a repo). */
+    /**
+     * Run `git <args>` in [repoDir]; returns trimmed stdout on exit 0, else null
+     * (git missing / not a repo). stderr is discarded straight to the OS so a
+     * chatty command can never fill its stderr pipe and deadlock the stdout read.
+     */
     private fun git(
         repoDir: File,
         vararg gitArgs: String,
@@ -141,10 +163,9 @@ object GitInitCommand {
             val proc =
                 ProcessBuilder(listOf("git", *gitArgs))
                     .directory(repoDir)
-                    .redirectErrorStream(false)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start()
             val out = proc.inputStream.readBytes().decodeToString()
-            proc.errorStream.readBytes()
             if (proc.waitFor() == 0) out.trim().ifEmpty { null } else null
         } catch (_: Exception) {
             null

@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import java.io.File
+import kotlin.concurrent.thread
 
 /**
  * `amy git apply PATCH_ID` — fetch a NIP-34 kind:1617 patch and apply it to the
@@ -105,9 +106,20 @@ object GitApplyCommand {
                     .directory(repoDir)
                     .redirectErrorStream(true)
                     .start()
-            if (input != null) proc.outputStream.use { it.write(input.toByteArray()) } else proc.outputStream.close()
+            // Feed stdin on a separate thread while we drain stdout on this one: a
+            // large patch (bigger than the OS pipe buffer) would otherwise deadlock
+            // — git blocks writing output we haven't read, we block writing stdin.
+            val writer =
+                if (input != null) {
+                    thread(name = "git-stdin") { runCatching { proc.outputStream.use { it.write(input.toByteArray()) } } }
+                } else {
+                    proc.outputStream.close()
+                    null
+                }
             val out = proc.inputStream.readBytes().decodeToString()
-            proc.waitFor() to out
+            val code = proc.waitFor()
+            writer?.join()
+            code to out
         } catch (e: Exception) {
             1 to (e.message ?: "could not run git (is it installed and is this a git repo?)")
         }

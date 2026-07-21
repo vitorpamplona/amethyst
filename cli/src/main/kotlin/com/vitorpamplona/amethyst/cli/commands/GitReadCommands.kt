@@ -82,27 +82,39 @@ object GitReadCommands {
             ctx.prepare()
             val repoAddress = GitSupport.repoCoordinate(addr)
             val relays = RawEventSupport.queryTargets(ctx, args)
-            // One drain pulls the items AND their status events (both `a`-tag the repo).
-            val received =
-                ctx.drain(
-                    relays.associateWith {
-                        listOf(Filter(kinds = listOf(itemKind) + STATUS_KINDS, tags = mapOf("a" to listOf(repoAddress)), limit = limit + 200))
-                    },
-                )
-            val events = received.map { it.second }
-            val authorities = repoAuthorities(ctx, addr, args)
-            val statuses = events.filterIsInstance<GitStatusEvent>()
 
-            val items =
-                events
+            // Two queries so item volume and status volume never starve each other
+            // (a busy repo can have far more status events than items). First page
+            // the items to the limit; then fetch exactly the status events that
+            // `e`-reference those items, so derived status is never truncated away.
+            val itemEvents =
+                ctx
+                    .drainAllPages(relays.associateWith { listOf(Filter(kinds = listOf(itemKind), tags = mapOf("a" to listOf(repoAddress)), limit = limit)) })
+                    .asSequence()
+                    .map { it.second }
                     .filter { it.kind == itemKind }
                     .distinctBy { it.id }
                     .sortedByDescending { it.createdAt }
-                    .map { item ->
-                        val status = latestStatus(item, statuses, authorities)
-                        GitSupport.targetSummary(item) + mapOf("status" to status)
-                    }.filter { wanted == null || it["status"] in wanted }
                     .take(limit)
+                    .toList()
+
+            val itemIds = itemEvents.map { it.id }
+            val statuses =
+                if (itemIds.isEmpty()) {
+                    emptyList()
+                } else {
+                    ctx
+                        .drain(relays.associateWith { listOf(Filter(kinds = STATUS_KINDS, tags = mapOf("e" to itemIds))) })
+                        .map { it.second }
+                        .filterIsInstance<GitStatusEvent>()
+                        .distinctBy { it.id }
+                }
+            val authorities = repoAuthorities(ctx, addr, args)
+
+            val items =
+                itemEvents
+                    .map { item -> GitSupport.targetSummary(item) + mapOf("status" to latestStatus(item, statuses, authorities)) }
+                    .filter { wanted == null || it["status"] in wanted }
 
             Output.emit(mapOf("repository" to repoAddress, "count" to items.size, "items" to items))
             return 0

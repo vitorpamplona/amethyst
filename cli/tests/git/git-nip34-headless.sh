@@ -119,15 +119,33 @@ done
 grep -q "relay up at" "$LOG_FILE" || { fail_msg "relay did not come up"; exit 1; }
 
 # =============================================================================
-# git init — bootstrap from the local git checkout (this repo)
+# git init — bootstrap from a local (full, non-shallow) git checkout
 # =============================================================================
-banner "git init (from the amethyst checkout)"
-INIT="$(M git init --repo "$REPO_ROOT" --relay "$RELAY_URL")"
+banner "git init (from a full scratch checkout)"
+INITREPO="$(mk_home)/initrepo"
+git init -q "$INITREPO"
+git -C "$INITREPO" config user.email a@b.c
+git -C "$INITREPO" config user.name t
+echo "hello" >"$INITREPO/README.md"
+git -C "$INITREPO" add README.md
+git -C "$INITREPO" commit -qm "initial commit"
+ROOT_COMMIT="$(git -C "$INITREPO" rev-list --max-parents=0 --first-parent HEAD | tail -1)"
+INIT="$(M git init --repo "$INITREPO" --relay "$RELAY_URL")"
 info "init: $INIT"
 assert_eq "$(echo "$INIT" | jq -r '.from_git_repo')" "true" init.from_git "init derived fields from the git repo"
 assert_nonempty "$(echo "$INIT" | jq -r '.name')" init.name "repo name derived"
-assert_nonempty "$(echo "$INIT" | jq -r '.earliest_commit')" init.euc "earliest-unique-commit derived from git"
+assert_eq "$(echo "$INIT" | jq -r '.earliest_commit')" "$ROOT_COMMIT" init.euc "earliest-unique-commit is the first-parent root"
 assert_nonempty "$(echo "$INIT" | jq -r '.state_event_id')" init.state "init also published a 30618 state event"
+
+# A SHALLOW clone must NOT invent an euc (it can't know the true root).
+SHALLOWREPO="$(mk_home)/shallowrepo"
+git clone -q --depth 1 "file://$INITREPO" "$SHALLOWREPO" 2>/dev/null || git clone -q --depth 1 "$INITREPO" "$SHALLOWREPO"
+if [[ "$(git -C "$SHALLOWREPO" rev-parse --is-shallow-repository)" == "true" ]]; then
+  SINIT="$(M git init --repo "$SHALLOWREPO" --d shallow-test --relay "$RELAY_URL")"
+  assert_eq "$(echo "$SINIT" | jq -r '.earliest_commit')" "null" init.shallow_euc "shallow clone omits the euc (no wrong identity)"
+else
+  skip_msg "could not create a shallow clone for init.shallow_euc"
+fi
 
 # =============================================================================
 # Repository announcement (30617) + state (30618)

@@ -66,13 +66,13 @@ class GitRepositoryEvent(
      * `["web", url1]` / `["web", url2]` form, so a repo announced by any client
      * round-trips without dropping URLs.
      */
-    fun webs(): List<String> = tags.flatMap(WebTag::parseAll)
+    fun webs(): List<String> = tags.flatMap(WebTag::parseAll).distinct()
 
     /** First clone URL, for backwards compatibility. Prefer [clones]. */
     fun clone() = clones().firstOrNull()
 
-    /** All clone URLs — tolerant of both the multi-value and repeated forms (see [webs]). */
-    fun clones(): List<String> = tags.flatMap(CloneTag::parseAll)
+    /** All clone URLs — tolerant of both the multi-value and repeated forms (see [webs]); deduped. */
+    fun clones(): List<String> = tags.flatMap(CloneTag::parseAll).distinct()
 
     /**
      * Relays the repository author monitors for patches and issues. NIP-34

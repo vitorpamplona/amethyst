@@ -245,5 +245,9 @@ object GitBrowseCommands {
         )
 
     /** A blob is treated as binary when it contains a NUL byte in its head. */
-    private fun isBinary(bytes: ByteArray): Boolean = bytes.take(8000).any { it.toInt() == 0 }
+    private fun isBinary(bytes: ByteArray): Boolean {
+        val end = minOf(8000, bytes.size)
+        for (i in 0 until end) if (bytes[i].toInt() == 0) return true
+        return false
+    }
 }
