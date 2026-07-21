@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  * assigned Role and holds [ConcordPermissions.MANAGE_ROLES]. Cycles that never
  * touch the owner can never bootstrap themselves.
  */
-class AuthorityResolver private constructor(
+data class AuthorityResolver private constructor(
     private val ownerLower: String,
     private val roles: Map<String, RoleEntity>,
     private val memberRoles: Map<String, Set<String>>,

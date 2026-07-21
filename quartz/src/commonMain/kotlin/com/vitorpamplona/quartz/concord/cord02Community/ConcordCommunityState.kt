@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.asFloor
 
 /** A channel id paired with its current folded definition. */
-class ConcordChannel(
+data class ConcordChannel(
     val channelIdHex: String,
     val definition: ChannelEntity,
 )
@@ -49,7 +49,7 @@ class ConcordChannel(
  * "Every member keeps the entire Control Plane in sync — it is small and must
  * stay complete." Recompute this whenever the known editions change.
  */
-class ConcordCommunityState(
+data class ConcordCommunityState(
     val ownerPubKey: String,
     val metadata: MetadataEntity?,
     val channels: Map<String, ConcordChannel>,
