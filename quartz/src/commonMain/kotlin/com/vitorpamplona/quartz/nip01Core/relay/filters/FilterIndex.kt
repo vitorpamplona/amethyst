@@ -22,6 +22,11 @@ package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.PersistentSet
+import kotlinx.collections.immutable.persistentHashMapOf
+import kotlinx.collections.immutable.persistentHashSetOf
+import kotlinx.collections.immutable.toPersistentHashSet
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -62,9 +67,10 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * copy-on-write CAS loops, mirroring the
  * `nip86RelayManagement.server.BanStore` pattern. Reads in
  * [candidatesFor] and [forEach] are wait-free single-load atomic.
- * Writes (subscription register / unregister) copy the inner maps
- * — fine for this workload because writes are subscription-rate
- * (rare) while reads are event-rate (frequent).
+ * Writes (subscription register / unregister) build the next snapshot
+ * from persistent (HAMT) maps — O(keys × log S) with structural
+ * sharing rather than a full O(S) copy of both maps, since on a relay
+ * a write happens on every REQ open and close.
  *
  * ## What the index does NOT cover
  *
@@ -113,10 +119,16 @@ class FilterIndex<S : Any> {
      * subscribers registered under it; [assignments] is the reverse
      * map used by [unregister] to find a subscriber's keys without
      * scanning every bucket.
+     *
+     * Persistent (HAMT) maps/sets: a register/unregister produces the
+     * next snapshot in O(keys × log S) with structural sharing, instead
+     * of copying both full maps — registration happens on every REQ
+     * open/close, so with S live subscriptions the full copy was
+     * O(S) work and O(S) allocation per REQ.
      */
     private data class State<S>(
-        val buckets: Map<BucketKey, Set<S>> = emptyMap(),
-        val assignments: Map<S, Set<BucketKey>> = emptyMap(),
+        val buckets: PersistentMap<BucketKey, PersistentSet<S>> = persistentHashMapOf(),
+        val assignments: PersistentMap<S, PersistentSet<BucketKey>> = persistentHashMapOf(),
     )
 
     private val state: AtomicReference<State<S>> = AtomicReference(State())
@@ -181,17 +193,18 @@ class FilterIndex<S : Any> {
         while (true) {
             val current = state.load()
             val keys = current.assignments[subscriber] ?: return
-            val newBuckets = current.buckets.toMutableMap()
+            var newBuckets = current.buckets
             for (key in keys) {
                 val cur = newBuckets[key] ?: continue
-                val next = cur - subscriber
-                if (next.isEmpty()) {
-                    newBuckets.remove(key)
-                } else {
-                    newBuckets[key] = next
-                }
+                val next = cur.remove(subscriber)
+                newBuckets =
+                    if (next.isEmpty()) {
+                        newBuckets.remove(key)
+                    } else {
+                        newBuckets.put(key, next)
+                    }
             }
-            val newAssignments = current.assignments - subscriber
+            val newAssignments = current.assignments.remove(subscriber)
             if (state.compareAndSet(current, State(newBuckets, newAssignments))) return
         }
     }
@@ -235,18 +248,18 @@ class FilterIndex<S : Any> {
         keys: List<BucketKey>,
     ) {
         if (keys.isEmpty()) return
-        val keySet = keys.toSet()
+        val keySet = keys.toPersistentHashSet()
         while (true) {
             val current = state.load()
-            val newBuckets = current.buckets.toMutableMap()
+            var newBuckets = current.buckets
             for (key in keySet) {
-                val cur = newBuckets[key] ?: emptySet()
-                if (subscriber in cur) continue
-                newBuckets[key] = cur + subscriber
+                val cur = newBuckets[key] ?: persistentHashSetOf()
+                val next = cur.add(subscriber)
+                if (next !== cur) newBuckets = newBuckets.put(key, next)
             }
             val existing = current.assignments[subscriber]
-            val merged = if (existing == null) keySet else existing + keySet
-            val newAssignments = current.assignments + (subscriber to merged)
+            val merged = existing?.addAll(keySet) ?: keySet
+            val newAssignments = current.assignments.put(subscriber, merged)
             if (state.compareAndSet(current, State(newBuckets, newAssignments))) return
         }
     }

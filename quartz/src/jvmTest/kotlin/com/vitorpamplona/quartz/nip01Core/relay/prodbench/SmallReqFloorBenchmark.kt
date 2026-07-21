@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -65,6 +66,7 @@ class SmallReqFloorBenchmark {
         const val AUTHORS = 2_500 // ~20 events per author, matching author-archive
         const val ROUNDS = 400
         const val WARMUP = 100
+        const val IDLE_SUBS = 1_000
     }
 
     private fun hexId(seed: Int): String = seed.toString(16).padStart(64, '0')
@@ -122,11 +124,14 @@ class SmallReqFloorBenchmark {
             }
 
             // --- B: backend queryRaw to EOSE (live machinery included) ---
+            // UNDISPATCHED mirrors the production path (RelaySession.handleReq
+            // starts the query coroutine undispatched), so B−A is the live
+            // machinery itself, not a benchmark-only scheduler hop.
             suspend fun timeBackend(round: Int): Long {
                 val eose = CompletableDeferred<Long>()
                 val t0 = System.nanoTime()
                 val job =
-                    scope.launch {
+                    scope.launch(start = CoroutineStart.UNDISPATCHED) {
                         live.queryRaw(
                             ctx = ctx,
                             filters = listOf(filterFor(round)),
@@ -142,6 +147,33 @@ class SmallReqFloorBenchmark {
             repeat(WARMUP) { timeBackend(it) }
             val b = LongArray(ROUNDS)
             repeat(ROUNDS) { b[it] = timeBackend(it) }
+
+            // --- B@1k: same, with 1000 idle live subscriptions parked ---
+            // Register/unregister cost scales with the live population
+            // (FilterIndex mutates a shared snapshot per REQ open/close),
+            // which the single-sub stage can't see. Each idle sub filters
+            // on an author absent from the corpus: 0-row replay, then parks
+            // at the live tail and stays registered.
+            val idleJobs =
+                (0 until IDLE_SUBS).map { i ->
+                    val ready = CompletableDeferred<Unit>()
+                    val job =
+                        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                            live.queryRaw(
+                                ctx = ctx,
+                                filters = listOf(Filter(authors = listOf(hexId(1_000_000 + i)), kinds = listOf(1), limit = 1)),
+                                onEachStored = {},
+                                onEachLive = {},
+                                onEose = { ready.complete(Unit) },
+                            )
+                        }
+                    ready.await()
+                    job
+                }
+            repeat(WARMUP) { timeBackend(it) }
+            val b1k = LongArray(ROUNDS)
+            repeat(ROUNDS) { b1k[it] = timeBackend(it) }
+            idleJobs.forEach { it.cancel() }
 
             // --- C: full session dispatch, REQ json in → EOSE frame out ---
             suspend fun timeSession(round: Int): Long {
@@ -164,10 +196,12 @@ class SmallReqFloorBenchmark {
 
             val mA = median(a)
             val mB = median(b)
+            val mB1k = median(b1k)
             val mC = median(c)
             println("SmallReqFloorBenchmark @ ${EVENTS / 1000}k events, ~${rowsA / ROUNDS} rows/req, medians of $ROUNDS")
             println("  A raw store query:        ${"%6.3f".format(mA)} ms")
             println("  B backend queryRaw→EOSE:  ${"%6.3f".format(mB)} ms  (live machinery +${"%6.3f".format(mB - mA)})")
+            println("  B@${IDLE_SUBS} idle subs:      ${"%6.3f".format(mB1k)} ms  (population cost +${"%6.3f".format(mB1k - mB)})")
             println("  C session REQ→EOSE:       ${"%6.3f".format(mC)} ms  (dispatch+frames +${"%6.3f".format(mC - mB)})")
 
             server.close()
