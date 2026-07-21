@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -55,6 +56,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -169,6 +171,8 @@ private object PrefKeys {
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
     const val LATEST_RELAY_GROUP_LIST = "latestRelayGroupList"
     const val LATEST_TRUST_PROVIDER_LIST = "latestTrustProviderList"
+    const val LATEST_KEY_PACKAGE_RELAY_LIST = "latestKeyPackageRelayList"
+    const val LATEST_FAVORITE_ALGO_FEEDS_LIST = "latestFavoriteAlgoFeedsList"
     const val CALLS_ENABLED = "calls_enabled"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
@@ -578,6 +582,8 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
                     putOrRemove(PrefKeys.LATEST_RELAY_GROUP_LIST, settings.backupRelayGroupList)
                     putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
+                    putOrRemove(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, settings.backupKeyPackageRelayList)
+                    putOrRemove(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, settings.backupFavoriteAlgoFeedsList)
                     putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
                     putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
                     putOrRemove(PrefKeys.LATEST_NUTZAP_INFO, settings.backupNutzapInfo)
@@ -764,6 +770,8 @@ object LocalPreferences {
                     val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
                     val latestRelayGroupListStr = getString(PrefKeys.LATEST_RELAY_GROUP_LIST, null)
                     val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
+                    val latestKeyPackageRelayListStr = getString(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, null)
+                    val latestFavoriteAlgoFeedsListStr = getString(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, null)
                     val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
                     val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
                     val latestNutzapInfoStr = getString(PrefKeys.LATEST_NUTZAP_INFO, null)
@@ -824,6 +832,8 @@ object LocalPreferences {
                     val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
                     val latestRelayGroupList = async { parseEventOrNull<SimpleGroupListEvent>(latestRelayGroupListStr) }
                     val latestTrustProviderList = async { parseEventOrNull<TrustProviderListEvent>(latestTrustProviderListStr) }
+                    val latestKeyPackageRelayList = async { parseEventOrNull<KeyPackageRelayListEvent>(latestKeyPackageRelayListStr) }
+                    val latestFavoriteAlgoFeedsList = async { parseEventOrNull<FavoriteAlgoFeedsListEvent>(latestFavoriteAlgoFeedsListStr) }
                     val latestPaymentTargets = async { parseEventOrNull<PaymentTargetsEvent>(latestPaymentTargetsStr) }
                     val latestCashuWallet =
                         async {
@@ -876,6 +886,8 @@ object LocalPreferences {
                     val latestEphemeralListResolved = latestEphemeralList.await()
                     val latestRelayGroupListResolved = latestRelayGroupList.await()
                     val latestTrustProviderListResolved = latestTrustProviderList.await()
+                    val latestKeyPackageRelayListResolved = latestKeyPackageRelayList.await()
+                    val latestFavoriteAlgoFeedsListResolved = latestFavoriteAlgoFeedsList.await()
                     val latestPaymentTargetsResolved = latestPaymentTargets.await()
                     val latestCashuWalletResolved = latestCashuWallet.await()
                     val latestNutzapInfoResolved = latestNutzapInfo.await()
@@ -970,6 +982,8 @@ object LocalPreferences {
                         backupEphemeralChatList = latestEphemeralListResolved,
                         backupRelayGroupList = latestRelayGroupListResolved,
                         backupTrustProviderList = latestTrustProviderListResolved,
+                        backupKeyPackageRelayList = latestKeyPackageRelayListResolved,
+                        backupFavoriteAlgoFeedsList = latestFavoriteAlgoFeedsListResolved,
                         lastReadPerRoute = MutableStateFlow(lastReadPerRouteResolved),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
