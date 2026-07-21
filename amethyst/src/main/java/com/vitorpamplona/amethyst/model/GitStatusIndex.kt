@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.model
 import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
@@ -72,36 +71,12 @@ object GitStatusIndex {
         val latest = HashMap<HexKey, GitStatusEvent>()
         for (event in events) {
             val target = event.rootEventId() ?: continue
-            if (!isAuthoritative(event, target)) continue
             val current = latest[target]
             if (current == null || event.createdAt > current.createdAt) {
                 latest[target] = event
             }
         }
         return latest
-    }
-
-    /**
-     * NIP-34: only the repository owner, a declared maintainer, or the target
-     * item's own author may set its status — "the newest Status from the root
-     * author or a maintainer is valid". Without this filter any pubkey could
-     * publish a kind-1632 and make someone else's issue render closed.
-     *
-     * The owner is read from the status's own `a` tag (so it holds even before
-     * the announcement is cached); the maintainer set needs the cached kind-30617
-     * (falling back to owner/author-only until it arrives — the safe default is to
-     * treat an unverifiable status as absent, i.e. the item stays open).
-     */
-    private fun isAuthoritative(
-        status: GitStatusEvent,
-        targetId: HexKey,
-    ): Boolean {
-        status.repositoryAddress()?.let { repoAddress ->
-            if (status.pubKey == repoAddress.pubKeyHex) return true
-            val repo = LocalCache.getAddressableNoteIfExists(repoAddress)?.event as? GitRepositoryEvent
-            if (repo != null && status.pubKey in repo.maintainers()) return true
-        }
-        return status.pubKey == LocalCache.getNoteIfExists(targetId)?.event?.pubKey
     }
 
     /**
