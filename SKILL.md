@@ -24,7 +24,9 @@ Build customized Amethyst Nostr clients for Android. Fork, rebrand, customize, a
 
 2. **Android SDK**
    - Command-line tools from https://developer.android.com/studio#command-line-tools-only
-   - Required components: build-tools, platform-tools, platforms;android-35
+   - Required components: build-tools, platform-tools, platforms;android-37
+   - The exact SDK level is `android-compileSdk` in `gradle/libs.versions.toml` —
+     check there if this number has drifted.
 
 3. **Git** for cloning the repository
 
@@ -66,48 +68,54 @@ keyPassword=your-password
 
 ### 3. Configure Signing
 
-Add to `amethyst/build.gradle` inside the `android {}` block:
+Add to `amethyst/build.gradle.kts` inside the `android {}` block:
 
-```gradle
-def keystorePropertiesFile = rootProject.file("keystore.properties")
-def keystoreProperties = new Properties()
+```kotlin
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 signingConfigs {
-    release {
+    create("release") {
         if (keystorePropertiesFile.exists()) {
-            storeFile rootProject.file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
+            storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
         }
     }
 }
 ```
 
+This needs `import java.util.Properties` at the top of the file.
+
 Update the release buildType to use the signing config:
-```gradle
+```kotlin
 buildTypes {
-    release {
-        signingConfig signingConfigs.release
+    getByName("release") {
+        signingConfig = signingConfigs.getByName("release")
         // ... existing config
     }
 }
 ```
 
+Verify with `./gradlew :amethyst:signingReport` — the release variants should
+report your keystore rather than `~/.android/debug.keystore`.
+
 ### 4. Disable Google Services (Required for F-Droid)
 
 **⚠️ CRITICAL:** The Google Services plugin fails when you change the package name. For F-Droid builds, disable it.
 
-Edit `amethyst/build.gradle`, comment out the plugin:
-```gradle
+Edit `amethyst/build.gradle.kts`, comment out the plugin:
+```kotlin
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
     // alias(libs.plugins.googleServices)  // DISABLED for F-Droid
     alias(libs.plugins.jetbrainsComposeCompiler)
+    alias(libs.plugins.serialization)
+    alias(libs.plugins.googleKsp)
 }
 ```
 
@@ -141,8 +149,8 @@ Edit `amethyst/src/main/res/values/strings.xml`:
 
 ### Change Package ID
 
-Edit `amethyst/build.gradle`:
-```gradle
+Edit `amethyst/build.gradle.kts`:
+```kotlin
 android {
     defaultConfig {
         applicationId = "com.yourcompany.yourapp"
@@ -152,8 +160,8 @@ android {
 
 ### Change Project Name
 
-Edit `settings.gradle`:
-```gradle
+Edit `settings.gradle.kts`:
+```kotlin
 rootProject.name = "YourAppName"
 ```
 
@@ -167,36 +175,28 @@ Replace icon files in:
 
 Make your app identify itself on posts with `["client", "YourAppName"]`.
 
-**1. Create tag builder extension:**
+You do **not** need to add the tag per event type. The client tag is applied
+centrally by `NostrSignerWithClientTag`, a signer decorator that appends the tag
+to everything it signs (and respects the user's "add client tag" privacy
+setting). Changing the name is a one-constant edit:
 
-Create `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/tags/clientTag/TagArrayBuilderExt.kt`:
+Edit `amethyst/src/main/java/com/vitorpamplona/amethyst/model/accountsCache/AccountCacheState.kt`:
 ```kotlin
-package com.vitorpamplona.quartz.nip01Core.tags.clientTag
-
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-
-fun <T : Event> TagArrayBuilder<T>.client(clientName: String) = 
-    addUnique(arrayOf(ClientTag.TAG_NAME, clientName))
+const val CLIENT_TAG_NAME = "YourAppName"
 ```
 
-**2. Add to TextNoteEvent:**
+That constant is passed to `NostrSignerWithClientTag` when the account's signer
+is built, so every signed event carries your name.
 
-Edit `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip10Notes/TextNoteEvent.kt`:
-
-Add import:
-```kotlin
-import com.vitorpamplona.quartz.nip01Core.tags.clientTag.client
-```
-
-In both `build()` functions, add after `alt(...)`:
-```kotlin
-client("YourAppName")
-```
+The tag itself lives in
+`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip89AppHandlers/clientTag/`
+(`ClientTag`, `TagArrayBuilderExt`, `NostrSignerWithClientTag`) — you only need to
+touch it if you want the optional NIP-89 handler address / relay hint variants.
 
 ### Modify Default Relays
 
-Edit relay configuration in `quartz/src/main/java/com/vitorpamplona/quartz/nip01Core/relay/` or the UI settings files.
+Edit `commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/defaults/Constants.kt`
+(see also `AmethystDefaults.kt` and `DefaultDmIndexerRelays.kt` in the same folder).
 
 ## Troubleshooting
 
