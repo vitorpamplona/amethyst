@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -85,6 +90,28 @@ val RELAY_GROUP_STATE_KINDS = RELAY_GROUP_METADATA_KINDS + RELAY_GROUP_PIN_KINDS
 /** Timeline kinds shown in a group's chat — chat messages and polls. */
 val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
+/**
+ * Extra timeline kinds a `block/buzz` workspace relay serves in the same `h`-scoped
+ * channels: stream messages v2 (40002), edits (40003), diffs (40008) and system rows
+ * (40099). Only requested from relays [BuzzRelayDialect] has marked — harmless
+ * elsewhere, but there is no reason to widen every vanilla NIP-29 REQ.
+ */
+val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
+    listOf(
+        StreamMessageV2Event.KIND,
+        StreamMessageEditEvent.KIND,
+        StreamMessageDiffEvent.KIND,
+        SystemMessageEvent.KIND,
+    )
+
+/** The timeline kinds to request from [relay]: the NIP-29 set, plus Buzz kinds on Buzz relays. */
+fun relayGroupTimelineKinds(relay: NormalizedRelayUrl): List<Int> =
+    if (BuzzRelayDialect.isBuzz(relay)) {
+        RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS
+    } else {
+        RELAY_GROUP_TIMELINE_KINDS
+    }
+
 /** Forum-thread kinds shown in a group's Threads tab. */
 val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND)
 
@@ -146,7 +173,7 @@ fun buildRelayGroupJoinedChatTailFilters(
             relay = relay,
             filter =
                 Filter(
-                    kinds = RELAY_GROUP_TIMELINE_KINDS,
+                    kinds = relayGroupTimelineKinds(relay),
                     tags = mapOf(GroupIdTag.TAG_NAME to ids.distinct()),
                     since = sinceEpoch,
                 ),
@@ -162,7 +189,7 @@ fun buildRelayGroupOpenChatTailFilter(
         relay = groupId.relayUrl,
         filter =
             Filter(
-                kinds = RELAY_GROUP_TIMELINE_KINDS,
+                kinds = relayGroupTimelineKinds(groupId.relayUrl),
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
             ),
@@ -185,7 +212,7 @@ fun buildRelayGroupHistoryFilters(
             relay = relay,
             filter =
                 Filter(
-                    kinds = RELAY_GROUP_TIMELINE_KINDS,
+                    kinds = relayGroupTimelineKinds(relay),
                     tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                     until = until,
                     limit = limit,

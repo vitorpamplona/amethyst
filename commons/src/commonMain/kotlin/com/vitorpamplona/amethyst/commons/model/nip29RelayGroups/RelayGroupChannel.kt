@@ -52,7 +52,7 @@ import kotlinx.coroutines.flow.StateFlow
  * host relay, so every read and write is pinned there via [relays].
  */
 @Stable
-class RelayGroupChannel(
+open class RelayGroupChannel(
     val groupId: GroupId,
 ) : Channel() {
     /**

@@ -116,6 +116,35 @@ Interop lessons encoded in the test:
   treated as absent and channel-scoped kinds are rejected.
 - The channel must exist (9007) before channel-scoped kinds are accepted.
 
+## Client integration (commons + amethyst)
+
+Buzz workspaces surface in Amethyst as **NIP-29 groups in the Buzz dialect** — one
+group model, two dialect renderers, and no impact on vanilla groups (feeds are
+kind-filtered, so they can never receive Buzz kinds by accident):
+
+- `commons/.../model/buzz/BuzzRelayDialect.kt` — per-relay capability registry.
+  Detection is event-shape based: the first Buzz-only kind consumed from a relay marks
+  it (no false positives — vanilla relays never serve those kinds). NIP-11 marking can
+  be added later for pre-connect detection.
+- `commons/.../model/buzz/BuzzWorkspaceChannel.kt` — sibling of `RelayGroupChannel`
+  (which is now `open`). Holds Buzz-only channel state: the kind-40003 **edit overlay**
+  (never render superseded text as current) and the newest kind-40100 **canvas**.
+  Kind-9 chat and kind-40002 stream messages share ONE timeline per group, so
+  mixed-dialect conversations stay whole.
+- `amethyst LocalCache` consumes every registered Buzz kind (they previously fell into
+  the "Event Not Supported" branch): timeline kinds attach to the group's
+  `BuzzWorkspaceChannel` (materialized dialect-aware, with an in-place upgrade when the
+  dialect is discovered after the channel was first created), addressables store
+  replaceably, the rest store as queryable regular events, and ephemeral signals
+  (typing 20002, observer 24200, huddle reactions 24810, pairing 24134) mark the
+  dialect but are deliberately not persisted.
+- The group-chat REQ builders (`RelayGroupFilterBuilders`) widen their timeline kind
+  set with 40002/40003/40008/40099 **only for marked relays**, so vanilla NIP-29 REQs
+  are untouched.
+
+Not yet wired: kind-aware rendering of 40002/40099/diff rows in the chat UI, the
+composer switch (write 40002 on Buzz relays), and NIP-42-at-connect workspace sessions.
+
 ## Owner Attestation (NIP-OA) — implemented
 
 The primitive that makes "agents as first-class members" work without enrolling every
