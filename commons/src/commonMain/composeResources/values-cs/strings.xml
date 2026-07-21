@@ -145,4 +145,11 @@
         <item quantity="many">%1$d událostí</item>
         <item quantity="other">%1$d událostí</item>
     </plurals>
+    <string name="podcast_value_for_value">Value-for-Value</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="few">%1$d relaye</item>
+        <item quantity="many">%1$d relaye</item>
+        <item quantity="other">%1$d relayů</item>
+    </plurals>
 </resources>

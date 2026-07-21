@@ -140,4 +140,5 @@
         <item quantity="one">%1$d händelse</item>
         <item quantity="other">%1$d händelser</item>
     </plurals>
+    <string name="ps1_save_block">block %1$d</string>
 </resources>
