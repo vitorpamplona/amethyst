@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
@@ -38,6 +39,9 @@ import kotlin.concurrent.thread
  * This shells out to `git`, like `git init` — it operates on the local checkout.
  */
 object GitApplyCommand {
+    /** Safety ceiling for the local `git am`/`git apply` invocation so a wedged git can't hang the CLI. */
+    private const val GIT_TIMEOUT_SEC = 60L
+
     suspend fun apply(
         dataDir: DataDir,
         rest: Array<String>,
@@ -101,17 +105,18 @@ object GitApplyCommand {
         vararg gitArgs: String,
     ): Pair<Int, String> {
         var writer: Thread? = null
+        var reader: Thread? = null
         return try {
             val proc =
                 ProcessBuilder(listOf("git", *gitArgs))
                     .directory(repoDir)
                     .redirectErrorStream(true)
                     .start()
-            // Feed stdin on a separate thread while we drain stdout on this one: a
-            // large patch (bigger than the OS pipe buffer) would otherwise deadlock
-            // — git blocks writing output we haven't read, we block writing stdin.
-            // The patch was decoded as UTF-8, so write it back as UTF-8 (not the JVM
-            // default charset, which would corrupt non-ASCII filenames/messages).
+            // Feed stdin AND drain stdout on side threads: a large patch (bigger than
+            // the OS pipe buffer) would otherwise deadlock, and reading on this thread
+            // would block an unbounded wait. The patch was decoded as UTF-8, so write
+            // it back as UTF-8 (not the JVM default charset, which would corrupt
+            // non-ASCII filenames/messages).
             writer =
                 if (input != null) {
                     thread(name = "git-stdin") { runCatching { proc.outputStream.use { it.write(input.toByteArray(Charsets.UTF_8)) } } }
@@ -119,14 +124,22 @@ object GitApplyCommand {
                     proc.outputStream.close()
                     null
                 }
-            val out = proc.inputStream.readBytes().decodeToString()
-            proc.waitFor() to out
+            val sb = StringBuilder()
+            reader = thread(name = "git-out") { runCatching { sb.append(proc.inputStream.readBytes().decodeToString()) } }
+            if (!proc.waitFor(GIT_TIMEOUT_SEC, TimeUnit.SECONDS)) {
+                proc.destroyForcibly()
+                124 to "git timed out after ${GIT_TIMEOUT_SEC}s"
+            } else {
+                reader.join()
+                proc.exitValue() to sb.toString()
+            }
         } catch (e: Exception) {
             1 to (e.message ?: "could not run git (is it installed and is this a git repo?)")
         } finally {
-            // Always join so a non-daemon stdin thread can't outlive the call (e.g.
+            // Always join so the non-daemon side threads can't outlive the call (e.g.
             // under the in-process test harness, which doesn't exitProcess).
-            writer?.join()
+            writer?.join(1_000)
+            reader?.join(1_000)
         }
     }
 }

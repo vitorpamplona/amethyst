@@ -177,6 +177,11 @@ assert_eq "$(M git show "$IADDR" --relay "$RELAY_URL" | jq -r '.clone | length')
 IISS="$(M git issue "$IADDR" --subject "interop" "b" --relay "$RELAY_URL" | jq -r '.event_id')"
 IOWNER="$(echo "$IADDR" | cut -d: -f2)"
 assert_eq "$(M fetch --id "$IISS" --relay "$RELAY_URL" | jq -r "[.events[0].tags[] | select(.[0]==\"p\" and .[1]==\"$IOWNER\")] | length")" "1" interop.issue_ptag "issue carries the repo owner p tag"
+# A PR (1618) also carries clone URLs as ONE multi-value tag (same fix as 30617).
+IPR="$(M git pr "$IADDR" --commit tip1 --clone https://c1.git,https://c2.git --subject s --relay "$RELAY_URL" | jq -r '.event_id')"
+IPRTAGS="$(M fetch --id "$IPR" --relay "$RELAY_URL")"
+assert_eq "$(echo "$IPRTAGS" | jq -r '[.events[0].tags[] | select(.[0]=="clone")] | length')" "1" interop.pr_clone_single "PR clone is one tag"
+assert_eq "$(echo "$IPRTAGS" | jq -r '.events[0].tags[] | select(.[0]=="clone") | length')" "3" interop.pr_clone_multivalue "PR clone tag carries both URLs"
 
 # GRASP server list (10317) round-trip.
 GRASP="$(M git grasp set "wss://grasp.example.com,wss://grasp2.example.com" --relay "$RELAY_URL")"

@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import java.io.File
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * `amy git init` — bootstrap a NIP-34 repository from the local git checkout,
@@ -42,6 +44,9 @@ import java.io.File
  * about the local working tree, exactly like the `ngit`/`nak git` `init`.
  */
 object GitInitCommand {
+    /** Safety ceiling for a single local `git` invocation; a normal read-only op finishes in milliseconds. */
+    private const val GIT_TIMEOUT_SEC = 60L
+
     suspend fun init(
         dataDir: DataDir,
         rest: Array<String>,
@@ -171,8 +176,18 @@ object GitInitCommand {
                     .directory(repoDir)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start()
-            val out = proc.inputStream.readBytes().decodeToString()
-            if (proc.waitFor() == 0) out.trim().ifEmpty { null } else null
+            // Drain stdout on a side thread and bound the wait: a wedged git (a
+            // hung filter/hook, a credential prompt) must not hang the CLI forever.
+            val sb = StringBuilder()
+            val reader = thread(name = "git-out") { runCatching { sb.append(proc.inputStream.readBytes().decodeToString()) } }
+            if (!proc.waitFor(GIT_TIMEOUT_SEC, TimeUnit.SECONDS)) {
+                proc.destroyForcibly()
+                reader.join(1_000)
+                null
+            } else {
+                reader.join()
+                if (proc.exitValue() == 0) sb.toString().trim().ifEmpty { null } else null
+            }
         } catch (_: Exception) {
             null
         }

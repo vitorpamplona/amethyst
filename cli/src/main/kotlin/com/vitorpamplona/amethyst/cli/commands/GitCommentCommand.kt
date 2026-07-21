@@ -44,7 +44,13 @@ object GitCommentCommand {
     ): Int {
         val args = Args(rest)
         val targetRef = args.positional(0, "target-event-or-repo")
-        val body = (args.positionalOrNull(1) ?: System.`in`.readBytes().decodeToString()).trim()
+        val bodyArg = args.positionalOrNull(1)
+        // Never block on an interactive TTY: amy is non-interactive, so require the
+        // body as an argument unless it's actually being piped in.
+        if (bodyArg == null && System.console() != null) {
+            return Output.error("bad_args", "comment body required as an argument (or piped on stdin)")
+        }
+        val body = (bodyArg ?: System.`in`.readBytes().decodeToString()).trim()
         if (body.isBlank()) return Output.error("bad_args", "empty comment (pass BODY as an argument or on stdin)")
         args.rejectUnknown("relay")
 

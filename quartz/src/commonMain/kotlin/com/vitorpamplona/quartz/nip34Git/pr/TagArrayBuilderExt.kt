@@ -46,6 +46,9 @@ fun TagArrayBuilder<GitPullRequestEvent>.currentCommit(commit: String) = addUniq
 
 fun TagArrayBuilder<GitPullRequestEvent>.cloneUrl(url: String) = add(CloneTag.assemble(url))
 
+/** Emit all clone URLs as one NIP-34 multi-value `["clone", url1, url2, …]` tag (the spec/ngit form). */
+fun TagArrayBuilder<GitPullRequestEvent>.cloneUrls(urls: List<String>) = addUnique(CloneTag.assemble(urls))
+
 fun TagArrayBuilder<GitPullRequestEvent>.subject(subject: String) = addUnique(SubjectTag.assemble(subject))
 
 fun TagArrayBuilder<GitPullRequestEvent>.branchName(name: String) = addUnique(BranchNameTag.assemble(name))

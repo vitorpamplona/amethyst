@@ -43,6 +43,9 @@ fun TagArrayBuilder<GitPullRequestUpdateEvent>.currentCommit(commit: String) = a
 
 fun TagArrayBuilder<GitPullRequestUpdateEvent>.cloneUrl(url: String) = add(CloneTag.assemble(url))
 
+/** Emit all clone URLs as one NIP-34 multi-value `["clone", url1, url2, …]` tag (the spec/ngit form). */
+fun TagArrayBuilder<GitPullRequestUpdateEvent>.cloneUrls(urls: List<String>) = addUnique(CloneTag.assemble(urls))
+
 fun TagArrayBuilder<GitPullRequestUpdateEvent>.mergeBase(commit: String) = addUnique(MergeBaseTag.assemble(commit))
 
 /** Adds the NIP-22 `E` tag pointing at the parent Pull Request. */

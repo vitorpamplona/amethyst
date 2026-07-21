@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip34Git
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -100,6 +101,28 @@ class GitNip34InteropTest {
         val tmpl = GitIssueEvent.build("subject", "body", EventHintBundle(repoEvent), emptyList(), emptyList())
         val pTags = tmpl.tags.filter { it[0] == "p" }.map { it[1] }
         assertTrue(owner in pTags, "issue must p-tag the repository owner for maintainer routing")
+    }
+
+    @Test
+    fun pullRequestEmitsAndReadsMultiValueClone() {
+        val repoEvent = repo(arrayOf(arrayOf("d", "x"), arrayOf("r", "root", "euc")))
+        val tmpl =
+            GitPullRequestEvent.build(
+                description = "desc",
+                repository = EventHintBundle(repoEvent),
+                earliestUniqueCommit = "root",
+                currentCommit = "tip",
+                cloneUrls = listOf("https://a.git", "https://b.git"),
+            )
+        // One multi-value clone tag (ngit/spec form), not repeated single-value tags.
+        assertEquals(1, tmpl.tags.count { it[0] == "clone" }, "PR clone must be a single tag")
+        assertEquals(listOf("clone", "https://a.git", "https://b.git"), tmpl.tags.first { it[0] == "clone" }.toList())
+
+        // Reader flattens both the multi-value and the legacy repeated forms.
+        val multi = GitPullRequestEvent("00", owner, 0, arrayOf(arrayOf("clone", "https://a.git", "https://b.git")), "", "00")
+        val repeated = GitPullRequestEvent("00", owner, 0, arrayOf(arrayOf("clone", "https://a.git"), arrayOf("clone", "https://b.git")), "", "00")
+        assertEquals(listOf("https://a.git", "https://b.git"), multi.cloneUrls())
+        assertEquals(listOf("https://a.git", "https://b.git"), repeated.cloneUrls())
     }
 
     @Test

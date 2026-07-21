@@ -126,6 +126,8 @@ object GitPatchCommands {
             File(file).takeIf { it.isFile }?.readText()
                 ?: throw IllegalArgumentException("--file not found: $file")
         } else {
+            // Non-interactive: don't block waiting for a human to type a patch.
+            require(System.console() == null) { "no patch given: pass --file PATH or pipe `git format-patch` to stdin" }
             System.`in`.readBytes().decodeToString()
         }.trim()
 }
