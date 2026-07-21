@@ -53,6 +53,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
@@ -70,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.note.NutzapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.ShowDonationCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -89,8 +93,20 @@ fun RenderCardFeed(
     routeForLastRead: String,
     scrollToEventId: String? = null,
     headerContent: (@Composable () -> Unit)? = null,
+    // Whether THIS feed drives the shared account history pager. False for an off-screen split tab / second
+    // pane, so only the feed the user is actually looking at pages the pager (see #2 in the audit).
+    drivesPaging: Boolean = true,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
+
+    // A genuinely empty feed has no rows for the look-ahead buffer driver to measure, so step every relay
+    // one page at a time to hunt for the first notifications. Once cards appear the buffer driver takes
+    // over. Gated on Empty only (never the transient Loading navigation flashes through), and only for the
+    // active feed so an off-screen tab doesn't hunt on the shared pager.
+    val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
+    if (drivesPaging) {
+        BootstrapNotificationHistoryWhenEmpty(feedState is CardFeedState.Empty, history.loadingMore, history.status) { history.advanceAll() }
+    }
 
     // Direct switch instead of CrossfadeIfEnabled: the crossfade's `currentlyVisible`
     // accumulator can leave a previous `Loaded` instance composed alongside the new
@@ -116,6 +132,7 @@ fun RenderCardFeed(
                 nav = nav,
                 scrollToEventId = scrollToEventId,
                 headerContent = headerContent,
+                drivesPaging = drivesPaging,
             )
         }
 
@@ -149,9 +166,29 @@ private fun FeedLoaded(
     nav: INav,
     scrollToEventId: String? = null,
     headerContent: (@Composable () -> Unit)? = null,
+    drivesPaging: Boolean = true,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
+
+    // Infinite-scroll backward pagination of the notifications history. All the driving (look-ahead buffer,
+    // auto-retry, per-relay sentinels) lives in [rememberNotificationHistoryPaging]; here we just get back
+    // the per-relay cursors to draw as frontier markers, and keep [history] for the detail dialog's retry.
+    val history = remember(accountViewModel) { accountViewModel.dataSources().account.notificationsHistory }
+    // Count of items above the notification cards in the LazyColumn (scaffold header + donation card + open
+    // polls), so the hoisted sentinel can map a visible LazyColumn index back to a card.
+    val leadingItemCount = (if (headerContent != null) 1 else 0) + 1 + openPolls.size
+    val limits =
+        rememberNotificationHistoryPaging(history, listState, drivesPaging) { index ->
+            items.list.getOrNull(index - leadingItemCount)?.createdAt()
+        }
+
+    // The relays behind a tapped in-stream marker; non-null shows the per-relay breakdown popup.
+    var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }
+    syncDetail?.let { detail ->
+        // Tap-through offers a Try Again on stalled relays, so a user who sees a bad relay can act on it.
+        RelayReachDetailDialog(detail, ::formatHistoryReachDate, onRetry = { history.advanceAll() }) { syncDetail = null }
+    }
 
     StickToTopOnPrepend(listState, items.list.firstOrNull()?.id())
 
@@ -233,7 +270,7 @@ private fun FeedLoaded(
             items = items.list,
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
-        ) { _, item ->
+        ) { index, item ->
             val isHighlighted = highlightedCardId == item.id()
             val highlightColor by animateColorAsState(
                 targetValue = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent,
@@ -257,6 +294,18 @@ private fun FeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+
+            // Per-relay markers in the gap toward the next-older card, at the depth each relay has paged to.
+            // The bulk load is buffer-driven (above); these mark each relay's frontier and drive the
+            // stalled-relay retry when scrolled into view (see the sentinel above). olderCreatedAt is null
+            // past the oldest loaded card, so relays that reached the bottom sit there as "fully loaded".
+            if (limits.isNotEmpty()) {
+                RelayReachMarkers(
+                    limits,
+                    item.createdAt(),
+                    items.list.getOrNull(index + 1)?.createdAt(),
+                ) { syncDetail = it }
+            }
         }
     }
 }

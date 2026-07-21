@@ -258,6 +258,9 @@ private fun SplitNotificationsBody(
     nav: INav,
 ) {
     HorizontalPager(state = pagerState) { page ->
+        // Only the settled, on-screen tab drives the shared account history pager, so the off-screen tab
+        // (composed during a swipe) doesn't page notifications the user isn't looking at.
+        val drivesPaging = page == pagerState.currentPage
         when (page) {
             0 -> {
                 NotificationPagerPage(
@@ -265,6 +268,7 @@ private fun SplitNotificationsBody(
                     pollContent = notifPolls,
                     scrollStateKey = ScrollStateKeys.NOTIFICATION_FOLLOWING,
                     scrollToEventId = scrollToEventId,
+                    drivesPaging = drivesPaging,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -278,6 +282,7 @@ private fun SplitNotificationsBody(
                     // Only the Following tab honors the deep-link scroll target so users
                     // aren't bounced when they swipe across to Everyone.
                     scrollToEventId = null,
+                    drivesPaging = drivesPaging,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -294,6 +299,7 @@ private fun NotificationPagerPage(
     scrollToEventId: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
+    drivesPaging: Boolean = true,
 ) {
     RefresheableBox(state, true) {
         val listState = rememberForeverLazyListState(scrollStateKey)
@@ -309,6 +315,7 @@ private fun NotificationPagerPage(
             routeForLastRead = NOTIFICATION_LAST_READ_KEY,
             scrollToEventId = scrollToEventId,
             headerContent = { ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav) },
+            drivesPaging = drivesPaging,
         )
     }
 }

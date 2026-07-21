@@ -209,6 +209,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -659,6 +660,11 @@ class Account(
     val mineRelays = AccountMineRelayState(nip65RelayList, privateStorageRelayList, localRelayList, proxyRelayList, scope)
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
+
+    // Account-level notification history paging cursors (one scope per account): how far back each
+    // notification relay has been paged by until+limit. Held here so they share the account's lifetime;
+    // the history loader ([AccountNotificationsHistoryEoseManager]) binds its orchestrator to these.
+    val notificationHistory = RelayLoadingCursors()
 
     val cashuWalletState =
         com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState(
