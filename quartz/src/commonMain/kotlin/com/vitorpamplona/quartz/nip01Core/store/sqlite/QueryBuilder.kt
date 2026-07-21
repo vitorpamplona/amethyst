@@ -49,7 +49,7 @@ class QueryBuilder(
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
             val out = ArrayList<T>(merge.limit!!)
-            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { out.add(it.toEvent()) }
             return out
         }
         return db.runQuery(toSql(filter, hasher(db)))
@@ -62,7 +62,7 @@ class QueryBuilder(
     ) {
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
-            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { onEach(it.toEvent()) }
             return
         }
         db.runQuery(toSql(filter, hasher(db)), onEach)
@@ -102,7 +102,7 @@ class QueryBuilder(
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
             val out = ArrayList<RawEvent>(merge.limit!!)
-            MergeQueryExecutor.run(db, merge, indexStrategy) { out.add(it.toRawEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { out.add(it.toRawEvent()) }
             return out
         }
         return db.runRawQuery(toSql(filter, hasher(db)))
@@ -115,7 +115,7 @@ class QueryBuilder(
     ) {
         val merge = filter.toFilterWithDTags()
         if (MergeQueryExecutor.streamCount(merge, indexStrategy) > 0) {
-            MergeQueryExecutor.run(db, merge, indexStrategy) { onEach(it.toRawEvent()) }
+            MergeQueryExecutor.run(db, merge, indexStrategy, hasher) { onEach(it.toRawEvent()) }
             return
         }
         db.runRawQuery(toSql(filter, hasher(db)), onEach)
@@ -202,13 +202,17 @@ class QueryBuilder(
             )
         }
 
-        val rowIdSubqueries = prepareRowIDSubQueries(filter, hasher)
+        // A search term that survived the simple-search branch above always
+        // combines with tags here (search + #t etc.). NIP-50 still orders by
+        // relevance, so carry the FTS rank through the subquery and out.
+        val rankSearch = newFilter.search != null && newFilter.search.isNotEmpty()
+        val rowIdSubqueries = prepareRowIDSubQueries(filter, hasher, projectRank = rankSearch)
 
         return if (rowIdSubqueries == null) {
             QuerySpec(makeEverythingQuery())
         } else {
             QuerySpec(
-                makeQueryIn(rowIdSubqueries.sql),
+                makeQueryIn(rowIdSubqueries.sql, orderByRank = rankSearch),
                 rowIdSubqueries.args,
             )
         }
@@ -220,7 +224,13 @@ class QueryBuilder(
     ): QuerySpec {
         if (filters.size == 1) return toSql(filters.first(), hasher)
 
-        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher)
+        // A multi-filter search REQ (e.g. the client's search-across-kinds,
+        // all filters sharing one term) must still be NIP-50 relevance-ordered.
+        // Only when EVERY branch is a search branch (and FTS is on, so each has
+        // a rank column) — a non-search branch has no defined relevance, so a
+        // mixed REQ falls back to created_at.
+        val rankSearch = fts.enabled && filters.all { !it.search.isNullOrEmpty() }
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher, projectRank = rankSearch)
 
         return if (rowIdSubqueries == null) {
             QuerySpec(
@@ -229,7 +239,7 @@ class QueryBuilder(
             )
         } else {
             QuerySpec(
-                makeQueryIn(rowIdSubqueries.sql),
+                makeQueryIn(rowIdSubqueries.sql, orderByRank = rankSearch),
                 rowIdSubqueries.args,
             )
         }
@@ -427,7 +437,7 @@ class QueryBuilder(
         val sql =
             buildString {
                 append("SELECT event_headers.id, event_headers.created_at FROM event_headers")
-                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.rowid")
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }
@@ -470,14 +480,20 @@ class QueryBuilder(
 
     private fun makeEverythingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC${if (indexStrategy.useAndIndexIdOnOrderBy) ", id ASC" else ""}"
 
-    private fun makeQueryIn(rowIdQuery: String) =
-        """
+    // [orderByRank] presents the joined result in NIP-50 relevance order: the
+    // subquery (built with `projectRank`) exposes the FTS bm25 score as a
+    // `rank` column, and `created_at DESC` is only a tie-break. Off, it keeps
+    // the default newest-first ordering for every non-search shape.
+    private fun makeQueryIn(
+        rowIdQuery: String,
+        orderByRank: Boolean = false,
+    ) = """
         SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
         INNER JOIN (
             $rowIdQuery
         ) AS filtered
         ON event_headers.row_id = filtered.row_id
-        ORDER BY created_at DESC${if (indexStrategy.useAndIndexIdOnOrderBy) ", id ASC" else ""}
+        ORDER BY ${if (orderByRank) "filtered.rank, " else ""}created_at DESC${if (indexStrategy.useAndIndexIdOnOrderBy) ", id ASC" else ""}
         """.trimIndent()
 
     private fun <T : Event> SQLiteConnection.runQuery(query: QuerySpec): List<T> =
@@ -713,16 +729,34 @@ class QueryBuilder(
     fun unionSubqueriesIfNeeded(
         filters: List<Filter>,
         hasher: TagNameValueHasher,
+        // See [prepareRowIDSubQueries]. When set, every branch is a search
+        // branch that also projects a `rank` column; the union keeps one row
+        // per event with its BEST (min) bm25 score so the caller can present
+        // the whole multi-filter search REQ NIP-50-ranked. Callers must only
+        // pass true when all filters carry a search term (else a branch has no
+        // rank column). Off for count/delete, which stay single-column.
+        projectRank: Boolean = false,
     ): QuerySpec? {
         val inner =
             filters.mapNotNull { filter ->
-                prepareRowIDSubQueries(filter, hasher)
+                prepareRowIDSubQueries(filter, hasher, projectRank)
             }
 
         if (inner.isEmpty()) return null
 
-        return if (inner.size == 1) {
-            inner.first()
+        if (inner.size == 1) return inner.first()
+
+        return if (projectRank) {
+            // UNION ALL keeps every (row_id, rank) so an event matching two
+            // branches under different terms isn't dropped before MIN; GROUP BY
+            // then dedups by event keeping the best score.
+            QuerySpec(
+                sql =
+                    "SELECT row_id, MIN(rank) as rank FROM (\n            " +
+                        inner.joinToString("\n            UNION ALL\n            ") { "SELECT row_id, rank FROM (${it.sql})" } +
+                        "\n            ) GROUP BY row_id",
+                args = inner.flatMap { it.args },
+            )
         } else {
             QuerySpec(
                 sql = inner.joinToString("\n            UNION\n            ") { "SELECT row_id FROM (${it.sql})" },
@@ -748,6 +782,13 @@ class QueryBuilder(
     fun prepareRowIDSubQueries(
         filter: Filter,
         hasher: TagNameValueHasher,
+        // When set on a search filter, the subquery also projects the FTS
+        // bm25 score as a `rank` column and orders its own LIMIT by relevance,
+        // so the caller ([makeQueryIn] with `orderByRank`) can present results
+        // NIP-50-ranked. Off (the default) for count/delete/union/negentropy,
+        // which never expose a second column (a two-column subquery breaks
+        // `row_id IN (…)`) and don't rank.
+        projectRank: Boolean = false,
     ): QuerySpec? {
         if (filter.isEmpty()) return null
 
@@ -760,6 +801,10 @@ class QueryBuilder(
         }
 
         val mustJoinSearch = filter.search != null && fts.enabled
+
+        // Only emit the rank column when there is actually an FTS join to take
+        // it from; a `projectRank` request on a tag-only filter is ignored.
+        val emitRank = projectRank && mustJoinSearch
 
         val nonDTagsIn = filter.tags?.filter { it.key != "d" } ?: emptyMap()
 
@@ -789,7 +834,11 @@ class QueryBuilder(
             buildString {
                 // always do tags if there are any
                 if (reverseLookup) {
-                    append("SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags")
+                    append("SELECT DISTINCT(event_tags.event_header_row_id) as row_id")
+                    // rank is functionally determined by the row_id (one FTS
+                    // row per event), so it doesn't change what DISTINCT folds.
+                    if (emitRank) append(", ${fts.tableName}.rank as rank")
+                    append(" FROM event_tags")
 
                     // it's quite rare to have 2 tags in the filter, but possible
                     nonDTagsIn.keys.forEachIndexed { index, tagName ->
@@ -815,13 +864,15 @@ class QueryBuilder(
                     }
 
                     if (mustJoinSearch) {
-                        append(" INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_tags.event_header_row_id")
+                        append(" INNER JOIN ${fts.tableName} ON ${fts.tableName}.rowid = event_tags.event_header_row_id")
                     }
                 } else if (mustJoinSearch) {
-                    append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName}")
+                    append("SELECT ${fts.tableName}.rowid as row_id")
+                    if (emitRank) append(", ${fts.tableName}.rank as rank")
+                    append(" FROM ${fts.tableName}")
 
                     if (hasHeaders) {
-                        append(" INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                        append(" INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.rowid")
                     }
                 } else {
                     // no tags and no search.
@@ -934,15 +985,17 @@ class QueryBuilder(
                     append(" WHERE ${clause.conditions}")
                 }
                 if (filter.limit != null) {
-                    if (reverseLookup) {
+                    if (emitRank) {
+                        // NIP-50: the LIMIT keeps the most RELEVANT rows, not
+                        // the newest, so the inner cut is by rank too.
+                        append(" ORDER BY rank")
+                    } else if (reverseLookup) {
                         append(" ORDER BY event_tags.created_at DESC")
-                        append(" LIMIT ")
-                        append(filter.limit)
                     } else {
                         append(" ORDER BY event_headers.created_at DESC")
-                        append(" LIMIT ")
-                        append(filter.limit)
                     }
+                    append(" LIMIT ")
+                    append(filter.limit)
                 }
             }
 
@@ -1001,11 +1054,17 @@ class QueryBuilder(
         val sql =
             buildString {
                 append("SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers")
-                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.rowid")
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }
-                append("\nORDER BY event_headers.created_at DESC")
+                // NIP-50: search results are ordered by relevance ("quality of
+                // search result"), not created_at, and the limit is applied
+                // after the score. FTS5 exposes bm25 as the `rank` column (more
+                // negative = more relevant), so ORDER BY rank ascending is
+                // best-match-first. created_at DESC is only a tie-break so
+                // equally-relevant matches come newest-first deterministically.
+                append("\nORDER BY ${fts.tableName}.rank, event_headers.created_at DESC")
                 if (indexStrategy.useAndIndexIdOnOrderBy) {
                     append(", event_headers.id ASC")
                 }
