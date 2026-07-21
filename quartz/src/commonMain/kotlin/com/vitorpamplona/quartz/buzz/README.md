@@ -175,3 +175,27 @@ An encrypted, durable record of one agent turn's token usage and cost, published
 agent to its owner. `content` is a NIP-44 v2 ciphertext of `AgentTurnMetricPayload`
 (camelCase) between the agent (author + `agent` tag) and the owner (`p` tag); either
 party can decrypt. See `amTurnMetrics/AgentTurnMetricEvent.kt`.
+
+## Agent-owner console (commons + amethyst) — implemented
+
+The owner-facing dashboard over their AI-agent fleet. Reachable from Settings → App →
+"Agent console" (`Route.AgentConsole`), three tabs:
+
+- **Costs** — decrypted NIP-AM turn metrics (`kind:44200`, `p` = owner) rolled up by the
+  pure `commons/.../model/buzz/AgentFleetMetrics.kt::AgentFleetAggregator`. Cost/token
+  semantics are the aggregator's, not the UI's: per `(agent, session)` the **max
+  cumulative** per field is the authoritative session total (robust to dropped turns),
+  falling back per-field to **summing the `turn` deltas** only when no cumulative exists;
+  a delta-sum touching a `deltaReliable == false` turn flags the fleet total estimated.
+  Ten aggregator tests pin these (cumulative-not-summed, missing-turn recovery, per-field
+  mixing, sessionless singletons, unreliable flag).
+- **Personas** — the owner's plaintext persona definitions (NIP-AP `kind:30175`).
+- **Observer** — a **live** subscription to ephemeral telemetry frames (NIP-AO
+  `kind:24200`, `p` = owner) via `subscribeAsFlow`, decrypted `frame:telemetry` only,
+  newest-first, bounded to a 200-row ring. Opened only while the tab is on screen
+  (`DisposableEffect`) because relays and `LocalCache` never store observer frames.
+
+`AgentConsoleViewModel` fetches 44200 + 30175 from the Buzz-dialect relays plus the
+owner's outbox set, lets `LocalCache` consume them, decrypts with the owner signer
+(cached by event id), and re-derives the aggregate. Read-only v1 — persona editing and
+NIP-OA attestation issuance are follow-ups.
