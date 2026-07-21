@@ -46,6 +46,17 @@ import kotlin.io.path.exists
  * later without changing callers. All FilterMatcher semantics (tag
  * AND/OR, since/until, id, author, kind cross-checks) are enforced in
  * the orchestrator, so picking a loose driver is correctness-safe.
+ *
+ * TODO: add the cost-based pick. The fixed tags → kinds → authors order
+ * makes `authors + kinds + limit` — the most common CLI shape (27
+ * assembler call sites, every `amy feed`-style author timeline) — drive
+ * from the kind tree and post-filter the author. Measured by
+ * `FsDriverSelectionBenchmark` at 30k events: 149 ms via `idx/kind/1/`
+ * vs 3.4 ms via `idx/author/<pk>/` with kind post-filtered (~44×), and
+ * the gap grows with the kind tree, not the result. Comparing candidate
+ * directory entry counts before walking (kind dirs vs author dirs vs tag
+ * dirs) is enough; the slot shortcut already rescues the
+ * replaceable/addressable subset.
  */
 internal class FsQueryPlanner(
     private val layout: FsLayout,
