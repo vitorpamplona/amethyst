@@ -49,8 +49,9 @@ import kotlin.io.path.exists
  * with a million entries) is therefore never read past ~the smallest
  * candidate's size. Before the pick, the fixed tags → kinds → authors
  * order sent `authors + kinds + limit` — the most common CLI shape —
- * through the kind tree: 149 ms vs 3.4 ms (~44×) at 30k events per
- * `FsDriverSelectionBenchmark`. All FilterMatcher semantics (tag AND/OR,
+ * through the kind tree: 149 ms fixed-order vs 4.0 ms cost-based at 30k
+ * events per `FsDriverSelectionBenchmark` (floor: author-only at
+ * 1.4 ms). All FilterMatcher semantics (tag AND/OR,
  * since/until, id, author, kind cross-checks) are enforced in the
  * orchestrator, so any driver pick is correctness-safe.
  */

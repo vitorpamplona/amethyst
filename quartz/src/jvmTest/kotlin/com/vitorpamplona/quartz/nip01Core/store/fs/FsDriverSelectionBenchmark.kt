@@ -30,23 +30,24 @@ import kotlin.io.path.exists
 import kotlin.test.Test
 
 /**
- * Quantifies [FsQueryPlanner]'s "first available driver wins" ordering
- * (tags → kinds → authors) on the `authors + kinds + limit` shape — the
- * most common CLI query (27 assembler call sites; every `amy feed`-style
- * author timeline over non-replaceable kinds).
+ * Guards [FsQueryPlanner]'s cost-based driver pick on the
+ * `authors + kinds + limit` shape — the most common CLI query (27
+ * assembler call sites; every `amy feed`-style author timeline over
+ * non-replaceable kinds).
  *
- * `Filter(authors=[pk], kinds=[1], limit=n)` drives from `idx/kind/1/`
- * (the biggest tree in any real store) and post-filters the author, even
- * though `idx/author/<pk>/` holds exactly that author's events. The
- * benchmark times:
+ * Under the pre-pick fixed order (tags → kinds → authors),
+ * `Filter(authors=[pk], kinds=[1], limit=n)` drove from `idx/kind/1/`
+ * (the biggest tree in any real store) and post-filtered the author:
+ * 149 ms at 30k events. The lockstep pick drives from the author tree
+ * and runs at ~4 ms. The benchmark times:
  *
- *  - **kind-driver (current)**: the filter as the planner runs it today.
- *  - **author-driver (proposed)**: same result set, but driven from the
- *    author tree with the kind check as a post-filter — what a cost-based
- *    picker (compare candidate directory sizes) would choose.
- *
- * Also reports the author-only shape (`authors + limit`) as the floor: the
- * planner already picks the author tree there, so its time is the target.
+ *  - **planner (cost-based pick)**: the filter as the planner runs it —
+ *    should sit near the floor, far below a kind-tree walk.
+ *  - **author-driver emulation**: the author tree walked via an
+ *    authors-only query with the kind check applied by the caller — the
+ *    reference the pick is expected to match or beat.
+ *  - **author-only floor**: `authors + limit` with no kind, the cheapest
+ *    possible walk of the same tree.
  *
  * Size the seed with `-DfsBenchScale=N` (default 1 ≈ ~30k events; each
  * event is a file + ~3 hardlinks, so seeding dominates wall time).
@@ -115,14 +116,14 @@ class FsDriverSelectionBenchmark {
                 val insertMs = (System.nanoTime() - t0) / 1e6
                 println("─ FsDriverSelectionBenchmark: ${bg.size} events (scale=$SCALE), seed %.0f ms ─".format(insertMs))
 
-                // Current planner: kinds present → kind tree drives, author
-                // is a post-filter over the whole kind-1 listing.
+                // The planner's own pick — expected to choose the author
+                // tree over the ~30k-entry kind-1 tree.
                 val kindDriven = Filter(authors = listOf(target), kinds = listOf(1), limit = 50)
-                time(store, "kind-driver (current planner)") { store.query<Event>(kindDriven).size }
+                time(store, "planner (cost-based pick)") { store.query<Event>(kindDriven).size }
 
-                // Proposed: drive from the author tree, post-filter kind —
-                // same semantics, what a cost-based picker would run.
-                time(store, "author-driver (proposed)") {
+                // Reference: author tree walked explicitly, kind checked
+                // by the caller — the pick should match or beat this.
+                time(store, "author-driver emulation") {
                     store
                         .query<Event>(Filter(authors = listOf(target), limit = 250))
                         .asSequence()
@@ -131,9 +132,9 @@ class FsDriverSelectionBenchmark {
                         .count()
                 }
 
-                // Floor: author-only shape, planner already optimal here.
+                // Floor: author-only shape, the cheapest walk of the tree.
                 val authorOnly = Filter(authors = listOf(target), limit = 50)
-                time(store, "author-only (planner floor)") { store.query<Event>(authorOnly).size }
+                time(store, "author-only floor") { store.query<Event>(authorOnly).size }
             } finally {
                 store.close()
                 if (root.exists()) {

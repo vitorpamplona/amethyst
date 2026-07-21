@@ -81,11 +81,14 @@ interface IndexingStrategy {
      * `(tag_hash, kind)` and reads every row for that tag/kind before
      * filtering the author.
      *
-     * TODO: re-evaluate the off-by-default choice (especially for geode)
-     * with `TagAuthorIndexBenchmark` (jvmTest prodbench). At 200k events:
-     * DM-room query 9.4 ms → 0.6 ms (~15×) with the flag on, for a batch
-     * insert cost of 41.5 → 47.3 µs/event (+14%) — measure at target
-     * corpus size before flipping, since the index competes for page cache.
+     * Measured by `TagAuthorIndexBenchmark` (jvmTest prodbench): the
+     * DM-room query drops 9.4 ms → 0.6 ms (~15×) at 200k events and
+     * 14.2 ms → 0.66 ms (~21×) at 1M — the gap grows with corpus size —
+     * while batch-insert cost stays inside run noise (49.0 vs 47.4
+     * µs/event at 1M). geode enables it; the client default stays off
+     * because a client store's per-tag row counts are bounded by one
+     * user's data. Flipping it on an existing DB is safe: the index is
+     * built on next open by `EventIndexesModule.ensureOptionalIndexes`.
      *
      * Keep in mind that activating too many indexes increases the size of the
      * DB so much that the indexes themselves won't fit in memory, requiring

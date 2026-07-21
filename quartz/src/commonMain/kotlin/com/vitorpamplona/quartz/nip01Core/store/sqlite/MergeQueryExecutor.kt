@@ -57,11 +57,12 @@ internal object MergeQueryExecutor {
     // reactions/replies watcher archetype) unions per-value streams that are
     // each sorted off `(tag_hash, kind, created_at)` and sorts the union.
     // `streamCount` currently rejects any filter with tags, so those queries
-    // never merge. Measured by `TagAuthorIndexBenchmark` at 200k events:
-    // `#e IN 300, limit 500` costs 12.8 ms cold / 6.0 ms since-bounded —
-    // tolerable client-side, but it scales with matching history like the
-    // follow-feed shape did; extend the merge to per-tag-value streams if
-    // relay-scale runs (relayBench) show it in the profile.
+    // never merge. Measured by `TagAuthorIndexBenchmark`: `#e IN 300,
+    // limit 500` costs 12.8 ms cold at 200k events and 14.2 ms at 1M
+    // (6.7 ms with indexTagsWithKindAndPubkey on) — tolerable, but it
+    // scales with matching history like the follow-feed shape did; extend
+    // the merge to per-tag-value streams if the relayBench
+    // `reactions-watch` scenario shows it in the profile vs strfry.
     const val COLS = "id, pubkey, created_at, kind, tags, content, sig"
 
     /**
