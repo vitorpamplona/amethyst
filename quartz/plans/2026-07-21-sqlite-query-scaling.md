@@ -62,13 +62,14 @@ By-column grows ~linearly with the table (O(n)/delete); by-rowid is flat —
 wrong.** NIP-50 says results are returned "in descending order by quality of
 search result ... not by the usual `.created_at`", with the limit applied after
 the score — but the store sorted search by `created_at DESC` (pre-existing).
-`makeSimpleSearch` (the `search [+ kinds/authors/since/until] + limit` shape)
-now orders by FTS5 bm25 (`ORDER BY event_fts.rank`, `created_at DESC` as a
-tie-break), verified against a stronger-but-older match outranking a
-weaker-but-newer one (`SearchRelevanceOrderTest`, `Fts5CapabilityProbe`). The
-rarer `search + specific tag` shape and the negentropy snapshot still sort by
-`created_at` (the row-id subquery can't carry rank through; negentropy is a
-sync set, not a ranked result) — a documented follow-up.
+*Every* search filter now orders by FTS5 bm25 (`ORDER BY event_fts.rank`,
+`created_at DESC` as a tie-break): the tag-free shape (`makeSimpleSearch`) and
+`search + tag` (the `prepareRowIDSubQueries`/`makeQueryIn` path, which carries
+the rank column through the row-id subquery via `projectRank` and applies the
+LIMIT by rank). Only the negentropy snapshot keeps `created_at` — a sync set,
+not a ranked result. Verified against stronger-but-older matches outranking
+weaker-but-newer ones, tag-scoped, with the limit cutting by score
+(`SearchRelevanceOrderTest`, `Fts5CapabilityProbe`).
 
 An earlier draft of *this* change instead added a `searchOrderByRowId` flag
 (order by the FTS rowid for O(limit) search); that is *ingestion* order — wrong

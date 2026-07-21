@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -86,6 +87,57 @@ class SearchRelevanceOrderTest {
                 // two newest.
                 val top2 = store.query<Event>(Filter(search = "apple", limit = 2)).map { it.id }
                 assertEquals(listOf(best.id, mid.id), top2)
+            } finally {
+                store.close()
+            }
+        }
+
+    /** A `#t` tag makes this a `search + tag` filter — the combined path. */
+    private var idSeq = 0
+
+    private fun hexId(n: Int): String {
+        val s = n.toString(16)
+        return "0".repeat(64 - s.length) + s
+    }
+
+    private fun tagged(
+        content: String,
+        createdAt: Long,
+        topic: String,
+    ): Event =
+        EventFactory.create(
+            hexId(++idSeq),
+            "00".repeat(32),
+            createdAt,
+            1,
+            arrayOf(arrayOf("t", topic)),
+            content,
+            "0".repeat(128),
+        )
+
+    @Test
+    fun searchWithATagIsAlsoRelevanceOrdered() =
+        runBlocking {
+            val store = EventStore(dbName = null)
+            try {
+                // All tagged #t=nostr; relevance decreases as created_at rises,
+                // so created_at order would be the exact reverse of relevance.
+                val strong = tagged("nostr nostr nostr", createdAt = 1, topic = "nostr")
+                val weak = tagged("nostr among many other unrelated filler words here padding", createdAt = 2, topic = "nostr")
+                // Matches the term but wrong tag → excluded by the tag filter.
+                val wrongTag = tagged("nostr nostr nostr nostr", createdAt = 3, topic = "other")
+                // Right tag but doesn't match the term → excluded by search.
+                val noMatch = tagged("bitcoin only", createdAt = 4, topic = "nostr")
+
+                store.batchInsert(listOf(strong, weak, wrongTag, noMatch))
+
+                val filter = Filter(search = "nostr", tags = mapOf("t" to listOf("nostr")), limit = 10)
+                val ids = store.query<Event>(filter).map { it.id }
+                assertEquals(listOf(strong.id, weak.id), ids, "search + tag must be relevance-ordered, tag-scoped")
+
+                // limit after score keeps the most relevant one.
+                val top1 = store.query<Event>(filter.copy(limit = 1)).map { it.id }
+                assertEquals(listOf(strong.id), top1)
             } finally {
                 store.close()
             }
