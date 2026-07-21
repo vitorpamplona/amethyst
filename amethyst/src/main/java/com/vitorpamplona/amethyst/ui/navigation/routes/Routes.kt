@@ -507,6 +507,10 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class ShareNoteAsQr(
+        val id: String,
+    ) : Route()
+
     @Serializable data class ContactListUsers(
         val noteId: String,
     ) : Route()

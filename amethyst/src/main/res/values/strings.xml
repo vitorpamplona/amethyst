@@ -531,6 +531,15 @@
     <string name="share_as_image_url">Share as Image Url</string>
     <string name="share_as_image_generating">Generating preview…</string>
     <string name="share_as_image_watermark">Shared via Amethyst</string>
+    <string name="share_as_qr">Share as QR</string>
+    <string name="share_as_qr_mode_web">Web link</string>
+    <string name="share_as_qr_mode_nostr">Nostr link</string>
+    <string name="share_as_qr_hint_web">Scan with any phone camera</string>
+    <string name="share_as_qr_hint_nostr">Scan with a Nostr app</string>
+    <string name="share_as_qr_kind_picture">Picture</string>
+    <string name="share_as_qr_code_description_web">QR code containing a web link to this note</string>
+    <string name="share_as_qr_code_description_nostr">QR code containing a Nostr link to this note</string>
+    <string name="share_as_qr_thumbnail_hidden_sensitive">Thumbnail hidden for sensitive content</string>
     <string name="quick_action_copy_user_id">Author ID</string>
     <string name="quick_action_copy_note_id">Note ID</string>
     <string name="quick_action_copy_text">Copy Text</string>
