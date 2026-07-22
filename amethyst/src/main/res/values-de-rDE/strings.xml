@@ -1613,7 +1613,9 @@
     <string name="media_server_primary_badge">Primär</string>
     <string name="media_server_added">Hinzugefügt</string>
     <string name="media_server_reorder">Server neu anordnen</string>
+    <string name="media_server_status_online">Online</string>
     <string name="media_server_status_slow">Langsam</string>
+    <string name="media_server_status_offline">Offline</string>
     <string name="media_server_status_checking">Wird geprüft…</string>
     <string name="payment_targets">Zahlungsziele</string>
     <string name="payment_targets_explainer">Veröffentliche deine Zahlungsadressen, damit andere dir direkt Geld senden können.</string>

@@ -12,6 +12,7 @@
     <string name="login_generate_button">Vygenerovat nový</string>
     <string name="login_key_hint">Zadejte svůj soukromý klíč (nsec) nebo veřejný klíč (npub)</string>
     <string name="login_key_label">nsec, bunker:// nebo npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
     <string name="login_show_key">Zobrazit klíč</string>
     <string name="login_hide_key">Skrýt klíč</string>
     <!-- New Key Warning -->
@@ -24,6 +25,7 @@
     <string name="action_copy">Kopírovat</string>
     <string name="action_paste">Vložit</string>
     <string name="action_cancel">Zrušit</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Uložit</string>
     <string name="action_delete">Smazat</string>
     <string name="action_share">Sdílet</string>
@@ -56,16 +58,26 @@
     <string name="chats_history_all_caught_up">Vše načteno</string>
     <string name="chats_history_reached_start">Dosáhli jste začátku zpráv %1$s</string>
     <string name="chats_history_subtitle">%1$s · %2$s · načteno od %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
     <string name="chats_history_waiting">čeká se na %1$s</string>
     <string name="chats_history_incomplete">Některé relaye neodpověděly</string>
     <string name="chats_history_incomplete_sub">%1$s nedostupných · klepnutím zobrazíte které</string>
     <string name="chats_history_relays_title">%1$s · historie podle relaye</string>
     <string name="chats_history_relay_since">od %1$s</string>
     <string name="action_dismiss">Zavřít</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="few">%1$d relaye</item>
+        <item quantity="many">%1$d relaye</item>
+        <item quantity="other">%1$d relayů</item>
+    </plurals>
     <!-- Notes & Replies -->
     <string name="replying_to">odpovídá na </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statický web: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">K čemu má přístup</string>
     <string name="nsite_root_site">Kořenový web</string>
     <string name="nsite_source">Zdroj:</string>
@@ -127,6 +139,8 @@
     <string name="road_event_traffic_jam">Dopravní zácpa</string>
     <string name="road_event_unknown">Silniční událost</string>
     <string name="podcast_value_zap_split_hint">Zapy na toto se rozdělují mezi:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="relay_monitor_rtt_open">Otevření</string>
     <string name="relay_monitor_rtt_read">Čtení</string>
     <string name="relay_monitor_rtt_write">Zápis</string>
@@ -134,6 +148,7 @@
     <string name="relay_monitor_relay_type">Typ</string>
     <string name="relay_monitor_requirements">Požadavky</string>
     <string name="relay_monitor_supported_nips">Podporované NIP</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Přijímané druhy</string>
     <string name="relay_discovery_geohash">Poloha</string>
     <string name="calendar_rsvp_going">Účastním se</string>
