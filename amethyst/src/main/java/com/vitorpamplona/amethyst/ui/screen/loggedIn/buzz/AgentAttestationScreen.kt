@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -58,6 +60,9 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Owner-side NIP-OA attestation issuance. The owner signs a standalone commitment
@@ -77,9 +82,10 @@ fun AgentAttestationScreen(
     nav: INav,
 ) {
     val keyPair = accountViewModel.account.settings.keyPair
+    val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     Scaffold(
-        topBar = { TopBarWithBackButton("Issue Attestation", nav) },
+        topBar = { TopBarWithBackButton("Attestations", nav) },
     ) { padding ->
         Column(
             modifier =
@@ -88,8 +94,14 @@ fun AgentAttestationScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // Agent side: hold an attestation an owner gave you, so this account
+            // authenticates to the owner's Buzz relays as a virtual member. Available to
+            // any signer — holding a credential doesn't require the raw key.
+            HoldAttestationSection(myPubkey = myPubkey)
+
+            // Owner side: issue an attestation for an agent key. Needs the raw private key.
             val privKey = keyPair.privKey
             if (privKey == null) {
                 ReadOnlyKeyNotice()
@@ -98,6 +110,118 @@ fun AgentAttestationScreen(
             }
         }
     }
+}
+
+/**
+ * Agent-side: paste an `auth` tag an owner issued to this account's key. It is verified
+ * against [myPubkey] and, on success, stored in [BuzzHeldAttestations] so the auth
+ * coordinator attaches it when this account AUTHs to a Buzz relay. In-memory only for
+ * now — re-paste after an app restart.
+ */
+@Composable
+private fun HoldAttestationSection(myPubkey: String) {
+    val held by BuzzHeldAttestations.flow.collectAsState()
+    val mine = held[myPubkey]
+
+    var input by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Hold an attestation",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            if (mine != null) {
+                Text(
+                    text = "Holding an attestation for this account. It is attached automatically when you authenticate to a Buzz relay.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = "Grants: " + mine.conditions.ifEmpty { "any kind, any time (unrestricted)" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(onClick = { BuzzHeldAttestations.remove(myPubkey) }) {
+                    Text("Remove")
+                }
+            } else {
+                Text(
+                    text = "Paste an owner-signed auth tag issued to this account to authenticate to their Buzz workspace as a virtual member.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = {
+                        input = it
+                        error = null
+                    },
+                    label = { Text("auth tag JSON") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                error?.let {
+                    Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                }
+                Button(
+                    onClick = {
+                        when (val outcome = parseHeldAttestation(input, myPubkey)) {
+                            is HoldOutcome.Failure -> error = outcome.message
+                            is HoldOutcome.Success -> {
+                                BuzzHeldAttestations.put(myPubkey, outcome.attestation)
+                                input = ""
+                                error = null
+                            }
+                        }
+                    },
+                    enabled = input.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Hold attestation")
+                }
+            }
+        }
+    }
+}
+
+private sealed interface HoldOutcome {
+    data class Success(
+        val attestation: OwnerAttestation,
+    ) : HoldOutcome
+
+    data class Failure(
+        val message: String,
+    ) : HoldOutcome
+}
+
+/**
+ * Parses a pasted `["auth", owner, conditions, sig]` JSON array and verifies it
+ * authorizes [myPubkey]. Returns a human-readable failure on malformed JSON, a
+ * non-`auth` tag, or a signature that doesn't verify for this key.
+ */
+private fun parseHeldAttestation(
+    input: String,
+    myPubkey: String,
+): HoldOutcome {
+    val tag =
+        try {
+            Json
+                .parseToJsonElement(input.trim())
+                .jsonArray
+                .map { it.jsonPrimitive.content }
+                .toTypedArray()
+        } catch (e: Exception) {
+            return HoldOutcome.Failure("Not a valid JSON tag array. Paste the [\"auth\", …] tag you were given.")
+        }
+    val attestation =
+        OwnerAttestation.parse(tag)
+            ?: return HoldOutcome.Failure("Not a NIP-OA auth tag.")
+    if (!attestation.verify(myPubkey)) {
+        return HoldOutcome.Failure("This attestation does not authorize the current account, or its signature is invalid.")
+    }
+    return HoldOutcome.Success(attestation)
 }
 
 @Composable

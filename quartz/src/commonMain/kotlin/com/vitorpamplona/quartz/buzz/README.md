@@ -141,15 +141,35 @@ kind-filtered, so they can never receive Buzz kinds by accident):
   replaceably, the rest store as queryable regular events, and ephemeral signals
   (typing 20002, observer 24200, huddle reactions 24810, pairing 24134) mark the
   dialect but are deliberately not persisted.
-- The group-chat REQ builders (`RelayGroupFilterBuilders`) request 40002/40003/40008/40099
-  **unconditionally** alongside the NIP-29 kinds (they match nothing on a vanilla relay).
+- The group-chat REQ builders (`RelayGroupFilterBuilders`) request the whole Buzz timeline
+  set — 40002/40003/40008/40099, canvas 40100, forum 45001-45003, agent jobs 43001-43006,
+  huddle lifecycle 48100-48103 — **unconditionally** alongside the NIP-29 kinds (they match
+  nothing on a vanilla relay; all are `h`-scoped so the same `#h` group REQ returns them).
   A dialect-gated version was reverted: gating advanced history cursors past ranges that
   had been queried without the Buzz kinds, permanently skipping older workspace messages.
+- Kind-aware chat rendering (`RenderBuzzNotes` + `ChatMessageCompose`): 40002 as text,
+  40003 as an edit overlay, 40099 as a system row, **40008 diffs** as a monospace scrollable
+  block with a repo/commit/file header, **agent-job (43xxx) + huddle (48xxx) lifecycle** as
+  centered system narration (huddles carry JSON content, so they must not fall through to a
+  raw text bubble), and **forum votes (45002)** as a glyph line. Forum posts stay plain text.
 - Dialect marking fires only off a **verified** event (`markBuzzIfVerified`), so an
   unverifiable frame from a hostile/buggy relay can't flip what the composer sends.
 
-Not yet wired: kind-aware rendering of 40002/40099/diff rows in the chat UI, the
-composer switch (write 40002 on Buzz relays), and NIP-42-at-connect workspace sessions.
+### NIP-OA agent auth at connect — implemented
+
+`commons/.../model/buzz/BuzzHeldAttestations.kt` holds the attestations this device has
+*received* (keyed by the agent pubkey they authorize; only `verify`-passing ones are
+stored). When an account whose pubkey matches a held attestation AUTHs (NIP-42) to a
+**Buzz-dialect** relay, `AuthCoordinator.buzzAugmented` appends the owner-signed `auth`
+tag to that account's AUTH event — and only that account's, never the Concord stream-key
+AUTHs that share the template — so an un-enrolled agent key gets virtual membership while
+its owner stays a member. The paste/hold + owner-side issue flows both live in
+`AgentAttestationScreen`. (Store is in-memory for now; persisting per-account is a follow-up.)
+
+Not yet wired (write path): the edit composer (40003) and forum/job/huddle/DM message
+composers, plus Buzz-native reactions/deletes — all require changes to the central chat
+composer and are deferred to a focused pass. The canvas (40100) is now requested and
+consumed as overlay state but has no dedicated viewer yet.
 
 ## Owner Attestation (NIP-OA) — implemented
 
