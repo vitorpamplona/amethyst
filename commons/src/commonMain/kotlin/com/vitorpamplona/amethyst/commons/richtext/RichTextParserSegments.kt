@@ -174,6 +174,16 @@ class ConcordInviteLinkSegment(
     segment: String,
 ) : Segment(segment)
 
+/**
+ * A Buzz workspace invite link (`https://<host>/invite/<token>`). Rendered as a tappable
+ * chip that opens the in-app join browser instead of the external browser, so the Buzz web
+ * app can sign the NIP-98 claim with the user's key via the injected `window.nostr`.
+ */
+@Immutable
+class BuzzInviteLinkSegment(
+    segment: String,
+) : Segment(segment)
+
 @Immutable
 class BlossomUriSegment(
     segment: String,

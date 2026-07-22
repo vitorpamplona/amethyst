@@ -3323,6 +3323,14 @@
     <string name="buzz_dm_start">Start conversation</string>
     <string name="buzz_dm_opening">Opening…</string>
     <string name="buzz_dm_remove">Remove</string>
+    <string name="buzz_invite_title">Workspace invite</string>
+    <string name="buzz_invite_heading">Join this workspace</string>
+    <string name="buzz_invite_workspace">Workspace</string>
+    <string name="buzz_invite_role">Role</string>
+    <string name="buzz_invite_body">You\'ll open the workspace in a secure in-app browser to review its terms and finish joining. It signs you in with your Amethyst key — no password.</string>
+    <string name="buzz_invite_continue">Continue in browser</string>
+    <string name="buzz_invite_invalid">This doesn\'t look like a valid Buzz invite link.</string>
+    <string name="buzz_invite_expired">This invite has expired. Ask for a new one.</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>

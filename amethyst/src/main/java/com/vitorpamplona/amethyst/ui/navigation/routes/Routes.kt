@@ -756,6 +756,10 @@ sealed class Route {
         val link: String,
     ) : Route()
 
+    @Serializable data class BuzzInvite(
+        val link: String,
+    ) : Route()
+
     @Serializable object Concords : Route()
 
     // The "minichat" of a chat message: its kind-1111 thread replies, opened from the message and

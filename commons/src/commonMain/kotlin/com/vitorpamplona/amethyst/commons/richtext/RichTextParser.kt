@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
+import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
@@ -391,6 +392,11 @@ class RichTextParser {
             // ordinary URLs; only `…/invite/…#…` shapes are actually decoded.
             if (word.contains("/invite/") && word.contains('#') && ConcordActions.parseInviteLink(word) != null) {
                 return ConcordInviteLinkSegment(word)
+            }
+            // A Buzz invite is a plain `…/invite/<token>` https URL (no fragment, so disjoint from
+            // the Concord shape above). Same cheap gate before the base64 parse.
+            if (word.contains("/invite/") && BuzzInviteLink.parse(word) != null) {
+                return BuzzInviteLinkSegment(word)
             }
             parseNowhereLink(word)?.let { return it }
             return LinkSegment(word)

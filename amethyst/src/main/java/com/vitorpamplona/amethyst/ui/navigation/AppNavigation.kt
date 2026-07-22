@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentPersonaEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzCanvasScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumPostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzNewDmScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspacesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
@@ -744,6 +745,8 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
+
+        composableFromEndArgs<Route.BuzzInvite> { BuzzInviteScreen(it.link, accountViewModel, nav) }
 
         composableFromEnd<Route.Concords> { ConcordHomeScreen(accountViewModel, nav) }
 

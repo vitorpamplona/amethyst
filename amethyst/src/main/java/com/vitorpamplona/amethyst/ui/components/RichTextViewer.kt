@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
+import com.vitorpamplona.amethyst.commons.richtext.BuzzInviteLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
@@ -492,6 +493,7 @@ private fun RenderWordWithoutPreview(
 
         is RelayGroupLinkSegment -> ClickableRelayGroupLink(word.segmentText, nav)
         is ConcordInviteLinkSegment -> ClickableConcordInviteLink(word.segmentText, nav)
+        is BuzzInviteLinkSegment -> ClickableBuzzInviteLink(word.segmentText, nav)
 
         is BlossomUriSegment -> BlossomUriRendererNoPreview(word.segmentText, accountViewModel)
 
@@ -533,6 +535,7 @@ private fun RenderWordWithPreview(
         is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
         is RelayGroupLinkSegment -> RelayGroupCard(word.segmentText, accountViewModel, nav)
         is ConcordInviteLinkSegment -> ConcordInviteCard(word.segmentText, accountViewModel, nav)
+        is BuzzInviteLinkSegment -> ClickableBuzzInviteLink(word.segmentText, nav)
         is BlossomUriSegment -> BlossomUriRenderer(word.segmentText, state, callbackUri, accountViewModel)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word.segmentText)
     }
