@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -118,8 +118,11 @@ class BuzzDmListViewModel : ViewModel() {
         this.scopeRelay = relay
         this.account = account
         relay?.let {
-            BuzzWorkspaces.join(it)
+            val newlyJoined = BuzzWorkspaces.join(it)
             viewModelScope.launch { account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }
+            // A join makes the relay first-party; if the socket was already open its one-shot AUTH
+            // challenge was spent unauthenticated, so reconnect to re-challenge and authenticate.
+            if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
         }
         refresh()
         startLive()
@@ -141,7 +144,12 @@ class BuzzDmListViewModel : ViewModel() {
         }
     }
 
-    /** Fetch kind-44100 (`#p` = me) + the visibility snapshot (30622) across the joined relays. */
+    /**
+     * Fetch kind-44100 (`#p` = me) + the visibility snapshot (30622) across the joined relays. These
+     * reads are `#p`-gated so the Buzz relay requires NIP-42 auth — use the warm-auth fetch
+     * (`pendingOnAuthRequired`) so it authenticates on the `auth-required` CLOSED and retries, rather
+     * than returning empty (this is why the import lists channels but a plain fetch wouldn't).
+     */
     private suspend fun discoverMemberChannels(account: Account) {
         val myPubkey = account.userProfile().pubkeyHex
         val relays = relays()
@@ -151,8 +159,13 @@ class BuzzDmListViewModel : ViewModel() {
                 Filter(kinds = listOf(MemberAddedNotificationEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
                 Filter(kinds = listOf(DmVisibilityEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
             )
-        account.client.fetchAllPagesFromPool(relays.associateWith { filters }) { event, relay ->
+        account.client.fetchAllWithHooks(
+            filters = relays.associateWith { filters },
+            timeoutMs = 8_000,
+            pendingOnAuthRequired = true,
+        ) { relay, event ->
             (event as? MemberAddedNotificationEvent)?.channel()?.let { memberChannels[it] = relay }
+            false
         }
     }
 
@@ -163,7 +176,7 @@ class BuzzDmListViewModel : ViewModel() {
                 .groupBy({ it.value }, { it.key })
                 .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
         if (byRelay.isEmpty()) return
-        account.client.fetchAllPagesFromPool(byRelay) { _, _ -> }
+        account.client.fetchAllWithHooks(filters = byRelay, timeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
     }
 
     /** Project the discovered DM channels (metadata `t` = `dm`), minus my hidden set, newest-first. */

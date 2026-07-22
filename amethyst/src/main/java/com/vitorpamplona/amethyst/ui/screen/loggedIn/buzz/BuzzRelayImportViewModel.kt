@@ -98,8 +98,17 @@ class BuzzRelayImportViewModel : ViewModel() {
 
         // The user came here to import from THIS relay: remember it as a joined workspace (persisted,
         // marks the Buzz dialect) and pre-approve NIP-42 auth so the `#p=me` read below is served.
-        BuzzWorkspaces.join(normalized)
+        val newlyJoined = BuzzWorkspaces.join(normalized)
         viewModelScope.launch { account.relayAuthLedger.setDecision(normalized.url, RelayAuthDecision.ALLOW) }
+
+        // NIP-42 sends its AUTH challenge once, on connect. If the socket was already open before this
+        // join (the common case — the relay is in the user's lists and connected at startup), that
+        // challenge was spent while the relay was still NOT first-party, so the connection is
+        // unauthenticated and the persistent group-roster (39002) subscription is refused. Joining
+        // makes the relay first-party (see AuthCoordinator.isFirstParty); force a reconnect so the
+        // relay re-challenges and the connection authenticates — unlocking the roster (Join gate) and
+        // every other `#p=me`-gated read on the shared socket.
+        if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
 
         // Seed "already added" from the current kind-10009 list so channels the user already has
         // render as added rather than offering a duplicate Add.

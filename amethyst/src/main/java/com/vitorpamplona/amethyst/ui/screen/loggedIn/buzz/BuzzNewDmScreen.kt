@@ -20,16 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -45,7 +50,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,9 +75,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 /**
- * Start a new Buzz DM: pick a workspace relay, add 1-8 people (npub or hex), and open. On
- * the relay's confirmation the screen jumps straight into the shared [Route.RelayGroup]
- * chat for the new conversation; on timeout it falls back to the DM inbox.
+ * Start a new Buzz DM: pick a workspace relay, add 1-8 people (search by name — this workspace's
+ * members rank first — or paste an npub/hex), and open. On the relay's confirmation the screen jumps
+ * straight into the shared [Route.RelayGroup] chat for the new conversation; on timeout it falls
+ * back to the DM inbox.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -86,8 +94,9 @@ fun BuzzNewDmScreen(
     val selectedRelay by viewModel.relay.collectAsStateWithLifecycle()
     val participants by viewModel.participants.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
+    val query by viewModel.query.collectAsStateWithLifecycle()
+    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
 
-    var input by remember { mutableStateOf("") }
     var inputError by remember { mutableStateOf<String?>(null) }
 
     val sending = status is BuzzNewDmViewModel.Status.Sending
@@ -131,22 +140,26 @@ fun BuzzNewDmScreen(
                 }
             }
             OutlinedTextField(
-                value = input,
+                value = query,
                 onValueChange = {
-                    input = it
+                    viewModel.updateQuery(it)
                     inputError = null
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringRes(R.string.buzz_dm_add_hint)) },
+                leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 singleLine = true,
                 isError = inputError != null,
                 supportingText = inputError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions =
                     KeyboardActions(
+                        // Enter accepts a pasted npub/hex directly — the escape hatch for someone
+                        // not yet in the local cache, so they'd never surface in the search list.
                         onDone = {
-                            val err = viewModel.addParticipant(input)
-                            if (err == null) input = "" else inputError = err
+                            if (query.isNotBlank()) {
+                                inputError = viewModel.addRawKey(query)
+                            }
                         },
                     ),
             )
@@ -155,7 +168,12 @@ fun BuzzNewDmScreen(
                 Text(it.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
 
-            Spacer(Modifier.weight(1f))
+            // Search results — workspace members first — fill the space above the pinned Start button.
+            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                items(suggestions, key = { it }) { hex ->
+                    SuggestionRow(hex, accountViewModel, nav) { viewModel.addParticipant(hex) }
+                }
+            }
 
             Button(
                 onClick = {
@@ -181,6 +199,32 @@ fun BuzzNewDmScreen(
                 }
             }
         }
+    }
+}
+
+/** One tappable search result — avatar + resolved name — that adds the user as a recipient. */
+@Composable
+private fun SuggestionRow(
+    hex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onClick: () -> Unit,
+) {
+    val user: User = remember(hex) { LocalCache.getOrCreateUser(hex) }
+    val name by observeUserName(user, accountViewModel)
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        UserPicture(hex, 34.dp, accountViewModel = accountViewModel, nav = nav)
+        Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
@@ -31,6 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +58,15 @@ class BuzzNewDmViewModel : ViewModel() {
 
     private val _participants = MutableStateFlow<List<HexKey>>(emptyList())
     val participants: StateFlow<List<HexKey>> = _participants.asStateFlow()
+
+    /** The current typeahead query and its resolved candidate pubkeys (members of this workspace first). */
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+
+    private val _suggestions = MutableStateFlow<List<HexKey>>(emptyList())
+    val suggestions: StateFlow<List<HexKey>> = _suggestions.asStateFlow()
+
+    private var searchJob: Job? = null
 
     private val _status = MutableStateFlow<Status>(Status.Idle)
     val status: StateFlow<Status> = _status.asStateFlow()
@@ -86,19 +98,74 @@ class BuzzNewDmViewModel : ViewModel() {
     }
 
     /**
-     * Resolves [input] (npub or 64-char hex) to a pubkey and adds it. Returns an error
-     * string to surface, or null on success. Rejects me, duplicates, non-keys and the
-     * 8-participant ceiling.
+     * Updates the typeahead [text] and refreshes [suggestions] off the main thread. Members of
+     * this workspace's channels are surfaced first (they're the people you'd DM here), then the
+     * rest of the general user search. Already-added recipients and yourself are filtered out.
      */
-    fun addParticipant(input: String): String? {
+    fun updateQuery(text: String) {
+        _query.value = text
+        val account = account ?: return
+        searchJob?.cancel()
+        if (text.isBlank()) {
+            _suggestions.value = emptyList()
+            return
+        }
+        searchJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                delay(150) // debounce keystrokes before touching the cache
+                val members = workspaceMemberKeys()
+                val me = account.userProfile().pubkeyHex
+                val already = _participants.value.toSet()
+                val ranked =
+                    LocalCache
+                        .findUsersStartingWith(text.trim(), account)
+                        .asSequence()
+                        .map { it.pubkeyHex }
+                        .filter { it != me && it !in already }
+                        // Stable sort keeps findUsersStartingWith's own relevance order within each bucket.
+                        .sortedByDescending { it in members }
+                        .take(12)
+                        .toList()
+                _suggestions.value = ranked
+            }
+    }
+
+    /** The union of member + admin pubkeys across every channel this workspace relay hosts locally. */
+    private fun workspaceMemberKeys(): Set<HexKey> {
+        val relay = _relay.value ?: return emptySet()
+        val keys = HashSet<HexKey>()
+        LocalCache.getRelayGroupChannelsOnRelay(relay).forEach { channel ->
+            keys.addAll(channel.members)
+            channel.admins.forEach { keys.add(it.pubKey) }
+        }
+        return keys
+    }
+
+    /**
+     * Adds an already-resolved [hex] pubkey (a tapped search result). Returns an error string to
+     * surface, or null on success. Rejects me, duplicates, invalid keys and the 8-participant ceiling.
+     * Also clears the query so the suggestion list collapses after a pick.
+     */
+    fun addParticipant(hex: HexKey): String? {
         val account = account ?: return "Not ready"
-        val hex = decodePublicKeyAsHexOrNull(input.trim())?.takeIf { it.isValid() } ?: return "Not a valid npub or hex key"
+        if (!hex.isValid()) return "Not a valid key"
         if (hex == account.userProfile().pubkeyHex) return "That's you"
         val current = _participants.value
         if (hex in current) return "Already added"
         if (current.size >= DmOpenEvent.MAX_PARTICIPANTS) return "At most ${DmOpenEvent.MAX_PARTICIPANTS} others"
         _participants.value = current + hex
+        _query.value = ""
+        _suggestions.value = emptyList()
         return null
+    }
+
+    /**
+     * Resolves a pasted npub/hex [input] and adds it — the escape hatch for someone not yet in the
+     * local cache (so they never surface in [updateQuery]'s search). Returns an error or null.
+     */
+    fun addRawKey(input: String): String? {
+        val hex = decodePublicKeyAsHexOrNull(input.trim())?.takeIf { it.isValid() } ?: return "Not a valid npub or hex key"
+        return addParticipant(hex)
     }
 
     fun removeParticipant(hex: HexKey) {
