@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
@@ -161,6 +162,11 @@ open class ChannelNewMessageViewModel :
     // INLINE keeps the reply in the timeline (native reply); MINICHAT sends a kind-1111
     // thread comment that opens as a minichat. Only meaningful while replyTo is set.
     val replyMode = mutableStateOf(ReplyMode.INLINE)
+
+    // When set, the composer is editing an existing Buzz stream message (kind 40002):
+    // the next send publishes a kind-40003 edit targeting this note instead of a new
+    // message. Only ever set for own messages on a Buzz-dialect relay (see editBuzzMessage).
+    val editingBuzzMessage = mutableStateOf<Note?>(null)
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
 
@@ -267,6 +273,26 @@ open class ChannelNewMessageViewModel :
     fun clearReply() {
         replyTo.value = null
         replyMode.value = ReplyMode.INLINE
+        draftTag.newVersion()
+    }
+
+    /**
+     * Enters Buzz edit mode: pre-fills the composer with [note]'s current text and marks
+     * the next send as a kind-40003 edit of it. Editing and replying are mutually
+     * exclusive, so any pending reply is cleared. The caller gates this to the user's own
+     * kind-40002 messages on a Buzz relay.
+     */
+    fun editBuzzMessage(note: Note) {
+        replyTo.value = null
+        replyMode.value = ReplyMode.INLINE
+        editingBuzzMessage.value = note
+        message.setTextAndPlaceCursorAtEnd(note.event?.content ?: "")
+        draftTag.newVersion()
+    }
+
+    fun clearBuzzEdit() {
+        editingBuzzMessage.value = null
+        message.setTextAndPlaceCursorAtEnd("")
         draftTag.newVersion()
     }
 
@@ -687,6 +713,19 @@ open class ChannelNewMessageViewModel :
                 }
             }
 
+            channel is RelayGroupChannel &&
+                BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) &&
+                editingBuzzMessage.value != null -> {
+                // Buzz edit (kind 40003): replaces the text of an existing kind-40002 message.
+                // build() sets the group's `h` tag plus the `e` tag pointing at the edited
+                // message; content is the replacement text. Kept minimal to mirror Buzz's own
+                // `build_edit` (buzz-sdk builders.rs) — the relay validates edits and the author
+                // match. LocalCache overlays the newest edit last-write-wins, so the edited row
+                // re-renders with this content.
+                val target = editingBuzzMessage.value!!
+                StreamMessageEditEvent.build(channel.groupId.id, target.idHex, tagger.message)
+            }
+
             channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) -> {
                 // Buzz workspace message: the native kind is 40002 (stream message v2)
                 // scoped with the group's `h` tag; Buzz threads replies with NIP-10
@@ -777,6 +816,7 @@ open class ChannelNewMessageViewModel :
         message.setTextAndPlaceCursorAtEnd("")
 
         replyTo.value = null
+        editingBuzzMessage.value = null
 
         urlPreview = null
 

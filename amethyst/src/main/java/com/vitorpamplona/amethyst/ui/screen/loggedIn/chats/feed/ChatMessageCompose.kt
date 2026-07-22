@@ -114,6 +114,9 @@ fun ChatroomMessageCompose(
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
     onBlank: (@Composable () -> Unit)? = null,
+    // Buzz-only: edit my own kind-40002 stream message (publishes a 40003 edit). Null for
+    // every non-Buzz chat surface, which hides the action.
+    onWantsToEditBuzz: ((Note) -> Unit)? = null,
 ) {
     // Re-skin inline `nostr:...` quotes for everything inside this bubble: a quoted
     // chat message renders with the chat reply design instead of the quoted-note card.
@@ -168,6 +171,7 @@ fun ChatroomMessageCompose(
                     onHighlightFinished,
                     groupPosition,
                     previousNoteId,
+                    onWantsToEditBuzz,
                 )
             }
         }
@@ -198,6 +202,7 @@ fun NormalChatNote(
     onHighlightFinished: (() -> Unit)? = null,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     previousNoteId: HexKey? = null,
+    onWantsToEditBuzz: ((Note) -> Unit)? = null,
 ) {
     // A geohash chat renders "as" its anonymous per-cell identity (and the account, when posting as
     // self); LocalChatActingIdentities lets the renderer treat those pubkeys as "me" (alignment,
@@ -328,6 +333,7 @@ fun NormalChatNote(
                 onDismiss = onDismiss,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                onWantsToEditBuzz = onWantsToEditBuzz,
             )
         },
         reactionsRow =

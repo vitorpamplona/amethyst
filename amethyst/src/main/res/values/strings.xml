@@ -3294,6 +3294,8 @@
     <string name="buzz_diff_truncated">(diff truncated)</string>
     <string name="buzz_canvas_title">Canvas</string>
     <string name="buzz_canvas_empty">No canvas has been shared in this workspace yet.</string>
+    <string name="buzz_edit_message">Edit</string>
+    <string name="buzz_editing_banner">Editing message</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>
