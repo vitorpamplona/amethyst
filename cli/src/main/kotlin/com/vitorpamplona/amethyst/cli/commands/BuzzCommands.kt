@@ -27,10 +27,15 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
+import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
+import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
+import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -55,6 +60,11 @@ object BuzzCommands {
         |    [--timeout SECS]
         |amy buzz personas [--relays R,R]            list my kind-30175 personas
         |    [--timeout SECS]
+        |amy buzz dm list [--relays R,R]             list my DMs (kind-41001, #p = me)
+        |    [--limit N] [--timeout SECS]
+        |amy buzz dm open RELAY PUBKEY [PUBKEY…]     open a DM with 1-8 people (kind-41010)
+        |amy buzz dm hide RELAY CHANNEL              hide a DM from my sidebar (kind-41012)
+        |amy buzz dm add-member RELAY CHANNEL PUBKEY add a member to a group DM (kind-41011)
         """.trimMargin()
 
     suspend fun dispatch(
@@ -71,8 +81,138 @@ object BuzzCommands {
                 "attest" to { rest -> attest(dataDir, rest) },
                 "console" to { rest -> console(dataDir, rest) },
                 "personas" to { rest -> personas(dataDir, rest) },
+                "dm" to { rest -> dm(dataDir, rest) },
             ),
         )
+
+    /** `buzz dm …` — the Buzz direct-message sub-verbs (list / open / hide / add-member). */
+    private suspend fun dm(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int {
+        val usage =
+            """
+            |amy buzz dm list [--relays R,R] [--limit N] [--timeout SECS]
+            |amy buzz dm open RELAY PUBKEY [PUBKEY…]
+            |amy buzz dm hide RELAY CHANNEL
+            |amy buzz dm add-member RELAY CHANNEL PUBKEY
+            """.trimMargin()
+        return route(
+            "buzz dm",
+            tail,
+            usage,
+            mapOf(
+                "list" to { rest -> dmList(dataDir, rest) },
+                "open" to { rest -> dmOpen(dataDir, rest) },
+                "hide" to { rest -> dmHide(dataDir, rest) },
+                "add-member" to { rest -> dmAddMember(dataDir, rest) },
+            ),
+        )
+    }
+
+    /** `buzz dm list` → drains the relay-signed kind-41001 confirmations addressed to me. */
+    private suspend fun dmList(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val relaysFlag = args.flag("relays")
+        val limit = args.flag("limit")?.toIntOrNull() ?: 50
+        val timeoutSecs = args.flag("timeout")?.toLongOrNull() ?: 8
+        args.rejectUnknown("relays", "limit", "timeout")
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val me = ctx.identity.pubKeyHex
+            val relays = relaysFor(ctx, relaysFlag)
+            if (relays.isEmpty()) return Output.error("no_relays", "no relays: pass --relays ws://…")
+
+            val filter = Filter(kinds = listOf(DmCreatedEvent.KIND), tags = mapOf("p" to listOf(me)), limit = limit)
+            val dms =
+                ctx
+                    .drainAllPages(relays.associateWith { listOf(filter) }, timeoutSecs * 1000)
+                    .map { it.second }
+                    .filterIsInstance<DmCreatedEvent>()
+                    .distinctBy { it.id }
+                    .sortedByDescending { it.createdAt }
+                    .take(limit)
+                    .map {
+                        mapOf(
+                            "dm_id" to it.dmId(),
+                            "participants" to it.participants(),
+                            "created_at" to it.createdAt,
+                        )
+                    }
+            Output.emit(mapOf("count" to dms.size, "dms" to dms))
+            return 0
+        }
+    }
+
+    /** `buzz dm open RELAY PUBKEY [PUBKEY…]` → publishes a kind-41010 with 1-8 `p` participants. */
+    private suspend fun dmOpen(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val usage = "buzz dm open RELAY PUBKEY [PUBKEY…]"
+        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+
+        val participants = mutableListOf<HexKey>()
+        var i = 1
+        while (true) {
+            val raw = args.positionalOrNull(i) ?: break
+            val hex =
+                decodePublicKeyAsHexOrNull(raw.trim())?.takeIf { it.isValid() }
+                    ?: return Output.error("bad_args", "invalid public key (npub or 64-char hex): $raw")
+            if (hex !in participants) participants.add(hex)
+            i++
+        }
+        if (participants.size !in DmOpenEvent.MIN_PARTICIPANTS..DmOpenEvent.MAX_PARTICIPANTS) {
+            return Output.error("bad_args", "a DM needs ${DmOpenEvent.MIN_PARTICIPANTS}-${DmOpenEvent.MAX_PARTICIPANTS} participants")
+        }
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val signed = ctx.signer.sign(DmOpenEvent.build(participants))
+            val ack = ctx.publish(signed, setOf(relay))
+            RawEventSupport.publishGuard(ack, signed.id)?.let { return it }
+            Output.emit(
+                mapOf(
+                    "event_id" to signed.id,
+                    "kind" to signed.kind,
+                    "relay" to relay.url,
+                    "participants" to participants,
+                    "published" to ack.values.any { it.accepted },
+                ),
+            )
+            return 0
+        }
+    }
+
+    /** `buzz dm hide RELAY CHANNEL` → publishes a kind-41012 scoped by the DM's `h` tag. */
+    private suspend fun dmHide(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int =
+        publishScoped(dataDir, rest, "buzz dm hide RELAY CHANNEL") { _, channelId, _ ->
+            DmHideEvent.build(channelId)
+        }
+
+    /** `buzz dm add-member RELAY CHANNEL PUBKEY` → publishes a kind-41011 (`h` + new `p`). */
+    private suspend fun dmAddMember(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val usage = "buzz dm add-member RELAY CHANNEL PUBKEY"
+        val memberInput = Args(rest).positionalOrNull(2) ?: return Output.error("bad_args", usage)
+        val member =
+            decodePublicKeyAsHexOrNull(memberInput.trim())?.takeIf { it.isValid() }
+                ?: return Output.error("bad_args", "invalid public key (npub or 64-char hex): $memberInput")
+        return publishScoped(dataDir, rest, usage) { _, channelId, _ ->
+            DmAddMemberEvent.build(channelId, member)
+        }
+    }
 
     /** `buzz post RELAY GID <text>` → publishes a kind-40002 stream message with an `h` tag. */
     private suspend fun post(

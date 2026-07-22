@@ -3309,6 +3309,20 @@
     <string name="buzz_forum_new_title">New forum topic</string>
     <string name="buzz_forum_body_label">What do you want to discuss?</string>
     <string name="buzz_forum_post_action">Post topic</string>
+    <string name="buzz_dm_title">Direct Messages</string>
+    <string name="buzz_dm_card_subtitle">Private conversations on your workspaces</string>
+    <string name="buzz_dm_new">New message</string>
+    <string name="buzz_dm_empty_title">No direct messages yet</string>
+    <string name="buzz_dm_empty_body">Start a private conversation with anyone on a Buzz workspace.</string>
+    <string name="buzz_dm_more">More</string>
+    <string name="buzz_dm_hide">Hide conversation</string>
+    <string name="buzz_dm_just_you">Just you</string>
+    <string name="buzz_dm_workspace">Workspace</string>
+    <string name="buzz_dm_recipients">To</string>
+    <string name="buzz_dm_add_hint">Add someone (npub or hex)</string>
+    <string name="buzz_dm_start">Start conversation</string>
+    <string name="buzz_dm_opening">Opening…</string>
+    <string name="buzz_dm_remove">Remove</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>

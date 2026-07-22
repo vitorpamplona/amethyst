@@ -103,7 +103,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentAttestationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentConsoleScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentPersonaEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzCanvasScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumPostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzNewDmScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspacesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
@@ -460,6 +462,8 @@ fun BuildNavigation(
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
         composableFromEnd<Route.BuzzWorkspaces> { BuzzWorkspacesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BuzzDmList> { BuzzDmListScreen(accountViewModel, nav) }
+        composableFromEnd<Route.BuzzNewDm> { BuzzNewDmScreen(accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }

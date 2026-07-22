@@ -217,12 +217,26 @@ the Threads tab is the read-side follow-up.)
 mirrors `BuzzHeldAttestations` to the device-global DataStore and reloads it at startup,
 **re-verifying each against its agent key** so a tampered on-disk credential is dropped.
 
+**Direct messages are wired** end-to-end. A Buzz DM is NOT NIP-17 gift-wrap — it's a
+relay-authoritative NIP-29 group whose `h`/id is a relay-generated UUID, its messages plain
+kind-9/40002 with `h` = that id, gated by the relay to its members (confidentiality is
+relay-side, not E2E). Flow:
+- **discovery** — `BuzzDmListViewModel` fetches + live-subscribes the relay-signed
+  `DmCreatedEvent` (41001, `#p` = me) and per-viewer `DmVisibilityEvent` (30622); `LocalCache`
+  consumes them into `commons/.../buzz/BuzzDmRegistry` (channel id → participants/relay, plus the
+  viewer's hidden set). It then fetches each DM's NIP-29 directory (39000-39003 `#d`) so the
+  relay-signed roster is present — a DM isn't in the joined-group list, so nothing else would.
+- **open/hide/add-member** — `Account.openBuzzDm` (41010, relay assigns the UUID and confirms via
+  41001; we never mint it), `hideBuzzDm` (41012), `addBuzzDmMember` (41011).
+- **UI** — `BuzzDmListScreen` (inbox) + `BuzzNewDmScreen` (publish 41010, await the 41001, jump
+  into the shared `RelayGroupChatScreen`); the whole chat timeline + composer is reused unchanged.
+- **CLI** — `amy buzz dm list/open/hide/add-member`.
+
 Still not wired: **presence (kind 20001)** — accepted by Buzz but it collides with Amethyst's
 `GeohashPresenceEvent` in `EventFactory` (20001 is registered as geohash presence), so it needs
-disambiguation before it can render (typing/20002 has no such collision). The **job/huddle/DM
+disambiguation before it can render (typing/20002 has no such collision). The **job/huddle
 composers** are deferred: jobs (43xxx) and huddles (48xxx) have **no builder** in `buzz-sdk`
-(reserved kinds), so a composer would encode an unconfirmed schema; DM (`build_dm_open`, 41001)
-is a full encrypted-DM subsystem for a later pass.
+(reserved kinds), so a composer would encode an unconfirmed schema.
 
 ## Owner Attestation (NIP-OA) — implemented
 

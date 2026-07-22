@@ -138,6 +138,8 @@ fun BuzzWorkspacesScreen(
         ) {
             item { AgentConsoleHeroCard(onClick = { nav.nav(Route.AgentConsole) }) }
 
+            item { DirectMessagesCard(onClick = { nav.nav(Route.BuzzDmList) }) }
+
             if (workspaces.isEmpty()) {
                 item { EmptyWorkspaces(onBrowse = { nav.nav(Route.RelayGroups) }) }
             } else {
@@ -218,6 +220,57 @@ private fun AgentConsoleHeroCard(onClick: () -> Unit) {
                 symbol = MaterialSymbols.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+/** A tonal card leading to the Buzz Direct Messages inbox. */
+@Composable
+private fun DirectMessagesCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondary),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.Send,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringRes(R.string.buzz_dm_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringRes(R.string.buzz_dm_card_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Icon(
+                symbol = MaterialSymbols.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(22.dp),
             )
         }

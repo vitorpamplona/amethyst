@@ -153,6 +153,9 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
+import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
+import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
@@ -2913,6 +2916,37 @@ class Account(
         if (!isWriteable()) return
         val signed = signer.sign(TypingIndicatorEvent.build(channel.groupId.id))
         client.publish(signed, setOf(channel.groupId.relayUrl))
+    }
+
+    /**
+     * Open (or re-surface) a Buzz DM with [participants] on [relay] via a kind-41010
+     * command. [participants] are the OTHER 1-8 people — the relay adds me, derives the
+     * canonical channel UUID, and confirms with a relay-signed [DmCreatedEvent]
+     * (kind-41001) that lands in [com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry].
+     * We never assign the channel id ourselves, so callers discover the materialized DM
+     * by watching that registry rather than from this call's return.
+     */
+    suspend fun openBuzzDm(
+        relay: NormalizedRelayUrl,
+        participants: List<HexKey>,
+    ) {
+        val template = DmOpenEvent.build(participants)
+        signAndSendPrivatelyOrBroadcast(template) { listOf(relay) }
+    }
+
+    /** Hide a Buzz DM from my sidebar with a kind-41012 command (re-opening it un-hides). */
+    suspend fun hideBuzzDm(channel: RelayGroupChannel) {
+        val template = DmHideEvent.build(channel.groupId.id)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Add [member] to an existing group DM with a kind-41011 command (creates a new DM set). */
+    suspend fun addBuzzDmMember(
+        channel: RelayGroupChannel,
+        member: HexKey,
+    ) {
+        val template = DmAddMemberEvent.build(channel.groupId.id, member)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 
     /** Send a kind 9022 leave request to the host relay and drop it from our list. */
