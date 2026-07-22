@@ -606,7 +606,7 @@ and `commons` aggregator the app uses.
 | `amy buzz attest AGENT [--kind K] [--after UNIX] [--before UNIX]` | Sign a NIP-OA attestation authorizing AGENT (offline; needs a local key). Prints the `auth` tag to hand to the agent operator. |
 | `amy buzz console [--relays R,R] [--timeout SECS]` | Fetch my kind:44200 turn metrics (`#p`=me), decrypt, and aggregate fleet + per-agent cost/tokens. |
 | `amy buzz personas [--relays R,R] [--timeout SECS]` | List my kind:30175 persona definitions (newest per slug). |
-| `amy buzz dm list [--relays R,R] [--limit N] [--timeout SECS]` | List my DMs from the relay-signed kind:41001 confirmations (`#p`=me): dm id + participants. |
+| `amy buzz dm list [--relays R,R] [--limit N] [--timeout SECS]` | List my DMs: discover channels I'm in via kind:44100 member-added notifications (`#p`=me), keep the ones a kind:40099 `dm_created` marks as DMs. (The deployed relay does not emit kind:41001.) |
 | `amy buzz dm open RELAY PUBKEY [PUBKEY…]` | Open (or re-surface) a DM with 1-8 people (kind:41010). The relay assigns the channel id and confirms via 41001. |
 | `amy buzz dm hide RELAY CHANNEL` | Hide a DM from my sidebar (kind:41012); re-opening it un-hides. |
 | `amy buzz dm add-member RELAY CHANNEL PUBKEY` | Add a member to an existing group DM (kind:41011). |
