@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -162,6 +165,24 @@ fun RelayGroupTopBar(
                     contentDescription = stringRes(R.string.relay_group_threads_title),
                     modifier = Modifier.size(20.dp),
                 )
+            }
+
+            // Buzz workspace canvas (kind 40100): shown only on a Buzz-dialect relay once
+            // a canvas has arrived for this channel. Observing canvasUpdates flips it on
+            // the moment the first canvas is consumed, without swapping the channel object.
+            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+                val canvasState = remember(channel.groupId.id) { BuzzWorkspaceStates.getOrCreate(channel.groupId.id) }
+                val canvasVersion by canvasState.canvasUpdates.collectAsState()
+                val hasCanvas = remember(canvasVersion) { canvasState.canvasNote != null }
+                if (hasCanvas) {
+                    IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id)) }) {
+                        Icon(
+                            symbol = MaterialSymbols.Dashboard,
+                            contentDescription = stringRes(R.string.buzz_canvas_title),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
             }
 
             val naddr = channel.toNAddr()

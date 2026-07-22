@@ -3292,6 +3292,8 @@
     <string name="chat_system_updated_channel">%1$s updated the channel profile</string>
     <string name="buzz_message_edited">(edited)</string>
     <string name="buzz_diff_truncated">(diff truncated)</string>
+    <string name="buzz_canvas_title">Canvas</string>
+    <string name="buzz_canvas_empty">No canvas has been shared in this workspace yet.</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>

@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentAttestationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentConsoleScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentPersonaEditScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzCanvasScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -758,6 +759,7 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
+        composableFromEndArgs<Route.BuzzCanvas> { BuzzCanvasScreen(it.channelId, accountViewModel, nav) }
 
         composableFromEndArgs<Route.RelayGroupCreate> {
             RelayGroupCreateScreen(

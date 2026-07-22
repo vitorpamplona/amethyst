@@ -699,6 +699,10 @@ sealed class Route {
         val relayUrl: String,
     ) : Route()
 
+    @Serializable data class BuzzCanvas(
+        val channelId: String,
+    ) : Route()
+
     @Serializable data class RelayGroupCreate(
         val relayUrl: String,
     ) : Route()

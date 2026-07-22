@@ -56,6 +56,11 @@ class BuzzWorkspaceState {
     var canvasNote: Note? = null
         private set
 
+    private val canvasVersion = MutableStateFlow(0)
+
+    /** Bumps when [canvasNote] is replaced by a newer revision, so a canvas view re-reads it. */
+    val canvasUpdates: StateFlow<Int> = canvasVersion
+
     /** Records a 40003 edit; keeps only the newest per target (last-write-wins by created_at). */
     fun addEdit(
         targetId: HexKey,
@@ -78,6 +83,7 @@ class BuzzWorkspaceState {
         lock.withLock {
             if ((note.createdAt() ?: 0L) > (canvasNote?.createdAt() ?: 0L)) {
                 canvasNote = note
+                canvasVersion.value = canvasVersion.value + 1
             }
         }
 
