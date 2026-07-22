@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.IEoseManager
+import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 
 /**
  * Bridges missing-addressable-note authors into [UserFinderFilterAssembler].
@@ -42,9 +45,24 @@ class AddressableAuthorRelayLoaderSubAssembler(
     val allKeys: () -> Set<EventFinderQueryState>,
     val userFinder: UserFinderFilterAssembler,
 ) : IEoseManager {
-    private val activeSubscriptions = mutableSetOf<UserFinderQueryState>()
+    // Private monitor: @Synchronized locks on `this`, which leaves the instance's monitor
+    // reachable to anything holding a reference to this assembler.
+    private val lock = Any()
+
+    // Only ever touched while holding [lock]. See commit() and destroy().
+    private var activeSubscriptions: Set<UserFinderQueryState> = emptySet()
+    private var destroyed = false
+
+    // Keeps the scan off the caller's thread. invalidateFilters() is reached synchronously from
+    // ComposeSubscriptionManager.subscribe/unsubscribe on every note composable mount/unmount,
+    // and those are documented "called by main. Keep it really fast."
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     override fun invalidateFilters(ignoreIfDoing: Boolean) {
+        bundler.invalidate(ignoreIfDoing, ::forceInvalidate)
+    }
+
+    private fun forceInvalidate() {
         val needed = mutableSetOf<UserFinderQueryState>()
 
         allKeys().forEach { key ->
@@ -57,18 +75,39 @@ class AddressableAuthorRelayLoaderSubAssembler(
             }
         }
 
-        val toAdd = needed - activeSubscriptions
-        val toRemove = activeSubscriptions - needed
+        commit(needed)
+    }
 
-        userFinder.subscribe(toAdd.toList())
-        userFinder.unsubscribe(toRemove.toList())
+    /**
+     * Serializes against [destroy] — the one caller the bundler cannot order, because
+     * `bundler.cancel()` cannot stop a body that is already running (it has no suspension points).
+     *
+     * The scan in [forceInvalidate] stays outside [lock], so [destroy] never waits on a
+     * [LocalCache] sweep. It can still wait on the two calls below, which are bounded: a pair of
+     * map updates inside [UserFinderFilterAssembler] plus the coroutine launches its
+     * `invalidateKeys()` fans out to.
+     *
+     * Calling [userFinder] while holding [lock] relies on subscribe/unsubscribe only taking
+     * ComposeSubscriptionManager's own lock and deferring real work to bundled coroutines — they
+     * never call back into this class. Revisit if that changes.
+     */
+    private fun commit(needed: Set<UserFinderQueryState>) {
+        synchronized(lock) {
+            if (destroyed) return
 
-        activeSubscriptions.clear()
-        activeSubscriptions.addAll(needed)
+            userFinder.subscribe((needed - activeSubscriptions).toList())
+            userFinder.unsubscribe((activeSubscriptions - needed).toList())
+
+            activeSubscriptions = needed
+        }
     }
 
     override fun destroy() {
-        userFinder.unsubscribe(activeSubscriptions.toList())
-        activeSubscriptions.clear()
+        synchronized(lock) {
+            destroyed = true
+            bundler.cancel()
+            userFinder.unsubscribe(activeSubscriptions.toList())
+            activeSubscriptions = emptySet()
+        }
     }
 }

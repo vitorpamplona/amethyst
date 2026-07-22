@@ -29,6 +29,25 @@ class OkMessage(
 ) : Message {
     override fun label() = LABEL
 
+    /**
+     * Wire form is `["OK","<eventId>",<true|false>,"<message>"]` — sent
+     * once per published EVENT. [eventId] is validated hex (always
+     * escape-free); splice directly when [message] also needs no escaping,
+     * which covers the empty-string success ack and the plain-ASCII
+     * rejection reasons. Byte-identical output; a reason with quotes or
+     * non-ASCII falls back to the generic serializer.
+     */
+    override fun toJson(): String {
+        if (!isEscapeFreeAscii(message)) return super.toJson()
+        return buildString(eventId.length + message.length + 20) {
+            append("[\"OK\",\"")
+            append(eventId)
+            append(if (success) "\",true,\"" else "\",false,\"")
+            append(message)
+            append("\"]")
+        }
+    }
+
     companion object {
         const val LABEL = "OK"
 

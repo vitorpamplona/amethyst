@@ -31,6 +31,37 @@ import com.vitorpamplona.quartz.utils.EventFactory
 /**
  * NIP-50 full-text search index over event content.
  *
+ * The index is a **contentless** FTS5 table (`content=''`,
+ * `contentless_delete=1`) whose `rowid` is the event's
+ * `event_headers.row_id`. Two consequences:
+ *
+ *  - **Deletes.** The `fts_foreign_key` trigger deletes by `rowid` (an FTS5
+ *    primary-key seek, O(log n)). The old `fts5(event_header_row_id,
+ *    content)` schema deleted by a *regular* column, which FTS5 cannot seek —
+ *    it scans the whole index per delete (O(n)), so deletion throughput
+ *    degraded with corpus size. Every event removal fires this trigger
+ *    (replaceable rotation, kind-5, expiration, right-to-vanish), so the
+ *    seek matters. Measured `Fts5CapabilityProbe`/`FtsSearchScalingBenchmark`:
+ *    ~78× at 8k rows and widening with the table.
+ *  - **Size.** A contentless table stores only the inverted index, not a
+ *    second copy of the tokenized text. The indexed text is *derived*
+ *    ([SearchableEvent.indexableContent], not any raw column), so FTS5
+ *    external-content — which reads the source column from the base table —
+ *    cannot express it; contentless is the correct primitive.
+ *
+ * Search results are ordered by **relevance**, per NIP-50 ("descending order
+ * by quality of search result ... not by the usual `.created_at`", limit
+ * applied after the score) — via FTS5 bm25 (`ORDER BY event_fts.rank`), with
+ * `created_at DESC` only as a tie-break. This holds for *every* search filter:
+ * the tag-free shape ([QueryBuilder.makeSimpleSearch]), `search + tag` (whose
+ * row-id subquery carries the rank through via `projectRank`), and a
+ * multi-filter all-search REQ (unioned, deduped by event keeping the best
+ * score). Only the negentropy snapshot — and a multi-filter REQ mixing search
+ * and non-search branches — keep `created_at` (a sync set / a branch with no
+ * defined relevance). bm25 must score every match, so search latency still grows with the
+ * match set regardless of ordering; corpus-independent search needs an
+ * external engine, not this index.
+ *
  * When [enabled] is `false` the module becomes an inert no-op: no
  * `event_fts` virtual table and no `fts_foreign_key` delete trigger are
  * created, inserts skip the per-event tokenization cost, and the reindex
@@ -52,34 +83,68 @@ class FullTextSearchModule(
 ) : IModule {
     val tableName = "event_fts"
     val triggerName = "fts_foreign_key"
-    val eventHeaderRowIdName = "event_header_row_id"
+
+    /**
+     * The FTS column that links back to `event_headers`. It is the implicit
+     * `rowid` of the (contentless) FTS table, which we set equal to
+     * `event_headers.row_id` on every insert — so the join is
+     * `event_headers.row_id = event_fts.rowid`, with no stored column.
+     */
+    val rowIdColumn = "rowid"
     val contentName = "content"
     val stateTableName = "fts_catchup_state"
+
+    /**
+     * Whether the on-disk `event_fts` is an FTS5 table (vs the fts4/fts3
+     * fallback). Only FTS5 supports the contentless schema and the
+     * `merge`/`optimize` maintenance commands; the fallback stores content
+     * and skips maintenance. Read only on the (single-threaded) writer.
+     * Cached lazily from `sqlite_master` so a reopened DB — where [create]
+     * never runs — still resolves it.
+     */
+    private var isFts5: Boolean? = null
 
     override fun create(db: SQLiteConnection) {
         if (!enabled) return
         val ftsVersion = versionFinder(db)
-        db.execSQL(
-            """
-                    CREATE VIRTUAL TABLE $tableName
-                    USING fts$ftsVersion($eventHeaderRowIdName, $contentName)
-                """,
-        )
+        isFts5 = ftsVersion >= 5
+        // FTS5: contentless index (no stored content copy) with delete
+        // support. fts4/fts3 (bundled driver never selects them) fall back to
+        // a plain content-storing table — rowid-explicit insert and
+        // delete-by-rowid work there too, only the size win is FTS5-only.
+        val columns =
+            if (ftsVersion >= 5) {
+                "$contentName, content='', contentless_delete=1"
+            } else {
+                contentName
+            }
+        db.execSQL("CREATE VIRTUAL TABLE $tableName USING fts$ftsVersion($columns)")
 
-        // Foreign key cleanup for full text search
+        // Foreign key cleanup for full text search. Deletes by the FTS rowid
+        // (= event_headers.row_id); a header with no FTS row (non-searchable
+        // kind) deletes nothing, which is a harmless no-op.
         db.execSQL(
             """
                 CREATE TRIGGER $triggerName
                 AFTER DELETE ON event_headers
                 FOR EACH ROW
                 BEGIN
-                    DELETE FROM $tableName
-                    WHERE old.row_id = $tableName.$eventHeaderRowIdName;
+                    DELETE FROM $tableName WHERE $tableName.rowid = old.row_id;
                 END;
             """,
         )
 
         createStateTable(db)
+    }
+
+    private fun resolveIsFts5(db: SQLiteConnection): Boolean {
+        isFts5?.let { return it }
+        val sql =
+            db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").use { stmt ->
+                stmt.bindText(1, tableName)
+                if (stmt.step()) stmt.getText(0) else ""
+            }
+        return sql.contains("fts5", ignoreCase = true).also { isFts5 = it }
     }
 
     /**
@@ -124,13 +189,13 @@ class FullTextSearchModule(
 
     val insertFTS =
         """
-        INSERT OR ROLLBACK INTO $tableName ($eventHeaderRowIdName, $contentName)
+        INSERT OR ROLLBACK INTO $tableName (rowid, $contentName)
         VALUES (?, ?)
         """.trimIndent()
 
     val deleteFTSByRowId =
         """
-        DELETE FROM $tableName WHERE $eventHeaderRowIdName = ?
+        DELETE FROM $tableName WHERE rowid = ?
         """.trimIndent()
 
     fun insert(
@@ -200,7 +265,19 @@ class FullTextSearchModule(
         dropTrigger(db)
         drop(db)
         create(db)
+        populateAll(db)
+        // The rebuild just wrote every row as its own tiny segment; compact
+        // them into one so the first search after a reindex isn't a scan over
+        // hundreds of segments.
+        optimize(db)
+    }
 
+    /**
+     * Scan every stored searchable event and insert its derived content into
+     * the (already created, empty) FTS index, keyed by `event_headers.row_id`.
+     * The caller owns the transaction and the create/drop lifecycle.
+     */
+    private fun populateAll(db: SQLiteConnection) {
         val kinds = searchableKindsPresent(db)
         if (kinds.isEmpty()) return
 
@@ -227,6 +304,58 @@ class FullTextSearchModule(
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * v4 → v5 migration: the pre-v5 index was `fts5(event_header_row_id,
+     * content)` with an auto-assigned rowid unrelated to `event_headers`, and
+     * it stored a second copy of the content. v5 is the contentless,
+     * rowid = row_id schema. The old rowids can't be remapped in place, so the
+     * table is dropped and repopulated. Runs inside the migration transaction.
+     *
+     *  - **synchronous** stores rebuild now (client corpora are small).
+     *  - **deferred** stores reset the catch-up watermark to 0 so the relay's
+     *    background worker repopulates without a long migration transaction.
+     */
+    fun migrateV4ToContentless(db: SQLiteConnection) {
+        if (!enabled) return
+        dropTrigger(db)
+        drop(db)
+        create(db)
+        if (deferIndexing) {
+            db.prepare("UPDATE $stateTableName SET last_row_id = 0 WHERE id = 1").use { it.step() }
+        } else {
+            populateAll(db)
+            optimize(db)
+        }
+    }
+
+    /**
+     * Full FTS5 segment compaction — merges the b-tree segments left by
+     * incremental inserts into one, so a `MATCH` touches a single segment
+     * instead of dozens. Expensive (rewrites the whole index); call it once
+     * after a rebuild, not per batch. No-op on the fts4/fts3 fallback.
+     */
+    fun optimize(db: SQLiteConnection) {
+        if (!enabled || !resolveIsFts5(db)) return
+        db.prepare("INSERT INTO $tableName($tableName) VALUES ('optimize')").use { it.step() }
+    }
+
+    /**
+     * Bounded incremental segment merge — does at most [pages] pages of merge
+     * work, so it stays cheap enough to run on a periodic maintenance tick
+     * while the index keeps growing from deferred catch-up. No-op on the
+     * fts4/fts3 fallback.
+     */
+    fun mergeSegments(
+        db: SQLiteConnection,
+        pages: Int = 16,
+    ) {
+        if (!enabled || !resolveIsFts5(db)) return
+        db.prepare("INSERT INTO $tableName($tableName, rank) VALUES ('merge', ?)").use { stmt ->
+            stmt.bindLong(1, pages.toLong())
+            stmt.step()
         }
     }
 
@@ -329,13 +458,11 @@ class FullTextSearchModule(
         // Unlike [reindexBatch] there is NO per-row delete here: rows past
         // the watermark were never indexed (deferred mode skips insert()),
         // and the watermark advances atomically with the FTS rows it
-        // covers, so a crash replay is impossible. The delete would also
-        // be ruinous — `event_header_row_id` is a plain FTS5 column, so
-        // deleting by it scans the whole FTS table per row, which turned
-        // the first catch-up implementation O(n²). Consequence: switching
-        // a database back and forth between deferred and synchronous
-        // strategies requires a [reindexAll] in between (same rule as a
-        // searchable-kinds change).
+        // covers, so a crash replay is impossible. (Delete-by-rowid is now
+        // O(log n) on the contentless index, so this is purely about not
+        // doing redundant work.) Consequence: switching a database back and
+        // forth between deferred and synchronous strategies requires a
+        // [reindexAll] in between (same rule as a searchable-kinds change).
         val limit = batchSize.coerceAtLeast(1)
         val kinds = searchableKindsPresent(db)
         var last = watermark

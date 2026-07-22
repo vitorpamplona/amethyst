@@ -25,6 +25,22 @@ class EoseMessage(
 ) : Message {
     override fun label() = LABEL
 
+    /**
+     * Wire form is `["EOSE","<subId>"]` — sent once per REQ, so it is on
+     * the per-subscription floor. Splice it directly when [subId] needs no
+     * escaping (the common case: client-chosen sub ids are short ASCII),
+     * skipping the generic serializer's node tree. Byte-identical output;
+     * any exotic subId falls back.
+     */
+    override fun toJson(): String {
+        if (!isEscapeFreeAscii(subId)) return super.toJson()
+        return buildString(subId.length + 12) {
+            append("[\"EOSE\",\"")
+            append(subId)
+            append("\"]")
+        }
+    }
+
     companion object {
         const val LABEL = "EOSE"
     }

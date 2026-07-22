@@ -57,6 +57,14 @@ fun relayIndexingStrategy(
     // index unconditionally; without it the filter walks the whole
     // time index.
     indexEventsByPubkeyAlone = true,
+    // The tag ∩ author ∩ kind shape (DM rooms, reports-by-follows,
+    // follows-scoped community feeds — 65 client assembler call sites)
+    // otherwise reads every row for the tag/kind before filtering the
+    // author. TagAuthorIndexBenchmark @ 1M events: 14.2 ms -> 0.66 ms
+    // (~21x, growing with corpus size) with insert cost inside run noise
+    // (49.0 vs 47.4 µs/event). Existing DBs build the index on next open
+    // via ensureOptionalIndexes.
+    indexTagsWithKindAndPubkey = true,
     indexFullTextSearch = fullTextSearch,
     // Tokenize off the commit path; NostrServer drives the catch-up
     // worker and search queries drain it first, so NIP-50 stays

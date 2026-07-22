@@ -64,6 +64,10 @@ class MediaSessionPool(
     val exoPlayerPool: ExoPlayerPool,
     val dataSourceFactory: DataSource.Factory,
     val appContext: Context,
+    // Ceiling on cached sessions. Each one holds a checked-out ExoPlayer, so on a device whose
+    // decoder ceiling is lower than [MAX_CACHED_SESSIONS] this is what keeps the session cache
+    // from pinning more MediaCodec instances than the hardware will grant.
+    maxSessions: Int = MAX_CACHED_SESSIONS,
     val reset: (MediaSession, Boolean) -> Unit,
 ) {
     private val exceptionHandler =
@@ -123,7 +127,7 @@ class MediaSessionPool(
     private val playingMap = mutableMapOf<String, SessionListener>()
 
     private val cache =
-        object : LruCache<String, SessionListener>(10) { // up to 10 videos in the screen at the same time
+        object : LruCache<String, SessionListener>(maxSessions.coerceIn(1, MAX_CACHED_SESSIONS)) {
             override fun entryRemoved(
                 evicted: Boolean,
                 key: String?,
@@ -295,6 +299,10 @@ class MediaSessionPool(
 
     companion object {
         private val CLEANUP_INTERVAL_NS = TimeUnit.MINUTES.toNanos(1)
+
+        // Roughly how many videos can share a screen at once. Acts as the upper bound only —
+        // a device that advertises fewer concurrent decoders than this caps lower.
+        const val MAX_CACHED_SESSIONS = 10
 
         // AOSP default for config_mediaMetadataBitmapMaxSize, used when the framework resource
         // can't be resolved by name on a given ROM.

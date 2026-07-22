@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubsc
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.note.DesktopPollCard
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
@@ -159,6 +160,8 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
@@ -247,6 +250,21 @@ private fun FeedNoteCardBody(
     myPubKeyHex: String? = null,
     onFollow: ((String) -> Unit)? = null,
 ) {
+    if (event is PollEvent) {
+        DesktopPollCard(
+            note = note,
+            event = event,
+            relayManager = relayManager,
+            localCache = localCache,
+            account = account,
+            myPubKeyHex = myPubKeyHex,
+            onNavigateToThread = onNavigateToThread,
+            onNavigateToProfile = onNavigateToProfile,
+            onHashtagClick = onHashtagClick,
+        )
+        return
+    }
+
     val isRepost = event is RepostEvent || event is GenericRepostEvent
 
     if (isRepost) {
@@ -270,6 +288,22 @@ private fun FeedNoteCardBody(
         // Now read event — recomposition will re-read this when metadata invalidates
         val originalEvent = originalNote.event
         if (originalEvent == null) {
+            return
+        }
+
+        // A boosted poll must still render as an interactive poll card, not a plain note.
+        if (originalEvent is PollEvent) {
+            DesktopPollCard(
+                note = originalNote,
+                event = originalEvent,
+                relayManager = relayManager,
+                localCache = localCache,
+                account = account,
+                myPubKeyHex = myPubKeyHex,
+                onNavigateToThread = onNavigateToThread,
+                onNavigateToProfile = onNavigateToProfile,
+                onHashtagClick = onHashtagClick,
+            )
             return
         }
 
@@ -859,6 +893,11 @@ fun FeedScreen(
                         kinds = listOf(com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND),
                         tags = mapOf("e" to interactionNoteIds),
                     ),
+                    // Poll responses (kind 1018) referencing these notes (NIP-88, lowercase `e`).
+                    Filter(
+                        kinds = listOf(PollResponseEvent.KIND),
+                        tags = mapOf("e" to interactionNoteIds),
+                    ),
                 ),
             relays = allRelayUrls,
             onEvent = { event, _, relay, _ ->
@@ -1117,6 +1156,7 @@ fun FeedScreen(
             onSearchClick = openFullSearch,
             relayManager = relayManager,
             localCache = localCache,
+            account = account,
             onNavigateToProfile = onNavigateToProfile,
             onNavigateToThread = onNavigateToThread,
         )
@@ -1156,6 +1196,7 @@ private fun FeedTabsHeader(
     onSearchClick: () -> Unit = {},
     relayManager: DesktopRelayConnectionManager? = null,
     localCache: DesktopLocalCache? = null,
+    account: AccountState.LoggedIn? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
 ) {
@@ -1508,6 +1549,9 @@ private fun FeedTabsHeader(
                                     onNavigateToThread(noteId)
                                 },
                                 localCache = localCache,
+                                relayManager = relayManager,
+                                account = account,
+                                myPubKeyHex = account?.pubKeyHex,
                                 modifier = Modifier.heightIn(max = 400.dp).fillMaxWidth(),
                             )
                         } else if (isSearching) {

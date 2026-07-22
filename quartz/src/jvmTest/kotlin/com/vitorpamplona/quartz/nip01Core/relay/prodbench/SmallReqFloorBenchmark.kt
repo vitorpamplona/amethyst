@@ -32,11 +32,14 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -65,6 +68,8 @@ class SmallReqFloorBenchmark {
         const val AUTHORS = 2_500 // ~20 events per author, matching author-archive
         const val ROUNDS = 400
         const val WARMUP = 100
+        const val IDLE_SUBS = 1_000
+        const val FANOUT_SUBS = 200
     }
 
     private fun hexId(seed: Int): String = seed.toString(16).padStart(64, '0')
@@ -122,16 +127,19 @@ class SmallReqFloorBenchmark {
             }
 
             // --- B: backend queryRaw to EOSE (live machinery included) ---
+            // UNDISPATCHED mirrors the production path (RelaySession.handleReq
+            // starts the query coroutine undispatched), so B−A is the live
+            // machinery itself, not a benchmark-only scheduler hop.
             suspend fun timeBackend(round: Int): Long {
                 val eose = CompletableDeferred<Long>()
                 val t0 = System.nanoTime()
                 val job =
-                    scope.launch {
+                    scope.launch(start = CoroutineStart.UNDISPATCHED) {
                         live.queryRaw(
                             ctx = ctx,
                             filters = listOf(filterFor(round)),
                             onEachStored = {},
-                            onEachLive = {},
+                            onEachLive = { _, _ -> },
                             onEose = { eose.complete(System.nanoTime() - t0) },
                         )
                     }
@@ -142,6 +150,33 @@ class SmallReqFloorBenchmark {
             repeat(WARMUP) { timeBackend(it) }
             val b = LongArray(ROUNDS)
             repeat(ROUNDS) { b[it] = timeBackend(it) }
+
+            // --- B@1k: same, with 1000 idle live subscriptions parked ---
+            // Register/unregister cost scales with the live population
+            // (FilterIndex mutates a shared snapshot per REQ open/close),
+            // which the single-sub stage can't see. Each idle sub filters
+            // on an author absent from the corpus: 0-row replay, then parks
+            // at the live tail and stays registered.
+            val idleJobs =
+                (0 until IDLE_SUBS).map { i ->
+                    val ready = CompletableDeferred<Unit>()
+                    val job =
+                        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                            live.queryRaw(
+                                ctx = ctx,
+                                filters = listOf(Filter(authors = listOf(hexId(1_000_000 + i)), kinds = listOf(1), limit = 1)),
+                                onEachStored = {},
+                                onEachLive = { _, _ -> },
+                                onEose = { ready.complete(Unit) },
+                            )
+                        }
+                    ready.await()
+                    job
+                }
+            repeat(WARMUP) { timeBackend(it) }
+            val b1k = LongArray(ROUNDS)
+            repeat(ROUNDS) { b1k[it] = timeBackend(it) }
+            idleJobs.forEach { it.cancel() }
 
             // --- C: full session dispatch, REQ json in → EOSE frame out ---
             suspend fun timeSession(round: Int): Long {
@@ -160,15 +195,67 @@ class SmallReqFloorBenchmark {
             val c = LongArray(ROUNDS)
             repeat(ROUNDS) { c[it] = timeSession(it) }
 
+            // --- fanout: one live event → FANOUT_SUBS live subscriptions ---
+            // All subs register on `live` directly (via queryRaw, same backend
+            // we submit into) and filter an author with no stored events (0-row
+            // replay, then park live). Submitting one matching event fans out to
+            // every sub; the body is serialized once and spliced per sub, so
+            // this measures the shared-serialization path (#2). skipVerify so
+            // the synthetic sig is accepted. Fewer rounds than A–C: each round
+            // is FANOUT_SUBS deliveries and a real group-commit insert.
+            val fanAuthor = hexId(9_000_001)
+            val delivered = AtomicInteger(0)
+            var fanDone = CompletableDeferred<Long>()
+            var fanStart = 0L
+            val fanJobs =
+                (0 until FANOUT_SUBS).map {
+                    val ready = CompletableDeferred<Unit>()
+                    val job =
+                        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                            live.queryRaw(
+                                ctx = ctx,
+                                filters = listOf(Filter(authors = listOf(fanAuthor), kinds = listOf(1))),
+                                onEachStored = {},
+                                onEachLive = { _, _ ->
+                                    if (delivered.incrementAndGet() == FANOUT_SUBS) {
+                                        fanDone.complete(System.nanoTime() - fanStart)
+                                    }
+                                },
+                                onEose = { ready.complete(Unit) },
+                            )
+                        }
+                    ready.await()
+                    job
+                }
+            val fanRounds = 60
+            val fanWarmup = 15
+            val fan = LongArray(fanRounds)
+            var fanSeq = 0
+            repeat(fanWarmup + fanRounds) { r ->
+                delivered.set(0)
+                fanDone = CompletableDeferred()
+                val ev = EventFactory.create<Event>(hexId(9_500_000 + fanSeq), fanAuthor, 1_700_000_000L + fanSeq, 1, emptyArray(), "fanout $fanSeq", sig)
+                fanSeq++
+                fanStart = System.nanoTime()
+                live.submit(ev, skipVerify = true) {}
+                val nanos = withTimeout(30_000) { fanDone.await() }
+                if (r >= fanWarmup) fan[r - fanWarmup] = nanos
+            }
+            fanJobs.forEach { it.cancel() }
+
             assertEquals(true, rowsA > 0, "author filters must return rows")
 
             val mA = median(a)
             val mB = median(b)
+            val mB1k = median(b1k)
             val mC = median(c)
             println("SmallReqFloorBenchmark @ ${EVENTS / 1000}k events, ~${rowsA / ROUNDS} rows/req, medians of $ROUNDS")
             println("  A raw store query:        ${"%6.3f".format(mA)} ms")
             println("  B backend queryRaw→EOSE:  ${"%6.3f".format(mB)} ms  (live machinery +${"%6.3f".format(mB - mA)})")
+            println("  B@${IDLE_SUBS} idle subs:      ${"%6.3f".format(mB1k)} ms  (population cost +${"%6.3f".format(mB1k - mB)})")
             println("  C session REQ→EOSE:       ${"%6.3f".format(mC)} ms  (dispatch+frames +${"%6.3f".format(mC - mB)})")
+            val mFan = median(fan)
+            println("  fanout 1→$FANOUT_SUBS live subs: ${"%6.3f".format(mFan)} ms  (${"%.2f".format(mFan * 1000 / FANOUT_SUBS)} µs/sub; body serialized once)")
 
             server.close()
             scope.cancel()

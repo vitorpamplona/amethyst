@@ -77,7 +77,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.dal.WorkoutFeedFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class AccountFeedContentStates(
@@ -196,6 +198,26 @@ class AccountFeedContentStates(
         scope.launch(Dispatchers.IO) {
             account.settings.relayGroupViewMode
                 .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
+        }
+
+        // A Concord control-plane fold is what first reveals a community's channels (and what makes
+        // ConcordCommunitySession.state non-null, without which ChatroomListKnownFeedFilter emits
+        // nothing at all for that community). None of it flows through LocalCache.newEventBundles,
+        // so the additive path can't see it: a folded channel reaches the Messages tab only if a
+        // message for it happens to arrive afterwards. Cold boot therefore shows a *subset* of a
+        // community's channels, or omits a quiet community entirely, until some unrelated
+        // invalidation fires. Rebuild on every structural change instead. `revision` bumps only on
+        // fold/membership/rekey (never a plain message), and sample() coalesces the burst of folds
+        // that lands as each control plane catches up — the same pairing Account.kt uses to drive
+        // refreshConcordChannelIndex off this flow.
+        scope.launch(Dispatchers.IO) {
+            @OptIn(FlowPreview::class)
+            account.concordSessions.revision
+                .drop(1)
+                .sample(500)
                 .collect {
                     dmKnown.invalidateData()
                 }

@@ -136,6 +136,14 @@ import java.io.IOException
 // Allows time for receiving app to copy the file after user confirms share.
 private const val SHARED_VIDEO_CLEANUP_DELAY_MS = 120_000L
 
+// Assumed shape of a video whose dimensions nobody has reported yet — no imeta `dim` and nothing
+// cached, which is the norm for a NIP-53 live stream on its first play. Without a ratio the sizing
+// modifier leaves height unconstrained, so the player stretches to whatever ceiling encloses it
+// (300.dp on the live-stream screen) and letterboxes the real frame inside, leaving black bars top
+// and bottom. Guessing the overwhelmingly common video shape puts the first layout in the right
+// place; [MediaAspectRatioCache] then corrects anything unusual once the decoder reports its size.
+private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
+
 @Composable
 fun ZoomableContentView(
     content: BaseMediaContent,
@@ -195,7 +203,7 @@ fun ZoomableContentView(
         }
 
         is MediaUrlVideo -> {
-            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url) ?: DEFAULT_VIDEO_ASPECT_RATIO
             val bridgedUrl =
                 remember(content.url, useLocalBlossomBridge) {
                     content.toCoilModel(useLocalBlossomBridge)
@@ -209,7 +217,13 @@ fun ZoomableContentView(
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
                 Box(
-                    modifier = Modifier.fillMaxWidth().then(boundsTrackingModifier),
+                    // The sizing modifier is repeated here because ContentWarningGate only applies
+                    // the one it is handed when the content is actually sensitive — the common
+                    // non-sensitive path emits content() bare. Without a height constraint of its
+                    // own this box stretches to whatever ceiling encloses it and the player
+                    // letterboxes the frame inside, which is what put black bars above and below
+                    // live streams (their enclosure is StreamingHeaderModifier's 300.dp cap).
+                    modifier = mediaSizingModifier(ratio, contentScale).then(boundsTrackingModifier),
                     contentAlignment = Alignment.Center,
                 ) {
                     VideoView(

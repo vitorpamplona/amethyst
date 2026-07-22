@@ -22,6 +22,11 @@ package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.PersistentSet
+import kotlinx.collections.immutable.persistentHashMapOf
+import kotlinx.collections.immutable.persistentHashSetOf
+import kotlinx.collections.immutable.toPersistentHashSet
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -62,9 +67,10 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * copy-on-write CAS loops, mirroring the
  * `nip86RelayManagement.server.BanStore` pattern. Reads in
  * [candidatesFor] and [forEach] are wait-free single-load atomic.
- * Writes (subscription register / unregister) copy the inner maps
- * — fine for this workload because writes are subscription-rate
- * (rare) while reads are event-rate (frequent).
+ * Writes (subscription register / unregister) build the next snapshot
+ * from persistent (HAMT) maps — O(keys × log S) with structural
+ * sharing rather than a full O(S) copy of both maps, since on a relay
+ * a write happens on every REQ open and close.
  *
  * ## What the index does NOT cover
  *
@@ -109,14 +115,26 @@ class FilterIndex<S : Any> {
     private object Unindexed : BucketKey
 
     /**
-     * Single immutable snapshot. [buckets] maps a key to the set of
-     * subscribers registered under it; [assignments] is the reverse
-     * map used by [unregister] to find a subscriber's keys without
-     * scanning every bucket.
+     * Single immutable snapshot. Subscribers are held in one map per
+     * indexable dimension so [candidatesFor] — called once per accepted
+     * ingest event, the hot read — can probe each dimension with the
+     * event's own field (`event.id`, `event.pubKey`, `tag[0]`/`tag[1]`,
+     * `event.kind`) and allocate no key-wrapper objects. [assignments] is
+     * the reverse map ([S] → the [BucketKey]s it occupies) used by
+     * [unregister]; the wrappers live only here, built on the rare
+     * register path.
+     *
+     * Persistent (HAMT) maps/sets: a register/unregister produces the
+     * next snapshot in O(keys × log S) with structural sharing, instead
+     * of copying full maps — registration happens on every REQ open/close.
      */
     private data class State<S>(
-        val buckets: Map<BucketKey, Set<S>> = emptyMap(),
-        val assignments: Map<S, Set<BucketKey>> = emptyMap(),
+        val ids: PersistentMap<HexKey, PersistentSet<S>> = persistentHashMapOf(),
+        val authors: PersistentMap<HexKey, PersistentSet<S>> = persistentHashMapOf(),
+        val tags: PersistentMap<String, PersistentMap<String, PersistentSet<S>>> = persistentHashMapOf(),
+        val kinds: PersistentMap<Int, PersistentSet<S>> = persistentHashMapOf(),
+        val unindexed: PersistentSet<S> = persistentHashSetOf(),
+        val assignments: PersistentMap<S, PersistentSet<BucketKey>> = persistentHashMapOf(),
     )
 
     private val state: AtomicReference<State<S>> = AtomicReference(State())
@@ -181,18 +199,23 @@ class FilterIndex<S : Any> {
         while (true) {
             val current = state.load()
             val keys = current.assignments[subscriber] ?: return
-            val newBuckets = current.buckets.toMutableMap()
+            var ids = current.ids
+            var authors = current.authors
+            var tags = current.tags
+            var kinds = current.kinds
+            var unindexed = current.unindexed
             for (key in keys) {
-                val cur = newBuckets[key] ?: continue
-                val next = cur - subscriber
-                if (next.isEmpty()) {
-                    newBuckets.remove(key)
-                } else {
-                    newBuckets[key] = next
+                when (key) {
+                    is IdKey -> ids = ids.removeSub(key.id, subscriber)
+                    is AuthorKey -> authors = authors.removeSub(key.author, subscriber)
+                    is KindKey -> kinds = kinds.removeSub(key.kind, subscriber)
+                    is TagKey -> tags = tags.removeTagSub(key.letter, key.value, subscriber)
+                    Unindexed -> unindexed = unindexed.remove(subscriber)
                 }
             }
-            val newAssignments = current.assignments - subscriber
-            if (state.compareAndSet(current, State(newBuckets, newAssignments))) return
+            val next =
+                State(ids, authors, tags, kinds, unindexed, current.assignments.remove(subscriber))
+            if (state.compareAndSet(current, next)) return
         }
     }
 
@@ -202,19 +225,22 @@ class FilterIndex<S : Any> {
      * candidate to handle negative constraints.
      *
      * Iteration order is insertion-stable per call but otherwise
-     * unspecified.
+     * unspecified. Allocates only the result set — dimensions are
+     * probed with the event's own fields, no key wrappers.
      */
     fun candidatesFor(event: Event): Set<S> {
         val s = state.load()
-        if (s.buckets.isEmpty()) return emptySet()
+        if (s.assignments.isEmpty()) return emptySet()
         val result = LinkedHashSet<S>()
-        s.buckets[Unindexed]?.let { result.addAll(it) }
-        s.buckets[IdKey(event.id)]?.let { result.addAll(it) }
-        s.buckets[AuthorKey(event.pubKey)]?.let { result.addAll(it) }
-        s.buckets[KindKey(event.kind)]?.let { result.addAll(it) }
-        for (tag in event.tags) {
-            if (tag.size >= 2 && tag[0].length == 1) {
-                s.buckets[TagKey(tag[0], tag[1])]?.let { result.addAll(it) }
+        if (s.unindexed.isNotEmpty()) result.addAll(s.unindexed)
+        s.ids[event.id]?.let { result.addAll(it) }
+        s.authors[event.pubKey]?.let { result.addAll(it) }
+        s.kinds[event.kind]?.let { result.addAll(it) }
+        if (s.tags.isNotEmpty()) {
+            for (tag in event.tags) {
+                if (tag.size >= 2 && tag[0].length == 1) {
+                    s.tags[tag[0]]?.get(tag[1])?.let { result.addAll(it) }
+                }
             }
         }
         return result
@@ -235,19 +261,75 @@ class FilterIndex<S : Any> {
         keys: List<BucketKey>,
     ) {
         if (keys.isEmpty()) return
-        val keySet = keys.toSet()
+        val keySet = keys.toPersistentHashSet()
         while (true) {
             val current = state.load()
-            val newBuckets = current.buckets.toMutableMap()
+            var ids = current.ids
+            var authors = current.authors
+            var tags = current.tags
+            var kinds = current.kinds
+            var unindexed = current.unindexed
             for (key in keySet) {
-                val cur = newBuckets[key] ?: emptySet()
-                if (subscriber in cur) continue
-                newBuckets[key] = cur + subscriber
+                when (key) {
+                    is IdKey -> ids = ids.addSub(key.id, subscriber)
+                    is AuthorKey -> authors = authors.addSub(key.author, subscriber)
+                    is KindKey -> kinds = kinds.addSub(key.kind, subscriber)
+                    is TagKey -> tags = tags.addTagSub(key.letter, key.value, subscriber)
+                    Unindexed -> unindexed = unindexed.add(subscriber)
+                }
             }
             val existing = current.assignments[subscriber]
-            val merged = if (existing == null) keySet else existing + keySet
-            val newAssignments = current.assignments + (subscriber to merged)
-            if (state.compareAndSet(current, State(newBuckets, newAssignments))) return
+            val merged = existing?.addAll(keySet) ?: keySet
+            val next = State(ids, authors, tags, kinds, unindexed, current.assignments.put(subscriber, merged))
+            if (state.compareAndSet(current, next)) return
+        }
+    }
+
+    // Per-dimension add/remove of one subscriber, returning the same map
+    // instance when nothing changed so the CAS builds minimal new nodes.
+    private fun <K> PersistentMap<K, PersistentSet<S>>.addSub(
+        key: K,
+        sub: S,
+    ): PersistentMap<K, PersistentSet<S>> {
+        val cur = this[key] ?: persistentHashSetOf()
+        val next = cur.add(sub)
+        return if (next === cur) this else put(key, next)
+    }
+
+    private fun <K> PersistentMap<K, PersistentSet<S>>.removeSub(
+        key: K,
+        sub: S,
+    ): PersistentMap<K, PersistentSet<S>> {
+        val cur = this[key] ?: return this
+        val next = cur.remove(sub)
+        return when {
+            next === cur -> this
+            next.isEmpty() -> remove(key)
+            else -> put(key, next)
+        }
+    }
+
+    private fun PersistentMap<String, PersistentMap<String, PersistentSet<S>>>.addTagSub(
+        letter: String,
+        value: String,
+        sub: S,
+    ): PersistentMap<String, PersistentMap<String, PersistentSet<S>>> {
+        val inner = this[letter] ?: persistentHashMapOf()
+        val newInner = inner.addSub(value, sub)
+        return if (newInner === inner) this else put(letter, newInner)
+    }
+
+    private fun PersistentMap<String, PersistentMap<String, PersistentSet<S>>>.removeTagSub(
+        letter: String,
+        value: String,
+        sub: S,
+    ): PersistentMap<String, PersistentMap<String, PersistentSet<S>>> {
+        val inner = this[letter] ?: return this
+        val newInner = inner.removeSub(value, sub)
+        return when {
+            newInner === inner -> this
+            newInner.isEmpty() -> remove(letter)
+            else -> put(letter, newInner)
         }
     }
 

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
+import java.nio.file.DirectoryStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -36,16 +37,23 @@ import kotlin.io.path.exists
  *
  * Step-2 coverage:
  *  - `ids`            → direct canonical opens
- *  - `tagsAll`/`tags` → tag index union (first key)
- *  - `kinds`          → kind index union
- *  - `authors`        → author index union
+ *  - `tagsAll`/`tags`/`kinds`/`authors` → cheapest index tree drives
+ *    (capped entry-count comparison), the rest post-filter
  *  - otherwise        → full scan via every `idx/kind/<k>/` subtree
  *
- * The planner is intentionally dumb about selectivity — "first available
- * driver wins". A cost-based picker (smallest listing) can slot in
- * later without changing callers. All FilterMatcher semantics (tag
- * AND/OR, since/until, id, author, kind cross-checks) are enforced in
- * the orchestrator, so picking a loose driver is correctness-safe.
+ * Driver choice is cost-based: every legal driver (each `tagsAll` value
+ * alone — AND semantics make any single value a complete driver — each
+ * `tags` key's value union, the kind set, the author set) opens a lazy
+ * directory iterator, all are drained in lockstep, and the first to
+ * exhaust — the smallest listing — drives. A giant tree (`idx/kind/1/`
+ * with a million entries) is therefore never read past ~the smallest
+ * candidate's size. Before the pick, the fixed tags → kinds → authors
+ * order sent `authors + kinds + limit` — the most common CLI shape —
+ * through the kind tree: 149 ms fixed-order vs 4.0 ms cost-based at 30k
+ * events per `FsDriverSelectionBenchmark` (floor: author-only at
+ * 1.4 ms). All FilterMatcher semantics (tag AND/OR,
+ * since/until, id, author, kind cross-checks) are enforced in the
+ * orchestrator, so any driver pick is correctness-safe.
  */
 internal class FsQueryPlanner(
     private val layout: FsLayout,
@@ -74,19 +82,100 @@ internal class FsQueryPlanner(
             return ftsDriver(search)
         }
 
-        firstTagKey(filter)?.let { (name, values) ->
-            return mergeDesc(values.map { v -> walkDir(layout.tagValueDir(name, v, hasher.hash(name, v))) })
+        val candidates = driverCandidates(filter)
+        if (candidates.isEmpty()) return allKindsDriver()
+
+        return mergeDesc(cheapestDriver(candidates).map { walkDir(it) })
+    }
+
+    /**
+     * Every set of index directories that, walked and post-filtered, yields
+     * a superset of the filter's matches:
+     *  - each `tagsAll` value alone (AND semantics — every match carries it),
+     *  - each `tags` key's full value union (OR within a key, AND across),
+     *  - the kind set, and the author set.
+     * Listed in the old fixed-priority order so [cheapestDriver] keeps that
+     * order on cost ties.
+     */
+    private fun driverCandidates(filter: Filter): List<List<Path>> {
+        val out = ArrayList<List<Path>>()
+        filter.tagsAll?.forEach { (name, values) ->
+            values.forEach { v -> out.add(listOf(layout.tagValueDir(name, v, hasher.hash(name, v)))) }
+        }
+        filter.tags?.forEach { (name, values) ->
+            if (values.isNotEmpty()) {
+                out.add(values.map { v -> layout.tagValueDir(name, v, hasher.hash(name, v)) })
+            }
+        }
+        filter.kinds?.takeIf { it.isNotEmpty() }?.let { kinds ->
+            out.add(kinds.map { layout.kindDir(it) })
+        }
+        filter.authors?.takeIf { it.isNotEmpty() }?.let { authors ->
+            out.add(authors.map { layout.authorDir(it) })
+        }
+        return out
+    }
+
+    /**
+     * Smallest candidate by lockstep listing drain: one lazy directory
+     * iterator per candidate, all advanced [COST_BATCH] entries per round —
+     * the first to exhaust its listing is the smallest, so a giant tree is
+     * never read past ~the smallest candidate's size (a candidate that
+     * exhausts on round one costs the others one batch each). A candidate
+     * whose dirs are all missing exhausts immediately: driving from an empty
+     * mandatory predicate correctly yields an empty result. If every
+     * candidate survives [COST_CAP] entries, all are huge and relative
+     * driver choice stops mattering — the first (old fixed-priority order)
+     * wins.
+     */
+    private fun cheapestDriver(candidates: List<List<Path>>): List<Path> {
+        if (candidates.size == 1) return candidates[0]
+        val cursors = candidates.map { EntryCursor(it) }
+        try {
+            var advanced = 0L
+            while (advanced < COST_CAP) {
+                for (i in cursors.indices) {
+                    if (!cursors[i].skip(COST_BATCH)) return candidates[i]
+                }
+                advanced += COST_BATCH
+            }
+            return candidates[0]
+        } finally {
+            cursors.forEach { it.close() }
+        }
+    }
+
+    /** Lazy entry iterator over a candidate's directories, in order. */
+    private class EntryCursor(
+        dirs: List<Path>,
+    ) : AutoCloseable {
+        private val remaining = ArrayDeque(dirs)
+        private var stream: DirectoryStream<Path>? = null
+        private var iter: Iterator<Path> = emptyList<Path>().iterator()
+
+        /** Advances up to [n] entries; false when the listing ends first. */
+        fun skip(n: Int): Boolean {
+            var left = n
+            while (left > 0) {
+                if (iter.hasNext()) {
+                    iter.next()
+                    left--
+                    continue
+                }
+                close()
+                val dir = remaining.removeFirstOrNull() ?: return false
+                if (!Files.isDirectory(dir)) continue
+                stream = Files.newDirectoryStream(dir)
+                iter = stream!!.iterator()
+            }
+            return true
         }
 
-        filter.kinds?.let { kinds ->
-            return mergeDesc(kinds.map { walkDir(layout.kindDir(it)) })
+        override fun close() {
+            stream?.close()
+            stream = null
+            iter = emptyList<Path>().iterator()
         }
-
-        filter.authors?.let { authors ->
-            return mergeDesc(authors.map { walkDir(layout.authorDir(it)) })
-        }
-
-        return allKindsDriver()
     }
 
     /**
@@ -301,14 +390,15 @@ internal class FsQueryPlanner(
         var top: Candidate,
     )
 
-    // ---- helpers ------------------------------------------------------
+    private companion object {
+        /** Entries each candidate's cursor advances per lockstep round. */
+        const val COST_BATCH = 64
 
-    /** First tag filter with at least one value, preferring `tagsAll`. */
-    private fun firstTagKey(filter: Filter): Pair<String, List<String>>? {
-        filter.tagsAll?.firstNonEmpty()?.let { return it }
-        filter.tags?.firstNonEmpty()?.let { return it }
-        return null
+        /**
+         * Stop draining once every candidate has survived this many
+         * entries: past it they are all huge, relative choice stops
+         * mattering, and the first candidate in priority order wins.
+         */
+        const val COST_CAP = 65_536L
     }
-
-    private fun Map<String, List<String>>.firstNonEmpty(): Pair<String, List<String>>? = entries.firstOrNull { it.value.isNotEmpty() }?.let { it.key to it.value }
 }

@@ -65,6 +65,7 @@
     <!-- Notes & Replies -->
     <string name="replying_to">respondendo para </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">Site Estático: %1$s</string>
     <string name="napplet_card_permissions">O que ele pode acessar</string>
     <string name="nsite_root_site">Site raiz</string>
     <string name="nsite_source">Origem:</string>

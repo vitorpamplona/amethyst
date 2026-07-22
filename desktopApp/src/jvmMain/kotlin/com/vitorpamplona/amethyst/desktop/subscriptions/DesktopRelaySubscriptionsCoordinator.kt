@@ -294,6 +294,11 @@ class DesktopRelaySubscriptionsCoordinator(
                     kinds = listOf(com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND),
                     tags = mapOf("e" to noteIds),
                 ),
+                // Poll responses (kind 1018) targeting these notes (NIP-88, lowercase `e`)
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
             )
 
         val listener =

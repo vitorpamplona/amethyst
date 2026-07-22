@@ -60,6 +60,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
@@ -155,7 +156,10 @@ class AccountNappletGateways(
                 )
             }
 
-        return NappletBroker(account.signer, ledger, consent, signerLedger = signerLedger, nostrConnectPrompt = connectPrompt, signerConsentPrompt = signerConsent, relay = relay, storage = storage, wallet = wallet, resource = resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
+        // Everything the broker signs belongs to the guest — a napplet, an nSite, or a web app
+        // calling NIP-07 — never to Amethyst, so our client tag has no business on it. It would also
+        // corrupt the template a NIP-07 caller re-checks the returned event against.
+        return NappletBroker(account.signer.withoutClientTag(), ledger, consent, signerLedger = signerLedger, nostrConnectPrompt = connectPrompt, signerConsentPrompt = signerConsent, relay = relay, storage = storage, wallet = wallet, resource = resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
     }
 
     /**

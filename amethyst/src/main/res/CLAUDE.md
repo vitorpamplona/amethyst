@@ -11,7 +11,10 @@ Always consider Slavic / Baltic / Semitic / Celtic languages when a string conta
    - English / German / Swedish / Brazilian Portuguese / Hungarian: `one`, `other`
    - Czech / Polish / Russian / Ukrainian / Croatian: `one`, `few`, `many`, `other`
    - Arabic: `zero`, `one`, `two`, `few`, `many`, `other`
+   - Latvian: `zero`, `one`, `other`
    - Chinese / Japanese: `other` only
+
+   Latvian's `zero` does **not** mean "no items" — it covers 0, 10, 11–19, 20, 30, … (`n % 10 = 0` or `n % 100 = 11..19`), so it fires on most counts and must read as a normal plural form. Never strip `<item quantity="zero">` from `values-lv-rLV`; among the locales we ship, only Arabic and Latvian have an integer-bearing `zero`.
 
 ## Anti-patterns to flag
 

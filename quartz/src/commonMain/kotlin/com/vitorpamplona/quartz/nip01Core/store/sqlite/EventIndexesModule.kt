@@ -147,13 +147,38 @@ class EventIndexesModule(
      */
     fun migrateV2AddPubkeyIndex(db: SQLiteConnection) {
         if (!indexStrategy.indexEventsByPubkeyAlone) return
-        val orderBy =
-            if (indexStrategy.useAndIndexIdOnOrderBy) {
-                "created_at DESC, id ASC"
-            } else {
-                "created_at DESC"
-            }
-        db.execSQL("CREATE INDEX IF NOT EXISTS query_by_pubkey_created ON event_headers (pubkey, $orderBy)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS query_by_pubkey_created ON event_headers (pubkey, ${orderByColumns()})")
+    }
+
+    private fun orderByColumns() =
+        if (indexStrategy.useAndIndexIdOnOrderBy) {
+            "created_at DESC, id ASC"
+        } else {
+            "created_at DESC"
+        }
+
+    /**
+     * Materializes any flag-gated index the current [indexStrategy] wants
+     * but the on-disk schema predates. Flags are runtime configuration, not
+     * schema — a deployment can flip one without a `user_version` bump — so
+     * this runs idempotently on every open. The first open after enabling a
+     * flag pays a one-time index build over the existing rows; subsequent
+     * opens are no-ops. A disabled flag never drops an existing index (that
+     * stays an operator decision).
+     */
+    fun ensureOptionalIndexes(db: SQLiteConnection) {
+        if (indexStrategy.indexEventsByCreatedAtAlone) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS query_by_created_at_id ON event_headers (${orderByColumns()})")
+        }
+        if (indexStrategy.indexEventsByPubkeyAlone) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS query_by_pubkey_created ON event_headers (pubkey, ${orderByColumns()})")
+        }
+        if (indexStrategy.indexTagsByCreatedAtAlone) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS query_by_tags_hash ON event_tags (tag_hash, created_at DESC)")
+        }
+        if (indexStrategy.indexTagsWithKindAndPubkey) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS query_by_tags_hash_kind_pubkey ON event_tags (tag_hash, kind, pubkey_hash, created_at DESC)")
+        }
     }
 
     val sqlInsertHeader =

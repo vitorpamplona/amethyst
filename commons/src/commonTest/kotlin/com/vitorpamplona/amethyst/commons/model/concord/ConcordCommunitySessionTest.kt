@@ -108,7 +108,7 @@ class ConcordCommunitySessionTest {
 
             // Feed the genesis control wraps → state folds, channels + membership resolve. A fold is
             // STRUCTURAL (it moves the subscription set), so it's allowed to bump the revision.
-            community.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL, session.ingest(it)) }
+            community.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL_FOLD, session.ingest(it)) }
             val state = session.state.value
             assertEquals("Nostrichs", state?.metadata?.name)
             assertTrue(state!!.channels.containsKey(community.generalChannelIdHex))

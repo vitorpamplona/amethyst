@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  * Provides convenience functions for creating relay subscription filters.
  */
 object FilterBuilders {
-    private val FEED_KINDS = listOf(1, 6, 16) // TextNoteEvent, RepostEvent, GenericRepostEvent
+    private val FEED_KINDS = listOf(1, 6, 16, 1068) // TextNoteEvent, RepostEvent, GenericRepostEvent, PollEvent
 
     /**
      * Creates a filter for text notes (kind 1) from all authors.

@@ -2125,6 +2125,7 @@
     <string name="default_relays_longer">Obnovit výchozí nastavení</string>
     <string name="geohash_title">Zveřejnit polohu jako </string>
     <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
+    <string name="geohash_teleport_title">Teleportace</string>
     <string name="geohash_teleport_action">✈  Teleportovat sem</string>
     <string name="location_pick_on_map">Vyberte místo na mapě</string>
     <string name="location_change_place">Změnit místo na mapě</string>

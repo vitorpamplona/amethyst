@@ -64,7 +64,7 @@ object ConcordJson {
  * drops the role, and with it every authority (grant) that depends on it.
  */
 @Serializable
-class RoleScope(
+data class RoleScope(
     val kind: String = "server",
     @SerialName("channel_id") val channelId: String? = null,
 )
@@ -75,7 +75,7 @@ class RoleScope(
  * ranks higher; no role may claim position 0 (reserved for the owner).
  */
 @Serializable
-class RoleEntity(
+data class RoleEntity(
     val name: String = "",
     val position: Long = 0,
     /** u64 permission bitfield as a decimal string. */
@@ -94,7 +94,7 @@ class RoleEntity(
  * terminates at the owner (see [AuthorityResolver]).
  */
 @Serializable
-class GrantEntity(
+data class GrantEntity(
     val member: String = "",
     @SerialName("role_ids") val roleIds: List<String> = emptyList(),
 )
@@ -105,7 +105,7 @@ class GrantEntity(
  * A [deleted] channel is terminal — its id is never reused.
  */
 @Serializable
-class ChannelEntity(
+data class ChannelEntity(
     val name: String = "",
     val private: Boolean = false,
     val voice: Boolean = false,
@@ -122,7 +122,7 @@ class ChannelEntity(
  * community name too.
  */
 @Serializable
-class MetadataEntity(
+data class MetadataEntity(
     val name: String = "",
     val icon: ImagePointer? = null,
     val banner: ImagePointer? = null,

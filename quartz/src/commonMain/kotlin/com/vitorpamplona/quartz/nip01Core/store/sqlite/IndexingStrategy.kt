@@ -74,9 +74,21 @@ interface IndexingStrategy {
      * Activate this if you see too many Tag-centric Filters without
      * kind AND pubkey at the same time.
      *
-     * This is a rarely used index (reports by your follows or
-     * NIP-04 DMs for instance) that becomes quite large without
-     * major gains.
+     * This shape (reports by your follows, NIP-04 DM rooms, follows-scoped
+     * community feeds) is not rare on the client side: the 2026-07 filter
+     * assembler survey counted 65 call sites building
+     * `kinds + authors + tags`. Without this index the plan seeks
+     * `(tag_hash, kind)` and reads every row for that tag/kind before
+     * filtering the author.
+     *
+     * Measured by `TagAuthorIndexBenchmark` (jvmTest prodbench): the
+     * DM-room query drops 9.4 ms → 0.6 ms (~15×) at 200k events and
+     * 14.2 ms → 0.66 ms (~21×) at 1M — the gap grows with corpus size —
+     * while batch-insert cost stays inside run noise (49.0 vs 47.4
+     * µs/event at 1M). geode enables it; the client default stays off
+     * because a client store's per-tag row counts are bounded by one
+     * user's data. Flipping it on an existing DB is safe: the index is
+     * built on next open by `EventIndexesModule.ensureOptionalIndexes`.
      *
      * Keep in mind that activating too many indexes increases the size of the
      * DB so much that the indexes themselves won't fit in memory, requiring
