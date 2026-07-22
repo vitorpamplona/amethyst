@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
@@ -210,12 +211,17 @@ class AuthCoordinator(
         account: Account,
         relayUrl: NormalizedRelayUrl,
     ): Boolean =
-        RelayAuthFirstParty.hasReason(
-            me = account.pubKey,
-            relayUrl = relayUrl,
-            pendingEvents = client.activeOutboxEvents(relayUrl),
-            myRelays = account.trustedRelays.flow.value,
-        )
+        // A Buzz workspace the user explicitly joined is a first-party reason to authenticate: its
+        // channel/DM discovery is read-only (`#p` = me), which is otherwise deliberately NOT
+        // first-party, so without this the p-gated 44100/30622 reads would never be served and the
+        // workspace would stay empty.
+        BuzzWorkspaces.isJoined(relayUrl) ||
+            RelayAuthFirstParty.hasReason(
+                me = account.pubKey,
+                relayUrl = relayUrl,
+                pendingEvents = client.activeOutboxEvents(relayUrl),
+                myRelays = account.trustedRelays.flow.value,
+            )
 
     fun destroy() {
         receiver.destroy()

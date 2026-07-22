@@ -37,14 +37,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,7 +76,9 @@ import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.launch
 
@@ -129,7 +134,21 @@ private fun DmRowCard(
 ) {
     val groupId = remember(row.channelId, row.relayUrl) { GroupId(row.channelId, row.relayUrl) }
     var menuOpen by remember { mutableStateOf(false) }
+    var addMemberOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    if (addMemberOpen) {
+        AddDmMemberDialog(
+            onDismiss = { addMemberOpen = false },
+            onAdd = { hex ->
+                addMemberOpen = false
+                scope.launch {
+                    val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
+                    accountViewModel.account.addBuzzDmMember(channel, hex)
+                }
+            },
+        )
+    }
 
     Card(
         onClick = { nav.nav(Route.RelayGroup(groupId.id, groupId.relayUrl.url)) },
@@ -171,7 +190,28 @@ private fun DmRowCard(
                 )
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
+                        text = { Text(stringRes(R.string.buzz_dm_add_member)) },
+                        leadingIcon = {
+                            Icon(
+                                symbol = MaterialSymbols.PersonAdd,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        onClick = {
+                            menuOpen = false
+                            addMemberOpen = true
+                        },
+                    )
+                    DropdownMenuItem(
                         text = { Text(stringRes(R.string.buzz_dm_hide)) },
+                        leadingIcon = {
+                            Icon(
+                                symbol = MaterialSymbols.VisibilityOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
                         onClick = {
                             menuOpen = false
                             scope.launch {
@@ -264,6 +304,56 @@ private fun DmAvatars(
                 )
             }
     }
+}
+
+/**
+ * Dialog to add another person to an existing group DM: accepts an npub or 64-char hex key,
+ * validates it locally, and hands the resolved hex to [onAdd] (which publishes kind-41011).
+ */
+@Composable
+private fun AddDmMemberDialog(
+    onDismiss: () -> Unit,
+    onAdd: (HexKey) -> Unit,
+) {
+    var input by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    val invalidMsg = stringRes(R.string.buzz_dm_add_member_invalid)
+
+    fun submit() {
+        val hex = decodePublicKeyAsHexOrNull(input.trim())?.takeIf { it.isValid() }
+        if (hex == null) {
+            error = invalidMsg
+        } else {
+            onAdd(hex)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.buzz_dm_add_member_title)) },
+        text = {
+            OutlinedTextField(
+                value = input,
+                onValueChange = {
+                    input = it
+                    error = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringRes(R.string.buzz_dm_add_hint)) },
+                singleLine = true,
+                isError = error != null,
+                supportingText = error?.let { { Text(it) } },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { submit() }, enabled = input.isNotBlank()) {
+                Text(stringRes(R.string.buzz_dm_add_member))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
 }
 
 /** Inviting empty state for a fresh DM inbox. */

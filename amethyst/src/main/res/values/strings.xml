@@ -350,6 +350,14 @@
         <item quantity="one">%1$d channel</item>
         <item quantity="other">%1$d channels</item>
     </plurals>
+    <plurals name="buzz_workspaces_count">
+        <item quantity="one">%1$d workspace</item>
+        <item quantity="other">%1$d workspaces</item>
+    </plurals>
+    <plurals name="buzz_workspaces_channel_count">
+        <item quantity="one">%1$d channel</item>
+        <item quantity="other">%1$d channels</item>
+    </plurals>
     <plurals name="concord_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
@@ -3300,6 +3308,8 @@
     <string name="buzz_typing_two">%1$s and %2$s are typing…</string>
     <string name="buzz_typing_many">Several people are typing…</string>
     <string name="buzz_workspaces_title">Workspaces</string>
+    <string name="buzz_workspaces_hero_tagline">Where humans and agents build together</string>
+    <string name="buzz_workspaces_leave">Leave workspace</string>
     <string name="buzz_workspaces_section">Your workspaces</string>
     <string name="buzz_workspaces_empty_title">No workspaces yet</string>
     <string name="buzz_workspaces_empty_body">Buzz workspaces are relays where humans and AI agents build together. Join one to see it here.</string>
@@ -3316,6 +3326,9 @@
     <string name="buzz_dm_empty_body">Start a private conversation with anyone on a Buzz workspace.</string>
     <string name="buzz_dm_more">More</string>
     <string name="buzz_dm_hide">Hide conversation</string>
+    <string name="buzz_dm_add_member">Add member</string>
+    <string name="buzz_dm_add_member_title">Add someone to this DM</string>
+    <string name="buzz_dm_add_member_invalid">Not a valid npub or hex key</string>
     <string name="buzz_dm_just_you">Just you</string>
     <string name="buzz_dm_workspace">Workspace</string>
     <string name="buzz_dm_recipients">To</string>
@@ -3331,6 +3344,8 @@
     <string name="buzz_invite_continue">Continue in browser</string>
     <string name="buzz_invite_invalid">This doesn\'t look like a valid Buzz invite link.</string>
     <string name="buzz_invite_expired">This invite has expired. Ask for a new one.</string>
+    <string name="buzz_invite_after_browser">Finish accepting the terms in the browser, then come back — your workspace will be waiting.</string>
+    <string name="buzz_invite_open_workspace">Open my workspaces</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>

@@ -39,26 +39,34 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.launch
 
 /**
  * Landing screen for a Buzz workspace invite link (`https://<host>/invite/<token>`), reached
@@ -79,6 +87,8 @@ fun BuzzInviteScreen(
 ) {
     val invite = remember(link) { BuzzInviteLink.parse(link) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var launched by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(R.string.buzz_invite_title), nav) },
@@ -147,21 +157,45 @@ fun BuzzInviteScreen(
 
             Spacer(Modifier.weight(1f))
 
-            Button(
-                onClick = {
-                    // Remember the workspace's relay as joined (persisted; also marks it a Buzz
-                    // dialect) so the app connects + authenticates + discovers its channels once
-                    // membership is granted, then hand off to the in-app window.nostr browser to
-                    // accept terms + sign the claim.
-                    RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { BuzzWorkspaces.join(it) }
-                    FavoriteAppLauncher.launchUrl(context, link)
-                },
-                enabled = !expired,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(symbol = MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(10.dp))
-                Text(stringRes(R.string.buzz_invite_continue))
+            if (launched) {
+                // After the browser hand-off: gently point back to the workspace, which now
+                // authenticates + discovers its channels (the claim granted membership).
+                Text(
+                    text = stringRes(R.string.buzz_invite_after_browser),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.size(4.dp))
+                Button(
+                    onClick = { nav.newStack(Route.BuzzWorkspaces) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(symbol = MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(stringRes(R.string.buzz_invite_open_workspace))
+                }
+            } else {
+                Button(
+                    onClick = {
+                        // Remember the workspace as joined (persisted; marks it a Buzz dialect) and
+                        // pre-approve NIP-42 auth to its relay so the read-only channel/DM discovery
+                        // authenticates without a prompt, then hand off to the in-app window.nostr
+                        // browser to accept terms + sign the claim.
+                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { relay ->
+                            BuzzWorkspaces.join(relay)
+                            scope.launch { accountViewModel.account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
+                        }
+                        FavoriteAppLauncher.launchUrl(context, link)
+                        launched = true
+                    },
+                    enabled = !expired,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(symbol = MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(stringRes(R.string.buzz_invite_continue))
+                }
             }
         }
     }

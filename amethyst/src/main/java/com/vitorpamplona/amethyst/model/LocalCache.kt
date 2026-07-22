@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmConversation
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
@@ -2136,23 +2135,6 @@ object LocalCache : ILocalCache, ICacheProvider {
             if (editNote.event != null) {
                 BuzzWorkspaceStates.getOrCreate(channelId).addEdit(target, editNote)
             }
-        }
-
-    private fun consume(
-        event: DmCreatedEvent,
-        relay: NormalizedRelayUrl?,
-        wasVerified: Boolean,
-    ): Boolean =
-        // A relay-signed DM confirmation (41001): store it AND record the "this UUID is a
-        // DM" fact into the process-wide registry so the DM list can surface it and the
-        // workspace list can exclude it. The channel timeline reuses the relay-group stack.
-        consumeBuzzRegularEvent(event, relay, wasVerified).also {
-            val channelId = event.dmId().ifBlank { return@also }
-            // The 41001 is relay-authored, so provenance is always the workspace relay.
-            val provenance = relay ?: return@also
-            BuzzDmRegistry.record(
-                BuzzDmConversation(channelId, event.participants(), event.createdAt, provenance),
-            )
         }
 
     private fun consume(
@@ -4656,7 +4638,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is StreamMessageBookmarkedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is StreamMessageScheduledEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is StreamReminderEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is DmCreatedEvent -> consume(event, relay, wasVerified)
+                is DmCreatedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is DmOpenEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is DmAddMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is DmHideEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)

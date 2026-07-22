@@ -39,17 +39,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +64,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
@@ -145,11 +151,15 @@ fun BuzzWorkspacesScreen(
         },
         accountViewModel = accountViewModel,
     ) { padding ->
+        val totalChannels = remember(workspaces) { workspaces.sumOf { it.second.size } }
+
         LazyColumn(
             modifier = Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item { BuzzHeroHeader(workspaceCount = workspaces.size, channelCount = totalChannels) }
+
             item { AgentConsoleHeroCard(onClick = { nav.nav(Route.AgentConsole) }) }
 
             item { DirectMessagesCard(onClick = { nav.nav(Route.BuzzDmList) }) }
@@ -176,6 +186,7 @@ fun BuzzWorkspacesScreen(
                             expanded = isOpen,
                             onToggle = { expanded[relayKey] = !isOpen },
                             onBrowse = { nav.nav(Route.RelayGroupServer(relayKey)) },
+                            onLeave = { BuzzWorkspaces.leave(relay) },
                         )
                     }
                     if (isOpen) {
@@ -184,6 +195,52 @@ fun BuzzWorkspacesScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The tab's masthead: a full-bleed [BuzzBrand.heroBrush] gradient banner with the Workspaces
+ * title, a one-line tagline, and a live "N workspaces · M channels" stat, so the surface reads
+ * as one energetic product the moment it opens.
+ */
+@Composable
+private fun BuzzHeroHeader(
+    workspaceCount: Int,
+    channelCount: Int,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(BuzzBrand.heroBrush())
+                .padding(20.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(
+                symbol = MaterialSymbols.AutoAwesome,
+                contentDescription = null,
+                tint = BuzzBrand.onHero(),
+                modifier = Modifier.size(30.dp),
+            )
+            Text(
+                text = stringRes(R.string.buzz_workspaces_hero_tagline),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = BuzzBrand.onHero(),
+            )
+            if (workspaceCount > 0) {
+                Text(
+                    text =
+                        pluralStringResource(R.plurals.buzz_workspaces_count, workspaceCount, workspaceCount) +
+                            "  ·  " +
+                            pluralStringResource(R.plurals.buzz_workspaces_channel_count, channelCount, channelCount),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = BuzzBrand.onHero().copy(alpha = 0.9f),
+                )
             }
         }
     }
@@ -293,8 +350,9 @@ private fun DirectMessagesCard(onClick: () -> Unit) {
 
 /**
  * A workspace header (one per Buzz relay): its host, a channel count, an expand chevron to
- * fold its channels, and a "browse all" affordance to the relay's full directory. Tapping
- * the row toggles; the folder icon opens the relay's channel directory.
+ * fold its channels, a "browse all" affordance to the relay's full directory, and an overflow
+ * to leave the workspace. Tapping the row toggles; the add icon opens the relay's channel
+ * directory; the overflow leaves.
  */
 @Composable
 private fun WorkspaceHeader(
@@ -303,7 +361,9 @@ private fun WorkspaceHeader(
     expanded: Boolean,
     onToggle: () -> Unit,
     onBrowse: () -> Unit,
+    onLeave: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         modifier =
             Modifier
@@ -345,6 +405,36 @@ private fun WorkspaceHeader(
                     .padding(4.dp)
                     .size(18.dp),
         )
+        Box {
+            Icon(
+                symbol = MaterialSymbols.MoreVert,
+                contentDescription = stringRes(R.string.buzz_workspaces_leave),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier
+                        .clip(CircleShape)
+                        .clickable { menuOpen = true }
+                        .padding(4.dp)
+                        .size(18.dp),
+            )
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringRes(R.string.buzz_workspaces_leave)) },
+                    leadingIcon = {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.Logout,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    onClick = {
+                        menuOpen = false
+                        onLeave()
+                    },
+                )
+            }
+        }
     }
 }
 
