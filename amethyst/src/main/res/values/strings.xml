@@ -3307,7 +3307,7 @@
     <string name="buzz_typing_one">%1$s is typing…</string>
     <string name="buzz_typing_two">%1$s and %2$s are typing…</string>
     <string name="buzz_typing_many">Several people are typing…</string>
-    <string name="buzz_workspaces_title">Workspaces</string>
+    <string name="buzz_workspaces_title">Buzz Workspaces</string>
     <string name="buzz_workspaces_hero_tagline">Where humans and agents build together</string>
     <string name="buzz_workspaces_leave">Leave workspace</string>
     <string name="buzz_workspaces_section">Your workspaces</string>
