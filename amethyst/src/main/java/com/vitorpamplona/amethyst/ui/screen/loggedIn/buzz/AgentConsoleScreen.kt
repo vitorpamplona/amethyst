@@ -31,9 +31,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -107,11 +108,12 @@ fun AgentConsoleScreen(
     Scaffold(
         topBar = { TopBarWithBackButton("Agent Console", nav) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text("Attest") },
-                icon = { Icon(symbol = MaterialSymbols.Key, contentDescription = null) },
+            FloatingActionButton(
                 onClick = { nav.nav(Route.AgentAttestation) },
-            )
+                shape = CircleShape,
+            ) {
+                Icon(symbol = MaterialSymbols.Key, contentDescription = "Attest")
+            }
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
