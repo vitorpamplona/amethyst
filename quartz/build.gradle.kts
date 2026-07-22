@@ -17,7 +17,7 @@ kotlin {
     }
     jvm {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
 
@@ -33,7 +33,7 @@ kotlin {
                 .toInt()
 
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
 
         optimization {
