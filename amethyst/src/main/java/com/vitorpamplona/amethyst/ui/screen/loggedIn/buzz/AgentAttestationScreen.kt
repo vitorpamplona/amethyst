@@ -115,8 +115,8 @@ fun AgentAttestationScreen(
 /**
  * Agent-side: paste an `auth` tag an owner issued to this account's key. It is verified
  * against [myPubkey] and, on success, stored in [BuzzHeldAttestations] so the auth
- * coordinator attaches it when this account AUTHs to a Buzz relay. In-memory only for
- * now — re-paste after an app restart.
+ * coordinator attaches it when this account AUTHs to a Buzz relay. Persisted across
+ * restarts (device-global) by `BuzzAttestationPreferences`.
  */
 @Composable
 private fun HoldAttestationSection(myPubkey: String) {

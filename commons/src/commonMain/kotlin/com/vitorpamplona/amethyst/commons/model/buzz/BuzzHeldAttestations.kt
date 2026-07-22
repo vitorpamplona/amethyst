@@ -84,6 +84,15 @@ object BuzzHeldAttestations {
         }
     }
 
+    /**
+     * Replaces the whole store with [entries] — used to restore from disk at startup. The
+     * caller must have re-verified each attestation against its agent key (the same gate
+     * [put] documents), so a tampered on-disk credential can't be reinstated.
+     */
+    fun restore(entries: Map<HexKey, OwnerAttestation>) {
+        heldByAgent.value = entries
+    }
+
     /** Test-only: clears all held attestations so unit tests don't leak state. */
     fun clearForTesting() {
         heldByAgent.value = emptyMap()

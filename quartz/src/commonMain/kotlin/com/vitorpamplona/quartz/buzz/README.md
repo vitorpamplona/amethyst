@@ -198,19 +198,31 @@ live tail requests 20002 (`RELAY_GROUP_OPEN_TAIL_KINDS`, scoped to the room on s
 Concord's typing feature. (`requires_h_channel_scope(20002)` is false on the relay, but
 Amethyst still `h`-scopes the send + subscription so it never leaks across channels.)
 
-**Navigation identity — a "Workspaces" tab.** `NavBarItem.BUZZ` (→ `Route.BuzzWorkspaces`)
-is a pinnable bottom-nav destination; `amethyst/.../buzz/BuzzWorkspacesScreen` is a hub that
-filters the joined relay groups to Buzz-dialect relays and leads with an Agent-Console hero
-card. Buzz workspaces still ALSO appear in the generic Relay Groups list (they are NIP-29
-groups); the tab is a Buzz-branded lens over the same data, not a separate store.
+**Navigation identity — a "Workspaces" tab with a channel shell.** `NavBarItem.BUZZ`
+(→ `Route.BuzzWorkspaces`) is a pinnable bottom-nav destination; `BuzzWorkspacesScreen` is a
+hub that **groups the joined Buzz-dialect groups by relay into workspace → channels** — a
+Buzz workspace IS a relay (a tenant, per buzz-core's `relay_url_authority`), and its channels
+are the NIP-29 groups on it. Each workspace is an expandable section (Concord-style) with its
+channels; a `+` opens the relay's full channel directory (`Route.RelayGroupServer`). Leads
+with an Agent-Console hero card. The groups still ALSO appear in the generic Relay Groups
+list; the tab is a Buzz-branded lens over the same store.
 
-Still not wired: the forum/job/huddle/DM message composers — each a send flow for a
-richer kind, and jobs/huddles are among the schema-inferred kinds, so they want Buzz-side
-confirmation before UI. **Presence (kind 20001)** is accepted by Buzz but collides with
-Amethyst's `GeohashPresenceEvent` in `EventFactory` (20001 is registered as geohash
-presence), so it needs disambiguation before it can render — unlike typing (20002), which
-has no such collision. A **workspace→channels shell** (Concord-style channel sidebar) and
-per-account persistence of held attestations remain follow-ups.
+**Forum posts (kind 45001) are composable.** On a Buzz relay the Threads-tab FAB opens
+`BuzzForumPostScreen` (`Route.BuzzForumPost`), which publishes a `ForumPostEvent` (mirroring
+`build_forum_post`) to the channel's host relay, instead of the vanilla kind-11 thread a
+NIP-29 relay uses. (Forum posts already render in the chat feed; a dedicated forum reader in
+the Threads tab is the read-side follow-up.)
+
+**Held attestations persist** across restarts: `amethyst/.../model/preferences/BuzzAttestationPreferences`
+mirrors `BuzzHeldAttestations` to the device-global DataStore and reloads it at startup,
+**re-verifying each against its agent key** so a tampered on-disk credential is dropped.
+
+Still not wired: **presence (kind 20001)** — accepted by Buzz but it collides with Amethyst's
+`GeohashPresenceEvent` in `EventFactory` (20001 is registered as geohash presence), so it needs
+disambiguation before it can render (typing/20002 has no such collision). The **job/huddle/DM
+composers** are deferred: jobs (43xxx) and huddles (48xxx) have **no builder** in `buzz-sdk`
+(reserved kinds), so a composer would encode an unconfirmed schema; DM (`build_dm_open`, 41001)
+is a full encrypted-DM subsystem for a later pass.
 
 ## Owner Attestation (NIP-OA) — implemented
 

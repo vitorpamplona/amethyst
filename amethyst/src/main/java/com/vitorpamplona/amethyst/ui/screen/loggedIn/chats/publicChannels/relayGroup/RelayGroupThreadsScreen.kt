@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -148,12 +149,19 @@ private fun RelayGroupThreads(
             if (canPost) {
                 FloatingActionButton(
                     onClick = {
-                        nav.nav(
-                            Route.NewShortNote(
-                                groupThreadId = channel.groupId.id,
-                                groupThreadRelayUrl = channel.groupId.relayUrl.url,
-                            ),
-                        )
+                        // On a Buzz workspace, "new thread" is a Buzz forum post (kind 45001);
+                        // vanilla NIP-29 relays use a kind-11 thread. Buzz relays reject
+                        // unknown kinds, so a kind-11 thread would be refused there.
+                        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+                            nav.nav(Route.BuzzForumPost(channel.groupId.id, channel.groupId.relayUrl.url))
+                        } else {
+                            nav.nav(
+                                Route.NewShortNote(
+                                    groupThreadId = channel.groupId.id,
+                                    groupThreadRelayUrl = channel.groupId.relayUrl.url,
+                                ),
+                            )
+                        }
                     },
                     shape = CircleShape,
                 ) {

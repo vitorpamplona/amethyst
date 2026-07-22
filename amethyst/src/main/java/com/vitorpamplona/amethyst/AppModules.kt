@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.model.preferences.BuzzAttestationPreferences
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
@@ -269,6 +270,10 @@ class AppModules(
                 .collect { torManager.onNetworkChange() }
         }
     }
+
+    // Restore + persist held NIP-OA attestations across restarts (device-global). Eager (not
+    // lazy) so it loads before the first Buzz-relay AUTH and mirrors later changes to disk.
+    val buzzAttestationPrefs = BuzzAttestationPreferences(appContext, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -42,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupChannelHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -90,6 +94,9 @@ fun BuzzWorkspacesScreen(
         .collectAsStateWithLifecycle()
     val buzzRelays by BuzzRelayDialect.flow.collectAsStateWithLifecycle()
 
+    // A Buzz workspace IS a relay (a tenant, per buzz-core's `relay_url_authority`), and its
+    // channels are the NIP-29 groups on it — so group the joined Buzz-dialect groups by relay
+    // into workspace → channels, the Concord community→channels shape.
     val workspaces =
         remember(joined, buzzRelays) {
             joined
@@ -97,8 +104,14 @@ fun BuzzWorkspacesScreen(
                     val relay = RelayUrlNormalizer.normalizeOrNull(tag.relayUrl) ?: return@mapNotNull null
                     if (relay !in buzzRelays) return@mapNotNull null
                     GroupId(tag.groupId, relay)
-                }.sortedBy { it.id }
+                }.groupBy { it.relayUrl }
+                .toList()
+                .sortedBy { it.first.url }
+                .map { (relay, channels) -> relay to channels.sortedBy { it.id } }
         }
+
+    // Which workspaces are expanded (channels shown). Defaults to all-open the first time.
+    val expanded = remember { mutableStateMapOf<String, Boolean>() }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -137,8 +150,23 @@ fun BuzzWorkspacesScreen(
                         modifier = Modifier.padding(top = 4.dp, start = 4.dp),
                     )
                 }
-                items(workspaces, key = { it.id + it.relayUrl.url }) { groupId ->
-                    WorkspaceRow(groupId, accountViewModel, nav)
+                workspaces.forEach { (relay, channels) ->
+                    val relayKey = relay.url
+                    val isOpen = expanded[relayKey] ?: true
+                    item(key = "ws-$relayKey") {
+                        WorkspaceHeader(
+                            relay = relay,
+                            channelCount = channels.size,
+                            expanded = isOpen,
+                            onToggle = { expanded[relayKey] = !isOpen },
+                            onBrowse = { nav.nav(Route.RelayGroupServer(relayKey)) },
+                        )
+                    }
+                    if (isOpen) {
+                        items(channels, key = { "ch-${it.relayUrl.url}-${it.id}" }) { groupId ->
+                            ChannelRow(groupId, accountViewModel, nav)
+                        }
+                    }
                 }
             }
         }
@@ -196,9 +224,66 @@ private fun AgentConsoleHeroCard(onClick: () -> Unit) {
     }
 }
 
-/** One workspace: a colored monogram avatar, live name + host, member count, unread dot. */
+/**
+ * A workspace header (one per Buzz relay): its host, a channel count, an expand chevron to
+ * fold its channels, and a "browse all" affordance to the relay's full directory. Tapping
+ * the row toggles; the folder icon opens the relay's channel directory.
+ */
 @Composable
-private fun WorkspaceRow(
+private fun WorkspaceHeader(
+    relay: NormalizedRelayUrl,
+    channelCount: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onBrowse: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable(onClick = onToggle)
+                .padding(vertical = 8.dp, horizontal = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = if (expanded) MaterialSymbols.ExpandMore else MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = relay.displayUrl(),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = "$channelCount",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(6.dp))
+        Icon(
+            symbol = MaterialSymbols.Add,
+            contentDescription = stringRes(R.string.buzz_workspaces_browse),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier =
+                Modifier
+                    .clip(CircleShape)
+                    .clickable(onClick = onBrowse)
+                    .padding(4.dp)
+                    .size(18.dp),
+        )
+    }
+}
+
+/** One channel (a NIP-29 group): a colored monogram avatar, live name + host, member count, unread dot. */
+@Composable
+private fun ChannelRow(
     groupId: GroupId,
     accountViewModel: AccountViewModel,
     nav: INav,

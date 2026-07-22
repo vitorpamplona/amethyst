@@ -3306,6 +3306,9 @@
     <string name="buzz_workspaces_browse">Browse groups</string>
     <string name="buzz_console_card_title">Agent Console</string>
     <string name="buzz_console_card_subtitle">Costs · Personas · Live observer</string>
+    <string name="buzz_forum_new_title">New forum topic</string>
+    <string name="buzz_forum_body_label">What do you want to discuss?</string>
+    <string name="buzz_forum_post_action">Post topic</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>
