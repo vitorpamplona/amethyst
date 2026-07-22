@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
@@ -146,6 +147,15 @@ val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
 /** The timeline kinds requested for every relay-group REQ (NIP-29 + Buzz; see above). */
 val RELAY_GROUP_ALL_TIMELINE_KINDS = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS
 
+/**
+ * Kinds requested on the **open channel's live tail only** — the timeline set plus the
+ * ephemeral kind-20002 typing indicator. Typing is scoped to the one channel on screen
+ * (not the whole joined fleet) because it's a live "someone is typing" signal, never
+ * stored (20000-29999) and never a feed row (`LocalCache` records it into `BuzzTypingState`
+ * and drops it). It matches nothing on a vanilla relay.
+ */
+val RELAY_GROUP_OPEN_TAIL_KINDS = RELAY_GROUP_ALL_TIMELINE_KINDS + TypingIndicatorEvent.KIND
+
 /** Forum-thread kinds shown in a group's Threads tab. */
 val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND)
 
@@ -223,7 +233,7 @@ fun buildRelayGroupOpenChatTailFilter(
         relay = groupId.relayUrl,
         filter =
             Filter(
-                kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
+                kinds = RELAY_GROUP_OPEN_TAIL_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
             ),

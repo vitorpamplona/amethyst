@@ -153,6 +153,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
@@ -2901,6 +2902,17 @@ class Account(
         val template = JoinRequestEvent.build(channel.groupId.id, inviteCode = code)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
         follow(channel)
+    }
+
+    /**
+     * Fire a Buzz kind-20002 typing heartbeat for [channel] to its host relay. Ephemeral
+     * (never stored) and fire-and-forget — no delivery tracking, no local echo (we filter
+     * our own typing in the UI). Throttled by the composer to [BuzzTypingState.TYPING_HEARTBEAT_SECS].
+     */
+    suspend fun sendBuzzTyping(channel: RelayGroupChannel) {
+        if (!isWriteable()) return
+        val signed = signer.sign(TypingIndicatorEvent.build(channel.groupId.id))
+        client.publish(signed, setOf(channel.groupId.relayUrl))
     }
 
     /** Send a kind 9022 leave request to the host relay and drop it from our list. */

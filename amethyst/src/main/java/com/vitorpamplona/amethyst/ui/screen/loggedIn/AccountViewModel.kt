@@ -685,6 +685,11 @@ class AccountViewModel(
         account.sendConcordTyping(communityId, channelIdHex)
     }
 
+    fun sendBuzzTyping(channel: RelayGroupChannel) =
+        viewModelScope.launch(Dispatchers.IO) {
+            account.sendBuzzTyping(channel)
+        }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,

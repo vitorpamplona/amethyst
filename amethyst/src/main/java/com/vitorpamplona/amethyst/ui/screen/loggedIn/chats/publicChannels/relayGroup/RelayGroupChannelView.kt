@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -249,6 +250,17 @@ private fun ChannelView(
                             RelayReachSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
                         }
                     },
+            )
+        }
+
+        // Buzz workspaces surface a live "… is typing" row just above the composer, fed by
+        // ephemeral kind-20002 heartbeats. Only rendered on a Buzz-dialect relay (the kind is
+        // Buzz-only); a no-op otherwise.
+        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            BuzzTypingIndicator(
+                channelId = channel.groupId.id,
+                myPubkey = accountViewModel.userProfile().pubkeyHex,
+                accountViewModel = accountViewModel,
             )
         }
 

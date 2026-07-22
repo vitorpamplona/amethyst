@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
@@ -4666,7 +4667,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                 // Buzz ephemeral signals: transient by definition (20000-29999) — do not
                 // pollute the note store, and do NOT mark the dialect from them (they are
                 // never stored, so the verified-mark gate has nothing to check).
-                is TypingIndicatorEvent -> false
+                is TypingIndicatorEvent -> {
+                    // Live "who is typing" side-effect only — record the heartbeat into the
+                    // process-wide typing state (the channel view collects it) and return
+                    // false so it never becomes a feed row. Own-typing is filtered in the UI.
+                    event.channelId()?.let { BuzzTypingState.record(it, event.pubKey, event.createdAt, TimeUtils.now()) }
+                    false
+                }
                 is ObserverFrameEvent -> false
                 is HuddleReactionEvent -> false
                 // Pairing (24134) is deliberately dialect-neutral: it flows during device

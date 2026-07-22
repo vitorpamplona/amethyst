@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,6 +44,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -62,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.FlowPreview
 
@@ -156,9 +161,28 @@ fun EditFieldRow(
             )
         }
 
+        // Client-side throttle for the Buzz kind-20002 typing heartbeat (below).
+        val lastTypingSecs = remember { longArrayOf(0L) }
+
         ThinPaddingTextField(
             state = channelScreenModel.message,
-            onTextChanged = { channelScreenModel.onMessageChanged() },
+            onTextChanged = {
+                channelScreenModel.onMessageChanged()
+                // Buzz typing indicator: fire a throttled heartbeat while composing in a
+                // Buzz workspace channel, so other members see "… is typing". No-op on any
+                // other chat (the kind is Buzz-only and the relay would ignore it anyway).
+                val channel = channelScreenModel.channel
+                if (channel is RelayGroupChannel &&
+                    BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) &&
+                    channelScreenModel.message.text.isNotEmpty()
+                ) {
+                    val now = TimeUtils.now()
+                    if (now - lastTypingSecs[0] >= BuzzTypingState.TYPING_HEARTBEAT_SECS) {
+                        lastTypingSecs[0] = now
+                        accountViewModel.sendBuzzTyping(channel)
+                    }
+                }
+            },
             onContentReceived = { uri, mimeType ->
                 channelScreenModel.pickedMedia(persistentListOf(SelectedMedia(uri, mimeType)))
             },
