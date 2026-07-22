@@ -69,6 +69,7 @@ enum class NavBarItem {
     PODCASTS,
     PUBLIC_CHATS,
     RELAY_GROUPS,
+    BUZZ,
     CONCORD,
     GEOHASH_CHATS,
     FOLLOW_PACKS,
@@ -344,6 +345,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Forum,
                 resolveRoute = { Route.RelayGroups },
             ),
+        NavBarItem.BUZZ to
+            NavBarItemDef(
+                id = NavBarItem.BUZZ,
+                labelRes = R.string.buzz_workspaces_title,
+                icon = MaterialSymbols.AutoAwesome,
+                resolveRoute = { Route.BuzzWorkspaces },
+            ),
         NavBarItem.CONCORD to
             NavBarItemDef(
                 id = NavBarItem.CONCORD,
@@ -496,6 +504,7 @@ val BottomBarCategories: List<NavBarCategory> =
             listOf(
                 NavBarItem.PUBLIC_CHATS,
                 NavBarItem.RELAY_GROUPS,
+                NavBarItem.BUZZ,
                 NavBarItem.CONCORD,
                 NavBarItem.GEOHASH_CHATS,
             ),

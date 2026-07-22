@@ -128,10 +128,11 @@ class RelayGroupFilterBuildersTest {
     fun `open chat tail is a single host h-filter with since only`() {
         val f = buildRelayGroupOpenChatTailFilter(g1OnA, 5L)
         assertEquals(relayA, f.relay)
-        // The open-channel tail always carries the Buzz timeline kinds in addition to
-        // the NIP-29 set: it is the Buzz-dialect detection bootstrap (see
-        // buildRelayGroupOpenChatTailFilter). Harmless on vanilla relays.
-        assertEquals(timelineKinds + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS, f.filter.kinds)
+        // The open-channel tail carries the full Buzz timeline set PLUS the ephemeral
+        // kind-20002 typing indicator (RELAY_GROUP_OPEN_TAIL_KINDS) — typing is scoped to
+        // the one channel on screen, not the joined fleet. It is also the Buzz-dialect
+        // detection bootstrap. Harmless on vanilla relays.
+        assertEquals(RELAY_GROUP_OPEN_TAIL_KINDS, f.filter.kinds)
         assertEquals(listOf("g1"), f.filter.tags!!["h"])
         assertEquals(5L, f.filter.since)
         assertNull(f.filter.until)

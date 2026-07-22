@@ -189,12 +189,28 @@ stored, and served by the Buzz relay. The one social action NOT in Buzz's accept
 (no 9734/9735) — but a zap is a Lightning payment whose receipt is published by the LN provider to
 the author's relays, so zapping still works; only the receipt isn't stored on the Buzz relay.
 
-Still not wired (write path): the forum/job/huddle/DM message composers — each a
-send flow for a richer kind, and jobs/huddles are among the schema-inferred kinds, so
-they want Buzz-side confirmation before UI. **Typing (KIND_TYPING_INDICATOR) and presence
-(KIND_PRESENCE_UPDATE) ARE accepted by Buzz** but Amethyst consumes them as ephemeral and
-does not render them yet. Persisting held attestations per-account (currently in-memory)
-needs a KMP storage abstraction and is a follow-up.
+**Live typing indicators (kind 20002)** are wired: `commons/.../model/buzz/BuzzTypingState`
+is a process-wide, lock-guarded `channel -> typist -> heartbeat` registry (6 unit tests);
+`LocalCache` records each ephemeral 20002 into it (still no feed row), the open channel's
+live tail requests 20002 (`RELAY_GROUP_OPEN_TAIL_KINDS`, scoped to the room on screen),
+`Account.sendBuzzTyping` fires a throttled heartbeat from the composer, and
+`BuzzTypingIndicator` renders an animated "… is typing" row above the input. This matches
+Concord's typing feature. (`requires_h_channel_scope(20002)` is false on the relay, but
+Amethyst still `h`-scopes the send + subscription so it never leaks across channels.)
+
+**Navigation identity — a "Workspaces" tab.** `NavBarItem.BUZZ` (→ `Route.BuzzWorkspaces`)
+is a pinnable bottom-nav destination; `amethyst/.../buzz/BuzzWorkspacesScreen` is a hub that
+filters the joined relay groups to Buzz-dialect relays and leads with an Agent-Console hero
+card. Buzz workspaces still ALSO appear in the generic Relay Groups list (they are NIP-29
+groups); the tab is a Buzz-branded lens over the same data, not a separate store.
+
+Still not wired: the forum/job/huddle/DM message composers — each a send flow for a
+richer kind, and jobs/huddles are among the schema-inferred kinds, so they want Buzz-side
+confirmation before UI. **Presence (kind 20001)** is accepted by Buzz but collides with
+Amethyst's `GeohashPresenceEvent` in `EventFactory` (20001 is registered as geohash
+presence), so it needs disambiguation before it can render — unlike typing (20002), which
+has no such collision. A **workspace→channels shell** (Concord-style channel sidebar) and
+per-account persistence of held attestations remain follow-ups.
 
 ## Owner Attestation (NIP-OA) — implemented
 

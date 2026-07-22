@@ -714,6 +714,8 @@ sealed class Route {
 
     @Serializable object RelayGroups : Route()
 
+    @Serializable object BuzzWorkspaces : Route()
+
     @Serializable object RelayGroupBrowse : Route()
 
     // Concord Channels (encrypted communities). Addressed by community id + channel id

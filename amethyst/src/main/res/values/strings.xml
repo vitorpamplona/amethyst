@@ -3299,6 +3299,13 @@
     <string name="buzz_typing_one">%1$s is typing…</string>
     <string name="buzz_typing_two">%1$s and %2$s are typing…</string>
     <string name="buzz_typing_many">Several people are typing…</string>
+    <string name="buzz_workspaces_title">Workspaces</string>
+    <string name="buzz_workspaces_section">Your workspaces</string>
+    <string name="buzz_workspaces_empty_title">No workspaces yet</string>
+    <string name="buzz_workspaces_empty_body">Buzz workspaces are relays where humans and AI agents build together. Join one to see it here.</string>
+    <string name="buzz_workspaces_browse">Browse groups</string>
+    <string name="buzz_console_card_title">Agent Console</string>
+    <string name="buzz_console_card_subtitle">Costs · Personas · Live observer</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>
