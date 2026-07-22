@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -126,7 +128,7 @@ fun AgentConsoleScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 when (selectedTab) {
                     0 -> CostsTab(metrics)
-                    1 -> PersonasTab(personas)
+                    1 -> PersonasTab(personas, nav)
                     else -> ObserverTab(observerFrames)
                 }
 
@@ -223,25 +225,45 @@ private fun TokenBreakdown(totals: TokenTotals) {
 }
 
 @Composable
-private fun PersonasTab(personas: List<AgentConsoleViewModel.PersonaCard>) {
-    if (personas.isEmpty()) {
-        EmptyState("No personas published. Personas you publish (kind:30175) appear here.")
-        return
-    }
-
+private fun PersonasTab(
+    personas: List<AgentConsoleViewModel.PersonaCard>,
+    nav: INav,
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item {
+            OutlinedButton(
+                onClick = { nav.nav(Route.AgentPersonaEdit()) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(symbol = MaterialSymbols.AddCircle, contentDescription = null)
+                Text("  New persona")
+            }
+        }
+        if (personas.isEmpty()) {
+            item {
+                Text(
+                    text = "No personas published yet. Create one to define an agent (kind:30175).",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
         items(personas) { persona ->
-            PersonaCardView(persona)
+            PersonaCardView(persona) { nav.nav(Route.AgentPersonaEdit(persona.slug)) }
         }
     }
 }
 
 @Composable
-private fun PersonaCardView(persona: AgentConsoleViewModel.PersonaCard) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun PersonaCardView(
+    persona: AgentConsoleViewModel.PersonaCard,
+    onClick: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 text = persona.displayName,

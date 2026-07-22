@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentAttestationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentConsoleScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentPersonaEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -460,6 +461,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AgentConsole> { AgentConsoleScreen(accountViewModel, nav) }
         composableFromEnd<Route.AgentAttestation> { AgentAttestationScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.AgentPersonaEdit> { AgentPersonaEditScreen(it.slug, accountViewModel, nav) }
         composableFromEndArgs<Route.NestLobby> { NestLobbyScreen(it.addressValue, accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }

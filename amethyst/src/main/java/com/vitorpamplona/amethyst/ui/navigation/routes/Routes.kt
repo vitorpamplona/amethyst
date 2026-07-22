@@ -473,6 +473,10 @@ sealed class Route {
 
     @Serializable object AgentAttestation : Route()
 
+    @Serializable data class AgentPersonaEdit(
+        val slug: String? = null,
+    ) : Route()
+
     @Serializable object EditFavoriteAlgoFeeds : Route()
 
     @Serializable object EditPaymentTargets : Route()
