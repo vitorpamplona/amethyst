@@ -70,11 +70,22 @@ sealed interface BottomBarEntry {
         val relayUrl: String,
     ) : BottomBarEntry
 
-    /** A pinned Concord community, keyed by its community id; opens the community's channel list. */
+    /**
+     * A pinned Concord community, keyed by its community id; opens the community's channel list.
+     *
+     * [relays] are the community's bootstrap relays, captured from the joined-list entry at pin
+     * time. A Concord community's private kind-13302 list often lives only on these relays (Armada/
+     * Vector publish it there, never to the user's outbox), so without them a pinned community whose
+     * list we haven't cached can never be found — the tab and its server screen would stay blank.
+     * Carrying the relays on the tab lets the bootstrap re-fetch the list from the right place even
+     * when nothing about the community is known yet. Optional (defaults empty) so older persisted
+     * bottom-bar configs still decode.
+     */
     @Serializable
     @SerialName("concord")
     data class Concord(
         val communityId: String,
+        val relays: List<String> = emptyList(),
     ) : BottomBarEntry
 
     /** A pinned Bitchat geohash location channel, keyed by its geohash cell; opens the location chat. */
