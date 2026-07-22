@@ -179,12 +179,22 @@ own 40002 messages threads to the composer through the shared chat feed via an o
 `EditFieldRow` shows an editing banner. This closes the render↔create loop (edit overlays
 already rendered).
 
+The **social/moderation kinds work through the shared chat action sheet with no Buzz-specific
+wiring**, because Buzz's relay accept-list (`buzz-core/src/kind.rs` `ALL_KINDS`) deliberately
+includes the standard Nostr kinds: **reactions** (NIP-25 kind 7 — `requires_h_channel_scope`
+is false, so no h-tag needed), **deletions** (NIP-09 kind 5, plus NIP-29 group delete 9005/9008),
+**reports** (NIP-56 kind 1984, queued to the tenant's `moderation_reports`), and **custom emoji**
+(10030/30030). Amethyst's `ChatMessageActionSheet` already produces these and they are accepted,
+stored, and served by the Buzz relay. The one social action NOT in Buzz's accept-list is **zaps**
+(no 9734/9735) — but a zap is a Lightning payment whose receipt is published by the LN provider to
+the author's relays, so zapping still works; only the receipt isn't stored on the Buzz relay.
+
 Still not wired (write path): the forum/job/huddle/DM message composers — each a
 send flow for a richer kind, and jobs/huddles are among the schema-inferred kinds, so
-they want Buzz-side confirmation before UI. Buzz has **no** stream-message reaction kind
-(reactions aren't part of its workspace model), so there is nothing to wire there.
-Persisting held attestations per-account (currently in-memory) needs a KMP storage
-abstraction and is a follow-up.
+they want Buzz-side confirmation before UI. **Typing (KIND_TYPING_INDICATOR) and presence
+(KIND_PRESENCE_UPDATE) ARE accepted by Buzz** but Amethyst consumes them as ephemeral and
+does not render them yet. Persisting held attestations per-account (currently in-memory)
+needs a KMP storage abstraction and is a follow-up.
 
 ## Owner Attestation (NIP-OA) — implemented
 
