@@ -325,6 +325,7 @@ import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -467,7 +468,10 @@ class Account(
      */
     val nip46Signer =
         Nip46SignerState(
-            signer = signer,
+            // Acting as someone else's bunker: the templates arriving here were composed by the
+            // connected client, so they are signed exactly as received — our client tag would both
+            // misattribute the event and change the id the client expects back.
+            signer = signer.withoutClientTag(),
             client = client,
             ledger = signerPermissionLedger,
             clientStore = nip46ClientStore,

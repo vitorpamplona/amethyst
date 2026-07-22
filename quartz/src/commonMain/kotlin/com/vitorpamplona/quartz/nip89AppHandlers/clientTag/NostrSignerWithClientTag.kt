@@ -117,3 +117,18 @@ class NostrSignerWithClientTag(
         return tags + arrayOf(clientTag)
     }
 }
+
+/**
+ * The same signer with the NIP-89 client-tag decorator peeled off, or the receiver unchanged when it
+ * carries no such decorator.
+ *
+ * The client tag says "this app composed this event", so it belongs only on templates this app
+ * authored. When we sign on someone else's behalf — a napplet, an nSite, a web app over NIP-07, a
+ * client using us as a NIP-46 bunker — the template is theirs, and appending a tag rewrites the very
+ * bytes they are about to have hashed into an id. NIP-07 callers routinely re-check the returned
+ * event against the template they submitted (block/buzz compares `JSON.stringify(tags)` outright)
+ * and reject the result as an invalid signature when it does not match.
+ *
+ * Any decoration under this one (metering, NIP-13 mining) is preserved, as is [NostrSigner.pubKey].
+ */
+fun NostrSigner.withoutClientTag(): NostrSigner = if (this is NostrSignerWithClientTag) inner else this
