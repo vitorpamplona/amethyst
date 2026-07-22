@@ -725,6 +725,11 @@ sealed class Route {
 
     @Serializable object BuzzNewDm : Route()
 
+    @Serializable
+    data class BuzzRelayImport(
+        val relayUrl: String,
+    ) : Route()
+
     @Serializable object RelayGroupBrowse : Route()
 
     // Concord Channels (encrypted communities). Addressed by community id + channel id

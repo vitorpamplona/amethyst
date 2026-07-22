@@ -2513,6 +2513,7 @@
     <string name="relay_group_browse_description">Browse the groups hosted on a relay. Paste a relay address, or pick one below.</string>
     <string name="relay_group_browse_relay_label">Relay address</string>
     <string name="relay_group_browse_go">Browse</string>
+    <string name="relay_group_browse_buzz_import">Using a Buzz workspace? Import your channels</string>
     <string name="relay_group_browse_your_relays">Relays you\'re on</string>
     <string name="relay_group_browse_popular">Popular relays</string>
     <string name="relay_group_no_messages_yet">No messages yet</string>
@@ -3346,6 +3347,14 @@
     <string name="buzz_invite_expired">This invite has expired. Ask for a new one.</string>
     <string name="buzz_invite_after_browser">Finish accepting the terms in the browser, then come back — your workspace will be waiting.</string>
     <string name="buzz_invite_open_workspace">Open my workspaces</string>
+    <string name="buzz_import_title">Import workspace channels</string>
+    <string name="buzz_import_loading">Finding your channels…</string>
+    <string name="buzz_import_your_channels">Your channels on this workspace</string>
+    <string name="buzz_import_add">Add</string>
+    <string name="buzz_import_add_all">Add all</string>
+    <string name="buzz_import_added">Added</string>
+    <string name="buzz_import_empty_title">No channels found</string>
+    <string name="buzz_import_empty_body">You don\'t seem to be a member of any channels on this relay yet. Accept the workspace invite in the browser first, then try again.</string>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>

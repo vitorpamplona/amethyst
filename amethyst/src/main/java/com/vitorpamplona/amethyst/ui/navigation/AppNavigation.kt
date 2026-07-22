@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzNewDmScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspacesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
@@ -465,6 +466,7 @@ fun BuildNavigation(
         composableFromEnd<Route.BuzzWorkspaces> { BuzzWorkspacesScreen(accountViewModel, nav) }
         composableFromEnd<Route.BuzzDmList> { BuzzDmListScreen(accountViewModel, nav) }
         composableFromEnd<Route.BuzzNewDm> { BuzzNewDmScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzRelayImport> { BuzzRelayImportScreen(it.relayUrl, accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
