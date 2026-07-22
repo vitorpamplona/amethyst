@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
@@ -127,6 +128,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -671,10 +673,20 @@ class AccountViewModel(
         account.refoundConcordCommunity(communityId, setOf(member))
     }
 
-    /** Pull the account's Concord community list from the stock + own relays (Concord hub bootstrap). */
+    /**
+     * Pull the account's Concord community list (kind 13302) from the stock + own relays and, in
+     * addition, from the bootstrap relays of every Concord community pinned to the bottom bar. The
+     * private list frequently lives only on a community's own relays, so a pinned community opened
+     * cold — never through the hub — is only reachable via the relays saved on its tab.
+     */
     fun importConcordCommunities() =
         viewModelScope.launch(Dispatchers.IO) {
-            account.importConcordCommunities()
+            val pinnedRelays =
+                settings.uiSettingsFlow.bottomBarItems.value
+                    .filterIsInstance<BottomBarEntry.Concord>()
+                    .flatMap { it.relays }
+                    .mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+            account.importConcordCommunities(pinnedRelays)
         }
 
     /** Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). */
