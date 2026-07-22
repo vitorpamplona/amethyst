@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -52,23 +53,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetMetrics
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentUsageSummary
 import com.vitorpamplona.amethyst.commons.model.buzz.TokenTotals
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
- * The workspace owner's agent-owner console — a read-only dashboard over the fleet of
- * AI agents that publish to them. Two tabs:
+ * The workspace owner's agent-owner console — a dashboard over the fleet of AI agents
+ * that publish to them. Three tabs:
  * - **Costs** — fleet totals and a per-agent breakdown (turns, sessions, tokens, spend),
  *   derived from decrypted NIP-AM turn metrics (`kind:44200`).
  * - **Personas** — the owner's published persona definitions (NIP-AP `kind:30175`).
+ * - **Observer** — a live stream of ephemeral NIP-AO telemetry frames (`kind:24200`).
  *
- * Data comes from [AgentConsoleViewModel], keyed by the owner pubkey so the fetch/decrypt
- * work survives navigation. This v1 is read-only; persona editing and NIP-OA attestation
- * issuance are follow-ups.
+ * A "Attest" FAB opens [AgentAttestationScreen] to issue a NIP-OA authorization for an
+ * agent key. Data comes from [AgentConsoleViewModel], keyed by the owner pubkey so the
+ * fetch/decrypt work survives navigation. The tabs are read-only; persona editing is a
+ * follow-up.
  */
 @Composable
 fun AgentConsoleScreen(
@@ -98,6 +104,13 @@ fun AgentConsoleScreen(
 
     Scaffold(
         topBar = { TopBarWithBackButton("Agent Console", nav) },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                text = { Text("Attest") },
+                icon = { Icon(symbol = MaterialSymbols.Key, contentDescription = null) },
+                onClick = { nav.nav(Route.AgentAttestation) },
+            )
+        },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             TabRow(selectedTabIndex = selectedTab) {

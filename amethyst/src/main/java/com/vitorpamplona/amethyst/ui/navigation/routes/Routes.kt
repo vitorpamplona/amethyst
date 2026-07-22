@@ -471,6 +471,8 @@ sealed class Route {
 
     @Serializable object AgentConsole : Route()
 
+    @Serializable object AgentAttestation : Route()
+
     @Serializable object EditFavoriteAlgoFeeds : Route()
 
     @Serializable object EditPaymentTargets : Route()
