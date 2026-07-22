@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordCommunityHasUnreadFlow
@@ -730,6 +731,35 @@ private fun ChannelTitleWithLabelInfo(
     }
 }
 
+/**
+ * A warning glyph on the row of a 1:1 room whose counterpart has been reported by someone the user
+ * follows. This is the surface where the user decides whether to open an unsolicited DM at all, so it
+ * warns before engagement rather than after. Group rooms render nothing.
+ */
+@Composable
+private fun RoomReportWarningIcon(
+    room: ChatroomKey,
+    accountViewModel: AccountViewModel,
+) {
+    val counterpartHex = room.users.singleOrNull() ?: return
+
+    LoadUser(baseUserHex = counterpartHex, accountViewModel = accountViewModel) { user ->
+        if (user != null) {
+            val state by accountViewModel.createUserReportWarningFlow(user).collectAsStateWithLifecycle()
+
+            if (state.shouldWarn) {
+                Icon(
+                    symbol = MaterialSymbols.Warning,
+                    contentDescription = reportWarningContentDescription(state),
+                    modifier = Size15Modifier,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = StdHorzSpacer)
+            }
+        }
+    }
+}
+
 @Composable
 private fun UserRoomCompose(
     room: ChatroomKey,
@@ -753,6 +783,7 @@ private fun UserRoomCompose(
         },
         firstRow = {
             RoomNameDisplay(room, Modifier.weight(1f), accountViewModel)
+            RoomReportWarningIcon(room, accountViewModel)
             if (room in pinnedRooms.value) {
                 Icon(
                     symbol = MaterialSymbols.PushPin,

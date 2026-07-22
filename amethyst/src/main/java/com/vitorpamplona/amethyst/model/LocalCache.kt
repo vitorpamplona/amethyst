@@ -1742,6 +1742,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
                     event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
 
+            // Every report that names an author lands here, including those that also name an event
+            // and are therefore filed against the note below. Read only by the DM sender warning —
+            // the hide threshold keeps counting `receivedReportsByAuthor` alone.
+            authorsReported.forEach { author -> author.reports().addReportNamingUser(note) }
+
             if (eventsReported.isEmpty()) {
                 authorsReported.forEach { author -> author.reports().addReport(note) }
             } else {
@@ -3268,7 +3273,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
-                getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(note)
+                getUserIfExists(it.pubkey)?.reportsOrNull()?.let { reports ->
+                    reports.removeReport(note)
+                    reports.removeReportNamingUser(note)
+                }
             }
 
             noteEvent.reportedPost().forEach {

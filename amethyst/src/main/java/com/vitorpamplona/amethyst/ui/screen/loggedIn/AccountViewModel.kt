@@ -49,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
+import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
@@ -785,6 +787,50 @@ class AccountViewModel(
                 ).also {
                     noteIsHiddenFlows.put(note, it)
                 }
+
+    private val userReportWarningFlows = LruCache<User, StateFlow<UserReportWarningState>>(300)
+
+    /**
+     * Whether to warn about [user] as the counterpart of a 1:1 DM, and with what.
+     *
+     * Safe to cache: [User.reports] is never nulled once created, so the upstream this subscribes to
+     * survives the idle gaps that `WhileSubscribed` introduces.
+     */
+    fun createUserReportWarningFlow(user: User): StateFlow<UserReportWarningState> =
+        userReportWarningFlows.get(user)
+            ?: combineTransform(
+                user.reports().reportsNamingUser,
+                account.kind3FollowList.flow,
+                account.settings.syncedSettings.security.warnAboutPostsWithReports,
+            ) { _, followList, warnAboutReports ->
+                emit(reportWarningFor(user, followList.authors, warnAboutReports))
+            }.onStart {
+                emit(
+                    reportWarningFor(
+                        user,
+                        account.followingKeySet(),
+                        account.settings.syncedSettings.security.warnAboutPostsWithReports.value,
+                    ),
+                )
+            }.flowOn(Dispatchers.IO)
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.WhileSubscribed(10000, 10000),
+                    UserReportWarningState.SILENT,
+                ).also {
+                    userReportWarningFlows.put(user, it)
+                }
+
+    private fun reportWarningFor(
+        user: User,
+        followingKeySet: Set<HexKey>,
+        warnAboutReports: Boolean,
+    ) = dmReportWarningFor(
+        counterpart = user,
+        loggedInPubKey = account.signer.pubKey,
+        followingKeySet = followingKeySet,
+        warnAboutReports = warnAboutReports,
+    )
 
     private val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
 

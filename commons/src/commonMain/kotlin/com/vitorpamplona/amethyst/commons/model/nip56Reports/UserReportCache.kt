@@ -37,6 +37,49 @@ class UserReportCache : UserDependencies {
     /** Tracks EOSE (End Of Stored Events) for relay subscriptions */
     val latestEOSEs = EOSERelayList()
 
+    /**
+     * Every report whose `reportedAuthor()` names this user, keyed by the reporting user — including
+     * reports that also name a specific event and therefore never reach [receivedReportsByAuthor].
+     *
+     * A superset of [receivedReportsByAuthor], read only by the DM sender warning. Keeping it
+     * separate leaves [countReportAuthorsBy] — and with it `Account.isAcceptable(user)` and the hide
+     * threshold — counting exactly the reports they counted before.
+     */
+    val reportsNamingUser = MutableStateFlow(mapOf<User, Set<Note>>())
+
+    fun addReportNamingUser(note: Note) {
+        val author = note.author ?: return
+
+        val existing = reportsNamingUser.value[author]
+        if (existing != null && existing.contains(note)) return
+
+        reportsNamingUser.update {
+            val current = it[author] ?: emptySet()
+            it + (author to current + note)
+        }
+    }
+
+    fun removeReportNamingUser(deleteNote: Note) {
+        val author = deleteNote.author ?: return
+
+        val existing = reportsNamingUser.value[author]
+        if (existing == null || !existing.contains(deleteNote)) return
+
+        reportsNamingUser.update {
+            val current = it[author] ?: return@update it
+            it + (author to current - deleteNote)
+        }
+    }
+
+    fun reportsNaming(users: Set<HexKey>): List<Note> =
+        reportsNamingUser.value.flatMap {
+            if (it.key.pubkeyHex in users) {
+                it.value
+            } else {
+                emptyList()
+            }
+        }
+
     fun addReport(note: Note) {
         val author = note.author ?: return
 
