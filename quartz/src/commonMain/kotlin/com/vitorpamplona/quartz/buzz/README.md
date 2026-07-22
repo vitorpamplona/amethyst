@@ -166,10 +166,25 @@ AUTHs that share the template — so an un-enrolled agent key gets virtual membe
 its owner stays a member. The paste/hold + owner-side issue flows both live in
 `AgentAttestationScreen`. (Store is in-memory for now; persisting per-account is a follow-up.)
 
-Not yet wired (write path): the edit composer (40003) and forum/job/huddle/DM message
-composers, plus Buzz-native reactions/deletes — all require changes to the central chat
-composer and are deferred to a focused pass. The canvas (40100) is now requested and
-consumed as overlay state but has no dedicated viewer yet.
+The **canvas (40100)** now has a viewer: `BuzzWorkspaceState` exposes a `canvasUpdates`
+flow and `amethyst/.../buzz/BuzzCanvasScreen` (`Route.BuzzCanvas`) renders the newest
+markdown, reached from a Dashboard action in the relay-group top bar that appears only on
+a Buzz relay once a canvas has arrived.
+
+The **edit composer (40003)** is wired: `ChannelNewMessageViewModel` has a Buzz edit mode
+(`editBuzzMessage`/`clearBuzzEdit`) whose next send publishes a 40003 targeting the
+original (minimal, mirroring Buzz's `build_edit`); an "Edit" action gated to the user's
+own 40002 messages threads to the composer through the shared chat feed via an optional
+`onWantsToEditBuzz` callback (default-null, so no other chat surface is affected), and
+`EditFieldRow` shows an editing banner. This closes the render↔create loop (edit overlays
+already rendered).
+
+Still not wired (write path): the forum/job/huddle/DM message composers — each a
+send flow for a richer kind, and jobs/huddles are among the schema-inferred kinds, so
+they want Buzz-side confirmation before UI. Buzz has **no** stream-message reaction kind
+(reactions aren't part of its workspace model), so there is nothing to wire there.
+Persisting held attestations per-account (currently in-memory) needs a KMP storage
+abstraction and is a follow-up.
 
 ## Owner Attestation (NIP-OA) — implemented
 
