@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -149,10 +149,11 @@ fun BuzzInviteScreen(
 
             Button(
                 onClick = {
-                    // Recognize the workspace's relay as Buzz-dialect so its events are materialized
-                    // as workspace channels once membership is granted, then hand off to the in-app
-                    // window.nostr browser to accept terms + sign the claim.
-                    RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { BuzzRelayDialect.mark(it) }
+                    // Remember the workspace's relay as joined (persisted; also marks it a Buzz
+                    // dialect) so the app connects + authenticates + discovers its channels once
+                    // membership is granted, then hand off to the in-app window.nostr browser to
+                    // accept terms + sign the claim.
+                    RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { BuzzWorkspaces.join(it) }
                     FavoriteAppLauncher.launchUrl(context, link)
                 },
                 enabled = !expired,

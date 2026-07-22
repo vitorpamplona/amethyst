@@ -25,18 +25,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
-import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
 import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,26 +51,33 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Backing ViewModel for [BuzzDmListScreen] — the user's Buzz direct-message inbox.
  *
- * A Buzz DM is a relay-authoritative NIP-29 group whose `h`/id is a relay-generated UUID,
- * so the message timeline reuses the whole relay-group chat stack; this ViewModel only
- * owns *discovery* and the inbox projection. It:
- * - fetches + live-subscribes the relay-signed [DmCreatedEvent] (`kind:41001`, `#p` = me)
- *   and per-viewer [DmVisibilityEvent] (`kind:30622`, `#p` = me) across the Buzz-dialect
- *   relays — [LocalCache] consumes them and feeds [BuzzDmRegistry];
- * - fetches each discovered DM's NIP-29 directory (39000-39003, `#d` = channel id) so the
- *   relay-signed roster is present, which is what the shared chat composer gates on
- *   (a DM isn't in the joined-group list, so nothing else would fetch it);
- * - projects [BuzzDmRegistry] (minus the viewer's hidden set) into [rows], sorted by last
- *   message time and enriched with the other participants for name/avatar rendering.
+ * A Buzz DM is a relay-authoritative NIP-29 group whose `h`/id is a relay-generated UUID, so the
+ * message timeline reuses the whole relay-group chat stack; this ViewModel owns only *discovery*
+ * and the inbox projection. Discovery mirrors how the deployed relay actually models DMs (it does
+ * NOT emit a queryable kind-41001): the relay addresses each member a kind-44100 member-added
+ * notification (`#p` = me, `h` = channel), and marks a channel a DM via the `t` tag on its
+ * kind-39000 metadata (with the participants inlined as `p` tags). So it:
+ * - fetches + live-subscribes 44100 (`#p` = me) across the joined Buzz relays to learn the
+ *   channels the user is in;
+ * - fetches each channel's directory (39000-39003) and keeps the ones whose metadata says
+ *   `t` = `dm` — that same 39000 also carries the roster the shared chat composer's member gate
+ *   needs, and the DM participants;
+ * - subscribes the per-viewer [DmVisibilityEvent] (`kind:30622`) so a hidden DM (tracked in
+ *   [BuzzDmRegistry]) drops out;
+ * - projects the visible DMs into [rows], sorted by last message time.
  */
 class BuzzDmListViewModel : ViewModel() {
     @Volatile private var account: Account? = null
     private val refreshMutex = Mutex()
     private var liveJob: Job? = null
+
+    /** channelId -> relay it was discovered on (from the 44100 provenance). */
+    private val memberChannels = ConcurrentHashMap<String, NormalizedRelayUrl>()
 
     private val _rows = MutableStateFlow<List<DmRow>>(emptyList())
     val rows: StateFlow<List<DmRow>> = _rows.asStateFlow()
@@ -79,13 +90,15 @@ class BuzzDmListViewModel : ViewModel() {
     data class DmRow(
         val channelId: String,
         val relayUrl: NormalizedRelayUrl,
-        /** All participants (from the 41001), including me. */
+        /** All participants (from the 39000 metadata `p` tags), including me. */
         val allParticipants: List<HexKey>,
         /** Participants other than me — who the DM is "with". */
         val others: List<HexKey>,
-        /** Newest message time (or the DM's created_at when it has no messages yet). */
+        /** Newest message time (or 0 when the DM has no messages yet). */
         val lastActivity: Long,
     )
+
+    private fun relays(): Set<NormalizedRelayUrl> = BuzzWorkspaces.flow.value + BuzzRelayDialect.flow.value
 
     fun bindAccountIfMissing(account: Account) {
         if (this.account != null) return
@@ -100,8 +113,8 @@ class BuzzDmListViewModel : ViewModel() {
             refreshMutex.withLock {
                 _isLoading.value = true
                 try {
-                    fetchDiscovery(account)
-                    fetchRosters(account)
+                    discoverMemberChannels(account)
+                    fetchMetadata(account)
                     rebuildRows(account)
                 } finally {
                     _isLoading.value = false
@@ -110,108 +123,96 @@ class BuzzDmListViewModel : ViewModel() {
         }
     }
 
-    /**
-     * One-shot paged fetch of the DM confirmations + visibility snapshots addressed to me
-     * (`#p` = me) from every Buzz-dialect relay. Events land in [LocalCache] → [BuzzDmRegistry].
-     */
-    private suspend fun fetchDiscovery(account: Account) {
+    /** Fetch kind-44100 (`#p` = me) + the visibility snapshot (30622) across the joined relays. */
+    private suspend fun discoverMemberChannels(account: Account) {
         val myPubkey = account.userProfile().pubkeyHex
-        val relays = BuzzRelayDialect.flow.value
+        val relays = relays()
         if (relays.isEmpty()) return
         val filters =
             listOf(
-                Filter(kinds = listOf(DmCreatedEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
+                Filter(kinds = listOf(MemberAddedNotificationEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
                 Filter(kinds = listOf(DmVisibilityEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
             )
-        account.client.fetchAllPagesFromPool(relays.associateWith { filters }) { _, _ -> }
+        account.client.fetchAllPagesFromPool(relays.associateWith { filters }) { event, relay ->
+            (event as? MemberAddedNotificationEvent)?.channel()?.let { memberChannels[it] = relay }
+        }
     }
 
-    /**
-     * Second phase: for the DMs just discovered, fetch each channel's NIP-29 directory
-     * (39000-39003) from its own relay so the relay-signed roster populates. Without it the
-     * shared chat composer's member gate would hide the input field on a DM.
-     */
-    private suspend fun fetchRosters(account: Account) {
-        val myPubkey = account.userProfile().pubkeyHex
+    /** Fetch the NIP-29 directory (39000-39003) of every discovered channel so its `t`/roster load. */
+    private suspend fun fetchMetadata(account: Account) {
         val byRelay =
-            BuzzDmRegistry
-                .visibleFor(myPubkey)
-                .groupBy { it.relay }
-                .mapValues { (_, dms) ->
-                    listOf(
-                        Filter(
-                            kinds = RELAY_GROUP_METADATA_KINDS,
-                            tags = mapOf("d" to dms.map { it.channelId }),
-                        ),
-                    )
-                }
+            memberChannels.entries
+                .groupBy({ it.value }, { it.key })
+                .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
         if (byRelay.isEmpty()) return
         account.client.fetchAllPagesFromPool(byRelay) { _, _ -> }
     }
 
+    /** Project the discovered DM channels (metadata `t` = `dm`), minus my hidden set, newest-first. */
     private fun rebuildRows(account: Account) {
         val myPubkey = account.userProfile().pubkeyHex
+        val hidden = BuzzDmRegistry.hiddenFor(myPubkey)
         _rows.value =
-            BuzzDmRegistry
-                .visibleFor(myPubkey)
-                .map { dm ->
+            memberChannels.entries
+                .mapNotNull { (channelId, relay) ->
+                    if (channelId in hidden) return@mapNotNull null
+                    val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(channelId, relay))
+                    val metadata = channel.event ?: return@mapNotNull null
+                    if (!metadata.isBuzzDm()) return@mapNotNull null
+                    val participants = metadata.buzzParticipants()
                     DmRow(
-                        channelId = dm.channelId,
-                        relayUrl = dm.relay,
-                        allParticipants = dm.participants,
-                        others = dm.participants.filter { it != myPubkey },
-                        lastActivity = lastActivityFor(dm.channelId, dm.createdAt),
+                        channelId = channelId,
+                        relayUrl = relay,
+                        allParticipants = participants,
+                        others = participants.filter { it != myPubkey },
+                        lastActivity = lastActivityFor(channelId),
                     )
                 }.sortedByDescending { it.lastActivity }
     }
 
-    /** Newest message `created_at` for [channelId] from [LocalCache], or [fallback] when empty. */
-    private fun lastActivityFor(
-        channelId: String,
-        fallback: Long,
-    ): Long =
+    /** Newest message `created_at` for [channelId] from [LocalCache], or 0 when the DM is empty. */
+    private fun lastActivityFor(channelId: String): Long =
         LocalCache
             .filter(
                 Filter(
                     kinds = listOf(ChatEvent.KIND, StreamMessageV2Event.KIND),
                     tags = mapOf("h" to listOf(channelId)),
                 ),
-            ).maxOfOrNull { it.createdAt() ?: 0L }
-            ?.takeIf { it > 0L }
-            ?: fallback
+            ).maxOfOrNull { it.createdAt() ?: 0L } ?: 0L
 
     /**
-     * Keeps a live REQ open for new DM confirmations / visibility changes and re-projects
-     * the inbox whenever the registry moves. Idempotent; torn down with the ViewModel.
+     * Keeps a live 44100 + 30622 REQ open (so new DMs / hide changes arrive) and re-projects the
+     * inbox when the registry or dialect set moves. Idempotent; torn down with the ViewModel.
      */
     private fun startLive() {
         val account = account ?: return
         if (liveJob != null) return
         val myPubkey = account.userProfile().pubkeyHex
-        val relays = BuzzRelayDialect.flow.value
 
         liveJob =
             viewModelScope.launch(Dispatchers.IO) {
-                // (a) Keep the discovery REQs open so LocalCache keeps feeding the registry.
-                relays.forEach { relay ->
+                relays().forEach { relay ->
                     launch {
-                        account.client
-                            .subscribeAsFlow(
-                                relay,
-                                Filter(kinds = listOf(DmCreatedEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
-                            ).collect { /* consumed globally by CacheClientConnector */ }
+                        val filter = Filter(kinds = listOf(MemberAddedNotificationEvent.KIND), tags = mapOf("p" to listOf(myPubkey)))
+                        account.client.subscribeAsFlow(relay, filter).collect { events ->
+                            var changed = false
+                            events.filterIsInstance<MemberAddedNotificationEvent>().forEach { e ->
+                                e.channel()?.let { if (memberChannels.put(it, relay) == null) changed = true }
+                            }
+                            if (changed) {
+                                fetchMetadata(account)
+                                rebuildRows(account)
+                            }
+                        }
                     }
                     launch {
-                        account.client
-                            .subscribeAsFlow(
-                                relay,
-                                Filter(kinds = listOf(DmVisibilityEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
-                            ).collect { }
+                        val filter = Filter(kinds = listOf(DmVisibilityEvent.KIND), tags = mapOf("p" to listOf(myPubkey)))
+                        account.client.subscribeAsFlow(relay, filter).collect { /* consumed → BuzzDmRegistry.hidden */ }
                     }
                 }
-                // (b) Re-project whenever the registry (conversations or my hidden set) changes.
+                // Re-project when my hidden set (30622) or the joined-relay set changes.
                 launch {
-                    combine(BuzzDmRegistry.conversations, BuzzDmRegistry.hidden) { _, _ -> }
+                    combine(BuzzDmRegistry.hidden, BuzzWorkspaces.flow, BuzzRelayDialect.flow) { _, _, _ -> }
                         .collect { rebuildRows(account) }
                 }
             }

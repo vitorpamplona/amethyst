@@ -213,6 +213,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -2929,9 +2930,17 @@ class Account(
     suspend fun openBuzzDm(
         relay: NormalizedRelayUrl,
         participants: List<HexKey>,
-    ) {
-        val template = DmOpenEvent.build(participants)
-        signAndSendPrivatelyOrBroadcast(template) { listOf(relay) }
+    ): String? {
+        val signed = signer.sign(DmOpenEvent.build(participants))
+        // The relay confirms the DM synchronously in the OK as `response:{"channel_id":"…"}` —
+        // the authoritative, relay-assigned channel UUID (the deployed relay does not emit a
+        // queryable kind-41001). Read it straight from the ack so the caller can open the chat.
+        val results = client.publishAndCollectResults(signed, setOf(relay))
+        val okMessage = results.values.firstOrNull { it.accepted }?.message ?: return null
+        return okMessage
+            .substringAfter("\"channel_id\":\"", "")
+            .substringBefore('"')
+            .takeIf { it.isNotBlank() }
     }
 
     /** Hide a Buzz DM from my sidebar with a kind-41012 command (re-opening it un-hides). */

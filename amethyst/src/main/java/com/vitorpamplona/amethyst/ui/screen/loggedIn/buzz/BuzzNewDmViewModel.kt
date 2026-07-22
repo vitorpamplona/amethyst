@@ -22,20 +22,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,9 +41,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * Backing ViewModel for [BuzzNewDmScreen]. It gathers 1-8 other participants and a Buzz
- * workspace relay, publishes a kind-41010 open command, then waits for the relay-signed
- * kind-41001 confirmation to land in [BuzzDmRegistry] so it can hand the caller the
- * relay-assigned [GroupId] (we never mint the DM's UUID ourselves).
+ * workspace relay, publishes a kind-41010 open command, and reads the relay's synchronous OK
+ * (`response:{"channel_id":"…"}`) for the assigned [GroupId] — we never mint the DM's UUID
+ * ourselves, and the deployed relay does not emit a queryable kind-41001 to poll for.
  */
 class BuzzNewDmViewModel : ViewModel() {
     @Volatile private var account: Account? = null
@@ -78,7 +74,7 @@ class BuzzNewDmViewModel : ViewModel() {
         if (this.account != null) return
         this.account = account
         val buzz =
-            BuzzRelayDialect.flow.value
+            (BuzzWorkspaces.flow.value + BuzzRelayDialect.flow.value)
                 .toList()
                 .sortedBy { it.url }
         _relays.value = buzz
@@ -110,9 +106,9 @@ class BuzzNewDmViewModel : ViewModel() {
     }
 
     /**
-     * Publishes the 41010 and awaits the 41001 confirmation, then invokes [onOpened] with
-     * the relay-assigned [GroupId]. On timeout it still calls [onOpened] with null so the
-     * screen can fall back to the inbox (the DM will surface there once it confirms).
+     * Publishes the 41010 and reads the relay's synchronous OK confirmation for the assigned
+     * channel id, then invokes [onOpened] with the [GroupId]. On a null id (the relay didn't
+     * confirm in the ack) it calls [onOpened] with null so the screen falls back to the inbox.
      */
     fun start(onOpened: (GroupId?) -> Unit) {
         val account = account ?: return
@@ -126,49 +122,16 @@ class BuzzNewDmViewModel : ViewModel() {
             _status.value = Status.Error("Add at least one person")
             return
         }
-        val expected = (others + account.userProfile().pubkeyHex).toSet()
 
         _status.value = Status.Sending
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                account.openBuzzDm(relay, others)
-                val groupId = awaitConfirmation(account, relay, expected)
+                val channelId = account.openBuzzDm(relay, others)
+                val groupId = channelId?.let { GroupId(it, relay) }
                 withContext(Dispatchers.Main) { onOpened(groupId) }
             } catch (e: IllegalArgumentException) {
                 _status.value = Status.Error(e.message ?: "Could not open the DM")
             }
         }
-    }
-
-    /**
-     * Polls for the relay-signed 41001 whose participant set matches [expected] on [relay],
-     * re-fetching `#p` = me between checks so a fresh confirmation is pulled in. Returns the
-     * matched [GroupId], or null after [CONFIRM_TIMEOUT_MS].
-     */
-    private suspend fun awaitConfirmation(
-        account: Account,
-        relay: NormalizedRelayUrl,
-        expected: Set<HexKey>,
-    ): GroupId? {
-        val myPubkey = account.userProfile().pubkeyHex
-        val filters = listOf(Filter(kinds = listOf(DmCreatedEvent.KIND), tags = mapOf("p" to listOf(myPubkey))))
-        val deadline = CONFIRM_TIMEOUT_MS
-        var waited = 0L
-        while (waited < deadline) {
-            account.client.fetchAllPagesFromPool(mapOf(relay to filters)) { _, _ -> }
-            val match =
-                BuzzDmRegistry.conversations.value.values.firstOrNull {
-                    it.relay == relay && it.participants.toSet() == expected
-                }
-            if (match != null) return GroupId(match.channelId, relay)
-            delay(POLL_INTERVAL_MS)
-            waited += POLL_INTERVAL_MS
-        }
-        return null
-    }
-
-    companion object {
-        private const val CONFIRM_TIMEOUT_MS = 6_000L
-        private const val POLL_INTERVAL_MS = 500L
     }
 }

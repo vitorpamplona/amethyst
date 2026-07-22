@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -94,17 +95,30 @@ fun BuzzWorkspacesScreen(
         .collectAsStateWithLifecycle()
     val buzzRelays by BuzzRelayDialect.flow.collectAsStateWithLifecycle()
 
+    // Buzz membership is server-side (redeeming an invite claims relay membership) — there is no
+    // NIP-29 join event — so the joined-group list alone misses workspace channels. Discover them
+    // from the relay's kind-44100 member-added notifications instead, and union the two sources.
+    val viewModel: BuzzWorkspacesViewModel =
+        viewModel(key = "BuzzWorkspaces-" + accountViewModel.account.userProfile().pubkeyHex)
+    viewModel.bindAccountIfMissing(accountViewModel.account)
+    val discovered by viewModel.channelsByRelay.collectAsStateWithLifecycle()
+
     // A Buzz workspace IS a relay (a tenant, per buzz-core's `relay_url_authority`), and its
-    // channels are the NIP-29 groups on it — so group the joined Buzz-dialect groups by relay
-    // into workspace → channels, the Concord community→channels shape.
+    // channels are the NIP-29 groups on it — so group by relay into workspace → channels, the
+    // Concord community→channels shape. Sources: (1) joined NIP-29 groups on Buzz-dialect relays,
+    // (2) member channels discovered via kind-44100 (already non-DM).
     val workspaces =
-        remember(joined, buzzRelays) {
-            joined
-                .mapNotNull { tag ->
+        remember(joined, buzzRelays, discovered) {
+            val fromJoined =
+                joined.mapNotNull { tag ->
                     val relay = RelayUrlNormalizer.normalizeOrNull(tag.relayUrl) ?: return@mapNotNull null
                     if (relay !in buzzRelays) return@mapNotNull null
                     GroupId(tag.groupId, relay)
-                }.groupBy { it.relayUrl }
+                }
+            val fromDiscovery = discovered.values.flatten()
+            (fromJoined + fromDiscovery)
+                .distinctBy { it.relayUrl.url + "/" + it.id }
+                .groupBy { it.relayUrl }
                 .toList()
                 .sortedBy { it.first.url }
                 .map { (relay, channels) -> relay to channels.sortedBy { it.id } }
