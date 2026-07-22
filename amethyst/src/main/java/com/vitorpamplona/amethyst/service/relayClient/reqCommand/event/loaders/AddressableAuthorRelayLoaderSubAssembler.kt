@@ -21,11 +21,17 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.IEoseManager
+import com.vitorpamplona.amethyst.commons.service.BundledUpdate
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Bridges missing-addressable-note authors into [UserFinderFilterAssembler].
@@ -37,14 +43,29 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
  * kind-0 / kind-10002 and resolve outbox relays via [UserOutboxFinderSubAssembler]. Once the
  * relay list arrives, [EventFinderFilterAssembler] is invalidated and can query the correct relay.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class AddressableAuthorRelayLoaderSubAssembler(
     val cache: LocalCache,
     val allKeys: () -> Set<EventFinderQueryState>,
     val userFinder: UserFinderFilterAssembler,
 ) : IEoseManager {
-    private val activeSubscriptions = mutableSetOf<UserFinderQueryState>()
+    // Immutable snapshots swapped atomically, so a diff can never observe a half-written set.
+    // Mutual exclusion between runs comes from the bundler (one body at a time), not from these
+    // atomics — they exist to hand state over to destroy(), the one caller the bundler cannot
+    // serialize.
+    private val activeSubscriptions = AtomicReference<Set<UserFinderQueryState>>(emptySet())
+    private val destroyed = AtomicBoolean(false)
+
+    // Keeps the scan off the caller's thread. invalidateFilters() is reached synchronously from
+    // ComposeSubscriptionManager.subscribe/unsubscribe on every note composable mount/unmount,
+    // and those are documented "called by main. Keep it really fast."
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     override fun invalidateFilters(ignoreIfDoing: Boolean) {
+        bundler.invalidate(ignoreIfDoing, ::forceInvalidate)
+    }
+
+    private fun forceInvalidate() {
         val needed = mutableSetOf<UserFinderQueryState>()
 
         allKeys().forEach { key ->
@@ -57,18 +78,26 @@ class AddressableAuthorRelayLoaderSubAssembler(
             }
         }
 
-        val toAdd = needed - activeSubscriptions
-        val toRemove = activeSubscriptions - needed
+        if (destroyed.load()) return
 
-        userFinder.subscribe(toAdd.toList())
-        userFinder.unsubscribe(toRemove.toList())
+        val previous = activeSubscriptions.exchange(needed)
 
-        activeSubscriptions.clear()
-        activeSubscriptions.addAll(needed)
+        userFinder.subscribe((needed - previous).toList())
+        userFinder.unsubscribe((previous - needed).toList())
+
+        // destroy() landed while we were subscribing. bundler.cancel() cannot stop a body that is
+        // already running — it has no suspension points — so the body releases what it just
+        // acquired. destroy() may unsubscribe the same states concurrently; that is a no-op.
+        if (destroyed.load()) {
+            activeSubscriptions.store(emptySet())
+            userFinder.unsubscribe(needed.toList())
+        }
     }
 
     override fun destroy() {
-        userFinder.unsubscribe(activeSubscriptions.toList())
-        activeSubscriptions.clear()
+        // Flag before cancelling so an in-flight body is guaranteed to see the teardown.
+        destroyed.store(true)
+        bundler.cancel()
+        userFinder.unsubscribe(activeSubscriptions.exchange(emptySet()).toList())
     }
 }
