@@ -104,7 +104,6 @@ fun buildSettingsCatalog(
                     symEntry(R.string.ots_explorer_settings, MaterialSymbols.Search, R.string.ots_explorer_search_keywords, Route.OtsSettings),
                     symEntry(R.string.namecoin_settings, MaterialSymbols.Security, R.string.namecoin_search_keywords, Route.NamecoinSettings),
                     symEntry(R.string.resource_usage_title, MaterialSymbols.Bolt, R.string.resource_usage_search_keywords, Route.ResourceUsage),
-                    symEntry(R.string.agent_console_title, MaterialSymbols.AutoAwesome, R.string.agent_console_search_keywords, Route.AgentConsole),
                 ),
         )
 

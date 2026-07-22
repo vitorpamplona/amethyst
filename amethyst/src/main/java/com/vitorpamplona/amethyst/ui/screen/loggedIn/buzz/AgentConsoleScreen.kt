@@ -81,13 +81,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
  */
 @Composable
 fun AgentConsoleScreen(
+    relayUrl: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val pubkey = accountViewModel.account.userProfile().pubkeyHex
-    val viewModel: AgentConsoleViewModel = viewModel(key = "AgentConsole-$pubkey")
+    val viewModel: AgentConsoleViewModel = viewModel(key = "AgentConsole-$relayUrl-$pubkey")
 
-    viewModel.bindAccountIfMissing(accountViewModel.account)
+    viewModel.bind(accountViewModel.account, relayUrl)
 
     val metrics by viewModel.metrics.collectAsStateWithLifecycle()
     val personas by viewModel.personas.collectAsStateWithLifecycle()

@@ -75,11 +75,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BuzzNewDmScreen(
+    relayUrl: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val viewModel: BuzzNewDmViewModel = viewModel()
-    viewModel.bindAccountIfMissing(accountViewModel.account)
+    val viewModel: BuzzNewDmViewModel = viewModel(key = "BuzzNewDm-$relayUrl")
+    viewModel.bind(accountViewModel.account, relayUrl)
 
     val relays by viewModel.relays.collectAsStateWithLifecycle()
     val selectedRelay by viewModel.relay.collectAsStateWithLifecycle()
@@ -162,7 +163,7 @@ fun BuzzNewDmScreen(
                         if (groupId != null) {
                             nav.newStack(Route.RelayGroup(groupId.id, groupId.relayUrl.url))
                         } else {
-                            nav.newStack(Route.BuzzDmList)
+                            nav.newStack(Route.BuzzDmList(relayUrl))
                         }
                     }
                 },

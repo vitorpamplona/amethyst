@@ -22,13 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.Dispatchers
@@ -70,15 +69,16 @@ class BuzzNewDmViewModel : ViewModel() {
         ) : Status
     }
 
-    fun bindAccountIfMissing(account: Account) {
+    /** Binds scoped to a single community [relayUrl] — a new DM is created on that community. */
+    fun bind(
+        account: Account,
+        relayUrl: String,
+    ) {
         if (this.account != null) return
         this.account = account
-        val buzz =
-            (BuzzWorkspaces.flow.value + BuzzRelayDialect.flow.value)
-                .toList()
-                .sortedBy { it.url }
-        _relays.value = buzz
-        _relay.value = buzz.firstOrNull()
+        val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
+        _relays.value = listOfNotNull(relay)
+        _relay.value = relay
     }
 
     fun selectRelay(relay: NormalizedRelayUrl) {

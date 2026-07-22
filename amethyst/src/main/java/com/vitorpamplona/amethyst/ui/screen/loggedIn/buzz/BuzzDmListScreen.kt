@@ -90,12 +90,13 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun BuzzDmListScreen(
+    relayUrl: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val pubkey = accountViewModel.account.userProfile().pubkeyHex
-    val viewModel: BuzzDmListViewModel = viewModel(key = "BuzzDmList-$pubkey")
-    viewModel.bindAccountIfMissing(accountViewModel.account)
+    val viewModel: BuzzDmListViewModel = viewModel(key = "BuzzDmList-$relayUrl-$pubkey")
+    viewModel.bind(accountViewModel.account, relayUrl)
 
     val rows by viewModel.rows.collectAsStateWithLifecycle()
 
@@ -105,7 +106,7 @@ fun BuzzDmListScreen(
             ExtendedFloatingActionButton(
                 text = { Text(stringRes(R.string.buzz_dm_new)) },
                 icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                onClick = { nav.nav(Route.BuzzNewDm) },
+                onClick = { nav.nav(Route.BuzzNewDm(relayUrl)) },
             )
         },
     ) { padding ->

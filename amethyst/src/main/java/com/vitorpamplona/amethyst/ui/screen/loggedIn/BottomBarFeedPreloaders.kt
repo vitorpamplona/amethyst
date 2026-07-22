@@ -137,10 +137,6 @@ private fun PreloadFor(
         // this tab needs no extra preload.
         NavBarItem.RELAY_GROUPS -> Unit
 
-        // The Agent Console + Buzz DM inbox fetch on-screen; nothing extra to preload here.
-        NavBarItem.AGENT_CONSOLE -> Unit
-        NavBarItem.BUZZ_DMS -> Unit
-
         NavBarItem.CONCORD -> ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
 
         NavBarItem.FOLLOW_PACKS -> FollowPacksFilterAssemblerSubscription(accountViewModel)

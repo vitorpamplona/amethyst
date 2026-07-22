@@ -26,6 +26,8 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetMetrics
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.filter
@@ -38,6 +40,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,6 +72,9 @@ import java.util.Collections
 class AgentConsoleViewModel : ViewModel() {
     @Volatile private var account: Account? = null
 
+    /** The community (relay) this console is scoped to — agents/telemetry live on community relays. */
+    private var scopeRelay: NormalizedRelayUrl? = null
+
     /** event id -> decrypted payload (null = decryption failed; don't retry). */
     private val decryptCache = HashMap<HexKey, AgentTurnMetricPayload?>()
     private val refreshMutex = Mutex()
@@ -89,9 +96,19 @@ class AgentConsoleViewModel : ViewModel() {
     /** Dedups ephemeral frames across relays and re-emissions (accessed off multiple readers). */
     private val observerSeen = Collections.synchronizedSet(HashSet<HexKey>())
 
-    fun bindAccountIfMissing(account: Account) {
+    /** Binds to [account] scoped to the community [relayUrl] — the console shows that community's fleet. */
+    fun bind(
+        account: Account,
+        relayUrl: String,
+    ) {
         if (this.account != null) return
+        val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
+        this.scopeRelay = relay
         this.account = account
+        relay?.let {
+            BuzzWorkspaces.join(it)
+            viewModelScope.launch { account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }
+        }
         refresh()
     }
 
@@ -118,7 +135,7 @@ class AgentConsoleViewModel : ViewModel() {
      */
     private suspend fun fetchFromRelays(account: Account) {
         val myPubkey = account.userProfile().pubkeyHex
-        val relays = BuzzRelayDialect.flow.value + account.outboxRelays.flow.value
+        val relays = scopeRelay?.let { setOf(it) } ?: (BuzzRelayDialect.flow.value + account.outboxRelays.flow.value)
         if (relays.isEmpty()) return
 
         val filters =
@@ -183,7 +200,7 @@ class AgentConsoleViewModel : ViewModel() {
         val account = account ?: return
         if (observerJob != null) return
 
-        val relays = BuzzRelayDialect.flow.value
+        val relays = scopeRelay?.let { setOf(it) } ?: BuzzRelayDialect.flow.value
         if (relays.isEmpty()) return
 
         val signer = account.signer

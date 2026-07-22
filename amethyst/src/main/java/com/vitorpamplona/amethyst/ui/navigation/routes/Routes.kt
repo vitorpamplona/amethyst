@@ -469,7 +469,10 @@ sealed class Route {
 
     @Serializable object EditNestsServers : Route()
 
-    @Serializable object AgentConsole : Route()
+    @Serializable
+    data class AgentConsole(
+        val relayUrl: String,
+    ) : Route()
 
     @Serializable object AgentAttestation : Route()
 
@@ -719,9 +722,15 @@ sealed class Route {
 
     @Serializable object RelayGroups : Route()
 
-    @Serializable object BuzzDmList : Route()
+    @Serializable
+    data class BuzzDmList(
+        val relayUrl: String,
+    ) : Route()
 
-    @Serializable object BuzzNewDm : Route()
+    @Serializable
+    data class BuzzNewDm(
+        val relayUrl: String,
+    ) : Route()
 
     @Serializable object RelayGroupBrowse : Route()
 

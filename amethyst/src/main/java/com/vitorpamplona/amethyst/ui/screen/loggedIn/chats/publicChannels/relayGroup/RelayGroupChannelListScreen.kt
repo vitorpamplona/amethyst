@@ -62,6 +62,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -218,7 +219,9 @@ fun RelayGroupChannelListScreen(
     ) { padding ->
         val myPubkey = accountViewModel.userProfile().pubkeyHex
         val showBuzz = isBuzz && buzzChannels.isNotEmpty()
-        if (channels.isEmpty() && !showBuzz) {
+        // A Buzz relay is a community, so always render its list (with the per-community DM + Console
+        // entries) even before channels load, rather than the generic "empty" text.
+        if (channels.isEmpty() && !showBuzz && !isBuzz) {
             // An empty directory on a relay whose NIP-11 says it doesn't run NIP-29 is almost
             // certainly the wrong relay, not a young one — say so instead of the generic empty text.
             // For a Buzz relay still discovering, say so; if it settled empty, guide the user.
@@ -249,6 +252,13 @@ fun RelayGroupChannelListScreen(
             }
         } else {
             LazyColumn(modifier = Modifier.padding(padding)) {
+                // A Buzz relay is a community: its Direct Messages and (owner) Agent Console are
+                // scoped to it, reached from here rather than as global drawer entries.
+                if (isBuzz) {
+                    item(key = "buzz-community-actions") {
+                        BuzzCommunityActions(relayUrl = relay.url, nav = nav)
+                    }
+                }
                 // Buzz membership section: the channels you already belong to on this workspace,
                 // each addable to your kind-10009 list.
                 if (showBuzz) {
@@ -321,6 +331,46 @@ private fun TorClearnetBanner(
             FilledTonalButton(onClick = onUseClearnet, modifier = Modifier.align(Alignment.End)) {
                 Text(stringRes(R.string.relay_tor_clearnet_action))
             }
+        }
+    }
+}
+
+/**
+ * Per-community entry points on a Buzz relay's screen: its Direct Messages inbox and (owner) Agent
+ * Console, both scoped to this one relay — replacing the old global drawer entries.
+ */
+@Composable
+private fun BuzzCommunityActions(
+    relayUrl: String,
+    nav: INav,
+) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        BuzzActionCard(
+            icon = MaterialSymbols.AutoMirrored.Send,
+            label = stringRes(R.string.buzz_dm_title),
+            onClick = { nav.nav(Route.BuzzDmList(relayUrl)) },
+        )
+        Spacer(Modifier.size(8.dp))
+        BuzzActionCard(
+            icon = MaterialSymbols.AutoAwesome,
+            label = stringRes(R.string.buzz_console_card_title),
+            onClick = { nav.nav(Route.AgentConsole(relayUrl)) },
+        )
+    }
+}
+
+@Composable
+private fun BuzzActionCard(
+    icon: MaterialSymbol,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(symbol = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.size(12.dp))
+            Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Icon(symbol = MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
     }
 }

@@ -26,6 +26,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.filter
@@ -40,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.Dispatchers
@@ -73,6 +75,9 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class BuzzDmListViewModel : ViewModel() {
     @Volatile private var account: Account? = null
+
+    /** The community (relay) this inbox is scoped to — DMs are per-community. */
+    private var scopeRelay: NormalizedRelayUrl? = null
     private val refreshMutex = Mutex()
     private var liveJob: Job? = null
 
@@ -98,11 +103,24 @@ class BuzzDmListViewModel : ViewModel() {
         val lastActivity: Long,
     )
 
-    private fun relays(): Set<NormalizedRelayUrl> = BuzzWorkspaces.flow.value + BuzzRelayDialect.flow.value
+    private fun relays(): Set<NormalizedRelayUrl> = scopeRelay?.let { setOf(it) } ?: (BuzzWorkspaces.flow.value + BuzzRelayDialect.flow.value)
 
-    fun bindAccountIfMissing(account: Account) {
+    /**
+     * Binds to [account] scoped to the community [relayUrl]. Marks that relay a joined workspace and
+     * pre-approves NIP-42 so the read-only `#p=me` DM discovery authenticates against it.
+     */
+    fun bind(
+        account: Account,
+        relayUrl: String,
+    ) {
         if (this.account != null) return
+        val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
+        this.scopeRelay = relay
         this.account = account
+        relay?.let {
+            BuzzWorkspaces.join(it)
+            viewModelScope.launch { account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }
+        }
         refresh()
         startLive()
     }

@@ -461,12 +461,12 @@ fun BuildNavigation(
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
-        composableFromEnd<Route.BuzzDmList> { BuzzDmListScreen(accountViewModel, nav) }
-        composableFromEnd<Route.BuzzNewDm> { BuzzNewDmScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzDmList> { BuzzDmListScreen(it.relayUrl, accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzNewDm> { BuzzNewDmScreen(it.relayUrl, accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
-        composableFromEnd<Route.AgentConsole> { AgentConsoleScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.AgentConsole> { AgentConsoleScreen(it.relayUrl, accountViewModel, nav) }
         composableFromEnd<Route.AgentAttestation> { AgentAttestationScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.AgentPersonaEdit> { AgentPersonaEditScreen(it.slug, accountViewModel, nav) }
         composableFromEndArgs<Route.NestLobby> { NestLobbyScreen(it.addressValue, accountViewModel, nav) }
