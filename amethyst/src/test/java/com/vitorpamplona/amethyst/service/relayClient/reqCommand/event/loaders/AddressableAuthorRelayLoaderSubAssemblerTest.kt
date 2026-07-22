@@ -29,9 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -40,7 +41,7 @@ import kotlin.concurrent.thread
 class AddressableAuthorRelayLoaderSubAssemblerTest {
     /**
      * Unique per-test-class identities so the shared [LocalCache] singleton isn't polluted with
-     * notes another test class also claims. The prefix keeps the key a valid 64-char hex pubkey.
+     * notes another test class also claims.
      */
     private fun stubKeys(count: Int): Set<EventFinderQueryState> {
         val account = mockk<Account>()
@@ -51,34 +52,28 @@ class AddressableAuthorRelayLoaderSubAssemblerTest {
     }
 
     /**
-     * Regression test for the `ConcurrentModificationException` in
-     * `SetsKt.minus` reported from `DefaultDispatcher-worker-70`.
+     * Regression test for the `ConcurrentModificationException` in `SetsKt.minus` reported from
+     * `DefaultDispatcher-worker-70`: this manager is genuinely re-entered from several threads at
+     * once, because `ComposeSubscriptionManager.subscribe`/`unsubscribe` call `invalidateKeys()`
+     * *after* releasing their own lock, and `LifecycleAwareSubscription`'s 30s grace-period
+     * unsubscribe fires on a `Dispatchers.Default` worker.
      *
-     * `ComposeSubscriptionManager.subscribe`/`unsubscribe` call `invalidateKeys()` *after*
-     * releasing their own lock, and `LifecycleAwareSubscription`'s 30s grace-period unsubscribe
-     * fires on a `Dispatchers.Default` worker — so this manager is genuinely re-entered from
-     * several threads at once.
-     *
-     * The invariant asserted here is the one that makes the crash impossible: **the body that
-     * reads and swaps the subscription state never runs concurrently with itself.** It's checked
-     * via the injected `allKeys()` lambda (called exactly once per body) rather than by catching
-     * the exception, because once the body is bundled its throwables are swallowed by
-     * `BundledUpdate`'s `CoroutineExceptionHandler` and would never reach the test thread.
+     * Overlap is detected through the injected `allKeys()` lambda rather than by catching — once
+     * the body is bundled its throwables are swallowed by `BundledUpdate`'s
+     * `CoroutineExceptionHandler` and would never reach the test thread.
      */
     @Test
     fun concurrentInvalidateFiltersNeverOverlap() {
-        val errors = CopyOnWriteArrayList<Throwable>()
         val userFinder = mockk<UserFinderFilterAssembler>(relaxed = true)
         val keys = stubKeys(50)
 
         val inFlight = AtomicInteger(0)
+        val overlaps = AtomicInteger(0)
         val assembler =
             AddressableAuthorRelayLoaderSubAssembler(
                 LocalCache,
                 {
-                    if (inFlight.incrementAndGet() > 1) {
-                        errors.add(IllegalStateException("forceInvalidate bodies overlapped"))
-                    }
+                    if (inFlight.incrementAndGet() > 1) overlaps.incrementAndGet()
                     try {
                         keys
                     } finally {
@@ -94,13 +89,7 @@ class AddressableAuthorRelayLoaderSubAssemblerTest {
                 (1..8).map {
                     thread(start = false) {
                         start.await()
-                        repeat(500) {
-                            try {
-                                assembler.invalidateFilters()
-                            } catch (t: Throwable) {
-                                errors.add(t)
-                            }
-                        }
+                        repeat(500) { assembler.invalidateFilters() }
                     }
                 }
             threads.forEach { it.start() }
@@ -110,11 +99,7 @@ class AddressableAuthorRelayLoaderSubAssemblerTest {
             assembler.destroy()
         }
 
-        assertTrue(
-            "invalidateFilters raced under concurrency: " +
-                errors.map { "${it::class.simpleName}: ${it.message}" }.distinct(),
-            errors.isEmpty(),
-        )
+        assertEquals("forceInvalidate bodies overlapped", 0, overlaps.get())
     }
 
     /** The manager still does its job: unresolved stub authors reach the user finder. */
@@ -138,11 +123,9 @@ class AddressableAuthorRelayLoaderSubAssemblerTest {
     }
 
     /**
-     * `bundler.cancel()` cannot stop a body that is already executing — the body has no
-     * suspension points, so it runs to completion after `destroy()` returns. Without the
-     * `destroyed` handshake the body re-subscribes authors that `destroy()` just released,
-     * leaving live kind-0/10002 REQs (and retained `User`/`Account` references) for a dead
-     * account after logout.
+     * `destroy()` must win against a body that is already past its `allKeys()` scan: otherwise the
+     * body re-subscribes authors `destroy()` just released, leaving live kind-0/10002 REQs (and
+     * retained `User`/`Account` references) for a dead account after logout.
      *
      * The body is gated inside the injected `allKeys()` lambda so `destroy()` provably runs
      * underneath an in-flight run rather than racing it by luck.
@@ -150,15 +133,9 @@ class AddressableAuthorRelayLoaderSubAssemblerTest {
     @Test
     fun destroyDuringInFlightInvalidateDoesNotLeakSubscriptions() {
         val userFinder = mockk<UserFinderFilterAssembler>(relaxed = true)
-        val subscribed = CopyOnWriteArrayList<UserFinderQueryState>()
-        val unsubscribed = CopyOnWriteArrayList<UserFinderQueryState>()
         val subscribeHappened = CountDownLatch(1)
         every { userFinder.subscribe(any<List<UserFinderQueryState>>()) } answers {
-            subscribed.addAll(firstArg<List<UserFinderQueryState>>())
             subscribeHappened.countDown()
-        }
-        every { userFinder.unsubscribe(any<List<UserFinderQueryState>>()) } answers {
-            unsubscribed.addAll(firstArg<List<UserFinderQueryState>>())
         }
 
         val keys = stubKeys(3)
@@ -183,14 +160,11 @@ class AddressableAuthorRelayLoaderSubAssemblerTest {
             destroyFinished.countDown()
         }
 
-        // Let the in-flight run finish (it either subscribes — the leak — or
-        // observes the teardown and skips; both settle within the timeout).
-        subscribeHappened.await(2, TimeUnit.SECONDS)
-
-        val leaked = subscribed - unsubscribed.toSet()
-        assertTrue(
-            "destroy() left ${leaked.size} subscriptions alive in userFinder",
-            leaked.isEmpty(),
+        // The gated body resumes the instant destroyFinished counts down, so a leak shows up
+        // immediately; the wait only has to outlast that hand-off.
+        assertFalse(
+            "in-flight body subscribed after destroy()",
+            subscribeHappened.await(500, TimeUnit.MILLISECONDS),
         )
     }
 }

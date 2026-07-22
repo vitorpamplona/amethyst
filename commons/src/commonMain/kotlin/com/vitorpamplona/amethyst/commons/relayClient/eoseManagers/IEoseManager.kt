@@ -21,6 +21,12 @@
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 interface IEoseManager {
+    /**
+     * May be called from any thread, concurrently with itself and with [destroy], and is reached
+     * synchronously from main on every composable mount/unmount. Implementations must return fast
+     * and must serialize their own state — see [BaseEoseManager], which does both by routing the
+     * work through a [com.vitorpamplona.amethyst.commons.service.BundledUpdate].
+     */
     fun invalidateFilters(ignoreIfDoing: Boolean = false)
 
     fun destroy()

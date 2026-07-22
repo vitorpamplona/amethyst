@@ -29,9 +29,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.concurrent.atomics.AtomicReference
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Bridges missing-addressable-note authors into [UserFinderFilterAssembler].
@@ -43,18 +40,18 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * kind-0 / kind-10002 and resolve outbox relays via [UserOutboxFinderSubAssembler]. Once the
  * relay list arrives, [EventFinderFilterAssembler] is invalidated and can query the correct relay.
  */
-@OptIn(ExperimentalAtomicApi::class)
 class AddressableAuthorRelayLoaderSubAssembler(
     val cache: LocalCache,
     val allKeys: () -> Set<EventFinderQueryState>,
     val userFinder: UserFinderFilterAssembler,
 ) : IEoseManager {
-    // Immutable snapshots swapped atomically, so a diff can never observe a half-written set.
-    // Mutual exclusion between runs comes from the bundler (one body at a time), not from these
-    // atomics — they exist to hand state over to destroy(), the one caller the bundler cannot
-    // serialize.
-    private val activeSubscriptions = AtomicReference<Set<UserFinderQueryState>>(emptySet())
-    private val destroyed = AtomicBoolean(false)
+    // Private monitor: @Synchronized locks on `this`, which leaves the instance's monitor
+    // reachable to anything holding a reference to this assembler.
+    private val lock = Any()
+
+    // Only ever touched while holding [lock]. See commit() and destroy().
+    private var activeSubscriptions: Set<UserFinderQueryState> = emptySet()
+    private var destroyed = false
 
     // Keeps the scan off the caller's thread. invalidateFilters() is reached synchronously from
     // ComposeSubscriptionManager.subscribe/unsubscribe on every note composable mount/unmount,
@@ -78,26 +75,39 @@ class AddressableAuthorRelayLoaderSubAssembler(
             }
         }
 
-        if (destroyed.load()) return
+        commit(needed)
+    }
 
-        val previous = activeSubscriptions.exchange(needed)
+    /**
+     * Serializes against [destroy] — the one caller the bundler cannot order, because
+     * `bundler.cancel()` cannot stop a body that is already running (it has no suspension points).
+     *
+     * The scan in [forceInvalidate] stays outside [lock], so [destroy] never waits on a
+     * [LocalCache] sweep. It can still wait on the two calls below, which are bounded: a pair of
+     * map updates inside [UserFinderFilterAssembler] plus the coroutine launches its
+     * `invalidateKeys()` fans out to.
+     *
+     * Calling [userFinder] while holding [lock] relies on subscribe/unsubscribe only taking
+     * ComposeSubscriptionManager's own lock and deferring real work to bundled coroutines — they
+     * never call back into this class. Revisit if that changes.
+     */
+    private fun commit(needed: Set<UserFinderQueryState>) {
+        synchronized(lock) {
+            if (destroyed) return
 
-        userFinder.subscribe((needed - previous).toList())
-        userFinder.unsubscribe((previous - needed).toList())
+            userFinder.subscribe((needed - activeSubscriptions).toList())
+            userFinder.unsubscribe((activeSubscriptions - needed).toList())
 
-        // destroy() landed while we were subscribing. bundler.cancel() cannot stop a body that is
-        // already running — it has no suspension points — so the body releases what it just
-        // acquired. destroy() may unsubscribe the same states concurrently; that is a no-op.
-        if (destroyed.load()) {
-            activeSubscriptions.store(emptySet())
-            userFinder.unsubscribe(needed.toList())
+            activeSubscriptions = needed
         }
     }
 
     override fun destroy() {
-        // Flag before cancelling so an in-flight body is guaranteed to see the teardown.
-        destroyed.store(true)
-        bundler.cancel()
-        userFinder.unsubscribe(activeSubscriptions.exchange(emptySet()).toList())
+        synchronized(lock) {
+            destroyed = true
+            bundler.cancel()
+            userFinder.unsubscribe(activeSubscriptions.toList())
+            activeSubscriptions = emptySet()
+        }
     }
 }
