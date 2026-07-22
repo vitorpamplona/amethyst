@@ -1611,7 +1611,9 @@
     <string name="media_server_primary_badge">Primär</string>
     <string name="media_server_added">Tillagd</string>
     <string name="media_server_reorder">Ändra ordning på server</string>
+    <string name="media_server_status_online">Online</string>
     <string name="media_server_status_slow">Långsam</string>
+    <string name="media_server_status_offline">Offline</string>
     <string name="media_server_status_checking">Kontrollerar…</string>
     <string name="payment_targets">Betalningsmottagare</string>
     <string name="payment_targets_explainer">Publicera dina betalningsadresser så att andra kan skicka pengar direkt till dig.</string>

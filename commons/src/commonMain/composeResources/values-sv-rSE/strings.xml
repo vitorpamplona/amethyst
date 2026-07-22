@@ -12,6 +12,7 @@
     <string name="login_generate_button">Skapa ny</string>
     <string name="login_key_hint">Ange din privata nyckel (nsec) eller publika nyckel (npub)</string>
     <string name="login_key_label">nsec, bunker:// eller npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
     <string name="login_show_key">Visa nyckel</string>
     <string name="login_hide_key">Dölj nyckel</string>
     <!-- New Key Warning -->
@@ -24,6 +25,7 @@
     <string name="action_copy">Kopiera</string>
     <string name="action_paste">Klistra in</string>
     <string name="action_cancel">Avbryt</string>
+    <string name="action_ok">Ok</string>
     <string name="action_save">Spara</string>
     <string name="action_delete">Radera</string>
     <string name="action_share">Dela</string>
@@ -56,6 +58,7 @@
     <string name="chats_history_all_caught_up">Allt ikapp</string>
     <string name="chats_history_reached_start">Nådde början av dina %1$s-meddelanden</string>
     <string name="chats_history_subtitle">%1$s · %2$s · laddat sedan %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
     <string name="chats_history_waiting">väntar på %1$s</string>
     <string name="chats_history_incomplete">Vissa reläer svarade inte</string>
     <string name="chats_history_incomplete_sub">%1$s ej nåbara · tryck för att se vilka</string>
@@ -70,6 +73,9 @@
     <string name="replying_to">Svarar till </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statisk webbplats: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Vad det har åtkomst till</string>
     <string name="nsite_root_site">Rotplats</string>
     <string name="nsite_source">Källa:</string>
@@ -103,6 +109,7 @@
         <item quantity="other">%1$s +%2$d till</item>
     </plurals>
     <string name="ps1_save_title">PS1-minneskortsparning</string>
+    <string name="ps1_save_block">block %1$d</string>
     <string name="ps1_save_empty_slot">Tom plats</string>
     <string name="podcast_play_soundbite">Spela höjdpunkt</string>
     <string name="road_event_accident">Olycka</string>
@@ -124,6 +131,7 @@
     <string name="road_event_traffic_jam">Trafikstockning</string>
     <string name="road_event_unknown">Väghändelse</string>
     <string name="podcast_value_zap_split_hint">Zaps till detta fördelas mellan:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Värde -för-värde</string>
     <string name="relay_monitor_rtt_open">Öppna</string>
     <string name="relay_monitor_rtt_read">Läs</string>
@@ -132,6 +140,7 @@
     <string name="relay_monitor_relay_type">Typ</string>
     <string name="relay_monitor_requirements">Krav</string>
     <string name="relay_monitor_supported_nips">NIP som stöds</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Accepterade typer</string>
     <string name="relay_discovery_geohash">Plats</string>
     <string name="calendar_rsvp_going">Kommer</string>

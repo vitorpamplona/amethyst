@@ -585,7 +585,7 @@ private fun PickerChildren(
         NavBarItem.CONCORD -> {
             val communities by accountViewModel.account.concordChannelList.liveCommunities
                 .collectAsStateWithLifecycle()
-            val entries = remember(communities) { communities.map { BottomBarEntry.Concord(it.id) } }
+            val entries = remember(communities) { communities.map { BottomBarEntry.Concord(it.id, it.relays) } }
             GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
         }
 

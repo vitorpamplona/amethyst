@@ -12,6 +12,7 @@
     <string name="login_generate_button">Neu erstellen</string>
     <string name="login_key_hint">Gib deinen privaten Schlüssel (nsec) oder öffentlichen Schlüssel (npub) ein</string>
     <string name="login_key_label">nsec, bunker:// oder npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
     <string name="login_show_key">Schlüssel anzeigen</string>
     <string name="login_hide_key">Schlüssel verbergen</string>
     <!-- New Key Warning -->
@@ -24,6 +25,7 @@
     <string name="action_copy">Kopieren</string>
     <string name="action_paste">Einfügen</string>
     <string name="action_cancel">Abbrechen</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Speichern</string>
     <string name="action_delete">Löschen</string>
     <string name="action_share">Teilen</string>
@@ -56,6 +58,7 @@
     <string name="chats_history_all_caught_up">Alles gelesen</string>
     <string name="chats_history_reached_start">Anfang deiner %1$s Nachrichten erreicht</string>
     <string name="chats_history_subtitle">%1$s · %2$s · geladen seit %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
     <string name="chats_history_waiting">warte auf %1$s</string>
     <string name="chats_history_incomplete">Einige Relays haben nicht geantwortet</string>
     <string name="chats_history_incomplete_sub">%1$s nicht erreichbar · tippen, um zu sehen welche</string>
@@ -70,6 +73,9 @@
     <string name="replying_to">Antworten auf </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statische Website: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">Worauf sie zugreifen kann</string>
     <string name="nsite_root_site">Stammseite</string>
     <string name="nsite_source">Quelle:</string>
@@ -125,6 +131,8 @@
     <string name="road_event_traffic_jam">Stau</string>
     <string name="road_event_unknown">Straßenereignis</string>
     <string name="podcast_value_zap_split_hint">Zaps hierauf werden aufgeteilt zwischen:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="relay_monitor_rtt_open">Öffnen</string>
     <string name="relay_monitor_rtt_read">Lesen</string>
     <string name="relay_monitor_rtt_write">Schreiben</string>
@@ -132,6 +140,7 @@
     <string name="relay_monitor_relay_type">Typ</string>
     <string name="relay_monitor_requirements">Anforderungen</string>
     <string name="relay_monitor_supported_nips">Unterstützte NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Akzeptierte Arten</string>
     <string name="relay_discovery_geohash">Standort</string>
     <string name="calendar_rsvp_going">Komme</string>

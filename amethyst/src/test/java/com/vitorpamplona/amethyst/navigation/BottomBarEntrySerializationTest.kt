@@ -40,7 +40,7 @@ class BottomBarEntrySerializationTest {
             BottomBarEntry.Favorite("url:https://example.com"),
             BottomBarEntry.PublicChat("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb"),
             BottomBarEntry.RelayGroup("abcd1234", "wss://groups.example.com"),
-            BottomBarEntry.Concord("f".repeat(64)),
+            BottomBarEntry.Concord("f".repeat(64), listOf("wss://relay.ditto.pub", "wss://community.example.com")),
         )
 
     @Test

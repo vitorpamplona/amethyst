@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
@@ -76,6 +77,15 @@ fun ConcordChannelSubscription(
  * [KeyDataSourceSubscription] so the planes stay requested app-wide, exactly like DMs, and keeps the
  * same [com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager.revision] watch so a
  * fresh fold subscribes its newly-revealed channel planes.
+ *
+ * Preloading a community's planes requires its keys, which come from the private kind-13302 list —
+ * so a community pinned to the bottom bar whose list never reached the cache preloads nothing and
+ * shows a blank tab + server screen ("doesn't load at all"). That list often lives only on the
+ * community's own relays (Armada/Vector publish it there, never to the user's outbox), so before we
+ * can preload we may first have to fetch it: [bootstrapPinnedCommunities] imports the list for any
+ * pinned community we don't yet know, from the relays saved on its tab. Once it folds into the cache,
+ * [com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState.liveCommunities] surfaces
+ * the entry, the tab/screen fill in, and the plane preload above picks it up.
  */
 @Composable
 fun ConcordChannelPreload(accountViewModel: AccountViewModel) {
@@ -88,5 +98,37 @@ fun ConcordChannelPreload(accountViewModel: AccountViewModel) {
         dataSource.invalidateFilters()
     }
 
+    bootstrapPinnedCommunities(accountViewModel)
+
     KeyDataSourceSubscription(state, dataSource)
+}
+
+/**
+ * Fetch the private kind-13302 list of any Concord community pinned to the bottom bar whose list we
+ * don't already have, from the relays saved on its tab (see
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel.importConcordCommunities]). Runs
+ * app-wide as part of [ConcordChannelPreload], so a pinned community loads without the user ever
+ * opening the Concord hub (which has its own import). Keyed on the exact set of missing communities,
+ * so the (slow, stock-relay) fetch runs when a new gap appears — a freshly pinned community we can't
+ * yet resolve — and not on every recomposition; it stops once every pinned community is known.
+ */
+@Composable
+private fun bootstrapPinnedCommunities(accountViewModel: AccountViewModel) {
+    val account = accountViewModel.account
+    val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+        .collectAsStateWithLifecycle()
+    val communities by account.concordChannelList.liveCommunities.collectAsStateWithLifecycle()
+
+    val missingPinned =
+        remember(items, communities) {
+            val known = communities.mapTo(HashSet()) { it.id }
+            items
+                .filterIsInstance<BottomBarEntry.Concord>()
+                .map { it.communityId }
+                .filterTo(sortedSetOf()) { it !in known }
+        }
+
+    LaunchedEffect(missingPinned) {
+        if (missingPinned.isNotEmpty()) accountViewModel.importConcordCommunities()
+    }
 }

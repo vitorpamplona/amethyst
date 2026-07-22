@@ -2880,10 +2880,15 @@ class Account(
      * Read-only import: kind 13302 is replaceable, so folding an older copy is a
      * no-op and this is safe to call on every hub open. Merging our own edits with
      * a foreign writer's is a separate concern (newest-wins replaceable).
+     *
+     * [extraRelays] are additional relays to query — the bootstrap relays saved on the
+     * bottom-bar tabs of pinned communities. A community's private list frequently lives
+     * only on the community's own relays (never the user's outbox), so a community pinned
+     * to the bottom bar would otherwise never surface when opened cold.
      */
-    suspend fun importConcordCommunities() {
+    suspend fun importConcordCommunities(extraRelays: Set<NormalizedRelayUrl> = emptySet()) {
         val stock = InviteRelayDictionary.STOCK.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-        val relays = (stock + mineRelays.flow.value + outboxRelays.flow.value).toSet()
+        val relays = (stock + mineRelays.flow.value + outboxRelays.flow.value + extraRelays).toSet()
         if (relays.isEmpty()) return
         val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(signer.pubKey))
         // Stock relays like relay.ditto.pub can be slow (~10–20s to first response), so give
