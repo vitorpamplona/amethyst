@@ -51,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -109,6 +110,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import kotlinx.coroutines.launch
 
 @Composable
@@ -359,6 +361,23 @@ fun SearchScreen(
         if (authors.isNotEmpty()) {
             coordinator.loadMetadataBatched(authors)
         }
+    }
+
+    // Fetch interactions (incl. kind-1018 poll responses) for poll results so their
+    // tallies populate — NIP-50 search returns the polls but not their responses.
+    val pollResultIds =
+        remember(noteResults) {
+            noteResults.filter { it.kind == PollEvent.KIND }.map { it.id }
+        }
+    DisposableEffect(pollResultIds, subscriptionsCoordinator, searchRelays) {
+        val coordinator = subscriptionsCoordinator
+        val subId =
+            if (coordinator != null && pollResultIds.isNotEmpty() && searchRelays.isNotEmpty()) {
+                coordinator.requestInteractions(pollResultIds, searchRelays)
+            } else {
+                null
+            }
+        onDispose { subId?.let { coordinator?.releaseInteractions(it) } }
     }
 
     // History state
@@ -720,6 +739,9 @@ fun SearchScreen(
                     onNavigateToProfile = onNavigateToProfile,
                     onNavigateToThread = onNavigateToThread,
                     localCache = localCache,
+                    relayManager = relayManager,
+                    account = account,
+                    myPubKeyHex = account?.pubKeyHex,
                     modifier = Modifier.padding(horizontal = sidePadding),
                 )
             } else if (!debouncedQuery.isEmpty && !isSearching) {

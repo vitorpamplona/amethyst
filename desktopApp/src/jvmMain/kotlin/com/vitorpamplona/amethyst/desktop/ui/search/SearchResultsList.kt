@@ -61,12 +61,16 @@ import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
+import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.ui.note.DesktopPollCard
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.note.SpamCheckedNoteRender
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadge
 import com.vitorpamplona.amethyst.desktop.ui.rememberDisplayData
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 @Composable
 fun SearchResultsList(
@@ -74,6 +78,10 @@ fun SearchResultsList(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     localCache: DesktopLocalCache? = null,
+    relayManager: DesktopRelayConnectionManager? = null,
+    account: AccountState.LoggedIn? = null,
+    myPubKeyHex: String? = null,
+    onHashtagClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -89,7 +97,8 @@ fun SearchResultsList(
     // Group notes by kind
     val textNotes = notes.filter { it.kind == 1 }
     val articles = notes.filter { it.kind == LongTextNoteEvent.KIND }
-    val otherNotes = notes.filter { it.kind != 1 && it.kind != LongTextNoteEvent.KIND }
+    val polls = notes.filter { it.kind == PollEvent.KIND }
+    val otherNotes = notes.filter { it.kind != 1 && it.kind != LongTextNoteEvent.KIND && it.kind != PollEvent.KIND }
 
     // Per-section collapsed state (absent = expanded)
     val collapsedSections = remember { mutableStateMapOf<String, Boolean>() }
@@ -252,6 +261,56 @@ fun SearchResultsList(
             }
         }
 
+        // Polls section (interactive cards — read tallies + vote)
+        if (polls.isNotEmpty()) {
+            item(key = "divider-polls") { HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
+            val collapsed = collapsedSections["polls"] == true
+            stickyHeader(key = "header-polls") {
+                SortableHeader(
+                    title = "Polls",
+                    count = polls.size,
+                    icon = MaterialSymbols.Poll,
+                    options = SearchSortOrder.EVENT_OPTIONS,
+                    selected = eventSortOrder,
+                    onSelect = { state.updateEventSortOrder(it) },
+                    collapsed = collapsed,
+                    onToggleCollapse = { collapsedSections["polls"] = !collapsed },
+                )
+            }
+            if (!collapsed) {
+                items(polls.take(5), key = { "poll-${it.id}" }) { event ->
+                    PollSearchItem(
+                        event = event as PollEvent,
+                        localCache = localCache,
+                        relayManager = relayManager,
+                        account = account,
+                        myPubKeyHex = myPubKeyHex,
+                        onNavigateToThread = onNavigateToThread,
+                        onNavigateToProfile = onNavigateToProfile,
+                        onHashtagClick = onHashtagClick,
+                    )
+                }
+                if (polls.size > 5) {
+                    item(key = "polls-expand") {
+                        ExpandableSection(
+                            remaining = polls.drop(5),
+                        ) { event ->
+                            PollSearchItem(
+                                event = event as PollEvent,
+                                localCache = localCache,
+                                relayManager = relayManager,
+                                account = account,
+                                myPubKeyHex = myPubKeyHex,
+                                onNavigateToThread = onNavigateToThread,
+                                onNavigateToProfile = onNavigateToProfile,
+                                onHashtagClick = onHashtagClick,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Other section
         if (otherNotes.isNotEmpty()) {
             item(key = "divider-other") { HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
@@ -317,6 +376,49 @@ private fun wotBadgeFor(userHex: String): (@Composable androidx.compose.foundati
         { WoTBadge(count = score, modifier = Modifier.align(Alignment.BottomEnd)) }
     } else {
         null
+    }
+}
+
+@Composable
+private fun PollSearchItem(
+    event: PollEvent,
+    localCache: DesktopLocalCache?,
+    relayManager: DesktopRelayConnectionManager?,
+    account: AccountState.LoggedIn?,
+    myPubKeyHex: String?,
+    onNavigateToThread: (String) -> Unit,
+    onNavigateToProfile: (String) -> Unit,
+    onHashtagClick: ((String) -> Unit)?,
+) {
+    SpamCheckedNoteRender(
+        displayedEvent = event,
+        noteIdHex = event.id,
+        localCache = localCache,
+    ) {
+        if (localCache != null && relayManager != null) {
+            // Interactive: read tallies + vote. Note is resolved from the cache; option
+            // rendering comes from the event, so an empty (unconsumed) note still renders.
+            DesktopPollCard(
+                note = localCache.getOrCreateNote(event.id),
+                event = event,
+                relayManager = relayManager,
+                localCache = localCache,
+                account = account,
+                myPubKeyHex = myPubKeyHex,
+                onNavigateToThread = onNavigateToThread,
+                onNavigateToProfile = onNavigateToProfile,
+                onHashtagClick = onHashtagClick,
+            )
+        } else {
+            // Read-only fallback when the live cache/relay manager isn't available.
+            NoteCard(
+                note = event.rememberDisplayData(localCache),
+                localCache = localCache,
+                onClick = { onNavigateToThread(event.id) },
+                onAuthorClick = onNavigateToProfile,
+                onMentionClick = onNavigateToProfile,
+            )
+        }
     }
 }
 
