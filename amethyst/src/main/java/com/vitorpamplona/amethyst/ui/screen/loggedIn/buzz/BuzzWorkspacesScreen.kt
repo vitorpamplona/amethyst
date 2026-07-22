@@ -160,13 +160,18 @@ fun BuzzWorkspacesScreen(
         ) {
             item { BuzzHeroHeader(workspaceCount = workspaces.size, channelCount = totalChannels) }
 
-            item { AgentConsoleHeroCard(onClick = { nav.nav(Route.AgentConsole) }) }
-
-            item { DirectMessagesCard(onClick = { nav.nav(Route.BuzzDmList) }) }
-
             if (workspaces.isEmpty()) {
+                // No workspaces means no relays to query, so the DM inbox and Agent Console
+                // (both scoped to your joined/dialect workspace relays) would only ever be empty.
+                // Show just the "join a workspace" prompt until there's at least one.
                 item { EmptyWorkspaces(onBrowse = { nav.nav(Route.RelayGroups) }) }
             } else {
+                // These aggregate ACROSS your workspaces (a unified DM inbox + fleet console), so
+                // they belong above the per-workspace list — but only once you actually have one.
+                item { AgentConsoleHeroCard(onClick = { nav.nav(Route.AgentConsole) }) }
+
+                item { DirectMessagesCard(onClick = { nav.nav(Route.BuzzDmList) }) }
+
                 item {
                     Text(
                         text = stringRes(R.string.buzz_workspaces_section),
