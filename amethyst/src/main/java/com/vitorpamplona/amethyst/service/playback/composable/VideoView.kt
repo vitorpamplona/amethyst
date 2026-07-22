@@ -124,6 +124,11 @@ fun VideoView(
     // DimensionTag uses reference equality, not structural.
     val dimW = dimensions?.width
     val dimH = dimensions?.height
+    // Deliberately snapshotted in a remember rather than observing MediaAspectRatioCache: when the
+    // ratio flips null -> known mid-playback this branch both adds an aspectRatio and emits an
+    // extra Spacer, and restructuring the children around a live AndroidView leaves the player's
+    // TextureView on a stale surface (the video redraws at native size in the corner). The
+    // enclosing box in ZoomableContentView is what sizes the player, and that one does observe.
     val ratio =
         remember(videoUri, dimW, dimH) {
             if (dimW != null && dimH != null && dimW > 0 && dimH > 0) {
