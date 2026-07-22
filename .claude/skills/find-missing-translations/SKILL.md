@@ -212,9 +212,25 @@ Before presenting results, **scan the missing English strings** for two red-flag
 Also **audit existing `<plurals>` resources** for two anti-patterns:
 
 1. **`quantity="one"` items that hardcode the literal `1`** (instead of using a `%d` / `%1$d` placeholder) — broken for languages where the `one` CLDR category covers more than just `n=1` (Russian, Ukrainian, Croatian, etc.).
-2. **`quantity="zero"` items in any locale that doesn't natively use the `zero` CLDR category** — i.e. **everything except Arabic (`ar`) and Welsh (`cy`)**. ICU/CLDR maps `count=0` to `other` for English and all the locales we ship to (cs, de, pt-BR, sv, etc.), so `<item quantity="zero">` is **dead code** there: `getQuantityString(id, 0)` will pick `other`, never the zero entry, and the visible runtime string ends up `"…0 items"` instead of the intended `"…no items"`.
+2. **`quantity="zero"` items in any locale that doesn't natively use the `zero` CLDR category** — i.e. everything except **Arabic (`ar`)**, **Latvian (`lv`)** and **Welsh (`cy`)**. ICU/CLDR maps `count=0` to `other` for English and most of the locales we ship to (cs, de, pt-BR, sv, etc.), so `<item quantity="zero">` is **dead code** there: `getQuantityString(id, 0)` will pick `other`, never the zero entry, and the visible runtime string ends up `"…0 items"` instead of the intended `"…no items"`.
 
-If a UX genuinely wants special "no items" wording at count=0, that has to be a call-site `if (count == 0)` branch to a separate `<string>`, **not** a `quantity="zero"` plural item.
+> ⚠️ **Latvian is the trap here — do NOT strip its `zero` items** (we nearly did, 2026-07-22). `lv` has an integer-bearing `zero` category that covers far more than 0: `select(0)`, `select(10)` and `select(11)` all return `zero` (the rule is `n % 10 = 0` or `n % 100 = 11..19`). So a Latvian `<item quantity="zero">` is *live code on the majority of counts*, and it must read as a normal plural form ("%1$d minūšu"), **not** as "no items" wording. An earlier version of this skill claimed only `ar` and `cy` had `zero`, which flagged all ~40 correct Latvian entries as dead and would have deleted working translations.
+
+If a UX genuinely wants special "no items" wording at count=0, that has to be a call-site `if (count == 0)` branch to a separate `<string>`, **not** a `quantity="zero"` plural item. (This is why `zero` is the wrong tool even where it exists: in `lv` it does not mean "zero".)
+
+**Verify, don't recall.** Before asserting any locale's category set, check it against CLDR rather than memory:
+
+```bash
+python3 -m venv /tmp/cldr && /tmp/cldr/bin/pip -q install babel
+/tmp/cldr/bin/python -c "
+from babel import Locale
+for c in ['en','lv','ar','cy','cs','de','sv','pt_BR','ru','pl']:
+    r = Locale.parse(c).plural_form
+    print(c, sorted({r(n) for n in range(0,10001)}), 'select(0)=', r(0), 'select(10)=', r(10))
+"
+```
+
+Across the 56 locale dirs this repo ships, **only `ar-rSA` and `lv-rLV`** have an integer-bearing `zero`.
 
 Flag and offer to fix:
 
@@ -240,15 +256,16 @@ for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*
 done
 ```
 
-Then scan for dead `quantity="zero"` entries. CLDR's `zero` category is integer-bearing only in **Arabic (`ar`)** and **Welsh (`cy`)**. In every other locale, count=0 falls through to `other`, so a `<item quantity="zero">` entry is dead and likely a translator/author bug (or it silently never fires):
+Then scan for dead `quantity="zero"` entries. CLDR's `zero` category is integer-bearing only in **Arabic (`ar`)**, **Latvian (`lv`)** and **Welsh (`cy`)** — those three are skipped below, so a hit is a genuine bug. In every other locale, count=0 falls through to `other`, so a `<item quantity="zero">` entry is dead and likely a translator/author bug (or it silently never fires):
 
 ```bash
 for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml \
          commons/src/commonMain/composeResources/values/strings.xml \
          commons/src/commonMain/composeResources/values-*/strings.xml; do
-  # Skip Arabic and Welsh — they natively use the zero category.
+  # Skip Arabic, Latvian and Welsh — they natively use the zero category.
+  # (Latvian's zero covers 0, 10, 11-19, 20, 30, … — stripping it breaks most counts.)
   case "$f" in
-    *values-ar*|*values-cy*) continue ;;
+    *values-ar*|*values-cy*|*values-lv*) continue ;;
   esac
   awk -v file="$f" '
     /<plurals/ { in_plurals = 1; name = $0; sub(/.*name="/, "", name); sub(/".*/, "", name) }
@@ -312,9 +329,10 @@ When adding or proposing **`<plurals>`** entries, follow these rules:
   - Polish (`pl`): `one`, `few`, `many`, `other`
   - Russian (`ru`): `one`, `few`, `many`, `other`
   - Arabic (`ar`): `zero`, `one`, `two`, `few`, `many`, `other`
+  - Latvian (`lv`): `zero`, `one`, `other` — its `zero` is **not** "no items"; it covers 0, 10, 11–19, 20, 30, …
   - German / Swedish / Brazilian Portuguese: `one`, `other`
 - When a missing string contains a count placeholder and is conceptually a singular/plural pair, **flag it before translating** — it may belong as a `<plurals>` resource rather than a single `<string>`. Surface this to the user before proposing translations.
-- **Do not use `quantity="zero"` outside Arabic (`ar`) and Welsh (`cy`).** CLDR's `zero` category is integer-bearing only in those two languages. Android calls `PluralRules.select(0)` for the device locale; in English/German/Czech/Polish/Russian/Swedish/Portuguese/etc. it returns `other`, so the explicit `<item quantity="zero">` is never picked at runtime and the user sees `"…0 items"` instead of the intended wording. If the design calls for "no items" at count=0, model it as a separate `<string>` and an `if (count == 0)` branch at the call site:
+- **Do not use `quantity="zero"` outside Arabic (`ar`), Latvian (`lv`) and Welsh (`cy`).** CLDR's `zero` category is integer-bearing only in those three languages. Android calls `PluralRules.select(0)` for the device locale; in English/German/Czech/Polish/Russian/Swedish/Portuguese/etc. it returns `other`, so the explicit `<item quantity="zero">` is never picked at runtime and the user sees `"…0 items"` instead of the intended wording. Conversely, **never delete an existing `zero` item from `ar`/`lv`/`cy`** — there it is live. If the design calls for "no items" at count=0, model it as a separate `<string>` and an `if (count == 0)` branch at the call site:
   ```kotlin
   val label = if (count == 0) {
       stringRes(R.string.foo_no_items, dateLabel)
@@ -377,4 +395,5 @@ When adding translated strings to locale files:
 - **Inserting strings in a specific position** — always append at the bottom; ordering is handled separately
 - **Hardcoding `"1"` in a `<plurals>` `quantity="one"` item** — always use the count placeholder; otherwise non-English `one` categories produce wrong text
 - **Copying English's `one`/`other` set into every locale** — each language must include all CLDR plural categories it uses (e.g. Czech needs `one`, `few`, `many`, `other`)
-- **Using `<item quantity="zero">` to special-case count=0** — outside Arabic and Welsh, this entry is unreachable: ICU/CLDR maps 0 → `other`, so the runtime never picks the zero item and the user sees `"…0 items"`. Special-case at the call site with a separate `<string>` instead.
+- **Using `<item quantity="zero">` to special-case count=0** — outside Arabic, Latvian and Welsh, this entry is unreachable: ICU/CLDR maps 0 → `other`, so the runtime never picks the zero item and the user sees `"…0 items"`. Special-case at the call site with a separate `<string>` instead.
+- **Reporting Latvian `quantity="zero"` entries as dead code** — `lv` has a real, integer-bearing `zero` category covering 0, 10, 11–19, 20, 30, … so those entries fire on *most* counts. An earlier version of this skill excluded only `ar`/`cy` from the zero audit and flagged all ~40 correct `values-lv-rLV` entries; acting on that would have deleted working translations. Confirm any locale's category set against CLDR (the babel snippet in Step 4) before calling a `zero` item dead.
