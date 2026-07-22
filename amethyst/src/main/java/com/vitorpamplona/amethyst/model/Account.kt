@@ -211,7 +211,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
@@ -2935,13 +2937,33 @@ class Account(
         // The relay confirms the DM synchronously in the OK as `response:{"channel_id":"…"}` —
         // the authoritative, relay-assigned channel UUID (the deployed relay does not emit a
         // queryable kind-41001). Read it straight from the ack so the caller can open the chat.
-        val results = client.publishAndCollectResults(signed, setOf(relay))
-        val okMessage = results.values.firstOrNull { it.accepted }?.message ?: return null
-        return okMessage
-            .substringAfter("\"channel_id\":\"", "")
-            .substringBefore('"')
-            .takeIf { it.isNotBlank() }
+        var results = client.publishAndCollectResults(signed, setOf(relay))
+        var channelId = buzzDmChannelIdFromAck(results)
+
+        // NIP-42 write race: on a cold connection the relay rejects the first publish with
+        // `auth-required` (our AUTH reply lands async and the write path doesn't re-send). Warm
+        // the connection with a pendingOnAuthRequired read so the auth coordinator completes the
+        // handshake, then retry the publish on the now-authed socket. Mirrors the amy CLI fix.
+        if (channelId == null && results.values.any { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }) {
+            client.fetchAllWithHooks(
+                filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
+                timeoutMs = 8_000,
+                pendingOnAuthRequired = true,
+            ) { _, _ -> false }
+            results = client.publishAndCollectResults(signed, setOf(relay))
+            channelId = buzzDmChannelIdFromAck(results)
+        }
+        return channelId
     }
+
+    /** The relay-assigned DM channel id from a DM-open OK message (`response:{"channel_id":"…"}`). */
+    private fun buzzDmChannelIdFromAck(results: Map<NormalizedRelayUrl, PublishResult>): String? =
+        results.values
+            .firstOrNull { it.accepted }
+            ?.message
+            ?.substringAfter("\"channel_id\":\"", "")
+            ?.substringBefore('"')
+            ?.takeIf { it.isNotBlank() }
 
     /** Hide a Buzz DM from my sidebar with a kind-41012 command (re-opening it un-hides). */
     suspend fun hideBuzzDm(channel: RelayGroupChannel) {
