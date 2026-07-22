@@ -37,6 +37,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.yield
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(UnstableApi::class)
 class ExoPlayerPool(
@@ -70,6 +71,10 @@ class ExoPlayerPool(
 
     private val warmPool = ArrayDeque<WarmPlayer>(warmSlotsCap.coerceAtLeast(1))
     private val warmPoolLock = Any()
+
+    init {
+        livePools.add(this)
+    }
 
     // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =
@@ -127,13 +132,51 @@ class ExoPlayerPool(
                     Log.d("PlaybackService") { "ExoPlayerPool discarding errored warm player: $preferredMediaId (${error.errorCodeName})" }
                     PcmTapRegistry.unregisterPlayer(warm)
                     warm.release()
+                    liveDecoders.decrementAndGet()
                 } else {
                     Log.d("PlaybackService") { "ExoPlayerPool warm hit: $preferredMediaId" }
+                    // Already counted against the decoder budget for as long as it sat warm.
                     return warm
                 }
             }
         }
+        ensureDecoderHeadroom()
+        liveDecoders.incrementAndGet()
         return coldPool.poll() ?: builder.build(context)
+    }
+
+    /**
+     * Frees decoder headroom before a cold or freshly built player is handed out.
+     *
+     * Every player that still holds a prepared MediaItem — checked out or merely warm — owns a
+     * MediaCodec instance, and devices advertise a hard ceiling on those (the emulator's
+     * c2.goldfish.h264.decoder declares `concurrent-instances max="4"`). Past that ceiling
+     * MediaCodec.start() fails with NO_MEMORY and the video surfaces as "can't load", so the
+     * budget has to be enforced at acquisition rather than only at retention.
+     *
+     * Warm players are a scroll-back cache, so they are what gives way: demoting one to cold
+     * stop()s it and releases its codec. This pool's own entries go first, then any other pool's
+     * — [PlaybackService] keeps a separate pool for direct and for Tor-proxied traffic, and both
+     * draw on the one per-process pile of decoders.
+     */
+    private fun ensureDecoderHeadroom() {
+        while (liveDecoders.get() >= poolSize) {
+            if (!evictOldestWarm() && !evictOldestWarmElsewhere()) return
+        }
+    }
+
+    private fun evictOldestWarm(): Boolean {
+        val oldest = synchronized(warmPoolLock) { warmPool.removeFirstOrNull() } ?: return false
+        Log.d("PlaybackService") { "ExoPlayerPool decoder-budget evict: ${oldest.mediaId}" }
+        demoteToCold(oldest.player)
+        return true
+    }
+
+    private fun evictOldestWarmElsewhere(): Boolean {
+        livePools.forEach { pool ->
+            if (pool !== this && pool.evictOldestWarm()) return true
+        }
+        return false
     }
 
     private fun takeWarm(mediaId: String): ExoPlayer? =
@@ -170,6 +213,7 @@ class ExoPlayerPool(
                 Log.d("PlaybackService") { "ExoPlayerPool dropping errored player: ${player.currentMediaItem?.mediaId} (${error.errorCodeName})" }
                 PcmTapRegistry.unregisterPlayer(player)
                 player.release()
+                liveDecoders.decrementAndGet()
                 return@withLock
             }
 
@@ -214,7 +258,10 @@ class ExoPlayerPool(
     private fun demoteToCold(player: ExoPlayer) {
         if (player.isReleased) return
         player.pause()
+        // stop() tears the renderers down, which is what actually hands the MediaCodec instance
+        // back to the system — so this is the point where the player stops costing budget.
         player.stop()
+        liveDecoders.decrementAndGet()
         player.clearVideoSurface()
         player.clearMediaItems()
 
@@ -260,6 +307,7 @@ class ExoPlayerPool(
     }
 
     fun destroy() {
+        livePools.remove(this)
         scope
             .launch {
                 mutex.withLock {
@@ -272,6 +320,7 @@ class ExoPlayerPool(
                     warmSnapshot.forEach {
                         PcmTapRegistry.unregisterPlayer(it.player)
                         it.player.release()
+                        liveDecoders.decrementAndGet()
                     }
                     coldPool.forEach {
                         PcmTapRegistry.unregisterPlayer(it)
@@ -286,5 +335,17 @@ class ExoPlayerPool(
 
     companion object {
         private const val DEFAULT_WARM_SLOTS = 3
+
+        // MediaCodec instances are a per-process resource, but PlaybackService builds one pool for
+        // direct traffic and another for Tor-proxied traffic, so a per-pool budget would let the
+        // app hold twice the device's decoder ceiling. Both counters below are therefore global.
+
+        // Players currently holding a decoder: checked out, or warm (paused but still prepared).
+        // Cold players have been stop()'d and own none.
+        private val liveDecoders = AtomicInteger(0)
+
+        // Every pool that hasn't been destroy()'d, so a pool starved of headroom can reclaim a
+        // warm player from a sibling instead of overshooting the shared ceiling.
+        private val livePools = ConcurrentLinkedQueue<ExoPlayerPool>()
     }
 }
