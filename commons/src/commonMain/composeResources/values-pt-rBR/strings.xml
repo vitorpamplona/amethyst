@@ -12,6 +12,7 @@
     <string name="login_generate_button">Gerar nova</string>
     <string name="login_key_hint">Digite sua chave privada (nsec) ou chave pública (npub)</string>
     <string name="login_key_label">nsec, bunker:// ou npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
     <string name="login_show_key">Mostrar chave</string>
     <string name="login_hide_key">Ocultar chave</string>
     <!-- New Key Warning -->
@@ -24,6 +25,7 @@
     <string name="action_copy">Copiar</string>
     <string name="action_paste">Colar</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Salvar</string>
     <string name="action_delete">Excluir</string>
     <string name="action_share">Compartilhar</string>
@@ -56,16 +58,24 @@
     <string name="chats_history_all_caught_up">Tudo em dia</string>
     <string name="chats_history_reached_start">Início das suas mensagens %1$s alcançado</string>
     <string name="chats_history_subtitle">%1$s · %2$s · carregado desde %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
     <string name="chats_history_waiting">aguardando %1$s</string>
     <string name="chats_history_incomplete">Alguns relays não responderam</string>
     <string name="chats_history_incomplete_sub">%1$s inacessível · toque para ver quais</string>
     <string name="chats_history_relays_title">%1$s · histórico por relay</string>
     <string name="chats_history_relay_since">desde %1$s</string>
     <string name="action_dismiss">Dispensar</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d Relé</item>
+        <item quantity="other">%1$d Relés</item>
+    </plurals>
     <!-- Notes & Replies -->
     <string name="replying_to">respondendo para </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Site Estático: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
     <string name="napplet_card_permissions">O que ele pode acessar</string>
     <string name="nsite_root_site">Site raiz</string>
     <string name="nsite_source">Origem:</string>
@@ -121,6 +131,7 @@
     <string name="road_event_traffic_jam">Congestionamento</string>
     <string name="road_event_unknown">Evento na via</string>
     <string name="podcast_value_zap_split_hint">Os zaps para isto são divididos entre:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Valor por Valor</string>
     <string name="relay_monitor_rtt_open">Abrir</string>
     <string name="relay_monitor_rtt_read">Leitura</string>
@@ -129,6 +140,7 @@
     <string name="relay_monitor_relay_type">Tipo</string>
     <string name="relay_monitor_requirements">Requisitos</string>
     <string name="relay_monitor_supported_nips">NIPs Suportados</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Tipos Aceitos</string>
     <string name="relay_discovery_geohash">Localização</string>
     <string name="calendar_rsvp_going">Vou</string>

@@ -886,11 +886,62 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">Przestaje obserwować %1$d kont</item>
         <item quantity="other">Przestaje obserwować %1$d konta</item>
     </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">dodaje %1$d transmiter</item>
+        <item quantity="few">dodaje %1$d transmiterów</item>
+        <item quantity="many">dodaje %1$d transmiterów</item>
+        <item quantity="other">dodaje %1$d transmitery</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">USUWA %1$d transmiter</item>
+        <item quantity="few">USUWA %1$d transmiterów</item>
+        <item quantity="many">USUWA %1$d transmiterów</item>
+        <item quantity="other">USUWA %1$d transmitery</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">wycisza jeszcze %1$d osobę</item>
+        <item quantity="few">wycisza jeszcze %1$d osób</item>
+        <item quantity="many">wycisza jeszcze %1$d osób</item>
+        <item quantity="other">wycisza jeszcze %1$d osoby</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">ODBLOKOWUJE %1$d osobę</item>
+        <item quantity="few">ODBLOKOWUJE %1$d osób</item>
+        <item quantity="many">ODBLOKOWUJE %1$d osób</item>
+        <item quantity="other">ODBLOKOWUJE %1$d osoby</item>
+    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">⚠️ To obserwuje %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠️ To zaprzestaje obserwacji %1$s.</string>
+    <string name="napplet_consent_diff_mute_one">⚠️ To ucisza %1$s.</string>
+    <string name="napplet_consent_diff_unmute_one">⚠️ To odblokowuje %1$s.</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">⚠️ To spowoduje przepisanie Twojej listy obserwowanych: %1$s.</string>
+    <string name="napplet_consent_diff_relays">⚠️ To przepisuje twoją listę transmiterów: %1$s. Twoje posty i przeczytane wpisy zmieniają się wraz z tym.</string>
+    <string name="napplet_consent_diff_mutes">⚠️ Spowoduje to aktualizację listy wyciszonych: %1$s. Wyciszone słowa i hashtagi nie są tutaj wyświetlane — naciśnij „Pokaż wydarzenie”, aby wyświetlić pełną listę.</string>
+    <string name="napplet_consent_diff_joiner">%1$s i %2$s</string>
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">Powoduje to ponowne opublikowanie istniejącej listy bez zmian.</string>
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">Spowoduje to utworzenie listy zawierającej %1$d pozycję. Amethyst nie posiada kopii w pamięci podręcznej, z którą mógłby dokonać porównania.</item>
+        <item quantity="few">Spowoduje to zapisanie listy zawierającej %1$d pozycji. Amethyst nie posiada w pamięci podręcznej kopii, z którą mógłby to porównać.</item>
+        <item quantity="many">Spowoduje to zapisanie listy zawierającej %1$d pozycji. Amethyst nie posiada w pamięci podręcznej kopii, z którą mógłby to porównać.</item>
+        <item quantity="other">Spowoduje to zapisanie listy zawierającej %1$d pozycje. Amethyst nie posiada w pamięci podręcznej kopii, z którą mógłby to porównać.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">To żądanie dotyczy usunięcia %1$d wydarzenia.</item>
+        <item quantity="few">To żądanie dotyczy usunięcia %1$d wydarzeń.</item>
+        <item quantity="many">To żądanie dotyczy usunięcia %1$d wydarzeń.</item>
+        <item quantity="other">To żądanie dotyczy usunięcia %1$d wydarzeń.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">Zawiera %1$d tag. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
+        <item quantity="few">Zawiera %1$d tagów. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
+        <item quantity="many">Zawiera %1$d tagów. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
+        <item quantity="other">Zawiera %1$d tagi. Naciśnij „Pokaż wydarzenie”, aby sprawdzić, co dokładnie zostanie podpisane.</item>
+    </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Połącz z Nostr</string>
     <string name="napplet_connect_subtitle">chce połączyć się z Twoim kontem Nostr</string>

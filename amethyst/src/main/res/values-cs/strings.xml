@@ -1677,7 +1677,9 @@
     <string name="media_server_primary_badge">Hlavní</string>
     <string name="media_server_added">Přidáno</string>
     <string name="media_server_reorder">Změnit pořadí serveru</string>
+    <string name="media_server_status_online">Online</string>
     <string name="media_server_status_slow">Pomalé</string>
+    <string name="media_server_status_offline">Offline</string>
     <string name="media_server_status_checking">Kontrola…</string>
     <string name="payment_targets">Platební cíle</string>
     <string name="payment_targets_explainer">Zveřejněte své platební adresy, aby vám ostatní mohli přímo posílat prostředky.</string>
