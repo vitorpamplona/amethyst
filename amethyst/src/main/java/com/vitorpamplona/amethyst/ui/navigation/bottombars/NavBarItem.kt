@@ -588,6 +588,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.COMMUNITIES,
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
+        NavBarItem.BUZZ,
         NavBarItem.CONCORD,
         NavBarItem.GEOHASH_CHATS,
         NavBarItem.CALENDARS,
