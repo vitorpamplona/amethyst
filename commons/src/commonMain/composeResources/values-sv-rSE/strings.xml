@@ -140,4 +140,5 @@
         <item quantity="one">%1$d händelse</item>
         <item quantity="other">%1$d händelser</item>
     </plurals>
+    <string name="nsite_title">Statisk webbplats: %1$s</string>
 </resources>

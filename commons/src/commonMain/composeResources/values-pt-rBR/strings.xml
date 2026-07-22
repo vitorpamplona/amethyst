@@ -137,4 +137,9 @@
         <item quantity="one">%1$d evento</item>
         <item quantity="other">%1$d eventos</item>
     </plurals>
+    <string name="nsite_title">Site Estático: %1$s</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
 </resources>
