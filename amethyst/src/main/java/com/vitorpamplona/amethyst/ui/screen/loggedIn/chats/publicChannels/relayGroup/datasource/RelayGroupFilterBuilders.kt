@@ -20,6 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleStartedEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobAcceptedEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
@@ -91,12 +105,21 @@ val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
 /**
  * Extra timeline kinds a `block/buzz` workspace relay serves in the same `h`-scoped
- * channels: stream messages v2 (40002), edits (40003), diffs (40008) and system rows
- * (40099). Requested UNCONDITIONALLY alongside the NIP-29 set — on a vanilla relay the
+ * channels, requested UNCONDITIONALLY alongside the NIP-29 set — on a vanilla relay the
  * kinds simply match nothing. A dialect-gated version was tried and reverted: gating
  * creates a bootstrap hole (nothing asks for a Buzz kind until one is consumed) and a
  * worse one — history pages fetched before the mark advance their cursors past ranges
  * queried WITHOUT Buzz kinds, permanently skipping older workspace messages.
+ *
+ * All are `h`-scoped (`GroupIdTag`), so the same `#h` group REQ returns them:
+ * - stream messages v2 (40002), edits (40003), diffs (40008), system rows (40099), canvas (40100)
+ * - forum posts/votes/comments (45001-45003)
+ * - agent jobs (43001-43006)
+ * - huddle lifecycle (48100-48103)
+ *
+ * Consumption for every one of these already exists in `LocalCache` (see
+ * `consumeBuzzTimelineEvent`); requesting them here is what lets them actually arrive for
+ * a group feed instead of only appearing if another subscription happened to fetch them.
  */
 val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
     listOf(
@@ -104,6 +127,20 @@ val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
         StreamMessageEditEvent.KIND,
         StreamMessageDiffEvent.KIND,
         SystemMessageEvent.KIND,
+        CanvasEvent.KIND,
+        ForumPostEvent.KIND,
+        ForumVoteEvent.KIND,
+        ForumCommentEvent.KIND,
+        JobRequestEvent.KIND,
+        JobAcceptedEvent.KIND,
+        JobProgressEvent.KIND,
+        JobResultEvent.KIND,
+        JobCancelEvent.KIND,
+        JobErrorEvent.KIND,
+        HuddleStartedEvent.KIND,
+        HuddleParticipantJoinedEvent.KIND,
+        HuddleParticipantLeftEvent.KIND,
+        HuddleEndedEvent.KIND,
     )
 
 /** The timeline kinds requested for every relay-group REQ (NIP-29 + Buzz; see above). */

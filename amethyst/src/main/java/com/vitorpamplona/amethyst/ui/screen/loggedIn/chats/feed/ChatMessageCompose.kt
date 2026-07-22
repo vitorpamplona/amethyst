@@ -56,7 +56,10 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzEditedNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzForumVote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
@@ -67,9 +70,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeBuzzEdit
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -136,6 +142,16 @@ fun ChatroomMessageCompose(
             } else if (event is SystemMessageEvent) {
                 // Buzz kind-40099: relay-signed room narration (join/leave/topic).
                 RenderBuzzSystemMessage(baseNote)
+            } else if (event is StreamMessageDiffEvent) {
+                // Buzz kind-40008: a code/text diff pushed into the channel.
+                RenderBuzzDiff(baseNote)
+            } else if (event is ForumVoteEvent) {
+                // Buzz kind-45002: a forum up/down vote.
+                RenderBuzzForumVote(baseNote)
+            } else if (isBuzzActivityRow(event)) {
+                // Buzz agent-job (43xxx) and huddle (48xxx) lifecycle narration. Huddles
+                // especially must be caught here — their content is JSON, not chat text.
+                RenderBuzzActivityRow(baseNote)
             } else {
                 NormalChatNote(
                     baseNote,
