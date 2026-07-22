@@ -503,6 +503,15 @@
     <string name="share_as_image_url">चित्र योजक के रूप में बाँटें</string>
     <string name="share_as_image_generating">पूर्वीक्षण चित्र उत्पादन चालू…</string>
     <string name="share_as_image_watermark">अमेथिस्ट द्वारा बाँटा गया</string>
+    <string name="share_as_qr">क्यूआर॰ चित्र के रूप में बाँटें</string>
+    <string name="share_as_qr_mode_web">जाल योजक</string>
+    <string name="share_as_qr_mode_nostr">नोस्टर योजक</string>
+    <string name="share_as_qr_hint_web">किसी भी संचारयन्त्र चित्रग्राहक के साथ परखें</string>
+    <string name="share_as_qr_hint_nostr">नोस्टर क्रमक के साथ परखें</string>
+    <string name="share_as_qr_kind_picture">चित्र</string>
+    <string name="share_as_qr_code_description_web">क्यूआर॰ चित्र जिसमें इस टीका का एक जाल योजक समाविष्ट है</string>
+    <string name="share_as_qr_code_description_nostr">क्यूआर॰ चित्र जिसमें इस टीका का एक नोस्टर योजक समाविष्ट है</string>
+    <string name="share_as_qr_thumbnail_hidden_sensitive">अंगुलचित्र छिपाया गया संवेदनशिल विषयवस्तु के कारण</string>
     <string name="quick_action_copy_user_id">लेखक विभेदक</string>
     <string name="quick_action_copy_note_id">टीका विभेदक</string>
     <string name="quick_action_copy_text">लेख की अनुकृति करें</string>
