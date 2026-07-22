@@ -35,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -178,20 +177,6 @@ fun RelayGroupBrowseScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Text(stringRes(R.string.relay_group_browse_go))
-            }
-
-            // Buzz workspaces expose no public group directory (membership is server-side), so the
-            // directory above comes back empty for them. This routes to the membership-scoped
-            // importer that lists the channels you already belong to on the relay you typed.
-            TextButton(
-                onClick = {
-                    val normalized = RelayUrlNormalizer.normalizeOrNull(relayUrl.trim())
-                    if (normalized == null) showError = true else nav.nav(Route.BuzzRelayImport(normalized.url))
-                },
-                enabled = relayUrl.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            ) {
-                Text(stringRes(R.string.relay_group_browse_buzz_import))
             }
 
             if (joined.isNotEmpty()) {

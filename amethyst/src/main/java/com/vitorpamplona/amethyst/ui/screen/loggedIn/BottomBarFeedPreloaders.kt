@@ -137,9 +137,9 @@ private fun PreloadFor(
         // this tab needs no extra preload.
         NavBarItem.RELAY_GROUPS -> Unit
 
-        // Buzz workspaces are relay groups on Buzz-dialect relays; they ride the same
-        // always-on relay-group state subscription, so there's nothing extra to preload.
-        NavBarItem.BUZZ -> Unit
+        // The Agent Console + Buzz DM inbox fetch on-screen; nothing extra to preload here.
+        NavBarItem.AGENT_CONSOLE -> Unit
+        NavBarItem.BUZZ_DMS -> Unit
 
         NavBarItem.CONCORD -> ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
 

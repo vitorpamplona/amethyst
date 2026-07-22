@@ -168,7 +168,13 @@ fun BuzzInviteScreen(
                 )
                 Spacer(Modifier.size(4.dp))
                 Button(
-                    onClick = { nav.newStack(Route.BuzzWorkspaces) },
+                    onClick = {
+                        // Open the relay's group screen, which now lists the channels the claim just
+                        // granted you membership to (importable into Amethyst).
+                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { relay ->
+                            nav.newStack(Route.RelayGroupServer(relay.url))
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(symbol = MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))

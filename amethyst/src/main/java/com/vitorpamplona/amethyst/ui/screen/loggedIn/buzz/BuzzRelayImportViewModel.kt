@@ -44,9 +44,9 @@ import kotlinx.coroutines.launch
 import java.util.Collections
 
 /**
- * Backing ViewModel for [BuzzRelayImportScreen]: given a Buzz workspace relay the user is
- * already a member of (on the Buzz web/desktop app), it surfaces the workspace channels they
- * belong to so they can add them to Amethyst.
+ * Discovers the Buzz workspace channels the user already belongs to on a relay (joined via the
+ * Buzz web/desktop app) so they can add them to Amethyst. Hosted by the relay group-list screen,
+ * which folds this membership-scoped section in when the relay is a Buzz relay.
  *
  * Buzz membership is server-side (no NIP-29 kind-10009 join event), so a Buzz relay exposes no
  * public group directory — the generic "browse a relay" flow returns nothing. Instead the relay

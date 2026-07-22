@@ -69,7 +69,8 @@ enum class NavBarItem {
     PODCASTS,
     PUBLIC_CHATS,
     RELAY_GROUPS,
-    BUZZ,
+    AGENT_CONSOLE,
+    BUZZ_DMS,
     CONCORD,
     GEOHASH_CHATS,
     FOLLOW_PACKS,
@@ -345,12 +346,19 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Forum,
                 resolveRoute = { Route.RelayGroups },
             ),
-        NavBarItem.BUZZ to
+        NavBarItem.AGENT_CONSOLE to
             NavBarItemDef(
-                id = NavBarItem.BUZZ,
-                labelRes = R.string.buzz_workspaces_title,
+                id = NavBarItem.AGENT_CONSOLE,
+                labelRes = R.string.buzz_console_card_title,
                 icon = MaterialSymbols.AutoAwesome,
-                resolveRoute = { Route.BuzzWorkspaces },
+                resolveRoute = { Route.AgentConsole },
+            ),
+        NavBarItem.BUZZ_DMS to
+            NavBarItemDef(
+                id = NavBarItem.BUZZ_DMS,
+                labelRes = R.string.buzz_dm_nav_label,
+                icon = MaterialSymbols.AutoMirrored.Send,
+                resolveRoute = { Route.BuzzDmList },
             ),
         NavBarItem.CONCORD to
             NavBarItemDef(
@@ -504,7 +512,8 @@ val BottomBarCategories: List<NavBarCategory> =
             listOf(
                 NavBarItem.PUBLIC_CHATS,
                 NavBarItem.RELAY_GROUPS,
-                NavBarItem.BUZZ,
+                NavBarItem.AGENT_CONSOLE,
+                NavBarItem.BUZZ_DMS,
                 NavBarItem.CONCORD,
                 NavBarItem.GEOHASH_CHATS,
             ),
@@ -588,7 +597,8 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.COMMUNITIES,
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.RELAY_GROUPS,
-        NavBarItem.BUZZ,
+        NavBarItem.AGENT_CONSOLE,
+        NavBarItem.BUZZ_DMS,
         NavBarItem.CONCORD,
         NavBarItem.GEOHASH_CHATS,
         NavBarItem.CALENDARS,

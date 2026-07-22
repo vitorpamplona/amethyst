@@ -25,22 +25,31 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,10 +58,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
@@ -64,6 +77,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -72,9 +87,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** A first screen's worth of recent messages to prefetch per visible group card, ahead of a tap. */
 private const val CHANNEL_LIST_WARMUP_LIMIT = 10
+
+/** Grace period before offering the Tor→clearnet escape hatch, so a slow-but-working relay isn't nagged. */
+private const val TOR_CLEARNET_HINT_DELAY_MS = 6_000L
 
 /**
  * Lists every channel a relay hosts (its kind 39000-39003 directory), so the user
@@ -116,6 +136,34 @@ fun RelayGroupChannelListScreen(
     // Recomputes as the NIP-11 doc resolves so real groups fill in and fakes stay hidden.
     val channels = remember(allChannels, relayInfo) { allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) } }
 
+    // Buzz relays expose no public group directory (membership is server-side), so `channels` above
+    // stays empty for them. When this is a Buzz relay, fold in the membership-scoped channels
+    // (kind-44100) so browsing the relay lists the channels you already belong to — each addable to
+    // your kind-10009 list (so it then shows in Messages / Relay Groups). Same screen, one Browse.
+    val isBuzz = BuzzRelayDialect.isBuzz(relay) || relayInfo.software?.contains("buzz", ignoreCase = true) == true
+    val buzzVm: BuzzRelayImportViewModel = viewModel(key = "BuzzImport-${relay.url}")
+    LaunchedEffect(isBuzz) { if (isBuzz) buzzVm.bind(accountViewModel.account, relay.url) }
+    val buzzChannels by buzzVm.channels.collectAsStateWithLifecycle()
+    val buzzAdded by buzzVm.added.collectAsStateWithLifecycle()
+    val buzzStatus by buzzVm.status.collectAsStateWithLifecycle()
+
+    // Tor-failure escape hatch: a Cloudflare-fronted (or otherwise Tor-hostile) relay times out over
+    // Tor. When Tor is on, the relay isn't an onion, it isn't already trusted, and nothing has loaded
+    // after a grace period, offer to reach it over clearnet — which adds it to the kind-10089 Trusted
+    // Relay List (connected over clearnet even while Tor stays on for everything else).
+    val torType by Amethyst.instance.torPrefs.torType
+        .collectAsStateWithLifecycle(TorType.OFF)
+    val trustedRelays by accountViewModel.account.trustedRelayList.flow
+        .collectAsStateWithLifecycle()
+    val isOnion = remember(relay) { relay.url.contains(".onion") }
+    var connectTimedOut by remember(relay) { mutableStateOf(false) }
+    LaunchedEffect(relay) {
+        delay(TOR_CLEARNET_HINT_DELAY_MS)
+        connectTimedOut = true
+    }
+    val scope = rememberCoroutineScope()
+    val showTorHint = torType != TorType.OFF && !isOnion && relay !in trustedRelays && connectTimedOut
+
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
@@ -141,31 +189,109 @@ fun RelayGroupChannelListScreen(
         },
     ) { padding ->
         val myPubkey = accountViewModel.userProfile().pubkeyHex
-        if (channels.isEmpty()) {
+        val showBuzz = isBuzz && buzzChannels.isNotEmpty()
+        if (channels.isEmpty() && !showBuzz) {
             // An empty directory on a relay whose NIP-11 says it doesn't run NIP-29 is almost
             // certainly the wrong relay, not a young one — say so instead of the generic empty text.
+            // For a Buzz relay still discovering, say so; if it settled empty, guide the user.
             val notNip29 = looksLikeNonNip29Relay(relayInfo)
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(
-                    text =
-                        if (notNip29) {
-                            stringRes(R.string.relay_group_channels_not_nip29)
-                        } else {
-                            stringRes(R.string.relay_group_channels_empty)
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                if (showTorHint) {
+                    TorClearnetBanner(
+                        relayName = relay.displayUrl(),
+                        onUseClearnet = {
+                            scope.launch { accountViewModel.account.saveTrustedRelayList((trustedRelays + relay).toList()) }
                         },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (notNip29) MaterialTheme.colorScheme.warningColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(32.dp),
-                )
+                    )
+                }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text =
+                            when {
+                                isBuzz && buzzStatus is BuzzRelayImportViewModel.Status.Loading -> stringRes(R.string.buzz_import_loading)
+                                isBuzz -> stringRes(R.string.buzz_import_empty_body)
+                                notNip29 -> stringRes(R.string.relay_group_channels_not_nip29)
+                                else -> stringRes(R.string.relay_group_channels_empty)
+                            },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (notNip29 && !isBuzz) MaterialTheme.colorScheme.warningColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(32.dp),
+                    )
+                }
             }
         } else {
             LazyColumn(modifier = Modifier.padding(padding)) {
+                // Buzz membership section: the channels you already belong to on this workspace,
+                // each addable to your kind-10009 list.
+                if (showBuzz) {
+                    item(key = "buzz-header") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringRes(R.string.buzz_import_your_channels),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (!buzzChannels.all { it.id in buzzAdded }) {
+                                FilledTonalButton(onClick = { buzzVm.addAll() }) {
+                                    Text(stringRes(R.string.buzz_import_add_all))
+                                }
+                            }
+                        }
+                    }
+                    items(buzzChannels, key = { "buzz-${it.id}" }) { groupId ->
+                        BuzzImportRow(
+                            groupId = groupId,
+                            isAdded = groupId.id in buzzAdded,
+                            onAdd = { buzzVm.add(groupId) },
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
                 itemsIndexed(channels, key = { _, channel -> channel.groupId.id }) { index, channel ->
-                    if (index > 0) {
+                    if (index > 0 || showBuzz) {
                         HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
                     RelayGroupChannelRow(channel, myPubkey, accountViewModel) { nav.nav(routeFor(channel)) }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Shown on the relay screen when a relay won't load over Tor (e.g. a Cloudflare-fronted relay that
+ * blocks Tor exits). Offers to reach it over clearnet, which adds it to the Trusted Relay List.
+ */
+@Composable
+private fun TorClearnetBanner(
+    relayName: String,
+    onUseClearnet: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                text = stringRes(R.string.relay_tor_clearnet_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.size(6.dp))
+            Text(
+                text = stringRes(R.string.relay_tor_clearnet_body, relayName),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.size(10.dp))
+            FilledTonalButton(onClick = onUseClearnet, modifier = Modifier.align(Alignment.End)) {
+                Text(stringRes(R.string.relay_tor_clearnet_action))
             }
         }
     }

@@ -719,16 +719,9 @@ sealed class Route {
 
     @Serializable object RelayGroups : Route()
 
-    @Serializable object BuzzWorkspaces : Route()
-
     @Serializable object BuzzDmList : Route()
 
     @Serializable object BuzzNewDm : Route()
-
-    @Serializable
-    data class BuzzRelayImport(
-        val relayUrl: String,
-    ) : Route()
 
     @Serializable object RelayGroupBrowse : Route()
 

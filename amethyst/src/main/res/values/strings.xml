@@ -2513,7 +2513,9 @@
     <string name="relay_group_browse_description">Browse the groups hosted on a relay. Paste a relay address, or pick one below.</string>
     <string name="relay_group_browse_relay_label">Relay address</string>
     <string name="relay_group_browse_go">Browse</string>
-    <string name="relay_group_browse_buzz_import">Using a Buzz workspace? Import your channels</string>
+    <string name="relay_tor_clearnet_title">Can\'t reach this relay over Tor</string>
+    <string name="relay_tor_clearnet_body">%1$s isn\'t responding through Tor — its host may be blocking Tor exit nodes. Connect to it over clearnet instead?</string>
+    <string name="relay_tor_clearnet_action">Use clearnet</string>
     <string name="relay_group_browse_your_relays">Relays you\'re on</string>
     <string name="relay_group_browse_popular">Popular relays</string>
     <string name="relay_group_no_messages_yet">No messages yet</string>
@@ -3321,6 +3323,7 @@
     <string name="buzz_forum_body_label">What do you want to discuss?</string>
     <string name="buzz_forum_post_action">Post topic</string>
     <string name="buzz_dm_title">Direct Messages</string>
+    <string name="buzz_dm_nav_label">Buzz DMs</string>
     <string name="buzz_dm_card_subtitle">Private conversations on your workspaces</string>
     <string name="buzz_dm_new">New message</string>
     <string name="buzz_dm_empty_title">No direct messages yet</string>
