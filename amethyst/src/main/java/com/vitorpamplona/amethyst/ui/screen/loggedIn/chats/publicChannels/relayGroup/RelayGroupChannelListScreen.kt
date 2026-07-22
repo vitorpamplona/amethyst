@@ -69,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
-import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.looksLikeNonNip29Relay
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -113,9 +112,21 @@ fun RelayGroupChannelListScreen(
 
     RelayGroupsOnRelaySubscription(relay, accountViewModel.dataSources().relayGroupsOnRelay, accountViewModel)
 
+    // Trust state drives the Tor→clearnet hint below AND a NIP-11 re-fetch: marking a relay Trusted
+    // moves it off Tor onto clearnet, so a NIP-11 doc that failed over Tor must be re-fetched — its
+    // cached error would otherwise keep the relay's `self` unknown for the whole TTL.
+    val trustedRelays by accountViewModel.account.trustedRelayList.flow
+        .collectAsStateWithLifecycle()
+    val isTrusted = relay in trustedRelays
+
     // Warm the relay's NIP-11 so we can tell its genuine (relay-signed) groups from stray
-    // user-published 39000s that a non-NIP-29 relay may also be storing.
-    val relayInfo by loadRelayInfo(relay)
+    // user-published 39000s that a non-NIP-29 relay may also be storing. Re-keyed on trust so a move
+    // to clearnet re-fetches over the new transport instead of serving the cached over-Tor failure.
+    val nip11Cache = Amethyst.instance.nip11Cache
+    val relayInfo by produceState(nip11Cache.getFromCache(relay), relay, isTrusted) {
+        if (isTrusted) nip11Cache.invalidate(relay)
+        nip11Cache.loadRelayInfo(relay, onInfo = { value = it }, onError = { _, _, _ -> })
+    }
 
     // Re-read the relay's channels whenever a group-metadata (kind 39000) event lands in
     // the cache — driven by LocalCache.observeEvents rather than a timer, so the list
@@ -132,9 +143,28 @@ fun RelayGroupChannelListScreen(
             }
     }
 
-    // Only the relay's own genuine, relay-signed groups (39000 author == the relay's NIP-11 `self`).
-    // Recomputes as the NIP-11 doc resolves so real groups fill in and fakes stay hidden.
-    val channels = remember(allChannels, relayInfo) { allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) } }
+    // Prefer the relay's own genuine, relay-signed groups (39000 author == the NIP-11 `self`).
+    // Recomputes as the NIP-11 doc resolves so real groups fill in and fakes stay hidden. But if
+    // NIP-11 is unreachable (e.g. a Cloudflare-fronted relay that resets the plain HTTP GET while
+    // still serving events over the socket), fall back to the dominant 39000 signer on this relay as
+    // its de-facto signer — so its relay-signed groups still show while a stray user-published 39000
+    // (a different author) stays filtered.
+    val channels =
+        remember(allChannels, relayInfo) {
+            val nip11Known = relayInfo.self != null || relayInfo.supported_nips != null
+            if (nip11Known) {
+                allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) }
+            } else {
+                val dominantSigner =
+                    allChannels
+                        .mapNotNull { it.event?.pubKey }
+                        .groupingBy { it }
+                        .eachCount()
+                        .maxByOrNull { it.value }
+                        ?.key
+                if (dominantSigner != null) allChannels.filter { it.event?.pubKey == dominantSigner } else allChannels
+            }
+        }
 
     // Buzz relays expose no public group directory (membership is server-side), so `channels` above
     // stays empty for them. When this is a Buzz relay, fold in the membership-scoped channels
@@ -153,8 +183,6 @@ fun RelayGroupChannelListScreen(
     // Relay List (connected over clearnet even while Tor stays on for everything else).
     val torType by Amethyst.instance.torPrefs.torType
         .collectAsStateWithLifecycle(TorType.OFF)
-    val trustedRelays by accountViewModel.account.trustedRelayList.flow
-        .collectAsStateWithLifecycle()
     val isOnion = remember(relay) { relay.url.contains(".onion") }
     var connectTimedOut by remember(relay) { mutableStateOf(false) }
     LaunchedEffect(relay) {

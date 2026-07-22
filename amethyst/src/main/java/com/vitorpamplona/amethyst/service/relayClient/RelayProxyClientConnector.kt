@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +85,16 @@ class RelayProxyClientConnector(
     // pool's backoff every time any relay list updates is far more damage than making that
     // one relay serve out its delay.
     private var lastTorSettings: TorRelaySettings? = null
+
+    // The relay-classification sets (trusted/DM/money) from the last apply(). A relay moving into or
+    // out of one of these flips its transport (e.g. marking a relay Trusted moves it off Tor onto
+    // clearnet) WITHOUT changing TorRelaySettings, so `torPolicyChanged` above misses it and the
+    // flipped relay would sit out its (now-irrelevant) backoff. We track these so such a relay can
+    // skip its retry delay on the next reconnect — scoped to onlyIfChanged, so only the relays that
+    // actually flipped re-dial and the rest of the pool's backoff is left untouched.
+    private var lastTrustedRelays: Set<NormalizedRelayUrl>? = null
+    private var lastDmRelays: Set<NormalizedRelayUrl>? = null
+    private var lastMoneyOpRelays: Set<NormalizedRelayUrl>? = null
 
     @OptIn(FlowPreview::class)
     val relayServices =
@@ -150,6 +161,9 @@ class RelayProxyClientConnector(
                 lastTorSettings = torSettings
                 lastTorConnection = infra.torConnection
                 lastClearConnection = infra.clearConnection
+                lastTrustedRelays = infra.evaluator.trustedRelayList
+                lastDmRelays = infra.evaluator.dmRelayList
+                lastMoneyOpRelays = infra.evaluator.moneyOpRelayList
             }
 
             else -> {
@@ -170,12 +184,28 @@ class RelayProxyClientConnector(
                 // relays go through Tor. The relays whose transport flipped must re-dial now.
                 val torPolicyChanged = lastTorSettings != null && torSettings != lastTorSettings
 
+                // A relay moved into/out of the trusted/DM/money sets (e.g. marked Trusted to move it
+                // off Tor onto clearnet). That flips only that relay's transport, not TorRelaySettings,
+                // so let onlyIfChanged pick out the flipped relay(s) and skip THEIR retry delay —
+                // without resetBackoff(), so the rest of the pool's backoff is untouched (these sets
+                // churn while relay lists load, and forgiving the whole pool then would be too much).
+                val classificationChanged =
+                    lastTrustedRelays != null &&
+                        (
+                            infra.evaluator.trustedRelayList != lastTrustedRelays ||
+                                infra.evaluator.dmRelayList != lastDmRelays ||
+                                infra.evaluator.moneyOpRelayList != lastMoneyOpRelays
+                        )
+
                 val previousNetworkId = lastNetworkId
 
                 lastTorConnection = infra.torConnection
                 lastClearConnection = infra.clearConnection
                 lastNetworkId = networkId ?: lastNetworkId
                 lastTorSettings = torSettings
+                lastTrustedRelays = infra.evaluator.trustedRelayList
+                lastDmRelays = infra.evaluator.dmRelayList
+                lastMoneyOpRelays = infra.evaluator.moneyOpRelayList
 
                 if (networkChanged) {
                     Log.d("ManageRelayServices") {
@@ -196,11 +226,12 @@ class RelayProxyClientConnector(
 
                     Log.d("ManageRelayServices") {
                         "Relay Services have changed, reconnecting relays that need to " +
-                            "(transportChanged=$transportChanged torPolicyChanged=$torPolicyChanged)"
+                            "(transportChanged=$transportChanged torPolicyChanged=$torPolicyChanged " +
+                            "classificationChanged=$classificationChanged)"
                     }
                     client.reconnect(
                         onlyIfChanged = true,
-                        ignoreRetryDelays = freshStart,
+                        ignoreRetryDelays = freshStart || classificationChanged,
                     )
                 }
             }
