@@ -69,6 +69,7 @@
     <!-- Notes & Replies -->
     <string name="replying_to">Svarar till </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">Statisk webbplats: %1$s</string>
     <string name="napplet_card_permissions">Vad det har åtkomst till</string>
     <string name="nsite_root_site">Rotplats</string>
     <string name="nsite_source">Källa:</string>
@@ -140,5 +141,4 @@
         <item quantity="one">%1$d händelse</item>
         <item quantity="other">%1$d händelser</item>
     </plurals>
-    <string name="nsite_title">Statisk webbplats: %1$s</string>
 </resources>
