@@ -387,16 +387,17 @@ class RichTextParser {
         }
 
         if (urls.withScheme.contains(word)) {
-            // A Concord invite link is a plain https URL, so it would otherwise render as a bare
-            // link. Cheap substring gates keep the base64/bech32 parse off the hot path for
-            // ordinary URLs; only `…/invite/…#…` shapes are actually decoded.
-            if (word.contains("/invite/") && word.contains('#') && ConcordActions.parseInviteLink(word) != null) {
-                return ConcordInviteLinkSegment(word)
-            }
-            // A Buzz invite is a plain `…/invite/<token>` https URL (no fragment, so disjoint from
-            // the Concord shape above). Same cheap gate before the base64 parse.
-            if (word.contains("/invite/") && BuzzInviteLink.parse(word) != null) {
-                return BuzzInviteLinkSegment(word)
+            // Concord and Buzz invites are plain https URLs that would otherwise render as bare
+            // links. The single `/invite/` substring gate keeps the base64/bech32 parse off the
+            // hot path for ordinary URLs; the two shapes are disjoint (Concord `…/invite/<naddr>#…`
+            // carries a fragment, Buzz `…/invite/<token>` does not), so only one branch decodes.
+            if (word.contains("/invite/")) {
+                if (word.contains('#') && ConcordActions.parseInviteLink(word) != null) {
+                    return ConcordInviteLinkSegment(word)
+                }
+                if (BuzzInviteLink.parse(word) != null) {
+                    return BuzzInviteLinkSegment(word)
+                }
             }
             parseNowhereLink(word)?.let { return it }
             return LinkSegment(word)
