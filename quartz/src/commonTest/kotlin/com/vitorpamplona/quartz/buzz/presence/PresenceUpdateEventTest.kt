@@ -20,18 +20,27 @@
  */
 package com.vitorpamplona.quartz.buzz.presence
 
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * Note: kind 20001 collides with the bitchat `GeohashPresenceEvent`, which owns the
- * `EventFactory` slot, so this Buzz event is intentionally NOT registered. We therefore
- * build the typed event directly from its template rather than via signer dispatch.
+ * kind:20001 is shared with the bitchat `GeohashPresenceEvent`. `EventFactory` disambiguates
+ * the two by the BitChat-required `g` (geohash) tag — with it the event is a geohash presence,
+ * without it a Buzz presence — so both parse and materialize to the right type.
  */
 class PresenceUpdateEventTest {
     private fun wrap(template: EventTemplate<PresenceUpdateEvent>) = PresenceUpdateEvent("", "", template.createdAt, template.tags, template.content, "")
+
+    private fun parse(
+        tags: Array<Array<String>>,
+        content: String,
+    ) = EventFactory.create<Event>("", "", 1_700_000_000L, PresenceUpdateEvent.KIND, tags, content, "")
 
     @Test
     fun buildsStatusInContentAndTag() {
@@ -51,5 +60,33 @@ class PresenceUpdateEventTest {
 
         assertEquals("in-a-meeting", event.status())
         assertEquals(null, event.presenceStatus())
+    }
+
+    @Test
+    fun factoryParsesClientPublishedForm() {
+        // A client-published presence: status tag + status in content, no `g` tag.
+        val event = parse(arrayOf(arrayOf("status", "online")), "online")
+
+        assertIs<PresenceUpdateEvent>(event)
+        assertEquals("online", event.status())
+        assertEquals(PresenceStatus.ONLINE, event.presenceStatus())
+    }
+
+    @Test
+    fun factoryParsesRelaySynthesizedForm() {
+        // The relay's synthesized read form: `p` tag (subject) + status in content, NO status tag.
+        val event = parse(arrayOf(arrayOf("p", "a".repeat(64))), "away")
+
+        assertIs<PresenceUpdateEvent>(event)
+        assertEquals("away", event.status())
+        assertEquals(PresenceStatus.AWAY, event.presenceStatus())
+    }
+
+    @Test
+    fun factoryStillRoutesGeohashPresenceToBitchat() {
+        // The BitChat `g` tag must keep winning the shared 20001 slot.
+        val event = parse(arrayOf(arrayOf("g", "u4pruyd")), "")
+
+        assertIs<GeohashPresenceEvent>(event)
     }
 }

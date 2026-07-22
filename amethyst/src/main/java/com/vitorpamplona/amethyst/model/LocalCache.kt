@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
@@ -97,6 +98,7 @@ import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
 import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminChangeRoleEvent
@@ -4596,9 +4598,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 // ------------------------------------------------------------------
                 // Buzz workspace kinds (block/buzz — the Buzz dialect of NIP-29).
                 // Timeline kinds attach into the group's BuzzWorkspaceChannel; the
-                // rest are stored for query/state. Kinds 9041/20001/39005/49001 are
-                // absent on purpose: their numbers belong to GoalEvent,
-                // GeohashPresenceEvent, GroupPinnedEvent and a non-wire audit kind.
+                // rest are stored for query/state. Kinds 9041/39005/49001 are absent
+                // on purpose: their numbers belong to GoalEvent, GroupPinnedEvent and
+                // a non-wire audit kind. Kind 20001 is shared with GeohashPresenceEvent
+                // (BitChat); EventFactory routes it to PresenceUpdateEvent only when the
+                // BitChat `g` tag is absent, and it is handled below with the ephemerals.
                 // ------------------------------------------------------------------
 
                 is StreamMessageV2Event -> consumeBuzzTimelineEvent(event, relay, wasVerified)
@@ -4686,6 +4690,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                     // process-wide typing state (the channel view collects it) and return
                     // false so it never becomes a feed row. Own-typing is filtered in the UI.
                     event.channelId()?.let { BuzzTypingState.record(it, event.pubKey, event.createdAt, TimeUtils.now()) }
+                    false
+                }
+                is PresenceUpdateEvent -> {
+                    // Live online/away/offline side-effect only — record the latest status for
+                    // the subject (the `p` tag on relay-synthesized reads, else the author) into
+                    // the process-wide presence state and return false so it never becomes a row.
+                    BuzzPresenceState.record(event.subjectPubKey(), event.status(), event.createdAt)
                     false
                 }
                 is ObserverFrameEvent -> false

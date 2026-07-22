@@ -50,6 +50,12 @@ class PresenceUpdateEvent(
     /** The presence status mapped to the curated enum, or `null` if unrecognized. */
     fun presenceStatus(): PresenceStatus? = PresenceStatus.fromWire(status())
 
+    /**
+     * Whose presence this reports. On a client-published event that is the author; on the
+     * relay-synthesized read form (relay-signed, subject in a `p` tag) it is the `p` tag.
+     */
+    fun subjectPubKey(): HexKey = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1) ?: pubKey
+
     companion object {
         const val KIND = 20001
 

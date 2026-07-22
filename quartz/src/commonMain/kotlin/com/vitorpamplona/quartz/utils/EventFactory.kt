@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
 import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
 import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminChangeRoleEvent
@@ -599,7 +600,18 @@ class EventFactory {
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashChatEvent.KIND -> GeohashChatEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashListEvent.KIND -> GeohashListEvent(id, pubKey, createdAt, tags, content, sig)
-                GeohashPresenceEvent.KIND -> GeohashPresenceEvent(id, pubKey, createdAt, tags, content, sig)
+                // kind:20001 is shared by BitChat's GeohashPresenceEvent and Buzz's
+                // PresenceUpdateEvent. Disambiguate by BitChat's required `g` (geohash) tag:
+                // BitChat presence always carries one (empty content); Buzz presence never does
+                // (the status lives in content, plus a `status` tag from clients or a `p` tag on
+                // relay-synthesized reads). This routes both inbound parse and outbound signing,
+                // since both go through this factory.
+                GeohashPresenceEvent.KIND ->
+                    if (tags.any { it.size > 1 && it[0] == "g" }) {
+                        GeohashPresenceEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        PresenceUpdateEvent(id, pubKey, createdAt, tags, content, sig)
+                    }
                 GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralGiftWrapEvent.KIND -> EphemeralGiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 GitAuthorListEvent.KIND -> GitAuthorListEvent(id, pubKey, createdAt, tags, content, sig)
