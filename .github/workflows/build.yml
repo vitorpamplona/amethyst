@@ -231,9 +231,23 @@ jobs:
           name: Android Lint Reports
           path: amethyst/build/reports/lint-results-*.html
 
+      # Publishes the JUnit XML produced by the unit-test tasks above as inline
+      # annotations plus a job summary. Replaces asadmansr/android-test-report-action,
+      # which was abandoned (last release 2020) and rebuilt an EOL Ubuntu 18.04 +
+      # Python 2 Docker image on every run — bionic's apt archives have since gone
+      # unreliable and broke this job. Pinned to a commit SHA (not the movable
+      # v6.4.2 tag) to close the supply-chain hole. annotate_only avoids needing
+      # `checks: write`, so it keeps working on pull requests from forks (where the
+      # GITHUB_TOKEN is read-only). fail_on_failure preserves the old step's
+      # behavior of marking the job red when a test fails.
       - name: Android Test Report
-        uses: asadmansr/android-test-report-action@v1.2.0
+        uses: mikepenz/action-junit-report@d9f48fc87bc235f7e214acf696ca5abc0a986f16 # v6.4.2
         if: always()
+        with:
+          report_paths: '**/build/test-results/**/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v7
