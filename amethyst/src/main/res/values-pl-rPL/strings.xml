@@ -32,6 +32,7 @@
     <string name="referenced_event_not_found">Przywołane zdarzenie nie zostało znalezione</string>
     <string name="could_not_decrypt_the_message">Nie można odszyfrować wiadomości</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <string name="chat_preview_decrypting">Rozszyfrowywanie…</string>
     <string name="group_picture">Zdjęcie grupy</string>
     <string name="explicit_content">Niedozwolona zawartość</string>
     <string name="relay_notice">Uwagi transmitera</string>
@@ -308,6 +309,10 @@
     <string name="concord_invite_failed_invalid">Ten link do zaproszenia jest nieprawidłowy lub nie można go otworzyć przy użyciu tego konta.</string>
     <string name="concord_invite_failed_incompatible">Nie można otworzyć tego linku do zaproszenia. Być może jest on nieaktualny, został już zastąpiony nowszym lub został utworzony w nowszej wersji aplikacji. Poproś o nowy link do zaproszenia.</string>
     <string name="concord_invite_failed_revoked">Ten link do zaproszenia został unieważniony i nie można już z niego korzystać. Poproś o nowy.</string>
+    <string name="concord_invite_failed_expired">Ten link do zaproszenia wygasł i nie może być już używany. Poproś o nowy link.</string>
+    <string name="concord_invite_preview_unknown_name">Nazwa społeczności zostanie ujawniona dopiero po dołączeniu</string>
+    <string name="concord_invite_preview_explainer">Dołączenie do transmiterów tego zaproszenia, publikuje ogłoszenie o dołączeniu podpisane przez twoje konto i dodaje społeczność do listy. Nic nie zostanie wysłane, dopóki nie klikniesz Dołącz.</string>
+    <string name="concord_invite_preview_relays">Transmiter tego zaproszenia skontaktuje się: %1$s</string>
     <string name="concord_home_title">Kanały Concord</string>
     <string name="concord_home_empty">Nie dołączyłeś(aś) jeszcze do kanału Concord. Utwórz kanał lub otwórz link z zaproszeniem.</string>
     <string name="concord_channels_empty">Brak kanałów.</string>
@@ -323,6 +328,10 @@
     <string name="concord_channel_delete_title">Usunąć kanał?</string>
     <string name="concord_channel_delete_message">Usunąć #%1$s? Tej operacji nie można cofnąć i nie będzie można odtworzyć kanału z tym samym identyfikatorem.</string>
     <string name="concord_channel_delete_confirm">Usuń</string>
+    <string name="concord_leave_community">Opuść społeczność</string>
+    <string name="concord_leave_title">Opuścić społeczność?</string>
+    <string name="concord_leave_message">Chcesz opuścić %1$s? Zostaniesz usunięty z listy członków tej społeczności, a synchronizacja z Twoimi urządzeniami zostanie wstrzymana. Społeczność nie zostanie o tym powiadomiona, a Ty nie zostaniesz usunięty z listy jej członków. Wiadomości, których nie będziesz już mógł odszyfrować, mogą okazać się nie do odzyskania, a powrót do społeczności będzie możliwy wyłącznie po otrzymaniu nowego zaproszenia.</string>
+    <string name="concord_leave_owner_warning">To Ty stworzyłeś tę społeczność. Odejście nie powoduje jej usunięcia ani przekazania komukolwiek innemu, ale powoduje usunięcie klucza właściciela przechowywanego na Twojej liście — nie będziesz mógł już nią zarządzać.</string>
     <string name="concord_edit_relays_desc">Miejsce, w którym publikowane i czytane są zaszyfrowane plany tej społeczności.</string>
     <string name="concord_typing_one">%1$s pisze…</string>
     <string name="concord_typing_two">%1$s i %2$s piszą…</string>
@@ -373,6 +382,13 @@
     <string name="concord_members_remove_title">Usunąć członka?</string>
     <string name="concord_members_remove_message">Spowoduje to zmianę klucza szyfrującego społeczności, przez co ten użytkownik nie będzie już mógł odczytać żadnych wiadomości wysłanych po tej zmianie. Klucze pozostałych użytkowników zostaną automatycznie zaktualizowane. Czynności tej nie można cofnąć.</string>
     <string name="concord_members_remove_confirm">Usuń</string>
+    <string name="concord_members_roles">Role…</string>
+    <string name="concord_members_roles_title">Przypisz rolę</string>
+    <string name="concord_members_roles_message">Wybierz każdą rolę, jaką powinien pełnić ten członek. Odznaczenie roli usuwa ją.</string>
+    <string name="concord_members_roles_save">Zapisz</string>
+    <string name="concord_members_roles_out_of_reach">Nie masz wyższej rangi od tego członka</string>
+    <string name="concord_members_roles_none_assignable">Brak ról, które można przydzielić</string>
+    <string name="concord_members_roles_failed">Nie udało się zaktualizować ról tego członka.</string>
     <string name="concord_role_owner">Właściciel</string>
     <string name="concord_role_admin">Admin</string>
     <string name="concord_role_banned">Zbanowany</string>
@@ -498,6 +514,15 @@
     <string name="share_as_image_url">Udostępnij jako adres Url obrazu</string>
     <string name="share_as_image_generating">Generowanie podglądu…</string>
     <string name="share_as_image_watermark">Udostępnione przez Ametyst</string>
+    <string name="share_as_qr">Udostępnij jako QR</string>
+    <string name="share_as_qr_mode_web">Link do strony internetowej</string>
+    <string name="share_as_qr_mode_nostr">Nostr link</string>
+    <string name="share_as_qr_hint_web">Skanuj za pomocą dowolnej kamery telefonu</string>
+    <string name="share_as_qr_hint_nostr">Zeskanuj za pomocą aplikacji Nostr</string>
+    <string name="share_as_qr_kind_picture">Zdjęcie</string>
+    <string name="share_as_qr_code_description_web">Kod QR zawierający link do tej notatki</string>
+    <string name="share_as_qr_code_description_nostr">Kod QR zawierający link Nostr do tej notatki</string>
+    <string name="share_as_qr_thumbnail_hidden_sensitive">Miniaturka ukryta ze względu na wrażliwą treść</string>
     <string name="quick_action_copy_user_id">ID autora</string>
     <string name="quick_action_copy_note_id">ID wpisu</string>
     <string name="quick_action_copy_text">Skopiuj tekst</string>
@@ -834,6 +859,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="napplet_consent_storage">Ta aplikacja nApplet chce korzystać ze swojego prywatnego schowka.</string>
     <string name="napplet_consent_pay">Ta aplikacja nApplet chce zapłacić fakturę w systemie Lightning.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">⚠ Ta aplikacja nApplet ma na celu opłacenie faktury Lightning, w której NIE podano kwoty — to odbiorca płatności decyduje, jaka kwota zostanie pobrana. Zezwól na to tylko wtedy, gdy ufasz tej aplikacji.</string>
     <string name="napplet_consent_resource">Ten nApplet chce pobrać zasób internetowy.</string>
     <string name="napplet_consent_upload">Ten nApplet chce przesłać plik na Twój serwer multimedialny.</string>
     <string name="napplet_consent_notify">Ten nApplet chce pokazywać Ci powiadomienia.</string>
@@ -848,6 +874,18 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
          one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">obserwuje %1$d nowe konto</item>
+        <item quantity="few">obserwuje %1$d nowych kont</item>
+        <item quantity="many">obserwuje %1$d nowych kont</item>
+        <item quantity="other">obserwuje %1$d nowe konta</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">Przestaje obserwować %1$d konto</item>
+        <item quantity="few">Przestaje obserwować %1$d kont</item>
+        <item quantity="many">Przestaje obserwować %1$d kont</item>
+        <item quantity="other">Przestaje obserwować %1$d konta</item>
+    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
@@ -889,9 +927,13 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">odczytaj prywatne wiadomości</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">przeczytaj swoje prywatne wiadomości za pomocą %1$s</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">Zawsze zezwalaj na %1$s</string>
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">Amethyst nie zdołała odszyfrować tej wiadomości. Być może nie jest ona adresowana do tego konta.</string>
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">Wiadomości z</string>
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Podłączone aplikacje</string>
     <string name="napplet_permissions_revoke_all">Cofnij wszystkie uprawnienia</string>
@@ -1559,6 +1601,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="blossom_payment_required">Ten serwer wymaga płatności do wysłania: %1$s</string>
     <string name="blossom_payment_title">Wymagana płatność</string>
     <string name="blossom_payment_message">%1$s pobiera opłatę w systemie Lightning za zapisanie tego pliku. Aby kontynuować, dokonaj płatności z podłączonego portfela.</string>
+    <string name="blossom_payment_server_says">%1$s powiedział: „%2$s”</string>
     <string name="blossom_pay">Zapłać</string>
     <plurals name="blossom_pay_sats">
         <item quantity="one">Zapłać %1$d sat</item>
@@ -2392,6 +2435,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="error_dialog_pay_withdraw_error">Nie można wypłacić</string>
     <string name="cashu_failed_redemption">Nie można wykupić Cashu</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Mint dostarczył następujący komunikat błędu: %1$s</string>
+    <string name="cashu_unsafe_mint_url">Niebezpieczny adres Cashu mint</string>
+    <string name="cashu_unsafe_mint_url_explainer">Amethyst nie skontaktował się z emitentem tego tokena. %1$s</string>
     <string name="cashu_successful_redemption">Cashu odebrano</string>
     <string name="cashu_successful_redemption_explainer">%1$s satsy zostały wysłane do Twojego portfela. (opłata: %2$s satoszy)</string>
     <string name="cashu_no_wallet_found">W systemie nie znaleziono kompatybilnego portfela Cashu</string>
