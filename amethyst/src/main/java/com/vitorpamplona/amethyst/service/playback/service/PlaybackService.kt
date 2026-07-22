@@ -80,14 +80,20 @@ class PlaybackService : MediaSessionService() {
                 },
             )
 
+        // The device's concurrent-decoder ceiling bounds both how many players may be checked out
+        // at once (the session cache) and how many the pool may retain, since a session and a warm
+        // pool entry each pin one MediaCodec instance.
+        val decoderBudget = SimultaneousPlaybackCalculator.max(applicationContext)
+
         return MediaSessionPool(
             exoPlayerPool =
                 ExoPlayerPool(
                     ExoPlayerBuilder(videoCache, resolvingDataSourceFactory),
-                    poolSize = SimultaneousPlaybackCalculator.max(applicationContext),
+                    poolSize = decoderBudget,
                 ),
             dataSourceFactory = resolvingDataSourceFactory,
             appContext = applicationContext,
+            maxSessions = decoderBudget,
             reset = { session, keepPlaying ->
                 (session.player as ExoPlayer).apply {
                     repeatMode = if (keepPlaying) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
