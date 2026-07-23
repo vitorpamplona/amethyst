@@ -132,6 +132,7 @@ fun DisplaySnack(
             broadcasts = activeBroadcasts,
             miningJobs = miningJobs,
             onCancelJob = { Amethyst.instance.powPublishQueue.cancel(it) },
+            onSendWithoutPow = { Amethyst.instance.powPublishQueue.sendWithoutPow(it) },
             onTap = onTap,
             onRetryAll = {
                 activeBroadcasts.forEach { b ->
