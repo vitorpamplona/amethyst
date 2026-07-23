@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 /**
  * Fetches the NIP-75 zap goal referenced by a live stream plus the zap receipts
@@ -56,7 +57,7 @@ fun filterGoalForLiveActivities(
                 relay = relay,
                 filter =
                     Filter(
-                        kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND),
+                        kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND),
                         tags = mapOf("e" to listOf(goalId)),
                         limit = 200,
                         since = since?.get(relay)?.time,

@@ -303,6 +303,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
@@ -539,6 +540,7 @@ object KindNames {
             RelayAddMemberEvent.KIND to KindName("Relay Add Member", "43"),
             RelayRemoveMemberEvent.KIND to KindName("Relay Remove Member", "43"),
             OnchainZapEvent.KIND to KindName("Onchain Zap", "BC"),
+            Bolt12ZapEvent.KIND to KindName("Bolt12 Zap", "XX"),
             PutUserEvent.KIND to KindName("Group Put User", "29"),
             RemoveUserEvent.KIND to KindName("Group Remove User", "29"),
             EditMetadataEvent.KIND to KindName("Group Edit Metadata", "29"),

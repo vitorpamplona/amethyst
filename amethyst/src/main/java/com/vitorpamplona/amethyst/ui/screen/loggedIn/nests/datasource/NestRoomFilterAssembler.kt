@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 /**
  * Per-room state for every wire subscription scoped to a single
@@ -96,6 +97,7 @@ class NestRoomFilterSubAssembler(
                                     MeetingRoomPresenceEvent.KIND,
                                     ReactionEvent.KIND,
                                     LnZapEvent.KIND,
+                                    Bolt12ZapEvent.KIND,
                                 ),
                             tags = mapOf("a" to listOf(key.note.idHex)),
                             since = since?.get(relay)?.time,

@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 val RepliesAndReactionsKinds =
@@ -55,6 +56,7 @@ val RepliesAndReactionsKinds =
         ReportEvent.KIND,
         LnZapEvent.KIND,
         OnchainZapEvent.KIND,
+        Bolt12ZapEvent.KIND,
         OtsEvent.KIND,
         TextNoteModificationEvent.KIND,
         CommentEvent.KIND,

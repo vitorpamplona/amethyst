@@ -582,6 +582,7 @@ private fun ReactionDetailGallery(
                 WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
                 WatchNutzapsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
+                WatchBolt12ZapsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
                 if (relays.isNotEmpty()) {
@@ -1509,7 +1510,8 @@ fun ObserveZapIconState(
                 zapsState?.note?.zapPayments?.isNotEmpty() == true ||
                     zapsState?.note?.zaps?.isNotEmpty() == true ||
                     zapsState?.note?.nutzaps?.isNotEmpty() == true ||
-                    zapsState?.note?.onchainZaps?.isNotEmpty() == true
+                    zapsState?.note?.onchainZaps?.isNotEmpty() == true ||
+                    zapsState?.note?.bolt12Zaps?.isNotEmpty() == true
             val wasZapped =
                 if (hasZapData) {
                     accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, afterTimeInSeconds)
