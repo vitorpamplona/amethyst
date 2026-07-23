@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -39,6 +41,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.RoleTag
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.concurrent.Volatile
 
 /**
  * A NIP-29 relay-based group ("channel" in Discord terms). Unlike a NIP-C7
@@ -81,11 +84,13 @@ class RelayGroupChannel(
         private set
 
     /** Relay-signed member pubkeys (kind 39002). */
+    @Volatile
     var members: Set<HexKey> = emptySet()
         private set
     private var membersUpdatedAt: Long = 0
 
     /** Relay-signed admins with their roles (kind 39001). */
+    @Volatile
     var admins: List<GroupAdminTag> = emptyList()
         private set
     private var adminsUpdatedAt: Long = 0
@@ -112,6 +117,7 @@ class RelayGroupChannel(
      * Members ∪ admins, recomputed only when a roster event lands. [memberCount] and the discovery
      * feed read this per note / per recomposition, so caching it avoids rebuilding the set each read.
      */
+    @Volatile
     private var allMembers: Set<HexKey> = emptySet()
 
     private fun recomputeAllMembers() {
@@ -304,8 +310,36 @@ class RelayGroupChannel(
                 else -> RelayGroupMembership.MODERATOR
             }
         }
-        return if (pubkey in members) RelayGroupMembership.MEMBER else RelayGroupMembership.NONE
+        if (pubkey in members) return RelayGroupMembership.MEMBER
+        // Buzz community-level fallback: a member of the relay's NIP-43 community roster (kind 13534 /
+        // 8000-8001) may participate in every channel on that relay even without a per-channel 39002
+        // entry — so a community member/admin isn't wrongly gated. Mapped to MEMBER only (never channel
+        // ADMIN) to avoid over-granting per-channel moderation. Buzz-only: the concept doesn't exist on
+        // standard NIP-29 relays.
+        if (BuzzRelayDialect.isBuzz(groupId.relayUrl) && BuzzCommunityMembership.isMember(groupId.relayUrl, pubkey)) {
+            return RelayGroupMembership.MEMBER
+        }
+        return RelayGroupMembership.NONE
     }
+
+    /**
+     * Whether posting here requires the author to appear in the relay-signed roster (39001/39002).
+     *
+     * Standard NIP-29 relays require membership to post to every group (an `open` group only means a
+     * kind-9021 join is auto-approved — you must still be a member to write). Buzz relaxes this: on a
+     * Buzz relay an **open** (non-`private`) channel accepts kind-9 from any authenticated relay member
+     * with NO per-channel join, and Buzz stamps EVERY channel with the `closed` join-flag — so there
+     * [isClosed] says nothing about who may post; only [isPrivate] reflects the write ACL.
+     */
+    fun requiresMembershipToPost(): Boolean = !BuzzRelayDialect.isBuzz(groupId.relayUrl) || isPrivate()
+
+    /**
+     * Whether [pubkey] may post here: a roster member/mod/admin always may; on an open Buzz channel any
+     * authenticated relay member may, even without a per-channel join. Mirrors the relay's write gate
+     * (`check_channel_membership`: member OR open-visibility), so the composer isn't hidden where the
+     * relay would actually accept the message.
+     */
+    fun canPost(pubkey: HexKey): Boolean = !requiresMembershipToPost() || membershipOf(pubkey).isMember()
 
     fun anyNameStartsWith(prefix: String): Boolean =
         groupId.id.contains(prefix, true) ||

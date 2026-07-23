@@ -22,21 +22,31 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
@@ -56,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.FlowPreview
 
@@ -85,6 +96,35 @@ fun EditFieldRow(
             mode = channelScreenModel.replyMode.value,
             onToggle = { channelScreenModel.toggleReplyMode() },
         )
+    }
+
+    // Buzz edit mode: a banner reminding the user the next send replaces an existing
+    // message (a kind-40003 edit), with an X to abandon the edit and clear the field.
+    channelScreenModel.editingBuzzMessage.value?.let {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringRes(R.string.buzz_editing_banner),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f).padding(start = 8.dp),
+            )
+            IconButton(onClick = { channelScreenModel.clearBuzzEdit() }) {
+                Icon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = stringRes(R.string.cancel),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 
     channelScreenModel.uploadState?.let { uploading ->
@@ -121,9 +161,28 @@ fun EditFieldRow(
             )
         }
 
+        // Client-side throttle for the Buzz kind-20002 typing heartbeat (below).
+        val lastTypingSecs = remember { longArrayOf(0L) }
+
         ThinPaddingTextField(
             state = channelScreenModel.message,
-            onTextChanged = { channelScreenModel.onMessageChanged() },
+            onTextChanged = {
+                channelScreenModel.onMessageChanged()
+                // Buzz typing indicator: fire a throttled heartbeat while composing in a
+                // Buzz workspace channel, so other members see "… is typing". No-op on any
+                // other chat (the kind is Buzz-only and the relay would ignore it anyway).
+                val channel = channelScreenModel.channel
+                if (channel is RelayGroupChannel &&
+                    BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) &&
+                    channelScreenModel.message.text.isNotEmpty()
+                ) {
+                    val now = TimeUtils.now()
+                    if (now - lastTypingSecs[0] >= BuzzTypingState.TYPING_HEARTBEAT_SECS) {
+                        lastTypingSecs[0] = now
+                        accountViewModel.sendBuzzTyping(channel)
+                    }
+                }
+            },
             onContentReceived = { uri, mimeType ->
                 channelScreenModel.pickedMedia(persistentListOf(SelectedMedia(uri, mimeType)))
             },

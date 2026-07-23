@@ -28,6 +28,12 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzTypingState
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -50,6 +56,83 @@ import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
+import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
+import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
+import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
+import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
+import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
+import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
+import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
+import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
+import com.vitorpamplona.quartz.buzz.erReminders.EventReminderEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleGuidelinesEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleReactionEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleStartedEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchiveRequestEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchivedIdentitiesListEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchivedIdentityEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.UnarchiveRequestEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.UnarchivedIdentityEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobAcceptedEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.managedAgents.ManagedAgentEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationBanEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationResolveReportEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationTimeoutEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationUntimeoutEvent
+import com.vitorpamplona.quartz.buzz.moderation.ProductFeedbackEvent
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
+import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
+import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
+import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminChangeRoleEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
+import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageBookmarkedEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessagePinnedEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageScheduledEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.stream.StreamReminderEvent
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.buzz.teams.TeamEvent
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalDeniedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalGrantedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCancelledEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepStartedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
+import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
@@ -197,6 +280,9 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -643,6 +729,18 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     /** Every relay group we know of that is hosted on [relay] (its channel directory). */
     fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
+
+    /**
+     * The [RelayGroupChannel] a group-scoped content [note] belongs to, resolved the same way
+     * [attachToRelayGroupIfScoped] keyed it: the serving-relay key first (fast O(1)), then the single
+     * channel bearing this group id when the note has no usable provenance relay. Read-only — used by
+     * feed filters that need a note's channel without scanning every channel's timeline.
+     */
+    fun getRelayGroupChannelForContent(note: Note): RelayGroupChannel? {
+        val groupId = note.event?.groupId() ?: return null
+        note.relays.firstNotNullOfOrNull { getRelayGroupChannelIfExists(GroupId(groupId, it)) }?.let { return it }
+        return relayGroupChannels.filter { key, _ -> key.id == groupId }.singleOrNull()
+    }
 
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
@@ -1151,6 +1249,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is StreamMessageV2Event -> {
+                // A Buzz thread reply links to the message it answers (its `reply`-marked e-tag) so it
+                // lands in that message's replies (the minichat). A plain message / non-reply has no marker.
+                listOfNotNull(event.tags.buzzThreadReply()?.let { checkGetOrCreateNote(it) })
+            }
+
             is VoiceReplyEvent -> {
                 event.markedReplyTos().mapNotNull { checkGetOrCreateNote(it) }
             }
@@ -1255,6 +1359,16 @@ object LocalCache : ILocalCache, ICacheProvider {
                         .map { it[1] }
                 val qTagTargets = event.quotedEvents().map { it.eventId }
                 (eTagTargets + qTagTargets).mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is StreamMessageV2Event -> {
+                // Buzz threads 40002s with marked root/reply e-tags (thread_tags in
+                // buzz-sdk). Link both so inbound replies render their quote bubble —
+                // we emit these markers on send, so we must also read them.
+                listOfNotNull(
+                    event.tags.buzzThreadRoot(),
+                    event.tags.buzzThreadReply(),
+                ).distinct().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             else -> {
@@ -2001,6 +2115,170 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
         return new
     }
+
+    /**
+     * Buzz/NIP-43 community (relay-wide) membership snapshot (kind 13534) → the relay's community roster.
+     * Buzz grants participation across ALL its channels off this list, not the per-channel 39002, so
+     * feeding it into [BuzzCommunityMembership] lets [RelayGroupChannel.membershipOf] recognise a
+     * community member even when a channel roster omits them. Scoped to Buzz relays (the concept is
+     * Buzz-specific and the event is relay-signed + NIP-70 relay-only).
+     */
+    fun consume(
+        event: RelayMembershipListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null && BuzzRelayDialect.isBuzz(relay)) {
+            if (BuzzCommunityMembership.updateSnapshot(relay, event.members().toSet(), event.createdAt)) {
+                refreshRelayGroupMembership(relay)
+            }
+        }
+        return new
+    }
+
+    /** Buzz/NIP-43 community member-added delta (kind 8000) → adds to the relay's [BuzzCommunityMembership]. */
+    fun consume(
+        event: RelayAddMemberEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBuzzRegularEvent(event, relay, wasVerified)
+        if (relay != null && BuzzRelayDialect.isBuzz(relay)) {
+            if (BuzzCommunityMembership.applyDelta(relay, add = event.memberPubKeys().toSet(), createdAt = event.createdAt)) {
+                refreshRelayGroupMembership(relay)
+            }
+        }
+        return new
+    }
+
+    /** Buzz/NIP-43 community member-removed delta (kind 8001) → removes from the relay's [BuzzCommunityMembership]. */
+    fun consume(
+        event: RelayRemoveMemberEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBuzzRegularEvent(event, relay, wasVerified)
+        if (relay != null && BuzzRelayDialect.isBuzz(relay)) {
+            if (BuzzCommunityMembership.applyDelta(relay, remove = event.memberPubKeys().toSet(), createdAt = event.createdAt)) {
+                refreshRelayGroupMembership(relay)
+            }
+        }
+        return new
+    }
+
+    /**
+     * Poke every relay-group channel on [relay] so the `membershipOf` community-level fallback re-renders
+     * (community membership lives outside the per-channel roster, so nothing else invalidates their state).
+     */
+    private fun refreshRelayGroupMembership(relay: NormalizedRelayUrl) {
+        getRelayGroupChannelsOnRelay(relay).forEach { it.updateChannelInfo() }
+    }
+
+    /**
+     * Marks the serving relay as Buzz, but only off a VERIFIED event: the mark changes
+     * what the composer sends (40002 vs kind 9) and how new channels on the relay are
+     * treated, so an unverifiable frame from a buggy/hostile relay must not flip it.
+     * The note-has-event check is the same verification gate the attach path uses.
+     */
+    private fun markBuzzIfVerified(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+    ) {
+        if (relay != null && getNoteIfExists(event.id)?.event != null) {
+            BuzzRelayDialect.mark(relay)
+        }
+    }
+
+    /**
+     * Consume + channel-attach for Buzz workspace timeline kinds (stream messages,
+     * diffs, system rows, forum posts, job cards, huddle lifecycle). These kinds only
+     * exist on `block/buzz` relays, so their (verified) arrival IS the dialect
+     * detection. Attachment goes through the SAME shared NIP-29 path kind-9 chat uses
+     * — including its stray-redirect protection — so mixed vanilla/Buzz conversations
+     * share one timeline and non-host strays never mint phantom channels.
+     */
+    private fun consumeBuzzTimelineEvent(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        consumeRegularEvent(event, relay, wasVerified).also {
+            markBuzzIfVerified(event, relay)
+            attachToRelayGroupIfScoped(event, relay)
+        }
+
+    /** Store-only consume for Buzz kinds that carry no channel timeline row. */
+    private fun consumeBuzzRegularEvent(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        consumeRegularEvent(event, relay, wasVerified).also {
+            markBuzzIfVerified(event, relay)
+        }
+
+    /**
+     * A Buzz forum ROOT post (kind 45001): a thread, not a chat message. Route it to the group's
+     * Threads collection ([RelayGroupChannel.addThread]) — the same place kind-11 threads go — so it
+     * surfaces in the forum/Threads view instead of leaking into the kind-9 chat feed as a bubble.
+     * Its kind-45003 comments are stored (store-only) and loaded on demand by the thread detail.
+     */
+    private fun consumeBuzzForumPost(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        consumeRegularEvent(event, relay, wasVerified).also {
+            markBuzzIfVerified(event, relay)
+            attachThreadToRelayGroupIfScoped(event, relay)
+        }
+
+    private fun consume(
+        event: StreamMessageEditEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        // Buzz's own timeline set excludes 40003: an edit is an OVERLAY replacing an
+        // earlier message's content, never a row of its own. Store it and record the
+        // overlay (keyed by the channel's UUID, so own sends with no provenance relay
+        // land too), but do NOT attach it to the timeline.
+        consumeBuzzRegularEvent(event, relay, wasVerified).also {
+            val target = event.editedMessage() ?: return@also
+            val channelId = event.channel() ?: return@also
+            val editNote = getOrCreateNote(event.id)
+            if (editNote.event != null) {
+                BuzzWorkspaceStates.getOrCreate(channelId).addEdit(target, editNote)
+            }
+        }
+
+    private fun consume(
+        event: DmVisibilityEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        // The relay-signed, `#p`-gated per-viewer hidden-DM snapshot (30622). Store the
+        // addressable event AND mirror the viewer's hidden set into the registry so a
+        // hidden DM drops out of that viewer's list until it's re-opened.
+        consumeBaseReplaceable(event, relay, wasVerified).also {
+            val viewer = event.viewer().ifBlank { return@also }
+            BuzzDmRegistry.recordHidden(viewer, event.hiddenChannels().toSet())
+        }
+
+    private fun consume(
+        event: CanvasEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        // The canvas is the channel's single living document, not a chat row: track
+        // only the newest revision as overlay state, never attach it to the timeline.
+        consumeBuzzRegularEvent(event, relay, wasVerified).also {
+            val channelId = event.channel() ?: return@also
+            val note = getOrCreateNote(event.id)
+            if (note.event != null) {
+                BuzzWorkspaceStates.getOrCreate(channelId).updateCanvas(note)
+            }
+        }
 
     /**
      * Attach a group-scoped content event (a kind-9 chat, kind-1068 poll, …
@@ -3054,6 +3332,13 @@ object LocalCache : ILocalCache, ICacheProvider {
         // grow unbounded with every author who ever heartbeat here.
         if (channel is LiveActivitiesChannel) {
             channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
+        }
+
+        // A Buzz workspace's edit/canvas overlay is keyed off the channel id, outside
+        // `notes`, so the top-N reap never touches it. Drop overlay entries whose target
+        // message was just pruned, else they pin the edit note + author forever.
+        if (channel is RelayGroupChannel) {
+            BuzzWorkspaceStates.getIfExists(channel.groupId.id)?.pruneEdits(channel.notes.keys())
         }
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
@@ -4425,6 +4710,121 @@ object LocalCache : ILocalCache, ICacheProvider {
                         attachToRelayGroupIfScoped(event, relay)
                     }
                 }
+
+                // ------------------------------------------------------------------
+                // Buzz workspace kinds (block/buzz — the Buzz dialect of NIP-29).
+                // Timeline kinds attach into the group's BuzzWorkspaceChannel; the
+                // rest are stored for query/state. Kinds 9041/39005/49001 are absent
+                // on purpose: their numbers belong to GoalEvent, GroupPinnedEvent and
+                // a non-wire audit kind. Kind 20001 is shared with GeohashPresenceEvent
+                // (BitChat); EventFactory routes it to PresenceUpdateEvent only when the
+                // BitChat `g` tag is absent, and it is handled below with the ephemerals.
+                // ------------------------------------------------------------------
+
+                is StreamMessageV2Event -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is StreamMessageEditEvent -> consume(event, relay, wasVerified)
+                is StreamMessageDiffEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is SystemMessageEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is CanvasEvent -> consume(event, relay, wasVerified)
+                // Forum root (45001) is a thread, not a chat row → Threads collection. Comments (45003)
+                // and votes (45002) are store-only: the forum-thread detail loads them on demand by root.
+                is ForumPostEvent -> consumeBuzzForumPost(event, relay, wasVerified)
+                is ForumCommentEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ForumVoteEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is JobRequestEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is JobAcceptedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is JobProgressEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is JobResultEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is JobCancelEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is JobErrorEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is HuddleStartedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is HuddleParticipantJoinedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is HuddleParticipantLeftEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is HuddleEndedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+
+                // Buzz addressable/replaceable state.
+                is PersonaEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is TeamEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is ManagedAgentEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is AgentProfileEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is EngramEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is WorkflowDefEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is EventReminderEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is PushLeaseEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is DmVisibilityEvent -> consume(event, relay, wasVerified)
+                is WindowBoundsEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+                is ArchivedIdentitiesListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
+
+                // Buzz store-only regular kinds (queryable state; no timeline row yet).
+                is StreamMessagePinnedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is StreamMessageBookmarkedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is StreamMessageScheduledEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is StreamReminderEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is DmCreatedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is DmOpenEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is DmAddMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is DmHideEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is MemberAddedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is MemberRemovedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is RelayMembershipListEvent -> consume(event, relay, wasVerified)
+                is RelayAddMemberEvent -> consume(event, relay, wasVerified)
+                is RelayRemoveMemberEvent -> consume(event, relay, wasVerified)
+                is AgentTurnMetricEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ModerationBanEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ModerationTimeoutEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ModerationUntimeoutEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ModerationResolveReportEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ProductFeedbackEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is RelayAdminAddMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is RelayAdminRemoveMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is RelayAdminChangeRoleEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is SetWorkspaceProfileEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ArchiveRequestEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is UnarchiveRequestEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ArchivedIdentityEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is UnarchivedIdentityEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is HuddleGuidelinesEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowTriggeredEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowStepStartedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowStepCompletedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowStepFailedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowCompletedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowFailedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowCancelledEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowApprovalRequestedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowApprovalGrantedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowApprovalDeniedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is WorkflowTriggerEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ApprovalGrantEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ApprovalDenyEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+
+                // Buzz relay-signed sidecars and audit projections: store-only, queryable.
+                is AuditEntryEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ChannelSummaryEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is PresenceSnapshotEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+
+                // Buzz ephemeral signals: transient by definition (20000-29999) — do not
+                // pollute the note store, and do NOT mark the dialect from them (they are
+                // never stored, so the verified-mark gate has nothing to check).
+                is TypingIndicatorEvent -> {
+                    // Live "who is typing" side-effect only — record the heartbeat into the
+                    // process-wide typing state (the channel view collects it) and return
+                    // false so it never becomes a feed row. Own-typing is filtered in the UI.
+                    event.channelId()?.let { BuzzTypingState.record(it, event.pubKey, event.createdAt, TimeUtils.now()) }
+                    false
+                }
+                is PresenceUpdateEvent -> {
+                    // Live online/away/offline side-effect only — record the latest status for
+                    // the subject (the `p` tag on relay-synthesized reads, else the author) into
+                    // the process-wide presence state and return false so it never becomes a row.
+                    BuzzPresenceState.record(event.subjectPubKey(), event.status(), event.createdAt)
+                    false
+                }
+                is ObserverFrameEvent -> false
+                is HuddleReactionEvent -> false
+                // Pairing (24134) is deliberately dialect-neutral: it flows during device
+                // pairing before any workspace relationship is established.
+                is PairingEvent -> false
 
                 is PollEvent -> {
                     consumeRegularEvent(event, relay, wasVerified).also {

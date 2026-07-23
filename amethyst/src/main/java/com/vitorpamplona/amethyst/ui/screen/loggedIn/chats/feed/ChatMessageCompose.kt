@@ -56,6 +56,11 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatGroupPosition
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzEditedNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzForumVote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderBuzzSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChannelAdminSystemMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
@@ -65,8 +70,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeBuzzEdit
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -104,6 +114,9 @@ fun ChatroomMessageCompose(
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
     onBlank: (@Composable () -> Unit)? = null,
+    // Buzz-only: edit my own kind-40002 stream message (publishes a 40003 edit). Null for
+    // every non-Buzz chat surface, which hides the action.
+    onWantsToEditBuzz: ((Note) -> Unit)? = null,
 ) {
     // Re-skin inline `nostr:...` quotes for everything inside this bubble: a quoted
     // chat message renders with the chat reply design instead of the quoted-note card.
@@ -129,6 +142,19 @@ fun ChatroomMessageCompose(
                 RenderChatClip(baseNote, accountViewModel, nav)
             } else if (event is ChannelCreateEvent || event is ChannelMetadataEvent) {
                 RenderChannelAdminSystemMessage(baseNote, accountViewModel, nav)
+            } else if (event is SystemMessageEvent) {
+                // Buzz kind-40099: relay-signed room narration (join/leave/topic).
+                RenderBuzzSystemMessage(baseNote)
+            } else if (event is StreamMessageDiffEvent) {
+                // Buzz kind-40008: a code/text diff pushed into the channel.
+                RenderBuzzDiff(baseNote)
+            } else if (event is ForumVoteEvent) {
+                // Buzz kind-45002: a forum up/down vote.
+                RenderBuzzForumVote(baseNote)
+            } else if (isBuzzActivityRow(event)) {
+                // Buzz agent-job (43xxx) and huddle (48xxx) lifecycle narration. Huddles
+                // especially must be caught here — their content is JSON, not chat text.
+                RenderBuzzActivityRow(baseNote)
             } else {
                 NormalChatNote(
                     baseNote,
@@ -145,6 +171,7 @@ fun ChatroomMessageCompose(
                     onHighlightFinished,
                     groupPosition,
                     previousNoteId,
+                    onWantsToEditBuzz,
                 )
             }
         }
@@ -175,6 +202,7 @@ fun NormalChatNote(
     onHighlightFinished: (() -> Unit)? = null,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     previousNoteId: HexKey? = null,
+    onWantsToEditBuzz: ((Note) -> Unit)? = null,
 ) {
     // A geohash chat renders "as" its anonymous per-cell identity (and the account, when posting as
     // self); LocalChatActingIdentities lets the renderer treat those pubkeys as "me" (alignment,
@@ -305,6 +333,7 @@ fun NormalChatNote(
                 onDismiss = onDismiss,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                onWantsToEditBuzz = onWantsToEditBuzz,
             )
         },
         reactionsRow =
@@ -582,7 +611,17 @@ fun NoteRow(
             note.event is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
-            else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+            else -> {
+                // Buzz channels overlay kind-40003 edits on their messages: when one
+                // exists, render the newest edit's content instead of the stale
+                // original. Null for every non-Buzz chat surface.
+                val buzzEdit = observeBuzzEdit(note)
+                if (buzzEdit != null) {
+                    RenderBuzzEditedNote(note, buzzEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                } else {
+                    RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                }
+            }
         }
     }
 }

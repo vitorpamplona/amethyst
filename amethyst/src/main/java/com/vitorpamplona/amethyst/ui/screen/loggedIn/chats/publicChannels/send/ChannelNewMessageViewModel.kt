@@ -34,10 +34,12 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
@@ -68,6 +70,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.threading.buzzThread
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
@@ -85,6 +92,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -119,6 +127,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 @Stable
 open class ChannelNewMessageViewModel :
@@ -155,6 +164,15 @@ open class ChannelNewMessageViewModel :
     // INLINE keeps the reply in the timeline (native reply); MINICHAT sends a kind-1111
     // thread comment that opens as a minichat. Only meaningful while replyTo is set.
     val replyMode = mutableStateOf(ReplyMode.INLINE)
+
+    // When set, the composer is editing an existing Buzz stream message (kind 40002):
+    // the next send publishes a kind-40003 edit targeting this note instead of a new
+    // message. Only ever set for own messages on a Buzz-dialect relay (see editBuzzMessage).
+    val editingBuzzMessage = mutableStateOf<Note?>(null)
+
+    // Explicit @-mentions resolved by the last createTemplate, used by sendPostSync for the Buzz
+    // auto-invite. Kept off the draft path on purpose (see createTemplate / sendPostSync).
+    private var pendingBuzzInviteMentions: List<User> = emptyList()
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
 
@@ -264,6 +282,26 @@ open class ChannelNewMessageViewModel :
         draftTag.newVersion()
     }
 
+    /**
+     * Enters Buzz edit mode: pre-fills the composer with [note]'s current text and marks
+     * the next send as a kind-40003 edit of it. Editing and replying are mutually
+     * exclusive, so any pending reply is cleared. The caller gates this to the user's own
+     * kind-40002 messages on a Buzz relay.
+     */
+    fun editBuzzMessage(note: Note) {
+        replyTo.value = null
+        replyMode.value = ReplyMode.INLINE
+        editingBuzzMessage.value = note
+        message.setTextAndPlaceCursorAtEnd(note.event?.content ?: "")
+        draftTag.newVersion()
+    }
+
+    fun clearBuzzEdit() {
+        editingBuzzMessage.value = null
+        message.setTextAndPlaceCursorAtEnd("")
+        draftTag.newVersion()
+    }
+
     open fun editFromDraft(draft: Note) {
         val noteEvent = draft.event
         val noteAuthor = draft.author
@@ -345,8 +383,15 @@ open class ChannelNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
+        // Reset before createTemplate populates it, so a prior send/draft can't leak stale mentions.
+        pendingBuzzInviteMentions = emptyList()
         val template = createTemplate() ?: return
         val channelRelays = channel?.relays() ?: emptySet()
+
+        // Buzz auto-invite runs ONLY on a real send (never draft auto-save), before the message goes
+        // out so the relay accepts the mention. No-op unless this is a Buzz relay group the user
+        // moderates; guarded so a failed add never blocks the message.
+        channel?.let { autoInviteMentionedBuzzMembers(it, pendingBuzzInviteMentions) }
 
         // A geohash cell with no resolvable relays has nowhere to publish. Bail before cancel() clears
         // the composer, so the user keeps their text (and draft) to retry rather than losing it silently.
@@ -498,7 +543,40 @@ open class ChannelNewMessageViewModel :
         }
     }
 
-    private suspend fun createTemplate(): EventTemplate<out Event>? {
+    /**
+     * Buzz auto-invite: mentioning someone who isn't yet a member of a Buzz workspace channel adds
+     * them (kind-9000 put-user) before the message goes out, so the `@`-mention resolves to a real
+     * member — mirroring Buzz's own composer, which is how you pull a bot into a channel by naming it.
+     *
+     * Only a moderator can issue kind-9000, so this is a no-op for a plain member (the relay would
+     * reject it anyway); self and already-present members are skipped. Best-effort — a failed add
+     * must never block the message, so each is guarded.
+     */
+    private suspend fun autoInviteMentionedBuzzMembers(
+        channel: Channel,
+        mentioned: List<User>?,
+    ) {
+        if (mentioned.isNullOrEmpty()) return
+        if (channel !is RelayGroupChannel || !BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) return
+        val me = accountViewModel.account.userProfile().pubkeyHex
+        if (!channel.membershipOf(me).canModerate()) return
+
+        mentioned.forEach { user ->
+            val pk = user.pubkeyHex
+            if (pk != me && channel.membershipOf(pk) == RelayGroupMembership.NONE) {
+                try {
+                    accountViewModel.account.putRelayGroupUser(channel, pk, emptyList())
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("BuzzAutoInvite", "Failed to add mentioned member ${pk.take(8)}: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // `protected open` so a specialized composer (e.g. the Buzz forum reply) can reuse this whole
+    // rich EditFieldRow but swap only the event it builds for the composed text.
+    protected open suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
 
         val messageText = message.text.toString()
@@ -510,6 +588,13 @@ open class ChannelNewMessageViewModel :
                 dao = accountViewModel,
             )
         tagger.run()
+
+        // Stash the *explicit* @-mentions for a possible auto-invite — but only the send path acts on
+        // them (see sendPostSync). Exclude the reply target (seeded into pTags) so replying to a
+        // non-member doesn't silently add them; and NEVER invite from here, because createTemplate also
+        // runs on every debounced draft auto-save (sendDraftSync) — inviting here would fire kind-9000s
+        // while the user is still typing.
+        pendingBuzzInviteMentions = tagger.pTags?.filter { it != replyTo.value?.author }.orEmpty()
 
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
@@ -525,7 +610,12 @@ open class ChannelNewMessageViewModel :
         // channel type (NIP-29 groups additionally carry the `h` tag). It carries the same mention/
         // hashtag/quote/emoji/attachment enrichment an inline message does — built from tagger.message,
         // not the raw text — so replying in a thread never silently drops any of them.
-        val minichatParent = replyTo.value?.takeIf { replyMode.value == ReplyMode.MINICHAT }?.event
+        // Buzz relays reject unknown kinds outright, and kind 1111 is not in Buzz's
+        // registry — a minichat comment sent to a workspace channel would be refused
+        // by the relay AFTER the composer already cleared. Buzz replies always go
+        // through the 40002 branch with its thread markers instead.
+        val minichatAllowed = !(channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl))
+        val minichatParent = replyTo.value?.takeIf { minichatAllowed && replyMode.value == ReplyMode.MINICHAT }?.event
         if (minichatParent != null) {
             return CommentEvent.replyBuilder(tagger.message, EventHintBundle(minichatParent, channelRelays.firstOrNull())) {
                 if (channel is RelayGroupChannel) {
@@ -676,6 +766,60 @@ open class ChannelNewMessageViewModel :
                 }
             }
 
+            channel is RelayGroupChannel &&
+                BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) &&
+                editingBuzzMessage.value != null -> {
+                // Buzz edit (kind 40003): replaces the text of an existing kind-40002 message.
+                // build() sets the group's `h` tag plus the `e` tag pointing at the edited
+                // message; content is the replacement text. Kept minimal to mirror Buzz's own
+                // `build_edit` (buzz-sdk builders.rs) — the relay validates edits and the author
+                // match. LocalCache overlays the newest edit last-write-wins, so the edited row
+                // re-renders with this content.
+                val target = editingBuzzMessage.value!!
+                StreamMessageEditEvent.build(channel.groupId.id, target.idHex, tagger.message)
+            }
+
+            channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) -> {
+                // Buzz workspace message: the native kind is 40002 (stream message v2)
+                // scoped with the group's `h` tag; Buzz threads replies with NIP-10
+                // marked e-tags (["e", root, "", "root"] + ["e", parent, "", "reply"],
+                // collapsing to a single "reply" when the parent IS the root — mirrors
+                // thread_tags in buzz-sdk builders.rs) plus a `p` notify to the parent
+                // author. The dialect check comes from BuzzRelayDialect (marked off
+                // verified Buzz events), not a channel subtype: channel instances are
+                // captured by screens for their whole life, so the dialect must be
+                // able to flip mid-session without swapping objects.
+                // Reply routing (Buzz has no kind-1111): an INLINE reply is flagged `broadcast` so it stays
+                // a flat timeline sibling; a MINICHAT reply omits it so the thread markers pull it into the
+                // message's minichat (mirrors block/buzz's broadcast-vs-thread split). A non-reply is neither.
+                val broadcastReply = replyTo.value != null && replyMode.value == ReplyMode.INLINE
+                StreamMessageV2Event.build(channel.groupId.id, tagger.message, broadcast = broadcastReply) {
+                    replyTo.value?.let { parent ->
+                        // The parent's root marker (when it is itself a nested reply),
+                        // else the parent's OWN reply target (a direct reply's collapsed
+                        // form carries the root as its "reply" marker — Buzz's relay
+                        // validates ancestry and rejects a mis-derived root), else the
+                        // parent starts the thread.
+                        val parentTags = parent.event?.tags
+                        val root =
+                            parentTags?.buzzThreadRoot()
+                                ?: parentTags?.buzzThreadReply()
+                                ?: parent.idHex
+                        buzzThread(root, parent.idHex)
+                        parent.author?.pubkeyHex?.let { pTag(PTag(it)) }
+                    }
+
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+                    contentWarningReason?.let { contentWarning(it) }
+                    localExpirationDate?.let { expiration(it) }
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            }
+
             channel is RelayGroupChannel -> {
                 // NIP-29 group message: a kind-9 chat scoped to the group with an
                 // `h` tag. The event is published only to the group's host relay
@@ -729,6 +873,7 @@ open class ChannelNewMessageViewModel :
         message.setTextAndPlaceCursorAtEnd("")
 
         replyTo.value = null
+        editingBuzzMessage.value = null
 
         urlPreview = null
 

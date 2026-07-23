@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.model.Account
@@ -82,12 +84,26 @@ class AccountNotificationsHistoryEoseManager(
     val status: StateFlow<PagingStatus> = pager.status
 
     // Each joined group's id, bucketed by the normalized host relay it lives on. Used both to route the
-    // group filter and (its keys) to add group host relays to the paged relay set.
-    private fun groupsByRelay(account: Account): Map<NormalizedRelayUrl, List<String>> =
-        account.relayGroupList.liveRelayGroupList.value
-            .groupBy({ RelayUrlNormalizer.normalizeOrNull(it.relayUrl) }, { it.groupId })
-            .mapNotNull { (relay, ids) -> relay?.let { it to ids.distinct() } }
-            .toMap()
+    // group filter and (its keys) to add group host relays to the paged relay set. Buzz DM channels aren't
+    // in the published list (server-side membership, tracked in BuzzDmChannels), so include them here too —
+    // otherwise paging back never loads older reactions/zaps on my DM messages. Hidden DMs are excluded.
+    private fun groupsByRelay(account: Account): Map<NormalizedRelayUrl, List<String>> {
+        val myPubkey = account.userProfile().pubkeyHex
+        val hiddenDms = BuzzDmRegistry.hiddenFor(myPubkey)
+
+        val listGroups =
+            account.relayGroupList.liveRelayGroupList.value
+                .mapNotNull { tag -> RelayUrlNormalizer.normalizeOrNull(tag.relayUrl)?.let { it to tag.groupId } }
+        val dmGroups =
+            BuzzDmChannels
+                .channelsFor(myPubkey)
+                .filterKeys { it !in hiddenDms }
+                .map { (channelId, relay) -> relay to channelId }
+
+        return (listGroups + dmGroups)
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, ids) -> ids.distinct() }
+    }
 
     // The full relay set this account pages notifications back through: inbox relays + group host relays.
     private fun notificationRelaySet(account: Account): Set<NormalizedRelayUrl> = account.notificationRelays.flow.value + groupsByRelay(account).keys
@@ -158,6 +174,13 @@ class AccountNotificationsHistoryEoseManager(
                     key.account.relayGroupList.liveRelayGroupList
                         .sample(1000)
                         .collectLatest { invalidateFilters() }
+                },
+                // A Buzz DM discovered/hidden adds or drops its host relay from the paged set.
+                key.account.scope.launch(Dispatchers.IO) {
+                    BuzzDmChannels.flow.sample(1000).collectLatest { invalidateFilters() }
+                },
+                key.account.scope.launch(Dispatchers.IO) {
+                    BuzzDmRegistry.hidden.sample(1000).collectLatest { invalidateFilters() }
                 },
             )
 

@@ -469,6 +469,17 @@ sealed class Route {
 
     @Serializable object EditNestsServers : Route()
 
+    @Serializable
+    data class AgentConsole(
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable object AgentAttestation : Route()
+
+    @Serializable data class AgentPersonaEdit(
+        val slug: String? = null,
+    ) : Route()
+
     @Serializable object EditFavoriteAlgoFeeds : Route()
 
     @Serializable object EditPaymentTargets : Route()
@@ -691,6 +702,22 @@ sealed class Route {
         val relayUrl: String,
     ) : Route()
 
+    @Serializable data class BuzzCanvas(
+        val channelId: String,
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class BuzzForumPost(
+        val channelId: String,
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable data class BuzzForumThread(
+        val channelId: String,
+        val relayUrl: String,
+        val rootId: String,
+    ) : Route()
+
     @Serializable data class RelayGroupCreate(
         val relayUrl: String,
     ) : Route()
@@ -701,6 +728,16 @@ sealed class Route {
     ) : Route()
 
     @Serializable object RelayGroups : Route()
+
+    @Serializable
+    data class BuzzDmList(
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable
+    data class BuzzNewDm(
+        val relayUrl: String,
+    ) : Route()
 
     @Serializable object RelayGroupBrowse : Route()
 
@@ -730,6 +767,10 @@ sealed class Route {
 
     // Deep-link target for a Concord invite link (naddr#fragment). Opens the join flow.
     @Serializable data class ConcordInvite(
+        val link: String,
+    ) : Route()
+
+    @Serializable data class BuzzInvite(
         val link: String,
     ) : Route()
 

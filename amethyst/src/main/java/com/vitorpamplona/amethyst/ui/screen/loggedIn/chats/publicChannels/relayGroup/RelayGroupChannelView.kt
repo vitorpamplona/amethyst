@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -216,6 +217,7 @@ private fun ChannelView(
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
+                onWantsToEditBuzz = newPostModel::editBuzzMessage,
                 jumpToNoteId = jumpToNoteId,
                 onJumpHandled = { jumpToNoteId.value = null },
                 // A status card at the oldest end: what it's reaching for while paging, "All caught up" when dry.
@@ -251,11 +253,23 @@ private fun ChannelView(
             )
         }
 
+        // Buzz workspaces surface a live "… is typing" row just above the composer, fed by
+        // ephemeral kind-20002 heartbeats. Only rendered on a Buzz-dialect relay (the kind is
+        // Buzz-only); a no-op otherwise.
+        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            BuzzTypingIndicator(
+                channelId = channel.groupId.id,
+                myPubkey = accountViewModel.userProfile().pubkeyHex,
+                accountViewModel = accountViewModel,
+            )
+        }
+
         Spacer(modifier = DoubleVertSpacer)
 
-        // NIP-29 relays reject writes from non-members, so only show the composer when the
-        // relay-signed roster (39001/39002) lists me as a member/mod/admin. Otherwise, explain why.
-        val canPost = liveChannel.membershipOf(accountViewModel.userProfile().pubkeyHex).isMember()
+        // Show the composer wherever the relay would actually accept my write: any roster
+        // member/mod/admin, plus any authenticated member of an open Buzz channel (which accepts
+        // writes without a per-channel join). Otherwise explain why. See [RelayGroupChannel.canPost].
+        val canPost = liveChannel.canPost(accountViewModel.userProfile().pubkeyHex)
 
         if (canPost) {
             EditFieldRow(

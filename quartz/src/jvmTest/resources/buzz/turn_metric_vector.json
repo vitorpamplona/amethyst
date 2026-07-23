@@ -1,0 +1,47 @@
+{
+  "agent_pub": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+  "agent_sk": "0000000000000000000000000000000000000000000000000000000000000002",
+  "event": {
+    "content": "At2UvYII19R8WRcFSDZ2eBNabD5oQZZoi68H6Hd2Lxmfc4h/xObb/bj9KTamNBbICdN1yiNcD+SXtsk45GqXLAdQh1KERHMviO2U03i7MtGqwGMehBx/FQ4EAOtZs6FvDK/wFTJnAOaz016xQvFj01SPdwV0MAKYBv5XrHuvTj01aP72ipmuw9Jvqw6GZ9BFxfO0IjzDK1dScXYc8Q/6Ak1hvS/ai2sla7NFhURPjzLVX5XzYxlZEr5RRdC0cZkYNQDKYFpFvfOjusE8RM6t49LVCj2pQ6vACW5u1evh0BzBvC6nrqyLqnm5AAFwjOkR1RL05E2AykhcrpveV4btAyySOglwoQnVKfn3qyEC3dkwHEcL6P3AsPxjwu1RoyD8ebs2iIJtGJcbEDXJCq44nHof167x95Lt8nfRuvZ+8MXZ7XG/BiFLerXva0hQVaDcuuLrOQeGHWpsO5jFokB0/JzCIDWrf7blO4sAoOQQB+D95Yh0W+iOJ934Nt4i+CrAIHQEwi70dQU3uH35BXlO+Bl8MS4qwufNqgoNn933GD5qO8ZRI/6UlO0o/PcV5by69YObzLbLKs/Oc7/KVybgKHptQg3w336MivxJgZYW9vStPWX5QVvdQPuWA39T8JbRaOdog6gVHeJgQoEkFYoM3NKaaT9plkvlQyPvA/EPCOYyFxM=",
+    "created_at": 1784660394,
+    "id": "af80fb74690500a34606590e9c90c17f361f4c7d8df1e8a35e45e9c6c70088ba",
+    "kind": 44200,
+    "pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+    "sig": "9015085d27803c0af48b530d171b78ea81511361862c7a548491c2371d1e602a6ceb3a53df0f600fd534929f6dd06b906dcc5b5b4135b673b4f51bf2ba07355f",
+    "tags": [
+      [
+        "p",
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+      ],
+      [
+        "agent",
+        "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
+      ]
+    ]
+  },
+  "owner_pub": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+  "owner_sk": "0000000000000000000000000000000000000000000000000000000000000001",
+  "payload": {
+    "channelId": "12345678-1234-1234-1234-123456789abc",
+    "cumulative": {
+      "costUsd": 0.41,
+      "inputTokens": 45210,
+      "outputTokens": 9876,
+      "totalTokens": 55086
+    },
+    "deltaReliable": true,
+    "harness": "goose",
+    "model": "claude-sonnet-4-5",
+    "sessionId": "sess-abc",
+    "stopReason": "end_turn",
+    "timestamp": "2026-07-01T20:11:03.213Z",
+    "turn": {
+      "costUsd": 0.0123,
+      "inputTokens": 1234,
+      "outputTokens": 567,
+      "totalTokens": 1801
+    },
+    "turnId": "turn-1",
+    "turnSeq": 1
+  }
+}

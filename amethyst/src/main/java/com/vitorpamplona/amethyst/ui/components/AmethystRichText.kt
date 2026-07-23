@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
+import com.vitorpamplona.amethyst.commons.richtext.BuzzInviteLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
@@ -218,6 +219,7 @@ class AmethystRichTextSegmentRenderer(
                 } else {
                     ClickableConcordInviteLink(segment.segmentText, nav)
                 }
+            is BuzzInviteLinkSegment -> ClickableBuzzInviteLink(segment.segmentText, nav)
             else -> Text(segment.segmentText)
         }
     }

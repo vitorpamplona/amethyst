@@ -59,6 +59,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-18 reposts / quotes | 🆕 | |
 | NIP-25 reactions | ✅ in groups · 🆕 elsewhere | `marmot message react` covers MLS group reactions; outer-event reactions still pending. |
 | NIP-29 relay groups (`amy relaygroup`) | ✅ | `RelayGroupCommands` — list/browse/info/create/join/leave/message/edit/invite/put-user/remove-user against a host relay; kind:10009 joined-list kept in sync. |
+| Buzz workspaces (`amy buzz`) | ✅ | `BuzzCommands` — post/read the kind:40002 stream timeline, `attest` (offline NIP-OA), `console` (decrypt+aggregate kind:44200 turn metrics via the shared `AgentFleetAggregator`), `personas` (kind:30175). Join/leave reuse `amy relaygroup` (Buzz workspaces are NIP-29 groups). |
 | NIP-51 lists (bookmarks, mute, follow sets) | 🆕 | `amethyst/model/nip51Lists/` |
 | NIP-57 zaps (send) | ✅ partial | `ZapCommand` — `zap user`/`zap event` build the kind:9734 request and fetch the BOLT11 (zap splits honored, one invoice per recipient); `--with NDEBIT` auto-pays through a CLINK debit pointer. Receipt (kind:9735) verification still 🆕. |
 | NIP-65 outbox model queries | ✅ | `OutboxCommand` — `amy outbox USER [--refresh]`, cache-first. |
