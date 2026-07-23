@@ -99,6 +99,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.podcasts.Boo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.repositories.BookmarkedRepositoriesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.BrowserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentAttestationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentConsoleScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentPersonaEditScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzCanvasScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumPostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumThreadScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzInviteScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzNewDmScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -453,9 +462,14 @@ fun BuildNavigation(
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzDmList> { BuzzDmListScreen(it.relayUrl, accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzNewDm> { BuzzNewDmScreen(it.relayUrl, accountViewModel, nav) }
         composableFromEnd<Route.FollowPacks> { FollowPacksScreen(accountViewModel, nav) }
         composableFromEnd<Route.LiveStreams> { LiveStreamsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nests> { NestsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.AgentConsole> { AgentConsoleScreen(it.relayUrl, accountViewModel, nav) }
+        composableFromEnd<Route.AgentAttestation> { AgentAttestationScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.AgentPersonaEdit> { AgentPersonaEditScreen(it.slug, accountViewModel, nav) }
         composableFromEndArgs<Route.NestLobby> { NestLobbyScreen(it.addressValue, accountViewModel, nav) }
         composableFromEnd<Route.Longs> { LongsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
@@ -731,6 +745,8 @@ fun BuildNavigation(
             )
         }
 
+        composableFromEndArgs<Route.BuzzInvite> { BuzzInviteScreen(it.link, accountViewModel, nav) }
+
         composableFromEnd<Route.Concords> { ConcordHomeScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.ConcordCreate> { ConcordCreateScreen(accountViewModel, nav) }
@@ -752,6 +768,9 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
+        composableFromEndArgs<Route.BuzzCanvas> { BuzzCanvasScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
+        composableFromBottomArgs<Route.BuzzForumPost> { BuzzForumPostScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzForumThread> { BuzzForumThreadScreen(it.channelId, it.relayUrl, it.rootId, accountViewModel, nav) }
 
         composableFromEndArgs<Route.RelayGroupCreate> {
             RelayGroupCreateScreen(

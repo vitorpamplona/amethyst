@@ -37,46 +37,25 @@ class UserReportCache : UserDependencies {
     /** Tracks EOSE (End Of Stored Events) for relay subscriptions */
     val latestEOSEs = EOSERelayList()
 
-    fun addReport(note: Note) {
-        val author = note.author ?: return
+    /**
+     * Every report whose `reportedAuthor()` names this user, keyed by the reporting user — including
+     * reports that also name a specific event and therefore never reach [receivedReportsByAuthor].
+     *
+     * A superset of [receivedReportsByAuthor], read by the DM sender warning and the profile Reports
+     * tab. Keeping it separate leaves [countReportAuthorsBy] — and with it `Account.isAcceptable(user)`
+     * and the hide threshold — counting exactly the reports they counted before.
+     */
+    val reportsNamingUser = MutableStateFlow(mapOf<User, Set<Note>>())
 
-        val reportsBy = receivedReportsByAuthor.value[author]
+    fun addReportNamingUser(note: Note) = reportsNamingUser.index(note)
 
-        // if it's already there, quick exit
-        if (reportsBy != null && reportsBy.contains(note)) return
+    fun removeReportNamingUser(deleteNote: Note) = reportsNamingUser.deindex(deleteNote)
 
-        receivedReportsByAuthor.update {
-            val author = note.author
-            if (author == null) {
-                it
-            } else {
-                val reportsByInner = it[author] ?: emptySet()
-                it + (author to reportsByInner + note)
-            }
-        }
-    }
+    fun reportsNaming(users: Set<HexKey>): List<Note> = reportsNamingUser.value.notesFrom(users)
 
-    fun removeReport(deleteNote: Note) {
-        val author = deleteNote.author ?: return
-        val reportsBy = receivedReportsByAuthor.value[author]
+    fun addReport(note: Note) = receivedReportsByAuthor.index(note)
 
-        // if it's not already there, quick exit
-        if (reportsBy == null || !reportsBy.contains(deleteNote)) return
-
-        receivedReportsByAuthor.update {
-            val author = deleteNote.author
-            if (author == null) {
-                it
-            } else {
-                val reportsByInner = it[author]
-                if (reportsByInner == null) {
-                    it
-                } else {
-                    it + (author to reportsByInner - deleteNote)
-                }
-            }
-        }
-    }
+    fun removeReport(deleteNote: Note) = receivedReportsByAuthor.deindex(deleteNote)
 
     fun reportsBy(user: User): Set<Note> = receivedReportsByAuthor.value[user] ?: emptySet()
 
@@ -91,15 +70,7 @@ class UserReportCache : UserDependencies {
 
     fun all() = receivedReportsByAuthor.value.values.flatten()
 
-    fun reportsBy(users: Set<HexKey>): List<Note> =
-        receivedReportsByAuthor.value
-            .flatMap {
-                if (it.key.pubkeyHex in users) {
-                    it.value
-                } else {
-                    emptyList()
-                }
-            }
+    fun reportsBy(users: Set<HexKey>): List<Note> = receivedReportsByAuthor.value.notesFrom(users)
 
     fun hasReport(
         loggedIn: User,
@@ -110,4 +81,39 @@ class UserReportCache : UserDependencies {
         } != null
 
     fun hasReportNewerThan(timeInSeconds: Long): Boolean = receivedReportsByAuthor.value.any { pair -> pair.value.firstOrNull { (it.createdAt() ?: 0L) > timeInSeconds } != null }
+}
+
+/** Files [note] under its author, unless it is already there. */
+private fun MutableStateFlow<Map<User, Set<Note>>>.index(note: Note) {
+    val author = note.author ?: return
+    if (value[author]?.contains(note) == true) return
+
+    update {
+        val existing = it[author] ?: emptySet()
+        it + (author to existing + note)
+    }
+}
+
+/** Drops [note] from its author's set, unless it isn't there. */
+private fun MutableStateFlow<Map<User, Set<Note>>>.deindex(note: Note) {
+    val author = note.author ?: return
+    if (value[author]?.contains(note) != true) return
+
+    update {
+        val existing = it[author] ?: return@update it
+        it + (author to existing - note)
+    }
+}
+
+/** Every note filed under an author in [authors]. Allocates nothing while the index is empty. */
+private fun Map<User, Set<Note>>.notesFrom(authors: Set<HexKey>): List<Note> {
+    if (isEmpty()) return emptyList()
+
+    return flatMap {
+        if (it.key.pubkeyHex in authors) {
+            it.value
+        } else {
+            emptyList()
+        }
+    }
 }

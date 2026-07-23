@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
+import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -233,6 +234,7 @@ fun uriToRoute(
 
     relayGroupInviteRoute(uri)?.let { return it }
     concordInviteRoute(uri)?.let { return it }
+    buzzInviteRoute(uri)?.let { return it }
 
     val parsedNip19 = Nip19Parser.uriToRoute(uri)
     val nip19 = parsedNip19?.entity
@@ -381,6 +383,18 @@ private fun relayGroupInviteRoute(uri: String): Route? {
 private fun concordInviteRoute(uri: String): Route? =
     if (uri.contains("/invite/") && uri.contains('#') && ConcordActions.parseInviteLink(uri) != null) {
         Route.ConcordInvite(uri)
+    } else {
+        null
+    }
+
+/**
+ * A Buzz workspace invite (`https://<host>/invite/<token>`) — a plain `/invite/` https URL with
+ * no fragment, so disjoint from the Concord shape above. Opens the in-app join flow
+ * ([Route.BuzzInvite]) instead of the external browser so the claim signs with the user's key.
+ */
+private fun buzzInviteRoute(uri: String): Route? =
+    if (uri.contains("/invite/") && BuzzInviteLink.parse(uri) != null) {
+        Route.BuzzInvite(uri)
     } else {
         null
     }

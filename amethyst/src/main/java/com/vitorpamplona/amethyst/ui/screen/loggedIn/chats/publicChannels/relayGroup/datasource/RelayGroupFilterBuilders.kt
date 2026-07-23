@@ -20,6 +20,25 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleStartedEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobAcceptedEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
+import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -85,8 +104,64 @@ val RELAY_GROUP_STATE_KINDS = RELAY_GROUP_METADATA_KINDS + RELAY_GROUP_PIN_KINDS
 /** Timeline kinds shown in a group's chat — chat messages and polls. */
 val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
 
-/** Forum-thread kinds shown in a group's Threads tab. */
-val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND)
+/**
+ * Extra timeline kinds a `block/buzz` workspace relay serves in the same `h`-scoped
+ * channels, requested UNCONDITIONALLY alongside the NIP-29 set — on a vanilla relay the
+ * kinds simply match nothing. A dialect-gated version was tried and reverted: gating
+ * creates a bootstrap hole (nothing asks for a Buzz kind until one is consumed) and a
+ * worse one — history pages fetched before the mark advance their cursors past ranges
+ * queried WITHOUT Buzz kinds, permanently skipping older workspace messages.
+ *
+ * All are `h`-scoped (`GroupIdTag`), so the same `#h` group REQ returns them:
+ * - stream messages v2 (40002), edits (40003), diffs (40008), system rows (40099), canvas (40100)
+ * - forum posts/votes/comments (45001-45003)
+ * - agent jobs (43001-43006)
+ * - huddle lifecycle (48100-48103)
+ *
+ * Consumption for every one of these already exists in `LocalCache` (see
+ * `consumeBuzzTimelineEvent`); requesting them here is what lets them actually arrive for
+ * a group feed instead of only appearing if another subscription happened to fetch them.
+ */
+val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
+    listOf(
+        StreamMessageV2Event.KIND,
+        StreamMessageEditEvent.KIND,
+        StreamMessageDiffEvent.KIND,
+        SystemMessageEvent.KIND,
+        CanvasEvent.KIND,
+        ForumPostEvent.KIND,
+        ForumVoteEvent.KIND,
+        ForumCommentEvent.KIND,
+        JobRequestEvent.KIND,
+        JobAcceptedEvent.KIND,
+        JobProgressEvent.KIND,
+        JobResultEvent.KIND,
+        JobCancelEvent.KIND,
+        JobErrorEvent.KIND,
+        HuddleStartedEvent.KIND,
+        HuddleParticipantJoinedEvent.KIND,
+        HuddleParticipantLeftEvent.KIND,
+        HuddleEndedEvent.KIND,
+    )
+
+/** The timeline kinds requested for every relay-group REQ (NIP-29 + Buzz; see above). */
+val RELAY_GROUP_ALL_TIMELINE_KINDS = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS
+
+/**
+ * Kinds requested on the **open channel's live tail only** — the timeline set plus the
+ * ephemeral kind-20002 typing indicator. Typing is scoped to the one channel on screen
+ * (not the whole joined fleet) because it's a live "someone is typing" signal, never
+ * stored (20000-29999) and never a feed row (`LocalCache` records it into `BuzzTypingState`
+ * and drops it). It matches nothing on a vanilla relay.
+ */
+val RELAY_GROUP_OPEN_TAIL_KINDS = RELAY_GROUP_ALL_TIMELINE_KINDS + TypingIndicatorEvent.KIND
+
+/**
+ * Forum-thread kinds shown in a group's Threads tab: NIP-29 kind-11 roots + kind-1111 comments, PLUS
+ * Buzz forum roots (45001) + comments (45003). Requested together (a vanilla relay matches nothing on
+ * the Buzz kinds, a Buzz relay nothing on kind-11), so the same Threads REQ surfaces either dialect.
+ */
+val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND, ForumPostEvent.KIND, ForumCommentEvent.KIND)
 
 /** Content kinds a card warms ahead of a tap (chat + polls + threads + comments). */
 val RELAY_GROUP_CARD_WARMUP_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND, ThreadEvent.KIND, CommentEvent.KIND)
@@ -146,7 +221,7 @@ fun buildRelayGroupJoinedChatTailFilters(
             relay = relay,
             filter =
                 Filter(
-                    kinds = RELAY_GROUP_TIMELINE_KINDS,
+                    kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                     tags = mapOf(GroupIdTag.TAG_NAME to ids.distinct()),
                     since = sinceEpoch,
                 ),
@@ -162,7 +237,7 @@ fun buildRelayGroupOpenChatTailFilter(
         relay = groupId.relayUrl,
         filter =
             Filter(
-                kinds = RELAY_GROUP_TIMELINE_KINDS,
+                kinds = RELAY_GROUP_OPEN_TAIL_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
             ),
@@ -185,7 +260,7 @@ fun buildRelayGroupHistoryFilters(
             relay = relay,
             filter =
                 Filter(
-                    kinds = RELAY_GROUP_TIMELINE_KINDS,
+                    kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                     tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                     until = until,
                     limit = limit,

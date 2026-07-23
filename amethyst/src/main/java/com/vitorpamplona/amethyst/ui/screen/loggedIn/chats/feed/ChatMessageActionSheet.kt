@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -119,6 +120,7 @@ fun ChatMessageActionSheet(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onWantsToEditBuzz: ((Note) -> Unit)? = null,
 ) {
     var showShareSheet by remember { mutableStateOf(false) }
     var wantsToEditPost by remember { mutableStateOf(false) }
@@ -264,6 +266,23 @@ fun ChatMessageActionSheet(
 
             // Stage one: the primary chat action (reply / edit draft) is always shown.
             ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
+
+            // Buzz: edit my own kind-40002 stream message (publishes a kind-40003 edit).
+            // A 40002 event is inherently a Buzz message, so the type alone is the gate;
+            // authorship restricts it to my own messages.
+            val canEditBuzz =
+                onWantsToEditBuzz != null &&
+                    note.event is StreamMessageV2Event &&
+                    note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
+            if (canEditBuzz) {
+                SectionDivider()
+                TileRow {
+                    ActionTile(MaterialSymbols.Edit, stringRes(R.string.buzz_edit_message)) {
+                        onWantsToEditBuzz!!(note)
+                        onDismiss()
+                    }
+                }
+            }
 
             val handlers =
                 NoteActionHandlers(

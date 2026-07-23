@@ -26,17 +26,14 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 @Composable
 fun RenderReport(
@@ -54,35 +51,11 @@ fun RenderReport(
                 .mapTo(LinkedHashSet()) { it.type }
         }
 
-    val explicitContent = stringRes(R.string.explicit_content)
-    val nudity = stringRes(R.string.nudity)
-    val profanity = stringRes(R.string.profanity_hateful_speech)
-    val spam = stringRes(R.string.spam)
-    val impersonation = stringRes(R.string.impersonation)
-    val illegal = stringRes(R.string.illegal_behavior)
-    val malware = stringRes(R.string.malware)
-    val other = stringRes(R.string.other)
-    val harassment = stringRes(R.string.harassment)
-    val violence = stringRes(R.string.violence)
+    val reportTypeLabels = reportTypes.map { reportTypeLabel(it) }
 
     val content =
-        remember(reportTypes, noteEvent) {
-            val reportTypeText =
-                reportTypes.joinToString(", ") {
-                    when (it) {
-                        ReportType.EXPLICIT -> explicitContent
-                        ReportType.NUDITY -> nudity
-                        ReportType.PROFANITY -> profanity
-                        ReportType.SPAM -> spam
-                        ReportType.IMPERSONATION -> impersonation
-                        ReportType.ILLEGAL -> illegal
-                        ReportType.MALWARE -> malware
-                        ReportType.OTHER -> other
-                        ReportType.HARASSMENT -> harassment
-                        ReportType.VIOLENCE -> violence
-                        null -> other
-                    }
-                }
+        remember(reportTypeLabels, noteEvent) {
+            val reportTypeText = reportTypeLabels.joinToString(", ")
             val extra = noteEvent.content.ifBlank { null }?.let { ": $it" } ?: ""
             reportTypeText + extra
         }

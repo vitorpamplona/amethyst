@@ -412,7 +412,7 @@ private fun RelayGroupDiscoveryCard(
                     }
                 }
 
-                if (!isMember) {
+                if (!isMember && channel.requiresMembershipToPost()) {
                     FilledTonalButton(onClick = {
                         // Open groups join directly; closed ones open the group where the invite
                         // code can be entered.
@@ -579,7 +579,9 @@ private const val DISCOVERY_MESSAGE_CAP = 50
 private fun DiscoveryStatusPill(channel: RelayGroupChannel) {
     val label =
         when {
-            channel.isClosed() -> stringRes(R.string.relay_group_badge_invite_only)
+            // `closed` alone doesn't mean invite-only on Buzz (it stamps every channel); only badge
+            // it where membership is actually required to participate. See [RelayGroupChannel.requiresMembershipToPost].
+            channel.requiresMembershipToPost() && channel.isClosed() -> stringRes(R.string.relay_group_badge_invite_only)
             channel.isPrivate() -> stringRes(R.string.relay_group_badge_private)
             else -> return
         }

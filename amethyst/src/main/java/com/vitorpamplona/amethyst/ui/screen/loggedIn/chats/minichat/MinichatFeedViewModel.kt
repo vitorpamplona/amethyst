@@ -25,7 +25,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -57,7 +57,7 @@ class MinichatFeedViewModel(
 
     private fun collectReplies(): List<Note> =
         rootNote.replies
-            .filter { it.event is CommentEvent && account.isAcceptable(it) }
+            .filter { isMinichatReply(it.event) && account.isAcceptable(it) }
             .sortedWith(compareBy({ it.createdAt() ?: 0L }, { it.idHex }))
 
     class Factory(

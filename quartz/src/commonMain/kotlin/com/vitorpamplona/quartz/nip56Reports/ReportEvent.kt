@@ -71,6 +71,16 @@ class ReportEvent(
 
     fun reportedAuthor() = tags.mapNotNull { ReportedAuthorTag.parse(it, defaultReportType()) }
 
+    /**
+     * Only the authors whose own `p` tag carries a report type, without the event-level fallback
+     * [reportedAuthor] applies. Separates an author this report is actually about from one it
+     * merely `p`-tags as a mention of an otherwise event-scoped report.
+     */
+    fun reportedAuthorsWithOwnType() =
+        tags.mapNotNull { tag ->
+            ReportedAuthorTag.parse(tag)?.takeIf { it.type != null }
+        }
+
     companion object {
         const val KIND = 1984
 

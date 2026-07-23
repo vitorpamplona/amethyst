@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.FiltersChanged
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -60,7 +62,10 @@ class RelayGroupFilterBuildersTest {
     private val g1OnA = GroupId("g1", relayA)
 
     private val timelineKinds = listOf(ChatEvent.KIND, PollEvent.KIND)
-    private val threadKinds = listOf(ThreadEvent.KIND, CommentEvent.KIND)
+
+    // NIP-29 kind-11/1111 threads + Buzz forum roots (45001) & comments (45003) — the Threads REQ
+    // fetches both dialects (a vanilla relay matches nothing on the Buzz kinds and vice versa).
+    private val threadKinds = listOf(ThreadEvent.KIND, CommentEvent.KIND, ForumPostEvent.KIND, ForumCommentEvent.KIND)
 
     // --- State (always-on): one #d filter per host relay, batching that relay's group ids ---
 
@@ -113,7 +118,9 @@ class RelayGroupFilterBuildersTest {
         assertEquals(2, filters.size)
 
         val a = filters.single { it.relay == relayA }
-        assertEquals(timelineKinds, a.filter.kinds)
+        // The joined tail now always carries the Buzz timeline kinds too (see
+        // RELAY_GROUP_ALL_TIMELINE_KINDS / BuzzTimelineKindsTest).
+        assertEquals(timelineKinds + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS, a.filter.kinds)
         assertEquals(setOf("g1", "g2"), a.filter.tags!!["h"]!!.toSet())
         assertEquals(999L, a.filter.since)
         assertNull("a time-floored tail must NOT cap by count (that is what lets it batch)", a.filter.limit)
@@ -126,7 +133,11 @@ class RelayGroupFilterBuildersTest {
     fun `open chat tail is a single host h-filter with since only`() {
         val f = buildRelayGroupOpenChatTailFilter(g1OnA, 5L)
         assertEquals(relayA, f.relay)
-        assertEquals(timelineKinds, f.filter.kinds)
+        // The open-channel tail carries the full Buzz timeline set PLUS the ephemeral
+        // kind-20002 typing indicator (RELAY_GROUP_OPEN_TAIL_KINDS) — typing is scoped to
+        // the one channel on screen, not the joined fleet. It is also the Buzz-dialect
+        // detection bootstrap. Harmless on vanilla relays.
+        assertEquals(RELAY_GROUP_OPEN_TAIL_KINDS, f.filter.kinds)
         assertEquals(listOf("g1"), f.filter.tags!!["h"])
         assertEquals(5L, f.filter.since)
         assertNull(f.filter.until)

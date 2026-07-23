@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.commands.AdminCommand
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
 import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
+import com.vitorpamplona.amethyst.cli.commands.BuzzCommands
 import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
 import com.vitorpamplona.amethyst.cli.commands.CreateCommand
@@ -285,6 +286,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "relay" -> RelayCommands.dispatch(dataDir, tail)
         "marmot" -> marmotDispatch(dataDir, tail)
         "relaygroup" -> RelayGroupCommands.dispatch(dataDir, tail)
+        "buzz" -> BuzzCommands.dispatch(dataDir, tail)
         "dm" -> DmCommands.dispatch(dataDir, tail)
         "geochat" -> GeochatCommands.dispatch(dataDir, tail)
         "profile" -> ProfileCommands.dispatch(dataDir, tail)
@@ -801,6 +803,13 @@ private fun printUsage() {
         |  relaygroup put-user RELAY GID PUBKEY       add/promote a user (kind 9000)
         |    [--role admin|moderator]
         |  relaygroup remove-user RELAY GID PUBKEY    kick a user (kind 9001)
+        |
+        |Buzz (block/buzz agent workspaces — NIP-29 dialect):
+        |  buzz post RELAY GID <text>                 post a kind-40002 stream message
+        |  buzz read RELAY GID [--limit N]            read recent workspace messages
+        |  buzz attest AGENT [--kind K]               issue a NIP-OA attestation (offline)
+        |  buzz console [--relays R,R]                aggregate my kind-44200 agent turn metrics
+        |  buzz personas [--relays R,R]               list my kind-30175 personas
         |
         |Marmot (MLS group messaging):
         |  marmot key-package publish                 publish a fresh KeyPackage

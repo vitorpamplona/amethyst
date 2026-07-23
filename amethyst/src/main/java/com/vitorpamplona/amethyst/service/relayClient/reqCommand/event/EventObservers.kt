@@ -30,10 +30,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
@@ -240,11 +240,11 @@ fun observeNoteMinichatReplyCount(
                 .flow()
                 .replies.stateFlow
                 .sample(200)
-                .mapLatest { it.note.replies.count { reply -> reply.event is CommentEvent } }
+                .mapLatest { it.note.replies.count { reply -> isMinichatReply(reply.event) } }
                 .distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(note.replies.count { it.event is CommentEvent })
+    return flow.collectAsStateWithLifecycle(note.replies.count { isMinichatReply(it.event) })
 }
 
 @Composable

@@ -112,7 +112,8 @@ class RelayGroupDiscoveryFeedFilter(
         val byRelay = constraints()
         val notes =
             LocalCache.addressables.filterIntoSet(GroupMetadataEvent.KIND) { _, note ->
-                matches(note, byRelay)
+                // Non-mine path here (isMine() returned above), so the joined set is never read.
+                matches(note, byRelay, emptySet())
             }
         return sort(notes)
     }
@@ -121,26 +122,36 @@ class RelayGroupDiscoveryFeedFilter(
         val joined = joinedGroupIds()
         val notes = HashSet<Note>()
         // Groups I explicitly joined — resolve each to its metadata note (may be null until loaded).
-        joined.forEach { LocalCache.getRelayGroupChannelIfExists(it)?.metadataNote?.let(notes::add) }
+        // DMs (hidden 39000s) are excluded even from "My Groups": they belong to the DM section.
+        joined.forEach {
+            LocalCache
+                .getRelayGroupChannelIfExists(it)
+                ?.takeUnless { c -> c.isHidden() }
+                ?.metadataNote
+                ?.let(notes::add)
+        }
         // Plus any group whose roster lists me as an admin/member.
         val me = account.userProfile().pubkeyHex
         LocalCache.relayGroupChannels
-            .filter { _, channel -> channel.event != null && channel.membershipOf(me).isMember() }
+            .filter { _, channel -> channel.event != null && !channel.isHidden() && channel.membershipOf(me).isMember() }
             .forEach { it.metadataNote?.let(notes::add) }
         return notes
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
         val byRelay = constraints()
+        // Compute the joined set once per batch instead of rebuilding a HashSet (with per-tag URL
+        // normalization) inside matches() for every event.
+        val joined = if (isMine()) joinedGroupIds() else emptySet()
         return newItems.flatMapTo(HashSet()) { note ->
             when (note.event) {
-                is GroupMetadataEvent -> if (matches(note, byRelay)) listOf(note) else emptyList()
+                is GroupMetadataEvent -> if (matches(note, byRelay, joined)) listOf(note) else emptyList()
                 // A roster change (39001/39002) can newly qualify a group whose 39000 already
                 // arrived (a follow just became an admin/member). The roster note itself isn't a
                 // feed row, so re-test the group's metadata note and inject it if it now matches —
                 // otherwise the group would stay hidden (or frozen at 0 members) until a refresh.
                 is GroupAdminsEvent, is GroupMembersEvent ->
-                    rosterMetadataNote(note)?.takeIf { matches(it, byRelay) }?.let { listOf(it) } ?: emptyList()
+                    rosterMetadataNote(note)?.takeIf { matches(it, byRelay, joined) }?.let { listOf(it) } ?: emptyList()
                 else -> emptyList()
             }
         }
@@ -154,9 +165,13 @@ class RelayGroupDiscoveryFeedFilter(
     private fun matches(
         note: Note,
         byRelay: Map<NormalizedRelayUrl, GroupDiscoveryConstraint>,
+        joined: Set<GroupId>,
     ): Boolean {
         val channel = relayGroupDiscoveryChannelFor(note) ?: return false
-        if (isMine()) return isMyGroup(channel, joinedGroupIds())
+        // DMs carry the NIP-29 `hidden` tag (Buzz sets it on t=dm 39000s) — private conversations, not
+        // browsable groups. Keep them out of the discovery list entirely (they live in the DM section).
+        if (channel.isHidden()) return false
+        if (isMine()) return isMyGroup(channel, joined)
         if (byRelay.isEmpty()) return false
         // Only surface groups whose 39000 is actually signed by the host relay's key (NIP-29's
         // authority). This drops stray user-published 39000s stored on general relays — the ones

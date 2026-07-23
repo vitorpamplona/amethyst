@@ -49,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
+import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
@@ -697,6 +699,11 @@ class AccountViewModel(
         account.sendConcordTyping(communityId, channelIdHex)
     }
 
+    fun sendBuzzTyping(channel: RelayGroupChannel) =
+        viewModelScope.launch(Dispatchers.IO) {
+            account.sendBuzzTyping(channel)
+        }
+
     @Immutable
     data class NoteComposeReportState(
         val isPostHidden: Boolean = false,
@@ -784,6 +791,38 @@ class AccountViewModel(
                     NoteComposeReportState(),
                 ).also {
                     noteIsHiddenFlows.put(note, it)
+                }
+
+    private val userReportWarningFlows = LruCache<User, StateFlow<UserReportWarningState>>(300)
+
+    /**
+     * Whether to warn about [user] as the counterpart of a 1:1 DM, and with what.
+     *
+     * Safe to cache: [User.reports] is never nulled once created, so the upstream this subscribes to
+     * survives the idle gaps that `WhileSubscribed` introduces.
+     */
+    fun createUserReportWarningFlow(user: User): StateFlow<UserReportWarningState> =
+        userReportWarningFlows.get(user)
+            ?: combineTransform(
+                user.reports().reportsNamingUser,
+                account.kind3FollowList.flow,
+                account.settings.syncedSettings.security.warnAboutPostsWithReports,
+            ) { _, followList, warnAboutReports ->
+                emit(
+                    dmReportWarningFor(
+                        counterpart = user,
+                        loggedInPubKey = account.signer.pubKey,
+                        followingKeySet = followList.authors,
+                        warnAboutReports = warnAboutReports,
+                    ),
+                )
+            }.flowOn(Dispatchers.IO)
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.WhileSubscribed(10000, 10000),
+                    UserReportWarningState.SILENT,
+                ).also {
+                    userReportWarningFlows.put(user, it)
                 }
 
     private val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
@@ -1678,6 +1717,19 @@ class AccountViewModel(
         pubkey: HexKey,
         roles: List<String>,
     ) = launchSigner { account.putRelayGroupUser(channel, pubkey, roles) }
+
+    /** Add [pubkey] to a Buzz community (relay-wide, kind 9030). Owner/admin only; relay enforces. */
+    fun addCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+        role: String? = null,
+    ) = launchSigner { account.addCommunityMember(relay, pubkey, role) }
+
+    /** Remove [pubkey] from a Buzz community (relay-wide, kind 9031). Owner/admin only. */
+    fun removeCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+    ) = launchSigner { account.removeCommunityMember(relay, pubkey) }
 
     fun editRelayGroupMetadata(
         channel: RelayGroupChannel,

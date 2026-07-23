@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -153,6 +154,16 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
+import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
+import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.threading.buzzThread
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
@@ -207,8 +218,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -222,6 +236,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -2279,12 +2294,25 @@ class Account(
         gatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }?.let { group ->
             val hostRelay = group.groupId.relayUrl
             val signed =
-                signer.sign(
-                    CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
-                        hTag(group.groupId.id)
-                        previous(group.previousEventRefs(pubKey))
-                    },
-                )
+                if (BuzzRelayDialect.isBuzz(hostRelay)) {
+                    // Buzz rejects kind-1111, so its minichat threads with a 40002 marked at the message's
+                    // root (never `broadcast` — a minichat reply always lives in the thread).
+                    val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id
+                    signer.sign(
+                        StreamMessageV2Event.build(group.groupId.id, text) {
+                            buzzThread(root, rootEvent.id)
+                            rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
+                            previous(group.previousEventRefs(pubKey))
+                        },
+                    )
+                } else {
+                    signer.sign(
+                        CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
+                            hTag(group.groupId.id)
+                            previous(group.previousEventRefs(pubKey))
+                        },
+                    )
+                }
             cache.justConsumeMyOwnEvent(signed)
             client.publish(signed, setOf(hostRelay))
             return true
@@ -2912,6 +2940,76 @@ class Account(
         follow(channel)
     }
 
+    /**
+     * Fire a Buzz kind-20002 typing heartbeat for [channel] to its host relay. Ephemeral
+     * (never stored) and fire-and-forget — no delivery tracking, no local echo (we filter
+     * our own typing in the UI). Throttled by the composer to [BuzzTypingState.TYPING_HEARTBEAT_SECS].
+     */
+    suspend fun sendBuzzTyping(channel: RelayGroupChannel) {
+        if (!isWriteable()) return
+        val signed = signer.sign(TypingIndicatorEvent.build(channel.groupId.id))
+        client.publish(signed, setOf(channel.groupId.relayUrl))
+    }
+
+    /**
+     * Open (or re-surface) a Buzz DM with [participants] on [relay] via a kind-41010
+     * command. [participants] are the OTHER 1-8 people — the relay adds me, derives the
+     * canonical channel UUID, and confirms with a relay-signed [DmCreatedEvent]
+     * (kind-41001) that lands in [com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry].
+     * We never assign the channel id ourselves, so callers discover the materialized DM
+     * by watching that registry rather than from this call's return.
+     */
+    suspend fun openBuzzDm(
+        relay: NormalizedRelayUrl,
+        participants: List<HexKey>,
+    ): String? {
+        val signed = signer.sign(DmOpenEvent.build(participants))
+        // The relay confirms the DM synchronously in the OK as `response:{"channel_id":"…"}` —
+        // the authoritative, relay-assigned channel UUID (the deployed relay does not emit a
+        // queryable kind-41001). Read it straight from the ack so the caller can open the chat.
+        var results = client.publishAndCollectResults(signed, setOf(relay))
+        var channelId = buzzDmChannelIdFromAck(results)
+
+        // NIP-42 write race: on a cold connection the relay rejects the first publish with
+        // `auth-required` (our AUTH reply lands async and the write path doesn't re-send). Warm
+        // the connection with a pendingOnAuthRequired read so the auth coordinator completes the
+        // handshake, then retry the publish on the now-authed socket. Mirrors the amy CLI fix.
+        if (channelId == null && results.values.any { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }) {
+            client.fetchAllWithHooks(
+                filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
+                timeoutMs = 8_000,
+                pendingOnAuthRequired = true,
+            ) { _, _ -> false }
+            results = client.publishAndCollectResults(signed, setOf(relay))
+            channelId = buzzDmChannelIdFromAck(results)
+        }
+        return channelId
+    }
+
+    /** The relay-assigned DM channel id from a DM-open OK message (`response:{"channel_id":"…"}`). */
+    private fun buzzDmChannelIdFromAck(results: Map<NormalizedRelayUrl, PublishResult>): String? =
+        results.values
+            .firstOrNull { it.accepted }
+            ?.message
+            ?.substringAfter("\"channel_id\":\"", "")
+            ?.substringBefore('"')
+            ?.takeIf { it.isNotBlank() }
+
+    /** Hide a Buzz DM from my sidebar with a kind-41012 command (re-opening it un-hides). */
+    suspend fun hideBuzzDm(channel: RelayGroupChannel) {
+        val template = DmHideEvent.build(channel.groupId.id)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /** Add [member] to an existing group DM with a kind-41011 command (creates a new DM set). */
+    suspend fun addBuzzDmMember(
+        channel: RelayGroupChannel,
+        member: HexKey,
+    ) {
+        val template = DmAddMemberEvent.build(channel.groupId.id, member)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
     /** Send a kind 9022 leave request to the host relay and drop it from our list. */
     suspend fun leaveRelayGroup(channel: RelayGroupChannel) {
         val template = LeaveRequestEvent.build(channel.groupId.id)
@@ -3050,6 +3148,28 @@ class Account(
     ) {
         val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles))
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Add [pubkey] to a Buzz **community** (the whole relay/tenant, not one channel) via the
+     * relay-admin add-member command (kind 9030). Owner/admin only — the relay validates the
+     * sender's role and, on a new insert, updates its NIP-43 membership list (13534). Published to
+     * [relay] with no channel scope.
+     */
+    suspend fun addCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+        role: String? = null,
+    ) {
+        signAndSendPrivatelyOrBroadcast(RelayAdminAddMemberEvent.build(pubkey, role)) { listOf(relay) }
+    }
+
+    /** Remove [pubkey] from a Buzz community via the relay-admin remove-member command (kind 9031). */
+    suspend fun removeCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+    ) {
+        signAndSendPrivatelyOrBroadcast(RelayAdminRemoveMemberEvent.build(pubkey)) { listOf(relay) }
     }
 
     /**

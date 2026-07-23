@@ -421,7 +421,6 @@ fun FeedLoaded(
         if (liveSection != null) {
             item {
                 DisplayLiveBubbles(liveSection, accountViewModel, nav)
-                Spacer(StdVertSpacer)
             }
         }
         itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { _, item ->
@@ -473,14 +472,21 @@ fun DisplayLiveBubbles(
 ) {
     val feed by liveFeed.feed.collectAsStateWithLifecycle()
 
-    LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
-        itemsIndexed(feed.list, key = { _, item -> item.hashCode() }) { _, item ->
-            when (item) {
-                is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
-                is GeohashChatChannel -> RenderGeohashBubble(item, accountViewModel, nav)
-                is LiveActivitiesChannel -> RenderLiveActivityBubble(item, accountViewModel, nav)
+    // Render the row and its trailing spacer only when there is something to show.
+    // Emitting the spacer unconditionally reserved dead vertical space at the very
+    // top of the feed whenever there were no live bubbles (the common case), which
+    // read as an oversized gap between the top-bar divider and the first note.
+    if (feed.list.isNotEmpty()) {
+        LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
+            itemsIndexed(feed.list, key = { _, item -> item.hashCode() }) { _, item ->
+                when (item) {
+                    is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
+                    is GeohashChatChannel -> RenderGeohashBubble(item, accountViewModel, nav)
+                    is LiveActivitiesChannel -> RenderLiveActivityBubble(item, accountViewModel, nav)
+                }
             }
         }
+        Spacer(StdVertSpacer)
     }
 }
 
