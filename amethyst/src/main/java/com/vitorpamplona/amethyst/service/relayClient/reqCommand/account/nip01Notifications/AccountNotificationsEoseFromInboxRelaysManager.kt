@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
@@ -99,7 +101,28 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                     )
                 }
 
-        return inbox + groups
+        // Buzz DM channels are NOT in the published group list (membership is server-side, tracked in
+        // BuzzDmChannels), so the joined-group query above skips them. Poll each DM host relay the same
+        // way — `#p` = me + `#h` = my DM channels — so a reaction/zap/repost on my DM message surfaces
+        // in notifications, not only as a chip inside the open conversation. Hidden DMs are excluded.
+        val myPubkey = user(key).pubkeyHex
+        val hiddenDms = BuzzDmRegistry.hiddenFor(myPubkey)
+        val dmGroups =
+            BuzzDmChannels
+                .channelsFor(myPubkey)
+                .filterKeys { it !in hiddenDms }
+                .entries
+                .groupBy({ it.value }, { it.key })
+                .flatMap { (relay, channelIds) ->
+                    filterGroupNotificationsToPubkey(
+                        relay = relay,
+                        pubkey = myPubkey,
+                        groupIds = channelIds.distinct(),
+                        since = since?.get(relay)?.time ?: pagingBoundary,
+                    )
+                }
+
+        return inbox + groups + dmGroups
     }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
@@ -121,6 +144,14 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                     key.account.relayGroupList.liveRelayGroupList.sample(1000).collectLatest {
                         invalidateFilters()
                     }
+                },
+                // Re-subscribe when a Buzz DM is discovered/hidden so its host relay is polled for
+                // reactions/zaps on my DM messages.
+                key.account.scope.launch(Dispatchers.IO) {
+                    BuzzDmChannels.flow.sample(1000).collectLatest { invalidateFilters() }
+                },
+                key.account.scope.launch(Dispatchers.IO) {
+                    BuzzDmRegistry.hidden.sample(1000).collectLatest { invalidateFilters() }
                 },
                 key.account.scope.launch(Dispatchers.IO) {
                     key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
