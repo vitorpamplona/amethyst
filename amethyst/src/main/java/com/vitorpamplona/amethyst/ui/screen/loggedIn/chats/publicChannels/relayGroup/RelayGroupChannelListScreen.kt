@@ -43,7 +43,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,8 +86,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzInviteMintButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
@@ -269,6 +268,15 @@ fun RelayGroupChannelListScreen(
                     )
                 },
                 popBack = nav::popBack,
+                actions = {
+                    if (isBuzz) {
+                        BuzzWorkspaceOverflowMenu(
+                            relay = relay,
+                            accountViewModel = accountViewModel,
+                            onAddPeople = { showAddPeople = true },
+                        )
+                    }
+                },
             )
         },
         floatingActionButton = {
@@ -320,17 +328,6 @@ fun RelayGroupChannelListScreen(
                 }
 
                 if (isBuzz) {
-                    item(key = "add-people") {
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { showAddPeople = true }) {
-                                Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.size(8.dp))
-                                Text(stringRes(R.string.buzz_community_add_people))
-                            }
-                            BuzzInviteMintButton(relay = relay, accountViewModel = accountViewModel)
-                        }
-                    }
-
                     val noChannelsYet = buzzChatChannels.isEmpty() && buzzForumChannels.isEmpty()
                     if (noChannelsYet) {
                         item(key = "buzz-no-channels") {

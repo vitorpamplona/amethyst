@@ -21,11 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import android.content.Intent
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,15 +55,19 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /**
- * A "Create invite link" text button for a Buzz workspace owner/admin: mints a link via the relay's
- * `/api/invites` endpoint ([BuzzInviteMinter]) and shows it with Copy / Share. Any member sees the
- * button, but the relay only serves owners/admins — a rejection surfaces as the error dialog.
+ * The Buzz workspace top-bar overflow (3-dot) menu. Holds the two workspace-owner actions that used
+ * to sit inline above the channel list: "Add people to this workspace" (kind-9030, delegated to the
+ * screen's [onAddPeople] dialog) and "Create invite link" (mints via the relay's `/api/invites`
+ * endpoint — see [BuzzInviteMinter]). Any member sees both, but the relay only serves owners/admins,
+ * so a rejection surfaces as the error dialog.
  */
 @Composable
-fun BuzzInviteMintButton(
+fun BuzzWorkspaceOverflowMenu(
     relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
+    onAddPeople: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     var minting by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<BuzzInviteMinter.MintedInvite?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -69,36 +75,58 @@ fun BuzzInviteMintButton(
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
 
-    TextButton(
-        onClick = {
-            if (minting) return@TextButton
-            minting = true
-            error = null
-            scope.launch {
-                try {
-                    result =
-                        BuzzInviteMinter.mint(
-                            relay = relay,
-                            ttlSecs = null,
-                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForPushRegistration,
-                            httpAuth = accountViewModel.account::createHTTPAuthorization,
-                        )
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    error = e.message ?: e::class.simpleName
-                } finally {
-                    minting = false
+    IconButton(onClick = { menuOpen = true }) {
+        Icon(
+            symbol = MaterialSymbols.MoreVert,
+            contentDescription = stringRes(R.string.more_options),
+            modifier = Modifier.size(24.dp),
+        )
+    }
+
+    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+        DropdownMenuItem(
+            leadingIcon = {
+                Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = null, modifier = Modifier.size(20.dp))
+            },
+            text = { Text(stringRes(R.string.buzz_community_add_people)) },
+            onClick = {
+                menuOpen = false
+                onAddPeople()
+            },
+        )
+        DropdownMenuItem(
+            leadingIcon = {
+                if (minting) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(symbol = MaterialSymbols.Link, contentDescription = null, modifier = Modifier.size(20.dp))
                 }
-            }
-        },
-    ) {
-        if (minting) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-        } else {
-            Icon(symbol = MaterialSymbols.Link, contentDescription = null, modifier = Modifier.size(18.dp))
-        }
-        Spacer(Modifier.size(8.dp))
-        Text(stringRes(R.string.buzz_invite_create))
+            },
+            text = { Text(stringRes(R.string.buzz_invite_create)) },
+            enabled = !minting,
+            onClick = {
+                menuOpen = false
+                if (minting) return@DropdownMenuItem
+                minting = true
+                error = null
+                scope.launch {
+                    try {
+                        result =
+                            BuzzInviteMinter.mint(
+                                relay = relay,
+                                ttlSecs = null,
+                                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForPushRegistration,
+                                httpAuth = accountViewModel.account::createHTTPAuthorization,
+                            )
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        error = e.message ?: e::class.simpleName
+                    } finally {
+                        minting = false
+                    }
+                }
+            },
+        )
     }
 
     result?.let { minted ->
