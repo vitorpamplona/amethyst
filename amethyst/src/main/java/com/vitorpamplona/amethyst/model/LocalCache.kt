@@ -730,6 +730,18 @@ object LocalCache : ILocalCache, ICacheProvider {
     /** Every relay group we know of that is hosted on [relay] (its channel directory). */
     fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
 
+    /**
+     * The [RelayGroupChannel] a group-scoped content [note] belongs to, resolved the same way
+     * [attachToRelayGroupIfScoped] keyed it: the serving-relay key first (fast O(1)), then the single
+     * channel bearing this group id when the note has no usable provenance relay. Read-only — used by
+     * feed filters that need a note's channel without scanning every channel's timeline.
+     */
+    fun getRelayGroupChannelForContent(note: Note): RelayGroupChannel? {
+        val groupId = note.event?.groupId() ?: return null
+        note.relays.firstNotNullOfOrNull { getRelayGroupChannelIfExists(GroupId(groupId, it)) }?.let { return it }
+        return relayGroupChannels.filter { key, _ -> key.id == groupId }.singleOrNull()
+    }
+
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =

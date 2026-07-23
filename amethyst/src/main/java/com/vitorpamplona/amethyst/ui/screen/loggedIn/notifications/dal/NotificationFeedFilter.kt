@@ -32,6 +32,9 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
@@ -373,6 +376,20 @@ class NotificationFeedFilter(
         return collection.filterTo(HashSet()) { acceptableEvent(it, filterParams) }
     }
 
+    /**
+     * The Buzz DM message [note] targets me: a kind-40002 in a `t=dm` channel whose 39000 participants
+     * include [me]. DM messages carry no `p` tag, so being a participant of the DM channel is the
+     * relevance signal — like a Marmot/Concord message. False for non-DM channels, for metadata we
+     * haven't loaded yet, or when I'm not a participant. (Own-message and toggle checks live at the call site.)
+     */
+    private fun isBuzzDmForMe(
+        note: Note,
+        me: HexKey,
+    ): Boolean {
+        val md = LocalCache.getRelayGroupChannelForContent(note)?.event ?: return false
+        return md.isBuzzDm() && md.buzzParticipants().contains(me)
+    }
+
     fun acceptableEvent(
         it: Note,
         filterParams: FilterByListParams,
@@ -402,6 +419,16 @@ class NotificationFeedFilter(
         }
 
         val noteEvent = it.event
+
+        // Buzz DM: a group chat message in a `t=dm` channel whose 39000 participants include me. A Buzz
+        // relay carries DM messages as either kind-9 (NIP-29 chat) or kind-40002 (stream message v2), and
+        // neither `p`-tags the recipient, so being a participant of the DM channel is the relevance signal
+        // — like a Marmot/Concord message above. Honors the same "Messages in notifications" toggle, and
+        // never notifies for my own message.
+        if ((noteEvent is StreamMessageV2Event || noteEvent is ChatEvent) && isBuzzDmForMe(it, loggedInUserHex)) {
+            if (!showMessages) return false
+            return it.author?.pubkeyHex != loggedInUserHex
+        }
 
         if (!showMessages &&
             (
