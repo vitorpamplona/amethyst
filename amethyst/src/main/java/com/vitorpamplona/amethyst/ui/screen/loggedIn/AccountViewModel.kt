@@ -1684,6 +1684,19 @@ class AccountViewModel(
         roles: List<String>,
     ) = launchSigner { account.putRelayGroupUser(channel, pubkey, roles) }
 
+    /** Add [pubkey] to a Buzz community (relay-wide, kind 9030). Owner/admin only; relay enforces. */
+    fun addCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+        role: String? = null,
+    ) = launchSigner { account.addCommunityMember(relay, pubkey, role) }
+
+    /** Remove [pubkey] from a Buzz community (relay-wide, kind 9031). Owner/admin only. */
+    fun removeCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+    ) = launchSigner { account.removeCommunityMember(relay, pubkey) }
+
     fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
         name: String?,

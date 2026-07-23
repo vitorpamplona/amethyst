@@ -158,6 +158,8 @@ import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
@@ -3146,6 +3148,28 @@ class Account(
     ) {
         val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles))
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Add [pubkey] to a Buzz **community** (the whole relay/tenant, not one channel) via the
+     * relay-admin add-member command (kind 9030). Owner/admin only — the relay validates the
+     * sender's role and, on a new insert, updates its NIP-43 membership list (13534). Published to
+     * [relay] with no channel scope.
+     */
+    suspend fun addCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+        role: String? = null,
+    ) {
+        signAndSendPrivatelyOrBroadcast(RelayAdminAddMemberEvent.build(pubkey, role)) { listOf(relay) }
+    }
+
+    /** Remove [pubkey] from a Buzz community via the relay-admin remove-member command (kind 9031). */
+    suspend fun removeCommunityMember(
+        relay: NormalizedRelayUrl,
+        pubkey: HexKey,
+    ) {
+        signAndSendPrivatelyOrBroadcast(RelayAdminRemoveMemberEvent.build(pubkey)) { listOf(relay) }
     }
 
     /**

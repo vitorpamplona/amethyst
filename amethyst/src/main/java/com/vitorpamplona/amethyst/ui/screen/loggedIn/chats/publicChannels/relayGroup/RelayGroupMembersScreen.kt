@@ -38,6 +38,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -163,6 +165,8 @@ private fun RelayGroupMembers(
                 .sortedBy { it.membership.rank() }
         }
 
+    var showAddMember by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
@@ -185,6 +189,14 @@ private fun RelayGroupMembers(
                 },
                 popBack = nav::popBack,
             )
+        },
+        // Only a moderator can add a member (the relay rejects a kind-9000 from anyone else).
+        floatingActionButton = {
+            if (iCanModerate) {
+                FloatingActionButton(onClick = { showAddMember = true }) {
+                    Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(R.string.relay_group_add_member))
+                }
+            }
         },
     ) { padding ->
         if (roster.isEmpty()) {
@@ -211,6 +223,17 @@ private fun RelayGroupMembers(
                 }
             }
         }
+    }
+
+    if (showAddMember) {
+        BuzzAddPeopleDialog(
+            title = stringRes(R.string.relay_group_add_member),
+            accountViewModel = accountViewModel,
+            nav = nav,
+            isAlreadyIn = { channel.membershipOf(it) != RelayGroupMembership.NONE },
+            onAdd = { accountViewModel.putRelayGroupUser(channel, it, emptyList()) },
+            onDismiss = { showAddMember = false },
+        )
     }
 }
 

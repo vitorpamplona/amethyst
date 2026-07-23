@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -82,8 +84,10 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzInviteMintButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
@@ -233,6 +237,11 @@ fun RelayGroupChannelListScreen(
         collapsedSections = if (key in collapsedSections) collapsedSections - key else collapsedSections + key
     }
 
+    // Community add-member (kind-9030). Offered to members of a Buzz workspace; the relay enforces
+    // the owner/admin requirement (a non-admin's command is simply rejected), since our NIP-43
+    // roster read drops roles and can't gate precisely.
+    var showAddPeople by remember { mutableStateOf(false) }
+
     // Tor-failure escape hatch: a Cloudflare-fronted (or otherwise Tor-hostile) relay times out over
     // Tor. When Tor is on, the relay isn't an onion, it isn't already trusted, and nothing has loaded
     // after a grace period, offer to reach it over clearnet — which adds it to the kind-10089 Trusted
@@ -311,6 +320,17 @@ fun RelayGroupChannelListScreen(
                 }
 
                 if (isBuzz) {
+                    item(key = "add-people") {
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = { showAddPeople = true }) {
+                                Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.size(8.dp))
+                                Text(stringRes(R.string.buzz_community_add_people))
+                            }
+                            BuzzInviteMintButton(relay = relay, accountViewModel = accountViewModel)
+                        }
+                    }
+
                     val noChannelsYet = buzzChatChannels.isEmpty() && buzzForumChannels.isEmpty()
                     if (noChannelsYet) {
                         item(key = "buzz-no-channels") {
@@ -440,6 +460,17 @@ fun RelayGroupChannelListScreen(
                 }
             }
         }
+    }
+
+    if (showAddPeople) {
+        BuzzAddPeopleDialog(
+            title = stringRes(R.string.buzz_community_add_people),
+            accountViewModel = accountViewModel,
+            nav = nav,
+            isAlreadyIn = { BuzzCommunityMembership.isMember(relay, it) },
+            onAdd = { accountViewModel.addCommunityMember(relay, it) },
+            onDismiss = { showAddPeople = false },
+        )
     }
 }
 

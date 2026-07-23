@@ -3367,6 +3367,14 @@
     <string name="relay_group_section_channels">Channels</string>
     <string name="relay_group_section_forums">Forums</string>
     <string name="buzz_agent_working">Working…</string>
+    <string name="relay_group_add_member">Add member</string>
+    <string name="buzz_community_add_people">Add people to this workspace</string>
+    <string name="buzz_invite_create">Create invite link</string>
+    <string name="buzz_invite_link_title">Invite link</string>
+    <string name="buzz_invite_share">Share</string>
+    <string name="buzz_invite_copy">Copy</string>
+    <string name="buzz_invite_error_title">Couldn\'t create invite</string>
+    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_star">Star channel</string>
     <string name="buzz_unstar">Unstar channel</string>
     <string name="buzz_dm_section_empty">No conversations yet</string>
