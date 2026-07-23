@@ -169,6 +169,7 @@ open class Note(
         removeLabel(note)
         removeNutzap(note)
         removeOnchainZapBySource(note)
+        removeBolt12ZapBySource(note)
     }
 
     var poll: PollResponsesCache? = null
@@ -247,6 +248,22 @@ open class Note(
      */
     @Volatile
     var nutzaps = mapOf<HexKey, NutzapEntry>()
+        private set
+
+    /**
+     * NIP-XX BOLT12 zaps (kind 9736) targeting this note.
+     * Key: the payer proof's `invoice_payment_hash` (hex) — the spec's dedup key,
+     * so two zap events proving the same settled payment collapse to one entry.
+     * Value: entry with the source Bolt12ZapEvent note (so `source.author` is the
+     * payer), the validated amount in millisats, and whether the proof's crypto
+     * was fully verified. Every entry here has already passed the synchronous
+     * `Bolt12ZapValidator`, so all are counted by `updateZapTotal` (there is no
+     * async pending state like onchain zaps have).
+     *
+     * `@Volatile` for the same cross-thread visibility reason as [onchainZaps].
+     */
+    @Volatile
+    var bolt12Zaps = mapOf<String, Bolt12ZapEntry>()
         private set
 
     var zapPayments = mapOf<Note, Note?>()
@@ -376,7 +393,8 @@ open class Note(
             zaps.isNotEmpty() ||
             boosts.isNotEmpty() ||
             onchainZaps.isNotEmpty() ||
-            nutzaps.isNotEmpty()
+            nutzaps.isNotEmpty() ||
+            bolt12Zaps.isNotEmpty()
 
     fun countReactions(): Int {
         var total = 0
@@ -408,7 +426,7 @@ open class Note(
     fun clearChildLinks(): List<Note> {
         val repliesChanged = replies.isNotEmpty()
         val reactionsChanged = reactions.isNotEmpty()
-        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty()
+        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty() || bolt12Zaps.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
         val reportsChanged = reports.isNotEmpty()
         val labelsChanged = labels.isNotEmpty()
@@ -424,7 +442,8 @@ open class Note(
                 zapPayments.keys +
                 zapPayments.values.filterNotNull() +
                 nutzaps.values.map { it.source } +
-                onchainZaps.values.map { it.source }
+                onchainZaps.values.map { it.source } +
+                bolt12Zaps.values.map { it.source }
 
         replies = listOf()
         reactions = mapOf()
@@ -435,6 +454,7 @@ open class Note(
         onchainZaps = mapOf()
         onchainZapResolved = false
         nutzaps = mapOf()
+        bolt12Zaps = mapOf()
         zapPayments = mapOf()
         zapsAmount = BigDecimal(0)
         relays = listOf()
@@ -713,6 +733,65 @@ open class Note(
         }
     }
 
+    private fun innerAddBolt12Zap(
+        paymentHashHex: String,
+        entry: Bolt12ZapEntry,
+    ): Boolean =
+        syncLock.withLock {
+            val existing = bolt12Zaps[paymentHashHex]
+            val merged =
+                if (existing == null) {
+                    entry
+                } else {
+                    // Same settled payment (dedup by invoice_payment_hash). NIP-XX: count
+                    // only one, and if amounts differ, keep the LOWER — so a re-publish
+                    // with a bigger amount tag can't inflate the total. Keep the stronger
+                    // verification flag, and the source of whichever entry we keep the
+                    // amount from.
+                    val keepEntry = if (entry.amountMillisats < existing.amountMillisats) entry else existing
+                    keepEntry.copy(cryptoVerified = entry.cryptoVerified || existing.cryptoVerified)
+                }
+            if (merged == existing) return@withLock false
+            bolt12Zaps = bolt12Zaps + Pair(paymentHashHex, merged)
+            return@withLock true
+        }
+
+    private fun innerRemoveBolt12ZapBySource(source: Note): Boolean =
+        syncLock.withLock {
+            val newMap = bolt12Zaps.filterValues { it.source != source }
+            if (newMap.size == bolt12Zaps.size) return@withLock false
+            bolt12Zaps = newMap
+            return@withLock true
+        }
+
+    /**
+     * Register a NIP-XX BOLT12 zap targeting this note. [source] is the kind:9736
+     * event's own note — `source.author` is the payer shown in the reactions
+     * gallery and notifications. [amountMillisats] and [cryptoVerified] come from
+     * the synchronous [com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidator]
+     * verdict; the caller MUST only call this for a `Valid` result. Deduplicated by
+     * [paymentHashHex] (the proof's `invoice_payment_hash`).
+     */
+    fun addBolt12Zap(
+        source: Note,
+        paymentHashHex: String,
+        amountMillisats: Long,
+        cryptoVerified: Boolean,
+    ) {
+        if (innerAddBolt12Zap(paymentHashHex, Bolt12ZapEntry(source, amountMillisats, cryptoVerified))) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
+    /** Detach every BOLT12-zap entry contributed by [source] — used when the source note is pruned or deleted. */
+    fun removeBolt12ZapBySource(source: Note) {
+        if (innerRemoveBolt12ZapBySource(source)) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
     private fun innerAddZapPayment(
         zapPaymentRequest: Note,
         zapPayment: Note?,
@@ -906,6 +985,7 @@ open class Note(
         // zap requests).
         if (isNutzappedBy(user, afterTimeInSeconds)) return true
         if (isOnchainZappedBy(user, afterTimeInSeconds)) return true
+        if (isBolt12ZappedBy(user, afterTimeInSeconds)) return true
 
         val first = isZappedByCalculation(null, user, afterTimeInSeconds, account, zaps)
         if (first) return true
@@ -929,6 +1009,15 @@ open class Note(
         afterTimeInSeconds: Long,
     ): Boolean =
         onchainZaps.values.any { entry ->
+            val sourceEvent = entry.source.event ?: return@any false
+            entry.source.author == user && sourceEvent.createdAt > afterTimeInSeconds
+        }
+
+    private fun isBolt12ZappedBy(
+        user: User,
+        afterTimeInSeconds: Long,
+    ): Boolean =
+        bolt12Zaps.values.any { entry ->
             val sourceEvent = entry.source.event ?: return@any false
             entry.source.author == user && sourceEvent.createdAt > afterTimeInSeconds
         }
@@ -1017,6 +1106,18 @@ open class Note(
         // sender intended to send.
         nutzaps.values.forEach { entry ->
             sumOfAmounts += BigDecimal(entry.claimedSats)
+        }
+
+        // NIP-XX BOLT12 zaps — count only the crypto-verified ones. An unverified
+        // (compressed, or offer-unbindable) proof carries a self-chosen preimage,
+        // amount, and payment hash with no settled-payment guarantee, so counting it
+        // would let anyone inflate a note's total for free. Unverified entries stay
+        // stored and shown (dimmed) but never sum. Divide in BigDecimal so fractional
+        // sats survive and match the millisat-native lightning column above.
+        bolt12Zaps.values.forEach { entry ->
+            if (entry.cryptoVerified) {
+                sumOfAmounts += BigDecimal(entry.amountMillisats).divide(BigDecimal(1000))
+            }
         }
 
         zapsAmount = sumOfAmounts
@@ -1186,7 +1287,8 @@ open class Note(
 
     fun hasZapped(loggedIn: User): Boolean =
         zaps.any { it.key.author == loggedIn } ||
-            nutzaps.values.any { it.source.author == loggedIn }
+            nutzaps.values.any { it.source.author == loggedIn } ||
+            bolt12Zaps.values.any { it.source.author == loggedIn }
 
     fun hasReacted(
         loggedIn: User,
@@ -1251,6 +1353,10 @@ open class Note(
             note.addOnchainZap(entry.source, txid, entry.claimedSats, entry.verifiedSats, entry.status)
             entry.source.replyTo = entry.source.replyTo?.replace(this, note)
         }
+        bolt12Zaps.forEach { (paymentHash, entry) ->
+            note.addBolt12Zap(entry.source, paymentHash, entry.amountMillisats, entry.cryptoVerified)
+            entry.source.replyTo = entry.source.replyTo?.replace(this, note)
+        }
         zapPayments.forEach {
             note.addZapPayment(it.key, it.value)
             it.key.replyTo = it.key.replyTo?.replace(this, note)
@@ -1271,6 +1377,7 @@ open class Note(
         zaps = emptyMap()
         nutzaps = emptyMap()
         onchainZaps = emptyMap()
+        bolt12Zaps = emptyMap()
         zapPayments = emptyMap()
         labels = emptyMap()
         zapsAmount = BigDecimal(0)

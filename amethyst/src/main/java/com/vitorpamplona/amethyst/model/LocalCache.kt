@@ -404,6 +404,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidator
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -470,6 +473,13 @@ object LocalCache : ILocalCache, ICacheProvider {
      * directly.
      */
     val onchainZapResolver = OnchainZapResolver(this)
+
+    /**
+     * NIP-XX BOLT12 zap validator. Unlike onchain zaps, BOLT12 proof verification
+     * is synchronous (a self-contained `lnp` payer proof), so `consume(Bolt12ZapEvent)`
+     * validates inline and needs no async resolver.
+     */
+    val bolt12ZapValidator = Bolt12ZapValidator()
 
     /**
      * Resolver for LNURL provider metadata used by [consume]`(LnZapEvent)` to
@@ -1277,6 +1287,17 @@ object LocalCache : ILocalCache, ICacheProvider {
                 // NIP-BC zaps can target an event id (e), an addressable event (a),
                 // or just the recipient profile (p). Profile-only zaps have no
                 // Note target and are surfaced through profile zap queries.
+                buildList {
+                    event.zappedEvent()?.let { checkGetOrCreateNote(it)?.let { add(it) } }
+                    event.zappedAddress()?.let { coord ->
+                        Address.parse(coord)?.let { add(getOrCreateAddressableNote(it)) }
+                    }
+                }
+            }
+
+            is Bolt12ZapEvent -> {
+                // NIP-XX BOLT12 zaps target an event (e), an addressable event (a),
+                // or just the recipient profile (p) — same shape as onchain zaps.
                 buildList {
                     event.zappedEvent()?.let { checkGetOrCreateNote(it)?.let { add(it) } }
                     event.zappedAddress()?.let { coord ->
@@ -2674,6 +2695,43 @@ object LocalCache : ILocalCache, ICacheProvider {
         return !alreadyLoaded
     }
 
+    fun consume(
+        event: Bolt12ZapEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed — still route it into any live-activity channel it references.
+        if (note.event != null) {
+            attachZapToLiveActivityChannel(event, note, relay)
+            return false
+        }
+
+        if (!(wasVerified || justVerify(event))) return false
+
+        // NIP-XX validation is fully synchronous: zap-event structure, the embedded
+        // kind:9737 intent match, and the `lnp` payer-proof binding + crypto. A failed
+        // validation drops the zap entirely — it never contributes to a zap total.
+        // The outer event signature was already verified above (wasVerified/justVerify),
+        // so skip the redundant re-check inside the validator.
+        val validation = bolt12ZapValidator.validate(event, verifyEventSignature = false)
+        if (validation !is Bolt12ZapValidation.Valid) {
+            Log.w("ZP") { "dropping bolt12 zap ${event.id}: ${(validation as Bolt12ZapValidation.Invalid).reason}" }
+            return false
+        }
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = computeReplyTo(event)
+        note.loadEvent(event, author, repliesTo)
+        repliesTo.forEach {
+            it.addBolt12Zap(note, validation.paymentHashHex, validation.amountMillisats, validation.proofCryptoVerified)
+        }
+        attachZapToLiveActivityChannel(event, note, relay)
+        refreshNewNoteObservers(note)
+        return true
+    }
+
     /**
      * Consume a NIP-61 nutzap (kind 9321). Resolves the e-tagged target
      * note(s), parses the proof amounts once, and attaches a `NutzapEntry`
@@ -2723,6 +2781,23 @@ object LocalCache : ILocalCache, ICacheProvider {
             .asSequence()
             .mapNotNull(ATag::parseAddress)
             .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex in hosts }
+            .distinct()
+            .forEach { address ->
+                getOrCreateLiveChannel(address).addNote(note, relay)
+            }
+    }
+
+    private fun attachZapToLiveActivityChannel(
+        event: Bolt12ZapEvent,
+        note: Note,
+        relay: NormalizedRelayUrl?,
+    ) {
+        // Only surface zaps whose recipient is the live activity host.
+        val host = event.recipient() ?: return
+        event.tags
+            .asSequence()
+            .mapNotNull(ATag::parseAddress)
+            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex == host }
             .distinct()
             .forEach { address ->
                 getOrCreateLiveChannel(address).addNote(note, relay)
@@ -4602,6 +4677,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is OnchainZapEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is Bolt12ZapEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

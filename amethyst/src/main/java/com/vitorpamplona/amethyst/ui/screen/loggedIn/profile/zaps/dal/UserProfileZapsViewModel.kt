@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -54,7 +55,7 @@ class UserProfileZapsViewModel(
 ) : ViewModel() {
     val zapsToUser =
         Filter(
-            kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND),
+            kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND),
             tags = mapOf("p" to listOf(user.pubkeyHex)),
         )
 
@@ -105,6 +106,16 @@ class UserProfileZapsViewModel(
         )
     }
 
+    private fun mapBolt12Zap(event: Bolt12ZapEvent): ZapAmount {
+        // The payer is the `P` tag; anonymous zaps fall back to the event pubkey.
+        // amount() is in millisats — divide to sats for the profile total.
+        val amountSats = (event.amount() ?: 0L) / 1000
+        return ZapAmount(
+            LocalCache.getOrCreateUser(event.payer() ?: event.pubKey),
+            BigDecimal(amountSats),
+        )
+    }
+
     suspend fun List<Event>.sumAmountsByUser(): List<ZapAmount> {
         val results = mutableMapOf<User, BigDecimal>()
 
@@ -113,6 +124,7 @@ class UserProfileZapsViewModel(
                 when (zapEvent) {
                     is LnZapEvent -> mapRequest(zapEvent)
                     is OnchainZapEvent -> mapOnchainZap(zapEvent)
+                    is Bolt12ZapEvent -> mapBolt12Zap(zapEvent)
                     else -> null
                 }
             if (zapAmount != null) {

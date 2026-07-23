@@ -169,6 +169,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 /** Returns the `@StringRes` id for the translated kind name, or -1 if unknown. */
 @Suppress("DEPRECATION")
@@ -261,6 +262,7 @@ fun kindDisplayName(kind: Int): Int =
         LiveActivitiesChatMessageEvent.KIND -> R.string.kind_live_chats
         LiveActivitiesEvent.KIND -> R.string.kind_live_streams
         LnZapEvent.KIND -> R.string.kind_zaps
+        Bolt12ZapEvent.KIND -> R.string.kind_zaps
         LnZapPaymentRequestEvent.KIND -> R.string.kind_nwc_request
         LnZapPaymentResponseEvent.KIND -> R.string.kind_nwc_response
         LnZapPrivateEvent.KIND -> R.string.kind_private_zaps

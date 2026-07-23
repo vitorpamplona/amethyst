@@ -45,6 +45,7 @@ import com.vitorpamplona.nestsclient.connectReconnectingNestsSpeaker
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -629,6 +630,16 @@ class NestViewModel(
      */
     fun onZapEvent(
         event: com.vitorpamplona.quartz.nip57Zaps.LnZapEvent,
+        nowSec: Long,
+        windowSec: Long = REACTION_WINDOW_SEC,
+    ) {
+        if (closed) return
+        _recentZaps.value = zapsAgg.apply(event, nowSec, windowSec)
+    }
+
+    /** Apply one kind-9736 BOLT12 zap to the same sliding-window aggregator. */
+    fun onZapEvent(
+        event: Bolt12ZapEvent,
         nowSec: Long,
         windowSec: Long = REACTION_WINDOW_SEC,
     ) {

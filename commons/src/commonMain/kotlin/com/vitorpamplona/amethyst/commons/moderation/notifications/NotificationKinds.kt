@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 /**
  * Nostr event kinds that can generate a notification when they tag the
@@ -70,6 +71,7 @@ object NotificationKinds {
             NutzapEvent.KIND, // 9321 — NIP-61 Cashu nutzap
             LnZapEvent.KIND, // 9735 — NIP-57 zap receipt
             OnchainZapEvent.KIND, // 8333 — onchain zap
+            Bolt12ZapEvent.KIND, // 9736 — NIP-XX BOLT12 zap
             // NIP-17 file-header messages (encrypted file DMs)
             ChatMessageEncryptedFileHeaderEvent.KIND,
         )
@@ -114,7 +116,8 @@ object NotificationKinds {
         if (event.pubKey == myPubKeyHex &&
             event !is LnZapEvent &&
             event !is NutzapEvent &&
-            event !is OnchainZapEvent
+            event !is OnchainZapEvent &&
+            event !is Bolt12ZapEvent
         ) {
             return false
         }

@@ -58,6 +58,7 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 /**
  * Kinds that notify me about activity on MY messages inside a NIP-29 group — reactions, replies
@@ -74,6 +75,7 @@ val GroupNotificationKinds =
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
         LnZapEvent.KIND,
+        Bolt12ZapEvent.KIND,
         ReportEvent.KIND,
     )
 
@@ -85,6 +87,7 @@ val SummaryKinds =
         GenericRepostEvent.KIND,
         LnZapEvent.KIND,
         OnchainZapEvent.KIND,
+        Bolt12ZapEvent.KIND,
     )
 
 val NotificationsPerKeyKinds =

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 /**
  * One in-flight kind-9735 zap to render as a floating overlay on the
@@ -61,6 +62,20 @@ data class RoomZap(
                 amountSats = event.amount?.toLong(),
                 createdAtSec = event.createdAt,
             )
+
+        /**
+         * Project a kind-9736 [Bolt12ZapEvent] into a [RoomZap]. The zapper is
+         * the `P` payer tag (or the event pubkey for an anonymous zap); the amount
+         * is the `amount` tag in millisats converted to sats.
+         */
+        fun from(event: Bolt12ZapEvent): RoomZap =
+            RoomZap(
+                eventId = event.id,
+                sourcePubkey = event.payer() ?: event.pubKey,
+                targetPubkey = event.recipient(),
+                amountSats = event.amount()?.div(1000),
+                createdAtSec = event.createdAt,
+            )
     }
 }
 
@@ -82,8 +97,19 @@ class RoomZapsAggregator {
         event: LnZapEvent,
         nowSec: Long,
         windowSec: Long,
+    ): Map<String, List<RoomZap>> = apply(RoomZap.from(event), nowSec, windowSec)
+
+    fun apply(
+        event: Bolt12ZapEvent,
+        nowSec: Long,
+        windowSec: Long,
+    ): Map<String, List<RoomZap>> = apply(RoomZap.from(event), nowSec, windowSec)
+
+    private fun apply(
+        incoming: RoomZap,
+        nowSec: Long,
+        windowSec: Long,
     ): Map<String, List<RoomZap>> {
-        val incoming = RoomZap.from(event)
         // Dedup: a relay re-delivery (or LocalCache.observeNotes's
         // full-list re-emit) of the same receipt must not stack.
         byEventId[incoming.eventId] = incoming

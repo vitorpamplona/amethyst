@@ -88,6 +88,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -166,6 +167,7 @@ class NotificationFeedFilter(
                 LnZapEvent.KIND,
                 NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
+                Bolt12ZapEvent.KIND,
                 LiveActivitiesChatMessageEvent.KIND,
                 PictureEvent.KIND,
                 PollEvent.KIND,
@@ -267,7 +269,8 @@ class NotificationFeedFilter(
                     // on the user marks it as theirs.
                     val targetsZapReceipt =
                         event.hasScopeKind(LnZapEvent.KIND.toString()) ||
-                            note.replyTo?.any { it.event is LnZapEvent } == true
+                            event.hasScopeKind(Bolt12ZapEvent.KIND.toString()) ||
+                            note.replyTo?.any { it.event is LnZapEvent || it.event is Bolt12ZapEvent } == true
 
                     if (targetsZapReceipt && event.isTaggedUser(authorHex)) {
                         return true
@@ -472,6 +475,9 @@ class NotificationFeedFilter(
                 } else {
                     noteEvent.pubKey
                 }
+            } else if (noteEvent is Bolt12ZapEvent) {
+                // The sender is the `P` payer tag; anonymous zaps sign with an ephemeral key.
+                noteEvent.payer() ?: noteEvent.pubKey
             } else {
                 if (it is AddressableNote) {
                     it.address.pubKeyHex
@@ -482,7 +488,7 @@ class NotificationFeedFilter(
 
         // Reactions/zaps/reposts target a note via `replyTo`, not via thread-root tags,
         // so isNotInMutedThread on the wrapper event misses them.
-        if (noteEvent is ReactionEvent || noteEvent is LnZapEvent ||
+        if (noteEvent is ReactionEvent || noteEvent is LnZapEvent || noteEvent is Bolt12ZapEvent ||
             noteEvent is RepostEvent || noteEvent is GenericRepostEvent
         ) {
             val target = it.replyTo?.lastOrNull()
@@ -545,7 +551,7 @@ class NotificationFeedFilter(
         // relevance check (tagsAnEventByUser is skipped below); it still scopes
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
-            (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
+            (noteEvent is LnZapEvent || noteEvent is Bolt12ZapEvent || notifAuthor != loggedInUserHex) &&
             (isChessEvent || isConcord || isReactionToMe || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex) || isReactionToMe) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
