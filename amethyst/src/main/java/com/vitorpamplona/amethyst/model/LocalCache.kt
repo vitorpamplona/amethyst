@@ -1742,10 +1742,26 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
                     event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
 
+            // Every report that names an author also lands in the naming index, including those
+            // filed against a note rather than a profile. Read only by the DM sender warning — the
+            // hide threshold keeps counting `receivedReportsByAuthor` alone.
             if (eventsReported.isEmpty()) {
-                authorsReported.forEach { author -> author.reports().addReport(note) }
+                authorsReported.forEach { author ->
+                    val reports = author.reports()
+                    reports.addReport(note)
+                    reports.addReportNamingUser(note)
+                }
             } else {
                 eventsReported.forEach { it.addReport(note) }
+
+                // Index only the authors whose own `p` tag carries a report type: an event-scoped
+                // report can `p`-tag an incidentally-mentioned third party with no type of its own,
+                // and there is no threshold here to absorb that noise the way
+                // `receivedReportsByAuthor`'s hide path does.
+                val explicitlyTyped = event.reportedAuthorsWithOwnType().mapTo(mutableSetOf()) { it.pubkey }
+                authorsReported.forEach { author ->
+                    if (author.pubkeyHex in explicitlyTyped) author.reports().addReportNamingUser(note)
+                }
             }
         }
 
@@ -3268,7 +3284,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
-                getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(note)
+                getUserIfExists(it.pubkey)?.reportsOrNull()?.let { reports ->
+                    reports.removeReport(note)
+                    reports.removeReportNamingUser(note)
+                }
             }
 
             noteEvent.reportedPost().forEach {

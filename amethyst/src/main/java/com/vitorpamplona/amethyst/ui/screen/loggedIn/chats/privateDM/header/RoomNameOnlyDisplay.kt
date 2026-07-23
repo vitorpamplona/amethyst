@@ -109,6 +109,11 @@ fun RoomNameDisplay(
     room: ChatroomKey,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
+    // The 1:1 counterpart, resolved once per row by the caller. Null for group rooms, which
+    // resolve every member on their own via DisplayUserSetAsSubject. Deliberately has no default:
+    // this function no longer self-resolves, so a caller must decide explicitly rather than
+    // silently rendering a blank 1:1 name.
+    preloadedUser: User?,
 ) {
     val roomSubject by accountViewModel.account.chatroomList
         .getOrCreatePrivateChatroom(room)
@@ -120,7 +125,11 @@ fun RoomNameDisplay(
             if (room.users.size > 1) {
                 DisplayRoomSubject(it)
             } else {
-                DisplayUserAndSubject(room.users.first(), it, accountViewModel)
+                DisplayUserAndSubject(it, accountViewModel, preloadedUser)
+            }
+        } else if (room.users.size == 1) {
+            Row {
+                preloadedUser?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
             }
         } else {
             DisplayUserSetAsSubject(room, accountViewModel)
@@ -144,9 +153,9 @@ fun DisplayRoomSubject(
 
 @Composable
 private fun DisplayUserAndSubject(
-    user: HexKey,
     subject: String,
     accountViewModel: AccountViewModel,
+    preloadedUser: User?,
 ) {
     Row {
         Text(
@@ -160,9 +169,7 @@ private fun DisplayUserAndSubject(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
         )
-        LoadUser(baseUserHex = user, accountViewModel = accountViewModel) {
-            it?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
-        }
+        preloadedUser?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
     }
 }
 
