@@ -216,6 +216,13 @@ class NotificationDispatcher(
                             // tagsAnEventByUser's replyTo check would otherwise
                             // always miss for replies into addressable posts.
                             val note = LocalCache.getNoteIfExists(event) ?: return@predicate false
+                            // Reactions/reposts are routed by tagsAnEventByUser
+                            // (the reacted note's author == me), not by a `p`
+                            // tag — so a Buzz-style bare `["e", id]` like, which
+                            // carries no `p` tag, still notifies. tagsAnEventByUser
+                            // below keeps it scoped to reactions on MY note.
+                            val isReactionOrRepost =
+                                event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent
                             pubkeys.any { pubkey ->
                                 // Public chat replies into my own messages often
                                 // omit the `p` tag; relax the gate for them (the
@@ -223,6 +230,7 @@ class NotificationDispatcher(
                                 // messages actually replying to me).
                                 (
                                     event.isTaggedUser(pubkey) ||
+                                        isReactionOrRepost ||
                                         NotificationFeedFilter.isNotifiablePublicChatReply(note, pubkey)
                                 ) &&
                                     NotificationFeedFilter.tagsAnEventByUser(note, pubkey)
