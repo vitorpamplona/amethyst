@@ -2184,6 +2184,22 @@ object LocalCache : ILocalCache, ICacheProvider {
             markBuzzIfVerified(event, relay)
         }
 
+    /**
+     * A Buzz forum ROOT post (kind 45001): a thread, not a chat message. Route it to the group's
+     * Threads collection ([RelayGroupChannel.addThread]) — the same place kind-11 threads go — so it
+     * surfaces in the forum/Threads view instead of leaking into the kind-9 chat feed as a bubble.
+     * Its kind-45003 comments are stored (store-only) and loaded on demand by the thread detail.
+     */
+    private fun consumeBuzzForumPost(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        consumeRegularEvent(event, relay, wasVerified).also {
+            markBuzzIfVerified(event, relay)
+            attachThreadToRelayGroupIfScoped(event, relay)
+        }
+
     private fun consume(
         event: StreamMessageEditEvent,
         relay: NormalizedRelayUrl?,
@@ -4673,9 +4689,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is StreamMessageDiffEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
                 is SystemMessageEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
                 is CanvasEvent -> consume(event, relay, wasVerified)
-                is ForumPostEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is ForumCommentEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is ForumVoteEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                // Forum root (45001) is a thread, not a chat row → Threads collection. Comments (45003)
+                // and votes (45002) are store-only: the forum-thread detail loads them on demand by root.
+                is ForumPostEvent -> consumeBuzzForumPost(event, relay, wasVerified)
+                is ForumCommentEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is ForumVoteEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is JobRequestEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
                 is JobAcceptedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
                 is JobProgressEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)

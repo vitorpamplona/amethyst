@@ -344,7 +344,9 @@ fun RelayGroupChannelListScreen(
                                 isAdded = groupId.id in buzzAdded,
                                 onAdd = { buzzVm.add(groupId) },
                                 accountViewModel = accountViewModel,
-                                onOpen = { nav.nav(Route.RelayGroup(groupId.id, relay.url)) },
+                                // A forum channel's primary content is its threads (kind-45001 posts), not a
+                                // kind-9 chat, so open the forum/threads view directly instead of the chat.
+                                onOpen = { nav.nav(Route.RelayGroupThreads(groupId.id, relay.url)) },
                             )
                         }
                     }

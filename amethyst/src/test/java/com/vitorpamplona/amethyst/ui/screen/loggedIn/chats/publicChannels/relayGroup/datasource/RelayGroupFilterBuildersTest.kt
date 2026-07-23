@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.FiltersChanged
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -60,7 +62,10 @@ class RelayGroupFilterBuildersTest {
     private val g1OnA = GroupId("g1", relayA)
 
     private val timelineKinds = listOf(ChatEvent.KIND, PollEvent.KIND)
-    private val threadKinds = listOf(ThreadEvent.KIND, CommentEvent.KIND)
+
+    // NIP-29 kind-11/1111 threads + Buzz forum roots (45001) & comments (45003) — the Threads REQ
+    // fetches both dialects (a vanilla relay matches nothing on the Buzz kinds and vice versa).
+    private val threadKinds = listOf(ThreadEvent.KIND, CommentEvent.KIND, ForumPostEvent.KIND, ForumCommentEvent.KIND)
 
     // --- State (always-on): one #d filter per host relay, batching that relay's group ids ---
 

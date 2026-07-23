@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.AgentPersonaEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzCanvasScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumPostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzNewDmScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
@@ -769,6 +770,7 @@ fun BuildNavigation(
         }
         composableFromEndArgs<Route.BuzzCanvas> { BuzzCanvasScreen(it.channelId, accountViewModel, nav) }
         composableFromBottomArgs<Route.BuzzForumPost> { BuzzForumPostScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzForumThread> { BuzzForumThreadScreen(it.channelId, it.relayUrl, it.rootId, accountViewModel, nav) }
 
         composableFromEndArgs<Route.RelayGroupCreate> {
             RelayGroupCreateScreen(

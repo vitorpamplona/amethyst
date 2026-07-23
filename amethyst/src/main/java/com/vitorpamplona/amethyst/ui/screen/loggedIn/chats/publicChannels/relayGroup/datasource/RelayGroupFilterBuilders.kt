@@ -156,8 +156,12 @@ val RELAY_GROUP_ALL_TIMELINE_KINDS = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GRO
  */
 val RELAY_GROUP_OPEN_TAIL_KINDS = RELAY_GROUP_ALL_TIMELINE_KINDS + TypingIndicatorEvent.KIND
 
-/** Forum-thread kinds shown in a group's Threads tab. */
-val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND)
+/**
+ * Forum-thread kinds shown in a group's Threads tab: NIP-29 kind-11 roots + kind-1111 comments, PLUS
+ * Buzz forum roots (45001) + comments (45003). Requested together (a vanilla relay matches nothing on
+ * the Buzz kinds, a Buzz relay nothing on kind-11), so the same Threads REQ surfaces either dialect.
+ */
+val RELAY_GROUP_THREAD_KINDS = listOf(ThreadEvent.KIND, CommentEvent.KIND, ForumPostEvent.KIND, ForumCommentEvent.KIND)
 
 /** Content kinds a card warms ahead of a tap (chat + polls + threads + comments). */
 val RELAY_GROUP_CARD_WARMUP_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND, ThreadEvent.KIND, CommentEvent.KIND)

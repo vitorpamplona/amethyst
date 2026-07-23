@@ -711,6 +711,12 @@ sealed class Route {
         val relayUrl: String,
     ) : Route()
 
+    @Serializable data class BuzzForumThread(
+        val channelId: String,
+        val relayUrl: String,
+        val rootId: String,
+    ) : Route()
+
     @Serializable data class RelayGroupCreate(
         val relayUrl: String,
     ) : Route()

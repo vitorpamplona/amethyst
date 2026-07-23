@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -189,7 +190,16 @@ private fun RelayGroupThreads(
                     if (index > 0) {
                         HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                    ThreadRow(thread, accountViewModel, nav) { nav.nav(Route.Note(thread.idHex)) }
+                    // A Buzz forum root (45001) opens the forum-thread detail (root + kind-45003 replies);
+                    // a NIP-29 kind-11 thread opens the generic note view with its kind-1111 comment tree.
+                    val open: () -> Unit = {
+                        if (thread.event is ForumPostEvent) {
+                            nav.nav(Route.BuzzForumThread(channel.groupId.id, channel.groupId.relayUrl.url, thread.idHex))
+                        } else {
+                            nav.nav(Route.Note(thread.idHex))
+                        }
+                    }
+                    ThreadRow(thread, accountViewModel, nav, open)
                 }
                 item(key = "threads-history-footer") {
                     RelayGroupThreadsHistoryFooter(loadingOlder, status.exhausted)
@@ -265,17 +275,31 @@ private fun ThreadRow(
     nav: INav,
     onClick: () -> Unit,
 ) {
-    // Observe the reply count so a kind-1111 comment arriving on an already-listed thread
-    // bumps it live (channel.threads only re-emits on add/remove of a thread).
+    // Observe the reply count so a comment arriving on an already-listed thread bumps it live
+    // (channel.threads only re-emits on add/remove of a thread).
     val replyCount by observeNoteReplyCount(thread, accountViewModel)
-    val event = thread.event as? ThreadEvent
-    val title = event?.title()?.takeIf { it.isNotBlank() } ?: stringRes(R.string.relay_group_thread_untitled)
-    val preview =
-        event
-            ?.content
-            ?.replace('\n', ' ')
-            ?.trim()
-            .orEmpty()
+    val untitled = stringRes(R.string.relay_group_thread_untitled)
+    // Two thread shapes share this list: NIP-29 kind-11 threads (title + body) and Buzz forum
+    // roots (kind 45001, body only — no title). For a forum post, surface the first line as the
+    // heading and the rest as the preview so it reads like a titled thread.
+    val title: String
+    val preview: String
+    when (val event = thread.event) {
+        is ThreadEvent -> {
+            title = event.title()?.takeIf { it.isNotBlank() } ?: untitled
+            preview = event.content.replace('\n', ' ').trim()
+        }
+        is ForumPostEvent -> {
+            val body = event.body().trim()
+            val firstLine = body.substringBefore('\n').trim()
+            title = firstLine.ifEmpty { untitled }
+            preview = body.removePrefix(firstLine).replace('\n', ' ').trim()
+        }
+        else -> {
+            title = untitled
+            preview = ""
+        }
+    }
     val author = thread.author
 
     Row(
