@@ -55,6 +55,16 @@ object NotificationRoutes {
         nostrGroupId: String,
         accountNpub: String,
     ): String = "marmot:$nostrGroupId$ACCOUNT$accountNpub"
+
+    /**
+     * Opens a NIP-29 relay-group / Buzz chatroom. [channelNAddr] is the channel's
+     * kind-39000 naddr, which `MainActivity.uriToRoute` already routes to
+     * `Route.RelayGroup` via the standard nostr-entity path.
+     */
+    fun relayGroupUri(
+        channelNAddr: String,
+        accountNpub: String,
+    ): String = "$channelNAddr$ACCOUNT$accountNpub"
 }
 
 internal fun Context.notificationManager(): NotificationManager = ContextCompat.getSystemService(this, NotificationManager::class.java) as NotificationManager

@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.ArticleNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.BadgeNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.ChessNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.CodeNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.DirectMessageNotification
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -216,8 +218,9 @@ class EventNotificationConsumer(
         // Don't push-notify events this account authored.
         if (event.pubKey == account.signer.pubKey) return
 
-        // Drop reactions/zaps whose target note lives on a muted thread.
-        if (event is ReactionEvent || event is LnZapEvent) {
+        // Drop reactions/zaps/reposts whose target note lives on a muted thread
+        // (matches the in-app feed, which mutes all four).
+        if (event is ReactionEvent || event is LnZapEvent || event is RepostEvent || event is GenericRepostEvent) {
             val target = LocalCache.getNoteIfExists(event)?.replyTo?.lastOrNull()
             if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
         }
@@ -226,6 +229,11 @@ class EventNotificationConsumer(
             is PrivateDmEvent -> DirectMessageNotification.notify(applicationContext, account, event)
             is ChatMessageEvent -> DirectMessageNotification.notify(applicationContext, account, event)
             is ChatMessageEncryptedFileHeaderEvent -> DirectMessageNotification.notify(applicationContext, account, event)
+
+            // Buzz DM messages (participant-routed; the predicate already scoped
+            // these kinds to Buzz DMs addressed to me).
+            is StreamMessageV2Event -> BuzzDmNotification.notify(applicationContext, account, event)
+            is ChatEvent -> BuzzDmNotification.notify(applicationContext, account, event)
 
             is LnZapEvent -> ZapNotification.notify(applicationContext, account, event)
             is NutzapEvent -> ZapNotification.notify(applicationContext, account, event)

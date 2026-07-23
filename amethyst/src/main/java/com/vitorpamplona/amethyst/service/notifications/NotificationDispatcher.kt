@@ -24,7 +24,9 @@ import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -133,6 +135,11 @@ class NotificationDispatcher(
                 LiveChessGameAcceptEvent.KIND,
                 LiveChessMoveEvent.KIND,
                 WakeUpEvent.KIND,
+                // Buzz DM messages in a `t=dm` relay-group channel (participant-
+                // routed; gated to Buzz DMs only in the predicate so ordinary
+                // kind-9 chats — Concord/NIP-C7 — don't leak into the tray).
+                StreamMessageV2Event.KIND,
+                ChatEvent.KIND,
                 // Unwrapped from GiftWrap → Seal
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
@@ -216,6 +223,18 @@ class NotificationDispatcher(
                             // tagsAnEventByUser's replyTo check would otherwise
                             // always miss for replies into addressable posts.
                             val note = LocalCache.getNoteIfExists(event) ?: return@predicate false
+
+                            // Buzz DM messages (kind 40002 / kind 9 in a `t=dm`
+                            // relay-group channel) are participant-routed, not
+                            // p-tagged. Gate them EXCLUSIVELY on Buzz-DM
+                            // membership so ordinary kind-9 chats (Concord /
+                            // NIP-C7) don't fall through the generic gate below.
+                            if (event is StreamMessageV2Event || event is ChatEvent) {
+                                return@predicate pubkeys.any { pubkey ->
+                                    BuzzDmNotification.buzzDmChannelForMe(note, pubkey) != null
+                                }
+                            }
+
                             // Reactions/reposts are routed by tagsAnEventByUser
                             // (the reacted note's author == me), not by a `p`
                             // tag — so a Buzz-style bare `["e", id]` like, which
