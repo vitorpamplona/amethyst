@@ -20,37 +20,38 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,44 +64,25 @@ fun CalendarReminderSettingsScreen(nav: INav) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringRes(R.string.calendar_reminder_settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(R.string.back),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                },
-            )
+            TopBarWithBackButton(stringRes(R.string.calendar_reminder_settings_title), nav)
         },
-    ) { pad ->
+    ) { padding ->
         Column(
             modifier =
                 Modifier
-                    .padding(pad)
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringRes(R.string.calendar_reminder_settings_enabled_title),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = stringRes(R.string.calendar_reminder_settings_enabled_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
+            SettingsSection(R.string.settings_section_reminders) {
+                // The switch writes straight to the device-scoped prefs and re-schedules (or
+                // cancels) the WorkManager job on the spot — no Save button, the change is applied
+                // the instant it's toggled.
+                SettingsSwitchTile(
+                    icon = MaterialSymbols.Notifications,
+                    title = R.string.calendar_reminder_settings_enabled_title,
+                    description = R.string.calendar_reminder_settings_enabled_subtitle,
                     checked = enabled,
                     onCheckedChange = {
                         enabled = it
@@ -115,35 +97,29 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                         }
                     },
                 )
-            }
-
-            Text(
-                text = stringRes(R.string.calendar_reminder_settings_lead_title),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-            Text(
-                text = stringRes(R.string.calendar_reminder_settings_lead_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CalendarReminderPrefs.LEAD_TIME_CHOICES.forEach { choice ->
-                    FilterChip(
-                        selected = choice == leadMinutes,
-                        onClick = {
-                            leadMinutes = choice
-                            prefs.setLeadMinutes(choice)
-                        },
-                        enabled = enabled,
-                        label = {
-                            Text(pluralStringResource(R.plurals.calendar_reminder_settings_lead_choice, choice, choice))
-                        },
-                    )
+                SettingsDivider()
+                SettingsBlockTile(
+                    icon = MaterialSymbols.Schedule,
+                    title = stringRes(R.string.calendar_reminder_settings_lead_title),
+                    description = stringRes(R.string.calendar_reminder_settings_lead_subtitle),
+                ) {
+                    val choices = CalendarReminderPrefs.LEAD_TIME_CHOICES
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        choices.forEachIndexed { index, choice ->
+                            SegmentedButton(
+                                selected = choice == leadMinutes,
+                                enabled = enabled,
+                                onClick = {
+                                    leadMinutes = choice
+                                    prefs.setLeadMinutes(choice)
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
+                                icon = {},
+                            ) {
+                                Text(pluralStringResource(R.plurals.calendar_reminder_settings_lead_choice, choice, choice))
+                            }
+                        }
+                    }
                 }
             }
         }

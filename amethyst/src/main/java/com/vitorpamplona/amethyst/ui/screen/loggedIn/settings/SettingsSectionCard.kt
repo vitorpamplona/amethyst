@@ -273,6 +273,50 @@ internal fun SettingsSwitchTile(
 }
 
 /**
+ * Compact switch row: icon + title + trailing [Switch], with no description line — for
+ * self-explanatory single-line toggles (e.g. "Profile Badges", "New Threads"). Tapping
+ * anywhere on the row toggles. When [enabled] is false the row dims and stops responding
+ * (used to lock the last remaining item in a "keep at least one on" group).
+ */
+@Composable
+internal fun SettingsSwitchTile(
+    icon: MaterialSymbol,
+    @StringRes title: Int,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val alpha = if (enabled) 1f else 0.5f
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .let { if (enabled) it.clickable { onCheckedChange(!checked) } else it }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsIconBox(MaterialTheme.colorScheme.primaryContainer) {
+            Icon(
+                symbol = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = alpha),
+            )
+        }
+        Text(
+            text = stringRes(title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(start = 16.dp, end = 12.dp),
+        )
+        Switch(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)
+    }
+}
+
+/**
  * Sub-row variant of [SettingsControlRow]: indented in place of a leading icon,
  * used for controls hierarchically grouped under the row above (e.g. a threshold
  * that only matters when the parent toggle is on). Text dims when [enabled] is false.

@@ -20,23 +20,31 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
@@ -45,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.appendLink
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -56,16 +66,15 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.CloseIcon
+import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -125,88 +134,121 @@ fun ZapTheDevsCard(
     val releaseNoteState by observeNote(baseNote, accountViewModel)
     val releaseNote = releaseNoteState.note
 
+    val heroGradient =
+        remember {
+            Brush.linearGradient(
+                colors = listOf(BitcoinOrange, Color(0xFF9C27B0)),
+            )
+        }
+
     Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
         Card(
-            modifier = MaterialTheme.colorScheme.imageModifier,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-            ) {
-                // Title
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+            Column {
+                // Eye-catching gradient hero header with a glowing bolt badge
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(heroGradient)
+                            .padding(16.dp),
                 ) {
-                    Text(
-                        text = stringRes(id = R.string.zap_the_devs_title),
-                        style =
-                            TextStyle(
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.22f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ZapIcon(
+                                modifier = Modifier.size(30.dp),
+                                tint = Color.White,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Text(
+                            text = stringRes(id = R.string.zap_the_devs_title),
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
 
                     IconButton(
-                        modifier = Size20Modifier,
+                        modifier = Modifier.align(Alignment.TopEnd),
                         onClick = { accountViewModel.markDonatedInThisVersion() },
                     ) {
-                        CloseIcon()
+                        Icon(
+                            symbol = MaterialSymbols.Close,
+                            contentDescription = stringRes(id = R.string.cancel),
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
 
-                Spacer(modifier = StdVertSpacer)
-
-                Text(
-                    buildAnnotatedString {
-                        append(stringRes(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
-                        append(" ")
-                        appendLink("#value4value", MaterialTheme.colorScheme.primary) { nav.nav(Route.Hashtag("value4value")) }
-                    },
-                )
-
-                Spacer(modifier = StdVertSpacer)
-
-                val noteEvent = releaseNote.event
-                if (noteEvent != null) {
-                    val route =
-                        remember(releaseNote) {
-                            routeFor(releaseNote, accountViewModel.account)
-                        }
-
-                    if (route != null) {
-                        Text(
-                            text =
-                                buildAnnotatedString {
-                                    withLink(
-                                        LinkAnnotation.Clickable("clickable") { nav.nav(route) },
-                                    ) {
-                                        append(stringRes(id = R.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
-                                    }
-                                    append(" " + stringRes(id = R.string.brought_to_you_by))
-                                },
-                        )
-                    } else {
-                        Text(stringRes(id = R.string.this_version_brought_to_you_by))
-                    }
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Text(
+                        buildAnnotatedString {
+                            append(stringRes(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
+                            append(" ")
+                            appendLink("#value4value", MaterialTheme.colorScheme.primary) { nav.nav(Route.Hashtag("value4value")) }
+                        },
+                    )
 
                     Spacer(modifier = StdVertSpacer)
 
-                    DisplayZapSplits(
-                        noteEvent = noteEvent,
-                        useAuthorIfEmpty = true,
+                    val noteEvent = releaseNote.event
+                    if (noteEvent != null) {
+                        val route =
+                            remember(releaseNote) {
+                                routeFor(releaseNote, accountViewModel.account)
+                            }
+
+                        if (route != null) {
+                            Text(
+                                text =
+                                    buildAnnotatedString {
+                                        withLink(
+                                            LinkAnnotation.Clickable("clickable") { nav.nav(route) },
+                                        ) {
+                                            append(stringRes(id = R.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
+                                        }
+                                        append(" " + stringRes(id = R.string.brought_to_you_by))
+                                    },
+                            )
+                        } else {
+                            Text(stringRes(id = R.string.this_version_brought_to_you_by))
+                        }
+
+                        Spacer(modifier = StdVertSpacer)
+
+                        DisplayZapSplits(
+                            noteEvent = noteEvent,
+                            useAuthorIfEmpty = true,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+
+                        Spacer(modifier = StdVertSpacer)
+                    }
+
+                    ZapDonationButton(
+                        baseNote = releaseNote,
+                        grayTint = MaterialTheme.colorScheme.onPrimary,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
-
-                    Spacer(modifier = StdVertSpacer)
                 }
-
-                ZapDonationButton(
-                    baseNote = releaseNote,
-                    grayTint = MaterialTheme.colorScheme.onPrimary,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
             }
         }
     }

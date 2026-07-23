@@ -20,42 +20,30 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.model.parseGalleryType
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import kotlinx.collections.immutable.persistentListOf
 
 @Preview
 @Composable
@@ -78,123 +66,77 @@ fun ProfileUiSettingsScreen(
             TopBarWithBackButton(stringRes(id = R.string.profile_ui_settings), nav)
         },
     ) { padding ->
-        Column(Modifier.padding(padding)) {
-            ProfileUiSettingsContent(accountViewModel)
-        }
+        ProfileUiSettingsContent(accountViewModel.settings.uiSettingsFlow, Modifier.padding(padding))
     }
 }
 
 @Composable
-fun ProfileUiSettingsContent(accountViewModel: AccountViewModel) {
-    val ui = accountViewModel.settings.uiSettingsFlow
-
+fun ProfileUiSettingsContent(
+    ui: UiSettingsFlow,
+    modifier: Modifier = Modifier,
+) {
     val showBadges by ui.showProfileBadges.collectAsStateWithLifecycle()
     val showAppRecommendations by ui.showProfileAppRecommendations.collectAsStateWithLifecycle()
     val showZapReceived by ui.showProfileZapReceivedFeed.collectAsStateWithLifecycle()
     val showFollowers by ui.showProfileFollowersFeed.collectAsStateWithLifecycle()
     val showOnchainWallet by ui.showOnchainWallet.collectAsStateWithLifecycle()
+    val gallery by ui.gallerySet.collectAsStateWithLifecycle()
 
     Column(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Spacer(Modifier.height(16.dp))
-
-        Text(
-            text = stringRes(R.string.profile_ui_settings_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 16.dp, start = Size20dp, end = Size20dp),
-        )
-
-        ProfileUiSwitchRow(
-            title = stringRes(R.string.profile_ui_setting_badges),
-            checked = showBadges,
-            onCheckedChange = { ui.showProfileBadges.tryEmit(it) },
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-
-        ProfileUiSwitchRow(
-            title = stringRes(R.string.profile_ui_setting_app_recommendations),
-            checked = showAppRecommendations,
-            onCheckedChange = { ui.showProfileAppRecommendations.tryEmit(it) },
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-
-        ProfileUiSwitchRow(
-            title = stringRes(R.string.profile_ui_setting_zap_received_feed),
-            checked = showZapReceived,
-            onCheckedChange = { ui.showProfileZapReceivedFeed.tryEmit(it) },
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-
-        ProfileUiSwitchRow(
-            title = stringRes(R.string.profile_ui_setting_followers_feed),
-            checked = showFollowers,
-            onCheckedChange = { ui.showProfileFollowersFeed.tryEmit(it) },
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-
-        ProfileUiSwitchRow(
-            title = stringRes(R.string.profile_ui_setting_onchain_wallet),
-            checked = showOnchainWallet,
-            onCheckedChange = { ui.showOnchainWallet.tryEmit(it) },
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-
-        Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = Size20dp)) {
-            GalleryChoice(ui)
+        SettingsSection(R.string.settings_section_profile_sections) {
+            SettingsSwitchTile(
+                icon = MaterialSymbols.MilitaryTech,
+                title = R.string.profile_ui_setting_badges,
+                checked = showBadges,
+                onCheckedChange = { ui.showProfileBadges.tryEmit(it) },
+            )
+            SettingsDivider()
+            SettingsSwitchTile(
+                icon = MaterialSymbols.Recommend,
+                title = R.string.profile_ui_setting_app_recommendations,
+                checked = showAppRecommendations,
+                onCheckedChange = { ui.showProfileAppRecommendations.tryEmit(it) },
+            )
+            SettingsDivider()
+            SettingsSwitchTile(
+                icon = MaterialSymbols.Bolt,
+                title = R.string.profile_ui_setting_zap_received_feed,
+                checked = showZapReceived,
+                onCheckedChange = { ui.showProfileZapReceivedFeed.tryEmit(it) },
+            )
+            SettingsDivider()
+            SettingsSwitchTile(
+                icon = MaterialSymbols.Group,
+                title = R.string.profile_ui_setting_followers_feed,
+                checked = showFollowers,
+                onCheckedChange = { ui.showProfileFollowersFeed.tryEmit(it) },
+            )
+            SettingsDivider()
+            SettingsSwitchTile(
+                icon = MaterialSymbols.AccountBalanceWallet,
+                title = R.string.profile_ui_setting_onchain_wallet,
+                checked = showOnchainWallet,
+                onCheckedChange = { ui.showOnchainWallet.tryEmit(it) },
+            )
         }
 
-        Spacer(Modifier.height(16.dp))
-    }
-}
-
-@Composable
-fun GalleryChoice(sharedPrefs: UiSettingsFlow) {
-    val galleryItems =
-        persistentListOf(
-            TitleExplainer(stringRes(ProfileGalleryType.CLASSIC.resourceId)),
-            TitleExplainer(stringRes(ProfileGalleryType.MODERN.resourceId)),
-        )
-
-    val galleryIndex by sharedPrefs.gallerySet.collectAsStateWithLifecycle()
-
-    SettingsRow(
-        R.string.gallery_style,
-        R.string.gallery_style_description,
-        galleryItems,
-        galleryIndex.screenCode,
-    ) {
-        sharedPrefs.gallerySet.tryEmit(parseGalleryType(it))
-    }
-}
-
-@Composable
-private fun ProfileUiSwitchRow(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = Size20dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-        )
+        SettingsSection(R.string.settings_section_appearance) {
+            SegmentedChoiceTile(
+                icon = MaterialSymbols.Collections,
+                title = R.string.gallery_style,
+                description = R.string.gallery_style_description,
+                options = ProfileGalleryType.entries,
+                labelRes = { it.resourceId },
+                selected = gallery,
+                onSelect = { ui.gallerySet.tryEmit(it) },
+            )
+        }
     }
 }

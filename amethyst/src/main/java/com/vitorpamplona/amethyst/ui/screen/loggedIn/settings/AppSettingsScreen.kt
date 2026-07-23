@@ -189,7 +189,7 @@ fun SettingsScreen(
  * choices instead of only naming them.
  */
 @Composable
-private fun <T> SegmentedChoiceTile(
+internal fun <T> SegmentedChoiceTile(
     icon: MaterialSymbol,
     @StringRes title: Int,
     @StringRes description: Int,

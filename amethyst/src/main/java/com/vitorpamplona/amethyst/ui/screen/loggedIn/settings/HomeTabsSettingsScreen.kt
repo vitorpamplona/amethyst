@@ -20,36 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 @Preview
@@ -73,16 +65,15 @@ fun HomeTabsSettingsScreen(
             TopBarWithBackButton(stringRes(id = R.string.home_tabs_settings), nav)
         },
     ) { padding ->
-        Column(Modifier.padding(padding)) {
-            HomeTabsSettingsContent(accountViewModel)
-        }
+        HomeTabsSettingsContent(accountViewModel.settings.uiSettingsFlow, Modifier.padding(padding))
     }
 }
 
 @Composable
-fun HomeTabsSettingsContent(accountViewModel: AccountViewModel) {
-    val ui = accountViewModel.settings.uiSettingsFlow
-
+fun HomeTabsSettingsContent(
+    ui: UiSettingsFlow,
+    modifier: Modifier = Modifier,
+) {
     val showNewThreads by ui.showHomeNewThreadsTab.collectAsStateWithLifecycle()
     val showConversations by ui.showHomeConversationsTab.collectAsStateWithLifecycle()
     val showEverything by ui.showHomeEverythingTab.collectAsStateWithLifecycle()
@@ -91,78 +82,37 @@ fun HomeTabsSettingsContent(accountViewModel: AccountViewModel) {
 
     Column(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Spacer(Modifier.height(16.dp))
-
-        Text(
-            text = stringRes(R.string.home_tabs_settings_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 16.dp, start = Size20dp, end = Size20dp),
-        )
-
-        HomeTabSwitchRow(
-            title = stringRes(R.string.new_threads),
-            checked = showNewThreads,
-            // Don't allow disabling the last remaining tab.
-            enabled = !(showNewThreads && activeCount == 1),
-            onCheckedChange = {
-                ui.showHomeNewThreadsTab.tryEmit(it)
-            },
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-
-        HomeTabSwitchRow(
-            title = stringRes(R.string.conversations),
-            checked = showConversations,
-            enabled = !(showConversations && activeCount == 1),
-            onCheckedChange = {
-                ui.showHomeConversationsTab.tryEmit(it)
-            },
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = Size20dp))
-
-        HomeTabSwitchRow(
-            title = stringRes(R.string.home_tab_everything),
-            checked = showEverything,
-            enabled = !(showEverything && activeCount == 1),
-            onCheckedChange = {
-                ui.showHomeEverythingTab.tryEmit(it)
-            },
-        )
-
-        Spacer(Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun HomeTabSwitchRow(
-    title: String,
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = Size20dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        Switch(
-            checked = checked,
-            enabled = enabled,
-            onCheckedChange = onCheckedChange,
-        )
+        SettingsSection(R.string.settings_section_home_tabs) {
+            SettingsSwitchTile(
+                icon = MaterialSymbols.Forum,
+                title = R.string.new_threads,
+                checked = showNewThreads,
+                // Don't allow disabling the last remaining tab.
+                enabled = !(showNewThreads && activeCount == 1),
+                onCheckedChange = { ui.showHomeNewThreadsTab.tryEmit(it) },
+            )
+            SettingsDivider()
+            SettingsSwitchTile(
+                icon = MaterialSymbols.Chat,
+                title = R.string.conversations,
+                checked = showConversations,
+                enabled = !(showConversations && activeCount == 1),
+                onCheckedChange = { ui.showHomeConversationsTab.tryEmit(it) },
+            )
+            SettingsDivider()
+            SettingsSwitchTile(
+                icon = MaterialSymbols.Public,
+                title = R.string.home_tab_everything,
+                checked = showEverything,
+                enabled = !(showEverything && activeCount == 1),
+                onCheckedChange = { ui.showHomeEverythingTab.tryEmit(it) },
+            )
+        }
     }
 }
