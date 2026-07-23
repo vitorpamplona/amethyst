@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -194,6 +195,7 @@ fun ConcordChannelScreen(
                     routeForLastRead = concordChannelLastReadRoute(communityId, channelId),
                     onWantsToReply = { newMessageModel.reply(it) },
                     onWantsToEditDraft = {},
+                    onWantsToEditChatMessage = { newMessageModel.editConcordMessage(it) },
                     // A status card at the oldest end: shows what it's reaching for while it pages and
                     // crossfades to "All caught up" when every relay runs dry.
                     olderBoundary = {
@@ -409,6 +411,35 @@ private fun ConcordMessageComposer(
             mode = newMessageModel.replyMode.value,
             onToggle = { newMessageModel.toggleReplyMode() },
         )
+    }
+
+    // Edit mode: a banner reminding the user the next send replaces this message (a kind-1010
+    // edit on the channel plane), with an X to abandon the edit and clear the field.
+    newMessageModel.editingMessage.value?.let {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SymbolIcon(
+                symbol = MaterialSymbols.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringRes(com.vitorpamplona.amethyst.R.string.concord_editing_banner),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f).padding(start = 8.dp),
+            )
+            IconButton(onClick = { newMessageModel.cancelEdit() }) {
+                SymbolIcon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.cancel),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 
     Column(modifier = EditFieldModifier) {

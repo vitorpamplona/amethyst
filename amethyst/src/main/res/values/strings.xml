@@ -3326,6 +3326,9 @@
     <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
     <string name="buzz_edit_message">Edit</string>
     <string name="buzz_editing_banner">Editing message</string>
+    <string name="edit_message">Edit</string>
+    <string name="message_edited">(edited)</string>
+    <string name="concord_editing_banner">Editing message</string>
     <string name="buzz_typing_one">%1$s is typing…</string>
     <string name="buzz_typing_two">%1$s and %2$s are typing…</string>
     <string name="buzz_typing_many">Several people are typing…</string>

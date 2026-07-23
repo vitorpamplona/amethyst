@@ -101,6 +101,31 @@ class ChannelChatEndToEndTest {
     }
 
     @Test
+    fun editIsAChannelBoundKind1010ThatPointsAtTheTargetAndRoundTrips() =
+        runTest {
+            val alice = NostrSignerInternal(KeyPair())
+            val channel = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+
+            val original = ChannelChat.message(alice.pubKey, channelIdHex, rootEpoch, "helo", createdAt = 1L)
+            val edit = ChannelChat.edit(alice.pubKey, channelIdHex, rootEpoch, original.id, "hello", createdAt = 2L)
+
+            // A native kind-1010 edit, e-tagging the original, still bound to the channel/epoch.
+            assertEquals(1010, edit.kind)
+            assertEquals(original.id, edit.tags.first { it[0] == "e" }[1])
+            assertEquals("hello", edit.content)
+            assertTrue(ChannelChat.isBoundTo(edit, channelIdHex, rootEpoch))
+            assertFalse(ChannelChat.isBoundTo(edit, channelIdHex, 1L)) // wrong epoch can't be replayed
+
+            // Wraps + opens on the shared plane like any other Chat Plane rumor.
+            val wrap = ConcordStreamEnvelope.wrap(edit, channel, alice, encrypted = true)
+            val opened = ConcordStreamEnvelope.open(wrap, channel)
+            assertEquals(1010, opened.rumor.kind)
+            assertEquals("hello", opened.rumor.content)
+            assertEquals(alice.pubKey, opened.author)
+            assertEquals(original.id, opened.rumor.tags.first { it[0] == "e" }[1])
+        }
+
+    @Test
     fun typingHeartbeatIsAnEphemeralWrapReadableByAnotherMember() =
         runTest {
             val alice = NostrSignerInternal(KeyPair())

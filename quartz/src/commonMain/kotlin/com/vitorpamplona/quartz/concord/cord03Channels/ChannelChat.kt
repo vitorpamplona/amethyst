@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.concord.cord03Channels
 
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
+import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -100,6 +101,42 @@ object ChannelChat {
             text = text,
             createdAt = createdAt,
             extraTags = arrayOf(arrayOf("q", parentId), arrayOf("p", parentAuthor)) + extraTags,
+        )
+
+    /**
+     * Builds an unsigned kind-1010 [TextNoteModificationEvent] rumor that edits an
+     * existing channel message [targetId] with [newText], bound to [channelId]/[epoch].
+     *
+     * This reuses Amethyst's native feed-post edit event (kind 1010): the edit is a
+     * separate rumor pointing at the target via an `e` tag, wrapped and published on
+     * the same channel plane as any other Chat Plane rumor. On the receiving side it
+     * decrypts to a normal kind-1010 that the shared edit machinery
+     * (`LocalCache.findLatestModificationForNote`) overlays onto the target — last
+     * edit wins, and only edits authored by the *original* message's author are
+     * applied (enforced there), so a member can't rewrite someone else's message. A
+     * client that doesn't understand kind-1010 simply keeps showing the original
+     * text, so the edit degrades gracefully.
+     */
+    fun edit(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        targetId: HexKey,
+        newText: String,
+        createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
+    ): Event =
+        RumorAssembler.assembleRumor<TextNoteModificationEvent>(
+            pubKey = authorPubKey,
+            createdAt = createdAt,
+            kind = TextNoteModificationEvent.KIND,
+            tags =
+                arrayOf(
+                    ChannelTag.assemble(channelId),
+                    EpochTag.assemble(epoch),
+                    arrayOf("e", targetId),
+                ) + extraTags,
+            content = newText,
         )
 
     /**

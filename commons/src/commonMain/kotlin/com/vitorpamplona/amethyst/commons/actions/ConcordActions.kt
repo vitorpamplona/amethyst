@@ -255,6 +255,25 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
+    /**
+     * Builds an encrypted-seal **edit** wrap (kind-1010 modification of [target]) on the [channel]
+     * plane. [newText] replaces [target]'s content on receivers that apply the native edit overlay;
+     * only the original author's edits take effect, so restrict callers to their own messages.
+     */
+    suspend fun buildChannelEdit(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        target: Event,
+        newText: String,
+        createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
+    ): Event {
+        val rumor = ChannelChat.edit(authorSigner.pubKey, channelId, epoch, target.id, newText, createdAt, extraTags)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+    }
+
     /** Builds an encrypted-seal reaction wrap (kind 7 against [target]) on the [channel] plane. */
     suspend fun buildChannelReaction(
         authorSigner: NostrSigner,

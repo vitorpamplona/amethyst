@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -94,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
@@ -120,7 +122,7 @@ fun ChatMessageActionSheet(
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     var showShareSheet by remember { mutableStateOf(false) }
     var wantsToEditPost by remember { mutableStateOf(false) }
@@ -267,18 +269,25 @@ fun ChatMessageActionSheet(
             // Stage one: the primary chat action (reply / edit draft) is always shown.
             ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
 
-            // Buzz: edit my own kind-40002 stream message (publishes a kind-40003 edit).
-            // A 40002 event is inherently a Buzz message, so the type alone is the gate;
-            // authorship restricts it to my own messages.
-            val canEditBuzz =
-                onWantsToEditBuzz != null &&
-                    note.event is StreamMessageV2Event &&
-                    note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
-            if (canEditBuzz) {
+            // Editing my own chat message. Two surfaces publish an edit today, gated by type:
+            //  - Buzz: kind-40002 stream message → a kind-40003 edit.
+            //  - Concord: kind-9 channel message (carries a ConcordChannel gatherer) → a
+            //    kind-1010 edit wrapped on the channel plane.
+            // Both restrict to my own messages; a note is only ever one of the two, so at
+            // most one tile shows and both route through the same edit callback.
+            val isMine = note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
+            val canEditBuzz = onWantsToEditChatMessage != null && note.event is StreamMessageV2Event && isMine
+            val canEditConcord =
+                onWantsToEditChatMessage != null &&
+                    note.event is ChatEvent &&
+                    isMine &&
+                    note.inGatherers?.any { it is ConcordChannel } == true
+            if (canEditBuzz || canEditConcord) {
                 SectionDivider()
                 TileRow {
-                    ActionTile(MaterialSymbols.Edit, stringRes(R.string.buzz_edit_message)) {
-                        onWantsToEditBuzz!!(note)
+                    val label = if (canEditBuzz) R.string.buzz_edit_message else R.string.edit_message
+                    ActionTile(MaterialSymbols.Edit, stringRes(label)) {
+                        onWantsToEditChatMessage!!(note)
                         onDismiss()
                     }
                 }

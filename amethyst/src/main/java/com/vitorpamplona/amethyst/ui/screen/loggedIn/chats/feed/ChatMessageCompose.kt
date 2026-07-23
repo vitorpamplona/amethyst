@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChan
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderConcordEditedNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeBuzzEdit
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeConcordEdit
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
@@ -114,9 +116,10 @@ fun ChatroomMessageCompose(
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
     onBlank: (@Composable () -> Unit)? = null,
-    // Buzz-only: edit my own kind-40002 stream message (publishes a 40003 edit). Null for
-    // every non-Buzz chat surface, which hides the action.
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    // Edit my own chat message on surfaces that support it (Buzz kind-40002 → 40003,
+    // Concord kind-9 → 1010). Null for chat surfaces without message editing, which hides
+    // the action.
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     // Re-skin inline `nostr:...` quotes for everything inside this bubble: a quoted
     // chat message renders with the chat reply design instead of the quoted-note card.
@@ -171,7 +174,7 @@ fun ChatroomMessageCompose(
                     onHighlightFinished,
                     groupPosition,
                     previousNoteId,
-                    onWantsToEditBuzz,
+                    onWantsToEditChatMessage,
                 )
             }
         }
@@ -202,7 +205,7 @@ fun NormalChatNote(
     onHighlightFinished: (() -> Unit)? = null,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     previousNoteId: HexKey? = null,
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     // A geohash chat renders "as" its anonymous per-cell identity (and the account, when posting as
     // self); LocalChatActingIdentities lets the renderer treat those pubkeys as "me" (alignment,
@@ -333,7 +336,7 @@ fun NormalChatNote(
                 onDismiss = onDismiss,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onWantsToEditBuzz = onWantsToEditBuzz,
+                onWantsToEditChatMessage = onWantsToEditChatMessage,
             )
         },
         reactionsRow =
@@ -612,14 +615,15 @@ fun NoteRow(
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
             else -> {
-                // Buzz channels overlay kind-40003 edits on their messages: when one
-                // exists, render the newest edit's content instead of the stale
-                // original. Null for every non-Buzz chat surface.
+                // Concord and Buzz channels overlay edits on their messages (kind-1010 and
+                // kind-40003 respectively): when one exists, render the newest edit's content
+                // instead of the stale original. Both are null for every other chat surface.
+                val concordEdit = observeConcordEdit(note)
                 val buzzEdit = observeBuzzEdit(note)
-                if (buzzEdit != null) {
-                    RenderBuzzEditedNote(note, buzzEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
-                } else {
-                    RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                when {
+                    concordEdit != null -> RenderConcordEditedNote(note, concordEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    buzzEdit != null -> RenderBuzzEditedNote(note, buzzEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
                 }
             }
         }

@@ -361,6 +361,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -2347,6 +2348,37 @@ class Account(
         // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags.
         val emojiTags = emoji.findEmojiTags(reaction).map { it.toTagArray() }.toTypedArray()
         val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now(), emojiTags)
+        publishConcordWrap(entry, wrap)
+        return true
+    }
+
+    /**
+     * Edit my own Concord channel message [note] to [newText]. Mirrors
+     * [reactToConcordMessage]: builds a kind-1010 [ChannelChat.edit] rumor bound to the
+     * message's channel/epoch, wraps it on the plane, and publishes it — so the edit stays
+     * inside the encrypted channel (a public kind-1010 would e-tag the private rumor id onto
+     * public relays). The receiving side overlays the newest edit onto the target message;
+     * only the *original author's* edits are applied, so we gate to my own kind-9 messages.
+     * Returns false if [note] isn't an editable Concord message I authored.
+     */
+    suspend fun editConcordChannelMessage(
+        note: Note,
+        newText: String,
+    ): Boolean {
+        if (!isWriteable()) return false
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        val target = note.event ?: return false
+        // Edits only apply to plain kind-9 messages, and only the author may edit their own.
+        if (target !is ChatEvent || target.pubKey != signer.pubKey) return false
+
+        val communityId = channel.channelId.communityId
+        val channelIdHex = channel.channelId.channelId
+        val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
+
+        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the new text, same as a fresh message.
+        val emojiTags = emoji.findEmojiTags(newText).map { it.toTagArray() }.toTypedArray()
+        val wrap = ConcordActions.buildChannelEdit(signer, channelKey, channelIdHex, entry.rootEpoch, target, newText, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
     }

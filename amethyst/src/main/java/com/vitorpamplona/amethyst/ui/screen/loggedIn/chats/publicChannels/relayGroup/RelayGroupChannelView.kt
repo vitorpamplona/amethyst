@@ -217,7 +217,7 @@ private fun ChannelView(
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
-                onWantsToEditBuzz = newPostModel::editBuzzMessage,
+                onWantsToEditChatMessage = newPostModel::editBuzzMessage,
                 jumpToNoteId = jumpToNoteId,
                 onJumpHandled = { jumpToNoteId.value = null },
                 // A status card at the oldest end: what it's reaching for while paging, "All caught up" when dry.

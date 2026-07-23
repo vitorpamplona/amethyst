@@ -63,6 +63,10 @@ open class ConcordNewMessageViewModel : ViewModel() {
     val message = TextFieldState()
     val replyTo = mutableStateOf<Note?>(null)
 
+    // The message currently being edited (my own kind-9), or null for a fresh post/reply. When set,
+    // [sendPost] publishes a kind-1010 edit on the channel plane instead of a new message.
+    val editingMessage = mutableStateOf<Note?>(null)
+
     // How the pending reply is delivered: INLINE stays in the timeline (kind-9 quote),
     // MINICHAT pulls it into a thread (kind-1111). Only meaningful while replyTo is set.
     val replyMode = mutableStateOf(ReplyMode.INLINE)
@@ -121,12 +125,26 @@ open class ConcordNewMessageViewModel : ViewModel() {
             this.channelId = channelId
             this.message.clearText()
             this.replyTo.value = null
+            this.editingMessage.value = null
         }
     }
 
     fun reply(note: Note) {
         replyTo.value = note
         replyMode.value = ReplyMode.INLINE
+        editingMessage.value = null
+    }
+
+    /** Enter edit mode for my own [note]: prefills the field with its current text; sending publishes a kind-1010 edit. */
+    fun editConcordMessage(note: Note) {
+        replyTo.value = null
+        editingMessage.value = note
+        message.setTextAndPlaceCursorAtEnd(note.event?.content ?: "")
+    }
+
+    fun cancelEdit() {
+        editingMessage.value = null
+        message.clearText()
     }
 
     /** Reply to [note] directly in a minichat thread (used from the minichat screen / long-press). */
@@ -184,8 +202,14 @@ open class ConcordNewMessageViewModel : ViewModel() {
         val text = message.text.toString().trim()
         if (text.isEmpty()) return
 
-        val parent = replyTo.value
-        account.sendConcordChannelMessage(community, channel, text, parent, replyMode.value)
+        val editing = editingMessage.value
+        if (editing != null) {
+            account.editConcordChannelMessage(editing, text)
+            editingMessage.value = null
+        } else {
+            val parent = replyTo.value
+            account.sendConcordChannelMessage(community, channel, text, parent, replyMode.value)
+        }
 
         message.clearText()
         clearReply()
