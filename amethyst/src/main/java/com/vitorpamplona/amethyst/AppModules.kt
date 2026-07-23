@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.BuzzAttestationPreferences
+import com.vitorpamplona.amethyst.model.preferences.BuzzChannelStarPreferences
 import com.vitorpamplona.amethyst.model.preferences.BuzzWorkspacePreferences
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
@@ -280,6 +281,9 @@ class AppModules(
     // the app knows which relays to sync as workspaces on cold start (Buzz membership is
     // server-side; there is no join event to rebuild the set from).
     val buzzWorkspacePrefs = BuzzWorkspacePreferences(appContext, applicationIOScope)
+
+    // Restore + persist the user's starred Buzz workspace channels across restarts (device-global).
+    val buzzChannelStarPrefs = BuzzChannelStarPreferences(appContext, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()

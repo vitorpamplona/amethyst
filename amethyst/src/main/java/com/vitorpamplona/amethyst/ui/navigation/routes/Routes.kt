@@ -704,6 +704,7 @@ sealed class Route {
 
     @Serializable data class BuzzCanvas(
         val channelId: String,
+        val relayUrl: String,
     ) : Route()
 
     @Serializable data class BuzzForumPost(

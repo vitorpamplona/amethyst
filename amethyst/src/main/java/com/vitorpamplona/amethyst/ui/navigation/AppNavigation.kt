@@ -768,7 +768,7 @@ fun BuildNavigation(
                 nav = nav,
             )
         }
-        composableFromEndArgs<Route.BuzzCanvas> { BuzzCanvasScreen(it.channelId, accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzCanvas> { BuzzCanvasScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
         composableFromBottomArgs<Route.BuzzForumPost> { BuzzForumPostScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
         composableFromEndArgs<Route.BuzzForumThread> { BuzzForumThreadScreen(it.channelId, it.relayUrl, it.rootId, accountViewModel, nav) }
 

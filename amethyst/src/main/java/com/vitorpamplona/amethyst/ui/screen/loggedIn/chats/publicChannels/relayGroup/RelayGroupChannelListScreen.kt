@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -83,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -207,14 +210,28 @@ fun RelayGroupChannelListScreen(
         }
 
     fun buzzTypeOf(groupId: GroupId): String? = channelsById[groupId.id]?.event?.buzzChannelType()
+    // Starred channels float to the top of their section (stable sort keeps the alphabetical order
+    // within the starred and unstarred buckets).
+    val starred by BuzzChannelStars.flow.collectAsStateWithLifecycle()
     val buzzChatChannels =
-        remember(buzzGroupIds, channelsById) {
-            buzzGroupIds.filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } }
+        remember(buzzGroupIds, channelsById, starred) {
+            buzzGroupIds
+                .filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } }
+                .sortedByDescending { it.id in starred }
         }
     val buzzForumChannels =
-        remember(buzzGroupIds, channelsById) {
-            buzzGroupIds.filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM }
+        remember(buzzGroupIds, channelsById, starred) {
+            buzzGroupIds
+                .filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM }
+                .sortedByDescending { it.id in starred }
         }
+
+    // Which sections the user has collapsed (session-scoped). Keyed by section id below.
+    var collapsedSections by remember { mutableStateOf(emptySet<String>()) }
+
+    fun toggleSection(key: String) {
+        collapsedSections = if (key in collapsedSections) collapsedSections - key else collapsedSections + key
+    }
 
     // Tor-failure escape hatch: a Cloudflare-fronted (or otherwise Tor-hostile) relay times out over
     // Tor. When Tor is on, the relay isn't an onion, it isn't already trusted, and nothing has loaded
@@ -313,8 +330,13 @@ fun RelayGroupChannelListScreen(
 
                     // -- CHANNELS --
                     if (buzzChatChannels.isNotEmpty()) {
+                        val channelsCollapsed = "channels" in collapsedSections
                         item(key = "sec-channels") {
-                            RelayGroupSectionHeader(title = stringRes(R.string.relay_group_section_channels)) {
+                            RelayGroupSectionHeader(
+                                title = stringRes(R.string.relay_group_section_channels),
+                                collapsed = channelsCollapsed,
+                                onToggle = { toggleSection("channels") },
+                            ) {
                                 if (buzzChatChannels.any { it.id !in buzzAdded }) {
                                     FilledTonalButton(onClick = { buzzVm.addAll() }) {
                                         Text(stringRes(R.string.buzz_import_add_all))
@@ -322,32 +344,45 @@ fun RelayGroupChannelListScreen(
                                 }
                             }
                         }
-                        items(buzzChatChannels, key = { "chat-${it.id}" }) { groupId ->
-                            BuzzImportRow(
-                                groupId = groupId,
-                                isAdded = groupId.id in buzzAdded,
-                                onAdd = { buzzVm.add(groupId) },
-                                accountViewModel = accountViewModel,
-                                onOpen = { nav.nav(Route.RelayGroup(groupId.id, relay.url)) },
-                            )
+                        if (!channelsCollapsed) {
+                            items(buzzChatChannels, key = { "chat-${it.id}" }) { groupId ->
+                                BuzzImportRow(
+                                    groupId = groupId,
+                                    isAdded = groupId.id in buzzAdded,
+                                    onAdd = { buzzVm.add(groupId) },
+                                    accountViewModel = accountViewModel,
+                                    onOpen = { nav.nav(Route.RelayGroup(groupId.id, relay.url)) },
+                                    isStarred = groupId.id in starred,
+                                    onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
+                                )
+                            }
                         }
                     }
 
                     // -- FORUMS --
                     if (buzzForumChannels.isNotEmpty()) {
+                        val forumsCollapsed = "forums" in collapsedSections
                         item(key = "sec-forums") {
-                            RelayGroupSectionHeader(title = stringRes(R.string.relay_group_section_forums))
-                        }
-                        items(buzzForumChannels, key = { "forum-${it.id}" }) { groupId ->
-                            BuzzImportRow(
-                                groupId = groupId,
-                                isAdded = groupId.id in buzzAdded,
-                                onAdd = { buzzVm.add(groupId) },
-                                accountViewModel = accountViewModel,
-                                // A forum channel's primary content is its threads (kind-45001 posts), not a
-                                // kind-9 chat, so open the forum/threads view directly instead of the chat.
-                                onOpen = { nav.nav(Route.RelayGroupThreads(groupId.id, relay.url)) },
+                            RelayGroupSectionHeader(
+                                title = stringRes(R.string.relay_group_section_forums),
+                                collapsed = forumsCollapsed,
+                                onToggle = { toggleSection("forums") },
                             )
+                        }
+                        if (!forumsCollapsed) {
+                            items(buzzForumChannels, key = { "forum-${it.id}" }) { groupId ->
+                                BuzzImportRow(
+                                    groupId = groupId,
+                                    isAdded = groupId.id in buzzAdded,
+                                    onAdd = { buzzVm.add(groupId) },
+                                    accountViewModel = accountViewModel,
+                                    // A forum channel's primary content is its threads (kind-45001 posts), not a
+                                    // kind-9 chat, so open the forum/threads view directly instead of the chat.
+                                    onOpen = { nav.nav(Route.RelayGroupThreads(groupId.id, relay.url)) },
+                                    isStarred = groupId.id in starred,
+                                    onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
+                                )
+                            }
                         }
                     }
 
@@ -452,12 +487,28 @@ private fun TorClearnetBanner(
 @Composable
 private fun RelayGroupSectionHeader(
     title: String,
+    collapsed: Boolean = false,
+    onToggle: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 18.dp, bottom = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(if (onToggle != null) Modifier.clickable(onClick = onToggle) else Modifier)
+                .padding(start = 16.dp, end = 8.dp, top = 18.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        if (onToggle != null) {
+            // A single chevron rotated 90° when expanded, so no extra glyph is needed.
+            Icon(
+                symbol = MaterialSymbols.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp).rotate(if (collapsed) 0f else 90f),
+            )
+        }
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
@@ -497,7 +548,13 @@ private fun BuzzDmInlineRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        UserPicture(leadHex, 40.dp, accountViewModel = accountViewModel, nav = nav)
+        // Only show a presence dot for a 1:1 DM — a cluster avatar can't carry one peer's status.
+        Box {
+            UserPicture(leadHex, 40.dp, accountViewModel = accountViewModel, nav = nav)
+            if (others.size == 1) {
+                PresenceDot(leadHex, Modifier.align(Alignment.BottomEnd), ringColor = MaterialTheme.colorScheme.surface)
+            }
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,

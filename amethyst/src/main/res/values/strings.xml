@@ -3305,6 +3305,9 @@
     <string name="buzz_diff_truncated">(diff truncated)</string>
     <string name="buzz_canvas_title">Canvas</string>
     <string name="buzz_canvas_empty">No canvas has been shared in this workspace yet.</string>
+    <string name="buzz_canvas_edit">Edit canvas</string>
+    <string name="buzz_canvas_save">Save canvas</string>
+    <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
     <string name="buzz_edit_message">Edit</string>
     <string name="buzz_editing_banner">Editing message</string>
     <string name="buzz_typing_one">%1$s is typing…</string>
@@ -3362,6 +3365,9 @@
 
     <string name="relay_group_section_channels">Channels</string>
     <string name="relay_group_section_forums">Forums</string>
+    <string name="buzz_agent_working">Working…</string>
+    <string name="buzz_star">Star channel</string>
+    <string name="buzz_unstar">Unstar channel</string>
     <string name="buzz_dm_section_empty">No conversations yet</string>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">See %1$d more conversation</item>

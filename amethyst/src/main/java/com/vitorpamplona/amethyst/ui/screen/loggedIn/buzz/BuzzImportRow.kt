@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupChannelHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
@@ -67,6 +70,8 @@ fun BuzzImportRow(
     onAdd: () -> Unit,
     accountViewModel: AccountViewModel,
     onOpen: (() -> Unit)? = null,
+    isStarred: Boolean = false,
+    onToggleStar: (() -> Unit)? = null,
 ) {
     val baseChannel = remember(groupId) { LocalCache.getOrCreateRelayGroupChannel(groupId) }
     val channelState by observeChannel(baseChannel, accountViewModel)
@@ -75,14 +80,19 @@ fun BuzzImportRow(
     val name = channel.toBestDisplayName()
     val memberCount = channel.memberCount()
 
+    // An unread dot when this group has chat newer than the last time this account opened it.
+    val hasUnread by remember(groupId) {
+        relayGroupChannelHasUnreadFlow(accountViewModel.account, groupId)
+    }.collectAsStateWithLifecycle(false)
+
+    val content =
+        @Composable {
+            BuzzImportRowContent(name, groupId.id, memberCount, isAdded, hasUnread, isStarred, onToggleStar, onAdd)
+        }
     if (onOpen != null) {
-        Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-            BuzzImportRowContent(name, groupId.id, memberCount, isAdded, onAdd)
-        }
+        Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { content() }
     } else {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            BuzzImportRowContent(name, groupId.id, memberCount, isAdded, onAdd)
-        }
+        Card(modifier = Modifier.fillMaxWidth()) { content() }
     }
 }
 
@@ -92,19 +102,36 @@ private fun BuzzImportRowContent(
     seed: String,
     memberCount: Int,
     isAdded: Boolean,
+    hasUnread: Boolean,
+    isStarred: Boolean,
+    onToggleStar: (() -> Unit)?,
     onAdd: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.padding(12.dp),
+        modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BuzzImportAvatar(name = name, seed = seed)
+        Box {
+            BuzzImportAvatar(name = name, seed = seed)
+            if (hasUnread) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .size(11.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            }
+        }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = name,
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -113,6 +140,16 @@ private fun BuzzImportRowContent(
                     text = "$memberCount",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (onToggleStar != null) {
+            IconButton(onClick = onToggleStar) {
+                Icon(
+                    symbol = if (isStarred) MaterialSymbols.Star else MaterialSymbols.StarBorder,
+                    contentDescription = stringRes(if (isStarred) R.string.buzz_unstar else R.string.buzz_star),
+                    tint = if (isStarred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
