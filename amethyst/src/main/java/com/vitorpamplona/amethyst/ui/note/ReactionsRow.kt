@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
@@ -265,6 +266,10 @@ private fun InnerReactionRow(
             // gift-wraps reactions to empty-sig targets, and zaps are forced to
             // the PRIVATE type with public rails suppressed.
             val isPrivateRumor = baseNote.isPrivateRumor()
+            // A NIP-29/Buzz relay-group message (including a Buzz DM) must not be publicly reposted or
+            // shared: the reference points at a membership-gated group event that non-members can't fetch,
+            // and a DM shouldn't be rebroadcast at all. Reply/like/zap stay (reply routes into the group).
+            val isRelayGroupMessage = baseNote.inGatherers?.any { it is RelayGroupChannel } == true
             when (item.action) {
                 ReactionRowAction.Reply -> {
                     ReplyReactionWithDialog(
@@ -279,7 +284,7 @@ private fun InnerReactionRow(
 
                 ReactionRowAction.Boost -> {
                     val isDM = baseNote.event is ChatroomKeyable
-                    if (!isDM && !isPrivateRumor) {
+                    if (!isDM && !isPrivateRumor && !isRelayGroupMessage) {
                         BoostWithDialog(
                             baseNote,
                             editState,
@@ -315,7 +320,7 @@ private fun InnerReactionRow(
                 }
 
                 ReactionRowAction.Share -> {
-                    if (!isPrivateRumor) {
+                    if (!isPrivateRumor && !isRelayGroupMessage) {
                         ShareReaction(
                             note = baseNote,
                             nav = nav,
