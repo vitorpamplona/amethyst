@@ -108,6 +108,64 @@ class ConcordSubscriptionPlannerTest {
         }
 
     @Test
+    fun channelPreviewFiltersAreOnePerChannelWithLimitOne() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val entry =
+                com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    relays = listOf("wss://r.example"),
+                    name = "Nostrichs",
+                )
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+
+            // Never read (lastRead == 0) ⇒ the newest few wraps (previewLimit), no `since`.
+            val previews = ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { 0L }, previewLimit = 10)
+
+            // One filter per channel (a fresh community has just #general) on the one community relay.
+            assertEquals(1, previews.size)
+            val preview = previews.first()
+            assertEquals(10, preview.filter.limit) // a handful of recent messages, not the whole backlog
+            assertNull(preview.filter.since) // never read ⇒ no catch-up window
+            assertEquals(listOf(1059), preview.filter.kinds) // stored wraps only — not ephemeral 21059 typing
+            val general = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch).publicKeyHex
+            assertTrue(preview.filter.authors?.contains(general) == true, "no limit:1 preview for #general")
+        }
+
+    @Test
+    fun channelPreviewFiltersCatchUpSinceLastReadWhenRead() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val entry =
+                com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    relays = listOf("wss://r.example"),
+                    name = "Nostrichs",
+                )
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+
+            // Read before (lastRead > 0) ⇒ everything since, capped, so the unread badge is accurate.
+            val lastRead = 1_700_000_000L
+            val previews =
+                ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { lastRead }, catchUpLimit = 25)
+
+            assertEquals(1, previews.size)
+            val preview = previews.first()
+            // `since = lastRead - 1` re-includes the last-read message (its created_at == lastRead),
+            // so even a caught-up channel still yields a preview.
+            assertEquals(lastRead - 1, preview.filter.since)
+            assertEquals(25, preview.filter.limit) // bounded by catchUpLimit, not 1
+        }
+
+    @Test
     fun relayBasedFiltersCollapsePerRelayAndApplySince() =
         runTest {
             val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))

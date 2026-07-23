@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -154,6 +155,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
@@ -2923,6 +2925,33 @@ class Account(
                 "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}",
         )
         newest?.let { cache.justConsumeMyOwnEvent(it) }
+    }
+
+    /**
+     * One-shot warm of every channel of [entries] so a community's channel list and the Messages inbox
+     * fill in without the user opening each channel one by one. Per channel, a channel read before is
+     * caught up from its last-read time (accurate unread badge + the missed messages ready when it
+     * opens) while a channel never read pulls only its single newest wrap for a preview — see
+     * [ConcordSubscriptionPlanner.channelPreviewFilters].
+     *
+     * This is deliberately **not** a live subscription: every wrap the drain pulls flows through the
+     * global cache connector (`CacheClientConnector` → `LocalCache.justConsume` → `concordSessions.ingest`),
+     * so it lands in the channel's message store the previews/unread counts read — and the always-on
+     * plane subscription ([RelaySubscriptionsCoordinator.concordChannels]) keeps them fresh afterward.
+     * So this only needs to run when a community's channels first fold (the account preload) or its
+     * screen is opened. One drain per call: all [entries]' per-channel filters are grouped by relay.
+     */
+    suspend fun warmConcordChannelPreviews(entries: List<ConcordCommunityListEntry>) {
+        val filters =
+            entries.flatMap { entry ->
+                val state = concordSessions.sessionFor(entry.id)?.state?.value ?: return@flatMap emptyList()
+                ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { channelIdHex ->
+                    loadLastRead(concordChannelLastReadRoute(entry.id, channelIdHex))
+                })
+            }
+        if (filters.isEmpty()) return
+        val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
+        client.fetchAll(filters = byRelay, timeoutMs = 20_000L)
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
