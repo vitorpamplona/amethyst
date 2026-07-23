@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Backing ViewModel for [BuzzNewDmScreen]. It gathers 1-8 other participants and a Buzz
@@ -196,7 +197,12 @@ class BuzzNewDmViewModel : ViewModel() {
                 val channelId = account.openBuzzDm(relay, others)
                 val groupId = channelId?.let { GroupId(it, relay) }
                 withContext(Dispatchers.Main) { onOpened(groupId) }
-            } catch (e: IllegalArgumentException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // openBuzzDm can throw signer / IO / timeout errors (not just IllegalArgumentException);
+                // catch them all so a failure surfaces as an error instead of crashing and leaving the
+                // Start button stuck disabled on `Sending`.
                 _status.value = Status.Error(e.message ?: "Could not open the DM")
             }
         }

@@ -291,9 +291,10 @@ private fun ThreadRow(
         }
         is ForumPostEvent -> {
             val body = event.body().trim()
-            val firstLine = body.substringBefore('\n').trim()
-            title = firstLine.ifEmpty { untitled }
-            preview = body.removePrefix(firstLine).replace('\n', ' ').trim()
+            title = body.substringBefore('\n').trim().ifEmpty { untitled }
+            // Everything after the first line. Using substringAfter (not removePrefix on the trimmed
+            // first line) avoids duplicating the first line when it had trailing spaces before the \n.
+            preview = body.substringAfter('\n', "").replace('\n', ' ').trim()
         }
         else -> {
             title = untitled

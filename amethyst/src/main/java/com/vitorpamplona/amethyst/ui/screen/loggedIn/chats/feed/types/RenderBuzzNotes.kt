@@ -76,7 +76,9 @@ import com.vitorpamplona.quartz.nip29RelayGroups.groupId
  */
 @Composable
 fun observeBuzzEdit(note: Note): Note? {
-    val channelId = remember(note) { note.event?.groupId() } ?: return null
+    // Key on note.event, not note: LocalCache mutates a Note in place, so keying on the Note instance
+    // would cache a null groupId taken before the event populated and never recompute for that row.
+    val channelId = remember(note.event) { note.event?.groupId() } ?: return null
     val state = remember(channelId) { BuzzWorkspaceStates.getOrCreate(channelId) }
     // Subscribing to the version counter is what re-runs editFor on new arrivals.
     val version by state.editUpdates.collectAsState()

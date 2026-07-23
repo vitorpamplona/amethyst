@@ -194,7 +194,9 @@ fun RelayGroupTopBar(
                 }
             }
 
-            val naddr = if (isDm) null else channel.toNAddr()
+            // remember the bech32 (naddr) encode — this top bar recomposes on every roster/metadata
+            // emission (observeChannel), and the encode is otherwise redone each time.
+            val naddr = remember(channel.groupId, isDm) { if (isDm) null else channel.toNAddr() }
             if (naddr != null) {
                 val context = LocalContext.current
                 IconButton(onClick = { shareRelayGroup(context, naddr) }) {

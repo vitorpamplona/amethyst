@@ -119,14 +119,15 @@ class AgentConsoleViewModel : ViewModel() {
     fun refresh() {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            refreshMutex.withLock {
-                _isLoading.value = true
-                try {
-                    fetchFromRelays(account)
-                    reloadFromCache(account)
-                } finally {
-                    _isLoading.value = false
-                }
+            _isLoading.value = true
+            try {
+                // fetchFromRelays only primes LocalCache (no shared VM state); the serialized
+                // reloadFromCache below takes the mutex itself, so a concurrent watch reload
+                // can't race it on decryptCache / the derived StateFlows.
+                fetchFromRelays(account)
+                reloadFromCache(account)
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -157,46 +158,49 @@ class AgentConsoleViewModel : ViewModel() {
         ) { _, _ -> false }
     }
 
-    private suspend fun reloadFromCache(account: Account) {
-        val myPubkey = account.userProfile().pubkeyHex
-        val signer = account.signer
+    // Serialized: refresh() and every per-relay watch collector funnel through here, so the shared
+    // decryptCache (a plain HashMap) and the derived StateFlows are only ever mutated single-threaded.
+    private suspend fun reloadFromCache(account: Account) =
+        refreshMutex.withLock {
+            val myPubkey = account.userProfile().pubkeyHex
+            val signer = account.signer
 
-        _personas.value =
-            LocalCache.addressables
-                .filter(PersonaEvent.KIND, myPubkey) { _, note -> note.event is PersonaEvent }
-                .mapNotNull { note ->
-                    val event = note.event as? PersonaEvent ?: return@mapNotNull null
-                    val content = event.personaOrNull()
-                    PersonaCard(
-                        slug = event.slug() ?: "",
-                        displayName = content?.displayName ?: event.slug() ?: "",
-                        model = content?.model,
-                        runtime = content?.runtime,
-                        provider = content?.provider,
-                        systemPrompt = content?.systemPrompt,
-                    )
-                }.sortedBy { it.displayName.lowercase() }
+            _personas.value =
+                LocalCache.addressables
+                    .filter(PersonaEvent.KIND, myPubkey) { _, note -> note.event is PersonaEvent }
+                    .mapNotNull { note ->
+                        val event = note.event as? PersonaEvent ?: return@mapNotNull null
+                        val content = event.personaOrNull()
+                        PersonaCard(
+                            slug = event.slug(),
+                            displayName = content?.displayName ?: event.slug(),
+                            model = content?.model,
+                            runtime = content?.runtime,
+                            provider = content?.provider,
+                            systemPrompt = content?.systemPrompt,
+                        )
+                    }.sortedBy { it.displayName.lowercase() }
 
-        val metricNotes =
-            LocalCache.filter(
-                Filter(kinds = listOf(AgentTurnMetricEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
-            )
+            val metricNotes =
+                LocalCache.filter(
+                    Filter(kinds = listOf(AgentTurnMetricEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
+                )
 
-        val decrypted =
-            metricNotes.mapNotNull { note ->
-                val event = note.event as? AgentTurnMetricEvent ?: return@mapNotNull null
-                val payload =
-                    if (decryptCache.containsKey(event.id)) {
-                        decryptCache[event.id]
-                    } else {
-                        event.decryptOrNull(signer).also { decryptCache[event.id] = it }
-                    } ?: return@mapNotNull null
-                val agent = event.agentPubKey() ?: event.pubKey
-                agent to payload
-            }
+            val decrypted =
+                metricNotes.mapNotNull { note ->
+                    val event = note.event as? AgentTurnMetricEvent ?: return@mapNotNull null
+                    val payload =
+                        if (decryptCache.containsKey(event.id)) {
+                            decryptCache[event.id]
+                        } else {
+                            event.decryptOrNull(signer).also { decryptCache[event.id] = it }
+                        } ?: return@mapNotNull null
+                    val agent = event.agentPubKey() ?: event.pubKey
+                    agent to payload
+                }
 
-        _metrics.value = AgentFleetAggregator.aggregate(decrypted)
-    }
+            _metrics.value = AgentFleetAggregator.aggregate(decrypted)
+        }
 
     /**
      * Opens a live subscription to the owner's ephemeral observer telemetry frames
@@ -222,6 +226,10 @@ class AgentConsoleViewModel : ViewModel() {
                 relays.forEach { relay ->
                     launch {
                         account.client.subscribeAsFlow(relay, filter).collect { events ->
+                            // Observer frames are ephemeral and unbounded over a long session; keep the
+                            // dedup set from growing without limit. We only render the newest ~200 rows,
+                            // so dropping the seen-history occasionally risks at most a stale duplicate.
+                            if (observerSeen.size > MAX_OBSERVER_ROWS * 4) observerSeen.clear()
                             val fresh =
                                 events
                                     .filterIsInstance<ObserverFrameEvent>()

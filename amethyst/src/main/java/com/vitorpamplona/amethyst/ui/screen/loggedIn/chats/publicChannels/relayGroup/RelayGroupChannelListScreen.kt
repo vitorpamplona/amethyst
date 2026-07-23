@@ -149,10 +149,10 @@ fun RelayGroupChannelListScreen(
     // the cache — driven by LocalCache.observeEvents rather than a timer, so the list
     // updates as directory events arrive with no polling. The initial value is sorted too
     // so the first frame doesn't reshuffle when the first emission arrives.
-    val allChannels by produceState(
-        initialValue = accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() },
-        relay,
-    ) {
+    // remember the seed so the per-relay cache scan + sort runs once (on first composition / relay
+    // change), not on every recomposition — produceState evaluates its initialValue argument eagerly.
+    val initialChannels = remember(relay) { accountViewModel.getRelayGroupChannelsOnRelay(relay).sortedBySnapshot { it.toBestDisplayName().lowercase() } }
+    val allChannels by produceState(initialValue = initialChannels, relay) {
         LocalCache
             .observeEvents<GroupMetadataEvent>(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
             .collect {
@@ -189,7 +189,7 @@ fun RelayGroupChannelListScreen(
     // your kind-10009 list (so it then shows in Messages / Relay Groups). Same screen, one Browse.
     val isBuzz = BuzzRelayDialect.isBuzz(relay) || relayInfo.software?.contains("buzz", ignoreCase = true) == true
     val buzzVm: BuzzRelayImportViewModel = viewModel(key = "BuzzImport-${relay.url}")
-    LaunchedEffect(isBuzz) { if (isBuzz) buzzVm.bind(accountViewModel.account, relay.url) }
+    LaunchedEffect(relay, isBuzz) { if (isBuzz) buzzVm.bind(accountViewModel.account, relay.url) }
     val buzzChannels by buzzVm.channels.collectAsStateWithLifecycle()
     val buzzAdded by buzzVm.added.collectAsStateWithLifecycle()
     val buzzStatus by buzzVm.status.collectAsStateWithLifecycle()
@@ -197,7 +197,7 @@ fun RelayGroupChannelListScreen(
     // This community's recent Direct Messages, shown inline below the channels (like Buzz's own
     // sidebar) instead of behind a separate drawer entry. Only mounted for Buzz relays.
     val dmVm: BuzzDmListViewModel = viewModel(key = "BuzzDmInline-${relay.url}")
-    LaunchedEffect(isBuzz) { if (isBuzz) dmVm.bind(accountViewModel.account, relay.url) }
+    LaunchedEffect(relay, isBuzz) { if (isBuzz) dmVm.bind(accountViewModel.account, relay.url) }
     val dmRows by dmVm.rows.collectAsStateWithLifecycle()
 
     // A Buzz workspace's channels come in three flavours, distinguished by the relay-signed 39000

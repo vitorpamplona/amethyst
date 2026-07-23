@@ -170,6 +170,10 @@ open class ChannelNewMessageViewModel :
     // message. Only ever set for own messages on a Buzz-dialect relay (see editBuzzMessage).
     val editingBuzzMessage = mutableStateOf<Note?>(null)
 
+    // Explicit @-mentions resolved by the last createTemplate, used by sendPostSync for the Buzz
+    // auto-invite. Kept off the draft path on purpose (see createTemplate / sendPostSync).
+    private var pendingBuzzInviteMentions: List<User> = emptyList()
+
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
 
     // Stripping failure dialog
@@ -379,8 +383,15 @@ open class ChannelNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
+        // Reset before createTemplate populates it, so a prior send/draft can't leak stale mentions.
+        pendingBuzzInviteMentions = emptyList()
         val template = createTemplate() ?: return
         val channelRelays = channel?.relays() ?: emptySet()
+
+        // Buzz auto-invite runs ONLY on a real send (never draft auto-save), before the message goes
+        // out so the relay accepts the mention. No-op unless this is a Buzz relay group the user
+        // moderates; guarded so a failed add never blocks the message.
+        channel?.let { autoInviteMentionedBuzzMembers(it, pendingBuzzInviteMentions) }
 
         // A geohash cell with no resolvable relays has nowhere to publish. Bail before cancel() clears
         // the composer, so the user keeps their text (and draft) to retry rather than losing it silently.
@@ -578,7 +589,12 @@ open class ChannelNewMessageViewModel :
             )
         tagger.run()
 
-        autoInviteMentionedBuzzMembers(channel, tagger.pTags)
+        // Stash the *explicit* @-mentions for a possible auto-invite — but only the send path acts on
+        // them (see sendPostSync). Exclude the reply target (seeded into pTags) so replying to a
+        // non-member doesn't silently add them; and NEVER invite from here, because createTemplate also
+        // runs on every debounced draft auto-save (sendDraftSync) — inviting here would fire kind-9000s
+        // while the user is still typing.
+        pendingBuzzInviteMentions = tagger.pTags?.filter { it != replyTo.value?.author }.orEmpty()
 
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())

@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -66,7 +67,10 @@ object BuzzInviteMinter {
             val wsUrl = relay.url
             val scheme = if (wsUrl.startsWith("wss", ignoreCase = true)) "https" else "http"
             val host = wsUrl.substringAfter("://").substringBefore("/")
-            val url = "$scheme://$host/api/invites"
+            // Parse once into an HttpUrl and sign over ITS canonical string, so the NIP-98 `u` tag is
+            // byte-for-byte what OkHttp transmits (host casing / encoding can't drift the two apart).
+            val httpUrl = "$scheme://$host/api/invites".toHttpUrl()
+            val url = httpUrl.toString()
 
             // Exact bytes the NIP-98 payload hash is computed over — must equal what we send.
             val bodyStr = ttlSecs?.let { "{\"ttl_secs\":$it}" } ?: "{}"
@@ -77,13 +81,13 @@ object BuzzInviteMinter {
             val request =
                 Request
                     .Builder()
-                    .url(url)
+                    .url(httpUrl)
                     .addHeader("Authorization", auth.toAuthToken())
                     .post(bodyBytes.toRequestBody("application/json".toMediaType()))
                     .build()
 
             okHttpClient(url).newCall(request).execute().use { response ->
-                val payload = response.body?.string().orEmpty()
+                val payload = response.body.string()
                 val tree = runCatching { json.readTree(payload) }.getOrNull()
 
                 if (!response.isSuccessful) {

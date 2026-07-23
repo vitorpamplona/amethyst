@@ -427,11 +427,14 @@ private fun BotWorkingLabel(
     val last = activity[agent] ?: return
 
     var nowSecs by remember { mutableLongStateOf(TimeUtils.now()) }
-    LaunchedEffect(agent) {
-        while (true) {
+    // Tick only while the agent could still read as "working"; stop once stale so an idle agent
+    // doesn't wake this row every 4s forever. A newer frame changes `last` and restarts the tick.
+    LaunchedEffect(agent, last) {
+        while (TimeUtils.now() - last <= BOT_WORKING_WINDOW_SECS) {
             nowSecs = TimeUtils.now()
             delay(4_000)
         }
+        nowSecs = TimeUtils.now()
     }
     if (nowSecs - last > BOT_WORKING_WINDOW_SECS) return
 

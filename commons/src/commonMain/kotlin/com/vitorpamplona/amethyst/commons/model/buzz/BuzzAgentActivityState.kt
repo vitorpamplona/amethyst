@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.buzz
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -39,27 +41,28 @@ import kotlinx.coroutines.flow.StateFlow
  */
 object BuzzAgentActivityState {
     private val lock = KmpLock()
-    private val lastFrameSecs = HashMap<HexKey, Long>()
-    private val mutableActivity = MutableStateFlow<Map<HexKey, Long>>(emptyMap())
+    private val mutableActivity = MutableStateFlow<PersistentMap<HexKey, Long>>(persistentMapOf())
 
     /** `agentPubKey -> newest observer-frame time (secs)`; the UI collects this and checks freshness. */
     val flow: StateFlow<Map<HexKey, Long>> = mutableActivity
 
-    /** Records that [agent] emitted a frame at [atSecs]; keeps the newest so staleness is monotonic. */
+    /**
+     * Records that [agent] emitted a frame at [atSecs]; keeps the newest so staleness is monotonic.
+     * Backed by a persistent map so a record shares structure with the previous snapshot instead of
+     * copying the whole map — this runs on a hot relay-consume path.
+     */
     fun record(
         agent: HexKey,
         atSecs: Long,
     ) = lock.withLock {
-        val prev = lastFrameSecs[agent]
+        val prev = mutableActivity.value[agent]
         if (prev != null && atSecs <= prev) return@withLock
-        lastFrameSecs[agent] = atSecs
-        mutableActivity.value = lastFrameSecs.toMap()
+        mutableActivity.value = mutableActivity.value.put(agent, atSecs)
     }
 
     /** Test-only: clears all activity so unit tests don't leak into each other. */
     fun clearForTesting() =
         lock.withLock {
-            lastFrameSecs.clear()
-            mutableActivity.value = emptyMap()
+            mutableActivity.value = persistentMapOf()
         }
 }

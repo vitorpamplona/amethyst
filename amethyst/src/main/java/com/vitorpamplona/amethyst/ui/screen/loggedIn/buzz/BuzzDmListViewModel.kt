@@ -114,16 +114,18 @@ class BuzzDmListViewModel : ViewModel() {
         relayUrl: String,
     ) {
         if (this.account != null) return
-        val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
-        this.scopeRelay = relay
         this.account = account
-        relay?.let {
-            val newlyJoined = BuzzWorkspaces.join(it)
-            viewModelScope.launch { account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }
-            // A join makes the relay first-party; if the socket was already open its one-shot AUTH
-            // challenge was spent unauthenticated, so reconnect to re-challenge and authenticate.
-            if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
-        }
+        // A malformed relay URL must not silently fall back to querying every joined workspace
+        // (relays() does that when scopeRelay is null) — this screen is scoped to one community.
+        val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return
+        this.scopeRelay = relay
+
+        val newlyJoined = BuzzWorkspaces.join(relay)
+        viewModelScope.launch { account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
+        // A join makes the relay first-party; if the socket was already open its one-shot AUTH
+        // challenge was spent unauthenticated, so reconnect to re-challenge and authenticate.
+        if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+
         refresh()
         startLive()
     }

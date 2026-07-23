@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.RoleTag
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.concurrent.Volatile
 
 /**
  * A NIP-29 relay-based group ("channel" in Discord terms). Unlike a NIP-C7
@@ -83,11 +84,13 @@ class RelayGroupChannel(
         private set
 
     /** Relay-signed member pubkeys (kind 39002). */
+    @Volatile
     var members: Set<HexKey> = emptySet()
         private set
     private var membersUpdatedAt: Long = 0
 
     /** Relay-signed admins with their roles (kind 39001). */
+    @Volatile
     var admins: List<GroupAdminTag> = emptyList()
         private set
     private var adminsUpdatedAt: Long = 0
@@ -114,6 +117,7 @@ class RelayGroupChannel(
      * Members ∪ admins, recomputed only when a roster event lands. [memberCount] and the discovery
      * feed read this per note / per recomposition, so caching it avoids rebuilding the set each read.
      */
+    @Volatile
     private var allMembers: Set<HexKey> = emptySet()
 
     private fun recomputeAllMembers() {

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.buzz
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -43,17 +45,18 @@ import kotlinx.coroutines.flow.StateFlow
  */
 object BuzzPresenceState {
     private val lock = KmpLock()
-    private val statusByUser = HashMap<HexKey, String>()
-    private val stampByUser = HashMap<HexKey, Long>()
-    private val mutablePresence = MutableStateFlow<Map<HexKey, String>>(emptyMap())
+    private var stampByUser: PersistentMap<HexKey, Long> = persistentMapOf()
+    private val mutablePresence = MutableStateFlow<PersistentMap<HexKey, String>>(persistentMapOf())
 
     /** `subjectPubKey -> latest status string`; the UI collects this and maps to a badge. */
     val flow: StateFlow<Map<HexKey, String>> = mutablePresence
 
     /**
      * Records [status] for [subject] as of [atSecs]. Keeps the newest by timestamp so an
-     * out-of-order or duplicated delivery can't clobber a fresher state. No-op when the update
-     * is not newer than what we already hold.
+     * out-of-order or duplicated delivery can't clobber a fresher state — an update that is not
+     * strictly newer than what we already hold is a no-op. Backed by persistent maps so a record
+     * shares structure with the previous snapshot instead of copying the whole map (this runs on a
+     * hot relay-consume path).
      */
     fun record(
         subject: HexKey,
@@ -61,11 +64,9 @@ object BuzzPresenceState {
         atSecs: Long,
     ) = lock.withLock {
         val prev = stampByUser[subject]
-        if (prev != null && atSecs < prev) return@withLock
-        if (statusByUser[subject] == status && prev == atSecs) return@withLock
-        statusByUser[subject] = status
-        stampByUser[subject] = atSecs
-        mutablePresence.value = statusByUser.toMap()
+        if (prev != null && atSecs <= prev) return@withLock
+        stampByUser = stampByUser.put(subject, atSecs)
+        mutablePresence.value = mutablePresence.value.put(subject, status)
     }
 
     /** The latest known status string for [subject], or `null` if none has arrived. */
@@ -74,8 +75,7 @@ object BuzzPresenceState {
     /** Test-only: clears all presence state so unit tests don't leak into each other. */
     fun clearForTesting() =
         lock.withLock {
-            statusByUser.clear()
-            stampByUser.clear()
-            mutablePresence.value = emptyMap()
+            stampByUser = persistentMapOf()
+            mutablePresence.value = persistentMapOf()
         }
 }

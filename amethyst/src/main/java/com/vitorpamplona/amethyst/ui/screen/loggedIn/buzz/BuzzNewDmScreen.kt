@@ -171,7 +171,9 @@ fun BuzzNewDmScreen(
             // Search results — workspace members first — fill the space above the pinned Start button.
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 items(suggestions, key = { it }) { hex ->
-                    SuggestionRow(hex, accountViewModel, nav) { viewModel.addParticipant(hex) }
+                    // Surface the same errors the Enter/paste path shows (e.g. the participant ceiling),
+                    // instead of a tap that silently does nothing.
+                    SuggestionRow(hex, accountViewModel, nav) { inputError = viewModel.addParticipant(hex) }
                 }
             }
 

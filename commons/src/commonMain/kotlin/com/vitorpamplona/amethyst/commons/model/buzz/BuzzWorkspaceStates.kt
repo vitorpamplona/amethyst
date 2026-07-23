@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.concurrent.Volatile
 
 /**
  * Buzz-only overlay state for one workspace channel: the kind-40003 edit overlay
@@ -53,6 +54,7 @@ class BuzzWorkspaceState {
     val editUpdates: StateFlow<Int> = editVersion
 
     /** The newest canvas (kind 40100) note for this channel, or null when none seen. */
+    @Volatile
     var canvasNote: Note? = null
         private set
 
