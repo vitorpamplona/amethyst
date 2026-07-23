@@ -739,14 +739,20 @@ open class Note(
     ): Boolean =
         syncLock.withLock {
             val existing = bolt12Zaps[paymentHashHex]
-            if (existing != null) {
-                // Same settled payment (dedup by invoice_payment_hash) — a relay echo.
-                if (entry == existing) return@withLock false
-                // Prefer a fully crypto-verified entry; never let an unverified
-                // (compressed-proof) republish overwrite a verified one.
-                if (!entry.cryptoVerified && existing.cryptoVerified) return@withLock false
-            }
-            bolt12Zaps = bolt12Zaps + Pair(paymentHashHex, entry)
+            val merged =
+                if (existing == null) {
+                    entry
+                } else {
+                    // Same settled payment (dedup by invoice_payment_hash). NIP-XX: count
+                    // only one, and if amounts differ, keep the LOWER — so a re-publish
+                    // with a bigger amount tag can't inflate the total. Keep the stronger
+                    // verification flag, and the source of whichever entry we keep the
+                    // amount from.
+                    val keepEntry = if (entry.amountMillisats < existing.amountMillisats) entry else existing
+                    keepEntry.copy(cryptoVerified = entry.cryptoVerified || existing.cryptoVerified)
+                }
+            if (merged == existing) return@withLock false
+            bolt12Zaps = bolt12Zaps + Pair(paymentHashHex, merged)
             return@withLock true
         }
 
@@ -1102,11 +1108,16 @@ open class Note(
             sumOfAmounts += BigDecimal(entry.claimedSats)
         }
 
-        // NIP-XX BOLT12 zaps — validated synchronously at consume time (the `lnp`
-        // payer proof is a self-contained settlement proof), so every stored entry
-        // counts, converting its millisat amount to sats like the lightning path.
+        // NIP-XX BOLT12 zaps — count only the crypto-verified ones. An unverified
+        // (compressed, or offer-unbindable) proof carries a self-chosen preimage,
+        // amount, and payment hash with no settled-payment guarantee, so counting it
+        // would let anyone inflate a note's total for free. Unverified entries stay
+        // stored and shown (dimmed) but never sum. Divide in BigDecimal so fractional
+        // sats survive and match the millisat-native lightning column above.
         bolt12Zaps.values.forEach { entry ->
-            sumOfAmounts += BigDecimal(entry.amountMillisats / 1000)
+            if (entry.cryptoVerified) {
+                sumOfAmounts += BigDecimal(entry.amountMillisats).divide(BigDecimal(1000))
+            }
         }
 
         zapsAmount = sumOfAmounts

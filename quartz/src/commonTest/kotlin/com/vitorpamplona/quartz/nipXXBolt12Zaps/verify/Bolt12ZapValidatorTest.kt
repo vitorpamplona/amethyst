@@ -200,6 +200,24 @@ class Bolt12ZapValidatorTest {
         }
 
     @Test
+    fun anIssuerlessOfferCannotBindTheInvoiceSoTheZapIsAcceptedButUnverified() =
+        runTest {
+            // The offer publishes no offer_issuer_id, so the invoice's node key can't be
+            // tied to the offer — a self-consistent proof proves nothing about paying it.
+            val signer = NostrSignerInternal(KeyPair())
+            val nodeKey = KeyPair()
+            val preimage = ByteArray(32) { (it + 12).toByte() }
+            val offer = Bolt12ProofFixture.buildOffer(nodeKey, amount, withIssuerId = false)
+            val intent = signedIntent(signer, offer)
+            val note = Bolt12ZapValidator.NIP_URI_PREFIX + intent.id
+            val proof = Bolt12ProofFixture.buildProof(nodeKey, KeyPair(), preimage, amount, note)
+
+            val result = validator.validate(signedZap(signer, intent, proof))
+            assertIs<Bolt12ZapValidation.Valid>(result)
+            assertTrue(!result.proofCryptoVerified, "an offer with no issuer id cannot be crypto-verified")
+        }
+
+    @Test
     fun rejectsWhenTheProofDoesNotMatchTheOffer() =
         runTest {
             val signer = NostrSignerInternal(KeyPair())

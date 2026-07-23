@@ -61,6 +61,14 @@ object Bolt12Bech32 {
         return sb.toString().lowercase()
     }
 
+    // O(1) bech32 data-alphabet membership, indexed by char code (ASCII only).
+    private val IS_BECH32_CHAR =
+        BooleanArray(128).also { table ->
+            for (c in Bech32.ALPHABET) table[c.code] = true
+        }
+
+    private fun isBech32Char(c: Char): Boolean = c.code < 128 && IS_BECH32_CHAR[c.code]
+
     private fun hasHrp(
         canonical: String,
         hrp: String,
@@ -70,7 +78,7 @@ object Bolt12Bech32 {
         if (!canonical.startsWith(prefix)) return false
         // every data char must be in the bech32 alphabet
         for (i in prefix.length until canonical.length) {
-            if (Bech32.ALPHABET.indexOf(canonical[i]) < 0) return false
+            if (!isBech32Char(canonical[i])) return false
         }
         return true
     }

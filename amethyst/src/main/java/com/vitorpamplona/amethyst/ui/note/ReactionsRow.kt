@@ -1551,7 +1551,12 @@ fun ObserveZapIcon(
         }
 
         LaunchedEffect(key1 = zapsState) {
-            if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
+            if (zapsState?.note?.zapPayments?.isNotEmpty() == true ||
+                zapsState?.note?.zaps?.isNotEmpty() == true ||
+                zapsState?.note?.nutzaps?.isNotEmpty() == true ||
+                zapsState?.note?.onchainZaps?.isNotEmpty() == true ||
+                zapsState?.note?.bolt12Zaps?.isNotEmpty() == true
+            ) {
                 val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, afterTimeInSeconds)
                 if (wasZappedByLoggedInUser.value != newWasZapped) {
                     wasZappedByLoggedInUser.value = newWasZapped

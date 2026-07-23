@@ -44,13 +44,15 @@ object Bolt12ProofFixture {
     fun buildOffer(
         nodeKey: KeyPair,
         amountMillisats: Long,
+        withIssuerId: Boolean = true,
     ): String {
+        // TLV types must be strictly ascending: amount(8), description(10), issuer_id(22).
         val records =
-            listOf(
-                TlvRecord(Bolt12Offer.TYPE_AMOUNT, Bolt12Values.tu64ToBytes(amountMillisats)),
-                TlvRecord(Bolt12Offer.TYPE_DESCRIPTION, "zap".encodeToByteArray()),
-                TlvRecord(Bolt12Offer.TYPE_ISSUER_ID, point(nodeKey.pubKey)),
-            )
+            buildList {
+                add(TlvRecord(Bolt12Offer.TYPE_AMOUNT, Bolt12Values.tu64ToBytes(amountMillisats)))
+                add(TlvRecord(Bolt12Offer.TYPE_DESCRIPTION, "zap".encodeToByteArray()))
+                if (withIssuerId) add(TlvRecord(Bolt12Offer.TYPE_ISSUER_ID, point(nodeKey.pubKey)))
+            }
         return Bolt12Bech32.encode(Bolt12Bech32.OFFER_HRP, TlvStream(records).encode())
     }
 

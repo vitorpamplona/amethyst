@@ -127,7 +127,7 @@ class Bolt12ZapValidator(
         val invoiceAmount = proof.invoiceAmount() ?: return invalid(Reason.MISSING_INVOICE_AMOUNT)
         if (invoiceAmount != amount) return invalid(Reason.PROOF_AMOUNT_MISMATCH)
 
-        offerBindingFailure(offerParsed, proof)?.let { return invalid(it) }
+        offerBindingHardFailure(offerParsed, proof)?.let { return invalid(it) }
 
         // --- Expensive checks (signatures + proof crypto) ------------------------
 
@@ -135,12 +135,25 @@ class Bolt12ZapValidator(
         if (!intent.verify()) return invalid(Reason.BAD_INTENT_SIGNATURE)
 
         val cryptoResult = proofVerifier.verify(proof)
-        val cryptoVerified =
+        val cryptoOk =
             when (cryptoResult) {
                 is Bolt12ProofResult.Valid -> true
                 is Bolt12ProofResult.Unsupported -> false
                 is Bolt12ProofResult.Invalid -> return invalid(mapProofReason(cryptoResult.reason))
             }
+
+        // "Crypto verified" requires BOTH that the invoice signature was checked AND
+        // that the signed invoice is provably the offer's — i.e. signed by the offer's
+        // `offer_issuer_id`. When the offer hides its destination behind blinded paths,
+        // or publishes no issuer id, the invoice node key is one the payer chose and
+        // can't be tied to the offer here, so "paid this offer" is NOT proven; such a
+        // proof is downgraded to unverified rather than asserted verified.
+        //
+        // NB: even a bound proof only proves payment to the *embedded* offer. The NIP
+        // has no offer↔recipient-identity binding, so nothing here proves the offer
+        // belongs to the p-tagged recipient — see
+        // quartz/plans/2026-07-23-bolt12-zap-interop-vectors.md.
+        val cryptoVerified = cryptoOk && isInvoiceBoundToOffer(offerParsed, proof)
 
         val paymentHash = proof.invoicePaymentHash() ?: return invalid(Reason.PROOF_MISSING_REQUIRED_FIELDS)
 
@@ -167,14 +180,13 @@ class Bolt12ZapValidator(
     }
 
     /**
-     * Soft binding of the proof to the offer without processing blinded paths:
-     * when the offer publishes an `offer_issuer_id` and no blinded paths, the
-     * invoice must be signed by that same node id, and any `offer_issuer_id`
-     * copied into the proof must match. Offers that route through blinded paths
-     * carry a per-path node id we can't check here, so they are left to the
-     * signature verification alone.
+     * A definite contradiction between the proof and the offer — the proof either
+     * copies a different `offer_issuer_id`, or (for a directly-addressed offer)
+     * carries an `invoice_node_id` that isn't the offer's issuer. These are hard
+     * rejects. Note the *absence* of a check is NOT a pass here — that only means
+     * we can't bind, which [isInvoiceBoundToOffer] reports separately.
      */
-    private fun offerBindingFailure(
+    private fun offerBindingHardFailure(
         offer: Bolt12Offer,
         proof: Bolt12PayerProof,
     ): Reason? {
@@ -189,6 +201,24 @@ class Bolt12ZapValidator(
             if (!nodeId.contentEquals(issuerId)) return Reason.OFFER_PROOF_MISMATCH
         }
         return null
+    }
+
+    /**
+     * True only when the settled invoice can be cryptographically tied to the offer:
+     * the offer publishes an `offer_issuer_id`, uses no blinded paths, and the proof's
+     * `invoice_node_id` equals that issuer (so the invoice signature the verifier
+     * checks was made by the offer's own node). Blinded-path or issuer-less offers
+     * expose a payer-chosen node key that can't be bound to the offer here, so a
+     * self-consistent proof against such an offer proves nothing about paying it.
+     */
+    private fun isInvoiceBoundToOffer(
+        offer: Bolt12Offer,
+        proof: Bolt12PayerProof,
+    ): Boolean {
+        val issuerId = offer.issuerId() ?: return false
+        if (offer.hasPaths()) return false
+        val nodeId = proof.invoiceNodeId() ?: return false
+        return nodeId.contentEquals(issuerId)
     }
 
     private fun mapProofReason(reason: Bolt12ProofResult.Reason): Reason =

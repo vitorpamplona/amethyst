@@ -56,6 +56,21 @@ class NoteBolt12ZapTest {
     }
 
     @Test
+    fun keepsTheLowerAmountWhenTwoProofsShareAPaymentHash() {
+        // NIP-XX: same proof identifier, differing amounts → count the LOWER, in either order.
+        val a = note("a".repeat(64))
+        a.addBolt12Zap(note("b".repeat(64)), "h", amountMillisats = 21_000_000L, cryptoVerified = true)
+        a.addBolt12Zap(note("c".repeat(64)), "h", amountMillisats = 5_000_000L, cryptoVerified = true)
+        assertEquals(1, a.bolt12Zaps.size)
+        assertEquals(5_000L, a.zapsAmount.toLong())
+
+        val b = note("a".repeat(64))
+        b.addBolt12Zap(note("b".repeat(64)), "h", amountMillisats = 5_000_000L, cryptoVerified = true)
+        b.addBolt12Zap(note("c".repeat(64)), "h", amountMillisats = 21_000_000L, cryptoVerified = true)
+        assertEquals(5_000L, b.zapsAmount.toLong(), "order must not change the counted amount")
+    }
+
+    @Test
     fun aVerifiedEntryIsNotDowngradedByAnUnverifiedRepublish() {
         val target = note("a".repeat(64))
         target.addBolt12Zap(note("b".repeat(64)), "h", amountMillisats = 5_000_000L, cryptoVerified = true)
@@ -93,13 +108,23 @@ class NoteBolt12ZapTest {
     }
 
     @Test
-    fun bolt12ZapsCombineWithLightningTotalsIndependently() {
+    fun onlyCryptoVerifiedBolt12ZapsCountTowardTheTotal() {
         val target = note("a".repeat(64))
-        // Two BOLT12 zaps; no lightning receipts on this note.
         target.addBolt12Zap(note("b".repeat(64)), "h1", amountMillisats = 2_000_000L, cryptoVerified = true)
+        // An unverified (compressed / unbindable) proof is stored + shown but MUST NOT count —
+        // its amount is self-chosen with no settled-payment guarantee.
         target.addBolt12Zap(note("c".repeat(64)), "h2", amountMillisats = 500_000L, cryptoVerified = false)
 
-        // Both count (validated == counted), regardless of crypto-verification state.
-        assertEquals(2_500L, target.zapsAmount.toLong())
+        assertEquals(2, target.bolt12Zaps.size, "both are stored (the unverified one still renders, dimmed)")
+        assertEquals(2_000L, target.zapsAmount.toLong(), "only the verified 2000-sat zap counts")
+    }
+
+    @Test
+    fun fractionalSatAmountsSurviveInTheTotal() {
+        val target = note("a".repeat(64))
+        // 1500 msat = 1.5 sat; two of them = 3 sat. Integer-dividing each first drops to 2.
+        target.addBolt12Zap(note("b".repeat(64)), "h1", amountMillisats = 1_500L, cryptoVerified = true)
+        target.addBolt12Zap(note("c".repeat(64)), "h2", amountMillisats = 1_500L, cryptoVerified = true)
+        assertEquals(3L, target.zapsAmount.toLong(), "fractional sats must not be truncated per-entry")
     }
 }

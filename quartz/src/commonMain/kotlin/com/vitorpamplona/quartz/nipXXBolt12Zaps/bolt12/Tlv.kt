@@ -91,10 +91,13 @@ class TlvReader(
 
     fun readBigSize(): Long {
         val first = readByte()
+        // BOLT-1 requires minimal encoding. Rejecting non-minimal forms also rejects
+        // the multi-byte forms whose value would overflow a signed Long (≥ 2^63 reads
+        // back negative, failing the `>=` bound), so callers get a non-negative Long.
         return when (first) {
-            0xff -> readUInt(8)
-            0xfe -> readUInt(4)
-            0xfd -> readUInt(2)
+            0xff -> readUInt(8).also { require(it >= 0x100000000L) { "non-minimal or out-of-range BigSize" } }
+            0xfe -> readUInt(4).also { require(it >= 0x10000L) { "non-minimal BigSize" } }
+            0xfd -> readUInt(2).also { require(it >= 0xfdL) { "non-minimal BigSize" } }
             else -> first.toLong()
         }
     }
@@ -167,7 +170,7 @@ class TlvStream(
             while (reader.remaining() > 0) {
                 val type = reader.readBigSize()
                 val length = reader.readBigSize()
-                require(length <= reader.remaining()) { "TLV length $length exceeds the remaining stream" }
+                require(length in 0..reader.remaining().toLong()) { "TLV length $length out of range (remaining ${reader.remaining()})" }
                 val value = reader.readBytes(length.toInt())
                 require(type > lastType) { "TLV records must be strictly ascending (saw $type after $lastType)" }
                 lastType = type

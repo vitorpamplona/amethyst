@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -121,7 +122,10 @@ private fun Bolt12ZapEntryRow(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val user = entry.source.author
+    // Anonymous zaps carry no `P` payer tag — show the blank/unknown author (as the
+    // standalone card does) instead of the throwaway ephemeral key's default avatar.
+    val isAnonymous = (entry.source.event as? Bolt12ZapEvent)?.isAnonymous() == true
+    val user = if (isAnonymous) null else entry.source.author
 
     // The amount is validated (checked against the proof's invoice_amount), so it
     // is safe to show for any sender. A not-yet-crypto-verified (compressed) proof

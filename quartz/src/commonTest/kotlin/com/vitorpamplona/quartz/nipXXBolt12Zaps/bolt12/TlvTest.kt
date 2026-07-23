@@ -88,6 +88,25 @@ class TlvTest {
     }
 
     @Test
+    fun bigSizeRejectsNonMinimalEncodings() {
+        // 5 encoded in the 3-byte (0xfd) form instead of a single byte.
+        assertFailsWith<IllegalArgumentException> { TlvReader(byteArrayOf(0xfd.toByte(), 0x00, 0x05)).readBigSize() }
+        // 0x100 encoded in the 5-byte (0xfe) form instead of 3.
+        assertFailsWith<IllegalArgumentException> {
+            TlvReader(byteArrayOf(0xfe.toByte(), 0x00, 0x00, 0x01, 0x00)).readBigSize()
+        }
+    }
+
+    @Test
+    fun tlvStreamRejectsAnOversizedOrHighBitLength() {
+        // type=1 (minimal), length=0xff FF FF FF FF 00 00 00 05 — reads back negative / huge.
+        val hostile =
+            byteArrayOf(0x01) +
+                byteArrayOf(0xff.toByte(), 0xff.toByte(), 0xff.toByte(), 0xff.toByte(), 0xff.toByte(), 0x00, 0x00, 0x00, 0x05)
+        assertFailsWith<IllegalArgumentException> { TlvStream.read(hostile) }
+    }
+
+    @Test
     fun signatureElementRangeIsRecognized() {
         assertEquals(false, TlvRecord(176, byteArrayOf()).isSignatureElement())
         assertEquals(true, TlvRecord(240, byteArrayOf()).isSignatureElement())
