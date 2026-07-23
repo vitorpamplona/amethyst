@@ -530,7 +530,9 @@ open class ChannelNewMessageViewModel :
         }
     }
 
-    private suspend fun createTemplate(): EventTemplate<out Event>? {
+    // `protected open` so a specialized composer (e.g. the Buzz forum reply) can reuse this whole
+    // rich EditFieldRow but swap only the event it builds for the composed text.
+    protected open suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
 
         val messageText = message.text.toString()
