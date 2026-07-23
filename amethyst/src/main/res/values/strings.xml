@@ -3359,6 +3359,14 @@
     <string name="buzz_import_empty_title">No channels found</string>
     <string name="buzz_import_empty_body">You don\'t seem to be a member of any channels on this relay yet. Accept the workspace invite in the browser first, then try again.</string>
 
+    <string name="relay_group_section_channels">Channels</string>
+    <string name="relay_group_section_forums">Forums</string>
+    <string name="buzz_dm_section_empty">No conversations yet</string>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">See %1$d more conversation</item>
+        <item quantity="other">See all %1$d conversations</item>
+    </plurals>
+
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>
 

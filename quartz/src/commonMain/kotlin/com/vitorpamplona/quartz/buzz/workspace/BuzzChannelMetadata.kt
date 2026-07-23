@@ -42,7 +42,12 @@ fun GroupMetadataEvent.buzzChannelType(): String? = tags.firstTagValue("t")
 /** True when the relay marks this channel a DM (`t` = "dm"). */
 fun GroupMetadataEvent.isBuzzDm(): Boolean = buzzChannelType() == BUZZ_CHANNEL_TYPE_DM
 
+/** True when the relay marks this channel a forum (`t` = "forum"). */
+fun GroupMetadataEvent.isBuzzForum(): Boolean = buzzChannelType() == BUZZ_CHANNEL_TYPE_FORUM
+
 /** The DM participant pubkeys inlined as `p` tags on a Buzz DM's 39000 (empty for non-DMs). */
 fun GroupMetadataEvent.buzzParticipants(): List<HexKey> = tags.mapNotNull(PTag::parseKey)
 
 const val BUZZ_CHANNEL_TYPE_DM = "dm"
+const val BUZZ_CHANNEL_TYPE_FORUM = "forum"
+const val BUZZ_CHANNEL_TYPE_STREAM = "stream"

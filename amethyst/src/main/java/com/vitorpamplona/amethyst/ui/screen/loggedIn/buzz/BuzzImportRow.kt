@@ -56,9 +56,9 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**
  * One row in the "your channels on this workspace" section: a Buzz workspace channel the user is a
- * member of (via kind-44100), with an Add affordance that appends it to the kind-10009 list so it
- * surfaces in Messages / Relay Groups. Reused by the relay group-list screen where Buzz membership
- * discovery is folded in.
+ * member of (via kind-44100). Tapping the card opens the channel ([onOpen]); the trailing Add
+ * affordance appends it to the kind-10009 list so it surfaces in Messages / Relay Groups. Reused by
+ * the relay group-list screen where Buzz membership discovery is folded in.
  */
 @Composable
 fun BuzzImportRow(
@@ -66,6 +66,7 @@ fun BuzzImportRow(
     isAdded: Boolean,
     onAdd: () -> Unit,
     accountViewModel: AccountViewModel,
+    onOpen: (() -> Unit)? = null,
 ) {
     val baseChannel = remember(groupId) { LocalCache.getOrCreateRelayGroupChannel(groupId) }
     val channelState by observeChannel(baseChannel, accountViewModel)
@@ -74,48 +75,65 @@ fun BuzzImportRow(
     val name = channel.toBestDisplayName()
     val memberCount = channel.memberCount()
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BuzzImportAvatar(name = name, seed = groupId.id)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+    if (onOpen != null) {
+        Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+            BuzzImportRowContent(name, groupId.id, memberCount, isAdded, onAdd)
+        }
+    } else {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            BuzzImportRowContent(name, groupId.id, memberCount, isAdded, onAdd)
+        }
+    }
+}
+
+@Composable
+private fun BuzzImportRowContent(
+    name: String,
+    seed: String,
+    memberCount: Int,
+    isAdded: Boolean,
+    onAdd: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BuzzImportAvatar(name = name, seed = seed)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (memberCount > 0) {
                 Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    text = "$memberCount",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (memberCount > 0) {
-                    Text(
-                        text = "$memberCount",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
-            if (isAdded) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        symbol = MaterialSymbols.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = stringRes(R.string.buzz_import_added),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            } else {
-                OutlinedButton(onClick = onAdd) {
-                    Text(stringRes(R.string.buzz_import_add))
-                }
+        }
+        if (isAdded) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    symbol = MaterialSymbols.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = stringRes(R.string.buzz_import_added),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else {
+            OutlinedButton(onClick = onAdd) {
+                Text(stringRes(R.string.buzz_import_add))
             }
         }
     }
