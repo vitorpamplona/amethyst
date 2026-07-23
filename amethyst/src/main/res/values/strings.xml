@@ -3326,6 +3326,7 @@
     <string name="buzz_forum_body_label">What do you want to discuss?</string>
     <string name="buzz_forum_post_action">Post topic</string>
     <string name="buzz_forum_thread_title">Forum thread</string>
+    <string name="buzz_forum_no_replies">No replies yet. Be the first to respond.</string>
     <string name="buzz_dm_title">Direct Messages</string>
     <string name="buzz_dm_nav_label">Buzz DMs</string>
     <string name="buzz_dm_card_subtitle">Private conversations on your workspaces</string>

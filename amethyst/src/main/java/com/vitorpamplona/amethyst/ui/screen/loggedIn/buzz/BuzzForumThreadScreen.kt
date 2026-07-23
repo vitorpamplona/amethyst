@@ -26,11 +26,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,11 +41,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -117,24 +121,37 @@ fun BuzzForumThreadScreen(
     replyModel.init(accountViewModel)
     replyModel.loadForumThread(channel, rootId)
 
-    Scaffold(
+    // DisappearingScaffold (not a plain Scaffold) so the composer + list get the app's shared
+    // imePadding + navigation-bar insets, matching RelayGroupChatScreen. The composer is content at
+    // the bottom of the Column (like the chat), not a Scaffold bottomBar.
+    DisappearingScaffold(
+        isInvertedLayout = false,
         topBar = { TopBarWithBackButton(stringRes(R.string.buzz_forum_thread_title), nav) },
-        bottomBar = {
+        accountViewModel = accountViewModel,
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                item(key = "root") {
+                    ForumPostBody(rootNote.event as? ForumPostEvent, rootNote.author?.pubkeyHex ?: rootId, accountViewModel, nav)
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                item(key = "reply-count") {
+                    RepliesCountHeader(replies.size)
+                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                if (replies.isEmpty()) {
+                    item(key = "no-replies") { NoRepliesYet() }
+                } else {
+                    items(replies, key = { it.id }) { reply ->
+                        ForumReplyRow(reply, accountViewModel, nav)
+                        HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
             if (canPost) {
                 // Reuse the full chat composer; a send publishes the kind-45003 reply and then bumps
                 // refreshKey to re-fetch (the relay doesn't echo our reply on the open subscription).
                 EditFieldRow(replyModel, accountViewModel, onSendNewMessage = { refreshKey++ }, nav)
-            }
-        },
-    ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            item(key = "root") {
-                ForumPostBody(rootNote.event as? ForumPostEvent, rootNote.author?.pubkeyHex ?: rootId, accountViewModel, nav)
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-            }
-            items(replies, key = { it.id }) { reply ->
-                ForumReplyRow(reply, accountViewModel, nav)
-                HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
     }
@@ -155,6 +172,38 @@ private fun ForumPostBody(
         }
         Text(text = event?.body().orEmpty(), style = MaterialTheme.typography.bodyLarge)
     }
+}
+
+@Composable
+private fun RepliesCountHeader(count: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Forum,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = pluralStringResource(R.plurals.chat_minichat_reply_count, count, count),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun NoRepliesYet() {
+    Text(
+        text = stringRes(R.string.buzz_forum_no_replies),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
+    )
 }
 
 @Composable
