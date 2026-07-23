@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -41,8 +43,12 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -101,11 +107,15 @@ class NotificationDispatcher(
                 // Direct-arrival
                 PrivateDmEvent.KIND,
                 LnZapEvent.KIND,
+                NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
                 ReactionEvent.KIND,
+                RepostEvent.KIND,
+                GenericRepostEvent.KIND,
+                BadgeAwardEvent.KIND,
                 TextNoteEvent.KIND,
                 CommentEvent.KIND,
-                // Public content kinds — routed to the Mentions channel when p-tagged.
+                // Public content kinds — routed to their channel when p-tagged.
                 PictureEvent.KIND,
                 VideoNormalEvent.KIND,
                 VideoShortEvent.KIND,
@@ -115,6 +125,8 @@ class NotificationDispatcher(
                 PollEvent.KIND,
                 GitPatchEvent.KIND,
                 GitIssueEvent.KIND,
+                GitPullRequestEvent.KIND,
+                GitPullRequestUpdateEvent.KIND,
                 HighlightEvent.KIND,
                 LongTextNoteEvent.KIND,
                 WikiNoteEvent.KIND,
