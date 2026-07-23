@@ -145,6 +145,12 @@ if [ -n "$TARGET_ID" ]; then
   pubB 7 "🤙" "[[\"e\",\"$TARGET_ID\"],[\"p\",\"$A_HEX\"]]" >/dev/null
   wait_for "ReactionsID" "reacted" && ok "reaction → Reactions channel" || bad "reaction notification missing"
 
+  # Buzz-style bare like: a NIP-25 kind-7 with an `e` tag but NO `p` tag (Buzz
+  # relays emit these). Must still notify — routed via tagsAnEventByUser, not the
+  # p-tag gate. A distinct emoji separates it from the 🤙 reaction above.
+  pubB 7 "❤️" "[[\"e\",\"$TARGET_ID\"]]" >/dev/null
+  wait_for "ReactionsID" "❤️" && ok "Buzz bare reaction (no p-tag) → Reactions channel" || bad "Buzz bare reaction missing"
+
   pubB 6 "" "[[\"e\",\"$TARGET_ID\"],[\"p\",\"$A_HEX\"]]" >/dev/null
   wait_for "RepostsID" "reposted" && ok "repost → Reposts channel (new kind)" || bad "repost notification missing"
 else
@@ -157,6 +163,12 @@ wait_for "MediaID" "shared a photo" && ok "picture → Media channel (BigPicture
 amyB dm send "$A_NPUB" "e2e direct message" --relay "$RELAY" >/dev/null 2>&1 \
   && { wait_for "PrivateMessagesID" "e2e direct message" && ok "DM → Private Messages (MessagingStyle)" || meh "DM notification missing (check A's kind:10050 DM relays include $RELAY)"; } \
   || meh "amy dm send failed (DM relays / wallet not configured) — skipped"
+
+# Buzz DM (kind 40002 / kind 9 in a `t=dm` relay-group channel) is participant-
+# routed off the channel's 39000 metadata, which this script can't set up in one
+# shot. Not auto-triggered — see README "Buzz DM (manual)". Expect it to land on
+# PrivateMessagesID with the channel name as title and "<sender>: <text>" body.
+meh "Buzz DM not auto-triggered (needs a t=dm relay-group channel) — see README"
 
 # ---------------------------------------------------------------------------
 hdr "Observability — cold-push metadata enrichment"

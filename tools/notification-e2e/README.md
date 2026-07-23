@@ -18,6 +18,7 @@ fails.
 | Mention (+ liveness) | `amy event --kind 1` p-tagging A | `MentionsID` + "mentioned you" |
 | Reply | kind 1 with `e`+`p` tags to A's note | `RepliesID` + "replied" |
 | Reaction | kind 7 to A's note | `ReactionsID` + "reacted" |
+| Buzz bare reaction | kind 7 with `e` tag, **no `p` tag** | `ReactionsID` (routed via `tagsAnEventByUser`) |
 | Repost *(new kind)* | kind 6 to A's note | `RepostsID` + "reposted" |
 | Picture *(new kind)* | kind 20 with `imeta` + `p` | `MediaID` + "shared a photo" |
 | DM | `amy dm send` | `PrivateMessagesID` + the body |
@@ -27,6 +28,25 @@ fails.
 Zaps (need a Lightning wallet), git/badge/nutzap/onchain (need repo / badge
 definition / cashu proofs) aren't automated here — they follow the same
 `amy event --kind …` pattern with the appropriate tags if you want to extend it.
+
+### Buzz DM (manual)
+
+Buzz DM notifications (`StreamMessageV2Event` k40002 / `ChatEvent` k9 in a `t=dm`
+relay-group channel) are participant-routed off the channel's kind-39000
+metadata, so they can't be triggered in one `amy event` call. To verify by hand:
+
+1. Create a Buzz DM channel whose kind-39000 metadata has `["t","dm"]` and a
+   `["p", <A_hex>]` participant tag (use the Buzz UI, or `amy relaygroup` /
+   `amy event --kind 39000` as the relay/group admin), on a relay A is connected
+   to. Let A load the channel (open it once) so its 39000 metadata is cached —
+   push only fires when the participant list is known.
+2. As B, post a message into it: `amy event --kind 9 --content "buzz dm hi"
+   --tags '[["h","<groupId>"]]' --relay <groupRelay>` (or kind 40002).
+3. Background the app; expect a `PrivateMessagesID` notification titled with the
+   channel name and body `B: buzz dm hi`, tapping it opens the chatroom.
+
+The gate is intentionally strict (participant metadata must be loaded), matching
+the in-app feed — a cold push with no cached channel won't notify.
 
 ## Prerequisites
 
