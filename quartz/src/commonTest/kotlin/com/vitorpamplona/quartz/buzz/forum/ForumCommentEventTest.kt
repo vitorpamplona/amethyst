@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.buzz.forum
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ForumCommentEventTest {
     private val channel = "3f2504e0-4f89-41d3-9a0c-0305e82c3301"
@@ -70,6 +71,6 @@ class ForumCommentEventTest {
         ev: ForumCommentEvent,
         expected: Array<String>,
     ) {
-        assert(ev.tags.any { it.toList() == expected.toList() }) { "missing tag ${expected.toList()}" }
+        assertTrue(ev.tags.any { it.toList() == expected.toList() }, "missing tag ${expected.toList()}")
     }
 }
