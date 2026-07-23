@@ -88,6 +88,7 @@ object CodeNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = id,
             users = listOf(author),
             notes = listOf(note),
             isComplete = { author.metadataOrNull()?.bestName() != null },

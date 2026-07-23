@@ -32,6 +32,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
+import android.os.SystemClock
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
@@ -49,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
 
 /**
@@ -79,6 +81,33 @@ object NotificationUtils {
 
     const val REPLY_GROUP_KEY_PREFIX = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
     private const val REPLY_SUMMARY_ID_BASE = 0x50000
+
+    // Event ids the user has just read/dismissed in-app. The enrichment path
+    // re-posts a notification as metadata arrives; without this guard a
+    // notification the user already dismissed would be resurrected seconds later
+    // when its author's kind:0 lands. Keyed by the event id string (not the
+    // hashCode) so distinct events can't collide. Entries self-expire after a
+    // window comfortably longer than the 25s enrichment window.
+    private const val DISMISS_GUARD_MS = 90_000L
+    private val recentlyDismissed = ConcurrentHashMap<String, Long>()
+
+    private fun markDismissed(eventId: String) {
+        val now = SystemClock.elapsedRealtime()
+        recentlyDismissed[eventId] = now + DISMISS_GUARD_MS
+        if (recentlyDismissed.size > 256) {
+            recentlyDismissed.entries.removeAll { it.value < now }
+        }
+    }
+
+    /** True if [eventId] was read/dismissed in-app within the guard window. */
+    fun wasDismissed(eventId: String): Boolean {
+        val expiry = recentlyDismissed[eventId] ?: return false
+        if (SystemClock.elapsedRealtime() > expiry) {
+            recentlyDismissed.remove(eventId)
+            return false
+        }
+        return true
+    }
 
     /**
      * Derives a stable summary notification id for a per-thread reply group.
@@ -144,6 +173,10 @@ object NotificationUtils {
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
     ) {
+        // The user read/dismissed this event in-app while enrichment was still
+        // running — don't resurrect it (and skip the bitmap work).
+        if (wasDismissed(id)) return
+
         val channelId = category.ensureChannel(applicationContext)
         val notId = id.hashCode()
 
@@ -224,6 +257,10 @@ object NotificationUtils {
         groupKey: String = category.group,
         summaryId: Int = category.summaryId,
     ) {
+        // The user read/dismissed this event in-app while enrichment was still
+        // running — don't resurrect it (and skip the bitmap work).
+        if (wasDismissed(id)) return
+
         val channelId = category.ensureChannel(applicationContext)
         val notId = id.hashCode()
 
@@ -543,6 +580,11 @@ object NotificationUtils {
      * doesn't keep an empty summary around.
      */
     fun NotificationManager.dismissNotificationForEvent(eventId: HexKey) {
+        // Record the dismissal first, unconditionally, so an in-flight enrichment
+        // window can't re-post this notification after the user has read it — even
+        // in the race where the initial post isn't visible in activeNotifications yet.
+        markDismissed(eventId)
+
         val notId = eventId.hashCode()
 
         // Most events the user reads never had a tray notification (regular feed

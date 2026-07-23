@@ -53,6 +53,7 @@ object ChessNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = event.id,
             users = listOf(author),
             notes = emptyList(),
             isComplete = { author.metadataOrNull()?.bestName() != null },

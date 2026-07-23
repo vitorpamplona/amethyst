@@ -71,6 +71,7 @@ object RepostNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = id,
             users = listOf(booster),
             notes = listOfNotNull(boostedNote),
             isComplete = { booster.metadataOrNull()?.bestName() != null },

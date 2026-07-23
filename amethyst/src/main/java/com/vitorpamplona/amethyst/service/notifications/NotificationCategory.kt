@@ -230,24 +230,33 @@ enum class NotificationCategory(
 
     fun channelId(context: Context): String = stringRes(context, channelIdRes)
 
+    @Volatile private var channelEnsured = false
+
     /**
-     * Idempotently creates this category's channel group and channel. Safe to
-     * call before every post — Android no-ops when the channel already exists
-     * (it never downgrades a channel the user has customized). Returns the
-     * channel id to post on.
+     * Creates this category's channel group and channel exactly once per process.
+     * The `create*` calls are idempotent but each is a Binder IPC, so — like the
+     * original `getOrCreate*Channel` field-caching — we skip them after the first
+     * successful creation instead of paying two IPCs on every post and re-render.
+     * Returns the channel id to post on.
      */
     fun ensureChannel(context: Context): String {
-        val nm = context.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannelGroup(
-            NotificationChannelGroup(channelGroup.id, stringRes(context, channelGroup.nameRes)),
-        )
         val id = channelId(context)
-        val channel =
-            NotificationChannel(id, stringRes(context, channelNameRes), importance).apply {
-                description = stringRes(context, channelDescriptionRes)
-                group = channelGroup.id
+        if (channelEnsured) return id
+        synchronized(this) {
+            if (!channelEnsured) {
+                val nm = context.getSystemService(NotificationManager::class.java)
+                nm.createNotificationChannelGroup(
+                    NotificationChannelGroup(channelGroup.id, stringRes(context, channelGroup.nameRes)),
+                )
+                val channel =
+                    NotificationChannel(id, stringRes(context, channelNameRes), importance).apply {
+                        description = stringRes(context, channelDescriptionRes)
+                        group = channelGroup.id
+                    }
+                nm.createNotificationChannel(channel)
+                channelEnsured = true
             }
-        nm.createNotificationChannel(channel)
+        }
         return id
     }
 }

@@ -66,6 +66,7 @@ object GroupMessageNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = innerEvent.id,
             users = listOf(sender),
             notes = emptyList(),
             isComplete = { sender.metadataOrNull()?.bestName() != null },
@@ -113,6 +114,7 @@ object GroupMessageNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = event.id,
             users = listOf(inviter),
             notes = emptyList(),
             isComplete = { inviter.metadataOrNull()?.bestName() != null },

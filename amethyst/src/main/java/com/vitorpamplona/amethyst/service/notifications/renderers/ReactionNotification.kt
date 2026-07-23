@@ -66,6 +66,7 @@ object ReactionNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = event.id,
             users = listOf(author),
             notes = listOfNotNull(reactedNote),
             isComplete = { author.metadataOrNull()?.bestName() != null },

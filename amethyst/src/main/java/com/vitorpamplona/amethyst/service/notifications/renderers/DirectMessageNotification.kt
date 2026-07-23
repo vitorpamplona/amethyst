@@ -109,6 +109,7 @@ object DirectMessageNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = eventId,
             users = listOf(author),
             notes = listOf(chatNote),
             isComplete = { author.metadataOrNull()?.bestName() != null },

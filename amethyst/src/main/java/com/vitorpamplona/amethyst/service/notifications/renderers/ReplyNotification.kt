@@ -69,6 +69,7 @@ object ReplyNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = event.id,
             users = listOf(author),
             notes = listOf(replyNote),
             isComplete = { author.metadataOrNull()?.bestName() != null },

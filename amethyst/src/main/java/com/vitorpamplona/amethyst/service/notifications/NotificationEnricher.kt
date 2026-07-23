@@ -31,13 +31,16 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -63,6 +66,16 @@ object NotificationEnricher {
     private const val TAG = "NotificationEnricher"
     private const val WINDOW_MS = 25_000L
 
+    /** Collapses the StateFlow initial-value burst and rapid relay arrivals into
+     * one re-render, instead of rebuilding (reloading avatars, re-posting) on
+     * every emission. */
+    private const val RENDER_DEBOUNCE_MS = 250L
+
+    /** Caps concurrent enrichment windows so a push burst can't hold N
+     * simultaneous relay windows + wakelocks + subscriptions. */
+    private const val MAX_CONCURRENT_WINDOWS = 4
+    private val windowLimiter = Semaphore(MAX_CONCURRENT_WINDOWS)
+
     /**
      * Posts [build] now, then observes [users] and [notes] for the enrichment
      * window, re-running [build] whenever their metadata/content changes, until
@@ -75,25 +88,38 @@ object NotificationEnricher {
     fun enrichAndPost(
         context: Context,
         account: Account,
+        notificationId: String,
         users: Collection<User>,
         notes: Collection<Note>,
         isComplete: () -> Boolean,
         build: suspend () -> Unit,
     ) {
         Amethyst.instance.applicationIOScope.launch {
-            // 1. Immediate render from whatever is already cached.
-            runBuild(build)
-
-            // 2. If we already have everything, we're done — no relay window.
-            if (isComplete()) return@launch
-
             withEnrichmentWakeLock(context) {
-                observeUntilComplete(account, users, notes, isComplete, build)
+                // 1. Immediate render from cache — under the wakelock so a
+                //    cold-push post can't be lost to Doze before it reaches the
+                //    tray (the parent dispatcher wakelock is already released).
+                runBuild(build)
+
+                // 2. If we already have everything, we're done — no relay window.
+                if (isComplete()) return@withEnrichmentWakeLock
+
+                // 3. Bound concurrent relay windows. When the cap is hit the
+                //    cached render still stands; it just won't live-enrich.
+                if (!windowLimiter.tryAcquire()) return@withEnrichmentWakeLock
+                try {
+                    observeUntilComplete(context, notificationId, account, users, notes, isComplete, build)
+                } finally {
+                    windowLimiter.release()
+                }
             }
         }
     }
 
+    @OptIn(FlowPreview::class)
     private suspend fun observeUntilComplete(
+        context: Context,
+        notificationId: String,
         account: Account,
         users: Collection<User>,
         notes: Collection<Note>,
@@ -129,24 +155,26 @@ object NotificationEnricher {
                         }
                     }
 
-                // Re-render whenever any involved user's metadata or note's
-                // content changes; stop as soon as everything needed is present.
+                // Re-render on metadata/content changes. Debounced so the
+                // StateFlow initial-value burst and rapid arrivals collapse into
+                // one rebuild. Stops as soon as everything needed is present, or
+                // the user dismissed the notification in-app.
                 val changes =
-                    (
-                        users.map { it.metadata().flow.map { } } +
-                            notes.map {
-                                it
-                                    .flow()
-                                    .metadata.stateFlow
-                                    .map { }
-                            }
-                    )
+                    users.map { it.metadata().flow.map { } } +
+                        notes.map {
+                            it
+                                .flow()
+                                .metadata.stateFlow
+                                .map { }
+                        }
 
                 if (changes.isNotEmpty()) {
                     withTimeoutOrNull(WINDOW_MS) {
                         merge(*changes.toTypedArray())
+                            .debounce(RENDER_DEBOUNCE_MS)
                             .onEach { runBuild(build) }
-                            .first { isComplete() }
+                            .takeWhile { !NotificationUtils.wasDismissed(notificationId) && !isComplete() }
+                            .collect { }
                     }
                 }
 

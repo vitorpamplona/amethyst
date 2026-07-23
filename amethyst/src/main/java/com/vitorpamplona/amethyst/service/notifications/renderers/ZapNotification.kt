@@ -146,6 +146,7 @@ object ZapNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = id,
             users = listOf(sender),
             notes = listOfNotNull(zappedNote),
             isComplete = { sender.metadataOrNull()?.bestName() != null },

@@ -72,6 +72,7 @@ object ArticleNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = event.id,
             users = listOf(author),
             notes = listOf(note),
             isComplete = { author.metadataOrNull()?.bestName() != null },

@@ -53,6 +53,7 @@ object BadgeNotification {
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
+            notificationId = event.id,
             users = listOf(issuer),
             notes = listOf(note),
             isComplete = { issuer.metadataOrNull()?.bestName() != null },
