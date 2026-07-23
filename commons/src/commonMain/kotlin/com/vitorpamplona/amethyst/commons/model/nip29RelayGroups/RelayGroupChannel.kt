@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
@@ -305,7 +306,16 @@ class RelayGroupChannel(
                 else -> RelayGroupMembership.MODERATOR
             }
         }
-        return if (pubkey in members) RelayGroupMembership.MEMBER else RelayGroupMembership.NONE
+        if (pubkey in members) return RelayGroupMembership.MEMBER
+        // Buzz community-level fallback: a member of the relay's NIP-43 community roster (kind 13534 /
+        // 8000-8001) may participate in every channel on that relay even without a per-channel 39002
+        // entry — so a community member/admin isn't wrongly gated. Mapped to MEMBER only (never channel
+        // ADMIN) to avoid over-granting per-channel moderation. Buzz-only: the concept doesn't exist on
+        // standard NIP-29 relays.
+        if (BuzzRelayDialect.isBuzz(groupId.relayUrl) && BuzzCommunityMembership.isMember(groupId.relayUrl, pubkey)) {
+            return RelayGroupMembership.MEMBER
+        }
+        return RelayGroupMembership.NONE
     }
 
     /**

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -297,6 +298,7 @@ class RelayGroupChannelTest {
     @Test
     fun buzzPrivateChannelStillGatesPostingOnRoster() {
         BuzzRelayDialect.clearForTesting()
+        BuzzCommunityMembership.clearForTesting()
         BuzzRelayDialect.mark(relay)
         try {
             val c = channel()
@@ -308,6 +310,66 @@ class RelayGroupChannelTest {
             assertFalse(c.canPost(bob)) // non-member blocked on a private channel
         } finally {
             BuzzRelayDialect.clearForTesting()
+            BuzzCommunityMembership.clearForTesting()
+        }
+    }
+
+    @Test
+    fun buzzCommunityMemberCountsEvenWhenAbsentFromChannelRoster() {
+        // A Buzz community member (NIP-43 kind 13534 / 8000) can participate in every channel on the
+        // relay, even a private one whose per-channel 39002 doesn't list them. membershipOf must fall
+        // back to the community roster so they aren't wrongly gated.
+        BuzzRelayDialect.clearForTesting()
+        BuzzCommunityMembership.clearForTesting()
+        BuzzRelayDialect.mark(relay)
+        try {
+            val c = channel()
+            c.updateGroupInfo(metadata(100, flags = listOf("private", "closed")))
+            c.updateMembers(members(100, alice)) // channel roster: only alice
+
+            // bob is not in the channel roster → NONE, blocked.
+            assertEquals(RelayGroupMembership.NONE, c.membershipOf(bob))
+            assertFalse(c.canPost(bob))
+
+            // bob joins the community (snapshot lists alice+bob).
+            BuzzCommunityMembership.updateSnapshot(relay, setOf(alice, bob), createdAt = 200)
+            assertEquals(RelayGroupMembership.MEMBER, c.membershipOf(bob))
+            assertTrue(c.canPost(bob))
+            // A per-channel admin still outranks the community fallback.
+            c.updateAdmins(admins(100, alice to listOf("admin")))
+            assertEquals(RelayGroupMembership.ADMIN, c.membershipOf(alice))
+
+            // 8001 remove delta drops bob again.
+            BuzzCommunityMembership.applyDelta(relay, remove = setOf(bob), createdAt = 300)
+            assertEquals(RelayGroupMembership.NONE, c.membershipOf(bob))
+        } finally {
+            BuzzRelayDialect.clearForTesting()
+            BuzzCommunityMembership.clearForTesting()
+        }
+    }
+
+    @Test
+    fun buzzCommunityMembershipIgnoresNonBuzzRelaysAndStaleDeltas() {
+        BuzzRelayDialect.clearForTesting()
+        BuzzCommunityMembership.clearForTesting()
+        try {
+            // Not a Buzz relay: community roster is irrelevant even if somehow populated.
+            BuzzCommunityMembership.updateSnapshot(relay, setOf(carol), createdAt = 100)
+            val c = channel()
+            assertEquals(RelayGroupMembership.NONE, c.membershipOf(carol))
+
+            // Now mark Buzz: the same roster applies.
+            BuzzRelayDialect.mark(relay)
+            assertEquals(RelayGroupMembership.MEMBER, c.membershipOf(carol))
+
+            // A stale delta (older created_at) must not resurrect a removed member.
+            BuzzCommunityMembership.applyDelta(relay, remove = setOf(carol), createdAt = 200)
+            assertEquals(RelayGroupMembership.NONE, c.membershipOf(carol))
+            BuzzCommunityMembership.applyDelta(relay, add = setOf(carol), createdAt = 150) // stale
+            assertEquals(RelayGroupMembership.NONE, c.membershipOf(carol))
+        } finally {
+            BuzzRelayDialect.clearForTesting()
+            BuzzCommunityMembership.clearForTesting()
         }
     }
 

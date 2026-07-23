@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -279,6 +280,9 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -2076,6 +2080,65 @@ object LocalCache : ILocalCache, ICacheProvider {
             latest?.let { getOrCreateRelayGroupChannel(GroupId(it.groupId(), relay)).updateSupportedRoles(it) }
         }
         return new
+    }
+
+    /**
+     * Buzz/NIP-43 community (relay-wide) membership snapshot (kind 13534) → the relay's community roster.
+     * Buzz grants participation across ALL its channels off this list, not the per-channel 39002, so
+     * feeding it into [BuzzCommunityMembership] lets [RelayGroupChannel.membershipOf] recognise a
+     * community member even when a channel roster omits them. Scoped to Buzz relays (the concept is
+     * Buzz-specific and the event is relay-signed + NIP-70 relay-only).
+     */
+    fun consume(
+        event: RelayMembershipListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+        if (relay != null && BuzzRelayDialect.isBuzz(relay)) {
+            if (BuzzCommunityMembership.updateSnapshot(relay, event.members().toSet(), event.createdAt)) {
+                refreshRelayGroupMembership(relay)
+            }
+        }
+        return new
+    }
+
+    /** Buzz/NIP-43 community member-added delta (kind 8000) → adds to the relay's [BuzzCommunityMembership]. */
+    fun consume(
+        event: RelayAddMemberEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBuzzRegularEvent(event, relay, wasVerified)
+        if (relay != null && BuzzRelayDialect.isBuzz(relay)) {
+            if (BuzzCommunityMembership.applyDelta(relay, add = event.memberPubKeys().toSet(), createdAt = event.createdAt)) {
+                refreshRelayGroupMembership(relay)
+            }
+        }
+        return new
+    }
+
+    /** Buzz/NIP-43 community member-removed delta (kind 8001) → removes from the relay's [BuzzCommunityMembership]. */
+    fun consume(
+        event: RelayRemoveMemberEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeBuzzRegularEvent(event, relay, wasVerified)
+        if (relay != null && BuzzRelayDialect.isBuzz(relay)) {
+            if (BuzzCommunityMembership.applyDelta(relay, remove = event.memberPubKeys().toSet(), createdAt = event.createdAt)) {
+                refreshRelayGroupMembership(relay)
+            }
+        }
+        return new
+    }
+
+    /**
+     * Poke every relay-group channel on [relay] so the `membershipOf` community-level fallback re-renders
+     * (community membership lives outside the per-channel roster, so nothing else invalidates their state).
+     */
+    private fun refreshRelayGroupMembership(relay: NormalizedRelayUrl) {
+        getRelayGroupChannelsOnRelay(relay).forEach { it.updateChannelInfo() }
     }
 
     /**
@@ -4648,6 +4711,9 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is DmHideEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is MemberAddedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is MemberRemovedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is RelayMembershipListEvent -> consume(event, relay, wasVerified)
+                is RelayAddMemberEvent -> consume(event, relay, wasVerified)
+                is RelayRemoveMemberEvent -> consume(event, relay, wasVerified)
                 is AgentTurnMetricEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is ModerationBanEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is ModerationTimeoutEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
