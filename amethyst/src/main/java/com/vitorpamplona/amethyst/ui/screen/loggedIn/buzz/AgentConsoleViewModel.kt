@@ -92,6 +92,7 @@ class AgentConsoleViewModel : ViewModel() {
     val observerFrames: StateFlow<List<ObserverRow>> = _observerFrames.asStateFlow()
 
     private var observerJob: Job? = null
+    private var watchJob: Job? = null
 
     /** Dedups ephemeral frames across relays and re-emissions (accessed off multiple readers). */
     private val observerSeen = Collections.synchronizedSet(HashSet<HexKey>())
@@ -258,8 +259,52 @@ class AgentConsoleViewModel : ViewModel() {
         observerJob = null
     }
 
+    /**
+     * Keeps the Costs + Personas tabs live while the console is open: a persistent subscription for
+     * the owner's turn metrics (44200, `#p` = me) and persona definitions (30175, authored by me) on
+     * this community's relay, re-deriving both tabs from [LocalCache] whenever a batch arrives.
+     *
+     * This is what makes the console populate right after the NIP-42 auth handshake completes: the
+     * one-shot [refresh] fetch can return before the authenticated retry actually delivers, so
+     * without a live watch the tabs stay empty until a manual refresh. Idempotent; [stopWatching]
+     * tears it down when the screen leaves.
+     */
+    fun startWatching() {
+        val account = account ?: return
+        if (watchJob != null) return
+
+        val relays = scopeRelay?.let { setOf(it) } ?: (BuzzRelayDialect.flow.value + account.outboxRelays.flow.value)
+        if (relays.isEmpty()) return
+
+        val myPubkey = account.userProfile().pubkeyHex
+        val filters =
+            listOf(
+                Filter(kinds = listOf(AgentTurnMetricEvent.KIND), tags = mapOf("p" to listOf(myPubkey))),
+                Filter(kinds = listOf(PersonaEvent.KIND), authors = listOf(myPubkey)),
+            )
+
+        watchJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                relays.forEach { relay ->
+                    launch {
+                        account.client.subscribeAsFlow(relay, filters).collect {
+                            // The client's global listener has already consumed the batch into LocalCache;
+                            // re-derive both tabs from it. reloadFromCache is idempotent + decrypt-cached.
+                            reloadFromCache(account)
+                        }
+                    }
+                }
+            }
+    }
+
+    fun stopWatching() {
+        watchJob?.cancel()
+        watchJob = null
+    }
+
     override fun onCleared() {
         stopObserving()
+        stopWatching()
         super.onCleared()
     }
 

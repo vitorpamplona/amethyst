@@ -90,6 +90,13 @@ fun AgentConsoleScreen(
 
     viewModel.bind(accountViewModel.account, relayUrl)
 
+    // Keep Costs + Personas live while the console is open, so they populate once the relay's NIP-42
+    // auth completes (the one-shot fetch on bind can return before the authenticated read delivers).
+    DisposableEffect(relayUrl) {
+        viewModel.startWatching()
+        onDispose { viewModel.stopWatching() }
+    }
+
     val metrics by viewModel.metrics.collectAsStateWithLifecycle()
     val personas by viewModel.personas.collectAsStateWithLifecycle()
     val observerFrames by viewModel.observerFrames.collectAsStateWithLifecycle()
