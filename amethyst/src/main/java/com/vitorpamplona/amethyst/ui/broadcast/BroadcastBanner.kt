@@ -44,15 +44,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -105,6 +108,7 @@ fun BroadcastBanner(
     broadcasts: ImmutableList<BroadcastEvent>,
     miningJobs: ImmutableList<PoWJobState> = persistentListOf(),
     onCancelJob: (String) -> Unit = {},
+    onSendWithoutPow: (String) -> Unit = {},
     onTap: () -> Unit = {},
     onRetryAll: () -> Unit = {},
     onDismiss: () -> Unit = {},
@@ -133,7 +137,7 @@ fun BroadcastBanner(
                         .animateContentSize(),
             ) {
                 if (miningJobs.isNotEmpty()) {
-                    MiningContent(miningJobs, onCancelJob)
+                    MiningContent(miningJobs, onCancelJob, onSendWithoutPow)
 
                     if (broadcasts.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
@@ -166,7 +170,32 @@ fun BroadcastBanner(
 private fun MiningContent(
     miningJobs: ImmutableList<PoWJobState>,
     onCancelJob: (String) -> Unit,
+    onSendWithoutPow: (String) -> Unit,
 ) {
+    // the job whose × was tapped and is awaiting the send-or-discard choice.
+    var confirmJobId by remember { mutableStateOf<String?>(null) }
+
+    // drop the dialog if its job finished (mined and published) while it was open.
+    LaunchedEffect(miningJobs) {
+        if (confirmJobId != null && miningJobs.none { it.id == confirmJobId }) {
+            confirmJobId = null
+        }
+    }
+
+    confirmJobId?.let { jobId ->
+        PoWCancelDialog(
+            onSendWithoutPow = {
+                onSendWithoutPow(jobId)
+                confirmJobId = null
+            },
+            onDiscard = {
+                onCancelJob(jobId)
+                confirmJobId = null
+            },
+            onKeepMining = { confirmJobId = null },
+        )
+    }
+
     // one shared pulse for the gear — mining has no measurable progress, so
     // the animation is what says "the app is working right now".
     val pulse = rememberInfiniteTransition(label = "miningPulse")
@@ -264,7 +293,16 @@ private fun MiningContent(
                 // there is nothing safe to abort anymore.
                 if (job.isCancellable) {
                     IconButton(
-                        onClick = { onCancelJob(job.id) },
+                        // a template post can still go out un-mined, so ask first;
+                        // opaque jobs (reactions, reposts) have no such choice and
+                        // just cancel.
+                        onClick = {
+                            if (job.canSendWithoutPow) {
+                                confirmJobId = job.id
+                            } else {
+                                onCancelJob(job.id)
+                            }
+                        },
                         modifier = Modifier.size(22.dp),
                     ) {
                         Icon(
@@ -318,6 +356,37 @@ private fun MiningContent(
             )
         }
     }
+}
+
+/**
+ * Asks what to do with a post whose proof of work is still mining: publish it
+ * now without PoW, discard it, or keep mining. Only shown for jobs that carry
+ * an un-mined fallback (template posts).
+ */
+@Composable
+private fun PoWCancelDialog(
+    onSendWithoutPow: () -> Unit,
+    onDiscard: () -> Unit,
+    onKeepMining: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onKeepMining,
+        title = { Text(stringRes(R.string.pow_cancel_dialog_title)) },
+        text = { Text(stringRes(R.string.pow_cancel_dialog_message)) },
+        confirmButton = {
+            TextButton(onClick = onSendWithoutPow) {
+                Text(stringRes(R.string.pow_cancel_dialog_send_without_pow))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDiscard) {
+                Text(
+                    text = stringRes(R.string.pow_cancel_dialog_discard),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+    )
 }
 
 @Composable
