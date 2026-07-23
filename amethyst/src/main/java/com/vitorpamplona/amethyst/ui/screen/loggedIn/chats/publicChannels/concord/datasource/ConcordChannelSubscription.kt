@@ -100,6 +100,10 @@ fun ConcordChannelPreload(accountViewModel: AccountViewModel) {
 
     bootstrapPinnedCommunities(accountViewModel)
 
+    // Warm the last-message preview of every channel of every joined community (one drain per relay),
+    // so the Messages inbox shows a preview for channels the user has never opened.
+    ConcordChannelPreviewAccountPreload(accountViewModel)
+
     KeyDataSourceSubscription(state, dataSource)
 }
 
