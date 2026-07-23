@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -195,6 +196,11 @@ class SearchBarViewModel(
                 // URL is carried so the fragment token survives.
                 if (ConcordActions.parseInviteLink(term) != null) {
                     return@mapLatest Route.ConcordInvite(term)
+                }
+
+                // A pasted Buzz workspace invite (`…/invite/<token>`) opens the in-app join flow.
+                if (term.contains("/invite/") && BuzzInviteLink.parse(term) != null) {
+                    return@mapLatest Route.BuzzInvite(term)
                 }
 
                 val parsed =

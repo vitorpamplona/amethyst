@@ -25,6 +25,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -60,6 +62,26 @@ fun RelayGroupJoinedChatTailPreload(accountViewModel: AccountViewModel) {
 
     val joined by account.relayGroupList.liveRelayGroupList.collectAsStateWithLifecycle()
     LaunchedEffect(joined) { dataSource.invalidateFilters() }
+
+    KeyDataSourceSubscription(state, dataSource)
+}
+
+/**
+ * Always-on preview **live tail** for the viewer's Buzz DM channels' recent chat, mounted alongside
+ * [RelayGroupJoinedChatTailPreload] — keeps discovered DM conversations warm app-wide so a Buzz DM can
+ * surface on the Notifications tab and in push without opening it. Re-derives whenever a DM is discovered
+ * ([com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels]) or hidden/unhidden
+ * ([com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry]).
+ */
+@Composable
+fun BuzzDmJoinedChatTailPreload(accountViewModel: AccountViewModel) {
+    val account = accountViewModel.account
+    val dataSource = accountViewModel.dataSources().buzzDmJoinedChatTail
+    val state = remember(account) { BuzzDmJoinedChatTailQueryState(account) }
+
+    val channels by BuzzDmChannels.flow.collectAsStateWithLifecycle()
+    val hidden by BuzzDmRegistry.hidden.collectAsStateWithLifecycle()
+    LaunchedEffect(channels, hidden) { dataSource.invalidateFilters() }
 
     KeyDataSourceSubscription(state, dataSource)
 }

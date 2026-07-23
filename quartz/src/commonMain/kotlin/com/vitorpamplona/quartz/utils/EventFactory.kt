@@ -22,6 +22,81 @@
 
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
+import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
+import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
+import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
+import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
+import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
+import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
+import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
+import com.vitorpamplona.quartz.buzz.erReminders.EventReminderEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleGuidelinesEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleReactionEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleStartedEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchiveRequestEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchivedIdentitiesListEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchivedIdentityEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.UnarchiveRequestEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.UnarchivedIdentityEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobAcceptedEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.managedAgents.ManagedAgentEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationBanEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationResolveReportEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationTimeoutEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationUntimeoutEvent
+import com.vitorpamplona.quartz.buzz.moderation.ProductFeedbackEvent
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
+import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
+import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
+import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminChangeRoleEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
+import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageBookmarkedEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessagePinnedEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageScheduledEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.stream.StreamReminderEvent
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.buzz.teams.TeamEvent
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalDeniedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalGrantedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCancelledEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepStartedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
+import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
@@ -351,6 +426,80 @@ class EventFactory {
             when (kind) {
                 AcceptedBadgeSetEvent.KIND -> AcceptedBadgeSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                AgentTurnMetricEvent.KIND -> AgentTurnMetricEvent(id, pubKey, createdAt, tags, content, sig)
+                EngramEvent.KIND -> EngramEvent(id, pubKey, createdAt, tags, content, sig)
+                AgentProfileEvent.KIND -> AgentProfileEvent(id, pubKey, createdAt, tags, content, sig)
+                ObserverFrameEvent.KIND -> ObserverFrameEvent(id, pubKey, createdAt, tags, content, sig)
+                PersonaEvent.KIND -> PersonaEvent(id, pubKey, createdAt, tags, content, sig)
+                AuditEntryEvent.KIND -> AuditEntryEvent(id, pubKey, createdAt, tags, content, sig)
+                WindowBoundsEvent.KIND -> WindowBoundsEvent(id, pubKey, createdAt, tags, content, sig)
+                DmAddMemberEvent.KIND -> DmAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
+                DmCreatedEvent.KIND -> DmCreatedEvent(id, pubKey, createdAt, tags, content, sig)
+                DmHideEvent.KIND -> DmHideEvent(id, pubKey, createdAt, tags, content, sig)
+                DmOpenEvent.KIND -> DmOpenEvent(id, pubKey, createdAt, tags, content, sig)
+                DmVisibilityEvent.KIND -> DmVisibilityEvent(id, pubKey, createdAt, tags, content, sig)
+                EventReminderEvent.KIND -> EventReminderEvent(id, pubKey, createdAt, tags, content, sig)
+                ForumCommentEvent.KIND -> ForumCommentEvent(id, pubKey, createdAt, tags, content, sig)
+                ForumPostEvent.KIND -> ForumPostEvent(id, pubKey, createdAt, tags, content, sig)
+                ForumVoteEvent.KIND -> ForumVoteEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleEndedEvent.KIND -> HuddleEndedEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleGuidelinesEvent.KIND -> HuddleGuidelinesEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleParticipantJoinedEvent.KIND -> HuddleParticipantJoinedEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleParticipantLeftEvent.KIND -> HuddleParticipantLeftEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleReactionEvent.KIND -> HuddleReactionEvent(id, pubKey, createdAt, tags, content, sig)
+                HuddleStartedEvent.KIND -> HuddleStartedEvent(id, pubKey, createdAt, tags, content, sig)
+                ArchiveRequestEvent.KIND -> ArchiveRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                ArchivedIdentitiesListEvent.KIND -> ArchivedIdentitiesListEvent(id, pubKey, createdAt, tags, content, sig)
+                ArchivedIdentityEvent.KIND -> ArchivedIdentityEvent(id, pubKey, createdAt, tags, content, sig)
+                UnarchiveRequestEvent.KIND -> UnarchiveRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                UnarchivedIdentityEvent.KIND -> UnarchivedIdentityEvent(id, pubKey, createdAt, tags, content, sig)
+                JobAcceptedEvent.KIND -> JobAcceptedEvent(id, pubKey, createdAt, tags, content, sig)
+                JobCancelEvent.KIND -> JobCancelEvent(id, pubKey, createdAt, tags, content, sig)
+                JobErrorEvent.KIND -> JobErrorEvent(id, pubKey, createdAt, tags, content, sig)
+                JobProgressEvent.KIND -> JobProgressEvent(id, pubKey, createdAt, tags, content, sig)
+                JobRequestEvent.KIND -> JobRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                JobResultEvent.KIND -> JobResultEvent(id, pubKey, createdAt, tags, content, sig)
+                ManagedAgentEvent.KIND -> ManagedAgentEvent(id, pubKey, createdAt, tags, content, sig)
+                ModerationBanEvent.KIND -> ModerationBanEvent(id, pubKey, createdAt, tags, content, sig)
+                ModerationResolveReportEvent.KIND -> ModerationResolveReportEvent(id, pubKey, createdAt, tags, content, sig)
+                ModerationTimeoutEvent.KIND -> ModerationTimeoutEvent(id, pubKey, createdAt, tags, content, sig)
+                ModerationUntimeoutEvent.KIND -> ModerationUntimeoutEvent(id, pubKey, createdAt, tags, content, sig)
+                ProductFeedbackEvent.KIND -> ProductFeedbackEvent(id, pubKey, createdAt, tags, content, sig)
+                MemberAddedNotificationEvent.KIND -> MemberAddedNotificationEvent(id, pubKey, createdAt, tags, content, sig)
+                MemberRemovedNotificationEvent.KIND -> MemberRemovedNotificationEvent(id, pubKey, createdAt, tags, content, sig)
+                PairingEvent.KIND -> PairingEvent(id, pubKey, createdAt, tags, content, sig)
+                PushLeaseEvent.KIND -> PushLeaseEvent(id, pubKey, createdAt, tags, content, sig)
+                TypingIndicatorEvent.KIND -> TypingIndicatorEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayAdminAddMemberEvent.KIND -> RelayAdminAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayAdminChangeRoleEvent.KIND -> RelayAdminChangeRoleEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayAdminRemoveMemberEvent.KIND -> RelayAdminRemoveMemberEvent(id, pubKey, createdAt, tags, content, sig)
+                CanvasEvent.KIND -> CanvasEvent(id, pubKey, createdAt, tags, content, sig)
+                StreamMessageBookmarkedEvent.KIND -> StreamMessageBookmarkedEvent(id, pubKey, createdAt, tags, content, sig)
+                StreamMessageDiffEvent.KIND -> StreamMessageDiffEvent(id, pubKey, createdAt, tags, content, sig)
+                StreamMessageEditEvent.KIND -> StreamMessageEditEvent(id, pubKey, createdAt, tags, content, sig)
+                StreamMessagePinnedEvent.KIND -> StreamMessagePinnedEvent(id, pubKey, createdAt, tags, content, sig)
+                StreamMessageScheduledEvent.KIND -> StreamMessageScheduledEvent(id, pubKey, createdAt, tags, content, sig)
+                StreamMessageV2Event.KIND -> StreamMessageV2Event(id, pubKey, createdAt, tags, content, sig)
+                StreamReminderEvent.KIND -> StreamReminderEvent(id, pubKey, createdAt, tags, content, sig)
+                SystemMessageEvent.KIND -> SystemMessageEvent(id, pubKey, createdAt, tags, content, sig)
+                ChannelSummaryEvent.KIND -> ChannelSummaryEvent(id, pubKey, createdAt, tags, content, sig)
+                PresenceSnapshotEvent.KIND -> PresenceSnapshotEvent(id, pubKey, createdAt, tags, content, sig)
+                TeamEvent.KIND -> TeamEvent(id, pubKey, createdAt, tags, content, sig)
+                ApprovalDenyEvent.KIND -> ApprovalDenyEvent(id, pubKey, createdAt, tags, content, sig)
+                ApprovalGrantEvent.KIND -> ApprovalGrantEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowApprovalDeniedEvent.KIND -> WorkflowApprovalDeniedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowApprovalGrantedEvent.KIND -> WorkflowApprovalGrantedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowApprovalRequestedEvent.KIND -> WorkflowApprovalRequestedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowCancelledEvent.KIND -> WorkflowCancelledEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowCompletedEvent.KIND -> WorkflowCompletedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowDefEvent.KIND -> WorkflowDefEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowFailedEvent.KIND -> WorkflowFailedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowStepCompletedEvent.KIND -> WorkflowStepCompletedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowStepFailedEvent.KIND -> WorkflowStepFailedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowStepStartedEvent.KIND -> WorkflowStepStartedEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowTriggerEvent.KIND -> WorkflowTriggerEvent(id, pubKey, createdAt, tags, content, sig)
+                WorkflowTriggeredEvent.KIND -> WorkflowTriggeredEvent(id, pubKey, createdAt, tags, content, sig)
+                SetWorkspaceProfileEvent.KIND -> SetWorkspaceProfileEvent(id, pubKey, createdAt, tags, content, sig)
                 AppCurationSetEvent.KIND -> AppCurationSetEvent(id, pubKey, createdAt, tags, content, sig)
                 AppDefinitionEvent.KIND -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 AppRecommendationEvent.KIND -> AppRecommendationEvent(id, pubKey, createdAt, tags, content, sig)
@@ -453,7 +602,18 @@ class EventFactory {
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashChatEvent.KIND -> GeohashChatEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashListEvent.KIND -> GeohashListEvent(id, pubKey, createdAt, tags, content, sig)
-                GeohashPresenceEvent.KIND -> GeohashPresenceEvent(id, pubKey, createdAt, tags, content, sig)
+                // kind:20001 is shared by BitChat's GeohashPresenceEvent and Buzz's
+                // PresenceUpdateEvent. Disambiguate by BitChat's required `g` (geohash) tag:
+                // BitChat presence always carries one (empty content); Buzz presence never does
+                // (the status lives in content, plus a `status` tag from clients or a `p` tag on
+                // relay-synthesized reads). This routes both inbound parse and outbound signing,
+                // since both go through this factory.
+                GeohashPresenceEvent.KIND ->
+                    if (tags.any { it.size > 1 && it[0] == "g" }) {
+                        GeohashPresenceEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        PresenceUpdateEvent(id, pubKey, createdAt, tags, content, sig)
+                    }
                 GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralGiftWrapEvent.KIND -> EphemeralGiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
                 GitAuthorListEvent.KIND -> GitAuthorListEvent(id, pubKey, createdAt, tags, content, sig)

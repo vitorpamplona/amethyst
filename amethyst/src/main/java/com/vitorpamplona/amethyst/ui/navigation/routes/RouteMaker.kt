@@ -356,6 +356,16 @@ fun routeReplyTo(
         return Route.ChatMinichat(rootId, concord.channelId.communityId, concord.channelId.channelId)
     }
 
+    // A Buzz/NIP-29 relay-group message (kind-9 or kind-40002, e.g. a Buzz DM shown on the Notifications
+    // tab) must reply INSIDE the group, not as a public kind:1111 comment. The group has no hint on the
+    // inner event — detect it via the gathering RelayGroupChannel (recorded on consume), mirroring the
+    // Marmot/Concord cases above — and open the conversation, where the composer sends the Buzz-dialect
+    // reply. Without this it falls through to `else` = Route.GenericCommentPost (kind:1111).
+    val relayGroup = note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
+    if (relayGroup != null) {
+        return routeFor(relayGroup)
+    }
+
     val noteEvent = note.event
     return when (noteEvent) {
         is ChannelMessageEvent -> {

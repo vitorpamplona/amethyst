@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
+import com.vitorpamplona.amethyst.commons.richtext.BuzzInviteLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
 import com.vitorpamplona.amethyst.commons.richtext.ConcordInviteLinkSegment
@@ -179,7 +180,7 @@ private fun RenderWord(
             renderer.Url("https://${word.segmentText}", word.segmentText, Modifier)
         is NowhereLinkSegment -> renderer.NowhereLink(word, canPreview, Modifier)
 
-        is RelayUrlSegment, is RelayGroupLinkSegment, is ConcordInviteLinkSegment ->
+        is RelayUrlSegment, is RelayGroupLinkSegment, is ConcordInviteLinkSegment, is BuzzInviteLinkSegment ->
             renderer.RelayLink(word, Modifier)
 
         is InvoiceSegment, is WithdrawSegment, is CashuSegment, is ClinkOfferSegment ->

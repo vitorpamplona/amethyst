@@ -523,7 +523,30 @@ class Context(
         // event in the local cache.
         verifyAndStore(event)
         if (relayList.isEmpty()) return emptyMap()
-        return client.publishAndCollectResults(event, relayList, timeoutSecs)
+
+        var results = client.publishAndCollectResults(event, relayList, timeoutSecs)
+
+        // NIP-42 write path: an auth-required relay rejects the FIRST publish with
+        // `auth-required`. The publish opens a connection, races the async AUTH reply, and
+        // tears down before it lands — and [relayAuth] only re-auths on a REQ `CLOSED`, never
+        // on a rejected EVENT `OK`. The READ path, though, holds the connection open and its
+        // `auth-required:` CLOSED reliably drives a re-auth (`reauthenticateIfAuthRequired`),
+        // leaving the pooled connection authenticated. So on `auth-required` we warm auth with
+        // a tiny `pendingOnAuthRequired` REQ, then retry the publish on the now-authed socket.
+        var attempt = 0
+        while (attempt < 4) {
+            val needAuth =
+                results
+                    .filterValues { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }
+                    .keys
+            if (needAuth.isEmpty()) break
+            // A cheap REQ whose only purpose is to force the AUTH handshake to completion.
+            val warmFilter = listOf(Filter(kinds = listOf(event.kind), limit = 1))
+            drain(needAuth.associateWith { warmFilter }, timeoutMs = 8_000, pendingOnAuthRequired = true)
+            results = results + client.publishAndCollectResults(event, needAuth, timeoutSecs)
+            attempt++
+        }
+        return results
     }
 
     /**

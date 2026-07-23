@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -68,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -117,9 +119,9 @@ private fun RelayGroupThreads(
 
     RelayGroupThreadsPaging(threadCount = { threads.size }, listState = listState, history = history)
 
-    // Only members can post a thread (the relay rejects a non-member's kind-11), so the
-    // compose FAB is hidden for everyone else.
-    val canPost = channel.membershipOf(accountViewModel.userProfile().pubkeyHex).isMember()
+    // Hide the compose FAB where the relay would reject the kind-11: on membership-gated groups
+    // that don't list me. Open Buzz channels accept any authenticated member. See [RelayGroupChannel.canPost].
+    val canPost = channel.canPost(accountViewModel.userProfile().pubkeyHex)
 
     Scaffold(
         topBar = {
@@ -148,12 +150,19 @@ private fun RelayGroupThreads(
             if (canPost) {
                 FloatingActionButton(
                     onClick = {
-                        nav.nav(
-                            Route.NewShortNote(
-                                groupThreadId = channel.groupId.id,
-                                groupThreadRelayUrl = channel.groupId.relayUrl.url,
-                            ),
-                        )
+                        // On a Buzz workspace, "new thread" is a Buzz forum post (kind 45001);
+                        // vanilla NIP-29 relays use a kind-11 thread. Buzz relays reject
+                        // unknown kinds, so a kind-11 thread would be refused there.
+                        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+                            nav.nav(Route.BuzzForumPost(channel.groupId.id, channel.groupId.relayUrl.url))
+                        } else {
+                            nav.nav(
+                                Route.NewShortNote(
+                                    groupThreadId = channel.groupId.id,
+                                    groupThreadRelayUrl = channel.groupId.relayUrl.url,
+                                ),
+                            )
+                        }
                     },
                     shape = CircleShape,
                 ) {
@@ -181,7 +190,16 @@ private fun RelayGroupThreads(
                     if (index > 0) {
                         HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                    ThreadRow(thread, accountViewModel, nav) { nav.nav(Route.Note(thread.idHex)) }
+                    // A Buzz forum root (45001) opens the forum-thread detail (root + kind-45003 replies);
+                    // a NIP-29 kind-11 thread opens the generic note view with its kind-1111 comment tree.
+                    val open: () -> Unit = {
+                        if (thread.event is ForumPostEvent) {
+                            nav.nav(Route.BuzzForumThread(channel.groupId.id, channel.groupId.relayUrl.url, thread.idHex))
+                        } else {
+                            nav.nav(Route.Note(thread.idHex))
+                        }
+                    }
+                    ThreadRow(thread, accountViewModel, nav, open)
                 }
                 item(key = "threads-history-footer") {
                     RelayGroupThreadsHistoryFooter(loadingOlder, status.exhausted)
@@ -257,17 +275,32 @@ private fun ThreadRow(
     nav: INav,
     onClick: () -> Unit,
 ) {
-    // Observe the reply count so a kind-1111 comment arriving on an already-listed thread
-    // bumps it live (channel.threads only re-emits on add/remove of a thread).
+    // Observe the reply count so a comment arriving on an already-listed thread bumps it live
+    // (channel.threads only re-emits on add/remove of a thread).
     val replyCount by observeNoteReplyCount(thread, accountViewModel)
-    val event = thread.event as? ThreadEvent
-    val title = event?.title()?.takeIf { it.isNotBlank() } ?: stringRes(R.string.relay_group_thread_untitled)
-    val preview =
-        event
-            ?.content
-            ?.replace('\n', ' ')
-            ?.trim()
-            .orEmpty()
+    val untitled = stringRes(R.string.relay_group_thread_untitled)
+    // Two thread shapes share this list: NIP-29 kind-11 threads (title + body) and Buzz forum
+    // roots (kind 45001, body only — no title). For a forum post, surface the first line as the
+    // heading and the rest as the preview so it reads like a titled thread.
+    val title: String
+    val preview: String
+    when (val event = thread.event) {
+        is ThreadEvent -> {
+            title = event.title()?.takeIf { it.isNotBlank() } ?: untitled
+            preview = event.content.replace('\n', ' ').trim()
+        }
+        is ForumPostEvent -> {
+            val body = event.body().trim()
+            title = body.substringBefore('\n').trim().ifEmpty { untitled }
+            // Everything after the first line. Using substringAfter (not removePrefix on the trimmed
+            // first line) avoids duplicating the first line when it had trailing spaces before the \n.
+            preview = body.substringAfter('\n', "").replace('\n', ' ').trim()
+        }
+        else -> {
+            title = untitled
+            preview = ""
+        }
+    }
     val author = thread.author
 
     Row(

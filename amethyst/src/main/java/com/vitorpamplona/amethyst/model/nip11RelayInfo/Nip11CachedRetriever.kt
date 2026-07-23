@@ -36,6 +36,18 @@ class Nip11CachedRetriever(
     private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult?>(1000)
     private val retriever = Nip11Retriever(okHttpClient)
 
+    /**
+     * Drops any cached NIP-11 document (including a cached *error*) for [relay], so the next
+     * [loadRelayInfo] performs a fresh fetch. Used when the transport to a relay changes — e.g. it's
+     * marked Trusted to move off Tor onto clearnet — so a doc that failed over the old transport
+     * (403/timeout) isn't served from cache for the rest of its TTL, which would keep the relay's
+     * `self` key unknown and hide its relay-signed NIP-29 groups.
+     */
+    fun invalidate(relay: NormalizedRelayUrl) {
+        relayInformationDocumentCache.remove(relay)
+        relayInformationEmptyCache.remove(relay)
+    }
+
     fun trimToSize(maxItems: Int) {
         relayInformationDocumentCache.trimToSize(maxItems)
         // relayInformationEmptyCache holds only lightweight display-name+favicon-url placeholders;

@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistoryFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStateFilterAssembler
@@ -139,6 +140,7 @@ class RelaySubscriptionsCoordinator(
     // amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md).
     val relayGroupJoinedState = RelayGroupJoinedStateFilterAssembler(client) // always-on: joined groups' metadata/roster/roles/pins
     val relayGroupJoinedChatTail = RelayGroupJoinedChatTailFilterAssembler(client) // always-on: batched #h recent-tail for Messages previews
+    val buzzDmJoinedChatTail = BuzzDmJoinedChatTailFilterAssembler(client) // always-on: batched #h recent-tail for the viewer's Buzz DM channels
     val relayGroupOpenChatTail = RelayGroupOpenChatTailFilterAssembler(client) // the open group's recent chat (covers non-joined)
     val relayGroupOpenChatHistory = RelayGroupOpenChatHistoryFilterAssembler(client) // the open group's on-demand backward history pager
 
@@ -218,6 +220,7 @@ class RelaySubscriptionsCoordinator(
             relayGroupsDiscovery,
             relayGroupJoinedState,
             relayGroupJoinedChatTail,
+            buzzDmJoinedChatTail,
             relayGroupOpenChatTail,
             relayGroupOpenChatHistory,
             concordChannels,

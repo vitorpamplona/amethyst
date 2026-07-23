@@ -20,6 +20,10 @@
         <item quantity="one">+%1$d\nreply</item>
         <item quantity="other">+%1$d\nreplies</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">Reported by %1$d person you follow</item>
+        <item quantity="other">Reported by %1$d people you follow</item>
+    </plurals>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>
@@ -350,6 +354,14 @@
         <item quantity="one">%1$d channel</item>
         <item quantity="other">%1$d channels</item>
     </plurals>
+    <plurals name="buzz_workspaces_count">
+        <item quantity="one">%1$d workspace</item>
+        <item quantity="other">%1$d workspaces</item>
+    </plurals>
+    <plurals name="buzz_workspaces_channel_count">
+        <item quantity="one">%1$d channel</item>
+        <item quantity="other">%1$d channels</item>
+    </plurals>
     <plurals name="concord_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
@@ -417,6 +429,13 @@
     <string name="chats_reply_not_found">Couldn\'t find this message</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Searched every relay · tap to see</string>
+    <string name="dm_sender_reported_who">Who reported this?</string>
+    <string name="dm_sender_reported_dismiss">Dismiss</string>
+    <string name="dm_sender_reported_hide">Hide</string>
+    <string name="dm_sender_reported_subtitle">Someone you follow flagged this account</string>
+    <string name="dm_sender_reported_icon">Reported</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Error loading replies: "</string>
     <string name="try_again">Try again</string>
     <string name="notification_feed_is_empty">No notifications yet.</string>
@@ -1278,6 +1297,7 @@
     <string name="nest_create_submit">Start space</string>
     <string name="nest_create_schedule_toggle">Schedule for later</string>
     <string name="nest_create_when">Pick a start time</string>
+    <string name="agent_console_title">Agent console</string>
     <string name="nests_servers_title">Nest servers</string>
     <string name="nests_servers_explainer">Choose which MoQ host servers Amethyst publishes your nests to. The first entry is used by default when you start a new space.</string>
     <string name="nests_servers_my_section">Your servers</string>
@@ -2128,6 +2148,7 @@
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
     <string name="nests_servers_search_keywords" translatable="false">audio rooms, live, spaces, rooms</string>
+    <string name="agent_console_search_keywords" translatable="false">buzz, agents, personas, cost, tokens, fleet, ai, turn metrics</string>
     <string name="profile_badges_search_keywords" translatable="false">badges, awards</string>
     <string name="favorite_dvms_search_keywords" translatable="false">dvm, data vending machine, algo, algorithm, feeds</string>
     <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
@@ -2508,6 +2529,9 @@
     <string name="relay_group_browse_description">Browse the groups hosted on a relay. Paste a relay address, or pick one below.</string>
     <string name="relay_group_browse_relay_label">Relay address</string>
     <string name="relay_group_browse_go">Browse</string>
+    <string name="relay_tor_clearnet_title">Can\'t reach this relay over Tor</string>
+    <string name="relay_tor_clearnet_body">%1$s isn\'t responding through Tor — its host may be blocking Tor exit nodes. Connect to it over clearnet instead?</string>
+    <string name="relay_tor_clearnet_action">Use clearnet</string>
     <string name="relay_group_browse_your_relays">Relays you\'re on</string>
     <string name="relay_group_browse_popular">Popular relays</string>
     <string name="relay_group_no_messages_yet">No messages yet</string>
@@ -3293,6 +3317,87 @@
     <string name="chat_system_created_channel">%1$s created the channel %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s created the channel</string>
     <string name="chat_system_updated_channel">%1$s updated the channel profile</string>
+    <string name="buzz_message_edited">(edited)</string>
+    <string name="buzz_diff_truncated">(diff truncated)</string>
+    <string name="buzz_canvas_title">Canvas</string>
+    <string name="buzz_canvas_empty">No canvas has been shared in this workspace yet.</string>
+    <string name="buzz_canvas_edit">Edit canvas</string>
+    <string name="buzz_canvas_save">Save canvas</string>
+    <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
+    <string name="buzz_edit_message">Edit</string>
+    <string name="buzz_editing_banner">Editing message</string>
+    <string name="buzz_typing_one">%1$s is typing…</string>
+    <string name="buzz_typing_two">%1$s and %2$s are typing…</string>
+    <string name="buzz_typing_many">Several people are typing…</string>
+    <string name="buzz_workspaces_title">Buzz Workspaces</string>
+    <string name="buzz_workspaces_hero_tagline">Where humans and agents build together</string>
+    <string name="buzz_workspaces_leave">Leave workspace</string>
+    <string name="buzz_workspaces_section">Your workspaces</string>
+    <string name="buzz_workspaces_empty_title">No workspaces yet</string>
+    <string name="buzz_workspaces_empty_body">Buzz workspaces are relays where humans and AI agents build together. Join one to see it here.</string>
+    <string name="buzz_workspaces_browse">Browse groups</string>
+    <string name="buzz_console_card_title">Agent Console</string>
+    <string name="buzz_console_card_subtitle">Costs · Personas · Live observer</string>
+    <string name="buzz_forum_new_title">New forum topic</string>
+    <string name="buzz_forum_body_label">What do you want to discuss?</string>
+    <string name="buzz_forum_post_action">Post topic</string>
+    <string name="buzz_forum_thread_title">Forum thread</string>
+    <string name="buzz_forum_no_replies">No replies yet. Be the first to respond.</string>
+    <string name="buzz_dm_title">Direct Messages</string>
+    <string name="buzz_dm_nav_label">Buzz DMs</string>
+    <string name="buzz_dm_card_subtitle">Private conversations on your workspaces</string>
+    <string name="buzz_dm_new">New message</string>
+    <string name="buzz_dm_empty_title">No direct messages yet</string>
+    <string name="buzz_dm_empty_body">Start a private conversation with anyone on a Buzz workspace.</string>
+    <string name="buzz_dm_more">More</string>
+    <string name="buzz_dm_hide">Hide conversation</string>
+    <string name="buzz_dm_add_member">Add member</string>
+    <string name="buzz_dm_add_member_title">Add someone to this DM</string>
+    <string name="buzz_dm_add_member_invalid">Not a valid npub or hex key</string>
+    <string name="buzz_dm_just_you">Just you</string>
+    <string name="buzz_dm_workspace">Workspace</string>
+    <string name="buzz_dm_recipients">To</string>
+    <string name="buzz_dm_add_hint">Add someone (npub or hex)</string>
+    <string name="buzz_dm_start">Start conversation</string>
+    <string name="buzz_dm_opening">Opening…</string>
+    <string name="buzz_dm_remove">Remove</string>
+    <string name="buzz_invite_title">Workspace invite</string>
+    <string name="buzz_invite_heading">Join this workspace</string>
+    <string name="buzz_invite_workspace">Workspace</string>
+    <string name="buzz_invite_role">Role</string>
+    <string name="buzz_invite_body">You\'ll open the workspace in a secure in-app browser to review its terms and finish joining. It signs you in with your Amethyst key — no password.</string>
+    <string name="buzz_invite_continue">Continue in browser</string>
+    <string name="buzz_invite_invalid">This doesn\'t look like a valid Buzz invite link.</string>
+    <string name="buzz_invite_expired">This invite has expired. Ask for a new one.</string>
+    <string name="buzz_invite_after_browser">Finish accepting the terms in the browser, then come back — your workspace will be waiting.</string>
+    <string name="buzz_invite_open_workspace">Open my workspaces</string>
+    <string name="buzz_import_title">Import workspace channels</string>
+    <string name="buzz_import_loading">Finding your channels…</string>
+    <string name="buzz_import_your_channels">Your channels on this workspace</string>
+    <string name="buzz_import_add">Add</string>
+    <string name="buzz_import_add_all">Add all</string>
+    <string name="buzz_import_added">Added</string>
+    <string name="buzz_import_empty_title">No channels found</string>
+    <string name="buzz_import_empty_body">You don\'t seem to be a member of any channels on this relay yet. Accept the workspace invite in the browser first, then try again.</string>
+
+    <string name="relay_group_section_channels">Channels</string>
+    <string name="relay_group_section_forums">Forums</string>
+    <string name="buzz_agent_working">Working…</string>
+    <string name="relay_group_add_member">Add member</string>
+    <string name="buzz_community_add_people">Add people to this workspace</string>
+    <string name="buzz_invite_create">Create invite link</string>
+    <string name="buzz_invite_link_title">Invite link</string>
+    <string name="buzz_invite_share">Share</string>
+    <string name="buzz_invite_copy">Copy</string>
+    <string name="buzz_invite_error_title">Couldn\'t create invite</string>
+    <string name="buzz_invite_dismiss">OK</string>
+    <string name="buzz_star">Star channel</string>
+    <string name="buzz_unstar">Unstar channel</string>
+    <string name="buzz_dm_section_empty">No conversations yet</string>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">See %1$d more conversation</item>
+        <item quantity="other">See all %1$d conversations</item>
+    </plurals>
 
     <string name="chat_delivery_details_title">Message Delivery</string>
     <string name="close">Close</string>
@@ -4375,6 +4480,11 @@
     <string name="pow_notification_channel_name">Proof of work mining</string>
     <string name="pow_notification_channel_description">Shows posts that are still mining their NIP-13 proof of work so they can finish after you leave the app.</string>
     <string name="pow_notification_cancel_all">Cancel</string>
+    <string name="pow_notification_send_without_pow">Send now</string>
+    <string name="pow_cancel_dialog_title">Stop mining?</string>
+    <string name="pow_cancel_dialog_message">This post is still mining its proof of work. You can send it now without proof of work, or discard it.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Send without PoW</string>
+    <string name="pow_cancel_dialog_discard">Discard post</string>
     <string name="pow_difficulty_estimate">≈ %1$s per post on this device</string>
     <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">

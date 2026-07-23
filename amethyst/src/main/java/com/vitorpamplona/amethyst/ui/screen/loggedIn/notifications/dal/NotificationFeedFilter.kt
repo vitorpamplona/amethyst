@@ -32,6 +32,9 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
@@ -376,6 +379,41 @@ class NotificationFeedFilter(
         return collection.filterTo(HashSet()) { acceptableEvent(it, filterParams) }
     }
 
+    /**
+     * The Buzz DM message [note] targets me: a kind-40002 in a `t=dm` channel whose 39000 participants
+     * include [me]. DM messages carry no `p` tag, so being a participant of the DM channel is the
+     * relevance signal — like a Marmot/Concord message. False for non-DM channels, for metadata we
+     * haven't loaded yet, or when I'm not a participant. (Own-message and toggle checks live at the call site.)
+     */
+    private fun isBuzzDmForMe(
+        note: Note,
+        me: HexKey,
+    ): Boolean {
+        val md = LocalCache.getRelayGroupChannelForContent(note)?.event ?: return false
+        return md.isBuzzDm() && md.buzzParticipants().contains(me)
+    }
+
+    /**
+     * A reaction/repost that carries NO `p` tag — so neither the follow filter nor the p-tag gate can
+     * route it — but whose reacted target (the LAST `e` tag, already loaded) is MY note. Buzz likes are a
+     * bare `["e", <id>]` with no author `p` tag (unlike NIP-25, which p-tags the reacted author), so being
+     * the author of the liked post is the only relevance signal. Restricted to the no-`p`-tag case so a
+     * well-formed reaction keeps its normal p-tag routing, and to an already-loaded target so it can't
+     * accept blindly.
+     */
+    private fun isReactionToMyEvent(
+        note: Note,
+        me: HexKey,
+    ): Boolean {
+        val event = note.event
+        if (event !is ReactionEvent && event !is RepostEvent && event !is GenericRepostEvent) return false
+        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+        return note.replyTo
+            ?.lastOrNull()
+            ?.author
+            ?.pubkeyHex == me
+    }
+
     fun acceptableEvent(
         it: Note,
         filterParams: FilterByListParams,
@@ -405,6 +443,16 @@ class NotificationFeedFilter(
         }
 
         val noteEvent = it.event
+
+        // Buzz DM: a group chat message in a `t=dm` channel whose 39000 participants include me. A Buzz
+        // relay carries DM messages as either kind-9 (NIP-29 chat) or kind-40002 (stream message v2), and
+        // neither `p`-tags the recipient, so being a participant of the DM channel is the relevance signal
+        // — like a Marmot/Concord message above. Honors the same "Messages in notifications" toggle, and
+        // never notifies for my own message.
+        if ((noteEvent is StreamMessageV2Event || noteEvent is ChatEvent) && isBuzzDmForMe(it, loggedInUserHex)) {
+            if (!showMessages) return false
+            return it.author?.pubkeyHex != loggedInUserHex
+        }
 
         if (!showMessages &&
             (
@@ -481,6 +529,11 @@ class NotificationFeedFilter(
 
         val isConcord = isConcordMessage || isConcordReaction
 
+        // A bare reaction/repost (no p-tag) to my own already-loaded note — e.g. a Buzz like, which is
+        // just `["e", <id>]` — is relevant to me: bypass the follow filter and satisfy the p-tag gate,
+        // exactly like a Concord reaction, since being the author of the liked post is the only signal.
+        val isReactionToMe = isReactionToMyEvent(it, loggedInUserHex)
+
         // Concord CHAT (a message/reply) honors the "Messages in notifications" toggle that silences DMs
         // and Marmot groups above. A reaction isn't a message — regular reactions ignore that toggle, so
         // Concord reactions do too (only isConcordMessage is gated).
@@ -499,8 +552,8 @@ class NotificationFeedFilter(
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || noteEvent is Bolt12ZapEvent || notifAuthor != loggedInUserHex) &&
-            (isChessEvent || isConcord || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
-            (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex)) &&
+            (isChessEvent || isConcord || isReactionToMe || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex) || isReactionToMe) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/

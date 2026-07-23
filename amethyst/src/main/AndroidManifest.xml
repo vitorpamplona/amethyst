@@ -212,6 +212,17 @@
                 <data android:pathPrefix="/invite/" />
             </intent-filter>
 
+            <!-- Buzz workspace invite links: https://<team>.communities.buzz.xyz/invite/<token> -->
+            <intent-filter android:label="Amethyst">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="communities.buzz.xyz" />
+                <data android:host="*.communities.buzz.xyz" />
+                <data android:pathPrefix="/invite/" />
+            </intent-filter>
+
             <intent-filter android:label="zap.stream">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,11 +32,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,32 +47,46 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzAgentActivityState
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
 
 /**
  * The roster of a NIP-29 group: everyone the relay lists as an admin (kind 39001)
@@ -121,6 +139,21 @@ private fun RelayGroupMembers(
     val iCanModerate = channel.membershipOf(myPubkey).canModerate()
     val iAmAdmin = channel.membershipOf(myPubkey) == RelayGroupMembership.ADMIN
 
+    // Feed the process-wide agent-activity state while this screen is open so a "Working…" line
+    // can light up next to an agent that's currently running. Observer frames (24200) are
+    // ephemeral and `#p`-addressed to the owner, so only the owner ever sees them — a non-owner
+    // simply never records anything and no indicator shows. Buzz relays only.
+    val relay = channel.groupId.relayUrl
+    LaunchedEffect(relay, myPubkey) {
+        if (!BuzzRelayDialect.isBuzz(relay)) return@LaunchedEffect
+        val filter = Filter(kinds = listOf(ObserverFrameEvent.KIND), tags = mapOf("p" to listOf(myPubkey)))
+        accountViewModel.account.client.subscribeAsFlow(relay, filter).collect { events ->
+            events.filterIsInstance<ObserverFrameEvent>().forEach { frame ->
+                BuzzAgentActivityState.record(frame.agentPubKey() ?: frame.pubKey, frame.createdAt)
+            }
+        }
+    }
+
     // Admins/moderators first, then plain members; alphabetical only inside a rank
     // is overkill here — rely on relay order but push elevated roles to the top.
     val roster =
@@ -131,6 +164,8 @@ private fun RelayGroupMembers(
                 .map { RosterEntry(it, channel.membershipOf(it), rolesByPubkey[it] ?: emptyList()) }
                 .sortedBy { it.membership.rank() }
         }
+
+    var showAddMember by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -154,6 +189,14 @@ private fun RelayGroupMembers(
                 },
                 popBack = nav::popBack,
             )
+        },
+        // Only a moderator can add a member (the relay rejects a kind-9000 from anyone else).
+        floatingActionButton = {
+            if (iCanModerate) {
+                FloatingActionButton(onClick = { showAddMember = true }) {
+                    Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(R.string.relay_group_add_member))
+                }
+            }
         },
     ) { padding ->
         if (roster.isEmpty()) {
@@ -180,6 +223,17 @@ private fun RelayGroupMembers(
                 }
             }
         }
+    }
+
+    if (showAddMember) {
+        BuzzAddPeopleDialog(
+            title = stringRes(R.string.relay_group_add_member),
+            accountViewModel = accountViewModel,
+            nav = nav,
+            isAlreadyIn = { channel.membershipOf(it) != RelayGroupMembership.NONE },
+            onAdd = { accountViewModel.putRelayGroupUser(channel, it, emptyList()) },
+            onDismiss = { showAddMember = false },
+        )
     }
 }
 
@@ -216,7 +270,10 @@ private fun RelayGroupMemberRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        UserPicture(entry.pubkey, Size35dp, accountViewModel = accountViewModel, nav = nav)
+        Box {
+            UserPicture(entry.pubkey, Size35dp, accountViewModel = accountViewModel, nav = nav)
+            PresenceDot(entry.pubkey, Modifier.align(Alignment.BottomEnd), ringColor = MaterialTheme.colorScheme.surface)
+        }
 
         Column(Modifier.weight(1f)) {
             if (user != null) {
@@ -229,6 +286,9 @@ private fun RelayGroupMemberRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            // A live "Working…" line for an agent member currently emitting observer frames;
+            // tapping it opens this community's Agent Console (Observer tab).
+            BotWorkingLabel(entry.pubkey) { nav.nav(Route.AgentConsole(channel.groupId.relayUrl.url)) }
         }
 
         MemberRoleBadge(entry)
@@ -346,6 +406,48 @@ private fun RelayGroupMemberRow(
                     Text(stringRes(R.string.cancel))
                 }
             },
+        )
+    }
+}
+
+/** How recent an observer frame must be for an agent to read as "Working…" right now. */
+private const val BOT_WORKING_WINDOW_SECS = 90L
+
+/**
+ * A live "Working…" line shown for an agent member that emitted an observer frame within the last
+ * [BOT_WORKING_WINDOW_SECS]. Renders nothing for a normal member (no frames) or a stale agent, and
+ * re-checks freshness on a slow tick so it fades out when the agent goes quiet.
+ */
+@Composable
+private fun BotWorkingLabel(
+    agent: HexKey,
+    onClick: () -> Unit,
+) {
+    val activity by BuzzAgentActivityState.flow.collectAsStateWithLifecycle()
+    val last = activity[agent] ?: return
+
+    var nowSecs by remember { mutableLongStateOf(TimeUtils.now()) }
+    // Tick only while the agent could still read as "working"; stop once stale so an idle agent
+    // doesn't wake this row every 4s forever. A newer frame changes `last` and restarts the tick.
+    LaunchedEffect(agent, last) {
+        while (TimeUtils.now() - last <= BOT_WORKING_WINDOW_SECS) {
+            nowSecs = TimeUtils.now()
+            delay(4_000)
+        }
+        nowSecs = TimeUtils.now()
+    }
+    if (nowSecs - last > BOT_WORKING_WINDOW_SECS) return
+
+    Row(
+        modifier = Modifier.clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Box(Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+        Text(
+            text = stringRes(R.string.buzz_agent_working),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }

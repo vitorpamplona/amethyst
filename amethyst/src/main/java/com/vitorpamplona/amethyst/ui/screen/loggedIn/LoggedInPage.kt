@@ -51,7 +51,9 @@ import com.vitorpamplona.amethyst.service.resourceusage.innermostSigner
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmDiscoveryPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreload
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
@@ -102,6 +104,11 @@ fun LoggedInPage(
     // content. See amethyst/plans/2026-07-18-nip29-group-chat-subscriptions.md.
     RelayGroupJoinedStatePreload(accountViewModel)
     RelayGroupJoinedChatTailPreload(accountViewModel)
+
+    // Discover the viewer's Buzz DM channels (44100 #p=me) across joined workspaces and keep their
+    // messages warm app-wide, so a Buzz DM shows on the Notifications tab / in push without opening it.
+    BuzzDmDiscoveryPreload(accountViewModel)
+    BuzzDmJoinedChatTailPreload(accountViewModel)
 
     // Foreground-only loaders: follows-outbox finder + random-relay notifications.
     // Pauses on ON_STOP, resumes on ON_START.

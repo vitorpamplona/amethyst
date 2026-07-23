@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.formatHistoryReachDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.DmReportWarningCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.PrivateMessageEditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -257,6 +258,8 @@ fun ChatroomViewUI(
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
+
+        DmReportWarningCard(room, accountViewModel, nav)
 
         Column(
             modifier =

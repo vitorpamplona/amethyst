@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
@@ -178,6 +179,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
+import com.vitorpamplona.amethyst.ui.note.types.RenderRelayGroupMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
@@ -226,6 +228,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -1451,16 +1454,45 @@ private fun RenderNoteRow(
         }
 
         is ChatEvent -> {
-            RenderChat(
+            // A kind-9 that belongs to a Buzz/NIP-29 relay group (its channel is recorded as a gatherer
+            // on consume) renders as a conversation row with a group/DM header — so a Buzz DM on the
+            // Notifications tab reads like a message, not a post. A non-group kind-9 keeps the plain chat body.
+            if (baseNote.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } != null) {
+                RenderRelayGroupMessage(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            } else {
+                RenderChat(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    unPackReply,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                    isBoostedNote = isBoostedNote,
+                )
+            }
+        }
+
+        is StreamMessageV2Event -> {
+            RenderRelayGroupMessage(
                 baseNote,
                 makeItShort,
                 canPreview,
                 quotesLeft,
-                unPackReply,
                 backgroundColor,
+                editState,
                 accountViewModel,
                 nav,
-                isBoostedNote = isBoostedNote,
             )
         }
 

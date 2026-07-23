@@ -56,6 +56,8 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     override val notificationId = NOTIFICATION_ID
     override val cancelAction = ACTION_CANCEL_ALL
     override val cancelLabelRes = R.string.pow_notification_cancel_all
+    override val secondaryAction = ACTION_SEND_ALL_NOW
+    override val secondaryLabelRes = R.string.pow_notification_send_without_pow
 
     // clock-driven refresh for the time-left text and bar; the shortService budget (~3 min)
     // caps this at a handful of updates.
@@ -85,6 +87,8 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     override fun isActive(value: ImmutableList<PoWJobState>) = value.isNotEmpty()
 
     override fun cancelAll() = Amethyst.instance.powPublishQueue.cancelAll()
+
+    override fun onSecondaryAction() = Amethyst.instance.powPublishQueue.sendAllWithoutPow()
 
     override fun needsClockRefresh(value: ImmutableList<PoWJobState>) = value.any { it.isMining }
 
@@ -147,6 +151,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
         private const val CHANNEL_ID = "pow_mining"
         private const val NOTIFICATION_ID = 0x504F57 // "POW"
         private const val ACTION_CANCEL_ALL = "com.vitorpamplona.amethyst.pow.CANCEL_ALL"
+        private const val ACTION_SEND_ALL_NOW = "com.vitorpamplona.amethyst.pow.SEND_ALL_NOW"
 
         private const val PROGRESS_REFRESH_MS = 30_000L
 
