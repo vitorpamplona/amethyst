@@ -423,6 +423,11 @@
     <string name="chats_reply_searched">Searched every relay · tap to see</string>
     <string name="dm_sender_reported_who">Who reported this?</string>
     <string name="dm_sender_reported_dismiss">Dismiss</string>
+    <string name="dm_sender_reported_hide">Hide</string>
+    <string name="dm_sender_reported_subtitle">Someone you follow flagged this account</string>
+    <string name="dm_sender_reported_icon">Reported</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Error loading replies: "</string>
     <string name="try_again">Try again</string>
     <string name="notification_feed_is_empty">No notifications yet.</string>
