@@ -1237,6 +1237,12 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is StreamMessageV2Event -> {
+                // A Buzz thread reply links to the message it answers (its `reply`-marked e-tag) so it
+                // lands in that message's replies (the minichat). A plain message / non-reply has no marker.
+                listOfNotNull(event.tags.buzzThreadReply()?.let { checkGetOrCreateNote(it) })
+            }
+
             is VoiceReplyEvent -> {
                 event.markedReplyTos().mapNotNull { checkGetOrCreateNote(it) }
             }

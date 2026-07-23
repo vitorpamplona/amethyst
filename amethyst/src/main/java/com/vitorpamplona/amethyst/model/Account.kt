@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -157,6 +158,10 @@ import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.threading.buzzThread
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
@@ -229,6 +234,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -2286,12 +2292,25 @@ class Account(
         gatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }?.let { group ->
             val hostRelay = group.groupId.relayUrl
             val signed =
-                signer.sign(
-                    CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
-                        hTag(group.groupId.id)
-                        previous(group.previousEventRefs(pubKey))
-                    },
-                )
+                if (BuzzRelayDialect.isBuzz(hostRelay)) {
+                    // Buzz rejects kind-1111, so its minichat threads with a 40002 marked at the message's
+                    // root (never `broadcast` — a minichat reply always lives in the thread).
+                    val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id
+                    signer.sign(
+                        StreamMessageV2Event.build(group.groupId.id, text) {
+                            buzzThread(root, rootEvent.id)
+                            rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
+                            previous(group.previousEventRefs(pubKey))
+                        },
+                    )
+                } else {
+                    signer.sign(
+                        CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
+                            hTag(group.groupId.id)
+                            previous(group.previousEventRefs(pubKey))
+                        },
+                    )
+                }
             cache.justConsumeMyOwnEvent(signed)
             client.publish(signed, setOf(hostRelay))
             return true

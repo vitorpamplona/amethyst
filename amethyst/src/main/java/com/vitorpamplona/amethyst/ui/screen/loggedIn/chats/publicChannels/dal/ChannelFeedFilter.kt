@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
 
 class ChannelFeedFilter(
     val channel: Channel,
@@ -37,10 +37,10 @@ class ChannelFeedFilter(
 
     override fun changesFlow() = channel.changesFlow()
 
-    // A kind-1111 comment is a *minichat* reply — it lives in the thread opened from its
-    // root message, not as a flat sibling in the main timeline (an inline reply is a normal
-    // kind-9/42 message and stays). Everything else the channel gathered is a timeline message.
-    private fun isTimelineMessage(note: Note): Boolean = note.event !is CommentEvent && account.isAcceptable(note)
+    // A minichat reply — a kind-1111 comment, or a Buzz 40002 thread reply (reply-marked, non-broadcast)
+    // — lives in the thread opened from its root message, not as a flat sibling in the main timeline.
+    // An inline reply (kind-9/42, or a Buzz broadcast=1 reply) is a normal message and stays.
+    private fun isTimelineMessage(note: Note): Boolean = !isMinichatReply(note.event) && account.isAcceptable(note)
 
     override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { _, it -> isTimelineMessage(it) })
 

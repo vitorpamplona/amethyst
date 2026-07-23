@@ -773,7 +773,11 @@ open class ChannelNewMessageViewModel :
                 // verified Buzz events), not a channel subtype: channel instances are
                 // captured by screens for their whole life, so the dialect must be
                 // able to flip mid-session without swapping objects.
-                StreamMessageV2Event.build(channel.groupId.id, tagger.message) {
+                // Reply routing (Buzz has no kind-1111): an INLINE reply is flagged `broadcast` so it stays
+                // a flat timeline sibling; a MINICHAT reply omits it so the thread markers pull it into the
+                // message's minichat (mirrors block/buzz's broadcast-vs-thread split). A non-reply is neither.
+                val broadcastReply = replyTo.value != null && replyMode.value == ReplyMode.INLINE
+                StreamMessageV2Event.build(channel.groupId.id, tagger.message, broadcast = broadcastReply) {
                     replyTo.value?.let { parent ->
                         // The parent's root marker (when it is itself a nested reply),
                         // else the parent's OWN reply target (a direct reply's collapsed
