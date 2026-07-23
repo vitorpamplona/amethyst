@@ -222,7 +222,27 @@ class NamecoinNameResolver(
     // ── Lookup & Value Parsing ─────────────────────────────────────────
 
     private suspend fun performLookup(parsed: ParsedIdentifier): NamecoinNostrResult? {
-        val nameResult = electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider()) ?: return null
+        // nameShowWithFallback never returns null in practice — every failure
+        // path throws a NamecoinLookupException subtype (NameNotFound,
+        // NameExpired, ServersUnreachable). If we don't catch them here, they
+        // propagate out through resolve() and up to Nip05State.checkAndUpdate,
+        // which lumps every lookup failure into markAsError() → red icon with
+        // no way for the user to tell "servers unreachable" from "wrong pubkey".
+        //
+        // resolve() is documented as returning null on any failure. Preserve
+        // that contract by mapping expected lookup exceptions to null. Callers
+        // that want the specific failure reason use resolveDetailed() instead.
+        val nameResult =
+            try {
+                electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider())
+                    ?: return null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: NamecoinLookupException) {
+                // NameNotFound / NameExpired / ServersUnreachable → null per
+                // resolve()'s contract. resolveDetailed() surfaces which one.
+                return null
+            }
         val valueJson = tryParseJson(nameResult.value) ?: return null
         val merged = expandImportsIfPresent(valueJson)
 
