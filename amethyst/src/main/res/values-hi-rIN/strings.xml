@@ -2006,6 +2006,11 @@
     <string name="settings_section_appearance">स्वरूप</string>
     <string name="settings_section_media">ध्वनिदृश्याभिलेख तथा जानकारी</string>
     <string name="settings_section_general">सामान्य</string>
+    <string name="settings_section_tor_engine">संयोजन</string>
+    <string name="settings_section_tor_routing">टोर॰ के माध्यम से</string>
+    <string name="settings_section_profile_sections">विभाग तथा सूचनावलियाँ</string>
+    <string name="settings_section_home_tabs">दृश्य पृष्ठसूचक</string>
+    <string name="settings_section_reminders">अनुस्मारकसूची</string>
     <string name="wallet_connect">धनकोष संयोजन</string>
     <string name="language">भाषा</string>
     <string name="theme">प्रदर्शनशैली</string>
