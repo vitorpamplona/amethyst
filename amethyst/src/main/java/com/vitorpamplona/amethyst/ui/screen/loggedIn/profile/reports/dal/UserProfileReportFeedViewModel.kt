@@ -50,7 +50,7 @@ class UserProfileReportFeedViewModel(
     val followersFlow: StateFlow<List<Note>> =
         user
             .reports()
-            .receivedReportsByAuthor
+            .reportsNamingUser
             .map {
                 it.values.flatten().sortedWith(sortingModel)
             }.sample(500)

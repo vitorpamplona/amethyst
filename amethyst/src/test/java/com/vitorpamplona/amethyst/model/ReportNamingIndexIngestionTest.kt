@@ -84,4 +84,39 @@ class ReportNamingIndexIngestionTest {
         assertEquals(1, reported.reports().reportsNaming(setOf(reporter)).size)
         assertEquals(0, reported.reports().countReportAuthorsBy(setOf(reporter)))
     }
+
+    @Test
+    fun aBareCoMentionedPTagIsNotIndexedWhileTheExplicitlyTypedOffenderIs() {
+        val reporter = "e1".repeat(32)
+        val offender = "e2".repeat(32)
+        val bystander = "e3".repeat(32)
+        val reportedNoteId = "e4".repeat(32)
+
+        val report =
+            ReportEvent(
+                id = "e5".repeat(32),
+                pubKey = reporter,
+                createdAt = 1_700_000_000L,
+                tags =
+                    arrayOf(
+                        arrayOf("e", reportedNoteId, ReportType.IMPERSONATION.code),
+                        // offender: explicitly typed, own report type
+                        arrayOf("p", offender, ReportType.IMPERSONATION.code),
+                        // bystander: bare 2-element p tag, no explicit type of its own
+                        arrayOf("p", bystander),
+                    ),
+                content = "",
+                sig = "sig",
+            )
+
+        LocalCache.consume(report, null, true)
+
+        val reportedOffender = LocalCache.getUserIfExists(offender)
+        assertTrue("the offender must exist in the cache", reportedOffender != null)
+        assertEquals(1, reportedOffender!!.reports().reportsNaming(setOf(reporter)).size)
+
+        val reportedBystander = LocalCache.getUserIfExists(bystander)
+        assertTrue("the bystander must exist in the cache", reportedBystander != null)
+        assertEquals(0, reportedBystander!!.reports().reportsNaming(setOf(reporter)).size)
+    }
 }

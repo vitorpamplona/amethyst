@@ -738,25 +738,21 @@ private fun ChannelTitleWithLabelInfo(
  */
 @Composable
 private fun RoomReportWarningIcon(
-    room: ChatroomKey,
+    preloadedUser: User?,
     accountViewModel: AccountViewModel,
 ) {
-    val counterpartHex = room.users.singleOrNull() ?: return
+    val user = preloadedUser ?: return
+    val flow = remember(user) { accountViewModel.createUserReportWarningFlow(user) }
+    val state by flow.collectAsStateWithLifecycle()
 
-    LoadUser(baseUserHex = counterpartHex, accountViewModel = accountViewModel) { user ->
-        if (user != null) {
-            val state by accountViewModel.createUserReportWarningFlow(user).collectAsStateWithLifecycle()
-
-            if (state.shouldWarn) {
-                Icon(
-                    symbol = MaterialSymbols.Warning,
-                    contentDescription = reportWarningContentDescription(state),
-                    modifier = Size15Modifier,
-                    tint = MaterialTheme.colorScheme.error,
-                )
-                Spacer(modifier = StdHorzSpacer)
-            }
-        }
+    if (state.shouldWarn) {
+        Icon(
+            symbol = MaterialSymbols.Warning,
+            contentDescription = reportWarningContentDescription(state),
+            modifier = Size15Modifier,
+            tint = MaterialTheme.colorScheme.error,
+        )
+        Spacer(modifier = StdHorzSpacer)
     }
 }
 
@@ -782,8 +778,17 @@ private fun UserRoomCompose(
             )
         },
         firstRow = {
-            RoomNameDisplay(room, Modifier.weight(1f), accountViewModel)
-            RoomReportWarningIcon(room, accountViewModel)
+            val counterpartHex = room.users.singleOrNull()
+            if (counterpartHex != null) {
+                // 1:1 room: resolve the counterpart once and share it between the name and the
+                // report-warning icon below, instead of each doing its own LoadUser.
+                LoadUser(baseUserHex = counterpartHex, accountViewModel = accountViewModel) { counterpart ->
+                    RoomNameDisplay(room, Modifier.weight(1f), accountViewModel, preloadedUser = counterpart)
+                    RoomReportWarningIcon(counterpart, accountViewModel)
+                }
+            } else {
+                RoomNameDisplay(room, Modifier.weight(1f), accountViewModel, preloadedUser = null)
+            }
             if (room in pinnedRooms.value) {
                 Icon(
                     symbol = MaterialSymbols.PushPin,

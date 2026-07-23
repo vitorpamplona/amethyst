@@ -18,8 +18,6 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-@file:Suppress("ktlint:standard:filename")
-
 package com.vitorpamplona.amethyst.commons.model.nip56Reports
 
 import androidx.compose.runtime.Immutable
@@ -38,15 +36,16 @@ import kotlinx.collections.immutable.toImmutableSet
 /**
  * What the DM surfaces should say about the person on the other end of a 1:1 chat.
  *
- * [reports] are the kind-1984 notes themselves so the UI can render reporter avatars; [reporterCount]
- * is the number of distinct reporters, which is what the headline counts.
+ * [reports] holds one kind-1984 note per distinct reporter — the avatars the UI renders, and what
+ * the headline counts.
  */
 @Immutable
 data class UserReportWarningState(
     val reports: ImmutableList<Note> = persistentListOf(),
     val types: ImmutableSet<ReportType> = persistentSetOf(),
-    val reporterCount: Int = 0,
 ) {
+    val reporterCount: Int get() = reports.size
+
     val shouldWarn: Boolean get() = reports.isNotEmpty()
 
     companion object {
@@ -78,20 +77,20 @@ fun dmReportWarningFor(
     val reports = counterpart.reportsOrNull()?.reportsNaming(followingKeySet).orEmpty()
     if (reports.isEmpty()) return UserReportWarningState.SILENT
 
-    val types =
-        reports.flatMapTo(LinkedHashSet<ReportType>()) { report ->
-            (report.event as? ReportEvent)
-                ?.reportedAuthor()
-                ?.filter { it.pubkey == counterpart.pubkeyHex }
-                ?.mapNotNull { it.type }
-                .orEmpty()
-        }
+    val types = LinkedHashSet<ReportType>()
+    val oneReportPerReporter = LinkedHashMap<HexKey, Note>()
 
-    val reporters = reports.mapNotNullTo(mutableSetOf()) { it.author?.pubkeyHex }
+    reports.forEach { report ->
+        report.author?.let { oneReportPerReporter.getOrPut(it.pubkeyHex) { report } }
+
+        (report.event as? ReportEvent)?.reportedAuthor()?.forEach {
+            // A single report can name several people; only this counterpart's reason belongs here.
+            if (it.pubkey == counterpart.pubkeyHex) it.type?.let(types::add)
+        }
+    }
 
     return UserReportWarningState(
-        reports = reports.toImmutableList(),
+        reports = oneReportPerReporter.values.toImmutableList(),
         types = types.toImmutableSet(),
-        reporterCount = reporters.size,
     )
 }

@@ -1742,15 +1742,26 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
                     event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
 
-            // Every report that names an author lands here, including those that also name an event
-            // and are therefore filed against the note below. Read only by the DM sender warning —
-            // the hide threshold keeps counting `receivedReportsByAuthor` alone.
-            authorsReported.forEach { author -> author.reports().addReportNamingUser(note) }
-
+            // Every report that names an author also lands in the naming index, including those
+            // filed against a note rather than a profile. Read only by the DM sender warning — the
+            // hide threshold keeps counting `receivedReportsByAuthor` alone.
             if (eventsReported.isEmpty()) {
-                authorsReported.forEach { author -> author.reports().addReport(note) }
+                authorsReported.forEach { author ->
+                    val reports = author.reports()
+                    reports.addReport(note)
+                    reports.addReportNamingUser(note)
+                }
             } else {
                 eventsReported.forEach { it.addReport(note) }
+
+                // Index only the authors whose own `p` tag carries a report type: an event-scoped
+                // report can `p`-tag an incidentally-mentioned third party with no type of its own,
+                // and there is no threshold here to absorb that noise the way
+                // `receivedReportsByAuthor`'s hide path does.
+                val explicitlyTyped = event.reportedAuthorsWithOwnType().mapTo(mutableSetOf()) { it.pubkey }
+                authorsReported.forEach { author ->
+                    if (author.pubkeyHex in explicitlyTyped) author.reports().addReportNamingUser(note)
+                }
             }
         }
 

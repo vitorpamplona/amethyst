@@ -25,6 +25,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 
+/**
+ * [reportTypeLabel] for each reason. Resolved into a list first because `joinToString` is not
+ * inline and so cannot call a composable, while `map` is.
+ */
+@Composable
+fun reportTypeLabels(types: Collection<ReportType?>): List<String> = types.map { reportTypeLabel(it) }
+
 /** The localized name of a NIP-56 report reason. An unrecognized reason reads as "Other". */
 @Composable
 fun reportTypeLabel(type: ReportType?): String =

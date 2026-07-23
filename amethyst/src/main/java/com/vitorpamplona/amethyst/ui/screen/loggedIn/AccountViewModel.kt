@@ -803,13 +803,12 @@ class AccountViewModel(
                 account.kind3FollowList.flow,
                 account.settings.syncedSettings.security.warnAboutPostsWithReports,
             ) { _, followList, warnAboutReports ->
-                emit(reportWarningFor(user, followList.authors, warnAboutReports))
-            }.onStart {
                 emit(
-                    reportWarningFor(
-                        user,
-                        account.followingKeySet(),
-                        account.settings.syncedSettings.security.warnAboutPostsWithReports.value,
+                    dmReportWarningFor(
+                        counterpart = user,
+                        loggedInPubKey = account.signer.pubKey,
+                        followingKeySet = followList.authors,
+                        warnAboutReports = warnAboutReports,
                     ),
                 )
             }.flowOn(Dispatchers.IO)
@@ -820,17 +819,6 @@ class AccountViewModel(
                 ).also {
                     userReportWarningFlows.put(user, it)
                 }
-
-    private fun reportWarningFor(
-        user: User,
-        followingKeySet: Set<HexKey>,
-        warnAboutReports: Boolean,
-    ) = dmReportWarningFor(
-        counterpart = user,
-        loggedInPubKey = account.signer.pubKey,
-        followingKeySet = followingKeySet,
-        warnAboutReports = warnAboutReports,
-    )
 
     private val noteMustShowExpandButtonFlows = LruCache<Note, StateFlow<Boolean>>(300)
 

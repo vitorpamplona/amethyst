@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,7 +49,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
-import com.vitorpamplona.amethyst.ui.note.types.reportTypeLabel
+import com.vitorpamplona.amethyst.ui.note.types.reportTypeLabels
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -72,13 +73,18 @@ fun DmReportWarningCard(
 
     LoadUser(baseUserHex = counterpartHex, accountViewModel = accountViewModel) { user ->
         if (user != null) {
-            val state by accountViewModel.createUserReportWarningFlow(user).collectAsStateWithLifecycle()
+            val flow = remember(user) { accountViewModel.createUserReportWarningFlow(user) }
+            val state by flow.collectAsStateWithLifecycle()
 
-            if (state.shouldWarn) {
-                var dismissed by remember(counterpartHex) { mutableStateOf(false) }
+            key(counterpartHex) {
+                // Hoisted above the `shouldWarn` check so it survives the transient SILENT state the
+                // flow emits on ~20s of backgrounding (`WhileSubscribed(10000, 10000)` +
+                // lifecycle-driven unsubscribe at ON_STOP) rather than being lost when this
+                // `remember` group briefly leaves composition.
+                var dismissed by remember { mutableStateOf(false) }
 
-                if (!dismissed) {
-                    ReportWarningBody(state, accountViewModel, nav, counterpartHex) { dismissed = true }
+                if (state.shouldWarn && !dismissed) {
+                    ReportWarningBody(state, accountViewModel, nav) { dismissed = true }
                 }
             }
         }
@@ -91,14 +97,11 @@ private fun ReportWarningBody(
     state: UserReportWarningState,
     accountViewModel: AccountViewModel,
     nav: INav,
-    counterpartHex: String,
     onDismiss: () -> Unit,
 ) {
-    var expanded by remember(counterpartHex) { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
-    // `map` is inline so it may call a composable; `joinToString` is not, so the labels have to be
-    // resolved before they are joined.
-    val typeLabels = state.types.map { reportTypeLabel(it) }
+    val typeLabels = reportTypeLabels(state.types)
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
@@ -123,7 +126,7 @@ private fun ReportWarningBody(
 
             if (expanded) {
                 FlowRow(modifier = Modifier.padding(top = 10.dp)) {
-                    state.reports.distinctBy { it.author }.forEach { report ->
+                    state.reports.forEach { report ->
                         NoteAuthorPicture(
                             baseNote = report,
                             size = Size35dp,
@@ -167,7 +170,7 @@ private fun ReportWarningBody(
 
 /** "Reported by 2 people you follow". The reason, if any, is rendered separately. */
 @Composable
-fun reportWarningHeadline(state: UserReportWarningState): String =
+private fun reportWarningHeadline(state: UserReportWarningState): String =
     pluralStringResource(
         R.plurals.dm_sender_reported,
         state.reporterCount,
@@ -182,7 +185,9 @@ fun reportWarningHeadline(state: UserReportWarningState): String =
 @Composable
 fun reportWarningContentDescription(state: UserReportWarningState): String {
     val headline = reportWarningHeadline(state)
-    val typeLabels = state.types.map { reportTypeLabel(it) }
+    val typeLabels = reportTypeLabels(state.types)
 
-    return if (typeLabels.isEmpty()) headline else headline + ". " + typeLabels.joinToString(", ")
+    return remember(headline, typeLabels) {
+        if (typeLabels.isEmpty()) headline else headline + ". " + typeLabels.joinToString(", ")
+    }
 }

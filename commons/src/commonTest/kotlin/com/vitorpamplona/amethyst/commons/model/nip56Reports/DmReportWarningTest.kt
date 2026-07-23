@@ -132,7 +132,8 @@ class DmReportWarningTest {
                 warnAboutReports = true,
             )
 
-        assertEquals(3, state.reports.size)
+        // Bob filed two of the three; the state keeps one report per reporter, for one avatar each.
+        assertEquals(2, state.reports.size)
         assertEquals(2, state.reporterCount)
         assertEquals(setOf(ReportType.IMPERSONATION, ReportType.SPAM), state.types.toSet())
     }
