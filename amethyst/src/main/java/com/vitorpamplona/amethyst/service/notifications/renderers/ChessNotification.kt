@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.notifications.renderers
 import android.content.Context
 import androidx.annotation.StringRes
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
@@ -45,6 +46,9 @@ object ChessNotification {
         event: BaseChessEvent,
         @StringRes contentRes: Int,
     ) {
+        // NIP-64 chess is a debug-only feature for now; don't notify in release.
+        if (!isDebug) return
+
         val author = LocalCache.getOrCreateUser(event.pubKey)
         val accountNpub = NotificationRoutes.accountNpub(account)
         val uri = NotificationRoutes.notificationsUri(accountNpub, event.id)

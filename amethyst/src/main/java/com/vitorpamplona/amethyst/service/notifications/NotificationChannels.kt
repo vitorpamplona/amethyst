@@ -28,6 +28,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.scheduledposts.AndroidScheduledPostNotifier
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -66,14 +67,18 @@ object NotificationChannels {
      * sensible settings order, plus the two non-event channels (scheduled posts,
      * calls) that don't map to a Nostr event kind. */
     val contentChannels: List<Entry> =
-        NotificationCategory.entries.map { category ->
-            Entry(
-                nameRes = category.channelNameRes,
-                icon = category.settingsIcon,
-                channelId = { category.channelId(it) },
-                ensure = { category.ensureChannel(it) },
-            )
-        } +
+        NotificationCategory.entries
+            // Chess (NIP-64) is a debug-only feature for now — don't surface (or
+            // create) its channel in release settings.
+            .filter { it != NotificationCategory.CHESS || isDebug }
+            .map { category ->
+                Entry(
+                    nameRes = category.channelNameRes,
+                    icon = category.settingsIcon,
+                    channelId = { category.channelId(it) },
+                    ensure = { category.ensureChannel(it) },
+                )
+            } +
             listOf(
                 Entry(
                     nameRes = R.string.app_notification_scheduled_posts_channel_name,
