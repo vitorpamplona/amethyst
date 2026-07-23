@@ -121,11 +121,18 @@ class RelayGroupDiscoveryFeedFilter(
         val joined = joinedGroupIds()
         val notes = HashSet<Note>()
         // Groups I explicitly joined — resolve each to its metadata note (may be null until loaded).
-        joined.forEach { LocalCache.getRelayGroupChannelIfExists(it)?.metadataNote?.let(notes::add) }
+        // DMs (hidden 39000s) are excluded even from "My Groups": they belong to the DM section.
+        joined.forEach {
+            LocalCache
+                .getRelayGroupChannelIfExists(it)
+                ?.takeUnless { c -> c.isHidden() }
+                ?.metadataNote
+                ?.let(notes::add)
+        }
         // Plus any group whose roster lists me as an admin/member.
         val me = account.userProfile().pubkeyHex
         LocalCache.relayGroupChannels
-            .filter { _, channel -> channel.event != null && channel.membershipOf(me).isMember() }
+            .filter { _, channel -> channel.event != null && !channel.isHidden() && channel.membershipOf(me).isMember() }
             .forEach { it.metadataNote?.let(notes::add) }
         return notes
     }
@@ -156,6 +163,9 @@ class RelayGroupDiscoveryFeedFilter(
         byRelay: Map<NormalizedRelayUrl, GroupDiscoveryConstraint>,
     ): Boolean {
         val channel = relayGroupDiscoveryChannelFor(note) ?: return false
+        // DMs carry the NIP-29 `hidden` tag (Buzz sets it on t=dm 39000s) — private conversations, not
+        // browsable groups. Keep them out of the discovery list entirely (they live in the DM section).
+        if (channel.isHidden()) return false
         if (isMine()) return isMyGroup(channel, joinedGroupIds())
         if (byRelay.isEmpty()) return false
         // Only surface groups whose 39000 is actually signed by the host relay's key (NIP-29's
