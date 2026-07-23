@@ -4386,6 +4386,11 @@
     <string name="pow_notification_channel_name">Proof of work mining</string>
     <string name="pow_notification_channel_description">Shows posts that are still mining their NIP-13 proof of work so they can finish after you leave the app.</string>
     <string name="pow_notification_cancel_all">Cancel</string>
+    <string name="pow_notification_send_without_pow">Send now</string>
+    <string name="pow_cancel_dialog_title">Stop mining?</string>
+    <string name="pow_cancel_dialog_message">This post is still mining its proof of work. You can send it now without proof of work, or discard it.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Send without PoW</string>
+    <string name="pow_cancel_dialog_discard">Discard post</string>
     <string name="pow_difficulty_estimate">≈ %1$s per post on this device</string>
     <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">

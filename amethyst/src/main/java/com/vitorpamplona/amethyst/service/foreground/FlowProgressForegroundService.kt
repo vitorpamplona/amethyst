@@ -75,6 +75,20 @@ abstract class FlowProgressForegroundService<T> : Service() {
     /** The intent action that routes back here to cancel everything. */
     protected abstract val cancelAction: String
     protected abstract val cancelLabelRes: Int
+
+    /**
+     * Optional second notification action (e.g. "send without PoW"). When
+     * [secondaryAction] and [secondaryLabelRes] are both non-null, the button is
+     * shown and tapping it routes back here to run [onSecondaryAction] without
+     * stopping the service — the work keeps going and the card drains normally.
+     */
+    protected open val secondaryAction: String? = null
+    protected open val secondaryLabelRes: Int? = null
+
+    protected open fun onSecondaryAction() {
+        // No-op by default: only subclasses that declare a secondary action override this.
+    }
+
     protected open val smallIcon: Int = R.drawable.amethyst
 
     /** When non-null, re-render the card on this cadence (for clock-driven text like "time left"). */
@@ -145,6 +159,17 @@ abstract class FlowProgressForegroundService<T> : Service() {
         )
     }
 
+    private val secondaryIntent: PendingIntent? by lazy {
+        secondaryAction?.let { action ->
+            PendingIntent.getService(
+                this,
+                2,
+                Intent(this, this.javaClass).setAction(action),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(
@@ -165,6 +190,14 @@ abstract class FlowProgressForegroundService<T> : Service() {
             cancelAll()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+            return START_NOT_STICKY
+        }
+
+        if (intent?.action != null && intent.action == secondaryAction) {
+            // keep the service alive: the jobs flip to publishing and the watch
+            // loop stops us once the queue drains.
+            onSecondaryAction()
+            watch()
             return START_NOT_STICKY
         }
 
@@ -252,20 +285,28 @@ abstract class FlowProgressForegroundService<T> : Service() {
                         .setProgress(bar.done)
             }
 
-        return NotificationCompat
-            .Builder(this, channelId)
-            .setSmallIcon(smallIcon)
-            .setContentTitle(content.title)
-            .setContentText(content.text)
-            .setStyle(style)
-            .setContentIntent(tapIntent)
-            .addAction(0, stringRes(this, cancelLabelRes), cancelIntent)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
+        val builder =
+            NotificationCompat
+                .Builder(this, channelId)
+                .setSmallIcon(smallIcon)
+                .setContentTitle(content.title)
+                .setContentText(content.text)
+                .setStyle(style)
+                .setContentIntent(tapIntent)
+                .addAction(0, stringRes(this, cancelLabelRes), cancelIntent)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+
+        val secondaryLabel = secondaryLabelRes
+        val secondaryPending = secondaryIntent
+        if (secondaryLabel != null && secondaryPending != null) {
+            builder.addAction(0, stringRes(this, secondaryLabel), secondaryPending)
+        }
+
+        return builder.build()
     }
 
     private fun ensureChannel() {

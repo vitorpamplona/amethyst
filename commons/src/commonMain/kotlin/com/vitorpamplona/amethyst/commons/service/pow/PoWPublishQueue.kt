@@ -75,6 +75,13 @@ data class PoWJobState(
     val difficulty: Int,
     val phase: PoWJobPhase = PoWJobPhase.QUEUED,
     val miningStartedAt: Long? = null,
+    /**
+     * True when the job carries a plain, un-mined fallback the user can publish
+     * right away instead of waiting for (or discarding) the nonce search — the
+     * template send paths. Opaque work jobs (reactions, reposts, anonymous
+     * posts, gift wraps) have no such fallback and are false.
+     */
+    val canSendWithoutPow: Boolean = false,
 ) {
     val isMining: Boolean get() = phase == PoWJobPhase.MINING
     val isCancellable: Boolean get() = phase != PoWJobPhase.PUBLISHING
@@ -131,12 +138,19 @@ class PoWPublishQueue(
         val dedupeKey: String?,
         val owner: HexKey?,
         val work: suspend (isActive: () -> Boolean) -> Unit,
+        // When non-null, publishes the event WITHOUT proof of work — the plain
+        // template send path, run in place of the (abandoned) nonce search.
+        val sendWithoutPow: (suspend () -> Unit)?,
     ) {
         @Volatile
         var cancelled = false
 
         @Volatile
         var publishing = false
+
+        // Set by cancel-and-send-now: stop the miner and publish [sendWithoutPow].
+        @Volatile
+        var sendUnminedRequested = false
     }
 
     private val queue = Channel<MiningJob>(UNLIMITED)
@@ -205,6 +219,16 @@ class PoWPublishQueue(
             PoWMiner.mine(toMine, pubKey, difficulty, minerThreads, isActive)
         },
         publish = onMined,
+        // send-now fallback: the same template, minus the nonce the miner would
+        // have added. created_at follows the mined path — refreshed to "now" for
+        // ordinary posts, left intact for scheduled ones.
+        sendWithoutPow = {
+            if (refreshCreatedAtOnStart) {
+                EventTemplate<T>(TimeUtils.now(), template.kind, template.tags, template.content)
+            } else {
+                template
+            }
+        },
     )
 
     /**
@@ -222,6 +246,11 @@ class PoWPublishQueue(
         owner: HexKey? = null,
         mine: suspend (isActive: () -> Boolean) -> R,
         publish: suspend (R) -> Unit,
+        // When non-null, produces the value [publish] would have received
+        // WITHOUT mining, so the user can abandon the nonce search and send the
+        // event right away (see [sendWithoutPow]). Null for stages whose result
+        // only exists after mining (gift wraps).
+        sendWithoutPow: (suspend () -> R)? = null,
     ) {
         val id = persistAs?.id ?: RandomInstance.randomChars(16)
         addJob(
@@ -231,6 +260,7 @@ class PoWPublishQueue(
             persistAs = persistAs,
             dedupeKey = dedupeKey,
             owner = owner ?: persistAs?.accountPubkey,
+            sendWithoutPow = sendWithoutPow?.let { produce -> { publish(produce()) } },
         ) { isActive ->
             val mined = mine(isActive)
             // frees the mining worker: signing may wait on an external signer
@@ -257,7 +287,7 @@ class PoWPublishQueue(
         dedupeKey: String? = null,
         owner: HexKey? = null,
         work: suspend (isActive: () -> Boolean) -> Unit,
-    ) = addJob(RandomInstance.randomChars(16), kind, difficulty, persistAs = null, dedupeKey = dedupeKey, owner = owner, work = work)
+    ) = addJob(RandomInstance.randomChars(16), kind, difficulty, persistAs = null, dedupeKey = dedupeKey, owner = owner, sendWithoutPow = null, work = work)
 
     private fun addJob(
         id: String,
@@ -266,6 +296,7 @@ class PoWPublishQueue(
         persistAs: PersistedPoWJob?,
         dedupeKey: String?,
         owner: HexKey?,
+        sendWithoutPow: (suspend () -> Unit)?,
         work: suspend (isActive: () -> Boolean) -> Unit,
     ) {
         val current = pending.value
@@ -278,10 +309,10 @@ class PoWPublishQueue(
             return
         }
 
-        val job = MiningJob(id, kind, difficulty, persisted = persistAs != null, dedupeKey = dedupeKey, owner = owner, work = work)
+        val job = MiningJob(id, kind, difficulty, persisted = persistAs != null, dedupeKey = dedupeKey, owner = owner, work = work, sendWithoutPow = sendWithoutPow)
         persistAs?.let { persistence?.save(it) }
         pending.update { it.putting(job.id, job) }
-        _jobs.update { (it + PoWJobState(job.id, job.kind, job.difficulty)).toImmutableList() }
+        _jobs.update { (it + PoWJobState(job.id, job.kind, job.difficulty, canSendWithoutPow = sendWithoutPow != null)).toImmutableList() }
         Log.d(TAG) {
             val durability = if (persistAs != null) "persisted" else "in-memory only, lost on process death"
             "Enqueued PoW job ${job.id} kind=${job.kind} difficulty=${job.difficulty} ($durability)"
@@ -320,6 +351,28 @@ class PoWPublishQueue(
     }
 
     /**
+     * Abandons the nonce search for [jobId] and publishes its event immediately
+     * WITHOUT proof of work, through the same sign+broadcast continuation the
+     * mined template would have used. No-op if the job already finished, is
+     * publishing, was cancelled, or was enqueued without an un-mined fallback
+     * (opaque work jobs — reactions, reposts, anonymous posts, gift wraps — have
+     * no plain template to fall back to). The running worker picks up the flag
+     * on its next [isActive] poll and does the publish; a still-QUEUED job does
+     * it as soon as a worker takes it.
+     */
+    fun sendWithoutPow(jobId: String) {
+        val job = pending.value[jobId] ?: return
+        if (job.publishing || job.cancelled || job.sendWithoutPow == null) return
+        job.sendUnminedRequested = true
+        Log.d(TAG) { "Requested send-without-PoW for job $jobId" }
+    }
+
+    /** Sends every job that supports it without proof of work; others keep mining. */
+    fun sendAllWithoutPow() {
+        pending.value.keys.forEach { sendWithoutPow(it) }
+    }
+
+    /**
      * Cancels every queued/mining job enqueued for [owner]'s account — used at
      * log-off so a deleted account's posts can't publish after the fact.
      * Publishing jobs are left to finish (cancel is unsafe mid-broadcast).
@@ -342,13 +395,24 @@ class PoWPublishQueue(
         var detached = false
 
         try {
-            job.work { !job.cancelled && workerJob.isActive }
+            job.work { !job.cancelled && !job.sendUnminedRequested && workerJob.isActive }
             detached = job.publishing
             Log.d(TAG) { "Finished mining PoW job ${job.id} kind=${job.kind} difficulty=${job.difficulty}" }
         } catch (e: CancellationException) {
             // the worker itself was cancelled (scope teardown): propagate.
             if (!currentCoroutineContext().isActive) throw e
-            Log.d(TAG) { "PoW job ${job.id} cancelled while mining" }
+
+            val sendWithoutPow = job.sendWithoutPow
+            if (job.sendUnminedRequested && !job.cancelled && sendWithoutPow != null) {
+                // user chose "send now": abandon the nonce search and publish the
+                // plain template through the same continuation, off the pool.
+                Log.d(TAG) { "PoW job ${job.id} sending without proof of work" }
+                setPhase(job.id, PoWJobPhase.PUBLISHING)
+                detached = true
+                scope.launch { finishDetached(job.id, job.kind, persisted = job.persisted, onMined = sendWithoutPow) }
+            } else {
+                Log.d(TAG) { "PoW job ${job.id} cancelled while mining" }
+            }
         } catch (e: Exception) {
             // mining-stage failures are deterministic (bad difficulty, broken
             // template): drop the checkpoint too, or every restore re-crashes.

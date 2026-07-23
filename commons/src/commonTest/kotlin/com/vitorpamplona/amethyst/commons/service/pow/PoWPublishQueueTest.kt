@@ -98,6 +98,65 @@ class PoWPublishQueueTest {
         }
 
     @Test
+    fun sendWithoutPowPublishesTheUnminedTemplate() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1)
+            val sent = CompletableDeferred<EventTemplate<TextNoteEvent>>()
+
+            // difficulty 40 would mine for ages: it must NOT finish before we
+            // abandon it, so what publishes is guaranteed the un-mined template.
+            queue.enqueue(template, pubKey, difficulty = 40) { sent.complete(it) }
+
+            // wait until a worker is actually searching, then send now.
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.any { j -> j.isMining } } } }
+            val jobId =
+                queue.jobs.value
+                    .first()
+                    .id
+            assertTrue(
+                queue.jobs.value
+                    .first()
+                    .canSendWithoutPow,
+                "template jobs offer the un-mined fallback",
+            )
+
+            queue.sendWithoutPow(jobId)
+
+            val result = withContext(Dispatchers.Default) { withTimeout(10_000) { sent.await() } }
+            val powTag = result.tags.firstNotNullOfOrNull { PoWTag.parse(it) }
+            assertEquals(null, powTag, "an un-mined send must carry no nonce tag")
+
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            scope.cancel()
+        }
+
+    @Test
+    fun sendWithoutPowIsNoOpForOpaqueWorkJobs() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1)
+
+            val gate = CompletableDeferred<Unit>()
+            var ran = false
+            // occupies the worker so the second job stays QUEUED and observable
+            queue.enqueueWork(kind = 1, difficulty = 10) { gate.await() }
+            queue.enqueueWork(kind = 1, difficulty = 10) { ran = true }
+
+            val workJob = queue.jobs.value[1]
+            assertFalse(workJob.canSendWithoutPow, "opaque work jobs have no un-mined fallback")
+
+            // no fallback → the request is ignored, the job keeps its place.
+            queue.sendWithoutPow(workJob.id)
+            assertEquals(2, queue.jobs.value.size)
+
+            gate.complete(Unit)
+            withContext(Dispatchers.Default) { withTimeout(10_000) { queue.jobs.first { it.isEmpty() } } }
+            assertTrue(ran, "the work job still runs its normal mining path")
+            scope.cancel()
+        }
+
+    @Test
     fun jobsRunInFifoOrder() =
         runTest {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
