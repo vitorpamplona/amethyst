@@ -118,9 +118,9 @@ private fun RelayGroupThreads(
 
     RelayGroupThreadsPaging(threadCount = { threads.size }, listState = listState, history = history)
 
-    // Only members can post a thread (the relay rejects a non-member's kind-11), so the
-    // compose FAB is hidden for everyone else.
-    val canPost = channel.membershipOf(accountViewModel.userProfile().pubkeyHex).isMember()
+    // Hide the compose FAB where the relay would reject the kind-11: on membership-gated groups
+    // that don't list me. Open Buzz channels accept any authenticated member. See [RelayGroupChannel.canPost].
+    val canPost = channel.canPost(accountViewModel.userProfile().pubkeyHex)
 
     Scaffold(
         topBar = {

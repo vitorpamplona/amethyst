@@ -205,7 +205,7 @@ fun RelayGroupTopBar(
                     )
                 }
 
-                !displayMembership.isMember() -> {
+                !displayMembership.isMember() && channel.requiresMembershipToPost() -> {
                     FilledTonalButton(onClick = {
                         // Closed groups need an invite code; open groups join directly.
                         if (channel.isClosed()) {

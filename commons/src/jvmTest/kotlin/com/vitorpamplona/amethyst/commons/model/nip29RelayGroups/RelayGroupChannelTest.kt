@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
@@ -257,6 +258,57 @@ class RelayGroupChannelTest {
     @Test
     fun displayNameFallsBackToGroupIdWithoutMetadata() {
         assertEquals(gid, channel().toBestDisplayName())
+    }
+
+    @Test
+    fun standardNip29RelayAlwaysRequiresMembershipToPost() {
+        // A non-Buzz relay: NIP-29 requires membership to post to EVERY group (open only means a
+        // 9021 join is auto-approved), so a non-member can't post even on an open/public channel.
+        BuzzRelayDialect.clearForTesting()
+        val c = channel()
+        c.updateGroupInfo(metadata(100, flags = emptyList())) // open (no "private" tag)
+        c.updateMembers(members(100, alice))
+
+        assertTrue(c.requiresMembershipToPost())
+        assertTrue(c.canPost(alice)) // member
+        assertFalse(c.canPost(bob)) // non-member is blocked on standard NIP-29
+    }
+
+    @Test
+    fun buzzOpenChannelLetsAnyMemberPostWithoutJoining() {
+        // Buzz relaxes NIP-29: an open (non-"private") channel accepts writes from any authenticated
+        // relay member without a per-channel join. Buzz stamps "closed" on every channel, so that flag
+        // must NOT gate posting — only "private" does.
+        BuzzRelayDialect.clearForTesting()
+        BuzzRelayDialect.mark(relay)
+        try {
+            val c = channel()
+            c.updateGroupInfo(metadata(100, flags = listOf("closed"))) // open + Buzz's always-on "closed"
+            c.updateMembers(members(100, alice))
+
+            assertFalse(c.requiresMembershipToPost())
+            assertTrue(c.canPost(alice)) // roster member
+            assertTrue(c.canPost(bob)) // NOT in the roster, but the open Buzz channel still accepts writes
+        } finally {
+            BuzzRelayDialect.clearForTesting()
+        }
+    }
+
+    @Test
+    fun buzzPrivateChannelStillGatesPostingOnRoster() {
+        BuzzRelayDialect.clearForTesting()
+        BuzzRelayDialect.mark(relay)
+        try {
+            val c = channel()
+            c.updateGroupInfo(metadata(100, flags = listOf("private", "closed")))
+            c.updateMembers(members(100, alice))
+
+            assertTrue(c.requiresMembershipToPost())
+            assertTrue(c.canPost(alice)) // member
+            assertFalse(c.canPost(bob)) // non-member blocked on a private channel
+        } finally {
+            BuzzRelayDialect.clearForTesting()
+        }
     }
 
     @Test

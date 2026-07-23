@@ -266,9 +266,10 @@ private fun ChannelView(
 
         Spacer(modifier = DoubleVertSpacer)
 
-        // NIP-29 relays reject writes from non-members, so only show the composer when the
-        // relay-signed roster (39001/39002) lists me as a member/mod/admin. Otherwise, explain why.
-        val canPost = liveChannel.membershipOf(accountViewModel.userProfile().pubkeyHex).isMember()
+        // Show the composer wherever the relay would actually accept my write: any roster
+        // member/mod/admin, plus any authenticated member of an open Buzz channel (which accepts
+        // writes without a per-channel join). Otherwise explain why. See [RelayGroupChannel.canPost].
+        val canPost = liveChannel.canPost(accountViewModel.userProfile().pubkeyHex)
 
         if (canPost) {
             EditFieldRow(

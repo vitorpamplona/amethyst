@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -306,6 +307,25 @@ class RelayGroupChannel(
         }
         return if (pubkey in members) RelayGroupMembership.MEMBER else RelayGroupMembership.NONE
     }
+
+    /**
+     * Whether posting here requires the author to appear in the relay-signed roster (39001/39002).
+     *
+     * Standard NIP-29 relays require membership to post to every group (an `open` group only means a
+     * kind-9021 join is auto-approved — you must still be a member to write). Buzz relaxes this: on a
+     * Buzz relay an **open** (non-`private`) channel accepts kind-9 from any authenticated relay member
+     * with NO per-channel join, and Buzz stamps EVERY channel with the `closed` join-flag — so there
+     * [isClosed] says nothing about who may post; only [isPrivate] reflects the write ACL.
+     */
+    fun requiresMembershipToPost(): Boolean = !BuzzRelayDialect.isBuzz(groupId.relayUrl) || isPrivate()
+
+    /**
+     * Whether [pubkey] may post here: a roster member/mod/admin always may; on an open Buzz channel any
+     * authenticated relay member may, even without a per-channel join. Mirrors the relay's write gate
+     * (`check_channel_membership`: member OR open-visibility), so the composer isn't hidden where the
+     * relay would actually accept the message.
+     */
+    fun canPost(pubkey: HexKey): Boolean = !requiresMembershipToPost() || membershipOf(pubkey).isMember()
 
     fun anyNameStartsWith(prefix: String): Boolean =
         groupId.id.contains(prefix, true) ||
