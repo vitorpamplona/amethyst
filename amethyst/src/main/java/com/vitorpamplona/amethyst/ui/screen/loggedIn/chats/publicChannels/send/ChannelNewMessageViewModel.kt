@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
@@ -126,6 +127,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 @Stable
 open class ChannelNewMessageViewModel :
@@ -530,6 +532,37 @@ open class ChannelNewMessageViewModel :
         }
     }
 
+    /**
+     * Buzz auto-invite: mentioning someone who isn't yet a member of a Buzz workspace channel adds
+     * them (kind-9000 put-user) before the message goes out, so the `@`-mention resolves to a real
+     * member — mirroring Buzz's own composer, which is how you pull a bot into a channel by naming it.
+     *
+     * Only a moderator can issue kind-9000, so this is a no-op for a plain member (the relay would
+     * reject it anyway); self and already-present members are skipped. Best-effort — a failed add
+     * must never block the message, so each is guarded.
+     */
+    private suspend fun autoInviteMentionedBuzzMembers(
+        channel: Channel,
+        mentioned: List<User>?,
+    ) {
+        if (mentioned.isNullOrEmpty()) return
+        if (channel !is RelayGroupChannel || !BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) return
+        val me = accountViewModel.account.userProfile().pubkeyHex
+        if (!channel.membershipOf(me).canModerate()) return
+
+        mentioned.forEach { user ->
+            val pk = user.pubkeyHex
+            if (pk != me && channel.membershipOf(pk) == RelayGroupMembership.NONE) {
+                try {
+                    accountViewModel.account.putRelayGroupUser(channel, pk, emptyList())
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("BuzzAutoInvite", "Failed to add mentioned member ${pk.take(8)}: ${e.message}")
+                }
+            }
+        }
+    }
+
     // `protected open` so a specialized composer (e.g. the Buzz forum reply) can reuse this whole
     // rich EditFieldRow but swap only the event it builds for the composed text.
     protected open suspend fun createTemplate(): EventTemplate<out Event>? {
@@ -544,6 +577,8 @@ open class ChannelNewMessageViewModel :
                 dao = accountViewModel,
             )
         tagger.run()
+
+        autoInviteMentionedBuzzMembers(channel, tagger.pTags)
 
         val urls = findURLs(messageText)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
