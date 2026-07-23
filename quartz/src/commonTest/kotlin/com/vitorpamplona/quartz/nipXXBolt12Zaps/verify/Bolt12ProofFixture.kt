@@ -62,10 +62,14 @@ object Bolt12ProofFixture {
         payerNote: String,
         compressed: Boolean = false,
         breakProofSignature: Boolean = false,
+        breakInvoiceSignature: Boolean = false,
+        corruptPaymentHash: Boolean = false,
     ): String {
         val nodePoint = point(nodeKey.pubKey)
         val payerPoint = point(payerLightningKey.pubKey)
-        val paymentHash = sha256(preimage)
+        // A corrupt hash still yields a valid signature over the corrupted records —
+        // the preimage check (SHA256(preimage) != invoice_payment_hash) is what rejects it.
+        val paymentHash = sha256(preimage).also { if (corruptPaymentHash) it[0] = (it[0] + 1).toByte() }
 
         // The invoice's signed records (types < 240), in ascending order.
         val invoiceRecords =
@@ -79,10 +83,11 @@ object Bolt12ProofFixture {
                 TlvRecord(Bolt12PayerProof.TYPE_INVOICE_NODE_ID, nodePoint),
             )
         val invoiceRoot = Bolt12Merkle.rootHash(invoiceRecords)
+        val invoiceSigningKey = if (breakInvoiceSignature) payerLightningKey else nodeKey
         val invoiceSig =
             Nip01Crypto.sign(
                 Bolt12Merkle.signatureDigest(Bolt12ProofVerifier.INVOICE_MESSAGE, Bolt12ProofVerifier.SIGNATURE_FIELD, invoiceRoot),
-                nodeKey.privKey!!,
+                invoiceSigningKey.privKey!!,
             )
 
         val preimageRecord = TlvRecord(Bolt12PayerProof.TYPE_PROOF_PREIMAGE, preimage)

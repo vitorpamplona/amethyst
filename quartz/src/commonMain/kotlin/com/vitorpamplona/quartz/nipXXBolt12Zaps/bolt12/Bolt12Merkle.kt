@@ -47,18 +47,26 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  * lightning/bolts#1346 test vectors.
  */
 object Bolt12Merkle {
-    private val LN_LEAF = "LnLeaf".encodeToByteArray()
     private val LN_NONCE = "LnNonce".encodeToByteArray()
-    private val LN_BRANCH = "LnBranch".encodeToByteArray()
+
+    // The "LnLeaf" and "LnBranch" tags are constants, so their SHA-256 (the inner
+    // hash of a tagged hash) is precomputed once instead of per leaf/branch. The
+    // "LnNonce" tag isn't constant (it embeds the first TLV), so it is hashed once
+    // per rootHash() call rather than once per record.
+    private val LN_LEAF_TAG_HASH = sha256("LnLeaf".encodeToByteArray())
+    private val LN_BRANCH_TAG_HASH = sha256("LnBranch".encodeToByteArray())
 
     /** Tagged hash `SHA256(SHA256(tag) || SHA256(tag) || msg)`. */
     fun taggedHash(
         tag: ByteArray,
         msg: ByteArray,
-    ): ByteArray {
-        val tagHash = sha256(tag)
-        return sha256(tagHash + tagHash + msg)
-    }
+    ): ByteArray = taggedHashPrecomputed(sha256(tag), msg)
+
+    /** Tagged hash when the caller already holds `SHA256(tag)` (the inner tag hash). */
+    private fun taggedHashPrecomputed(
+        tagHash: ByteArray,
+        msg: ByteArray,
+    ): ByteArray = sha256(tagHash + tagHash + msg)
 
     /**
      * Computes the merkle root over [signableRecords] — the caller must have
@@ -69,12 +77,12 @@ object Bolt12Merkle {
         require(signableRecords.isNotEmpty()) { "Cannot compute a merkle root over zero records" }
 
         val firstTlv = signableRecords.first().encoded
-        val nonceTag = LN_NONCE + firstTlv
+        val nonceTagHash = sha256(LN_NONCE + firstTlv)
 
         var nodes = ArrayList<ByteArray>(signableRecords.size * 2)
         for (record in signableRecords) {
-            nodes.add(taggedHash(LN_LEAF, record.encoded))
-            nodes.add(taggedHash(nonceTag, record.encoded))
+            nodes.add(taggedHashPrecomputed(LN_LEAF_TAG_HASH, record.encoded))
+            nodes.add(taggedHashPrecomputed(nonceTagHash, record.encoded))
         }
 
         while (nodes.size > 1) {
@@ -99,9 +107,9 @@ object Bolt12Merkle {
         b: ByteArray,
     ): ByteArray =
         if (compareUnsigned(a, b) <= 0) {
-            taggedHash(LN_BRANCH, a + b)
+            taggedHashPrecomputed(LN_BRANCH_TAG_HASH, a + b)
         } else {
-            taggedHash(LN_BRANCH, b + a)
+            taggedHashPrecomputed(LN_BRANCH_TAG_HASH, b + a)
         }
 
     /**

@@ -2419,7 +2419,9 @@ object LocalCache : ILocalCache, ICacheProvider {
         // NIP-XX validation is fully synchronous: zap-event structure, the embedded
         // kind:9737 intent match, and the `lnp` payer-proof binding + crypto. A failed
         // validation drops the zap entirely — it never contributes to a zap total.
-        val validation = bolt12ZapValidator.validate(event)
+        // The outer event signature was already verified above (wasVerified/justVerify),
+        // so skip the redundant re-check inside the validator.
+        val validation = bolt12ZapValidator.validate(event, verifyEventSignature = false)
         if (validation !is Bolt12ZapValidation.Valid) {
             Log.w("ZP") { "dropping bolt12 zap ${event.id}: ${(validation as Bolt12ZapValidation.Invalid).reason}" }
             return false

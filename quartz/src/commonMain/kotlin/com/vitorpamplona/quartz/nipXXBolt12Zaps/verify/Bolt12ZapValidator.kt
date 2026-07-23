@@ -53,12 +53,28 @@ import com.vitorpamplona.quartz.utils.Hex
 class Bolt12ZapValidator(
     private val proofVerifier: Bolt12ProofVerifier = Bolt12ProofVerifier(),
 ) {
-    fun validate(event: Bolt12ZapEvent): Bolt12ZapValidation {
-        // Step 1 — kind and event signature.
-        if (event.kind != Bolt12ZapEvent.KIND) return invalid(Reason.WRONG_KIND)
-        if (!event.verify()) return invalid(Reason.BAD_EVENT_SIGNATURE)
+    /**
+     * @param verifyEventSignature verify the zap event's own signature. Defaults to
+     *   true for standalone callers. The `LocalCache` ingest path passes false
+     *   because the relay-client pipeline already verified it before dispatch —
+     *   avoiding a redundant schnorr check on the hot path.
+     *
+     * Checks are ordered cheap-to-expensive: all structural, cross-event, and
+     * binding checks (tag reads, string/number compares) run first, and the
+     * expensive signature/crypto verifications run only once an event has passed
+     * them — so a malformed or mismatched event is rejected without paying for a
+     * schnorr verification. This cannot change an accept/reject outcome (a
+     * badly-signed event still fails the later verify), only which reason a
+     * doubly-invalid event reports.
+     */
+    fun validate(
+        event: Bolt12ZapEvent,
+        verifyEventSignature: Boolean = true,
+    ): Bolt12ZapValidation {
+        // --- Cheap checks (no crypto) --------------------------------------------
 
-        // Step 2 — zap-event structure.
+        // Zap-event kind + structure.
+        if (event.kind != Bolt12ZapEvent.KIND) return invalid(Reason.WRONG_KIND)
         if (event.tags.count(DescriptionTag::isTag) != 1) return invalid(Reason.NOT_EXACTLY_ONE_DESCRIPTION)
         if (event.description() == null) return invalid(Reason.MISSING_DESCRIPTION)
 
@@ -78,9 +94,8 @@ class Bolt12ZapValidator(
         val payer = event.payer()
         if (payer != null && payer != event.pubKey) return invalid(Reason.PAYER_TAG_MISMATCH)
 
-        // Step 3 — embedded intent.
+        // Embedded intent — parse + structure (signature verified later).
         val intent = event.zapIntent ?: return invalid(Reason.MISSING_OR_INVALID_INTENT)
-        if (!intent.verify()) return invalid(Reason.BAD_INTENT_SIGNATURE)
         if (intent.pubKey != event.pubKey) return invalid(Reason.INTENT_PUBKEY_MISMATCH)
         if (intent.zapId() == null) return invalid(Reason.INVALID_ZAP_ID)
 
@@ -91,7 +106,7 @@ class Bolt12ZapValidator(
         if (intent.offer() == null) return invalid(Reason.INTENT_STRUCTURE_INVALID)
         if (checkTargetCardinality(intent.tags) != null) return invalid(Reason.INTENT_STRUCTURE_INVALID)
 
-        // Step 4 — the zap and its intent must agree.
+        // The zap and its intent must agree.
         if (event.content != intent.content) return invalid(Reason.CONTENT_MISMATCH)
         if (recipient != intent.recipient()) return invalid(Reason.RECIPIENT_MISMATCH)
         if (amount != intentAmount) return invalid(Reason.AMOUNT_MISMATCH)
@@ -100,13 +115,12 @@ class Bolt12ZapValidator(
         if (event.zappedAddress() != intent.zappedAddress()) return invalid(Reason.TARGET_MISMATCH)
         if (event.zappedKind() != intent.zappedKind()) return invalid(Reason.TARGET_MISMATCH)
 
-        // Step 5 — parse the raw offer.
+        // Parse the raw offer + payer proof.
         val offerParsed = Bolt12Offer.parse(offer) ?: return invalid(Reason.UNPARSEABLE_OFFER)
-
-        // Step 6 — parse & decode the payer proof.
         val proof = Bolt12PayerProof.parse(proofStr) ?: return invalid(Reason.UNPARSEABLE_PROOF)
 
-        // Step 7 — bind the proof to this zap.
+        // Bind the proof to this zap. Uses intent.id — a forged id can't survive the
+        // intent signature check below, so binding-before-verify is safe.
         val expectedNote = NIP_URI_PREFIX + intent.id
         if (proof.invreqPayerNote() != expectedNote) return invalid(Reason.PROOF_NOTE_MISMATCH)
 
@@ -115,7 +129,11 @@ class Bolt12ZapValidator(
 
         offerBindingFailure(offerParsed, proof)?.let { return invalid(it) }
 
-        // Step 6 (crypto) — verify the payer proof signatures.
+        // --- Expensive checks (signatures + proof crypto) ------------------------
+
+        if (verifyEventSignature && !event.verify()) return invalid(Reason.BAD_EVENT_SIGNATURE)
+        if (!intent.verify()) return invalid(Reason.BAD_INTENT_SIGNATURE)
+
         val cryptoResult = proofVerifier.verify(proof)
         val cryptoVerified =
             when (cryptoResult) {

@@ -152,4 +152,91 @@ class Bolt12ZapValidatorTest {
             val result = validator.validate(signedZap(signer, intent, proof))
             assertEquals(Bolt12ZapValidation.Invalid(Bolt12ZapValidation.Reason.INTENT_PUBKEY_MISMATCH), result)
         }
+
+    @Test
+    fun rejectsWhenThePreimageDoesNotHashToThePaymentHash() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            val nodeKey = KeyPair()
+            val preimage = ByteArray(32) { (it + 6).toByte() }
+            val offer = Bolt12ProofFixture.buildOffer(nodeKey, amount)
+            val intent = signedIntent(signer, offer)
+            val note = Bolt12ZapValidator.NIP_URI_PREFIX + intent.id
+            val proof = Bolt12ProofFixture.buildProof(nodeKey, KeyPair(), preimage, amount, note, corruptPaymentHash = true)
+
+            val result = validator.validate(signedZap(signer, intent, proof))
+            assertEquals(Bolt12ZapValidation.Invalid(Bolt12ZapValidation.Reason.PROOF_PREIMAGE_MISMATCH), result)
+        }
+
+    @Test
+    fun rejectsAnInvalidInvoiceSignature() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            val nodeKey = KeyPair()
+            val preimage = ByteArray(32) { (it + 8).toByte() }
+            val offer = Bolt12ProofFixture.buildOffer(nodeKey, amount)
+            val intent = signedIntent(signer, offer)
+            val note = Bolt12ZapValidator.NIP_URI_PREFIX + intent.id
+            val proof = Bolt12ProofFixture.buildProof(nodeKey, KeyPair(), preimage, amount, note, breakInvoiceSignature = true)
+
+            val result = validator.validate(signedZap(signer, intent, proof))
+            assertEquals(Bolt12ZapValidation.Invalid(Bolt12ZapValidation.Reason.PROOF_INVOICE_SIGNATURE_INVALID), result)
+        }
+
+    @Test
+    fun rejectsAPayerTagThatIsNotTheEventAuthor() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            val nodeKey = KeyPair()
+            val preimage = ByteArray(32) { (it + 9).toByte() }
+            val offer = Bolt12ProofFixture.buildOffer(nodeKey, amount)
+            val intent = signedIntent(signer, offer)
+            val note = Bolt12ZapValidator.NIP_URI_PREFIX + intent.id
+            val proof = Bolt12ProofFixture.buildProof(nodeKey, KeyPair(), preimage, amount, note)
+
+            // Attribute the zap to someone other than its signer.
+            val zap = signer.sign(Bolt12ZapEvent.build(intent, proof, payerPubKey = "c".repeat(64)))
+            assertEquals(Bolt12ZapValidation.Invalid(Bolt12ZapValidation.Reason.PAYER_TAG_MISMATCH), validator.validate(zap))
+        }
+
+    @Test
+    fun rejectsWhenTheProofDoesNotMatchTheOffer() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            val offerNodeKey = KeyPair()
+            val proofNodeKey = KeyPair() // a different node than the offer's issuer
+            val preimage = ByteArray(32) { (it + 10).toByte() }
+            val offer = Bolt12ProofFixture.buildOffer(offerNodeKey, amount)
+            val intent = signedIntent(signer, offer)
+            val note = Bolt12ZapValidator.NIP_URI_PREFIX + intent.id
+            val proof = Bolt12ProofFixture.buildProof(proofNodeKey, KeyPair(), preimage, amount, note)
+
+            val result = validator.validate(signedZap(signer, intent, proof))
+            assertEquals(Bolt12ZapValidation.Invalid(Bolt12ZapValidation.Reason.OFFER_PROOF_MISMATCH), result)
+        }
+
+    @Test
+    fun skipsTheEventSignatureCheckWhenTheCallerAlreadyVerifiedIt() =
+        runTest {
+            val signer = NostrSignerInternal(KeyPair())
+            val nodeKey = KeyPair()
+            val preimage = ByteArray(32) { (it + 11).toByte() }
+            val offer = Bolt12ProofFixture.buildOffer(nodeKey, amount)
+            val intent = signedIntent(signer, offer)
+            val note = Bolt12ZapValidator.NIP_URI_PREFIX + intent.id
+            val proof = Bolt12ProofFixture.buildProof(nodeKey, KeyPair(), preimage, amount, note)
+            val validZap = signedZap(signer, intent, proof)
+
+            // Same event, but its own signature is corrupted (id still matches content).
+            val tamperedSig =
+                Bolt12ZapEvent(validZap.id, validZap.pubKey, validZap.createdAt, validZap.tags, validZap.content, "0".repeat(128))
+
+            // Default: the bad event signature is caught.
+            assertEquals(
+                Bolt12ZapValidation.Invalid(Bolt12ZapValidation.Reason.BAD_EVENT_SIGNATURE),
+                validator.validate(tamperedSig),
+            )
+            // Ingest path: the pipeline already verified the event, so skipping is safe and it validates.
+            assertIs<Bolt12ZapValidation.Valid>(validator.validate(tamperedSig, verifyEventSignature = false))
+        }
 }
