@@ -53,13 +53,18 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @Composable
@@ -98,6 +103,12 @@ fun RelayGroupTopBar(
     }
     val displayMembership = if (!membership.isMember() && requested) RelayGroupMembership.PENDING else membership
 
+    // A Buzz DM is a private 1:1 conversation: title it by the OTHER participant (not the generic "DM"
+    // metadata name), and drop the forum-threads + share affordances — a DM has no forum, and its
+    // private, membership-gated naddr is meaningless to hand out.
+    val isDm = channel.event?.isBuzzDm() == true
+    val dmOther = if (isDm) channel.event?.buzzParticipants()?.firstOrNull { it != myPubkey } else null
+
     var menuOpen by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
     var showJoinCode by remember { mutableStateOf(false) }
@@ -109,13 +120,17 @@ fun RelayGroupTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(
-                        text = channel.toBestDisplayName(),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
+                    if (dmOther != null) {
+                        DmParticipantTitle(dmOther, channel, accountViewModel, Modifier.weight(1f, fill = false))
+                    } else {
+                        Text(
+                            text = channel.toBestDisplayName(),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
                     RoleBadge(displayMembership)
                 }
                 Row(
@@ -155,14 +170,16 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
-            IconButton(onClick = {
-                nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
-            }) {
-                Icon(
-                    symbol = MaterialSymbols.Forum,
-                    contentDescription = stringRes(R.string.relay_group_threads_title),
-                    modifier = Modifier.size(20.dp),
-                )
+            if (!isDm) {
+                IconButton(onClick = {
+                    nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
+                }) {
+                    Icon(
+                        symbol = MaterialSymbols.Forum,
+                        contentDescription = stringRes(R.string.relay_group_threads_title),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
 
             // Buzz workspace canvas (kind 40100): shown on any Buzz-dialect relay so a member can
@@ -177,7 +194,7 @@ fun RelayGroupTopBar(
                 }
             }
 
-            val naddr = channel.toNAddr()
+            val naddr = if (isDm) null else channel.toNAddr()
             if (naddr != null) {
                 val context = LocalContext.current
                 IconButton(onClick = { shareRelayGroup(context, naddr) }) {
@@ -273,6 +290,25 @@ fun RelayGroupTopBar(
             onDismiss = { showJoinCode = false },
         )
     }
+}
+
+/** Title for a Buzz DM: the OTHER participant's display name (reactive), falling back to the channel name. */
+@Composable
+private fun DmParticipantTitle(
+    otherPubkey: HexKey,
+    channel: RelayGroupChannel,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier,
+) {
+    val user = remember(otherPubkey) { LocalCache.getOrCreateUser(otherPubkey) }
+    val name by observeUserName(user, accountViewModel)
+    Text(
+        text = name.ifBlank { channel.toBestDisplayName() },
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
 }
 
 /** Fire the system share sheet with a njump web link to the group's naddr. */
