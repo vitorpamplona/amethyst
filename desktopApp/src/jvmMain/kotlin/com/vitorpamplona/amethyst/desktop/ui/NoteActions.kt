@@ -1313,7 +1313,7 @@ fun NoteActionsRow(
             )
         }
 
-        // Share menu
+        // Overflow menu: copy / broadcast / share links + mute / report.
         val shareMenuState = rememberShareMenuState()
         Box {
             IconButton(
@@ -1321,8 +1321,8 @@ fun NoteActionsRow(
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    MaterialSymbols.Share,
-                    contentDescription = "Share",
+                    MaterialSymbols.MoreVert,
+                    contentDescription = "More actions",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
                 )

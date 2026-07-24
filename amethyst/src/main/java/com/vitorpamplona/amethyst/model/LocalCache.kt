@@ -22,7 +22,6 @@
 
 package com.vitorpamplona.amethyst.model
 
-import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
@@ -117,7 +116,6 @@ import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalDeniedEvent
@@ -135,6 +133,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -198,14 +197,11 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
@@ -1383,16 +1379,6 @@ object LocalCache : ILocalCache, ICacheProvider {
                 (eTagTargets + qTagTargets).mapNotNull { checkGetOrCreateNote(it) }
             }
 
-            is StreamMessageV2Event -> {
-                // Buzz threads 40002s with marked root/reply e-tags (thread_tags in
-                // buzz-sdk). Link both so inbound replies render their quote bubble —
-                // we emit these markers on send, so we must also read them.
-                listOfNotNull(
-                    event.tags.buzzThreadRoot(),
-                    event.tags.buzzThreadReply(),
-                ).distinct().mapNotNull { checkGetOrCreateNote(it) }
-            }
-
             else -> {
                 emptyList()
             }
@@ -1484,12 +1470,17 @@ object LocalCache : ILocalCache, ICacheProvider {
         val author = getOrCreateUser(event.pubKey)
 
         // Already processed this event.
-        if (version.event?.id == event.id) return false
+        if (version.event != null) return false
 
         if (wasVerified || justVerify(event)) {
-            if (version.event == null) {
-                version.loadEvent(event, author, emptyList())
-                version.flowSet?.ots?.invalidateData()
+            version.loadEvent(event, author, emptyList())
+
+            // Anchor the attestation to the note it timestamps (like an edit to its message), so it
+            // survives exactly as long as that note and is dropped when the note is deleted or pruned.
+            // addTimestamp invalidates the target's `ots` flow so the OTS pill re-derives — the old
+            // code invalidated the attestation's OWN (observer-less) flow, so the target never updated.
+            event.digestEventId()?.let { targetId ->
+                getOrCreateNote(targetId).addTimestamp(version)
             }
 
             refreshNewNoteObservers(version)
@@ -2262,15 +2253,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean =
         // Buzz's own timeline set excludes 40003: an edit is an OVERLAY replacing an
-        // earlier message's content, never a row of its own. Store it and record the
-        // overlay (keyed by the channel's UUID, so own sends with no provenance relay
-        // land too), but do NOT attach it to the timeline.
+        // earlier message's content, never a row of its own. Store it and anchor it to the
+        // message it edits (Note.edits) — like every other edit kind — so the overlay is held
+        // for as long as its message and never leaks into the timeline as a bubble.
         consumeBuzzRegularEvent(event, relay, wasVerified).also {
             val target = event.editedMessage() ?: return@also
-            val channelId = event.channel() ?: return@also
             val editNote = getOrCreateNote(event.id)
             if (editNote.event != null) {
-                BuzzWorkspaceStates.getOrCreate(channelId).addEdit(target, editNote)
+                getOrCreateNote(target).addEdit(editNote)
             }
         }
 
@@ -2851,12 +2841,48 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
+            // Anchor the modification to the note it edits, like every other edit kind — the read side
+            // (Note.textNoteModifications) then folds `edited.edits` instead of scanning the cache,
+            // and addEdit invalidates the note's edits flow so the UI re-derives.
             event.editedNote()?.let {
-                checkGetOrCreateNote(it.eventId)?.let { editedNote ->
-                    modificationCache.remove(editedNote.idHex)
-                    // must update list of Notes to quickly update the user.
-                    editedNote.flowSet?.edits?.invalidateData()
-                }
+                checkGetOrCreateNote(it.eventId)?.addEdit(note)
+            }
+
+            refreshNewNoteObservers(note)
+
+            return true
+        }
+
+        return false
+    }
+
+    fun consume(
+        event: ConcordChatEditEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return false
+
+        // A Concord edit rumor is unsigned (its sig is empty); the envelope open path already
+        // established authenticity, so we consume it as pre-verified like any other Concord rumor.
+        if (wasVerified || justVerify(event)) {
+            note.loadEvent(event, author, emptyList())
+
+            // Anchor the edit to the message it edits (like a reaction to its target), so it survives
+            // as long as that channel-retained message does. A Concord rumor is decrypted exactly once
+            // per session — the community session dedups re-delivered wraps — so an edit left orphaned
+            // in the soft cache could be GC'd and never re-downloaded. The bubble reads `note.edits`.
+            event.editedMessageId()?.let { targetId ->
+                getOrCreateNote(targetId).addEdit(note)
             }
 
             refreshNewNoteObservers(note)
@@ -3253,73 +3279,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
 
-    suspend fun findEarliestOtsForNote(
-        note: Note,
-        otsVerifCacheBuilder: () -> VerificationStateCache,
-    ): Long? {
-        checkNotInMainThread()
-
-        var minTime: Long? = null
-        val time = TimeUtils.now()
-
-        val candidates =
-            notes.mapNotNull { _, item ->
-                val noteEvent = item.event
-                if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                    val cachedTime = (otsVerifCacheBuilder().justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
-                    if (cachedTime != null) {
-                        if (minTime == null || cachedTime < (minTime ?: Long.MAX_VALUE)) {
-                            minTime = cachedTime
-                        }
-                        null
-                    } else {
-                        // tries to verify again
-                        noteEvent
-                    }
-                } else {
-                    null
-                }
-            }
-
-        candidates.forEach { noteEvent ->
-            (otsVerifCacheBuilder().cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
-                if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
-                    minTime = stampedTime
-                }
-            }
-        }
-
-        return minTime
-    }
-
-    val modificationCache = LruCache<HexKey, List<Note>>(20)
-
-    fun cachedModificationEventsForNote(note: Note): List<Note>? = modificationCache[note.idHex]
-
-    fun findLatestModificationForNote(note: Note): List<Note> {
-        checkNotInMainThread()
-
-        val noteAuthor = note.author ?: return emptyList()
-
-        modificationCache[note.idHex]?.let {
-            return it
-        }
-
-        val time = TimeUtils.now()
-
-        val newNotes =
-            notes
-                .filter { _, item ->
-                    val noteEvent = item.event
-
-                    noteEvent is TextNoteModificationEvent && noteAuthor == item.author && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
-                }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-
-        modificationCache.put(note.idHex, newNotes)
-
-        return newNotes
-    }
-
     fun cleanMemory() {
         Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
         notes.cleanUp()
@@ -3408,13 +3367,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         // grow unbounded with every author who ever heartbeat here.
         if (channel is LiveActivitiesChannel) {
             channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
-        }
-
-        // A Buzz workspace's edit/canvas overlay is keyed off the channel id, outside
-        // `notes`, so the top-N reap never touches it. Drop overlay entries whose target
-        // message was just pruned, else they pin the edit note + author forever.
-        if (channel is RelayGroupChannel) {
-            BuzzWorkspaceStates.getIfExists(channel.groupId.id)?.pruneEdits(channel.notes.keys())
         }
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
@@ -3643,6 +3595,17 @@ object LocalCache : ILocalCache, ICacheProvider {
             getNoteIfExists(quotedId)?.removeBoost(note)
         }
 
+        // Edits (1010/3302/40003) are anchored on their target's Note.edits and carry no `replyTo`
+        // back-link, so the unlink above can't reach them — resolve the target by the edit's `e` tag
+        // and drop it there, or a deleted edit would keep overlaying its message.
+        editedTargetIdOf(noteEvent)?.let { getNoteIfExists(it)?.removeEdit(note) }
+
+        // OTS attestations (kind 1040) are likewise anchored on their target's Note.timestamps with
+        // no `replyTo` back-link — resolve the target by the `e` tag and drop the proof there.
+        if (noteEvent is OtsEvent) {
+            noteEvent.digestEventId()?.let { getNoteIfExists(it)?.removeTimestamp(note) }
+        }
+
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
                 getUserIfExists(it.pubkey)?.reportsOrNull()?.let { reports ->
@@ -3680,6 +3643,15 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         refreshDeletedNoteObservers(note)
     }
+
+    /** The id of the message/post an edit event targets (its `e` tag), across all three edit kinds. */
+    private fun editedTargetIdOf(event: Event?): HexKey? =
+        when (event) {
+            is TextNoteModificationEvent -> event.editedNote()?.eventId
+            is ConcordChatEditEvent -> event.editedMessageId()
+            is StreamMessageEditEvent -> event.editedMessage()
+            else -> null
+        }
 
     fun unlinkAndRemove(nextToBeRemoved: List<Note>) {
         nextToBeRemoved.forEach { note -> unlinkAndRemove(note) }
@@ -4995,6 +4967,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is TextNoteModificationEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ConcordChatEditEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

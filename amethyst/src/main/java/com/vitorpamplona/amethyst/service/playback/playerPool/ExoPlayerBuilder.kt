@@ -50,6 +50,7 @@ class ExoPlayerBuilder(
 
         val renderersFactory =
             object : DefaultRenderersFactory(context) {
+                @Suppress("DEPRECATION") // media3 DefaultAudioSink.Builder.setEnableAudioTrackPlaybackParams is deprecated.
                 override fun buildAudioSink(
                     context: Context,
                     enableFloatOutput: Boolean,

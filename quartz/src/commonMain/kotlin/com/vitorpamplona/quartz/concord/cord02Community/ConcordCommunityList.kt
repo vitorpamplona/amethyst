@@ -29,6 +29,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.elementNames
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -98,10 +99,16 @@ class ConcordEntryResidue(
  * - [tombstones] — the document's tombstones, verbatim. We derive liveness from them but
  *   never author one, so dropping them on write would both lose another client's unknown
  *   keys and resurrect communities that client deliberately removed.
+ * - [unparsedEntries] — entries we could not decode into the typed model, kept verbatim. A
+ *   single entry carrying a wire field this version still requires but a peer omitted would
+ *   otherwise throw and empty the *entire* list; instead we skip just that entry on read and
+ *   re-emit it untouched on write, so a read-modify-write never deletes a membership this
+ *   version merely failed to understand — the same guarantee [tombstones]/[extras] give.
  */
 class ConcordListResidue(
     val extras: JsonObject = NoExtras,
     val tombstones: List<JsonObject> = emptyList(),
+    val unparsedEntries: List<JsonObject> = emptyList(),
 ) {
     companion object {
         val EMPTY = ConcordListResidue()
@@ -229,7 +236,11 @@ object ConcordCommunityList {
     @Serializable
     private class WireChannel(
         val id: String,
-        val key: String,
+        // A public channel carries no delivered key, so a writer lists it with only {id, epoch,
+        // name}. `key` MUST default rather than be required: a single keyless channel would
+        // otherwise throw MissingFieldException and make the whole document decode to empty,
+        // silently dropping *every* joined community from the list.
+        val key: String = "",
         val epoch: Long,
         val name: String = "",
         @SerialName(EXTRAS) val extras: JsonObject = NoExtras,
@@ -373,7 +384,15 @@ object ConcordCommunityList {
                 tombstones = residue.tombstones,
                 extras = residue.extras,
             )
-        return ConcordJson.instance.encodeToString(CommunityListDocSerializer, doc)
+        if (residue.unparsedEntries.isEmpty()) {
+            return ConcordJson.instance.encodeToString(CommunityListDocSerializer, doc)
+        }
+        // Re-attach the entries we couldn't parse, verbatim, so a read-modify-write never deletes
+        // a membership this version failed to understand. They ride alongside the typed entries.
+        val encoded = ConcordJson.instance.encodeToJsonElement(CommunityListDocSerializer, doc).jsonObject
+        val allEntries = ((encoded["entries"] as? JsonArray)?.toList() ?: emptyList()) + residue.unparsedEntries
+        val merged = JsonObject(encoded + ("entries" to JsonArray(allEntries)))
+        return ConcordJson.instance.encodeToString(JsonObject.serializer(), merged)
     }
 
     /**
@@ -385,38 +404,70 @@ object ConcordCommunityList {
 
     /**
      * Parses the decrypted plaintext JSON document into its live entries plus the
-     * document-level residue (unknown keys and tombstones) that [encode] must hand back.
-     * Returns an empty document on failure.
+     * document-level residue (unknown keys, tombstones, and any entries we couldn't decode)
+     * that [encode] must hand back.
+     *
+     * Entries are decoded **one at a time**: an entry this version can't parse (a wire field we
+     * still require that a peer omitted) is skipped and kept verbatim in
+     * [ConcordListResidue.unparsedEntries], never allowed to fail the whole document and empty
+     * the user's entire community list. Returns an empty document only when the outer structure
+     * itself is unreadable.
      */
     fun decodeDocument(json: String): ConcordCommunityListDocument =
         try {
-            val doc = ConcordJson.instance.decodeFromString(CommunityListDocSerializer, json)
+            val root = ConcordJson.instance.parseToJsonElement(json).jsonObject
+            val tombstones = (root["tombstones"] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: emptyList()
+
             val latestRemoval = HashMap<String, Long>()
-            for (t in doc.tombstones) {
+            for (t in tombstones) {
                 val id = (t["community_id"] as? JsonPrimitive)?.contentOrNull ?: continue
                 val removedAt = (t["removed_at"] as? JsonPrimitive)?.longOrNull ?: 0L
                 val prev = latestRemoval[id]
                 if (prev == null || removedAt > prev) latestRemoval[id] = removedAt
             }
-            val entries =
-                doc.entries.mapNotNull { e ->
-                    val removedAt = latestRemoval[e.communityId]
-                    if (removedAt != null && e.addedAt <= removedAt) return@mapNotNull null
-                    val current = e.current
-                    val seed = e.seed?.let { ConcordJson.instance.decodeFromJsonElement(JoinMaterialWireSerializer, it) }
-                    // Hydrating from `seed` mints a fresh `current`; its unknown keys stay safe in
-                    // the verbatim seed, so they are not copied into the new snapshot.
-                    val residue =
-                        ConcordEntryResidue(
-                            entryExtras = e.extras,
-                            seed = e.seed,
-                            currentExtras = if (current != null) current.extras else NoExtras,
-                        )
-                    (current ?: seed)?.toEntry(e.addedAt, e.inviteRef, e.excludedAtEpoch, residue)
-                }
+
+            val entries = ArrayList<ConcordCommunityListEntry>()
+            val unparsed = ArrayList<JsonObject>()
+            for (element in (root["entries"] as? JsonArray ?: emptyList())) {
+                val wireObj = element as? JsonObject ?: continue
+                val e =
+                    try {
+                        ConcordJson.instance.decodeFromJsonElement(CommunityListEntryWireSerializer, wireObj)
+                    } catch (_: Exception) {
+                        // Skip just this entry, but keep it verbatim so a later write re-emits it
+                        // instead of deleting a membership this version failed to understand.
+                        unparsed.add(wireObj)
+                        continue
+                    }
+                val removedAt = latestRemoval[e.communityId]
+                if (removedAt != null && e.addedAt <= removedAt) continue
+                val current = e.current
+                // Hydrating from `seed` mints a fresh `current`; its unknown keys stay safe in the
+                // verbatim seed, so they are not copied into the new snapshot. `seed` decode is
+                // guarded too: it only hydrates when `current` is absent, and survives in residue.
+                val seed =
+                    e.seed?.let {
+                        try {
+                            ConcordJson.instance.decodeFromJsonElement(JoinMaterialWireSerializer, it)
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                val residue =
+                    ConcordEntryResidue(
+                        entryExtras = e.extras,
+                        seed = e.seed,
+                        currentExtras = if (current != null) current.extras else NoExtras,
+                    )
+                (current ?: seed)?.toEntry(e.addedAt, e.inviteRef, e.excludedAtEpoch, residue)?.let { entries.add(it) }
+            }
+
+            // Doc-level unknown keys: everything at the root that is not a field we model.
+            val docExtras = JsonObject(root.filterKeys { it != "entries" && it != "tombstones" })
+
             ConcordCommunityListDocument(
                 entries = entries,
-                residue = ConcordListResidue(extras = doc.extras, tombstones = doc.tombstones),
+                residue = ConcordListResidue(extras = docExtras, tombstones = tombstones, unparsedEntries = unparsed),
             )
         } catch (_: Exception) {
             ConcordCommunityListDocument(emptyList())

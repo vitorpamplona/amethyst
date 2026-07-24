@@ -25,7 +25,6 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.util.LruCache
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
@@ -46,12 +45,17 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 class SessionListener(
     val session: MediaSession,
     val playerListener: Player.Listener,
 ) {
+    // Set once, by the retire funnel, making retireSession idempotent no matter how many
+    // paths reach the same entry.
+    val retired = AtomicBoolean(false)
+
     fun removeListeners() {
         session.player.removeListener(playerListener)
     }
@@ -123,28 +127,41 @@ class MediaSessionPool(
         return if (resolved > 0) resolved else (DEFAULT_METADATA_BITMAP_DP * resources.displayMetrics.density).toInt()
     }
 
-    // protects from LruCache killing playing sessions
-    private val playingMap = mutableMapOf<String, SessionListener>()
-
-    private val cache =
-        object : LruCache<String, SessionListener>(maxSessions.coerceIn(1, MAX_CACHED_SESSIONS)) {
-            override fun entryRemoved(
-                evicted: Boolean,
-                key: String?,
-                oldValue: SessionListener?,
-                newValue: SessionListener?,
-            ) {
-                super.entryRemoved(evicted, key, oldValue, newValue)
-
-                if (!playingMap.contains(key)) {
-                    oldValue?.let { pair ->
-                        pair.removeListeners()
-                        exoPlayerPool.releasePlayerAsync(pair.session.player as ExoPlayer)
-                        pair.session.release()
-                    }
-                }
-            }
+    private val registry =
+        SessionRegistry<SessionListener>(maxSessions.coerceIn(1, MAX_CACHED_SESSIONS)) { entry ->
+            retireSession(entry)
         }
+
+    /**
+     * The one place a session's player goes back to the pool — the registry's onDropped and
+     * newSession's failure unwind both land here.
+     *
+     * [SessionRegistry] removes an entry from both of its maps before signaling, so its paths
+     * already deliver each entry at most once; the [SessionListener.retired] CAS keeps the funnel
+     * idempotent regardless, because a double retire would double-return the player — an
+     * under-count, the harmful direction (toward MediaCodec NO_MEMORY).
+     *
+     * Both orderings below are load-bearing, not tidiness:
+     * - removeListeners() before release(), because releasing a session can fire
+     *   onIsPlayingChanged, which would re-enter setPlaying while we are still inside
+     *   the registry's entryRemoved callback.
+     * - releasePlayerAsync() before release(), so a throw from session teardown cannot
+     *   strand the player. releasePlayerAsync only queues the return, so the listener and
+     *   session are detached before the queued release ever runs.
+     */
+    private fun retireSession(entry: SessionListener) {
+        if (!entry.retired.compareAndSet(false, true)) return
+        entry.removeListeners()
+        exoPlayerPool.releasePlayerAsync(entry.session.player as ExoPlayer)
+        entry.session.release()
+    }
+
+    internal fun setPlaying(
+        id: String,
+        isPlaying: Boolean,
+    ) {
+        registry.setPlaying(id, isPlaying)
+    }
 
     @OptIn(UnstableApi::class)
     fun newSession(
@@ -156,31 +173,55 @@ class MediaSessionPool(
         // is reused so the populated buffer survives. Null falls back to a cold acquire.
         preferredMediaId: String?,
     ): MediaSession {
-        val mediaSession =
-            MediaSession
-                .Builder(context, exoPlayerPool.acquirePlayer(context, preferredMediaId))
-                .apply {
-                    setBitmapLoader(sharedBitmapLoader)
-                    setId(id)
-                    setCallback(globalCallback)
-                }.build()
+        val player = exoPlayerPool.acquirePlayer(context, preferredMediaId)
 
-        val listener = MediaSessionExoPlayerConnector(mediaSession, this)
+        // newSession owns the player until registry.register() hands ownership over. Anything
+        // that throws in between — reset(), or the PendingIntent in bindSessionActivity() —
+        // would otherwise strand a counted player with no owner. The unwind routes through
+        // retireSession so there is exactly one teardown sequence; removing a never-added
+        // listener there is a no-op.
+        var entry: SessionListener? = null
+        var handedOff = false
 
-        mediaSession.player.addListener(listener)
+        try {
+            val mediaSession =
+                MediaSession
+                    .Builder(context, player)
+                    .apply {
+                        setBitmapLoader(sharedBitmapLoader)
+                        setId(id)
+                        setCallback(globalCallback)
+                    }.build()
 
-        reset(mediaSession, keepPlaying)
+            val listener = MediaSessionExoPlayerConnector(mediaSession, this)
+            entry = SessionListener(mediaSession, listener)
 
-        // Warm-pool fast path acquires a player that still holds its MediaItem, so the
-        // client side skips setMediaItem (see GetVideoController) and onAddMediaItems
-        // never fires for this fresh session — leaving the notification's tap target
-        // unset. Re-bind it from the player's current item so tapping the playback
-        // notification opens the originating nostr URI.
-        bindSessionActivity(mediaSession, mediaSession.player.currentMediaItem)
+            mediaSession.player.addListener(listener)
 
-        cache.put(mediaSession.id, SessionListener(mediaSession, listener))
+            reset(mediaSession, keepPlaying)
 
-        return mediaSession
+            // Warm-pool fast path acquires a player that still holds its MediaItem, so the
+            // client side skips setMediaItem (see GetVideoController) and onAddMediaItems
+            // never fires for this fresh session — leaving the notification's tap target
+            // unset. Re-bind it from the player's current item so tapping the playback
+            // notification opens the originating nostr URI.
+            bindSessionActivity(mediaSession, mediaSession.player.currentMediaItem)
+
+            // Past this point the registry owns the session. register() inserts the entry before
+            // it can fire an eviction's onDropped, so even if register() itself throws (a
+            // displaced entry's retire failing), the new entry is already registered and a later
+            // sweep retires it — the catch must not also return this player, which would
+            // double-return it.
+            handedOff = true
+            registry.register(mediaSession.id, entry)
+
+            return mediaSession
+        } catch (e: Throwable) {
+            if (!handedOff) {
+                entry?.let { retireSession(it) } ?: exoPlayerPool.releasePlayerAsync(player)
+            }
+            throw e
+        }
     }
 
     fun bindSessionActivity(
@@ -199,14 +240,14 @@ class MediaSessionPool(
     }
 
     fun releaseSession(session: MediaSession) {
-        val listener = playingMap.get(session.id) ?: cache.get(session.id)
-        if (listener != null) {
-            session.player.removeListener(listener.playerListener)
-        }
-
-        playingMap.remove(session.id)
-        cache.remove(session.id)
-        session.release()
+        // The registry removes the entry and then signals; retireSession does the teardown —
+        // explicitly, whether the session is idle or playing, never by relying on a cache
+        // removal firing a callback (a no-op once the entry was evicted while playing).
+        //
+        // An unknown id drops nothing: not in the registry means already retired (retireSession
+        // released it) or never owned (newSession's failure path), and releasing such a session
+        // again would be a double-release.
+        registry.drop(session.id)
         cleanupUnused()
     }
 
@@ -217,8 +258,7 @@ class MediaSessionPool(
         // CAS so only one caller actually launches the sweep when many releases fire at once.
         if (!lastCleanupNs.compareAndSet(previous, now)) return
         scope.launch {
-            val snap = cache.snapshot()
-            snap.values.forEach {
+            registry.idleSnapshot().forEach {
                 if (it.session.connectedControllers.isEmpty()) {
                     releaseSession(it.session)
                 }
@@ -227,18 +267,17 @@ class MediaSessionPool(
     }
 
     fun destroy() {
-        scope.launch {
-            cache.evictAll()
-            playingMap.forEach {
-                it.value.removeListeners()
-                exoPlayerPool.releasePlayer(it.value.session.player as ExoPlayer)
-                it.value.session.release()
-            }
-            playingMap.clear()
+        // Synchronous on purpose: retireSession uses the non-suspending releasePlayerAsync, and
+        // releasePlayerAsync's contract guarantees returns queued here run before the pool's own
+        // teardown — so every player is back before exoPlayerPool.destroy() sweeps.
+        try {
+            registry.dropAll()
+        } finally {
+            // The player pool must tear down even if a retire throws mid-sweep; skipping it
+            // would leak every pooled player, not just the session that failed.
+            exoPlayerPool.destroy()
+            scope.cancel()
         }
-
-        exoPlayerPool.destroy()
-        scope.cancel()
     }
 
     fun getSession(
@@ -247,17 +286,15 @@ class MediaSessionPool(
         context: Context,
         preferredMediaId: String? = null,
     ): MediaSession {
-        val existingSession = playingMap.get(id) ?: cache.get(id)
-        if (existingSession != null) {
-            return existingSession.session
-        }
+        registry.get(id)?.let { return it.session }
 
         return newSession(id, keepPlaying, context, preferredMediaId)
     }
 
-    fun playingContent() = playingMap.values
+    fun playingContent() = registry.playingEntries()
 
-    fun getSession(id: String) = cache.get(id)?.session
+    // Resolves the session whether it is idle or playing.
+    fun getSession(id: String) = registry.get(id)?.session
 
     class MediaSessionCallback(
         val pool: MediaSessionPool,
@@ -288,12 +325,10 @@ class MediaSessionPool(
         val pool: MediaSessionPool,
     ) : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (isPlaying) {
-                pool.playingMap.put(mediaSession.id, SessionListener(mediaSession, this))
-            } else {
-                pool.cache.put(mediaSession.id, SessionListener(mediaSession, this))
-                pool.playingMap.remove(mediaSession.id)
-            }
+            // Moves the one existing entry between tiers. A session must never have more than
+            // one live wrapper: dropping one wrapper would hand the player back while another
+            // still pointed at the live session.
+            pool.setPlaying(mediaSession.id, isPlaying)
         }
     }
 

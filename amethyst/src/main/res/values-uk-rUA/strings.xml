@@ -301,6 +301,7 @@
     <string name="chats_reply_not_found">Не вдалося знайти це повідомлення</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Перевірено всі relay · натисніть, щоб побачити</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Не вдалося завантажити відповіді: "</string>
     <string name="try_again">Повторити</string>
     <string name="notification_feed_is_empty">Поки що немає сповіщень.</string>
@@ -1231,6 +1232,14 @@
     <string name="app_notification_mentions_channel_description">Сповіщає вас, коли хтось згадує або цитує вас у пості</string>
     <string name="app_notification_mentions_channel_message">%1$s згадав(ла) вас</string>
     <string name="app_notification_mentions_summary">Нові згадки</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Вхідні дзвінки</string>
     <string name="app_notification_calls_channel_description">Сповіщення про вхідні голосові та відеодзвінки</string>

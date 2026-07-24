@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import io.mockk.every
 import io.mockk.mockk
@@ -48,7 +49,7 @@ import java.util.UUID
 /**
  * The Buzz dialect of NIP-29 in `LocalCache`: dialect detection off VERIFIED events,
  * timeline attachment into the group's (stable, never-swapped) `RelayGroupChannel`, and
- * the kind-40003 edit overlay held in `BuzzWorkspaceStates` keyed by the channel id.
+ * the kind-40003 edit overlay anchored on the message it edits (`Note.edits`).
  */
 class BuzzWorkspaceChannelTest {
     private val buzzRelay = RelayUrlNormalizer.normalizeOrNull("wss://buzz.example.team/")!!
@@ -147,9 +148,11 @@ class BuzzWorkspaceChannelTest {
             LocalCache.checkDeletionAndConsume(edit2, buzzRelay, false)
             LocalCache.checkDeletionAndConsume(edit1, buzzRelay, false)
 
-            val state = BuzzWorkspaceStates.getIfExists(channelId)!!
-            assertEquals("newest edit wins regardless of arrival order", "the fix", state.effectiveContentFor(original.id))
-            assertEquals(edit2.id, state.editFor(original.id)?.idHex)
+            // The edits are anchored on the message they edit (Note.edits); newest by created_at wins.
+            val target = LocalCache.getNoteIfExists(original.id)!!
+            val newest = target.edits.filter { it.event is StreamMessageEditEvent }.maxByOrNull { it.createdAt() ?: 0L }
+            assertEquals("newest edit wins regardless of arrival order", "the fix", newest?.event?.content)
+            assertEquals(edit2.id, newest?.idHex)
 
             val channel = LocalCache.getRelayGroupChannelIfExists(GroupId(channelId, buzzRelay))!!
             assertFalse("edits are overlays, never timeline rows", channel.notes.containsKey(edit1.id))
@@ -157,10 +160,10 @@ class BuzzWorkspaceChannelTest {
         }
 
     @Test
-    fun overlayIsKeyedByChannelIdSoOwnSendsWithNoRelayLand() =
+    fun ownSendsWithNoRelayStillOverlayTheirMessage() =
         runBlocking {
-            // An edit consumed with a null provenance relay (own optimistic send) must
-            // still record its overlay — the registry is keyed by channel id, not relay.
+            // An edit consumed with a null provenance relay (own optimistic send) must still
+            // overlay its message — it is anchored on the message note, independent of any relay.
             val channelId = newChannelId()
             val original = streamMessage(channelId, "original")
             LocalCache.checkDeletionAndConsume(original, null, true)
@@ -171,11 +174,64 @@ class BuzzWorkspaceChannelTest {
                 )
             LocalCache.checkDeletionAndConsume(edit, null, true)
 
-            assertEquals("edited offline", BuzzWorkspaceStates.getIfExists(channelId)?.effectiveContentFor(original.id))
+            val target = LocalCache.getNoteIfExists(original.id)!!
+            val newest = target.edits.filter { it.event is StreamMessageEditEvent }.maxByOrNull { it.createdAt() ?: 0L }
+            assertEquals("edited offline", newest?.event?.content)
         }
 
     @Test
-    fun pruneDropsOverlaysForMessagesNoLongerInTheChannel() =
+    fun aForgedEditByAnotherAuthorNeverOverridesTheMessage() =
+        runBlocking {
+            val channelId = newChannelId()
+            val original = streamMessage(channelId, "the truth") // authored by `signer`
+            LocalCache.checkDeletionAndConsume(original, buzzRelay, false)
+
+            // Mallory publishes a well-formed, VERIFIED 40003 targeting someone else's message.
+            val mallory = NostrSignerInternal(KeyPair())
+            val forged =
+                mallory.sign(
+                    StreamMessageEditEvent.build(channelId, original.id, "lies", createdAt = original.createdAt + 100),
+                )
+            LocalCache.checkDeletionAndConsume(forged, buzzRelay, false)
+
+            // The forged edit still lands in the store (it is a valid signed event)…
+            val target = LocalCache.getNoteIfExists(original.id)!!
+            assertTrue("the forged edit is stored", target.edits.any { it.idHex == forged.id })
+            // …but the overlay only applies the ORIGINAL author's edits, so it is ignored.
+            assertNull(
+                "an edit by a different author must never override the message",
+                target.latestBuzzEdit(),
+            )
+
+            // The real author's own later edit does apply.
+            val real = signer.sign(StreamMessageEditEvent.build(channelId, original.id, "the fix", createdAt = original.createdAt + 200))
+            LocalCache.checkDeletionAndConsume(real, buzzRelay, false)
+            assertEquals("the fix", target.latestBuzzEdit()?.event?.content)
+        }
+
+    @Test
+    fun deletingAnEditUnlinksItFromTheMessage() =
+        runBlocking {
+            val channelId = newChannelId()
+            val original = streamMessage(channelId, "typo")
+            LocalCache.checkDeletionAndConsume(original, buzzRelay, false)
+            val edit = signer.sign(StreamMessageEditEvent.build(channelId, original.id, "fixed", createdAt = original.createdAt + 5))
+            LocalCache.checkDeletionAndConsume(edit, buzzRelay, false)
+
+            val target = LocalCache.getNoteIfExists(original.id)!!
+            assertEquals("fixed", target.latestBuzzEdit()?.event?.content)
+
+            // The author deletes their own edit (NIP-09). It must stop overlaying the message and
+            // be unlinked from Note.edits, not linger as a stale overlay.
+            val deletion = signer.sign(DeletionEvent.build(listOf(edit)))
+            LocalCache.checkDeletionAndConsume(deletion, buzzRelay, false)
+
+            assertNull("a deleted edit must no longer overlay its message", target.latestBuzzEdit())
+            assertTrue("the deleted edit is unlinked from the message", target.edits.none { it.idHex == edit.id })
+        }
+
+    @Test
+    fun pruningAMessageReleasesItsEdits() =
         runBlocking {
             val channelId = newChannelId()
             val original = streamMessage(channelId, "will be pruned")
@@ -183,11 +239,12 @@ class BuzzWorkspaceChannelTest {
             val edit = signer.sign(StreamMessageEditEvent.build(channelId, original.id, "edit", createdAt = original.createdAt + 5))
             LocalCache.checkDeletionAndConsume(edit, buzzRelay, false)
 
-            val state = BuzzWorkspaceStates.getIfExists(channelId)!!
-            assertNotNull(state.editFor(original.id))
+            val target = LocalCache.getNoteIfExists(original.id)!!
+            assertTrue("the edit is anchored on its message", target.edits.any { it.idHex == edit.id })
 
-            // Simulate the message having been reaped from the channel.
-            state.pruneEdits(emptySet())
-            assertNull("overlay for a pruned message must be dropped", state.editFor(original.id))
+            // An edit lives in Note.edits, so reaping the message releases the overlay with it —
+            // no separate side store to prune.
+            target.clearChildLinks()
+            assertTrue("overlay for a pruned message must be dropped", target.edits.isEmpty())
         }
 }

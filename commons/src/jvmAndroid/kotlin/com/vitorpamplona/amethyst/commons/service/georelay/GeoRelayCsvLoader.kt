@@ -46,7 +46,7 @@ class GeoRelayCsvLoader(
                     .build()
             okHttpClient(url).newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    GeoRelayDirectory.parseCsv(response.body?.string().orEmpty())
+                    GeoRelayDirectory.parseCsv(response.body.string())
                 } else {
                     emptyList()
                 }

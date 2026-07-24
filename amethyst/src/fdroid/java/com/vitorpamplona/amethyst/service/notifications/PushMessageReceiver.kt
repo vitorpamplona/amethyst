@@ -97,8 +97,8 @@ class PushMessageReceiver : MessagingReceiver() {
                 Log.d(TAG) { "Building okHttpClient, useTor: ${Amethyst.instance.torManager.isSocksReady()}" }
                 Amethyst.instance.okHttpClients.getHttpClient(Amethyst.instance.torManager.isSocksReady())
             }
-            NotificationUtils.getOrCreateZapChannel(appContext)
-            NotificationUtils.getOrCreateDMChannel(appContext)
+            NotificationCategory.ZAP.ensureChannel(appContext)
+            NotificationCategory.DIRECT_MESSAGE.ensureChannel(appContext)
         }
         // } else {
         Log.d(TAG) { "Same endpoint provided:- ${endpoint.url} for Instance: $instance $sanitizedEndpoint" }

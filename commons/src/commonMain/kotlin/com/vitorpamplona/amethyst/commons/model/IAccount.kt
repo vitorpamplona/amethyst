@@ -70,6 +70,17 @@ data class LiveHiddenUsers(
     fun isThreadMuted(rootHex: String) = mutedThreads.contains(rootHex)
 
     fun isHashtagHidden(hashtag: String) = hiddenHashtags.contains(hashtag.lowercase())
+
+    companion object {
+        /** Neutral value that hides nothing — a safe default before any list has loaded. */
+        val EMPTY =
+            LiveHiddenUsers(
+                showSensitiveContent = null,
+                hiddenWordsCase = emptyList(),
+                hiddenUsersHashCodes = emptySet(),
+                spammersHashCodes = emptySet(),
+            )
+    }
 }
 
 /**

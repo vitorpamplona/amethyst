@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.feeds
 
 import com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrder
@@ -59,17 +60,18 @@ private fun List<Note>.deduplicateReposts(): List<Note> =
  */
 class DesktopGlobalFeedFilter(
     private val cache: DesktopLocalCache,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = "global"
 
     override fun feed(): List<Note> =
         cache.notes
-            .filterIntoSet { _, note -> isFeedNote(note.event) }
+            .filterIntoSet { _, note -> isFeedNote(note.event) && !note.isHiddenFor(hidden()) }
             .sortedWith(DefaultFeedOrder)
             .deduplicateReposts()
             .take(limit())
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isFeedNote(it.event) }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isFeedNote(it.event) && !it.isHiddenFor(hidden()) }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder).deduplicateReposts()
 
@@ -81,6 +83,7 @@ class DesktopGlobalFeedFilter(
  */
 class DesktopFollowingFeedFilter(
     private val cache: DesktopLocalCache,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
     private val followedPubkeys: () -> Set<HexKey>,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = "following-${followedPubkeys().hashCode()}"
@@ -89,7 +92,7 @@ class DesktopFollowingFeedFilter(
         val follows = followedPubkeys()
         return cache.notes
             .filterIntoSet { _, note ->
-                isFeedNote(note.event) && note.author?.pubkeyHex in follows
+                isFeedNote(note.event) && note.author?.pubkeyHex in follows && !note.isHiddenFor(hidden())
             }.sortedWith(DefaultFeedOrder)
             .deduplicateReposts()
             .take(limit())
@@ -98,7 +101,7 @@ class DesktopFollowingFeedFilter(
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
         val follows = followedPubkeys()
         return newItems.filterTo(HashSet()) {
-            isFeedNote(it.event) && it.author?.pubkeyHex in follows
+            isFeedNote(it.event) && it.author?.pubkeyHex in follows && !it.isHiddenFor(hidden())
         }
     }
 
@@ -115,12 +118,14 @@ class DesktopCustomFeedFilter(
     private val cache: DesktopLocalCache,
     private val feedId: String,
     private val source: FeedSource.Filter,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = "custom-$feedId"
 
     private fun matchesSource(note: Note): Boolean {
         val event = note.event ?: return false
         if (!isFeedNote(event)) return false
+        if (note.isHiddenFor(hidden())) return false
 
         // Kind filter
         if (source.kinds.isNotEmpty() && event.kind !in source.kinds) return false
@@ -167,6 +172,7 @@ class DesktopCustomFeedFilter(
 class DesktopThreadFilter(
     private val noteId: HexKey,
     private val cache: DesktopLocalCache,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
 ) : FeedFilter<Note>() {
     override fun feedKey(): String = "thread-$noteId"
 
@@ -174,6 +180,8 @@ class DesktopThreadFilter(
         val root = cache.getNoteIfExists(noteId) ?: return emptyList()
         // Use LinkedHashSet for O(1) containment checks (was O(R) with MutableList)
         val seen = LinkedHashSet<Note>()
+        // The thread root is always shown even if muted — the user explicitly
+        // navigated into it. Replies by muted/blocked authors are still hidden.
         seen.add(root)
         collectReplies(root, seen)
         return seen.sortedWith(compareBy { it.createdAt() ?: 0L })
@@ -183,7 +191,9 @@ class DesktopThreadFilter(
         note: Note,
         seen: LinkedHashSet<Note>,
     ) {
+        val choices = hidden()
         for (reply in note.replies) {
+            if (reply.isHiddenFor(choices)) continue
             if (seen.add(reply)) {
                 collectReplies(reply, seen)
             }
@@ -207,6 +217,7 @@ class DesktopProfileFeedFilter(
     private val pubkey: HexKey,
     private val cache: DesktopLocalCache,
     private val repliesOnly: Boolean = false,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = if (repliesOnly) "profile-$pubkey-replies" else "profile-$pubkey"
 
@@ -220,6 +231,7 @@ class DesktopProfileFeedFilter(
     private fun isProfileNote(note: Note): Boolean {
         val event = note.event ?: return false
         if (note.author?.pubkeyHex != pubkey) return false
+        if (note.isHiddenFor(hidden())) return false
         return if (repliesOnly) {
             isReply(event)
         } else {
@@ -265,16 +277,17 @@ class DesktopBookmarkFeedFilter(
  */
 class DesktopReadsFeedFilter(
     private val cache: DesktopLocalCache,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = "reads"
 
     override fun feed(): List<Note> =
         cache.notes
-            .filterIntoSet { _, note -> note.event is LongTextNoteEvent }
+            .filterIntoSet { _, note -> note.event is LongTextNoteEvent && !note.isHiddenFor(hidden()) }
             .sortedWith(DefaultFeedOrder)
             .take(limit())
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is LongTextNoteEvent }
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { it.event is LongTextNoteEvent && !it.isHiddenFor(hidden()) }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 
@@ -288,6 +301,7 @@ class DesktopReadsFeedFilter(
 class DesktopNotificationFeedFilter(
     private val userPubKeyHex: HexKey,
     private val cache: DesktopLocalCache,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
 ) : AdditiveFeedFilter<Note>() {
     companion object {
         val NOTIFICATION_KINDS =
@@ -316,7 +330,8 @@ class DesktopNotificationFeedFilter(
         val event = note.event ?: return false
         return event.kind in NOTIFICATION_KINDS &&
             event.pubKey != userPubKeyHex &&
-            event.isTaggedUser(userPubKeyHex)
+            event.isTaggedUser(userPubKeyHex) &&
+            !note.isHiddenFor(hidden())
     }
 }
 
@@ -327,6 +342,7 @@ class DesktopNotificationFeedFilter(
 class DesktopSearchFeedFilter(
     private val query: String,
     private val cache: DesktopLocalCache,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = "search-$query"
 
@@ -335,7 +351,7 @@ class DesktopSearchFeedFilter(
         return cache.notes
             .filterIntoSet { _, note ->
                 val event = note.event ?: return@filterIntoSet false
-                event is TextNoteEvent && event.content.lowercase().contains(lowerQuery)
+                event is TextNoteEvent && event.content.lowercase().contains(lowerQuery) && !note.isHiddenFor(hidden())
             }.sortedWith(DefaultFeedOrder)
             .take(limit())
     }
@@ -344,7 +360,7 @@ class DesktopSearchFeedFilter(
         val lowerQuery = query.lowercase()
         return newItems.filterTo(HashSet()) {
             val event = it.event
-            event is TextNoteEvent && event.content.lowercase().contains(lowerQuery)
+            event is TextNoteEvent && event.content.lowercase().contains(lowerQuery) && !it.isHiddenFor(hidden())
         }
     }
 

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -156,6 +157,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
@@ -364,6 +366,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.builder.Bolt12ZapBuilder
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.utils.DualCase
@@ -2289,6 +2292,7 @@ class Account(
         text: String,
         replyTo: Note? = null,
         replyMode: ReplyMode = ReplyMode.INLINE,
+        imetas: List<IMetaTag> = emptyList(),
     ): Boolean {
         if (!isWriteable()) return false
         val session = concordSessions.sessionFor(communityId) ?: return false
@@ -2302,8 +2306,11 @@ class Account(
         val parent = replyTo?.event
         val wrap =
             when {
-                // A minichat reply is a kind-1111 thread comment; an inline reply is a kind-9
-                // message quoting the parent; a fresh post is a plain kind-9 message.
+                // A minichat reply is a kind-1111 thread comment (carrying encrypted image imetas when
+                // the user attached media); an inline reply is a kind-9 message quoting the parent; a
+                // fresh post is a plain kind-9 message.
+                parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
+                    ConcordActions.buildChannelImageReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, imetas, TimeUtils.now(), emojiTags)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
                     ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
                 parent != null ->
@@ -2350,6 +2357,7 @@ class Account(
     suspend fun sendMinichatReply(
         rootNote: Note,
         text: String,
+        imetas: List<IMetaTag> = emptyList(),
     ): Boolean {
         if (!isWriteable()) return false
         val gatherers = rootNote.inGatherers
@@ -2361,16 +2369,24 @@ class Account(
                 text,
                 rootNote,
                 ReplyMode.MINICHAT,
+                imetas,
             )
         }
 
         // Public chats: a plain public kind-1111 comment rooted at the message. NIP-29 groups
-        // additionally carry the `h` tag and go only to the host relay.
+        // additionally carry the `h` tag and go only to the host relay. Attached media rides as
+        // NIP-92 `imeta` tags, with each URL appended to the content so any client renders it.
         val rootEvent = rootNote.event ?: return false
+        val finalText = appendMediaUrls(text, imetas)
 
         gatherers?.firstNotNullOfOrNull { it as? PublicChatChannel }?.let { chat ->
             val relays = chat.relays()
-            val signed = signer.sign(CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, relays.firstOrNull())))
+            val signed =
+                signer.sign(
+                    CommentEvent.replyBuilder(finalText, EventHintBundle(rootEvent, relays.firstOrNull())) {
+                        imetas(imetas)
+                    },
+                )
             cache.justConsumeMyOwnEvent(signed)
             client.publish(signed, relays.ifEmpty { outboxRelays.flow.value })
             return true
@@ -2381,10 +2397,11 @@ class Account(
             val signed =
                 if (BuzzRelayDialect.isBuzz(hostRelay)) {
                     // Buzz rejects kind-1111, so its minichat threads with a 40002 marked at the message's
-                    // root (never `broadcast` — a minichat reply always lives in the thread).
+                    // root (never `broadcast` — a minichat reply always lives in the thread). Attached
+                    // media is carried as URLs appended to the content (no `imeta` on the stream event).
                     val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id
                     signer.sign(
-                        StreamMessageV2Event.build(group.groupId.id, text) {
+                        StreamMessageV2Event.build(group.groupId.id, finalText) {
                             buzzThread(root, rootEvent.id)
                             rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
                             previous(group.previousEventRefs(pubKey))
@@ -2392,9 +2409,10 @@ class Account(
                     )
                 } else {
                     signer.sign(
-                        CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
+                        CommentEvent.replyBuilder(finalText, EventHintBundle(rootEvent, hostRelay)) {
                             hTag(group.groupId.id)
                             previous(group.previousEventRefs(pubKey))
+                            imetas(imetas)
                         },
                     )
                 }
@@ -2404,6 +2422,21 @@ class Account(
         }
 
         return false
+    }
+
+    /**
+     * Appends each attachment URL not already present in [text] to the message content (newline
+     * separated), so a plaintext media link renders inline in any client — mirroring
+     * [com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat.imageMessage]. Returns [text]
+     * unchanged when there are no attachments.
+     */
+    private fun appendMediaUrls(
+        text: String,
+        imetas: List<IMetaTag>,
+    ): String {
+        if (imetas.isEmpty()) return text
+        val extraUrls = imetas.map { it.url }.filter { it.isNotBlank() && !text.contains(it) }
+        return (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
     }
 
     /**
@@ -2430,6 +2463,37 @@ class Account(
         // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags.
         val emojiTags = emoji.findEmojiTags(reaction).map { it.toTagArray() }.toTypedArray()
         val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now(), emojiTags)
+        publishConcordWrap(entry, wrap)
+        return true
+    }
+
+    /**
+     * Edit my own Concord channel message [note] to [newText]. Mirrors
+     * [reactToConcordMessage]: builds a kind-3302 [ChannelChat.edit] rumor bound to the
+     * message's channel/epoch, wraps it on the plane, and publishes it — so the edit stays
+     * inside the encrypted channel (a public edit would e-tag the private rumor id onto
+     * public relays). The receiving side overlays the newest edit onto the target message;
+     * only the *original author's* edits are applied, so we gate to my own kind-9 messages.
+     * Returns false if [note] isn't an editable Concord message I authored.
+     */
+    suspend fun editConcordChannelMessage(
+        note: Note,
+        newText: String,
+    ): Boolean {
+        if (!isWriteable()) return false
+        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
+        val target = note.event ?: return false
+        // Edits only apply to plain kind-9 messages, and only the author may edit their own.
+        if (target !is ChatEvent || target.pubKey != signer.pubKey) return false
+
+        val communityId = channel.channelId.communityId
+        val channelIdHex = channel.channelId.channelId
+        val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
+
+        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the new text, same as a fresh message.
+        val emojiTags = emoji.findEmojiTags(newText).map { it.toTagArray() }.toTypedArray()
+        val wrap = ConcordActions.buildChannelEdit(signer, channelKey, channelIdHex, entry.rootEpoch, target, newText, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -3008,6 +3072,33 @@ class Account(
                 "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}",
         )
         newest?.let { cache.justConsumeMyOwnEvent(it) }
+    }
+
+    /**
+     * One-shot warm of every channel of [entries] so a community's channel list and the Messages inbox
+     * fill in without the user opening each channel one by one. Per channel, a channel read before is
+     * caught up from its last-read time (accurate unread badge + the missed messages ready when it
+     * opens) while a channel never read pulls only its single newest wrap for a preview — see
+     * [ConcordSubscriptionPlanner.channelPreviewFilters].
+     *
+     * This is deliberately **not** a live subscription: every wrap the drain pulls flows through the
+     * global cache connector (`CacheClientConnector` → `LocalCache.justConsume` → `concordSessions.ingest`),
+     * so it lands in the channel's message store the previews/unread counts read — and the always-on
+     * plane subscription ([RelaySubscriptionsCoordinator.concordChannels]) keeps them fresh afterward.
+     * So this only needs to run when a community's channels first fold (the account preload) or its
+     * screen is opened. One drain per call: all [entries]' per-channel filters are grouped by relay.
+     */
+    suspend fun warmConcordChannelPreviews(entries: List<ConcordCommunityListEntry>) {
+        val filters =
+            entries.flatMap { entry ->
+                val state = concordSessions.sessionFor(entry.id)?.state?.value ?: return@flatMap emptyList()
+                ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { channelIdHex ->
+                    loadLastRead(concordChannelLastReadRoute(entry.id, channelIdHex))
+                })
+            }
+        if (filters.isEmpty()) return
+        val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
+        client.fetchAll(filters = byRelay, timeoutMs = 20_000L)
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────

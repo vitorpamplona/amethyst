@@ -33,6 +33,7 @@ object PushNotificationUtils {
     var lastToken: String? = null
     var hasInit: List<AccountInfo>? = null
 
+    @Suppress("DEPRECATION") // FirebaseMessaging.token is deprecated in the current SDK.
     suspend fun checkAndInit(
         accounts: List<AccountInfo>,
         okHttpClient: (String) -> OkHttpClient,

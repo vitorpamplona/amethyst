@@ -153,6 +153,7 @@ class RemoteImeView(
     fun selectAllText(): Boolean = onTextContextMenuItem(android.R.id.selectAll)
 
     /** A page field focused: configure the keyboard, seed the buffer, and raise the IME. */
+    @Suppress("DEPRECATION") // InputMethodManager.SHOW_IMPLICIT is deprecated; no equivalent flag on the newer API.
     fun onPageFocus(focus: ImeEvent.Focus) {
         configureFor(focus)
         // Focus the EditText BEFORE seeding text/selection. An EditText jumps its caret to the end when it

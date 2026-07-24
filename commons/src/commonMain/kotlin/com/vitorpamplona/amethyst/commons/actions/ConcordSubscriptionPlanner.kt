@@ -135,6 +135,66 @@ object ConcordSubscriptionPlanner {
     }
 
     /**
+     * Per-channel **preview / catch-up** filters for every channel of a folded community, so its
+     * channel list and the Messages inbox fill in without the user opening each channel one by one.
+     * One filter per channel (never collapsed like the live [channelPlaneSubs], where the relay caps
+     * every channel's planes as one result and starves the quiet channels); each channel's authors
+     * span every held epoch so it reaches across a CORD-06 Refounding, and only stored wraps
+     * ([ConcordStreamEnvelope.KIND_WRAP]) count — the ephemeral 21059 is a typing heartbeat.
+     *
+     * How much to pull is per-channel, from [lastReadFor] (0 = never read):
+     *  - **Read before** → everything since the last-read time (capped at [catchUpLimit]), so the
+     *    unread badge is accurate and the missed messages are already in cache when the channel opens.
+     *    The last-read value *is a message's `created_at`* (the read marker is stamped with the seen
+     *    message's timestamp, not wall-clock), so the window is `since = lastRead - 1`: that
+     *    re-includes the last-read message itself, guaranteeing a preview even for a fully caught-up
+     *    channel — and since the unread count is a strict `created_at > lastRead`, that boundary
+     *    message is not miscounted as unread.
+     *  - **Never read** → the [previewLimit] newest wraps — enough for a preview and a rough sense of
+     *    how busy the channel is (the unread badge counts what we pulled), without dragging a whole
+     *    channel's backlog into a community the user has only glanced at. The full history still pages
+     *    in on open (the backward history pager).
+     *
+     * The returned filters `groupByRelay` into one REQ per relay, one filter per channel.
+     */
+    fun channelPreviewFilters(
+        entry: ConcordCommunityListEntry,
+        state: ConcordCommunityState,
+        lastReadFor: (channelIdHex: String) -> Long,
+        catchUpLimit: Int = 50,
+        previewLimit: Int = 10,
+    ): List<RelayBasedFilter> {
+        val authorsByChannel = LinkedHashMap<ConcordChannelId, MutableSet<String>>()
+        val relaysByChannel = HashMap<ConcordChannelId, Set<NormalizedRelayUrl>>()
+        for (sub in channelPlaneSubs(entry, state)) {
+            val channelId = sub.channelId ?: continue
+            authorsByChannel.getOrPut(channelId) { LinkedHashSet() }.add(sub.pubKeyHex)
+            relaysByChannel[channelId] = sub.relays
+        }
+        return authorsByChannel.flatMap { (channelId, authors) ->
+            val lastRead = lastReadFor(channelId.channelId)
+            val filter =
+                if (lastRead > 0L) {
+                    Filter(
+                        kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
+                        authors = authors.toList(),
+                        // -1 so the last-read message (created_at == lastRead) is itself returned:
+                        // a caught-up channel still gets a preview, and strict-> unread stays correct.
+                        since = lastRead - 1,
+                        limit = catchUpLimit,
+                    )
+                } else {
+                    Filter(
+                        kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
+                        authors = authors.toList(),
+                        limit = previewLimit,
+                    )
+                }
+            (relaysByChannel[channelId] ?: emptySet()).map { relay -> RelayBasedFilter(relay = relay, filter = filter) }
+        }
+    }
+
+    /**
      * Collapses [subs] into a `relay -> [filter]` map ready for a drain/subscribe.
      * All plane wraps are kind-1059 authored by the plane address, so each relay
      * gets one `{kinds:[1059], authors:[…all plane pks on it…]}` filter.

@@ -31,6 +31,9 @@ class EncryptedStorage {
         // returns the preferences for each account or a global file if null.
         fun prefsFileName(npub: String? = null): String = if (npub == null) PREFERENCES_NAME else "${PREFERENCES_NAME}_$npub"
 
+        // androidx.security.crypto is deprecated with no drop-in successor; migrating the
+        // on-disk key store is a separate, security-sensitive effort.
+        @Suppress("DEPRECATION")
         fun preferences(
             applicationContext: Context,
             npub: String? = null,

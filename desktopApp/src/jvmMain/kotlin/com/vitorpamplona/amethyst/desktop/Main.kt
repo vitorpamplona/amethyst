@@ -148,6 +148,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
@@ -1430,6 +1431,7 @@ private fun AppInner(
                                 LocalNamecoinPreferences provides namecoinPreferences,
                                 LocalNamecoinService provides namecoinService,
                                 LocalSpamExemptKeys provides spamExemptKeys,
+                                com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
                             ) {
                                 val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
                                 Column(modifier = Modifier.fillMaxSize()) {
@@ -1721,6 +1723,7 @@ fun MainContent(
                         SearchRelayListEvent.KIND,
                         BlockedRelayListEvent.KIND,
                         BlossomServersEvent.KIND,
+                        MuteListEvent.KIND,
                     ),
                 authors = listOf(account.pubKeyHex),
                 limit = 5,
@@ -1745,7 +1748,8 @@ fun MainContent(
                         // accountRelays' persisted copy.
                         if (event is AdvertisedRelayListEvent ||
                             event is ChatMessageRelayListEvent ||
-                            event is BlossomServersEvent
+                            event is BlossomServersEvent ||
+                            event is MuteListEvent
                         ) {
                             scope.launch(Dispatchers.IO) {
                                 localCache.justConsumeMyOwnEvent(event)
@@ -1779,6 +1783,7 @@ fun MainContent(
                                     SearchRelayListEvent.KIND,
                                     BlockedRelayListEvent.KIND,
                                     BlossomServersEvent.KIND,
+                                    MuteListEvent.KIND,
                                 ),
                             authors = listOf(account.pubKeyHex),
                             limit = 10,
@@ -1793,7 +1798,7 @@ fun MainContent(
                             relay: NormalizedRelayUrl,
                             forFilters: List<Filter>?,
                         ) {
-                            if (event is AdvertisedRelayListEvent || event is BlossomServersEvent) {
+                            if (event is AdvertisedRelayListEvent || event is BlossomServersEvent || event is MuteListEvent) {
                                 scope.launch(Dispatchers.IO) {
                                     localCache.justConsumeMyOwnEvent(event)
                                 }
@@ -2055,6 +2060,8 @@ fun MainContent(
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
         LocalBlossomServers provides iAccount.blossomServerList.flow,
+        com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
+        com.vitorpamplona.amethyst.desktop.ui.LocalSnackbarHost provides snackbarHostState,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
@@ -2662,6 +2669,9 @@ fun RelaySettingsScreen(
             com.vitorpamplona.amethyst.desktop.ui.settings.HashtagSpamSettingsSection(
                 settings = LocalHashtagSpamSettings.current,
             )
+            Spacer(Modifier.height(16.dp))
+            com.vitorpamplona.amethyst.desktop.ui.settings
+                .ModerationSettingsSection()
             Spacer(Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))

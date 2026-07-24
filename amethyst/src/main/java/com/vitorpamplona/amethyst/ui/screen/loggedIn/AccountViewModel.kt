@@ -2065,8 +2065,6 @@ class AccountViewModel(
 
     fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
-    fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
-
     fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = LocalCache.getOrCreatePublicChatChannel(key)
 
     fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel = LocalCache.getOrCreateLiveChannel(key)

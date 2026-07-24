@@ -270,6 +270,7 @@ class NappletHostService : Service() {
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */
+    @Suppress("DEPRECATION") // androidx.privacysandbox.ui toCoreLibInfo is deprecated with no successor.
     private fun replyWithAdapter(tab: NappletTab) {
         val adapter = NappletHostUiAdapter(this, tab.sessionId)
         val coreLibInfo = adapter.toCoreLibInfo(this)
@@ -330,6 +331,7 @@ class NappletHostService : Service() {
         wv.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            @Suppress("DEPRECATION")
             databaseEnabled = false
             allowFileAccess = false
             allowContentAccess = false

@@ -108,7 +108,7 @@ fun BuzzCanvasScreen(
             }
         },
     ) { padding ->
-        if (content.isNullOrBlank() || canvas == null) {
+        if (content.isNullOrBlank()) {
             Box(
                 modifier = Modifier.padding(padding).fillMaxSize().padding(32.dp),
                 contentAlignment = Alignment.Center,

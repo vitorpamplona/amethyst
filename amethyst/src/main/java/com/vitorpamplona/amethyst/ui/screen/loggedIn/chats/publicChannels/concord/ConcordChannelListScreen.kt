@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreviewLoader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -99,6 +100,8 @@ fun ConcordChannelListScreen(
     nav: INav,
 ) {
     ConcordChannelSubscription(accountViewModel.dataSources().concordChannels, accountViewModel)
+    // Warm every channel's last-message preview so the list fills in without opening each channel.
+    ConcordChannelPreviewLoader(communityId, accountViewModel)
 
     val account = accountViewModel.account
     // Re-resolve on each revision so a deep link that lands before the session exists picks it up.

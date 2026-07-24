@@ -101,6 +101,35 @@ class ChannelChatEndToEndTest {
     }
 
     @Test
+    fun editIsAChannelBoundKind3302ThatPointsAtTheTargetAndRoundTrips() =
+        runTest {
+            val alice = NostrSignerInternal(KeyPair())
+            val channel = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+
+            val original = ChannelChat.message(alice.pubKey, channelIdHex, rootEpoch, "helo", createdAt = 1L)
+            val edit = ChannelChat.edit(alice.pubKey, channelIdHex, rootEpoch, original.id, "hello", createdAt = 2L)
+
+            // The dedicated Concord edit kind (Armada KIND_EDIT), e-tagging the original,
+            // still bound to the channel/epoch. Armada omits a `k` tag on edits, so we do too.
+            assertEquals(ConcordChatEditEvent.KIND, edit.kind)
+            assertEquals(3302, edit.kind)
+            assertEquals(original.id, edit.tags.first { it[0] == "e" }[1])
+            assertTrue(edit.tags.none { it[0] == "k" })
+            assertEquals("hello", edit.content)
+            assertTrue(ChannelChat.isBoundTo(edit, channelIdHex, rootEpoch))
+            assertFalse(ChannelChat.isBoundTo(edit, channelIdHex, 1L)) // wrong epoch can't be replayed
+
+            // Wraps + opens on the shared plane like any other Chat Plane rumor; the opened
+            // rumor is typed as a ConcordChatEditEvent that names the edited message.
+            val wrap = ConcordStreamEnvelope.wrap(edit, channel, alice, encrypted = true)
+            val opened = ConcordStreamEnvelope.open(wrap, channel)
+            assertEquals(3302, opened.rumor.kind)
+            assertEquals("hello", opened.rumor.content)
+            assertEquals(alice.pubKey, opened.author)
+            assertEquals(original.id, (opened.rumor as ConcordChatEditEvent).editedMessageId())
+        }
+
+    @Test
     fun typingHeartbeatIsAnEphemeralWrapReadableByAnotherMember() =
         runTest {
             val alice = NostrSignerInternal(KeyPair())
@@ -171,6 +200,40 @@ class ChannelChatEndToEndTest {
 
         // A plaintext message has no encrypted attachments.
         assertTrue(ChannelChat.encryptedImagesOf(ChannelChat.message(author, channelIdHex, 0L, "hi", 1L)).isEmpty())
+    }
+
+    @Test
+    fun encryptedImageReplyIsAKind1111CommentCarryingTheEncryptedAttachment() {
+        val author = KeyPair().pubKey.toHexKey()
+        val parent = ChannelChat.message(author, channelIdHex, 0L, "root", createdAt = 1L)
+        val cipher = AESGCM(ByteArray(32) { 0x33 }, ByteArray(16) { 0x44 })
+        val url = "https://blossom.example/reply-ciphertext.bin"
+
+        val imeta =
+            ChannelChat.encryptedImageImeta(
+                url = url,
+                mimeType = "image/png",
+                dim = "640x480",
+                blurhash = null,
+                cipher = cipher,
+                originalHash = "bb".repeat(32),
+            )
+        val reply = ChannelChat.imageReply(author, channelIdHex, 0L, "here", listOf(imeta), parent, createdAt = 6L)
+
+        // A thread reply keeps the kind-1111 NIP-22 shape (E root + e parent), stays channel-bound,
+        // and appends the ciphertext url to content — exactly like [imageMessage] but on a comment.
+        assertEquals(1111, reply.kind)
+        assertEquals(parent.id, reply.tags.first { it[0] == "E" }[1])
+        assertEquals(parent.id, reply.tags.first { it[0] == "e" }[1])
+        assertTrue(ChannelChat.isBoundTo(reply, channelIdHex, 0L))
+        assertEquals("here\n$url", reply.content)
+
+        // The encrypted attachment round-trips with the same key/nonce so the receiver can decrypt.
+        val parsed = ChannelChat.encryptedImagesOf(reply)
+        assertEquals(1, parsed.size)
+        assertEquals(url, parsed.first().url)
+        assertTrue(parsed.first().key.contentEquals(ByteArray(32) { 0x33 }))
+        assertTrue(parsed.first().nonce.contentEquals(ByteArray(16) { 0x44 }))
     }
 
     @Test

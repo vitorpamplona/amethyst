@@ -119,11 +119,15 @@ fun ThreadScreen(
     var rootNoteEoseReceived by remember(noteId) { mutableStateOf(false) }
 
     // DesktopFeedViewModel reads thread from cache (root + replies via graph walk)
+    val iAccount = com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount.current
     val threadViewModel =
-        remember(noteId) {
+        remember(noteId, iAccount) {
             DesktopFeedViewModel(
-                DesktopThreadFilter(noteId, localCache),
+                DesktopThreadFilter(noteId, localCache) {
+                    iAccount?.hiddenUsers?.value ?: com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY
+                },
                 localCache,
+                iAccount?.hiddenUsers,
             )
         }
     DisposableEffect(threadViewModel) {

@@ -38,16 +38,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.buzz.BuzzInviteMinter
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -73,7 +72,7 @@ fun BuzzWorkspaceOverflowMenu(
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     IconButton(onClick = { menuOpen = true }) {
         Icon(
@@ -145,13 +144,13 @@ fun BuzzWorkspaceOverflowMenu(
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, minted.url)
                         }
-                    ContextCompat.startActivity(context, Intent.createChooser(send, null), null)
+                    context.startActivity(Intent.createChooser(send, null))
                     result = null
                 }) { Text(stringRes(R.string.buzz_invite_share)) }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    clipboard.setText(AnnotatedString(minted.url))
+                    scope.launch { clipboard.setText(minted.url) }
                     result = null
                 }) { Text(stringRes(R.string.buzz_invite_copy)) }
             },

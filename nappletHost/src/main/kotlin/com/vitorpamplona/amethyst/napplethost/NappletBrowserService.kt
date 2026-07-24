@@ -245,6 +245,7 @@ class NappletBrowserService : Service() {
     }
 
     /** Builds the SandboxedUiAdapter for [tab] and ships its cross-process handle (coreLibInfo) to the client. */
+    @Suppress("DEPRECATION") // androidx.privacysandbox.ui toCoreLibInfo is deprecated with no successor.
     private fun replyWithAdapter(tab: BrowserTab) {
         val adapter = NappletBrowserUiAdapter(this, tab.sessionId)
         val coreLibInfo = adapter.toCoreLibInfo(this)
@@ -306,6 +307,7 @@ class NappletBrowserService : Service() {
         wv.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            @Suppress("DEPRECATION")
             databaseEnabled = false
             allowFileAccess = false
             allowContentAccess = false

@@ -21,12 +21,15 @@
 package com.vitorpamplona.amethyst.desktop.viewmodels
 
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -40,10 +43,23 @@ import kotlinx.coroutines.launch
 class DesktopFeedViewModel(
     filter: FeedFilter<Note>,
     cacheProvider: ICacheProvider,
+    hiddenUsers: StateFlow<LiveHiddenUsers>? = null,
 ) : FeedViewModel(filter, cacheProvider) {
     init {
         viewModelScope.launch(Dispatchers.IO) {
             feedState.refreshSuspended()
+        }
+
+        // Re-filter live when the account's mute/block/sensitive choices change
+        // (e.g. the user mutes someone, or a private mute list finishes
+        // decrypting) so hidden notes disappear without a restart. `drop(1)`
+        // skips the initial replay — the refresh above already covers first load.
+        if (hiddenUsers != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                hiddenUsers.drop(1).collect {
+                    feedState.invalidateData(false)
+                }
+            }
         }
     }
 

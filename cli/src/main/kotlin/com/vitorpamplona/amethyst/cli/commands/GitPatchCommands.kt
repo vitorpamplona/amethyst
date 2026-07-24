@@ -113,7 +113,7 @@ object GitPatchCommands {
                     "event_id" to signed.id,
                     "kind" to signed.kind,
                     "repository" to Address.assemble(addr.kind, addr.pubKeyHex, addr.dTag),
-                    "subject" to (signed as? GitPatchEvent)?.subject(),
+                    "subject" to signed.subject(),
                 ) + RawEventSupport.ackFields(ack),
             )
             return 0

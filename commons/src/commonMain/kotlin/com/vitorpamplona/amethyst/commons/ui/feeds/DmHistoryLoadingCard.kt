@@ -391,7 +391,7 @@ fun RelayReachDetailDialog(
         confirmButton = {
             if (showRetry) {
                 TextButton(onClick = {
-                    onRetry?.invoke()
+                    onRetry()
                     onDismiss()
                 }) { Text(stringResource(Res.string.action_try_again)) }
             } else {

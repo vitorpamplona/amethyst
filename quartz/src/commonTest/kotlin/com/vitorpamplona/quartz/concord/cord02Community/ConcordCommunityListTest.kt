@@ -134,6 +134,108 @@ class ConcordCommunityListTest {
     }
 
     @Test
+    fun aKeylessChannelDoesNotNukeTheWholeList() {
+        // A public channel carries no delivered key, so a writer lists it under `channels`
+        // with only {id, epoch, name} and no `key`. The whole document must still decode —
+        // a single keyless channel entry must not throw MissingFieldException and take every
+        // joined community down with it (the "Concord communities won't load" regression).
+        val json =
+            """
+            {
+              "entries": [
+                {
+                  "community_id": "${"11".repeat(32)}",
+                  "current": {
+                    "community_id": "${"11".repeat(32)}",
+                    "owner": "${"0f".repeat(32)}",
+                    "owner_salt": "${"aa".repeat(32)}",
+                    "community_root": "${"cc".repeat(32)}",
+                    "root_epoch": 0,
+                    "channels": [
+                      { "id": "${"ee".repeat(32)}", "epoch": 0, "name": "general" }
+                    ],
+                    "relays": ["wss://relay.example"],
+                    "name": "Has A Public Channel"
+                  },
+                  "added_at": 1700000000000
+                }
+              ],
+              "tombstones": []
+            }
+            """.trimIndent()
+
+        val entries = ConcordCommunityList.decode(json)
+        assertEquals(1, entries.size, "a keyless (public) channel must not drop the entry")
+        assertEquals("Has A Public Channel", entries[0].name)
+        assertEquals(1, entries[0].privateChannels.size)
+        assertEquals("", entries[0].privateChannels[0].key) // absent key ⇒ empty, not a throw
+    }
+
+    // A good entry, and one whose `current` is missing the required `owner` field so it cannot be
+    // decoded into the typed model at all.
+    private fun docWithOneUnparseableEntry() =
+        """
+        {
+          "entries": [
+            {
+              "community_id": "${"11".repeat(32)}",
+              "current": {
+                "community_id": "${"11".repeat(32)}",
+                "owner": "${"0f".repeat(32)}",
+                "owner_salt": "${"aa".repeat(32)}",
+                "community_root": "${"cc".repeat(32)}",
+                "root_epoch": 0,
+                "relays": ["wss://relay.example"],
+                "name": "Healthy"
+              },
+              "added_at": 1700000000000
+            },
+            {
+              "community_id": "${"22".repeat(32)}",
+              "current": {
+                "community_id": "${"22".repeat(32)}",
+                "owner_salt": "${"bb".repeat(32)}",
+                "community_root": "${"dd".repeat(32)}",
+                "root_epoch": 0,
+                "name": "Missing Owner"
+              },
+              "added_at": 1700000000001
+            }
+          ],
+          "tombstones": []
+        }
+        """.trimIndent()
+
+    @Test
+    fun oneUnparseableEntryDoesNotDropItsGoodNeighbors() {
+        val doc = ConcordCommunityList.decodeDocument(docWithOneUnparseableEntry())
+        // The healthy entry survives; the broken one is set aside, not fatal to the whole list.
+        assertEquals(1, doc.entries.size)
+        assertEquals("Healthy", doc.entries[0].name)
+        assertEquals("11".repeat(32), doc.entries[0].id)
+        assertEquals(1, doc.residue.unparsedEntries.size)
+        assertEquals(
+            "22".repeat(32),
+            doc.residue.unparsedEntries[0]["community_id"]!!
+                .jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun anUnparseableEntrySurvivesAWriteRoundTrip() {
+        // A write (follow/unfollow) must re-emit the entry we couldn't parse, verbatim — dropping
+        // it would delete another client's membership just because this version can't model it.
+        val doc = ConcordCommunityList.decodeDocument(docWithOneUnparseableEntry())
+        val out = ConcordCommunityList.encode(doc.entries, doc.residue).asJson()
+        val ids =
+            out["entries"]!!.jsonArray.map { it.jsonObject["community_id"]!!.jsonPrimitive.content }.toSet()
+        assertTrue(ids.contains("11".repeat(32)), "the healthy entry is written back")
+        assertTrue(ids.contains("22".repeat(32)), "the unparseable entry is preserved verbatim")
+        // And a second decode still surfaces exactly the one healthy entry (idempotent).
+        assertEquals(1, ConcordCommunityList.decode(out.toString()).size)
+    }
+
+    @Test
     fun tombstoneAfterAddDropsEntry() {
         val jm = """{"community_id":"${"11".repeat(32)}","owner":"${"0f".repeat(32)}","owner_salt":"${"aa".repeat(32)}","community_root":"${"bb".repeat(32)}","root_epoch":0,"channels":[],"relays":[],"name":"Gone"}"""
         val json =

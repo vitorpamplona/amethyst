@@ -103,6 +103,42 @@ object ChannelChat {
         )
 
     /**
+     * Builds an unsigned kind-3302 [ConcordChatEditEvent] rumor that edits an existing
+     * channel message [targetId] with [newText], bound to [channelId]/[epoch].
+     *
+     * This is the dedicated Concord edit kind (CORD-02 Appendix B) the reference client
+     * (Soapbox Armada's `KIND_EDIT`) emits — a separate rumor naming the target with a
+     * single `["e", …]` tag, carrying the replacement text, wrapped and published on the
+     * same channel plane as any other Chat Plane rumor. Armada omits a `k` tag on edits
+     * (only deletes carry one), so we do too, for wire parity. On the receiving side it
+     * decrypts to a kind-3302 that the fold overlays onto the target — latest edit wins,
+     * and only edits authored by the *original* message's author are applied, so a member
+     * can't rewrite someone else's message. It's non-destructive: the original keeps its
+     * id, so reactions/replies/quotes stay attached.
+     */
+    fun edit(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        targetId: HexKey,
+        newText: String,
+        createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
+    ): Event =
+        RumorAssembler.assembleRumor<ConcordChatEditEvent>(
+            pubKey = authorPubKey,
+            createdAt = createdAt,
+            kind = ConcordChatEditEvent.KIND,
+            tags =
+                arrayOf(
+                    ChannelTag.assemble(channelId),
+                    EpochTag.assemble(epoch),
+                    arrayOf("e", targetId),
+                ) + extraTags,
+            content = newText,
+        )
+
+    /**
      * Builds an unsigned kind-1111 **thread reply** ([CommentEvent], NIP-22) to
      * [parent], bound to [channelId]/[epoch].
      *
@@ -132,6 +168,37 @@ object ChannelChat {
                 extraTags.forEach { add(it) }
             },
         )
+
+    /**
+     * Builds an unsigned kind-1111 **thread reply carrying encrypted image** attachments ([imetas]) to
+     * [parent], bound to [channelId]/[epoch]. Combines [reply]'s NIP-22 thread pointers with
+     * [imageMessage]'s attachment handling: each ciphertext URL not already in [text] is appended to the
+     * content (so the shared feed renders it) and each rides as a NIP-92 `imeta` tag
+     * ([encryptedImageImeta]). This is the minichat counterpart of [imageMessage] — an image sent as a
+     * thread reply instead of a top-level channel message.
+     */
+    fun imageReply(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        text: String,
+        imetas: List<IMetaTag>,
+        parent: Event,
+        createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
+    ): Event {
+        val extraUrls = imetas.map { it.url }.filter { it.isNotBlank() && !text.contains(it) }
+        val finalText = (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
+        return reply(
+            authorPubKey = authorPubKey,
+            channelId = channelId,
+            epoch = epoch,
+            text = finalText,
+            parent = parent,
+            createdAt = createdAt,
+            extraTags = imetas.map { it.toTagArray() }.toTypedArray() + extraTags,
+        )
+    }
 
     /**
      * Builds an unsigned kind-7 [ReactionEvent] rumor bound to [channelId]/[epoch]

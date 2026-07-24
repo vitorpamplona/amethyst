@@ -28,6 +28,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.scheduledposts.AndroidScheduledPostNotifier
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -62,57 +63,36 @@ object NotificationChannels {
         val ensure: (Context) -> Unit,
     )
 
+    /** The per-kind content channels, derived from [NotificationCategory], in a
+     * sensible settings order, plus the two non-event channels (scheduled posts,
+     * calls) that don't map to a Nostr event kind. */
     val contentChannels: List<Entry> =
-        listOf(
-            Entry(
-                nameRes = R.string.app_notification_dms_channel_name,
-                icon = MaterialSymbols.Mail,
-                channelId = { stringRes(it, R.string.app_notification_dms_channel_id) },
-                ensure = { NotificationUtils.getOrCreateDMChannel(it) },
-            ),
-            Entry(
-                nameRes = R.string.app_notification_mentions_channel_name,
-                icon = MaterialSymbols.AlternateEmail,
-                channelId = { stringRes(it, R.string.app_notification_mentions_channel_id) },
-                ensure = { NotificationUtils.getOrCreateMentionChannel(it) },
-            ),
-            Entry(
-                nameRes = R.string.app_notification_replies_channel_name,
-                icon = MaterialSymbols.Chat,
-                channelId = { stringRes(it, R.string.app_notification_replies_channel_id) },
-                ensure = { NotificationUtils.getOrCreateReplyChannel(it) },
-            ),
-            Entry(
-                nameRes = R.string.app_notification_reactions_channel_name,
-                icon = MaterialSymbols.Favorite,
-                channelId = { stringRes(it, R.string.app_notification_reactions_channel_id) },
-                ensure = { NotificationUtils.getOrCreateReactionChannel(it) },
-            ),
-            Entry(
-                nameRes = R.string.app_notification_zaps_channel_name,
-                icon = MaterialSymbols.Bolt,
-                channelId = { stringRes(it, R.string.app_notification_zaps_channel_id) },
-                ensure = { NotificationUtils.getOrCreateZapChannel(it) },
-            ),
-            Entry(
-                nameRes = R.string.app_notification_chess_channel_name,
-                icon = MaterialSymbols.ChessKnight,
-                channelId = { stringRes(it, R.string.app_notification_chess_channel_id) },
-                ensure = { NotificationUtils.getOrCreateChessChannel(it) },
-            ),
-            Entry(
-                nameRes = R.string.app_notification_scheduled_posts_channel_name,
-                icon = MaterialSymbols.Schedule,
-                channelId = { stringRes(it, R.string.app_notification_scheduled_posts_channel_id) },
-                ensure = { AndroidScheduledPostNotifier.ensureChannel(it) },
-            ),
-            Entry(
-                nameRes = R.string.app_notification_calls_channel_name,
-                icon = MaterialSymbols.Call,
-                channelId = { CallNotifier.CALL_CHANNEL_ID },
-                ensure = { CallNotifier.getOrCreateCallChannel(it) },
-            ),
-        )
+        NotificationCategory.entries
+            // Chess (NIP-64) is a debug-only feature for now — don't surface (or
+            // create) its channel in release settings.
+            .filter { it != NotificationCategory.CHESS || isDebug }
+            .map { category ->
+                Entry(
+                    nameRes = category.channelNameRes,
+                    icon = category.settingsIcon,
+                    channelId = { category.channelId(it) },
+                    ensure = { category.ensureChannel(it) },
+                )
+            } +
+            listOf(
+                Entry(
+                    nameRes = R.string.app_notification_scheduled_posts_channel_name,
+                    icon = MaterialSymbols.Schedule,
+                    channelId = { stringRes(it, R.string.app_notification_scheduled_posts_channel_id) },
+                    ensure = { AndroidScheduledPostNotifier.ensureChannel(it) },
+                ),
+                Entry(
+                    nameRes = R.string.app_notification_calls_channel_name,
+                    icon = MaterialSymbols.Call,
+                    channelId = { CallNotifier.CALL_CHANNEL_ID },
+                    ensure = { CallNotifier.getOrCreateCallChannel(it) },
+                ),
+            )
 
     fun statusOf(
         context: Context,

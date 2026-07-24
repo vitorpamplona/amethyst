@@ -20,6 +20,10 @@
         <item quantity="one">सं॰%1$d\n उत्तर</item>
         <item quantity="other">सं॰%1$d\n उत्तर</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">वृत्तान्त आपके द्वारा अनुचरित %1$d व्यक्ति से</item>
+        <item quantity="other">वृत्तान्त आपके द्वारा अनुचरित %1$d व्यक्तियों से</item>
+    </plurals>
     <string name="post_not_found">घटना उपलब्ध की जा रही है अथवा आपके पुनःप्रसारक सूची में से प्राप्त नहीं</string>
     <string name="post_not_found_short">देखें</string>
     <string name="channel_image">प्रणाली चित्र</string>
@@ -339,6 +343,14 @@
         <item quantity="one">%1$d प्रणाली</item>
         <item quantity="other">%1$d प्रणालियाँ</item>
     </plurals>
+    <plurals name="buzz_workspaces_count">
+        <item quantity="one">%1$d कार्यशाला</item>
+        <item quantity="other">%1$d कार्यशालाएँ</item>
+    </plurals>
+    <plurals name="buzz_workspaces_channel_count">
+        <item quantity="one">%1$d प्रणाली</item>
+        <item quantity="other">%1$d प्रणालियाँ</item>
+    </plurals>
     <plurals name="concord_member_count">
         <item quantity="one">%1$d सदस्य</item>
         <item quantity="other">%1$d सदस्य</item>
@@ -406,6 +418,13 @@
     <string name="chats_reply_not_found">यह सन्देश अप्राप्त</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">प्रत्येक पुनःप्रसारक में खोज लिया। देखने के लिए दबाएँ</string>
+    <string name="dm_sender_reported_who">किसने भेजा यह वृत्तान्त।</string>
+    <string name="dm_sender_reported_dismiss">हटाएँ</string>
+    <string name="dm_sender_reported_hide">छिपाएँ</string>
+    <string name="dm_sender_reported_subtitle">आपके द्वारा अनुचरित किसी ने इस लेखा पर संशयचिह्न लगाया</string>
+    <string name="dm_sender_reported_icon">वृत्तान्त भेज दिया</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">%1$dसं॰</string>
     <string name="error_loading_replies">"प्रतिवचनों को प्राप्त करने में अपक्रम : "</string>
     <string name="try_again">पुनः प्रयास करें</string>
     <string name="notification_feed_is_empty">अभी तक कोई सूचनाएँ नहीं।</string>
@@ -1240,6 +1259,7 @@
     <string name="nest_create_submit">स्थान आरम्भण</string>
     <string name="nest_create_schedule_toggle">भविष्य समयनिर्धारण</string>
     <string name="nest_create_when">आरम्भ समय का चयन करें</string>
+    <string name="agent_console_title">घटक कोष्ठक</string>
     <string name="nests_servers_title">निलय सेवासंगणक</string>
     <string name="nests_servers_explainer">चयन करें कि किन एमओक्यू॰ जालावास सेवासंगणकों पर अमेथिस्ट आपके निलयों का प्रकाशन करता है। प्रथम विकल्प का प्रयोग होगा मूलविकल्पतः जब आप एक नया स्थान आरम्भ करेंगे।</string>
     <string name="nests_servers_my_section">आपके सेवासंगणक</string>
@@ -1735,6 +1755,9 @@
     <string name="app_notification_zaps_channel_message_for">%1$s के लिए</string>
     <string name="app_notification_reply_label">उत्तर</string>
     <string name="app_notification_mark_read_label">पढा हुआ चिह्नित करें</string>
+    <string name="app_notification_me">मैं</string>
+    <string name="app_notification_new_message">नया सन्देश</string>
+    <string name="app_notification_added_to_group">आप %1$s में जोडे गए हैं</string>
     <string name="app_notification_dms_summary">नए सन्देश</string>
     <string name="app_notification_zaps_summary">नए ज्साप</string>
     <string name="app_notification_reactions_channel_name">प्रतिक्रियाएँ</string>
@@ -1756,6 +1779,49 @@
     <string name="app_notification_mentions_channel_description">आपको सूचित करता है जब किसी ने आपका उल्लेख अथवा उद्धरण किया हो</string>
     <string name="app_notification_mentions_channel_message">%1$s ने आपका उल्लेख किया</string>
     <string name="app_notification_mentions_summary">नए उल्लेख</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">सन्देश</string>
+    <string name="app_notification_group_social">सामूहिक</string>
+    <string name="app_notification_group_payments">भुगतान</string>
+    <string name="app_notification_group_content">विषयवस्तु</string>
+    <string name="app_notification_group_developer">विकासकर्ता</string>
+    <string name="app_notification_group_games">खेल</string>
+    <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">पुनःप्रकाशन</string>
+    <string name="app_notification_reposts_channel_description">आपको सूचित करता है जब कोई आपके पत्र को पुनःप्रकाशित करते हैं</string>
+    <string name="app_notification_reposts_channel_message">%1$s ने आपके पत्र को पुनःप्रकाशित किया</string>
+    <string name="app_notification_reposts_summary">नए पुनःप्रकाशन</string>
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_name">ध्वनिचित्राभिलेख</string>
+    <string name="app_notification_media_channel_description">आपको सूचित करता है जब कोई आपका उल्लेख करते हैं चित्र अथवा चलचित्र में</string>
+    <string name="app_notification_media_channel_message_photo">%1$s ने चित्र बाँटा</string>
+    <string name="app_notification_media_channel_message_video">%1$s ने चलचित्र बाँटा</string>
+    <string name="app_notification_media_summary">नए ध्वनिचित्राभिलेख</string>
+    <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_name">निबन्ध तथा उद्दीप्तव्य</string>
+    <string name="app_notification_articles_channel_description">आपको सूचित करता है जब कोई आपका उल्लेख अथवा आपको उद्दीप्त करते हैं एक निबन्ध में</string>
+    <string name="app_notification_articles_channel_message">%1$s ने आपका उल्लेख किया एक निबन्ध में</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s ने आपके निबन्ध को उद्दीप्त किया</string>
+    <string name="app_notification_articles_summary">नए निबन्ध</string>
+    <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">क्रमलेख तथा गिट॰</string>
+    <string name="app_notification_code_channel_description">आपको सूचित करता है विषय तथा सुधारलेख तथा कर्षण अनुरोधों पर</string>
+    <string name="app_notification_code_channel_message_issue">%1$s ने एक विषय खोला</string>
+    <string name="app_notification_code_channel_message_patch">%1$s ने एक सुधारलेख भेजा</string>
+    <string name="app_notification_code_channel_message_pr">%1$s ने एक कर्षण अनुरोध खोला</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s ने एक कर्षण अनुरोध का अद्यतन किया</string>
+    <string name="app_notification_code_summary">नई क्रमलेख गतिविधि</string>
+    <!-- Badges -->
+    <string name="app_notification_badges_channel_name">पदक</string>
+    <string name="app_notification_badges_channel_description">अपको सूचित करता है जब आप एक नया पदक प्राप्त करते हैं</string>
+    <string name="app_notification_badges_channel_message">आपने एक पदक प्राप्त किया</string>
+    <string name="app_notification_badges_channel_message_from">पुरस्कृत %1$s द्वारा</string>
+    <string name="app_notification_badges_summary">नए पदक</string>
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">नटज्साप॰ %1$s से</string>
+    <string name="app_notification_onchain_channel_message_from">खण्डश्रृंखलाबद्ध ज्साप %1$s से</string>
+    <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s ने प्रश्न पूछा</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">आगामी आह्वान</string>
     <string name="app_notification_calls_channel_description">सूचनाएँ आगामी ध्वनि तथा दृश्य आह्वानों के लिए</string>
@@ -2306,6 +2372,9 @@
     <string name="relay_group_browse_description">पुनःप्रसारक में उपलब्ध समूहों का वीक्षण करें। पुनःप्रसारक पता चिपकाएँ अथवा नीचे चयन करें।</string>
     <string name="relay_group_browse_relay_label">पुनःप्रसारक पता</string>
     <string name="relay_group_browse_go">वीक्षण</string>
+    <string name="relay_tor_clearnet_title">यह पुनःप्रसारक अभिगम्य नहीं टोर॰ पर</string>
+    <string name="relay_tor_clearnet_body">%1$s से कोई प्रत्युत्तर नहीं टोर॰ द्वारा। इसका जालनिवास सम्भाव्यतः टोर॰ निर्गमन स्थानों को अवरुद्ध कर रहा है। क्या इसके स्थान पर स्पष्टजाल पर संयोजन करें।</string>
+    <string name="relay_tor_clearnet_action">स्पष्टजाल का उपयोग करें</string>
     <string name="relay_group_browse_your_relays">पुनःप्रसारक जिन पर आप हैं</string>
     <string name="relay_group_browse_popular">लोकप्रिय पुनःप्रसारक</string>
     <string name="relay_group_no_messages_yet">कोई सन्देश नहीं अब तक</string>
@@ -3012,6 +3081,86 @@
     <string name="chat_system_created_channel">%1$s ने %2$s प्रणाली बनाया</string>
     <string name="chat_system_created_channel_unnamed">%1$s ने प्रणाली बनाया</string>
     <string name="chat_system_updated_channel">%1$s ने प्रणाली परिचय का अद्यतन किया</string>
+    <string name="buzz_message_edited">(सम्पादित)</string>
+    <string name="buzz_diff_truncated">(अन्तर ह्रस्वकृत)</string>
+    <string name="buzz_canvas_title">चित्रपट</string>
+    <string name="buzz_canvas_empty">कोई चित्रपट बाँटा नहीं गया इस कार्यशाला में अब तक।</string>
+    <string name="buzz_canvas_edit">चित्रपट सम्पादन</string>
+    <string name="buzz_canvas_save">चित्रपट अभिलेखन</string>
+    <string name="buzz_canvas_body_label">चित्रपट (मार्कडौन॰)</string>
+    <string name="buzz_edit_message">सम्पादन</string>
+    <string name="buzz_editing_banner">सन्देश सम्पादन</string>
+    <string name="buzz_typing_one">%1$s टंकण मध्य…</string>
+    <string name="buzz_typing_two">%1$s तथा %2$s टंकण मध्य…</string>
+    <string name="buzz_typing_many">अनेक लोग टंकण मध्य…</string>
+    <string name="buzz_workspaces_title">बज्स्स कार्यशालाएँ</string>
+    <string name="buzz_workspaces_hero_tagline">जहाँ मनुष्य तथा घटक एक साथ निर्माण करते हैं</string>
+    <string name="buzz_workspaces_leave">कार्यशाला निर्गमन</string>
+    <string name="buzz_workspaces_section">आपके कार्यशालाएँ</string>
+    <string name="buzz_workspaces_empty_title">कोई कार्यशालाएँ नहीं अब तक</string>
+    <string name="buzz_workspaces_empty_body">बज्स्स कार्यशालाएँ पुनःप्रसारक हैं जहाँ मनुष्य तथा एआई॰ घटक एक साथ निर्माण करते हैं। एक के साथ जुडें उसे यहाँ देखने के लिए।</string>
+    <string name="buzz_workspaces_browse">समूहों का वीक्षण</string>
+    <string name="buzz_console_card_title">घटक कोष्ठक</string>
+    <string name="buzz_console_card_subtitle">परिव्यय। व्यक्तिशैलियाँ। वर्तमान अवलोकनकर्ता</string>
+    <string name="buzz_forum_new_title">नया मंच विषय</string>
+    <string name="buzz_forum_body_label">आप किस विषय पर चर्चा करना चाहते हैं।</string>
+    <string name="buzz_forum_post_action">विषय प्रकाशन</string>
+    <string name="buzz_forum_thread_title">मंच सूत्र</string>
+    <string name="buzz_forum_no_replies">कोई प्रत्युत्तर नहीं अब तक। सबसे पहले उत्तर देनेवाले बनें।</string>
+    <string name="buzz_dm_title">सीधे सन्देश</string>
+    <string name="buzz_dm_nav_label">बज्स्स सीधेसन्देश</string>
+    <string name="buzz_dm_card_subtitle">निजी वार्तालाप आपके कार्यशालाओं में</string>
+    <string name="buzz_dm_new">नया सन्देश</string>
+    <string name="buzz_dm_empty_title">कोई सीधेसन्देश नहीं अब तक</string>
+    <string name="buzz_dm_empty_body">आरम्भ करें निजी वार्तालप किसी से भी एक बज्स्स कार्यशाला में।</string>
+    <string name="buzz_dm_more">और अधिक</string>
+    <string name="buzz_dm_hide">संवाद छिपाएँ</string>
+    <string name="buzz_dm_add_member">सदस्य जोडें</string>
+    <string name="buzz_dm_add_member_title">किसी को जोडें इस सीधेसन्देश में</string>
+    <string name="buzz_dm_add_member_invalid">मान्य एनपुब॰ अथवा षोडषांक कुंचिका नहीं</string>
+    <string name="buzz_dm_just_you">केवल आप</string>
+    <string name="buzz_dm_workspace">कार्यशाला</string>
+    <string name="buzz_dm_recipients">इनको</string>
+    <string name="buzz_dm_add_hint">किसी को जोडें (एनपुब॰ अथवा षोडषांक)</string>
+    <string name="buzz_dm_start">वार्तालाप आरम्भ करें</string>
+    <string name="buzz_dm_opening">खोला जा रहा है…</string>
+    <string name="buzz_dm_remove">हटाएँ</string>
+    <string name="buzz_invite_title">कार्यशाला आमन्त्रण</string>
+    <string name="buzz_invite_heading">इस कार्यशाला के साथ जुडें</string>
+    <string name="buzz_invite_workspace">कार्यशाला</string>
+    <string name="buzz_invite_role">भूमिका</string>
+    <string name="buzz_invite_body">आप कार्यशाला को खोलेंगे एक सुरक्षित क्रमकाभ्यन्तर वीक्षक में इसके नियमों का पुनरीक्षण करने के लिए तथा जुडने की प्रक्रिया सम्पन्न करेंगे। यह आपकी अमेथिस्ट कुंचिका से प्रवेशांकन करेगा। कोई पारणशब्द नहीं।</string>
+    <string name="buzz_invite_continue">जालवीक्षक में आगे बढें</string>
+    <string name="buzz_invite_invalid">यह एक मान्य बज्स्स आमन्त्रण योजक जैसे नहीं दिखता।</string>
+    <string name="buzz_invite_expired">यह आमन्त्रण पुराना हो चुका है। एक नए के लिए पूछें।</string>
+    <string name="buzz_invite_after_browser">वीक्षक में नियमों को स्वीकार करना सम्पन्न करें। तत्पश्चात यहाँ लौट आएँ। आपकी कार्यशाला प्रतीक्षा कर रही होगी।</string>
+    <string name="buzz_invite_open_workspace">मेरे कार्यशालाओं को खोलें</string>
+    <string name="buzz_import_title">कार्यशाला प्रणालियों का आयात</string>
+    <string name="buzz_import_loading">आपके प्रणालियों का खोज…</string>
+    <string name="buzz_import_your_channels">आपके प्रणालियाँ इस कार्यशाला में</string>
+    <string name="buzz_import_add">जोडें</string>
+    <string name="buzz_import_add_all">सब को जोडें</string>
+    <string name="buzz_import_added">जोडा गया</string>
+    <string name="buzz_import_empty_title">कोई प्रणालियाँ प्राप्त नहीं</string>
+    <string name="buzz_import_empty_body">आप इस पुनःप्रसारक के किसी भी प्रणाली के सदस्य प्रतीत नहीं होते अब तक। पहले वीक्षक में कार्यशाला आमन्त्रण स्वीकार करें। तत्पश्चात पुनःप्रयास करें।</string>
+    <string name="relay_group_section_channels">प्रणालियाँ</string>
+    <string name="relay_group_section_forums">मंच</string>
+    <string name="buzz_agent_working">कार्य मध्य…</string>
+    <string name="relay_group_add_member">सदस्य जोडें</string>
+    <string name="buzz_community_add_people">इस कार्यशाला में लोगों को जोडें</string>
+    <string name="buzz_invite_create">आमन्त्रण योजक बनाएँ</string>
+    <string name="buzz_invite_link_title">आमन्त्रण योजक</string>
+    <string name="buzz_invite_share">बाँटें</string>
+    <string name="buzz_invite_copy">अनुकृति</string>
+    <string name="buzz_invite_error_title">आमन्त्रण बनाने में असफल</string>
+    <string name="buzz_invite_dismiss">ठीक</string>
+    <string name="buzz_star">प्रणाली ताराचिह्नित करें</string>
+    <string name="buzz_unstar">प्रणाली ताराचिह्न हटाएँ</string>
+    <string name="buzz_dm_section_empty">कोई संवाद नहीं अब तक</string>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">देखें %1$d और संवाद</item>
+        <item quantity="other">देखें सभी %1$d संवाद</item>
+    </plurals>
     <string name="chat_delivery_details_title">सन्देश वितरण</string>
     <string name="close">आवृत</string>
     <string name="chat_delivery_pending">किसी एक पुनःप्रसारक द्वारा इस सन्देश की स्वीकृति की प्रतीक्षा</string>
@@ -4027,6 +4176,11 @@
     <string name="pow_notification_channel_name">श्रमप्रमाण खनन</string>
     <string name="pow_notification_channel_description">उन पत्रों को दिखाता है जो अपने निप॰१३ श्रमप्रमाण का खनन कर रहे हैं जिससे कि वे सम्पन्न हो सके आप क्रमक छोडने के पश्चात।</string>
     <string name="pow_notification_cancel_all">निरस्त</string>
+    <string name="pow_notification_send_without_pow">अभी भेजें</string>
+    <string name="pow_cancel_dialog_title">क्या खनन रोक दें।</string>
+    <string name="pow_cancel_dialog_message">यह पत्र अभी भी अपना श्रमप्रमाण का खनन कर रहा है। आप इसे अभी भेज सकते हैं श्रमप्रमाण के बिना अथवा इसे हटा सकते हैं।</string>
+    <string name="pow_cancel_dialog_send_without_pow">श्रमप्रमाण बिना भेज दें</string>
+    <string name="pow_cancel_dialog_discard">पत्र हटाएँ</string>
     <string name="pow_difficulty_estimate">लगभग %1$s प्रति पत्र इस यन्त्र पर</string>
     <string name="pow_estimate_instant">१ से॰ से न्यून</string>
     <plurals name="pow_estimate_seconds">

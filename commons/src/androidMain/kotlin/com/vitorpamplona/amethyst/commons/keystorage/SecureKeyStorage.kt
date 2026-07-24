@@ -64,6 +64,9 @@ actual class SecureKeyStorage private actual constructor() {
         }
     }
 
+    // androidx.security.crypto is deprecated with no drop-in successor; migrating the
+    // on-disk key store is a separate, security-sensitive effort.
+    @Suppress("DEPRECATION")
     private val masterKey: MasterKey by lazy {
         MasterKey
             .Builder(appContext, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
@@ -71,6 +74,7 @@ actual class SecureKeyStorage private actual constructor() {
             .build()
     }
 
+    @Suppress("DEPRECATION")
     private val encryptedPrefs by lazy {
         EncryptedSharedPreferences.create(
             appContext,

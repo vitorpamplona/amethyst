@@ -137,7 +137,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDe
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -577,12 +576,6 @@ class AppModules(
             )
         }
 
-    // Application-wide ots verification cache
-    val otsVerifCache by lazy {
-        Log.d("AppModules", "OtsCache Init")
-        VerificationStateCache(otsResolverBuilder)
-    }
-
     val torEvaluatorFlow =
         TorRelayState(
             okHttpClients,
@@ -747,7 +740,7 @@ class AppModules(
     // Tries to verify new OTS events when they arrive.
     val otsEventVerifier =
         IncomingOtsEventVerifier(
-            otsVerifCache = { otsVerifCache },
+            otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             scope = applicationIOScope,
         )
@@ -1034,6 +1027,8 @@ class AppModules(
         )
     }
 
+    // androidx.security.crypto's EncryptedSharedPreferences is deprecated with no drop-in successor.
+    @Suppress("DEPRECATION")
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(appContext, npub)
 
     fun initiate(appContext: Context) {
@@ -1092,9 +1087,11 @@ class AppModules(
             uiState
         }
 
-        // LRUCache should not be instanciated in the Main thread due to blocking
+        // LRUCache should not be instanciated in the Main thread due to blocking.
+        // trimToSize is a no-op on the empty cache; it just forces the object's
+        // (blocking) initialization to happen off the main thread.
         applicationIOScope.launch {
-            CachedRobohash
+            CachedRobohash.trimToSize(100)
             resourceCacheInit()
         }
 

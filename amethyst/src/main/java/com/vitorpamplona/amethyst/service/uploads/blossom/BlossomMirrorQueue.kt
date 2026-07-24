@@ -89,14 +89,18 @@ class BlossomMirrorQueue(
 
     val isRunning get() = _state.value?.running == true
 
-    /** Enqueue a sweep. No-op if one is already running or there's nothing to do. */
+    /**
+     * Enqueue a sweep. Returns true when this call actually started one; false (no-op) when a
+     * sweep is already running or there's nothing to do — the caller can tell the difference so
+     * it doesn't report an import/sync as started when the work was silently dropped.
+     */
     fun start(
         account: Account,
         tasks: List<Task>,
-    ) {
-        if (isRunning) return
+    ): Boolean {
+        if (isRunning) return false
         val work = tasks.flatMap { t -> t.targets.map { t to it } }
-        if (work.isEmpty()) return
+        if (work.isEmpty()) return false
 
         // Publish the active state and start the foreground service synchronously (we're on the
         // foreground thread here, which is what dataSync FGS starts require) before the sweep runs.
@@ -122,6 +126,7 @@ class BlossomMirrorQueue(
                     }.awaitAll()
                 _state.update { it?.copy(running = false) }
             }
+        return true
     }
 
     private suspend fun mirrorOne(

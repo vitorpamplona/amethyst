@@ -133,6 +133,7 @@ object GitReadCommands {
      * comment trees and PR-update (1619) events (which use NIP-22 uppercase `E`)
      * are out of scope here.
      */
+    @Suppress("DEPRECATION") // legacy kind:1622 GitReplyEvent is read for backward compatibility.
     suspend fun thread(
         dataDir: DataDir,
         rest: Array<String>,

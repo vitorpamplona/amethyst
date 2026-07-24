@@ -41,8 +41,21 @@ path = "/"
 # call_group_size = 64
 
 [database]
+# Which IEventStore implementation backs the relay. Default "sqlite".
+#   - "sqlite": quartz's SQLite store — honours every knob below. Best for
+#     real traffic. CLI: --store sqlite.
+#   - "fs": quartz's filesystem store — one JSON file per event under the
+#     directory named by `file` (a directory, not a db file, in this mode).
+#     Human-inspectable with cat/jq; the SQLite-only knobs are ignored, and
+#     it always needs `file`. CLI: --store fs.
+# Any other value is the fully-qualified class name of a custom IEventStore
+# on the classpath, instantiated reflectively (needs a public constructor
+# `(NormalizedRelayUrl?, IndexingStrategy)`, `(NormalizedRelayUrl?)`, or `()`).
+# backend = "sqlite"
+
 # True keeps an in-memory SQLite db (events vanish on restart). Useful
-# for tests; set false + `file = "..."` for persistent storage.
+# for tests; set false + `file = "..."` for persistent storage. Ignored
+# by the "fs" backend, which always writes to the `file` directory.
 in_memory = false
 file = "/var/lib/geode/events.db"
 

@@ -22,17 +22,20 @@ package com.vitorpamplona.amethyst.desktop.ui.note
 
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.ui.LocalSnackbarHost
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import kotlinx.coroutines.launch
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
@@ -52,62 +55,132 @@ class ShareMenuState {
 @Composable
 fun rememberShareMenuState(): ShareMenuState = remember { ShareMenuState() }
 
+/** A single note-menu entry — one source of truth shared by the ⋮ overflow and the right-click menu. */
+class NoteMenuAction(
+    val label: String,
+    val onClick: () -> Unit,
+)
+
+/**
+ * The canonical note action list. Rendered identically by [ShareMenu] (⋮ dropdown)
+ * and the feed's right-click context menu, so both offer the same items.
+ * Moderation actions (mute/report) are added only for other authors on a
+ * writeable account; each action shows a snackbar via [LocalSnackbarHost].
+ */
+@Composable
+fun rememberNoteMenuActions(
+    event: Event,
+    relayManager: DesktopRelayConnectionManager,
+    onReportClick: () -> Unit,
+): List<NoteMenuAction> {
+    val account = LocalDesktopIAccount.current
+    val snackbar = LocalSnackbarHost.current
+    val scope = rememberCoroutineScope()
+    val canModerate = account != null && account.isWriteable() && event.pubKey != account.pubKey
+    return remember(event, canModerate) {
+        buildList {
+            add(NoteMenuAction("Copy Text") { copyToClipboard(event.content) })
+            add(NoteMenuAction("Copy Note ID") { copyToClipboard("nostr:${NNote.create(event.id)}") })
+            add(
+                NoteMenuAction("Copy Event Link") {
+                    val relays = relayManager.connectedRelays.value.take(3)
+                    copyToClipboard("nostr:${NEvent.create(event.id, event.pubKey, event.kind, relays)}")
+                },
+            )
+            add(NoteMenuAction("Copy Raw JSON") { copyToClipboard(event.toJson()) })
+            add(
+                NoteMenuAction("Copy Web Link") {
+                    copyToClipboard("https://njump.me/${NEvent.create(event.id, event.pubKey, event.kind, emptyList())}")
+                },
+            )
+            add(
+                NoteMenuAction("Broadcast") {
+                    relayManager.broadcastToAll(event)
+                    scope.launch { snackbar?.showSnackbar("Broadcast to relays") }
+                },
+            )
+            if (canModerate) {
+                add(
+                    NoteMenuAction("Mute user") {
+                        scope.launch {
+                            try {
+                                account.hideUser(event.pubKey)
+                                snackbar?.showSnackbar("Muted user")
+                            } catch (e: Exception) {
+                                snackbar?.showSnackbar("Mute failed: ${e.message}")
+                            }
+                        }
+                    },
+                )
+                add(NoteMenuAction("Report…", onReportClick))
+            }
+        }
+    }
+}
+
+/** The ⋮ overflow dropdown. Renders [rememberNoteMenuActions] + the report dialog. */
 @Composable
 fun ShareMenu(
     state: ShareMenuState,
     event: Event,
     relayManager: DesktopRelayConnectionManager,
 ) {
+    var showReportDialog by remember { mutableStateOf(false) }
+    val actions = rememberNoteMenuActions(event, relayManager) { showReportDialog = true }
+
     DropdownMenu(
         expanded = state.expanded,
         onDismissRequest = { state.dismiss() },
     ) {
-        DropdownMenuItem(
-            text = { Text("Copy Text") },
-            onClick = {
-                copyToClipboard(event.content)
-                state.dismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text("Copy Note ID") },
-            onClick = {
-                copyToClipboard("nostr:${NNote.create(event.id)}")
-                state.dismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text("Copy Event Link") },
-            onClick = {
-                val relays = relayManager.connectedRelays.value.take(3)
-                copyToClipboard("nostr:${NEvent.create(event.id, event.pubKey, event.kind, relays)}")
-                state.dismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text("Copy Raw JSON") },
-            onClick = {
-                copyToClipboard(event.toJson())
-                state.dismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text("Copy Web Link") },
-            onClick = {
-                val nevent = NEvent.create(event.id, event.pubKey, event.kind, emptyList())
-                copyToClipboard("https://njump.me/$nevent")
-                state.dismiss()
-            },
-        )
-        HorizontalDivider()
-        DropdownMenuItem(
-            text = { Text("Broadcast") },
-            onClick = {
-                relayManager.broadcastToAll(event)
-                state.dismiss()
-            },
-        )
+        actions.forEach { action ->
+            DropdownMenuItem(
+                text = { Text(action.label) },
+                onClick = {
+                    action.onClick()
+                    state.dismiss()
+                },
+            )
+        }
     }
+
+    if (showReportDialog) {
+        NoteReportDialog(event) { showReportDialog = false }
+    }
+}
+
+/** Report dialog wired to the account + snackbar, reused by every note surface. */
+@Composable
+fun NoteReportDialog(
+    event: Event,
+    onDismiss: () -> Unit,
+) {
+    val account = LocalDesktopIAccount.current ?: return
+    val snackbar = LocalSnackbarHost.current
+    val scope = rememberCoroutineScope()
+    ReportNoteDialog(
+        onDismiss = onDismiss,
+        onReport = { type, comment ->
+            scope.launch {
+                try {
+                    account.reportEvent(event, type, comment)
+                    snackbar?.showSnackbar("Report sent")
+                } catch (e: Exception) {
+                    snackbar?.showSnackbar("Report failed: ${e.message}")
+                }
+            }
+        },
+        onBlockAndReport = { type, comment ->
+            scope.launch {
+                try {
+                    account.reportEvent(event, type, comment)
+                    account.hideUser(event.pubKey)
+                    snackbar?.showSnackbar("Reported & muted")
+                } catch (e: Exception) {
+                    snackbar?.showSnackbar("Report failed: ${e.message}")
+                }
+            }
+        },
+    )
 }
 
 private fun copyToClipboard(text: String) {

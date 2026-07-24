@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.OptionalAuthPoli
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyAuthOnlyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.NdjsonImportExport
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
@@ -94,6 +95,9 @@ import java.io.File
  *   --path <p>         ws path (default from config or /)
  *   --info <file>      NIP-11 doc file (overrides [info] section)
  *   --db <file>        sqlite db path (overrides [database].file)
+ *   --store <backend>  event-store backend (overrides [database].backend):
+ *                      "sqlite" (default), "fs", or the fully-qualified
+ *                      class name of a custom IEventStore on the classpath.
  *   --auth             require NIP-42 AUTH (sets options.require_auth = true)
  *   --optional-auth    advertise NIP-42 AUTH but don't require it (sets
  *                      options.optional_auth = true; ignored when --auth is set)
@@ -107,6 +111,18 @@ import java.io.File
  *                      per-event tokenization cost on ingest.
  */
 fun main(args: Array<String>) {
+    // Terminal flags handled before verb dispatch so a packaged binary has a
+    // fast, exit-0 command that never opens a store or binds a port — the smoke
+    // test the Homebrew formula, the .deb/.rpm post-install check, and the
+    // Docker image healthcheck all invoke.
+    if (args.any { it == "--version" || it == "-V" }) {
+        println("geode ${BuildConfig.VERSION}")
+        return
+    }
+    if (args.any { it == "--help" || it == "-h" }) {
+        printHelp()
+        return
+    }
     when (args.firstOrNull()?.takeUnless { it.startsWith("--") }) {
         "import" -> runImport(args.copyOfRange(1, args.size))
         "export" -> runExport(args.copyOfRange(1, args.size))
@@ -117,27 +133,70 @@ fun main(args: Array<String>) {
     }
 }
 
+private fun printHelp() {
+    println(
+        """
+        geode ${BuildConfig.VERSION} - a standalone Nostr relay.
+
+        Usage:
+          geode [relay] [flags]         serve the relay (default when no verb is given)
+          geode import [flags] [FILE...] bulk-load NDJSON events into the store
+          geode export [flags]          dump the store as NDJSON to stdout
+
+        Common flags:
+          --config <file>    TOML config (see config.example.toml)
+          --host <addr>      bind address (default 0.0.0.0)
+          --port <n>         tcp port (default 7447, 0 to autobind)
+          --path <p>         websocket path (default /)
+          --db <file>        sqlite db path (persistent storage)
+          --store <backend>  event-store backend: sqlite (default), fs, or a
+                             fully-qualified IEventStore class name
+          --auth             require NIP-42 AUTH
+          --optional-auth    advertise NIP-42 AUTH but don't require it
+          --no-verify        do NOT verify event signatures (trusted input only)
+          --no-search        disable NIP-50 full-text search
+          --version, -V      print the version and exit
+          --help, -h         print this help and exit
+
+        Docs: https://github.com/vitorpamplona/amethyst/blob/main/geode/README.md
+        """.trimIndent(),
+    )
+}
+
 /**
  * Opens the store the `import`/`export` verbs operate on, honoring the same
  * `--db`/`--config`/`--no-search` selection the relay uses so a verb targets the
  * exact store the server would.
  */
 private class StoreContext(
+    /** Human-readable location of the store's bytes, for the verb's summary line. */
     val dbFile: String?,
-    val store: EventStore,
+    val store: IEventStore,
 )
 
 private fun openStore(a: Args): StoreContext {
-    val config = a.opt(CONFIG_FLAG)?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig()
-    val dbFile = a.opt("--db") ?: config.database.file?.takeUnless { config.database.in_memory }
+    val config =
+        (a.opt(CONFIG_FLAG)?.let { StaticConfig.fromFile(File(it)) } ?: StaticConfig())
+            .withStoreOverride(a.opt(STORE_FLAG))
     val fullTextSearch = !a.flag(NO_SEARCH_FLAG) && config.options.full_text_search
+    // The verbs operate on the same store the server would, honoring the same
+    // `[database].backend` selection — unscoped (relay = null) because bulk
+    // load/dump has no single relay to attribute NIP-62 cascades to.
     val store =
-        EventStore(
-            dbName = dbFile,
-            indexStrategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index),
-            numReaders = config.database.readers ?: 4,
+        StoreFactory.open(
+            config = config,
+            relay = null,
+            fullTextSearch = fullTextSearch,
+            dbOverride = a.opt("--db"),
         )
-    return StoreContext(dbFile, store)
+    // Where the bytes land, for the summary line. Only the SQLite in-memory
+    // case has no location; the FS store always has a directory.
+    val sqlite =
+        config.database.backend
+            .trim()
+            .lowercase() in StoreFactory.SQLITE_BACKEND_KEYWORDS
+    val location = a.opt("--db") ?: config.database.file?.takeUnless { sqlite && config.database.in_memory }
+    return StoreContext(location, store)
 }
 
 private fun runImport(args: Array<String>) {
@@ -189,10 +248,12 @@ private fun serve(args: Array<String>) {
     val a = parseArgs(args)
 
     val config: StaticConfig =
-        a
-            .opt(CONFIG_FLAG)
-            ?.let { StaticConfig.fromFile(File(it)) }
-            ?: StaticConfig()
+        (
+            a
+                .opt(CONFIG_FLAG)
+                ?.let { StaticConfig.fromFile(File(it)) }
+                ?: StaticConfig()
+        ).withStoreOverride(a.opt(STORE_FLAG))
     config.validate()
 
     val host = a.opt("--host") ?: config.network.host
@@ -200,7 +261,6 @@ private fun serve(args: Array<String>) {
     val path = a.opt("--path") ?: config.network.path
 
     val cliInfoFile = a.opt("--info")?.let { File(it) }
-    val dbFile = a.opt("--db") ?: config.database.file?.takeUnless { config.database.in_memory }
     val requireAuth = a.flag("--auth") || config.options.require_auth
     // Optional AUTH advertises the challenge without gating commands on it.
     // Mandatory AUTH already sends the challenge, so it wins when both are set.
@@ -239,11 +299,11 @@ private fun serve(args: Array<String>) {
             if (config.database.temp_store_memory) add("PRAGMA temp_store = MEMORY;")
         }
     val store =
-        EventStore(
-            dbName = dbFile,
+        StoreFactory.open(
+            config = config,
             relay = advertisedUrl,
-            indexStrategy = relayIndexingStrategy(fullTextSearch, config.negentropy.live_index),
-            numReaders = config.database.readers ?: 4,
+            fullTextSearch = fullTextSearch,
+            dbOverride = a.opt("--db"),
             extraPragmas = extraPragmas,
         )
 
@@ -371,20 +431,24 @@ private fun serve(args: Array<String>) {
     // Periodic query-planner statistics refresh (`PRAGMA optimize`).
     // Incremental and usually a no-op; failures are swallowed — a missed
     // refresh only means slightly staler planner stats until the next tick.
+    // SQLite-only: the `optimize()` PRAGMA has no meaning for other backends,
+    // so the loop only runs when the configured store is the SQLite one.
     val maintenanceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    config.database.optimize_interval_seconds?.let { secs ->
-        maintenanceScope.launch {
-            while (true) {
-                delay(secs * 1000)
-                try {
-                    store.optimize()
-                } catch (e: CancellationException) {
-                    throw e // shutdown cancelled us; don't swallow it
-                } catch (e: Exception) {
-                    // A missed refresh only means slightly staler planner
-                    // stats until the next tick — log and keep the loop.
-                    // Errors (OOM, etc.) are NOT swallowed.
-                    println("PRAGMA optimize failed: ${e.message}")
+    (store as? EventStore)?.let { sqlite ->
+        config.database.optimize_interval_seconds?.let { secs ->
+            maintenanceScope.launch {
+                while (true) {
+                    delay(secs * 1000)
+                    try {
+                        sqlite.optimize()
+                    } catch (e: CancellationException) {
+                        throw e // shutdown cancelled us; don't swallow it
+                    } catch (e: Exception) {
+                        // A missed refresh only means slightly staler planner
+                        // stats until the next tick — log and keep the loop.
+                        // Errors (OOM, etc.) are NOT swallowed.
+                        println("PRAGMA optimize failed: ${e.message}")
+                    }
                 }
             }
         }
@@ -469,6 +533,14 @@ private class Args(
 private const val CONFIG_FLAG = "--config"
 private const val NO_VERIFY_FLAG = "--no-verify"
 private const val NO_SEARCH_FLAG = "--no-search"
+private const val STORE_FLAG = "--store"
+
+/**
+ * Apply a `--store <backend>` CLI override on top of the parsed
+ * `[database].backend`. `null` (flag absent) leaves the config untouched, so
+ * the TOML value — or its `"sqlite"` default — stands.
+ */
+private fun StaticConfig.withStoreOverride(backend: String?): StaticConfig = if (backend == null) this else copy(database = database.copy(backend = backend))
 
 /**
  * Boolean flags that never take a value. Listing them explicitly is what lets a

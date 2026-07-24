@@ -72,11 +72,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -87,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46ActivityEntry
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -107,7 +107,7 @@ fun Nip46SignerScreen(
     val signer = account.nip46Signer
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     val enabled by account.settings.nip46SignerEnabled.collectAsStateWithLifecycle()
     val secret by account.settings.nip46BunkerSecret.collectAsStateWithLifecycle()
@@ -187,7 +187,7 @@ fun Nip46SignerScreen(
                     QrHeroCard(
                         uri = uri,
                         onCopy = {
-                            clipboard.setText(AnnotatedString(uri))
+                            scope.launch { clipboard.setText(uri) }
                             Toast.makeText(context, R.string.nip46_signer_copied, Toast.LENGTH_SHORT).show()
                         },
                         onRegenerate = { confirmRotate = true },

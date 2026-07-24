@@ -504,6 +504,7 @@ class NappletHostActivity : ComponentActivity() {
             // per-applet origin (a napplet.local subdomain) — storage is scoped to that origin, isolated
             // from other applets and from the shell. SPAs need it at boot; without it they crash-loop.
             domStorageEnabled = true
+            @Suppress("DEPRECATION")
             databaseEnabled = false
             allowFileAccess = false
             allowContentAccess = false

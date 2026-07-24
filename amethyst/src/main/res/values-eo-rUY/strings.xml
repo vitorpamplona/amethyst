@@ -300,6 +300,7 @@
     <string name="chats_reply_not_found">Ne povis trovi tiun ĉi mesaĝon</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Serĉis ĉiun relay · tuŝetu por vidi</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Eraro ŝargante respondojn: "</string>
     <string name="try_again">Provi denove</string>
     <string name="notification_feed_is_empty">Ankoraŭ neniuj sciigoj.</string>
@@ -1217,6 +1218,14 @@
     <string name="app_notification_mentions_channel_description">Sciigos vin kiam iu menciigas aŭ citas vin en afiŝo</string>
     <string name="app_notification_mentions_channel_message">%1$s menciis vin</string>
     <string name="app_notification_mentions_summary">Novaj mencioj</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Alvenantaj alvokoj</string>
     <string name="app_notification_calls_channel_description">Sciigoj por alvenantaj voĉaj kaj vidaj alvokoj</string>

@@ -110,6 +110,42 @@ jobs:
           name: ${{ matrix.desktop-artifact-name }}
           path: ${{ matrix.desktop-artifact-path }}
 
+  # geode (the standalone Nostr relay) is JVM-only, so it runs in its own job
+  # rather than the build-desktop matrix — one runner suffices (no reason to test
+  # a platform-independent module 3× across the desktop OS matrix). Isolating it
+  # also keeps its default suite's CPU-heavy throughput benchmarks (a 1M-event
+  # mirror sync, WireReqFloor, NegentropyServerReconcile) from contending with the
+  # timing-sensitive quartz relay-client tests under org.gradle.parallel — that
+  # contention flakes tests like NostrClientReqBypassingRelayLimitsTest.
+  test-geode:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Test geode (gradle)
+        run: ./gradlew :geode:test
+
+      - name: Upload geode Test Reports
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: geode Test Reports
+          path: geode/build/reports
+
   test-quartz-ios:
     # Phase 1 of the iOS support plan
     # (amethyst/plans/2026-05-24-ios-support.md): keep :quartz green on iOS

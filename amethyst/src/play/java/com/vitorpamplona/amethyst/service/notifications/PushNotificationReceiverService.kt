@@ -94,8 +94,8 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
             PushNotificationUtils.checkAndInit(token, LocalPreferences.allSavedAccounts()) {
                 Amethyst.instance.okHttpClients.getHttpClient(Amethyst.instance.torManager.isSocksReady())
             }
-            NotificationUtils.getOrCreateZapChannel(applicationContext)
-            NotificationUtils.getOrCreateDMChannel(applicationContext)
+            NotificationCategory.ZAP.ensureChannel(applicationContext)
+            NotificationCategory.DIRECT_MESSAGE.ensureChannel(applicationContext)
         }
     }
 

@@ -205,6 +205,10 @@ class AndroidBleTransport(
         readCharacteristic = null
     }
 
+    // The 5-arg connectGatt(context, autoConnect, callback, transport, phy) overload is deprecated
+    // in favor of the variant that also takes a Handler; keep this one to avoid changing BLE
+    // callback threading.
+    @Suppress("DEPRECATION")
     override fun connectToPeer(peer: BlePeer) {
         val device =
             peer.platformHandle as? BluetoothDevice ?: run {
