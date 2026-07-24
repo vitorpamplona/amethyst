@@ -103,4 +103,38 @@ class NotificationContentMentionTest {
         assertEquals("just a normal note with no tags", resolved.text)
         assertTrue(resolved.citedUsers.isEmpty())
     }
+
+    @Test
+    fun `an inline image link is pulled out as the big picture and stripped from the body`() {
+        val rendered = NotificationContent.renderNoteText("look at this https://example.com/cat.jpg amazing")
+
+        assertEquals("https://example.com/cat.jpg", rendered.imageUrl)
+        assertEquals("look at this amazing", rendered.text)
+    }
+
+    @Test
+    fun `an image url on its own line becomes the big picture while the caption stays the body`() {
+        val rendered = NotificationContent.renderNoteText("Check out my new photo\nhttps://example.com/pic.png")
+
+        assertEquals("https://example.com/pic.png", rendered.imageUrl)
+        assertEquals("Check out my new photo", rendered.text)
+    }
+
+    @Test
+    fun `trailing punctuation after an image url is trimmed`() {
+        assertEquals("https://example.com/a.webp", NotificationContent.firstImageUrl("nice pic https://example.com/a.webp."))
+    }
+
+    @Test
+    fun `a video link is not treated as an image and stays in the text`() {
+        val rendered = NotificationContent.renderNoteText("watch https://example.com/clip.mp4 now")
+
+        assertEquals(null, rendered.imageUrl)
+        assertTrue(rendered.text.contains("https://example.com/clip.mp4"))
+    }
+
+    @Test
+    fun `a bare filename without a url scheme is not mistaken for an image`() {
+        assertEquals(null, NotificationContent.firstImageUrl("my file is called cat.jpg locally"))
+    }
 }

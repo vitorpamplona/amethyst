@@ -59,8 +59,9 @@ object MentionNotification {
         val uri = NotificationRoutes.noteUri(note, accountNpub)
 
         // Users cited inline in the text (nostr:npub/nprofile) are observed too, so
-        // their names fill in as their kind:0 metadata arrives.
-        val citedUsers = NotificationContent.resolveMentions(event.content).citedUsers
+        // their names fill in as their kind:0 metadata arrives. An inline image link
+        // is rendered as the big picture instead of shown as a raw URL.
+        val rendered = NotificationContent.renderNoteText(event.content)
 
         val nm = context.notificationManager()
 
@@ -68,22 +69,24 @@ object MentionNotification {
             context = context,
             account = account,
             notificationId = event.id,
-            users = listOf(author) + citedUsers,
+            users = listOf(author) + rendered.citedUsers,
             notes = listOf(note),
             isComplete = {
                 author.metadataOrNull()?.bestName() != null &&
-                    citedUsers.all { it.metadataOrNull()?.bestName() != null }
+                    rendered.citedUsers.all { it.metadataOrNull()?.bestName() != null }
             },
         ) {
+            val body = NotificationContent.renderNoteText(event.content)
             nm.postStandard(
                 category = category,
                 id = event.id,
                 messageTitle = stringRes(context, titleRes, author.toBestDisplayName()),
-                messageBody = NotificationContent.resolveMentions(event.content).text,
+                messageBody = body.text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
                 applicationContext = context,
+                bigPictureUrl = body.imageUrl,
             )
         }
     }

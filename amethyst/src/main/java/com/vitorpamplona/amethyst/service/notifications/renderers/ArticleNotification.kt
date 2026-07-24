@@ -61,7 +61,7 @@ object ArticleNotification {
                 R.string.app_notification_articles_channel_message
             }
         val bodySource = if (event is HighlightEvent) event.quote() else event.content
-        val citedUsers = NotificationContent.resolveMentions(bodySource).citedUsers
+        val rendered = NotificationContent.renderNoteText(bodySource)
 
         val nm = context.notificationManager()
 
@@ -69,22 +69,24 @@ object ArticleNotification {
             context = context,
             account = account,
             notificationId = event.id,
-            users = listOf(author) + citedUsers,
+            users = listOf(author) + rendered.citedUsers,
             notes = listOf(note),
             isComplete = {
                 author.metadataOrNull()?.bestName() != null &&
-                    citedUsers.all { it.metadataOrNull()?.bestName() != null }
+                    rendered.citedUsers.all { it.metadataOrNull()?.bestName() != null }
             },
         ) {
+            val body = NotificationContent.renderNoteText(bodySource)
             nm.postStandard(
                 category = NotificationCategory.ARTICLE,
                 id = event.id,
                 messageTitle = stringRes(context, titleRes, author.toBestDisplayName()),
-                messageBody = NotificationContent.resolveMentions(bodySource).text,
+                messageBody = body.text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
                 applicationContext = context,
+                bigPictureUrl = body.imageUrl,
             )
         }
     }

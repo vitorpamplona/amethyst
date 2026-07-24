@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -112,6 +113,66 @@ object NotificationContent {
             }
 
         return ResolvedText(rewritten.take(max), cited)
+    }
+
+    /**
+     * The result of [renderNoteText]: [ResolvedText] plus [imageUrl], the first
+     * inline image link found anywhere in the note. When present, a renderer shows
+     * it as the notification's big picture and the link is stripped from [text] —
+     * so a mention whose body is "look at this https://…/cat.jpg" shows the photo
+     * instead of the raw URL.
+     */
+    data class RenderedText(
+        val text: String,
+        val citedUsers: List<User>,
+        val imageUrl: String?,
+    )
+
+    private val whitespace = Regex("\\s+")
+    private val trailingPunctuation = charArrayOf('.', ',', ')', '(', '!', '?', ';', ':', '"', '\'')
+
+    /**
+     * The first `http(s)` image URL in [content] (anywhere, not only the first
+     * line — images are usually on their own line), or null. Trailing sentence
+     * punctuation is trimmed so "…/cat.jpg." still resolves. Videos are ignored:
+     * Coil can't load them as a still, so their link stays in the text.
+     */
+    fun firstImageUrl(content: String?): String? {
+        if (content == null) return null
+        content.split(whitespace).forEach { raw ->
+            if (!raw.startsWith("http://", ignoreCase = true) && !raw.startsWith("https://", ignoreCase = true)) {
+                return@forEach
+            }
+            val url = raw.trimEnd(*trailingPunctuation)
+            if (RichTextParser.isImageUrl(url)) return url
+        }
+        return null
+    }
+
+    /**
+     * [resolveMentions] plus inline-image extraction: resolves `@npub` mentions,
+     * pulls the first image link out as [RenderedText.imageUrl], and removes that
+     * link from the excerpt text (collapsing the whitespace it leaves behind).
+     */
+    fun renderNoteText(
+        content: String?,
+        max: Int = 280,
+    ): RenderedText {
+        val resolved = resolveMentions(content, max = Int.MAX_VALUE)
+        val imageUrl = firstImageUrl(content)
+
+        val text =
+            if (imageUrl != null) {
+                resolved.text
+                    .replace(imageUrl, "")
+                    .replace(whitespace, " ")
+                    .trim()
+                    .take(max)
+            } else {
+                resolved.text.take(max)
+            }
+
+        return RenderedText(text, resolved.citedUsers, imageUrl)
     }
 
     suspend fun decryptZapContentAuthor(
