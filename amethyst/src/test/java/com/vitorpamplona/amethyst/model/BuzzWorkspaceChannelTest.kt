@@ -39,6 +39,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -175,6 +176,36 @@ class BuzzWorkspaceChannelTest {
             val target = LocalCache.getNoteIfExists(original.id)!!
             val newest = target.edits.filter { it.event is StreamMessageEditEvent }.maxByOrNull { it.createdAt() ?: 0L }
             assertEquals("edited offline", newest?.event?.content)
+        }
+
+    @Test
+    fun aForgedEditByAnotherAuthorNeverOverridesTheMessage() =
+        runBlocking {
+            val channelId = newChannelId()
+            val original = streamMessage(channelId, "the truth") // authored by `signer`
+            LocalCache.checkDeletionAndConsume(original, buzzRelay, false)
+
+            // Mallory publishes a well-formed, VERIFIED 40003 targeting someone else's message.
+            val mallory = NostrSignerInternal(KeyPair())
+            val forged =
+                mallory.sign(
+                    StreamMessageEditEvent.build(channelId, original.id, "lies", createdAt = original.createdAt + 100),
+                )
+            LocalCache.checkDeletionAndConsume(forged, buzzRelay, false)
+
+            // The forged edit still lands in the store (it is a valid signed event)…
+            val target = LocalCache.getNoteIfExists(original.id)!!
+            assertTrue("the forged edit is stored", target.edits.any { it.idHex == forged.id })
+            // …but the overlay only applies the ORIGINAL author's edits, so it is ignored.
+            assertNull(
+                "an edit by a different author must never override the message",
+                LocalCache.findLatestBuzzEditForNote(target),
+            )
+
+            // The real author's own later edit does apply.
+            val real = signer.sign(StreamMessageEditEvent.build(channelId, original.id, "the fix", createdAt = original.createdAt + 200))
+            LocalCache.checkDeletionAndConsume(real, buzzRelay, false)
+            assertEquals("the fix", LocalCache.findLatestBuzzEditForNote(target)?.event?.content)
         }
 
     @Test

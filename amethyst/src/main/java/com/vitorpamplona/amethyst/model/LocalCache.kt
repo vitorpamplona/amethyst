@@ -3270,6 +3270,19 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun cachedModificationEventsForNote(note: Note): List<Note> = findLatestModificationForNote(note)
 
+    /**
+     * The kind-40003 Buzz edit currently overlaying [note], or null when unedited. Like every other
+     * edit kind, only the ORIGINAL message author's edits count — the send side already gates Edit to
+     * your own messages, and the relay is not trusted to reject a cross-author edit, so a 40003 signed
+     * by anyone else can never rewrite your message. The newest by created_at wins (Buzz's rule).
+     */
+    fun findLatestBuzzEditForNote(note: Note): Note? {
+        val authorHex = note.author?.pubkeyHex ?: return null
+        return note.edits
+            .filter { it.event is StreamMessageEditEvent && it.author?.pubkeyHex == authorHex }
+            .maxByOrNull { it.createdAt() ?: 0L }
+    }
+
     fun cleanMemory() {
         Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
         notes.cleanUp()

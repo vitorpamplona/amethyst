@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -60,7 +61,6 @@ import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
-import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
@@ -69,19 +69,16 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
  * arrive. Returns null when the message is unedited.
  *
  * Each edit is anchored on the message it edits ([Note.edits], where [LocalCache] consumes it),
- * so it is held for as long as its message and read straight off the note — no channel-keyed
- * side store. Buzz keeps the newest by `created_at` regardless of author (its own last-write-wins
- * rule); [addEdit] invalidates the note's edits flow, so collecting it re-runs the fold.
+ * so it is held for as long as its message and read straight off the note — no channel-keyed side
+ * store. [LocalCache.findLatestBuzzEditForNote] applies only the original author's newest edit;
+ * [addEdit] invalidates the note's edits flow, so collecting it re-runs the fold.
  */
 @Composable
 fun observeBuzzEdit(note: Note): Note? {
     val latest by
         produceState<Note?>(initialValue = null, note.idHex) {
             note.flow().edits.stateFlow.collect {
-                value =
-                    note.edits
-                        .filter { it.event is StreamMessageEditEvent }
-                        .maxByOrNull { it.createdAt() ?: 0L }
+                value = LocalCache.findLatestBuzzEditForNote(note)
             }
         }
     return latest
