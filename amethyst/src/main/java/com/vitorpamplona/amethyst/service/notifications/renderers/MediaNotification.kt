@@ -54,7 +54,7 @@ object MediaNotification {
         val uri = NotificationRoutes.noteUri(note, accountNpub)
         val isVideo = event is VideoEvent
         val bigPictureUrl = NotificationContent.mediaImageUrl(event)
-        val caption = NotificationContent.excerpt(event.content, 140)
+        val citedUsers = NotificationContent.resolveMentions(event.content, 140).citedUsers
 
         val nm = context.notificationManager()
 
@@ -62,9 +62,12 @@ object MediaNotification {
             context = context,
             account = account,
             notificationId = event.id,
-            users = listOf(author),
+            users = listOf(author) + citedUsers,
             notes = listOf(note),
-            isComplete = { author.metadataOrNull()?.bestName() != null },
+            isComplete = {
+                author.metadataOrNull()?.bestName() != null &&
+                    citedUsers.all { it.metadataOrNull()?.bestName() != null }
+            },
         ) {
             val user = author.toBestDisplayName()
             val titleRes =
@@ -77,7 +80,7 @@ object MediaNotification {
                 category = NotificationCategory.MEDIA,
                 id = event.id,
                 messageTitle = stringRes(context, titleRes, user),
-                messageBody = caption,
+                messageBody = NotificationContent.resolveMentions(event.content, 140).text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,

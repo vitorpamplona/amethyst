@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
@@ -44,6 +49,70 @@ object NotificationContent {
             ?.firstOrNull { it.isNotBlank() }
             ?.take(max)
             ?: ""
+
+    /**
+     * The result of [resolveMentions]: the excerpt with every `nostr:npub` /
+     * `nostr:nprofile` token swapped for the cited user's `@DisplayName`, plus the
+     * [User]s that were cited so a renderer can add them to its enrichment window
+     * and re-render as their metadata loads.
+     */
+    data class ResolvedText(
+        val text: String,
+        val citedUsers: List<User>,
+    )
+
+    /**
+     * Like [excerpt], but rewrites inline user mentions to readable names: each
+     * `nostr:npub1…` / `nostr:nprofile1…` (optionally `@`-prefixed) becomes
+     * `@<best display name>` for the cited user, and that user is returned in
+     * [ResolvedText.citedUsers]. Event/address references (`nevent`, `note`,
+     * `naddr`, …) are left untouched — they aren't people and have no name to show.
+     *
+     * Called from the build closure on every re-render, so as a cited user's
+     * kind:0 arrives the notification text updates in place from `@npub1abc…` to
+     * `@RealName`.
+     */
+    fun resolveMentions(
+        content: String?,
+        max: Int = 280,
+    ): ResolvedText {
+        val line =
+            content
+                ?.split("\n")
+                ?.firstOrNull { it.isNotBlank() }
+                ?: return ResolvedText("", emptyList())
+
+        // Cheap opt-out: no mention tokens means no work and no allocations.
+        if (!line.contains("npub1", ignoreCase = true) && !line.contains("nprofile1", ignoreCase = true)) {
+            return ResolvedText(line.take(max), emptyList())
+        }
+
+        val cited = mutableListOf<User>()
+        val rewritten =
+            Nip19Parser.nip19regex.replace(line) { match ->
+                val type = match.groups[3]?.value ?: match.groups[5]?.value
+                val key = match.groups[4]?.value ?: match.groups[6]?.value
+                val trailing = match.groups[7]?.value ?: ""
+
+                val hex =
+                    when (val entity = Nip19Parser.parseComponents(type ?: "", key, null)?.entity) {
+                        is NPub -> entity.hex
+                        is NProfile -> entity.hex
+                        else -> null
+                    }
+
+                if (hex != null) {
+                    val user = LocalCache.getOrCreateUser(hex)
+                    cited.add(user)
+                    "@${user.toBestDisplayName()}$trailing"
+                } else {
+                    // nevent / note / naddr / parse failure — leave as-is.
+                    match.value
+                }
+            }
+
+        return ResolvedText(rewritten.take(max), cited)
+    }
 
     suspend fun decryptZapContentAuthor(
         event: LnZapRequestEvent,

@@ -61,8 +61,7 @@ object ReplyNotification {
         val accountNpub = NotificationRoutes.accountNpub(account)
         val uri = NotificationRoutes.noteUri(replyNote, accountNpub)
 
-        val replyExcerpt = NotificationContent.excerpt(event.content)
-        val parentExcerpt = parentContent?.let { NotificationContent.excerpt(it, 140) }?.takeIf { it.isNotBlank() }
+        val citedUsers = NotificationContent.resolveMentions(event.content).citedUsers
 
         val nm = context.notificationManager()
 
@@ -70,11 +69,16 @@ object ReplyNotification {
             context = context,
             account = account,
             notificationId = event.id,
-            users = listOf(author),
+            users = listOf(author) + citedUsers,
             notes = listOf(replyNote),
-            isComplete = { author.metadataOrNull()?.bestName() != null },
+            isComplete = {
+                author.metadataOrNull()?.bestName() != null &&
+                    citedUsers.all { it.metadataOrNull()?.bestName() != null }
+            },
         ) {
             val user = author.toBestDisplayName()
+            val replyExcerpt = NotificationContent.resolveMentions(event.content).text
+            val parentExcerpt = parentContent?.let { NotificationContent.resolveMentions(it, 140).text }?.takeIf { it.isNotBlank() }
             val parent =
                 parentExcerpt?.let {
                     ParentMessage(

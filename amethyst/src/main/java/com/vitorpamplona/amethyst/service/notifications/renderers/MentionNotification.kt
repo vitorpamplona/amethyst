@@ -57,7 +57,10 @@ object MentionNotification {
         val author = LocalCache.getOrCreateUser(event.pubKey)
         val accountNpub = NotificationRoutes.accountNpub(account)
         val uri = NotificationRoutes.noteUri(note, accountNpub)
-        val body = NotificationContent.excerpt(event.content)
+
+        // Users cited inline in the text (nostr:npub/nprofile) are observed too, so
+        // their names fill in as their kind:0 metadata arrives.
+        val citedUsers = NotificationContent.resolveMentions(event.content).citedUsers
 
         val nm = context.notificationManager()
 
@@ -65,15 +68,18 @@ object MentionNotification {
             context = context,
             account = account,
             notificationId = event.id,
-            users = listOf(author),
+            users = listOf(author) + citedUsers,
             notes = listOf(note),
-            isComplete = { author.metadataOrNull()?.bestName() != null },
+            isComplete = {
+                author.metadataOrNull()?.bestName() != null &&
+                    citedUsers.all { it.metadataOrNull()?.bestName() != null }
+            },
         ) {
             nm.postStandard(
                 category = category,
                 id = event.id,
                 messageTitle = stringRes(context, titleRes, author.toBestDisplayName()),
-                messageBody = body,
+                messageBody = NotificationContent.resolveMentions(event.content).text,
                 time = event.createdAt,
                 pictureUrl = author.profilePicture(),
                 uri = uri,
