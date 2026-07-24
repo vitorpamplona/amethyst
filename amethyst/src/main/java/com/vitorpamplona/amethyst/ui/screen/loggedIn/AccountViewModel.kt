@@ -163,6 +163,9 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -1199,6 +1202,31 @@ class AccountViewModel(
             onPayViaIntent = onPayViaIntent,
             zapType = effectiveType,
         )
+    }
+
+    /** True when the account has at least one NIP-47 wallet configured. */
+    fun hasNwcWallet(): Boolean =
+        account.settings.nwcWallets.value
+            .isNotEmpty()
+
+    /**
+     * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
+     * `pay` method, wrapping it as a BIP321 `bitcoin:?lno=` instruction. This is a
+     * plain payment, not a NIP-XX zap (no Nostr receipt); the outcome is surfaced as
+     * a toast. Callers should gate on [hasNwcWallet].
+     */
+    fun payBolt12OfferViaNwc(
+        offer: String,
+        amountMillisats: Long,
+    ) = launchSigner {
+        account.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
+            when (response) {
+                is PaySuccessResponse -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_sent)
+                is IErrorResponseLike ->
+                    toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, response.errorMessage() ?: "")
+                else -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, "")
+            }
+        }
     }
 
     /**

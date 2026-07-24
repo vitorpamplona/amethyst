@@ -1725,6 +1725,10 @@
     <string name="bolt12_offer">BOLT12 offer (lno1…)</string>
     <string name="invalid_bolt12_offer">Not a valid BOLT12 offer</string>
     <string name="delete_bolt12_offer">Delete BOLT12 offer</string>
+    <string name="bolt12_pay_with_wallet">Pay with connected wallet</string>
+    <string name="bolt12_payment_amount_sats">Amount (sats)</string>
+    <string name="bolt12_payment_sent">BOLT12 payment sent</string>
+    <string name="bolt12_payment_failed">BOLT12 payment failed: %1$s</string>
 
     <string name="uploading_state_ready">Not Started</string>
     <string name="uploading_state_compressing">Compressing</string>

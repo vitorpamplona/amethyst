@@ -21,14 +21,21 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,8 +48,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -56,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.payViaBolt12Intent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
@@ -80,14 +90,17 @@ fun Bolt12PayButton(
                     event?.offers() ?: emptyList()
                 }
             if (offers.isNotEmpty()) {
-                Bolt12PayButtonWithOffers(offers)
+                Bolt12PayButtonWithOffers(offers, accountViewModel)
             }
         }
     }
 }
 
 @Composable
-fun Bolt12PayButtonWithOffers(offers: List<String>) {
+fun Bolt12PayButtonWithOffers(
+    offers: List<String>,
+    accountViewModel: AccountViewModel,
+) {
     var expanded by remember { mutableStateOf(false) }
 
     FilledTonalButton(
@@ -107,6 +120,7 @@ fun Bolt12PayButtonWithOffers(offers: List<String>) {
     if (expanded) {
         Bolt12OffersDialog(
             offers = offers,
+            accountViewModel = accountViewModel,
             onDismiss = { expanded = false },
         )
     }
@@ -115,11 +129,19 @@ fun Bolt12PayButtonWithOffers(offers: List<String>) {
 @Composable
 fun Bolt12OffersDialog(
     offers: List<String>,
+    accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
+
+    // Whether we can settle in-app over the user's NIP-47 wallet (nwc#2 `pay`), or
+    // must hand off to an external wallet via a bitcoin: intent.
+    val canPayInApp = remember { accountViewModel.hasNwcWallet() }
+
+    // The offer the user chose to pay over NWC; drives the amount-entry dialog.
+    var nwcPayOffer by remember { mutableStateOf<String?>(null) }
 
     M3ActionDialog(
         title = stringRes(R.string.bolt12_offers),
@@ -129,6 +151,7 @@ fun Bolt12OffersDialog(
             offers.forEach { offer ->
                 Bolt12OfferRow(
                     offer = offer,
+                    canPayInApp = canPayInApp,
                     onCopy = {
                         scope.launch {
                             clipboardManager.setText(offer)
@@ -140,7 +163,7 @@ fun Bolt12OffersDialog(
                                 ).show()
                         }
                     },
-                    onPay = {
+                    onPayViaIntent = {
                         payViaBolt12Intent(
                             offer = offer,
                             context = context,
@@ -150,17 +173,31 @@ fun Bolt12OffersDialog(
                             },
                         )
                     },
+                    onPayInApp = { nwcPayOffer = offer },
                 )
             }
         }
+    }
+
+    nwcPayOffer?.let { offer ->
+        Bolt12NwcAmountDialog(
+            onDismiss = { nwcPayOffer = null },
+            onPay = { amountMillisats ->
+                accountViewModel.payBolt12OfferViaNwc(offer, amountMillisats)
+                nwcPayOffer = null
+                onDismiss()
+            },
+        )
     }
 }
 
 @Composable
 private fun Bolt12OfferRow(
     offer: String,
+    canPayInApp: Boolean,
     onCopy: () -> Unit,
-    onPay: () -> Unit,
+    onPayViaIntent: () -> Unit,
+    onPayInApp: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -187,13 +224,71 @@ private fun Bolt12OfferRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(onClick = onPay) {
+        if (canPayInApp) {
+            IconButton(onClick = onPayInApp) {
+                Icon(
+                    symbol = MaterialSymbols.AccountBalanceWallet,
+                    contentDescription = stringRes(R.string.bolt12_pay_with_wallet),
+                    modifier = Size20Modifier,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        IconButton(onClick = onPayViaIntent) {
             Icon(
                 symbol = MaterialSymbols.Bolt,
                 contentDescription = stringRes(R.string.bolt12_offers),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Collects an amount (in sats) and returns it to [onPay] in millisats. */
+@Composable
+private fun Bolt12NwcAmountDialog(
+    onDismiss: () -> Unit,
+    onPay: (amountMillisats: Long) -> Unit,
+) {
+    var sats by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.bolt12_pay_with_wallet),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                OutlinedTextField(
+                    value = sats,
+                    onValueChange = { new -> sats = new.filter { it.isDigit() } },
+                    label = { Text(text = stringRes(R.string.bolt12_payment_amount_sats)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            val amountSats = sats.toLongOrNull()
+                            if (amountSats != null && amountSats > 0) {
+                                onPay(amountSats * 1000)
+                            }
+                        },
+                        shape = ButtonBorder,
+                        enabled = (sats.toLongOrNull() ?: 0) > 0,
+                    ) {
+                        Text(text = stringRes(R.string.bolt12_pay_with_wallet))
+                    }
+                }
+            }
         }
     }
 }
