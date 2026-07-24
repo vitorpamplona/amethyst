@@ -1445,6 +1445,18 @@ class Account(
         onError: (Int, String?) -> Unit,
         onProcessed: () -> Unit,
     ) {
+        // NONZAP means "pay, but publish no receipt" — settle the offer without binding
+        // a zap intent or emitting a 9736, matching the privacy of a bolt11 NONZAP.
+        if (zapType == LnZapEvent.ZapType.NONZAP) {
+            sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
+                scope.launch {
+                    if (response is IErrorResponseLike) onError(R.string.bolt12_payment_failed, response.errorMessage())
+                    onProcessed()
+                }
+            }
+            return
+        }
+
         val anonymous = zapType == LnZapEvent.ZapType.ANONYMOUS
         // The 9737 intent and the 9736 zap MUST be signed by the same key. An anonymous
         // zap uses a fresh ephemeral key so it carries no `P` tag and isn't traceable.
