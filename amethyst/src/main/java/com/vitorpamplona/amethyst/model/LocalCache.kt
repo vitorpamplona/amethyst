@@ -404,6 +404,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidator
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
@@ -4257,6 +4258,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is ChatMessageRelayListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is Bolt12OfferListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -322,6 +323,7 @@ class AccountSettings(
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
+    var backupBolt12Offers: Bolt12OfferListEvent? = null,
     var callTurnServers: List<CallTurnServer> = emptyList(),
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
@@ -1256,6 +1258,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupNipA3PaymentTargets?.id != newNIPA3PaymentTargets.id) {
             backupNipA3PaymentTargets = newNIPA3PaymentTargets
+            saveAccountSettings()
+        }
+    }
+
+    fun updateBolt12Offers(newBolt12Offers: Bolt12OfferListEvent?) {
+        if (newBolt12Offers == null || newBolt12Offers.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupBolt12Offers?.id != newBolt12Offers.id) {
+            backupBolt12Offers = newBolt12Offers
             saveAccountSettings()
         }
     }

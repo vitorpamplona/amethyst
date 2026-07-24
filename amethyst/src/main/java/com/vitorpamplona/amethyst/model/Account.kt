@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
+import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -759,6 +760,8 @@ class Account(
     val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore, marmotKeyPackageStore) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
+
+    val bolt12OfferList = Bolt12OfferListState(signer, cache, scope, settings)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(
@@ -5540,6 +5543,8 @@ class Account(
     suspend fun sendNestsServersList(servers: List<com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 
     suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
+
+    suspend fun saveBolt12Offers(offers: List<String>) = sendMyPublicAndPrivateOutbox(bolt12OfferList.saveOffers(offers))
 
     fun markAsRead(
         route: String,
