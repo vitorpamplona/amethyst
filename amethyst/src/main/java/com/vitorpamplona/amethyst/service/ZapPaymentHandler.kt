@@ -157,11 +157,13 @@ class ZapPaymentHandler(
             }
 
         // BOLT12-first: a recipient who publishes a kind:10058 offer is zapped over
-        // BOLT12 when we hold an NWC wallet to obtain the payer proof (nwc#2 `pay`).
-        // Recipients without an offer (or when we have no NWC wallet) stay on lightning.
+        // BOLT12 when our default NWC wallet advertises the nwc#2 `pay` method (needed for
+        // the payer proof). Otherwise — no wallet, or a wallet without `pay` — the recipient
+        // stays on lightning, so an unsupported wallet degrades gracefully instead of erroring.
         val canBolt12 =
             account.settings.nwcWallets.value
-                .isNotEmpty()
+                .isNotEmpty() &&
+                account.defaultWalletSupportsBolt12Pay()
 
         val bolt12Recipients =
             unverifiedZapsToSend.mapNotNull {

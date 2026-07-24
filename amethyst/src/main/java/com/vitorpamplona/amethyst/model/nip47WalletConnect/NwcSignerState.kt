@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -99,6 +100,14 @@ class NwcSignerState(
                 NostrWalletConnectResponseCache(it)
             }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, NostrWalletConnectResponseCache(nip47Signer.value))
+
+    /**
+     * The NIP-47 method names the default wallet advertises (nwc#2 `get_info.methods`).
+     * Empty until fetched or when no wallet is set. [Account] refreshes it whenever the
+     * default wallet changes; the zap path reads it to decide whether the BOLT12 `pay`
+     * rail is available before preferring it over lightning.
+     */
+    val defaultWalletCapabilities = MutableStateFlow<Set<String>>(emptySet())
 
     fun buildSigner(uri: Nip47WalletConnect.Nip47URINorm?) =
         uri?.secret?.hexToByteArray()?.let {

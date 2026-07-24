@@ -138,7 +138,7 @@ fun Bolt12OffersDialog(
 
     // Whether we can settle in-app over the user's NIP-47 wallet (nwc#2 `pay`), or
     // must hand off to an external wallet via a bitcoin: intent.
-    val canPayInApp = remember { accountViewModel.hasNwcWallet() }
+    val canPayInApp = remember { accountViewModel.canPayBolt12ViaNwc() }
 
     // The offer the user chose to pay over NWC; drives the amount-entry dialog.
     var nwcPayOffer by remember { mutableStateOf<String?>(null) }
