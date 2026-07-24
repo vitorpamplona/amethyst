@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,30 +32,43 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,15 +85,22 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -86,8 +108,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.coroutines.launch
+import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.zoomable
 
 @Composable
 fun BlossomBlobManagerScreen(
@@ -104,6 +129,11 @@ fun BlossomBlobManagerScreen(
     val error by vm.error.collectAsStateWithLifecycle()
     val pendingPayment by vm.pendingPayment.collectAsStateWithLifecycle()
 
+    // The tapped file, if any. We keep only the hash and re-resolve the row from the
+    // live list each recomposition so the open viewer/sheet stays in sync with
+    // mirror/delete updates (and closes itself when the last copy of the blob is deleted).
+    var selectedHash by remember { mutableStateOf<HexKey?>(null) }
+
     pendingPayment?.let { pending ->
         BlossomPaymentDialog(
             host = pending.targetHost,
@@ -112,6 +142,31 @@ fun BlossomBlobManagerScreen(
             onConfirm = { vm.confirmPendingPayment() },
             onDismiss = { vm.cancelPendingPayment() },
         )
+    }
+
+    selectedHash?.let { hash ->
+        val selected = blobs.firstOrNull { it.hash == hash }
+        when {
+            selected == null -> selectedHash = null
+
+            // Images and videos open in the full-screen zoomable viewer, which carries
+            // the actions in its own bottom drawer. Everything else (PDFs, arbitrary
+            // blobs) has nothing to zoom, so it goes straight to the actions sheet.
+            selected.url != null && selected.isViewable ->
+                BlossomBlobViewer(
+                    row = selected,
+                    vm = vm,
+                    accountViewModel = accountViewModel,
+                    onDismiss = { selectedHash = null },
+                )
+
+            else ->
+                BlobDetailSheet(
+                    row = selected,
+                    vm = vm,
+                    onDismiss = { selectedHash = null },
+                )
+        }
     }
 
     Scaffold(
@@ -164,22 +219,30 @@ fun BlossomBlobManagerScreen(
                     }
 
                 else ->
-                    LazyColumn(
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 104.dp),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         if (blobs.any { it.hasMissing }) {
-                            item { SyncAllBanner(onSyncAll = { vm.syncAll() }) }
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                SyncAllBanner(onSyncAll = { vm.syncAll() })
+                            }
                         }
                         items(blobs, key = { it.hash }) { row ->
-                            BlobCard(row, vm)
+                            GalleryTile(row, onClick = { selectedHash = row.hash })
                         }
                     }
             }
         }
     }
 }
+
+/** Whether a blob is an image or a video, i.e. it can be previewed and shown full-screen. */
+private val BlobRow.isViewable: Boolean
+    get() = type?.let { it.startsWith("image/") || it.startsWith("video/") } == true
 
 @Composable
 private fun CenteredState(content: @Composable () -> Unit) {
@@ -229,13 +292,277 @@ private fun SyncAllBanner(onSyncAll: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * One gallery cell: a square preview — the image itself, or a decoded first frame for a
+ * video (with a play badge) — plus a corner badge summarizing how many of the user's
+ * servers hold this blob. Tapping it opens the full-screen viewer / actions.
+ */
 @Composable
-private fun BlobCard(
+private fun GalleryTile(
+    row: BlobRow,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .clickable(onClick = onClick),
+    ) {
+        BlobPreview(row = row, modifier = Modifier.fillMaxSize())
+
+        SyncBadge(
+            row = row,
+            modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+        )
+    }
+}
+
+/**
+ * Renders a blob's visual preview inside [modifier]'s bounds: the image, or a video's
+ * first frame (decoded by Coil's VideoFrameDecoder) with a centered play glyph. Falls
+ * back to a type glyph while loading fails or for non-visual blobs (e.g. an HLS playlist
+ * Coil can't decode).
+ */
+@Composable
+private fun BlobPreview(
+    row: BlobRow,
+    modifier: Modifier = Modifier,
+    glyphSize: Dp = 34.dp,
+    playIconSize: Dp = 40.dp,
+) {
+    val isVideo = row.type?.startsWith("video/") == true
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (row.url != null && row.isViewable) {
+            SubcomposeAsyncImage(
+                model = row.url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                val state by painter.state.collectAsState()
+                when (state) {
+                    is AsyncImagePainter.State.Success -> {
+                        SubcomposeAsyncImageContent()
+                        if (isVideo) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    symbol = MaterialSymbols.PlayCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(playIconSize),
+                                    tint = Color.White,
+                                )
+                            }
+                        }
+                    }
+
+                    is AsyncImagePainter.State.Error -> BlobGlyph(row, glyphSize)
+
+                    else -> {}
+                }
+            }
+        } else {
+            BlobGlyph(row, glyphSize)
+        }
+    }
+}
+
+@Composable
+private fun BlobGlyph(
+    row: BlobRow,
+    size: Dp,
+) {
+    Icon(
+        symbol = glyphFor(row.type),
+        contentDescription = null,
+        modifier = Modifier.size(size),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/**
+ * Corner chip over a gallery tile: a green check when the blob is on every server, an
+ * amber cloud when some server is still missing it, plus a `present/total` count so the
+ * spread is legible at a glance without opening the file.
+ */
+@Composable
+private fun SyncBadge(
+    row: BlobRow,
+    modifier: Modifier = Modifier,
+) {
+    val synced = !row.hasMissing
+    val accent = if (synced) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.tertiary
+    Row(
+        modifier =
+            modifier
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.45f))
+                .padding(horizontal = 7.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            symbol = if (synced) MaterialSymbols.CheckCircle else MaterialSymbols.CloudUpload,
+            contentDescription =
+                stringRes(
+                    if (synced) R.string.blossom_on_all_servers else R.string.blossom_not_on_all_servers,
+                ),
+            modifier = Modifier.size(13.dp),
+            tint = accent,
+        )
+        Text(
+            text = "${row.presentCount}/${row.servers.size}",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+        )
+    }
+}
+
+/**
+ * Full-screen viewer opened from a gallery tile: the image is zoomable/pannable and a
+ * video plays inline, matching the app's [com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog].
+ * The blob's storage matrix and its sync/copy/open/share/report/delete actions live in a
+ * bottom drawer reached from the top bar, so they don't cover the media until asked for.
+ */
+@Composable
+private fun BlossomBlobViewer(
     row: BlobRow,
     vm: BlossomBlobManagerViewModel,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var drawerOpen by remember { mutableStateOf(false) }
+    val isVideo = row.type?.startsWith("video/") == true
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties =
+            DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+    ) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            val url = row.url
+            if (url != null && isVideo) {
+                val controllerVisible = remember { mutableStateOf(true) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    VideoViewInner(
+                        videoUri = url,
+                        mimeType = row.type,
+                        contentScale = ContentScale.Fit,
+                        borderModifier = Modifier.fillMaxWidth(),
+                        automaticallyStartPlayback = true,
+                        controllerVisible = controllerVisible,
+                        isFullscreen = true,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            } else if (url != null) {
+                val zoomState = rememberZoomState()
+                AsyncImage(
+                    model = url,
+                    contentDescription = row.hash,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().zoomable(zoomState),
+                )
+            }
+
+            // Top bar: back, share, and the drawer toggle.
+            Row(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ViewerIconButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(R.string.back), onDismiss)
+                Spacer(Modifier.weight(1f))
+                if (url != null) {
+                    ViewerIconButton(MaterialSymbols.Share, stringRes(R.string.quick_action_share)) {
+                        shareUrl(context, url)
+                    }
+                }
+                ViewerIconButton(MaterialSymbols.Info, stringRes(R.string.blossom_file_details)) {
+                    drawerOpen = true
+                }
+            }
+
+            // Bottom drawer with the file's storage matrix and actions.
+            if (drawerOpen) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable(onClick = { drawerOpen = false }),
+                )
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                ) {
+                    BlobActionsContent(
+                        row = row,
+                        vm = vm,
+                        modifier =
+                            Modifier
+                                .fillMaxHeight(0.7f)
+                                .navigationBarsPadding()
+                                // Swallow taps so the scrim behind doesn't dismiss the drawer.
+                                .clickable(enabled = false) {},
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ViewerIconButton(
+    symbol: MaterialSymbol,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)),
+    ) {
+        Icon(symbol = symbol, contentDescription = contentDescription, tint = Color.White)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BlobDetailSheet(
+    row: BlobRow,
+    vm: BlossomBlobManagerViewModel,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        BlobActionsContent(row = row, vm = vm, modifier = Modifier.navigationBarsPadding())
+    }
+}
+
+/**
+ * The blob's detail + action list, shared by the [BlobDetailSheet] (non-visual blobs)
+ * and by [BlossomBlobViewer]'s bottom drawer: a preview + hash/size header, the "Stored
+ * on" per-server matrix, the sync (mirror-to-missing) button, and the
+ * copy/open/share/report/delete actions.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BlobActionsContent(
+    row: BlobRow,
+    vm: BlossomBlobManagerViewModel,
+    modifier: Modifier = Modifier,
+) {
     var reportOpen by remember { mutableStateOf(false) }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -243,17 +570,26 @@ private fun BlobCard(
 
     Column(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Header: thumbnail / file glyph + hash + overflow menu.
+        // Preview + identity.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            BlobThumbnail(row)
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                BlobPreview(row = row, modifier = Modifier.fillMaxSize(), glyphSize = 28.dp, playIconSize = 28.dp)
+            }
+            Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(
                     text = row.hash.take(12) + "…" + row.hash.takeLast(6),
                     style = MaterialTheme.typography.titleSmall,
@@ -267,62 +603,24 @@ private fun BlobCard(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+        }
 
-            Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(symbol = MaterialSymbols.MoreVert, contentDescription = null)
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    if (row.url != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringRes(R.string.copy)) },
-                            leadingIcon = { MenuIcon(MaterialSymbols.ContentCopy) },
-                            onClick = {
-                                menuOpen = false
-                                val url = row.url
-                                scope.launch { clipboard.setText(url) }
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringRes(R.string.blossom_open)) },
-                            leadingIcon = { MenuIcon(MaterialSymbols.AutoMirrored.OpenInNew) },
-                            onClick = {
-                                menuOpen = false
-                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, row.url.toUri())) }
-                            },
-                        )
-                    }
-                    if (row.hasPresent) {
-                        DropdownMenuItem(
-                            text = { Text(stringRes(R.string.blossom_report)) },
-                            leadingIcon = { MenuIcon(MaterialSymbols.Report) },
-                            onClick = {
-                                menuOpen = false
-                                reportOpen = true
-                            },
-                        )
-                        HorizontalDivider()
-                        row.presentServers.forEach { server ->
-                            DropdownMenuItem(
-                                text = { Text(stringRes(R.string.blossom_delete_from_host, vm.hostOf(server))) },
-                                leadingIcon = { MenuIcon(MaterialSymbols.Delete, MaterialTheme.colorScheme.error) },
-                                onClick = {
-                                    menuOpen = false
-                                    vm.delete(row.hash, server)
-                                },
-                            )
-                        }
-                    }
-                }
+        // Where the file lives.
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = stringRes(R.string.blossom_stored_on),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                row.servers.forEach { ServerPill(it) }
             }
         }
 
-        // Per-server presence pills (green = has it, grey = missing, spinner = working).
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            row.servers.forEach { ServerPill(it) }
-        }
-
-        // Primary CTA: fill the gaps.
+        // Primary CTA: fill the gaps for this file.
         if (row.hasMissing && row.url != null) {
             FilledTonalButton(
                 onClick = { vm.mirrorToMissing(row) },
@@ -333,6 +631,34 @@ private fun BlobCard(
                 Text(stringRes(R.string.blossom_mirror_to_missing))
             }
         }
+
+        // Secondary actions.
+        if (row.url != null) {
+            val url = row.url
+            DetailAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy)) {
+                scope.launch { clipboard.setText(url) }
+            }
+            DetailAction(MaterialSymbols.Share, stringRes(R.string.quick_action_share)) {
+                shareUrl(context, url)
+            }
+            DetailAction(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(R.string.blossom_open)) {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+            }
+        }
+
+        if (row.hasPresent) {
+            DetailAction(MaterialSymbols.Report, stringRes(R.string.blossom_report)) { reportOpen = true }
+
+            HorizontalDivider()
+
+            row.presentServers.forEach { server ->
+                DetailAction(
+                    symbol = MaterialSymbols.Delete,
+                    label = stringRes(R.string.blossom_delete_from_host, vm.hostOf(server)),
+                    tint = MaterialTheme.colorScheme.error,
+                ) { vm.delete(row.hash, server) }
+            }
+        }
     }
 
     if (reportOpen) {
@@ -341,29 +667,44 @@ private fun BlobCard(
 }
 
 @Composable
-private fun BlobThumbnail(row: BlobRow) {
-    val shape = RoundedCornerShape(12.dp)
-    if (row.url != null && row.type?.startsWith("image/") == true) {
-        AsyncImage(
-            model = row.url,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(48.dp).clip(shape),
-        )
-    } else {
-        Box(
-            modifier = Modifier.size(48.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            val glyph = if (row.type?.startsWith("video/") == true) MaterialSymbols.Download else MaterialSymbols.Storage
-            Icon(
-                symbol = glyph,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
+private fun DetailAction(
+    symbol: MaterialSymbol,
+    label: String,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick)
+                .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(22.dp), tint = tint)
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = tint)
     }
+}
+
+private fun glyphFor(type: String?): MaterialSymbol =
+    when {
+        type?.startsWith("image/") == true -> MaterialSymbols.Image
+        type?.startsWith("video/") == true -> MaterialSymbols.PlayCircle
+        else -> MaterialSymbols.Storage
+    }
+
+private fun shareUrl(
+    context: Context,
+    url: String,
+) {
+    val send =
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, url)
+        }
+    runCatching { context.startActivity(Intent.createChooser(send, null)) }
 }
 
 @Composable
@@ -394,14 +735,6 @@ private fun ServerPill(presence: ServerPresence) {
             color = if (present) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.grayText,
         )
     }
-}
-
-@Composable
-private fun MenuIcon(
-    symbol: MaterialSymbol,
-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-) {
-    Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(20.dp), tint = tint)
 }
 
 private fun humanBytes(bytes: Long): String =
