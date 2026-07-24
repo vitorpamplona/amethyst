@@ -41,6 +41,8 @@ class UserWatcherSubAssembler(
     val failureTracker: RelayOfflineTracker,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Loading profiles"
+
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).

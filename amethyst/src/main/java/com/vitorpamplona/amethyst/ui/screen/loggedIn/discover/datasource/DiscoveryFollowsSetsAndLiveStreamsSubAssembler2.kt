@@ -41,6 +41,8 @@ class DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(
     client: INostrClient,
     allKeys: () -> Set<DiscoveryQueryState>,
 ) : PerUserAndFollowListEoseManager<DiscoveryQueryState, TopFilter>(client, allKeys) {
+    override val subscriptionReason get() = "Discover feed"
+
     override fun updateFilter(
         key: DiscoveryQueryState,
         since: SincePerRelayMap?,

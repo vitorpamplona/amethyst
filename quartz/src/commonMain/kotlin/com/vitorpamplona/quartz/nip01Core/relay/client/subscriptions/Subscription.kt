@@ -28,6 +28,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 data class Subscription(
     val id: String = newSubId(),
     val listener: SubscriptionListener,
+    /**
+     * A short, human-readable explanation of WHY this subscription exists
+     * (e.g. "Your DMs", "Notifications", "Home feed"). Purely a client-side
+     * diagnostic label — it never reaches the relay (a REQ only carries the
+     * [id] and the filters). Surfaced by the always-on notification so the
+     * user can see what each open connection is actually doing. Defaults to
+     * empty for one-off/internal subscriptions that don't need to be shown.
+     */
+    val reason: String = "",
 ) {
     private var currentVersion: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
 

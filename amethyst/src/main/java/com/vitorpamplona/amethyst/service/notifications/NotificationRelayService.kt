@@ -49,6 +49,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -140,6 +141,15 @@ class NotificationRelayService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var relayServiceCollectorJob: Job? = null
     private var connectedRelayCount = 0
+
+    // Cap of reason lines shown in the expanded notification; the rest collapse into a
+    // "+N more" line so the notification stays readable when many screens are open.
+    private val maxReasonLines = 8
+
+    // The grouped, human-readable reasons for the currently-active subscriptions
+    // ("Your DMs", "Home feed ×2", …). Kept so ensureForeground() can rebuild the same
+    // expanded notification on every re-promotion, not just on a reason change.
+    private var activeReasons: List<String> = emptyList()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -235,7 +245,7 @@ class NotificationRelayService : Service() {
      */
     private fun ensureForeground(): Boolean {
         try {
-            val notification = buildNotification(connectedRelayCount)
+            val notification = buildNotification(connectedRelayCount, activeReasons)
             ServiceCompat.startForeground(
                 this,
                 NOTIFICATION_ID,
@@ -298,32 +308,57 @@ class NotificationRelayService : Service() {
 
                 launch {
                     // sample() caps how often we touch the notification. During feed
-                    // load/teardown connectedRelaysFlow churns dozens of times per second;
-                    // posting on every delta blows past Android's notification rate limit
-                    // (~10/s), which silently drops updates and leaves the visible count
-                    // stuck on a stale intermediate value. One refresh per second stays
-                    // well under the limit and always lands the settled count.
-                    Amethyst.instance.client
-                        .connectedRelaysFlow()
-                        .sample(NOTIFICATION_REFRESH_MS)
-                        .collectLatest { relays ->
-                            val count = relays.size
-                            if (count != connectedRelayCount) {
+                    // load/teardown both flows churn dozens of times per second; posting on
+                    // every delta blows past Android's notification rate limit (~10/s), which
+                    // silently drops updates and leaves the visible state stale. One refresh
+                    // per second stays well under the limit and always lands the settled value.
+                    //
+                    // We combine the connected-relay count with the per-subscription reasons
+                    // so the ongoing notification shows not just HOW MANY connections are open
+                    // but WHAT each one is doing ("Your DMs", "Notifications", "Home feed", …).
+                    combine(
+                        Amethyst.instance.client.connectedRelaysFlow(),
+                        Amethyst.instance.client.subscriptionReasonsFlow(),
+                    ) { relays, reasons ->
+                        relays.size to groupReasons(reasons)
+                    }.sample(NOTIFICATION_REFRESH_MS)
+                        .collectLatest { (count, reasons) ->
+                            if (count != connectedRelayCount || reasons != activeReasons) {
                                 connectedRelayCount = count
-                                updateNotification(count)
+                                activeReasons = reasons
+                                updateNotification(count, reasons)
                             }
                         }
                 }
             }
     }
 
-    private fun updateNotification(connectedRelays: Int) {
-        val notification = buildNotification(connectedRelays)
+    private fun updateNotification(
+        connectedRelays: Int,
+        reasons: List<String>,
+    ) {
+        val notification = buildNotification(connectedRelays, reasons)
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun buildNotification(connectedRelays: Int): Notification {
+    /**
+     * Turns the raw subId -> reason map into a display list: identical reasons collapse
+     * into one line with a "×N" multiplier (e.g. two open threads -> "A profile's posts ×2"),
+     * sorted by how many subscriptions share each reason so the busiest work shows first.
+     */
+    private fun groupReasons(reasons: Map<String, String>): List<String> =
+        reasons.values
+            .groupingBy { it }
+            .eachCount()
+            .entries
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .map { (reason, count) -> if (count > 1) "$reason ×$count" else reason }
+
+    private fun buildNotification(
+        connectedRelays: Int,
+        reasons: List<String>,
+    ): Notification {
         val contentText =
             when {
                 connectedRelays <= 0 -> getString(R.string.always_on_notif_connecting)
@@ -348,17 +383,39 @@ class NotificationRelayService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        return NotificationCompat
-            .Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.always_on_notif_title))
-            .setContentText(contentText)
-            .setSmallIcon(R.drawable.amethyst_service)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .build()
+        val builder =
+            NotificationCompat
+                .Builder(this, CHANNEL_ID)
+                .setContentTitle(getString(R.string.always_on_notif_title))
+                .setContentText(contentText)
+                .setSmallIcon(R.drawable.amethyst_service)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+
+        // When expanded, list what each open connection is doing. InboxStyle shows one
+        // line per active subscription reason (capped at [maxReasonLines], the overflow
+        // folded into a "+N more" line), with the relay-count line as the summary. The
+        // collapsed view keeps showing just [contentText], so nothing changes for users
+        // who never expand the notification.
+        if (reasons.isNotEmpty()) {
+            val inbox =
+                NotificationCompat
+                    .InboxStyle()
+                    .setBigContentTitle(getString(R.string.always_on_notif_title))
+                    .setSummaryText(contentText)
+
+            reasons.take(maxReasonLines).forEach { inbox.addLine(it) }
+            val overflow = reasons.size - maxReasonLines
+            if (overflow > 0) {
+                inbox.addLine(pluralStringRes(this, R.plurals.always_on_notif_more_subscriptions, overflow, overflow))
+            }
+            builder.setStyle(inbox)
+        }
+
+        return builder.build()
     }
 
     private fun createNotificationChannel() {

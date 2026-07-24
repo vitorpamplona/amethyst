@@ -28,6 +28,8 @@ class NoteEventLoaderSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<EventFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
+    override val subscriptionReason get() = "Loading posts"
+
     override fun updateFilter(keys: List<EventFinderQueryState>) =
         listOfNotNull(
             filterMissingEvents(keys),

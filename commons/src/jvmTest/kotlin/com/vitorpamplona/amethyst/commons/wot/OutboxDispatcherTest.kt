@@ -165,6 +165,7 @@ class OutboxDispatcherTest {
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
             listener: SubscriptionListener?,
+            reason: String,
         ) {
             allSubscribeCalls.add(filters)
             filters.forEach { (relay, filterList) ->

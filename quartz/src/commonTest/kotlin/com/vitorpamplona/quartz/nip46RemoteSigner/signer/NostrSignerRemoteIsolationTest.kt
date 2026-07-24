@@ -70,6 +70,7 @@ private class TrackingNostrClient : INostrClient {
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         listener: SubscriptionListener?,
+        reason: String,
     ) {
         subscriptions.add(SubscriptionRecord(subId, filters))
     }

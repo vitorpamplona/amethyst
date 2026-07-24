@@ -45,6 +45,8 @@ class MarmotGroupEventsEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Your secure groups"
+
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
     override fun updateFilter(

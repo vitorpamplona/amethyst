@@ -55,6 +55,7 @@ class BlockedRelayFilteringClientTest {
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
             listener: SubscriptionListener?,
+            reason: String,
         ) {
             subscribedFilters = filters
         }

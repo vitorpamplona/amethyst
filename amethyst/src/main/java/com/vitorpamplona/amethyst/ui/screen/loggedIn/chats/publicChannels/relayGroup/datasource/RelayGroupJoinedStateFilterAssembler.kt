@@ -65,6 +65,8 @@ class RelayGroupJoinedStateSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RelayGroupJoinedStateQueryState>,
 ) : PerUniqueIdEoseManager<RelayGroupJoinedStateQueryState, Account>(client, allKeys) {
+    override val subscriptionReason get() = "Your group info"
+
     override fun updateFilter(
         key: RelayGroupJoinedStateQueryState,
         since: SincePerRelayMap?,

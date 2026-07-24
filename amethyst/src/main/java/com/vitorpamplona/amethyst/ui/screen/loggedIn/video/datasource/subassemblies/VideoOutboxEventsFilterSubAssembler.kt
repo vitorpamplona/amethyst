@@ -55,6 +55,8 @@ class VideoOutboxEventsFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<VideoQueryState>,
 ) : PerUserAndFollowListEoseManager<VideoQueryState, TopFilter>(client, allKeys) {
+    override val subscriptionReason get() = "Video feed"
+
     override fun updateFilter(
         key: VideoQueryState,
         since: SincePerRelayMap?,

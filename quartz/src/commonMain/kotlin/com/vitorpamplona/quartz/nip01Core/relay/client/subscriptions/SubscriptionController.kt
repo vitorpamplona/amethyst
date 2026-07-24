@@ -54,7 +54,8 @@ class SubscriptionController(
     fun requestNewSubscription(
         subId: String,
         listener: SubscriptionListener,
-    ): Subscription = Subscription(subId, listener).also { subscriptions.put(it.id, it) }
+        reason: String = "",
+    ): Subscription = Subscription(subId, listener, reason).also { subscriptions.put(it.id, it) }
 
     fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
 
@@ -71,7 +72,7 @@ class SubscriptionController(
             }
 
         subscriptions.forEach { id, sub ->
-            updateRelaysIfNeeded(id, sub.listener, sub.filters(), currentFilters[id])
+            updateRelaysIfNeeded(id, sub.listener, sub.filters(), currentFilters[id], sub.reason)
         }
     }
 
@@ -80,20 +81,21 @@ class SubscriptionController(
         listener: SubscriptionListener,
         newFilters: Map<NormalizedRelayUrl, List<Filter>>?,
         oldFilters: Map<NormalizedRelayUrl, List<Filter>>?,
+        reason: String = "",
     ) {
         if (oldFilters != null) {
             if (newFilters == null) {
                 // was active and is not active anymore, just close.
                 client.unsubscribe(subId)
             } else {
-                client.subscribe(subId, newFilters, listener)
+                client.subscribe(subId, newFilters, listener, reason)
             }
         } else {
             if (newFilters == null) {
                 // was not active and is still not active, does nothing
             } else {
                 // was not active and becomes active, sends the entire filter.
-                client.subscribe(subId, newFilters, listener)
+                client.subscribe(subId, newFilters, listener, reason)
             }
         }
     }

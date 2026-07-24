@@ -46,12 +46,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -101,6 +103,17 @@ class NostrClient(
     private val activeRequests: PoolRequests = PoolRequests()
     private val activeCounts: PoolCounts = PoolCounts()
     private val eventOutbox: PoolEventOutbox = PoolEventOutbox()
+
+    /**
+     * subId -> human-readable reason for every subscription currently open with a
+     * non-blank reason. Populated in [subscribe] and pruned in [unsubscribe], so it
+     * mirrors what the live connections are doing. Exposed via [subscriptionReasonsFlow]
+     * for the always-on notification. Updated only when the mapping actually changes to
+     * avoid churning the flow on every filter refresh (subscribe fires on each change).
+     */
+    private val subscriptionReasons = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    override fun subscriptionReasonsFlow(): StateFlow<Map<String, String>> = subscriptionReasons
 
     private var listeners = setOf<RelayConnectionListener>()
 
@@ -218,7 +231,10 @@ class NostrClient(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         listener: SubscriptionListener?,
+        reason: String,
     ) {
+        registerReason(subId, reason)
+
         val relaysToUpdate = activeRequests.addOrUpdate(subId, filters, listener)
 
         if (isActive()) {
@@ -272,7 +288,27 @@ class NostrClient(
         }
     }
 
+    /**
+     * Records (or clears) the display reason for [subId]. A blank reason removes any
+     * existing mapping, so a subscription that stops passing a reason disappears from
+     * the list. No-ops when the mapping is unchanged to keep [subscriptionReasons] quiet.
+     */
+    private fun registerReason(
+        subId: String,
+        reason: String,
+    ) {
+        subscriptionReasons.update { current ->
+            if (reason.isBlank()) {
+                if (subId in current) current - subId else current
+            } else {
+                if (current[subId] == reason) current else current + (subId to reason)
+            }
+        }
+    }
+
     override fun unsubscribe(subId: String) {
+        registerReason(subId, "")
+
         val relaysToUpdateReqs = activeRequests.remove(subId)
         val relaysToUpdateCounts = activeCounts.remove(subId)
 

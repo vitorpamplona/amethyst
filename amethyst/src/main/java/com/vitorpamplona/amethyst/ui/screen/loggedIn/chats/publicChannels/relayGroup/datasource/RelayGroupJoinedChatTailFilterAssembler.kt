@@ -75,6 +75,8 @@ class RelayGroupJoinedChatTailSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RelayGroupJoinedChatTailQueryState>,
 ) : PerUniqueIdEoseManager<RelayGroupJoinedChatTailQueryState, Account>(client, allKeys) {
+    override val subscriptionReason get() = "Your group chats"
+
     private val windowLoad = WindowLoadTracker("relayGroup.preview.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 

@@ -57,8 +57,9 @@ class BlockedRelayFilteringClient(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         listener: SubscriptionListener?,
+        reason: String,
     ) {
-        delegate.subscribe(subId, filters.withoutBlocked(), listener)
+        delegate.subscribe(subId, filters.withoutBlocked(), listener, reason)
     }
 
     override fun count(

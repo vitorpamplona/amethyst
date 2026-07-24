@@ -89,6 +89,7 @@ class FeedMetadataCoordinatorTest {
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
             listener: SubscriptionListener?,
+            reason: String,
         ) {
             subscriptions[subId] = listener
             subscribeCalls.add(filters)

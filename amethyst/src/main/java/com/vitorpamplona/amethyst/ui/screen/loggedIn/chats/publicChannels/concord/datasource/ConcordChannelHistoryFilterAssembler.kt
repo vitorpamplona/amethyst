@@ -79,6 +79,8 @@ class ConcordChannelHistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ConcordChannelHistoryQueryState>,
 ) : PerUniqueIdEoseManager<ConcordChannelHistoryQueryState, ConcordChannelId>(client, allKeys) {
+    override val subscriptionReason get() = "A Concord group's history"
+
     // Floor at `now` (liveTailSeconds = 0), NOT the DM 7-day tail: the Concord live subscription isn't a
     // strict recent-tail (it asks the plane author unbounded and the relay caps the result), so paging
     // must walk the WHOLE history from the top to reach "recent but capped" messages. Overlap with the

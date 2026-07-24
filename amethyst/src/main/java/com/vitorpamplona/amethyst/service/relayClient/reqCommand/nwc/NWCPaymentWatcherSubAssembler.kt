@@ -28,6 +28,8 @@ class NWCPaymentWatcherSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<NWCPaymentQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<NWCPaymentQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Wallet payments"
+
     override fun updateFilter(keys: List<NWCPaymentQueryState>): List<RelayBasedFilter>? {
         if (keys.isEmpty()) return null
 

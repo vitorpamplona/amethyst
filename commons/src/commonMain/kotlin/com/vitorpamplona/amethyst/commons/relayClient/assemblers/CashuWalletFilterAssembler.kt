@@ -92,6 +92,8 @@ private class CashuWalletSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<CashuWalletQueryState>,
 ) : SingleSubEoseManager<CashuWalletQueryState>(client, allKeys, invalidateAfterEose = true) {
+    override val subscriptionReason get() = "Your Cashu wallet"
+
     override fun distinct(key: CashuWalletQueryState): Any = key.pubkey
 
     override fun updateFilter(

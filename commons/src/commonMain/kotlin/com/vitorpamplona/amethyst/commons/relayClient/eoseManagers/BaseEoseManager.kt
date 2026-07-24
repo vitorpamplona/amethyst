@@ -35,11 +35,51 @@ abstract class BaseEoseManager<T>(
 ) : IEoseManager {
     private val orchestrator = SubscriptionController(client)
 
+    /**
+     * A short, human-readable explanation of what this manager's subscriptions are
+     * doing (e.g. "Your DMs", "Notifications", "Home feed"). Surfaced by the always-on
+     * notification so the user can see what each open relay connection is for.
+     *
+     * Override with a friendly, CONSTANT label (do not reference constructor fields that
+     * may not be initialized yet: [SingleSubEoseManager] creates its subscription in a
+     * property initializer, so this getter can run before the leaf class finishes
+     * constructing). When null, a readable name derived from the class name is used, so
+     * every subscription is labeled even without an override.
+     */
+    open val subscriptionReason: String? get() = null
+
     abstract fun updateSubscriptions(keys: Set<T>)
 
     fun getSubscription(subId: String) = orchestrator.getSub(subId)
 
-    fun requestNewSubscription(listener: SubscriptionListener) = orchestrator.requestNewSubscription(newSubId(), listener)
+    fun requestNewSubscription(listener: SubscriptionListener) = orchestrator.requestNewSubscription(newSubId(), listener, resolveReason())
+
+    fun requestNewSubscription(
+        reason: String,
+        listener: SubscriptionListener,
+    ) = orchestrator.requestNewSubscription(newSubId(), listener, reason)
+
+    private fun resolveReason(): String = subscriptionReason ?: humanizeClassName()
+
+    /**
+     * Fallback label for managers that don't override [subscriptionReason]: strips the
+     * infrastructure suffix from the class name and splits camelCase into words, e.g.
+     * `HomeOutboxEventsEoseManager` -> "Home Outbox Events". Not pretty for every class,
+     * but always non-blank and good enough to tell subscriptions apart in the list.
+     */
+    private fun humanizeClassName(): String {
+        val raw = this::class.simpleName ?: return "Subscription"
+        val stripped =
+            raw
+                .removeSuffix("SubAssembler")
+                .removeSuffix("SubAssembly")
+                .removeSuffix("EoseManager")
+                .removeSuffix("FilterAssembler")
+                .removeSuffix("Assembler")
+                .removeSuffix("Manager")
+                .ifEmpty { raw }
+        return stripped.replace(Regex("(?<=[a-z0-9])(?=[A-Z])"), " ").trim()
+    }
 
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 

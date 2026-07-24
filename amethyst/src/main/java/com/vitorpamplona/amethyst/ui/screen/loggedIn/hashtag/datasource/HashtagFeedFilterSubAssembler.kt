@@ -29,6 +29,8 @@ class HashtagFeedFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<HashtagQueryState>,
 ) : PerUniqueIdEoseManager<HashtagQueryState, String>(client, allKeys) {
+    override val subscriptionReason get() = "Hashtag feed"
+
     override fun updateFilter(
         key: HashtagQueryState,
         since: SincePerRelayMap?,

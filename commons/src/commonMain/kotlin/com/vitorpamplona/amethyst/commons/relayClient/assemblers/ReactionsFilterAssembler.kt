@@ -51,6 +51,8 @@ class ReactionsFilterAssembler(
     client: INostrClient,
     allKeys: () -> Set<ReactionsQueryState>,
 ) : SingleSubEoseManager<ReactionsQueryState>(client, allKeys, invalidateAfterEose = true) {
+    override val subscriptionReason get() = "Loading reactions"
+
     override fun distinct(key: ReactionsQueryState): Any = key.noteIds.hashCode()
 
     override fun updateFilter(

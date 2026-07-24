@@ -32,6 +32,8 @@ class CommunityFeedFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<CommunityQueryState>,
 ) : SingleSubEoseManager<CommunityQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Community feed"
+
     override fun updateFilter(
         keys: List<CommunityQueryState>,
         since: SincePerRelayMap?,

@@ -56,6 +56,8 @@ class HomeOutboxEventsEoseManager(
     client: INostrClient,
     allKeys: () -> Set<HomeQueryState>,
 ) : PerUserAndFollowListEoseManager<HomeQueryState, TopFilter>(client, allKeys) {
+    override val subscriptionReason get() = "Home feed"
+
     override fun updateFilter(
         key: HomeQueryState,
         since: SincePerRelayMap?,

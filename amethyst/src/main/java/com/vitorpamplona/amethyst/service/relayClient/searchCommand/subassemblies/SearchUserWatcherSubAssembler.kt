@@ -48,6 +48,8 @@ class SearchUserWatcherSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<SearchQueryState>,
 ) : PerUniqueIdEoseManager<SearchQueryState, Int>(client, allKeys) {
+    override val subscriptionReason get() = "Searching people"
+
     override fun updateFilter(
         key: SearchQueryState,
         since: SincePerRelayMap?,

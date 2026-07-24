@@ -42,6 +42,8 @@ class ChatroomNip04SubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
+    override val subscriptionReason get() = "A direct message chat"
+
     private val windowLoad = WindowLoadTracker("convo.nip04.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 

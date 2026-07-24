@@ -74,6 +74,8 @@ class AccountNotificationsHistoryEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Your notifications (history)"
+
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
     // A modest page: each marker-triggered advance pulls ~500 older notifications, digestible to render

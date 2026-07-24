@@ -51,6 +51,8 @@ class MetadataFilterAssembler(
     client: INostrClient,
     allKeys: () -> Set<MetadataQueryState>,
 ) : SingleSubEoseManager<MetadataQueryState>(client, allKeys, invalidateAfterEose = true) {
+    override val subscriptionReason get() = "Loading profile info"
+
     override fun distinct(key: MetadataQueryState): Any = key.pubkeys.hashCode()
 
     override fun updateFilter(

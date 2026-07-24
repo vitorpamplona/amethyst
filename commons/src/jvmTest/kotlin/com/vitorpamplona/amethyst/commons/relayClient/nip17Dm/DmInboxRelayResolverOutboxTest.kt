@@ -91,6 +91,7 @@ class DmInboxRelayResolverOutboxTest {
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
             listener: SubscriptionListener?,
+            reason: String,
         ) {
             filters.forEach { (relay, filterList) ->
                 queriedRelays.add(relay)

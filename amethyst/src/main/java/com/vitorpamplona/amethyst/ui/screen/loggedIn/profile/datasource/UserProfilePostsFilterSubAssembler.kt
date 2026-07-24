@@ -29,6 +29,8 @@ class UserProfilePostsFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<UserProfileQueryState>,
 ) : PerUserEoseManager<UserProfileQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "A profile's posts"
+
     override fun updateFilter(
         key: UserProfileQueryState,
         since: SincePerRelayMap?,

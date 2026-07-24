@@ -70,6 +70,8 @@ private class CashuMintDirectorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<CashuMintDirectoryQueryState>,
 ) : SingleSubEoseManager<CashuMintDirectoryQueryState>(client, allKeys, invalidateAfterEose = true) {
+    override val subscriptionReason get() = "Cashu mint directory"
+
     override fun distinct(key: CashuMintDirectoryQueryState): Any = key.relays.hashCode()
 
     override fun updateFilter(

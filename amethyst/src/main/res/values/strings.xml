@@ -1948,6 +1948,10 @@
         <item quantity="other">Connected to %1$d relays</item>
     </plurals>
     <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
+    <plurals name="always_on_notif_more_subscriptions">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
 

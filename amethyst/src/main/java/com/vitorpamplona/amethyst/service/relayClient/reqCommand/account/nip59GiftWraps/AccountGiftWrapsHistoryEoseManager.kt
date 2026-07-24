@@ -60,6 +60,8 @@ class AccountGiftWrapsHistoryEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Your private messages (history)"
+
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
     private val pager = BackwardRelayPager("giftwrap.history")

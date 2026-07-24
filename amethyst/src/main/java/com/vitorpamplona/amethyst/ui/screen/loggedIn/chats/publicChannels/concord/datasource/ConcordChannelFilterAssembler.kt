@@ -68,6 +68,8 @@ class ConcordChannelSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ConcordChannelQueryState>,
 ) : PerUniqueIdEoseManager<ConcordChannelQueryState, Account>(client, allKeys) {
+    override val subscriptionReason get() = "Your Concord groups"
+
     override fun updateFilter(
         key: ConcordChannelQueryState,
         since: SincePerRelayMap?,

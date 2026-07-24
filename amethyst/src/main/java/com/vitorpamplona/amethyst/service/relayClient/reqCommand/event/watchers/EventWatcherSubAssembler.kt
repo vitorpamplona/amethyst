@@ -36,6 +36,8 @@ class EventWatcherSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubEoseManager<EventFinderQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Watching replies & reactions"
+
     var lastNotesOnFilter = emptyList<Note>()
     var latestEOSEs: EOSEAccountFast<Note> = EOSEAccountFast(1000)
 

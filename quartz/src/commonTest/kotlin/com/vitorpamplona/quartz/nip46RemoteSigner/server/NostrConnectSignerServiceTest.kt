@@ -128,6 +128,7 @@ class NostrConnectSignerServiceTest {
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
             listener: SubscriptionListener?,
+            reason: String,
         ) {
             this.listener = listener
         }

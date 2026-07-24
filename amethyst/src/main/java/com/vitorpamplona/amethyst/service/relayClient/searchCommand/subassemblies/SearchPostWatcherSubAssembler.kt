@@ -47,6 +47,8 @@ class SearchPostWatcherSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<SearchQueryState>,
 ) : PerUniqueIdEoseManager<SearchQueryState, Int>(client, allKeys) {
+    override val subscriptionReason get() = "Search results"
+
     override fun updateFilter(
         key: SearchQueryState,
         since: SincePerRelayMap?,

@@ -50,6 +50,8 @@ class ChatroomListNip04SubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomListState>,
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
+    override val subscriptionReason get() = "Your direct messages"
+
     private val windowLoad = WindowLoadTracker("rooms.nip04.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 

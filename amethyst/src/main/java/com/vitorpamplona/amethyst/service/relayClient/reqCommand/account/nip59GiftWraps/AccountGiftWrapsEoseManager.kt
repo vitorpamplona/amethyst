@@ -54,6 +54,8 @@ class AccountGiftWrapsEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Your private messages"
+
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
     // The initial-load tracker drives the boot spinner: it stays true until every DM relay has

@@ -138,6 +138,7 @@ class AccountFollowsLoaderSubAssembler(
                     }
                 }
             },
+            reason = "Contacts' relay lists",
         )
 
     fun updateFilterForAllAccounts(accounts: Collection<Account>): List<RelayBasedFilter>? {

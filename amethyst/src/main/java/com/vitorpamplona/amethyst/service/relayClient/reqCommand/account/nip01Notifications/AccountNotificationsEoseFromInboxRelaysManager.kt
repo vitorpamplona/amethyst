@@ -41,6 +41,8 @@ class AccountNotificationsEoseFromInboxRelaysManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Your notifications"
+
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
     /**

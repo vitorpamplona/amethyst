@@ -399,6 +399,7 @@ private class CapturingNostrClient : INostrClient {
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         listener: SubscriptionListener?,
+        reason: String,
     ) {}
 
     override fun count(
@@ -460,6 +461,7 @@ private class CountingNostrClient(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         listener: SubscriptionListener?,
+        reason: String,
     ) {}
 
     override fun count(

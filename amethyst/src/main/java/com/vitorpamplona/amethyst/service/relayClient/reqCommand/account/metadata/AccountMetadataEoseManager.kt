@@ -38,6 +38,8 @@ class AccountMetadataEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
+    override val subscriptionReason get() = "Your account info"
+
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
     fun relayFlow(query: AccountQueryState) = query.account.homeRelays.flow

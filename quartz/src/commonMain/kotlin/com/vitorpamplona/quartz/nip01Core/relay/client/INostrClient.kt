@@ -69,7 +69,19 @@ interface INostrClient : AutoCloseable {
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         listener: SubscriptionListener? = null,
+        reason: String = "",
     )
+
+    /**
+     * Maps each currently-active subscription id to a short, human-readable
+     * explanation of why it is open (e.g. "Your DMs", "Notifications"). Only
+     * subscriptions that were opened with a non-blank reason appear here, and
+     * an entry is removed as soon as its subscription is closed — so the map
+     * reflects what the live relay connections are actually doing right now.
+     * Consumed by the always-on notification service. The default is an empty,
+     * never-changing flow for clients that don't track reasons.
+     */
+    fun subscriptionReasonsFlow(): StateFlow<Map<String, String>> = MutableStateFlow(emptyMap())
 
     fun count(
         subId: String = newSubId(),
@@ -142,6 +154,7 @@ class EmptyNostrClient : INostrClient {
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         listener: SubscriptionListener?,
+        reason: String,
     ) { }
 
     override fun count(
