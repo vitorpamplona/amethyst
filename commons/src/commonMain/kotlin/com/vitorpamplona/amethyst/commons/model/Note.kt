@@ -742,14 +742,23 @@ open class Note(
             val merged =
                 if (existing == null) {
                     entry
+                } else if (entry.cryptoVerified != existing.cryptoVerified) {
+                    // Cross-verification dedup. Only a crypto-verified proof has an amount
+                    // bound by the invoice signature; an unverified one (a compressed proof,
+                    // or an offer we can't bind) carries a self-chosen amount and payment
+                    // hash. Because a payer proof publishes its `proof_preimage`, once any
+                    // BOLT12 zap is public anyone can replay that preimage in a fresh,
+                    // unverifiable proof with a 1-msat amount and the same payment hash — so
+                    // if we let the lower amount win here and inherited the verified flag, a
+                    // griefer could drive the counted total to ~zero and mislabel a fake
+                    // amount as verified. Keep the verified entry outright, whichever amount
+                    // it carries; never let an unverified duplicate override it.
+                    if (entry.cryptoVerified) entry else existing
                 } else {
-                    // Same settled payment (dedup by invoice_payment_hash). NIP-XX: count
-                    // only one, and if amounts differ, keep the LOWER — so a re-publish
-                    // with a bigger amount tag can't inflate the total. Keep the stronger
-                    // verification flag, and the source of whichever entry we keep the
-                    // amount from.
-                    val keepEntry = if (entry.amountMillisats < existing.amountMillisats) entry else existing
-                    keepEntry.copy(cryptoVerified = entry.cryptoVerified || existing.cryptoVerified)
+                    // Same verification status: dedup by the settled payment and, if amounts
+                    // differ, keep the LOWER — so a re-publish with a bigger amount tag can't
+                    // inflate the total (NIP-XX). Both share the same cryptoVerified flag.
+                    if (entry.amountMillisats < existing.amountMillisats) entry else existing
                 }
             if (merged == existing) return@withLock false
             bolt12Zaps = bolt12Zaps + Pair(paymentHashHex, merged)

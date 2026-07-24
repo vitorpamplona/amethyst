@@ -81,6 +81,28 @@ class NoteBolt12ZapTest {
     }
 
     @Test
+    fun aLowerUnverifiedRepublishCannotGriefAVerifiedTotal() {
+        // A payer proof publishes its proof_preimage, so once a BOLT12 zap is public
+        // anyone can replay the same payment hash in an UNVERIFIABLE (e.g. compressed)
+        // proof carrying a self-chosen 1-msat amount. The lower-amount dedup MUST apply
+        // only among validated proofs — an unverified duplicate can neither lower the
+        // counted amount nor inherit the verified flag. Both arrival orders.
+        val verifiedFirst = note("a".repeat(64))
+        verifiedFirst.addBolt12Zap(note("b".repeat(64)), "h", amountMillisats = 5_000_000L, cryptoVerified = true)
+        verifiedFirst.addBolt12Zap(note("c".repeat(64)), "h", amountMillisats = 1L, cryptoVerified = false)
+        assertEquals(1, verifiedFirst.bolt12Zaps.size)
+        assertTrue(verifiedFirst.bolt12Zaps["h"]!!.cryptoVerified)
+        assertEquals(5_000L, verifiedFirst.zapsAmount.toLong(), "an unverified 1-msat replay must not grief the total down")
+
+        val unverifiedFirst = note("a".repeat(64))
+        unverifiedFirst.addBolt12Zap(note("c".repeat(64)), "h", amountMillisats = 1L, cryptoVerified = false)
+        unverifiedFirst.addBolt12Zap(note("b".repeat(64)), "h", amountMillisats = 5_000_000L, cryptoVerified = true)
+        assertEquals(1, unverifiedFirst.bolt12Zaps.size)
+        assertTrue(unverifiedFirst.bolt12Zaps["h"]!!.cryptoVerified)
+        assertEquals(5_000L, unverifiedFirst.zapsAmount.toLong(), "order must not matter")
+    }
+
+    @Test
     fun removingBySourceDropsTheEntryAndUpdatesTheTotal() {
         val target = note("a".repeat(64))
         val source = note("b".repeat(64))
