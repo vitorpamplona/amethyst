@@ -137,7 +137,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDe
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -577,12 +576,6 @@ class AppModules(
             )
         }
 
-    // Application-wide ots verification cache
-    val otsVerifCache by lazy {
-        Log.d("AppModules", "OtsCache Init")
-        VerificationStateCache(otsResolverBuilder)
-    }
-
     val torEvaluatorFlow =
         TorRelayState(
             okHttpClients,
@@ -747,7 +740,7 @@ class AppModules(
     // Tries to verify new OTS events when they arrive.
     val otsEventVerifier =
         IncomingOtsEventVerifier(
-            otsVerifCache = { otsVerifCache },
+            otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             scope = applicationIOScope,
         )

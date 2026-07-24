@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -164,6 +165,7 @@ open class Note(
         removeBoost(note)
         removeReaction(note)
         removeEdit(note)
+        removeTimestamp(note)
         removeZap(note)
         removeZapPayment(note)
         removeReport(note)
@@ -177,6 +179,18 @@ open class Note(
     fun pollStateOrNull(): PollResponsesCache? = poll
 
     fun pollState(): PollResponsesCache = poll ?: PollResponsesCache().also { poll = it }
+
+    /**
+     * When this note holds a NIP-03 OpenTimestamps event (kind 1040), its memoized blockchain
+     * verification verdict. Kept on the note itself — not in a separate id-keyed cache — so the
+     * (expensive, network-backed) result shares the note's lifecycle: the attestation is anchored on
+     * its target's [timestamps] and both are evicted together. `null` means never verified yet.
+     *
+     * `@Volatile`: written by the OTS verifier on `applicationIOScope` and read from the Compose
+     * read path when folding an earliest-attested time.
+     */
+    @Volatile
+    var otsVerification: VerificationState? = null
 
     // These fields are updated every time an event related to this note is received.
     var replies = listOf<Note>()
@@ -197,6 +211,16 @@ open class Note(
      * author-matching edit.
      */
     var edits = listOf<Note>()
+        private set
+
+    /**
+     * NIP-03 OpenTimestamps attestations (kind 1040) proving this note existed by a given time,
+     * held here — like [reactions] and [edits] — so an attestation survives exactly as long as the
+     * note it timestamps and is dropped the moment that note leaves the cache (including on a NIP-09
+     * delete). Anchoring them here also replaces the old full-cache scan: the OTS pill folds this
+     * list directly. Each attestation memoizes its own blockchain verdict in [Note.otsVerification].
+     */
+    var timestamps = listOf<Note>()
         private set
 
     var reports = mapOf<User, List<Note>>()
@@ -424,6 +448,20 @@ open class Note(
         }
     }
 
+    fun addTimestamp(note: Note) {
+        if (note !in timestamps) {
+            timestamps = timestamps + note
+            flowSet?.ots?.invalidateData()
+        }
+    }
+
+    fun removeTimestamp(note: Note) {
+        if (note in timestamps) {
+            timestamps = timestamps - note
+            flowSet?.ots?.invalidateData()
+        }
+    }
+
     fun removeBoost(note: Note) {
         if (note in boosts) {
             boosts = boosts - note
@@ -437,6 +475,7 @@ open class Note(
         val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
         val editsChanged = edits.isNotEmpty()
+        val timestampsChanged = timestamps.isNotEmpty()
         val reportsChanged = reports.isNotEmpty()
         val labelsChanged = labels.isNotEmpty()
 
@@ -445,6 +484,7 @@ open class Note(
                 reactions.values.flatten() +
                 boosts +
                 edits +
+                timestamps +
                 reports.values.flatten() +
                 labels.values.flatten() +
                 zaps.keys +
@@ -458,6 +498,7 @@ open class Note(
         reactions = mapOf()
         boosts = listOf()
         edits = listOf()
+        timestamps = listOf()
         reports = mapOf()
         labels = mapOf()
         zaps = mapOf()
@@ -472,6 +513,7 @@ open class Note(
         if (reactionsChanged) flowSet?.reactions?.invalidateData()
         if (boostsChanged) flowSet?.boosts?.invalidateData()
         if (editsChanged) flowSet?.edits?.invalidateData()
+        if (timestampsChanged) flowSet?.ots?.invalidateData()
         if (reportsChanged) flowSet?.reports?.invalidateData()
         if (labelsChanged) flowSet?.labels?.invalidateData()
         if (zapsChanged) flowSet?.zaps?.invalidateData()

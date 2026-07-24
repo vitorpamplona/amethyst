@@ -37,8 +37,8 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.nip03Timestamp.earliestOtsVerifiedTime
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -119,12 +119,10 @@ fun LoadOts(
     val noteStatus by observeNoteOts(note, accountViewModel)
 
     LaunchedEffect(key1 = noteStatus) {
+        val target = noteStatus?.note ?: note
         val newOts =
             withContext(Dispatchers.IO) {
-                LocalCache.findEarliestOtsForNote(
-                    note = noteStatus?.note ?: note,
-                    otsVerifCacheBuilder = { Amethyst.instance.otsVerifCache },
-                )
+                target.earliestOtsVerifiedTime(Amethyst.instance.otsResolverBuilder.build())
             }
 
         earliestDate =

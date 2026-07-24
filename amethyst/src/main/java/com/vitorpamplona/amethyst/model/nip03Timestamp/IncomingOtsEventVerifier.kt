@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model.nip03Timestamp
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
 class IncomingOtsEventVerifier(
-    private val otsVerifCache: () -> VerificationStateCache,
+    private val otsResolverBuilder: OtsResolverBuilder,
     private val cache: LocalCache,
     private val scope: CoroutineScope,
 ) {
@@ -49,11 +49,12 @@ class IncomingOtsEventVerifier(
                 null,
             )
 
+    // Verifies each newly-arrived attestation once and memoizes the verdict on the note itself
+    // (Note.otsVerification), so the OTS pill can render off a cached result without re-hitting
+    // the blockchain. The verdict is evicted with the note — no separate cache to keep in sync.
     suspend fun consume(note: Note) {
-        note.event?.let { event ->
-            if (event is OtsEvent) {
-                otsVerifCache().cacheVerify(event)
-            }
+        if (note.event is OtsEvent) {
+            note.cacheVerifyOts(otsResolverBuilder.build())
         }
     }
 }
