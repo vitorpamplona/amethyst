@@ -3268,8 +3268,6 @@ object LocalCache : ILocalCache, ICacheProvider {
             }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
     }
 
-    fun cachedModificationEventsForNote(note: Note): List<Note> = findLatestModificationForNote(note)
-
     /**
      * The kind-40003 Buzz edit currently overlaying [note], or null when unedited. Like every other
      * edit kind, only the ORIGINAL message author's edits count — the send side already gates Edit to
