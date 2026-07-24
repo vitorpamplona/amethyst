@@ -3567,6 +3567,11 @@ object LocalCache : ILocalCache, ICacheProvider {
             getNoteIfExists(quotedId)?.removeBoost(note)
         }
 
+        // Edits (1010/3302/40003) are anchored on their target's Note.edits and carry no `replyTo`
+        // back-link, so the unlink above can't reach them — resolve the target by the edit's `e` tag
+        // and drop it there, or a deleted edit would keep overlaying its message.
+        editedTargetIdOf(noteEvent)?.let { getNoteIfExists(it)?.removeEdit(note) }
+
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
                 getUserIfExists(it.pubkey)?.reportsOrNull()?.let { reports ->
@@ -3604,6 +3609,15 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         refreshDeletedNoteObservers(note)
     }
+
+    /** The id of the message/post an edit event targets (its `e` tag), across all three edit kinds. */
+    private fun editedTargetIdOf(event: Event?): HexKey? =
+        when (event) {
+            is TextNoteModificationEvent -> event.editedNote()?.eventId
+            is ConcordChatEditEvent -> event.editedMessageId()
+            is StreamMessageEditEvent -> event.editedMessage()
+            else -> null
+        }
 
     fun unlinkAndRemove(nextToBeRemoved: List<Note>) {
         nextToBeRemoved.forEach { note -> unlinkAndRemove(note) }

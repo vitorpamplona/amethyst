@@ -25,8 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,40 +32,11 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.latestConcordEdit
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-
-/**
- * Observes the newest kind-3302 Concord edit overlaying a Concord chat message [note],
- * recomposing when a new edit lands. Returns null for non-Concord messages or an
- * unedited one.
- *
- * Concord edits ride the encrypted channel plane (unlike public feed edits, there is no
- * relay subscription to start — the session decrypts the wrap and lands the kind-3302
- * rumor in [LocalCache] itself). Each edit is attached to the message it edits ([Note.edits],
- * like a reaction to its target), so it is held for exactly as long as the channel-retained
- * message — a Concord rumor is decrypted once per session and can't be re-downloaded, so it
- * must not be left orphaned in the soft cache. We recompute from that list whenever it changes.
- * Only edits authored by the original message's author are applied — so a member can't rewrite
- * someone else's message — and the latest by CORD-02 §4 send time wins.
- */
-@Composable
-fun observeConcordEdit(note: Note): Note? {
-    // `addEdit` invalidates this flow, so collecting it re-runs the fold on each new edit. A non-Concord
-    // message simply has no kind-3302 edits, so [Note.latestConcordEdit] returns null for it.
-    val latest by
-        produceState<Note?>(initialValue = null, note.idHex) {
-            note.flow().edits.stateFlow.collect {
-                value = note.latestConcordEdit()
-            }
-        }
-    return latest
-}
 
 /**
  * A Concord chat message whose content has been superseded by a kind-3302 edit:

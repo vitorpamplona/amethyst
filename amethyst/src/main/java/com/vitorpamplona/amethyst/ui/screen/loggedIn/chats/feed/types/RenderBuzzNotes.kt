@@ -30,8 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +41,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.latestBuzzEdit
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -63,26 +60,6 @@ import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-
-/**
- * Observes the newest kind-40003 edit overlaying [note], recomposing when new edits
- * arrive. Returns null when the message is unedited.
- *
- * Each edit is anchored on the message it edits ([Note.edits], where LocalCache consumes it),
- * so it is held for as long as its message and read straight off the note — no channel-keyed side
- * store. [Note.latestBuzzEdit] applies only the original author's newest edit; [addEdit]
- * invalidates the note's edits flow, so collecting it re-runs the fold.
- */
-@Composable
-fun observeBuzzEdit(note: Note): Note? {
-    val latest by
-        produceState<Note?>(initialValue = null, note.idHex) {
-            note.flow().edits.stateFlow.collect {
-                value = note.latestBuzzEdit()
-            }
-        }
-    return latest
-}
 
 /**
  * A Buzz stream message whose content has been superseded by a kind-40003 edit:

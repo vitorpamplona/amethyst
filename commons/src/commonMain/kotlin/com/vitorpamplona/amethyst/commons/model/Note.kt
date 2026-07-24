@@ -163,6 +163,7 @@ open class Note(
         removeReply(note)
         removeBoost(note)
         removeReaction(note)
+        removeEdit(note)
         removeZap(note)
         removeZapPayment(note)
         removeReport(note)

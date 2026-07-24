@@ -56,7 +56,8 @@ fun Note.latestBuzzEdit(): Note? {
     val authorHex = author?.pubkeyHex ?: return null
     return edits
         .filter { it.event is StreamMessageEditEvent && it.author?.pubkeyHex == authorHex }
-        .maxByOrNull { it.createdAt() ?: 0L }
+        // idHex tie-break so a same-second pair resolves identically on every client.
+        .maxWithOrNull(compareBy({ it.createdAt() ?: 0L }, { it.idHex }))
 }
 
 /** The kind-3302 Concord edit overlaying this message, or null — author-only, newest by CORD-02 §4 send time. */
@@ -65,5 +66,4 @@ fun Note.latestConcordEdit(): Note? {
     return edits
         .filter { it.author?.pubkeyHex == authorHex && it.event is ConcordChatEditEvent }
         .maxWithOrNull(compareBy({ (it.event as ConcordChatEditEvent).orderingMs() }, { it.idHex }))
-        ?.takeIf { it.event != null }
 }

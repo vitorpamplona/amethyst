@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.latestBuzzEdit
+import com.vitorpamplona.amethyst.model.latestConcordEdit
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -72,13 +74,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeBuzzEdit
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeConcordEdit
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -615,17 +617,33 @@ fun NoteRow(
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
             else -> {
-                // Concord and Buzz channels overlay edits on their messages (kind-1010 and
-                // kind-40003 respectively): when one exists, render the newest edit's content
-                // instead of the stale original. Both are null for every other chat surface.
-                val concordEdit = observeConcordEdit(note)
-                val buzzEdit = observeBuzzEdit(note)
-                when {
-                    concordEdit != null -> RenderConcordEditedNote(note, concordEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
-                    buzzEdit != null -> RenderBuzzEditedNote(note, buzzEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                // Concord and Buzz channels overlay edits on their messages (kind-3302 and
+                // kind-40003): when one exists, render the newest edit's content instead of the
+                // stale original. One observer for both — a message is only ever one kind, so a
+                // single edits-flow collector per row covers both (and is null for other surfaces).
+                val edit = observeChatEdit(note)
+                when (edit?.event) {
+                    is ConcordChatEditEvent -> RenderConcordEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    is StreamMessageEditEvent -> RenderBuzzEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
                     else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
                 }
             }
         }
     }
+}
+
+/**
+ * The newest edit overlaying a chat message [note] (Concord kind-3302 or Buzz kind-40003), or null
+ * when unedited. A message is only ever one kind, so both resolve off the same [Note.edits] and one
+ * collector on the note's edits flow serves both — recomposing whenever an edit is added or removed.
+ */
+@Composable
+fun observeChatEdit(note: Note): Note? {
+    val latest by
+        produceState<Note?>(initialValue = null, note.idHex) {
+            note.flow().edits.stateFlow.collect {
+                value = note.latestConcordEdit() ?: note.latestBuzzEdit()
+            }
+        }
+    return latest
 }
