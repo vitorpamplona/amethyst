@@ -256,8 +256,8 @@ object ConcordActions {
     }
 
     /**
-     * Builds an encrypted-seal **edit** wrap (kind-1010 modification of [target]) on the [channel]
-     * plane. [newText] replaces [target]'s content on receivers that apply the native edit overlay;
+     * Builds an encrypted-seal **edit** wrap (kind-3302 [ChannelChat.edit] of [target]) on the
+     * [channel] plane. [newText] replaces [target]'s content on receivers that apply the edit overlay;
      * only the original author's edits take effect, so restrict callers to their own messages.
      */
     suspend fun buildChannelEdit(

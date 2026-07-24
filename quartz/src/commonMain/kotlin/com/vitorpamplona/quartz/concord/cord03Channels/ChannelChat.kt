@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.concord.cord03Channels
 
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
-import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -104,18 +103,18 @@ object ChannelChat {
         )
 
     /**
-     * Builds an unsigned kind-1010 [TextNoteModificationEvent] rumor that edits an
-     * existing channel message [targetId] with [newText], bound to [channelId]/[epoch].
+     * Builds an unsigned kind-3302 [ConcordChatEditEvent] rumor that edits an existing
+     * channel message [targetId] with [newText], bound to [channelId]/[epoch].
      *
-     * This reuses Amethyst's native feed-post edit event (kind 1010): the edit is a
-     * separate rumor pointing at the target via an `e` tag, wrapped and published on
-     * the same channel plane as any other Chat Plane rumor. On the receiving side it
-     * decrypts to a normal kind-1010 that the shared edit machinery
-     * (`LocalCache.findLatestModificationForNote`) overlays onto the target — last
-     * edit wins, and only edits authored by the *original* message's author are
-     * applied (enforced there), so a member can't rewrite someone else's message. A
-     * client that doesn't understand kind-1010 simply keeps showing the original
-     * text, so the edit degrades gracefully.
+     * This is the dedicated Concord edit kind (CORD-02 Appendix B) the reference client
+     * (Soapbox Armada's `KIND_EDIT`) emits — a separate rumor naming the target with a
+     * single `["e", …]` tag, carrying the replacement text, wrapped and published on the
+     * same channel plane as any other Chat Plane rumor. Armada omits a `k` tag on edits
+     * (only deletes carry one), so we do too, for wire parity. On the receiving side it
+     * decrypts to a kind-3302 that the fold overlays onto the target — latest edit wins,
+     * and only edits authored by the *original* message's author are applied, so a member
+     * can't rewrite someone else's message. It's non-destructive: the original keeps its
+     * id, so reactions/replies/quotes stay attached.
      */
     fun edit(
         authorPubKey: HexKey,
@@ -126,10 +125,10 @@ object ChannelChat {
         createdAt: Long,
         extraTags: Array<Array<String>> = emptyArray(),
     ): Event =
-        RumorAssembler.assembleRumor<TextNoteModificationEvent>(
+        RumorAssembler.assembleRumor<ConcordChatEditEvent>(
             pubKey = authorPubKey,
             createdAt = createdAt,
-            kind = TextNoteModificationEvent.KIND,
+            kind = ConcordChatEditEvent.KIND,
             tags =
                 arrayOf(
                     ChannelTag.assemble(channelId),

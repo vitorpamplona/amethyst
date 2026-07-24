@@ -49,17 +49,17 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.sample
 
 /**
- * Observes the newest kind-1010 edit overlaying a Concord chat message [note],
+ * Observes the newest kind-3302 Concord edit overlaying a Concord chat message [note],
  * recomposing when a new edit lands. Returns null for non-Concord messages or an
  * unedited one.
  *
  * Concord edits ride the encrypted channel plane (unlike public feed edits, there is
  * no relay subscription to start here — the session decrypts the wrap and lands the
- * kind-1010 rumor in [LocalCache] itself). Resolution then goes through the same
- * shared machinery the feed uses: [LocalCache.findLatestModificationForNote] keeps
- * only same-author modifications, so a member can't rewrite someone else's message,
- * and the newest one wins (last write). Runs off the main thread because
- * `findLatestModificationForNote` scans the cache.
+ * kind-3302 rumor in [LocalCache] itself). Resolution goes through
+ * [LocalCache.findLatestConcordEditForNote], which keeps only edits authored by the
+ * original message's author — so a member can't rewrite someone else's message — and
+ * the newest one wins (last write). Runs off the main thread because the finder scans
+ * the cache.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
@@ -76,7 +76,7 @@ fun observeConcordEdit(note: Note): Note? {
                 .edits
                 .stateFlow
                 .sample(500)
-                .mapLatest { LocalCache.findLatestModificationForNote(note).lastOrNull() }
+                .mapLatest { LocalCache.findLatestConcordEditForNote(note).lastOrNull() }
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
                 .collect { value = it }
@@ -85,9 +85,9 @@ fun observeConcordEdit(note: Note): Note? {
 }
 
 /**
- * A Concord chat message whose content has been superseded by a kind-1010 edit:
+ * A Concord chat message whose content has been superseded by a kind-3302 edit:
  * renders the NEWEST edit's content (never the stale original) plus an "(edited)"
- * marker, matching the feed's last-write-wins edit presentation.
+ * marker, matching the Concord reference client's last-write-wins presentation.
  */
 @Composable
 fun RenderConcordEditedNote(

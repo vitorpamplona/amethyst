@@ -135,6 +135,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -2792,6 +2793,43 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     fun consume(
+        event: ConcordChatEditEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return false
+
+        // A Concord edit rumor is unsigned (its sig is empty); the envelope open path already
+        // established authenticity, so we consume it as pre-verified like any other Concord rumor.
+        if (wasVerified || justVerify(event)) {
+            note.loadEvent(event, author, emptyList())
+
+            event.editedMessageId()?.let {
+                checkGetOrCreateNote(it)?.let { editedNote ->
+                    concordEditCache.remove(editedNote.idHex)
+                    // Must invalidate so the chat bubble re-derives the latest edit overlay.
+                    editedNote.flowSet?.edits?.invalidateData()
+                }
+            }
+
+            refreshNewNoteObservers(note)
+
+            return true
+        }
+
+        return false
+    }
+
+    fun consume(
         event: PollResponseEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -3240,6 +3278,39 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
 
         modificationCache.put(note.idHex, newNotes)
+
+        return newNotes
+    }
+
+    val concordEditCache = LruCache<HexKey, List<Note>>(20)
+
+    /**
+     * Every Concord chat edit (kind 3302) targeting [note] that was authored by [note]'s own
+     * author — a member can't rewrite someone else's message — oldest first (createdAt, then id),
+     * so the caller applies the last as the winning edit. Mirrors [findLatestModificationForNote]
+     * but for the dedicated Concord edit kind rather than the kind-1010 feed edit.
+     */
+    fun findLatestConcordEditForNote(note: Note): List<Note> {
+        checkNotInMainThread()
+
+        val noteAuthor = note.author ?: return emptyList()
+
+        concordEditCache[note.idHex]?.let {
+            return it
+        }
+
+        val newNotes =
+            notes
+                .filter { _, item ->
+                    val noteEvent = item.event
+
+                    noteEvent is ConcordChatEditEvent && noteAuthor == item.author && noteEvent.editedMessageId() == note.idHex
+                }
+                // Order by CORD-02 §4 send time (createdAt*1000 + `ms` tag) so the caller's last is
+                // the winning edit, matching the reference client at sub-second precision.
+                .sortedWith(compareBy({ (it.event as ConcordChatEditEvent).orderingMs() }, { it.idHex }))
+
+        concordEditCache.put(note.idHex, newNotes)
 
         return newNotes
     }
@@ -4911,6 +4982,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is TextNoteModificationEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is ConcordChatEditEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

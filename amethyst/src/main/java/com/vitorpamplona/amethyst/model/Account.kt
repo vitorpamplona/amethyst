@@ -2354,9 +2354,9 @@ class Account(
 
     /**
      * Edit my own Concord channel message [note] to [newText]. Mirrors
-     * [reactToConcordMessage]: builds a kind-1010 [ChannelChat.edit] rumor bound to the
+     * [reactToConcordMessage]: builds a kind-3302 [ChannelChat.edit] rumor bound to the
      * message's channel/epoch, wraps it on the plane, and publishes it — so the edit stays
-     * inside the encrypted channel (a public kind-1010 would e-tag the private rumor id onto
+     * inside the encrypted channel (a public edit would e-tag the private rumor id onto
      * public relays). The receiving side overlays the newest edit onto the target message;
      * only the *original author's* edits are applied, so we gate to my own kind-9 messages.
      * Returns false if [note] isn't an editable Concord message I authored.
