@@ -1694,6 +1694,33 @@
     <string name="blossom_report_title">Report blob</string>
     <string name="blossom_report_comment_hint">Reason (optional)</string>
     <string name="blossom_send">Send</string>
+    <string name="blossom_more_actions">More actions</string>
+    <string name="blossom_import_menu">Import files…</string>
+    <string name="blossom_import_title">Import files</string>
+    <string name="blossom_import_intro">Check other Blossom servers for files you\'ve uploaded elsewhere and copy them into your own servers.</string>
+    <string name="blossom_import_sources_section">Servers to check</string>
+    <string name="blossom_import_enable_all">Enable all</string>
+    <string name="blossom_import_disable_all">Disable all</string>
+    <string name="blossom_import_add_url_label">Or paste a server address</string>
+    <string name="blossom_import_scan">Check servers</string>
+    <string name="blossom_import_scanning">Checking…</string>
+    <string name="blossom_import_source_failed">Couldn\'t reach this server</string>
+    <string name="blossom_import_none_found">No new files were found on the selected servers.</string>
+    <string name="blossom_import_no_targets">Add your own Blossom servers first, so there\'s somewhere to copy the imported files into.</string>
+    <string name="blossom_import_manage_servers">Manage my servers</string>
+    <string name="blossom_import_busy">A file sync is already running. Try importing again once it finishes.</string>
+    <plurals name="blossom_import_files_found">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <plurals name="blossom_import_found_files">
+        <item quantity="one">Found %1$d file to import into your servers.</item>
+        <item quantity="other">Found %1$d files to import into your servers.</item>
+    </plurals>
+    <plurals name="blossom_import_start_button">
+        <item quantity="one">Import %1$d file</item>
+        <item quantity="other">Import %1$d files</item>
+    </plurals>
 
     <string name="recommended_media_servers">Recommended Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>

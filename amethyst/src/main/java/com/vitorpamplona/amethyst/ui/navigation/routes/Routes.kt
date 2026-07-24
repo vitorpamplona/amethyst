@@ -467,6 +467,8 @@ sealed class Route {
 
     @Serializable object ManageBlossomBlobs : Route()
 
+    @Serializable object ImportBlossomBlobs : Route()
+
     @Serializable object EditNestsServers : Route()
 
     @Serializable

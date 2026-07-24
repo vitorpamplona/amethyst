@@ -59,6 +59,10 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import kotlinx.coroutines.delay
+
+/** How long the finished "Sync complete" banner lingers before it auto-dismisses. */
+private const val AUTO_DISMISS_DELAY_MS = 4000L
 
 /**
  * App-wide floating banner for the BUD-04 "sync all" sweep, mounted at the navigation
@@ -74,6 +78,17 @@ fun DisplayBlossomSyncProgress() {
     // state clears to null on cancel/dismiss.
     var lastShown by remember { mutableStateOf<BlossomSyncState?>(null) }
     LaunchedEffect(state) { state?.let { lastShown = it } }
+
+    // Once the sweep finishes, auto-dismiss the "Sync complete" banner after a short pause so
+    // the user doesn't have to tap X. Keyed on `running`: a new sweep flips it back to true and
+    // cancels the pending dismiss; tapping X clears state to null and re-keys this to a no-op.
+    val running = state?.running
+    LaunchedEffect(running) {
+        if (running == false) {
+            delay(AUTO_DISMISS_DELAY_MS)
+            queue.dismiss()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         AnimatedVisibility(
