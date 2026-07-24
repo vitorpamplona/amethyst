@@ -49,22 +49,28 @@ fun Note.justOtsVerification(): VerificationState? = otsVerification
 suspend fun Note.cacheVerifyOts(resolver: OtsResolver): VerificationState {
     val event = event as? OtsEvent ?: return VerificationState.Error("Not an OTS event")
     return when (val current = otsVerification) {
-        is VerificationState.Verifying -> current
         is VerificationState.Verified -> current
+        is VerificationState.Error -> current
         is VerificationState.NetworkError ->
             if (current.time < TimeUtils.fiveMinutesAgo()) verifyOts(event, resolver) else current
-        is VerificationState.Error -> current
+        // null, or a leftover non-terminal state from an interrupted run: (re)verify.
         else -> verifyOts(event, resolver)
     }
 }
 
+/**
+ * Verifies the attestation and stores ONLY the terminal verdict. We deliberately never persist a
+ * `Verifying` sentinel: this runs inside a cancellable `LoadOts` LaunchedEffect, so if the coroutine
+ * were cancelled at the network suspension point after writing `Verifying` but before the verdict,
+ * that sentinel would stick on the (long-lived) note forever — there is no LRU eviction to recover
+ * it, unlike the old VerificationStateCache — and the OTS pill would silently vanish. Leaving the
+ * field untouched until a real verdict lands means a cancelled run simply retries on the next read;
+ * the cost is at worst two concurrent first-time verifications, which is harmless.
+ */
 private suspend fun Note.verifyOts(
     event: OtsEvent,
     resolver: OtsResolver,
-): VerificationState {
-    otsVerification = VerificationState.Verifying
-    return event.verifyState(resolver).also { otsVerification = it }
-}
+): VerificationState = event.verifyState(resolver).also { otsVerification = it }
 
 /**
  * The earliest blockchain-verified time (unix seconds) among this note's non-expired OTS
