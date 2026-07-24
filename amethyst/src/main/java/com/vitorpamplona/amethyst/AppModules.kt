@@ -1034,6 +1034,8 @@ class AppModules(
         )
     }
 
+    // androidx.security.crypto's EncryptedSharedPreferences is deprecated with no drop-in successor.
+    @Suppress("DEPRECATION")
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(appContext, npub)
 
     fun initiate(appContext: Context) {
@@ -1092,9 +1094,11 @@ class AppModules(
             uiState
         }
 
-        // LRUCache should not be instanciated in the Main thread due to blocking
+        // LRUCache should not be instanciated in the Main thread due to blocking.
+        // trimToSize is a no-op on the empty cache; it just forces the object's
+        // (blocking) initialization to happen off the main thread.
         applicationIOScope.launch {
-            CachedRobohash
+            CachedRobohash.trimToSize(100)
             resourceCacheInit()
         }
 

@@ -103,6 +103,31 @@ data class StaticConfig(
     )
 
     data class DatabaseSection(
+        /**
+         * Which [com.vitorpamplona.quartz.nip01Core.store.IEventStore]
+         * implementation backs the relay. Recognised keywords (case-
+         * insensitive):
+         *
+         *  - `"sqlite"` (default): quartz's SQLite-backed
+         *    [com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore] —
+         *    honours every `[database]` knob below ([in_memory]/[file],
+         *    [readers], [mmap_size], …). The right choice for real traffic.
+         *  - `"fs"`: quartz's filesystem
+         *    [com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore],
+         *    one JSON file per event under the directory named by [file]
+         *    (which becomes a directory, not a db file, for this backend).
+         *    Human-inspectable with `cat`/`jq`; the SQLite-only knobs are
+         *    ignored.
+         *
+         * Any other value is treated as the fully-qualified class name of a
+         * custom `IEventStore` on the classpath, instantiated reflectively —
+         * see [com.vitorpamplona.geode.StoreFactory]. This is the "plug in
+         * any implementation" escape hatch: the class must implement
+         * `IEventStore` and expose one of the public constructors
+         * `(NormalizedRelayUrl?, IndexingStrategy)`, `(NormalizedRelayUrl?)`,
+         * or `()`.
+         */
+        val backend: String = "sqlite",
         /** True keeps an in-memory SQLite db (default — events vanish on restart). */
         val in_memory: Boolean = true,
         val file: String? = null,

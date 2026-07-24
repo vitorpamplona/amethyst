@@ -26,6 +26,12 @@
         <item quantity="many">+%1$d\nodpovědi</item>
         <item quantity="other">+%1$d\nodpovědí</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">Nahlásil %1$d člověk, kterého sledujete</item>
+        <item quantity="few">Nahlásili %1$d lidé, které sledujete</item>
+        <item quantity="many">Nahlásilo %1$d lidí, které sledujete</item>
+        <item quantity="other">Nahlásilo %1$d lidí, které sledujete</item>
+    </plurals>
     <string name="post_not_found">Příspěvek se načítá nebo nemůže být nalezena ve vašem seznamu relací</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Obrázek kanálu</string>
@@ -420,6 +426,12 @@
     <string name="chats_reply_not_found">Tuto zprávu se nepodařilo najít</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Prohledány všechny relaye · klepnutím zobrazíte</string>
+    <string name="dm_sender_reported_who">Kdo to nahlásil?</string>
+    <string name="dm_sender_reported_dismiss">Zavřít</string>
+    <string name="dm_sender_reported_hide">Skrýt</string>
+    <string name="dm_sender_reported_subtitle">Někdo, koho sledujete, nahlásil tento účet</string>
+    <string name="dm_sender_reported_icon">Nahlášeno</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Chyba při načítání odpovědí: "</string>
     <string name="try_again">Zkusit znovu</string>
     <string name="notification_feed_is_empty">Zatím žádná oznámení.</string>
@@ -1799,6 +1811,9 @@
     <string name="app_notification_zaps_channel_message_for">pro %1$s</string>
     <string name="app_notification_reply_label">Odpovědět</string>
     <string name="app_notification_mark_read_label">Označit jako přečtené</string>
+    <string name="app_notification_me">Já</string>
+    <string name="app_notification_new_message">Nová zpráva</string>
+    <string name="app_notification_added_to_group">Byli jste přidáni do %1$s</string>
     <string name="app_notification_dms_summary">Nové zprávy</string>
     <string name="app_notification_zaps_summary">Nové zapsy</string>
     <string name="app_notification_reactions_channel_name">Reakce</string>
@@ -1820,6 +1835,49 @@
     <string name="app_notification_mentions_channel_description">Upozorní vás, když vás někdo zmíní nebo cituje v příspěvku</string>
     <string name="app_notification_mentions_channel_message">%1$s vás zmínil(a)</string>
     <string name="app_notification_mentions_summary">Nové zmínky</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">Zprávy</string>
+    <string name="app_notification_group_social">Sociální</string>
+    <string name="app_notification_group_payments">Platby</string>
+    <string name="app_notification_group_content">Obsah</string>
+    <string name="app_notification_group_developer">Vývojář</string>
+    <string name="app_notification_group_games">Hry</string>
+    <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">Přeposlání</string>
+    <string name="app_notification_reposts_channel_description">Upozorní vás, když někdo přepošle váš příspěvek</string>
+    <string name="app_notification_reposts_channel_message">%1$s přeposlal váš příspěvek</string>
+    <string name="app_notification_reposts_summary">Nová přeposlání</string>
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_name">Média</string>
+    <string name="app_notification_media_channel_description">Upozorní vás, když vás někdo zmíní ve fotce nebo videu</string>
+    <string name="app_notification_media_channel_message_photo">%1$s sdílel fotku</string>
+    <string name="app_notification_media_channel_message_video">%1$s sdílel video</string>
+    <string name="app_notification_media_summary">Nová média</string>
+    <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_name">Články a zvýraznění</string>
+    <string name="app_notification_articles_channel_description">Upozorní vás, když vás někdo zmíní nebo zvýrazní v článku</string>
+    <string name="app_notification_articles_channel_message">%1$s vás zmínil v článku</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s zvýraznil váš článek</string>
+    <string name="app_notification_articles_summary">Nové články</string>
+    <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">Kód a Git</string>
+    <string name="app_notification_code_channel_description">Upozorní vás na issues, patche a pull requesty</string>
+    <string name="app_notification_code_channel_message_issue">%1$s otevřel issue</string>
+    <string name="app_notification_code_channel_message_patch">%1$s odeslal patch</string>
+    <string name="app_notification_code_channel_message_pr">%1$s otevřel pull request</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s aktualizoval pull request</string>
+    <string name="app_notification_code_summary">Nová aktivita v kódu</string>
+    <!-- Badges -->
+    <string name="app_notification_badges_channel_name">Odznaky</string>
+    <string name="app_notification_badges_channel_description">Upozorní vás, když získáte odznak</string>
+    <string name="app_notification_badges_channel_message">Získali jste odznak</string>
+    <string name="app_notification_badges_channel_message_from">Uděleno od %1$s</string>
+    <string name="app_notification_badges_summary">Nové odznaky</string>
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">Nutzap od %1$s</string>
+    <string name="app_notification_onchain_channel_message_from">Onchain zap od %1$s</string>
+    <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s položil otázku</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Příchozí hovory</string>
     <string name="app_notification_calls_channel_description">Oznámení pro příchozí hlasové a videohovory</string>
@@ -2074,6 +2132,11 @@
     <string name="settings_section_appearance">Vzhled</string>
     <string name="settings_section_media">Média a data</string>
     <string name="settings_section_general">Obecné</string>
+    <string name="settings_section_tor_engine">Připojení</string>
+    <string name="settings_section_tor_routing">Směrovat přes Tor</string>
+    <string name="settings_section_profile_sections">Sekce a kanály</string>
+    <string name="settings_section_home_tabs">Viditelné karty</string>
+    <string name="settings_section_reminders">Připomenutí</string>
     <string name="wallet_connect">Připojení peněženky</string>
     <string name="language">Jazyk</string>
     <string name="theme">Motiv</string>
@@ -2373,6 +2436,9 @@
     <string name="relay_group_browse_description">Procházejte skupiny hostované na relay. Vložte adresu relay nebo vyberte některou níže.</string>
     <string name="relay_group_browse_relay_label">Adresa relay</string>
     <string name="relay_group_browse_go">Procházet</string>
+    <string name="relay_tor_clearnet_title">Nelze dosáhnout tohoto relaye přes Tor</string>
+    <string name="relay_tor_clearnet_body">%1$s neodpovídá přes Tor — jeho hostitel může blokovat výstupní uzly Toru. Připojit se k němu místo toho přes clearnet?</string>
+    <string name="relay_tor_clearnet_action">Použít clearnet</string>
     <string name="relay_group_browse_your_relays">Relaye, na kterých jste</string>
     <string name="relay_group_browse_popular">Oblíbené relaye</string>
     <string name="relay_group_no_messages_yet">Zatím žádné zprávy</string>
@@ -3106,6 +3172,9 @@
     <string name="chat_system_created_channel">%1$s vytvořil(a) kanál %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s vytvořil(a) kanál</string>
     <string name="chat_system_updated_channel">%1$s aktualizoval(a) profil kanálu</string>
+    <string name="relay_group_section_channels">Kanály</string>
+    <string name="relay_group_section_forums">Fóra</string>
+    <string name="relay_group_add_member">Přidat člena</string>
     <string name="chat_delivery_details_title">Doručení zprávy</string>
     <string name="close">Zavřít</string>
     <string name="chat_delivery_pending">Čekání, až relay přijme tuto zprávu</string>
@@ -4157,6 +4226,11 @@
     <string name="pow_notification_channel_name">Těžení proof of work</string>
     <string name="pow_notification_channel_description">Zobrazuje příspěvky, které stále těží svůj NIP-13 proof of work, aby mohly dokončit těžbu i po opuštění aplikace.</string>
     <string name="pow_notification_cancel_all">Zrušit</string>
+    <string name="pow_notification_send_without_pow">Odeslat nyní</string>
+    <string name="pow_cancel_dialog_title">Zastavit těžení?</string>
+    <string name="pow_cancel_dialog_message">Tento příspěvek stále těží svůj proof of work. Můžete jej odeslat hned bez proof of work, nebo jej zahodit.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Odeslat bez PoW</string>
+    <string name="pow_cancel_dialog_discard">Zahodit příspěvek</string>
     <string name="pow_difficulty_estimate">≈ %1$s na příspěvek na tomto zařízení</string>
     <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">

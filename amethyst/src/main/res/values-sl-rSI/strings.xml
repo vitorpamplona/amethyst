@@ -375,6 +375,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="chats_reply_not_found">Ne nejdem tega sporočila</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Preiskani vsi releji · dotakni se za ogled</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Napaka pri nalaganju odgovorov: "</string>
     <string name="try_again">Poskusi ponovno</string>
     <string name="notification_feed_is_empty">Ni še obvestil.</string>
@@ -1544,6 +1545,14 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="app_notification_mentions_channel_description">Obvesti vas, ko vas nekdo omeni ali citira v objavi</string>
     <string name="app_notification_mentions_channel_message">%1$s vas je omenil</string>
     <string name="app_notification_mentions_summary">Nove omembe</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Dohodni klici</string>
     <string name="app_notification_calls_channel_description">Obvestila o dohodnih glasovnih in video klicih</string>

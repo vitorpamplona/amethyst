@@ -57,7 +57,7 @@ object BuzzAgentActivityState {
     ) = lock.withLock {
         val prev = mutableActivity.value[agent]
         if (prev != null && atSecs <= prev) return@withLock
-        mutableActivity.value = mutableActivity.value.put(agent, atSecs)
+        mutableActivity.value = mutableActivity.value.putting(agent, atSecs)
     }
 
     /** Test-only: clears all activity so unit tests don't leak into each other. */

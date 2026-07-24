@@ -86,7 +86,7 @@ object ConcordInviteLink {
         if (useStock) {
             out.add(FLAG_STOCK_RELAYS.toByte())
         } else {
-            require(relays!!.size <= MAX_RELAYS) { "at most $MAX_RELAYS relays, was ${relays.size}" }
+            require(relays.size <= MAX_RELAYS) { "at most $MAX_RELAYS relays, was ${relays.size}" }
             out.add(0)
             out.add(relays.size.toByte())
             for (r in relays) {

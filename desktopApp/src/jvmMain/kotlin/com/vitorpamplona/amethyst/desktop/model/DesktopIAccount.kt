@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.model
 
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.INwcSignerState
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListRepository
@@ -32,11 +33,13 @@ import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRep
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.moderation.PreferencesSensitiveContentSettings
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -50,6 +53,13 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEve
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -58,10 +68,12 @@ import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClient
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.ConcurrentHashMap
+import java.util.logging.Logger
 
 /**
  * Desktop implementation of IAccount.
@@ -138,13 +150,34 @@ class DesktopIAccount(
 
     // ---------------------------------------------------------------------------------
 
-    override val showSensitiveContent: Boolean? = null
+    /**
+     * "Always show sensitive content" preference (NIP-36). `null` = respect
+     * content warnings (blur), `true` = always show. Persisted via
+     * [PreferencesSensitiveContentSettings] (shared with `amy`); flip it with
+     * [setAlwaysShowSensitive].
+     */
+    private val sensitiveContentSettings = PreferencesSensitiveContentSettings()
+    val showSensitiveContentSetting: StateFlow<Boolean?> = sensitiveContentSettings.showSensitiveContent
 
-    override val hiddenWordsCase: List<DualCase> = emptyList()
+    fun setAlwaysShowSensitive(alwaysShow: Boolean) = sensitiveContentSettings.setAlwaysShow(alwaysShow)
 
-    override val hiddenUsersHashCodes: Set<Int> = emptySet()
+    /**
+     * Mute (kind 10000) + block (kind 30000 `d=mute`) state, assembled into a
+     * live [com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers] used by the
+     * feed filters and [isHidden]/[isAcceptable]. See [DesktopHiddenUsersState].
+     */
+    val hiddenUsersState = DesktopHiddenUsersState(signer, localCache, scope, showSensitiveContentSetting)
 
-    override val spammersHashCodes: Set<Int> = emptySet()
+    /** Current moderation choices — feeds observe this to re-filter live on mute/block. */
+    val hiddenUsers: StateFlow<LiveHiddenUsers> get() = hiddenUsersState.flow
+
+    override val showSensitiveContent: Boolean? get() = hiddenUsersState.flow.value.showSensitiveContent
+
+    override val hiddenWordsCase: List<DualCase> get() = hiddenUsersState.flow.value.hiddenWordsCase
+
+    override val hiddenUsersHashCodes: Set<Int> get() = hiddenUsersState.flow.value.hiddenUsersHashCodes
+
+    override val spammersHashCodes: Set<Int> get() = hiddenUsersState.flow.value.spammersHashCodes
 
     override val chatroomList: ChatroomList = ChatroomList(accountState.pubKeyHex)
     override val marmotGroupList =
@@ -173,12 +206,12 @@ class DesktopIAccount(
 
     override fun followingKeySet(): Set<String> = kind3FollowList.flow.value.authors
 
-    override fun isHidden(user: User): Boolean = false
+    override fun isHidden(user: User): Boolean = hiddenUsersState.flow.value.isUserHidden(user.pubkeyHex)
 
     override fun isAcceptable(note: Note): Boolean {
-        // Accept all notes on desktop for now
         val event = note.event ?: return true
-        return !localCache.hasBeenDeleted(event)
+        if (localCache.hasBeenDeleted(event)) return false
+        return !note.isHiddenFor(hiddenUsersState.flow.value)
     }
 
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
@@ -351,6 +384,107 @@ class DesktopIAccount(
         }
     }
 
+    // ----- Moderation write actions (NIP-51 mute list + NIP-56 reports) -----
+
+    /** Mute a user (private entry). Persists to the kind-10000 mute list and hides live. */
+    suspend fun hideUser(pubkeyHex: HexKey) = updateMuteList(UserTag(pubkeyHex), isPrivate = true, add = true)
+
+    /** Un-mute a user. */
+    suspend fun showUser(pubkeyHex: HexKey) = updateMuteList(UserTag(pubkeyHex), isPrivate = true, add = false)
+
+    /** Hide a word/phrase (private entry). Notes containing it collapse. */
+    suspend fun hideWord(word: String) = updateMuteList(WordTag(word), isPrivate = true, add = true)
+
+    suspend fun showWord(word: String) = updateMuteList(WordTag(word), isPrivate = true, add = false)
+
+    /** Mute a thread by its root event id. */
+    suspend fun hideThread(rootIdHex: HexKey) = updateMuteList(EventTag(rootIdHex), isPrivate = true, add = true)
+
+    suspend fun showThread(rootIdHex: HexKey) = updateMuteList(EventTag(rootIdHex), isPrivate = true, add = false)
+
+    private suspend fun updateMuteList(
+        tag: MuteTag,
+        isPrivate: Boolean,
+        add: Boolean,
+    ) {
+        if (!isWriteable()) return
+        try {
+            val current = hiddenUsersState.currentMuteList()
+            val event =
+                when {
+                    !add -> if (current != null) MuteListEvent.remove(current, tag, signer) else return
+                    current == null -> MuteListEvent.create(tag, isPrivate, signer)
+                    else -> MuteListEvent.add(current, tag, isPrivate, signer)
+                }
+            // Optimistic local apply so enforcement + the management screens update
+            // immediately, then fan out to relays.
+            localCache.justConsumeMyOwnEvent(event)
+            publishModeration(event, if (add) "mute+" else "mute-")
+        } catch (e: Exception) {
+            moderationLog.warning("[Moderation] mute list update failed: ${e.message}")
+            throw e
+        }
+    }
+
+    /** Publish a NIP-56 (kind 1984) report about a note. */
+    suspend fun report(
+        note: Note,
+        type: ReportType,
+        comment: String = "",
+    ) {
+        val reported = note.event ?: return
+        reportEvent(reported, type, comment)
+    }
+
+    /** Publish a NIP-56 (kind 1984) report about a raw event. */
+    suspend fun reportEvent(
+        reportedEvent: Event,
+        type: ReportType,
+        comment: String = "",
+    ) {
+        if (!isWriteable()) return
+        try {
+            val signed = signer.sign(ReportEvent.build(reportedEvent, type, comment))
+            publishModeration(signed, "report(${type.code})")
+        } catch (e: Exception) {
+            moderationLog.warning("[Moderation] report failed: ${e.message}")
+            throw e
+        }
+    }
+
+    /** Publish a NIP-56 (kind 1984) report about a user. */
+    suspend fun report(
+        userPubKeyHex: HexKey,
+        type: ReportType,
+        comment: String = "",
+    ) {
+        if (!isWriteable()) return
+        try {
+            val signed = signer.sign(ReportEvent.build(userPubKeyHex, type, comment))
+            publishModeration(signed, "report-user(${type.code})")
+        } catch (e: Exception) {
+            moderationLog.warning("[Moderation] user report failed: ${e.message}")
+            throw e
+        }
+    }
+
+    /**
+     * Broadcast a moderation event and log the outcome — including the relay
+     * count, so a publish to zero connected relays is visible rather than silent.
+     */
+    private fun publishModeration(
+        event: Event,
+        action: String,
+    ) {
+        val relayCount = relayManager.connectedRelays.value.size
+        relayManager.broadcastToAll(event)
+        if (relayCount == 0) {
+            moderationLog.warning("[Moderation] $action kind=${event.kind} id=${event.id.take(8)} → 0 connected relays (not delivered)")
+        } else {
+            moderationLog.info("[Moderation] $action kind=${event.kind} id=${event.id.take(8)} → $relayCount relays")
+        }
+    }
+
     private fun addEventToChatroom(
         event: com.vitorpamplona.quartz.nip01Core.core.Event,
         roomKey: com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey,
@@ -365,5 +499,6 @@ class DesktopIAccount(
 
     companion object {
         const val CLIENT_TAG_NAME = "Amethyst"
+        private val moderationLog: Logger = Logger.getLogger("DesktopModeration")
     }
 }

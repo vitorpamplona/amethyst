@@ -52,7 +52,7 @@ class AuthApprovalRequests {
 
     /** Track a newly surfaced tier-2 challenge. Last write per relay wins. */
     fun add(approval: PendingAuthApproval) {
-        _pending.update { it.put(approval.relayUrl, approval) }
+        _pending.update { it.putting(approval.relayUrl, approval) }
     }
 
     /**
@@ -65,7 +65,7 @@ class AuthApprovalRequests {
         scope: AuthApprovalScope,
     ): Boolean {
         val approval = _pending.value[relayUrl] ?: return false
-        _pending.update { it.remove(relayUrl) }
+        _pending.update { it.removing(relayUrl) }
         return approval.decision.complete(scope)
     }
 

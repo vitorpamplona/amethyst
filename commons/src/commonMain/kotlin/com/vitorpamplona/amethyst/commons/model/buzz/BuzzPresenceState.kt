@@ -65,8 +65,8 @@ object BuzzPresenceState {
     ) = lock.withLock {
         val prev = stampByUser[subject]
         if (prev != null && atSecs <= prev) return@withLock
-        stampByUser = stampByUser.put(subject, atSecs)
-        mutablePresence.value = mutablePresence.value.put(subject, status)
+        stampByUser = stampByUser.putting(subject, atSecs)
+        mutablePresence.value = mutablePresence.value.putting(subject, status)
     }
 
     /** The latest known status string for [subject], or `null` if none has arrived. */

@@ -299,6 +299,7 @@ class NappletBrowserActivity : ComponentActivity() {
         wv.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            @Suppress("DEPRECATION")
             databaseEnabled = false
             allowFileAccess = false
             allowContentAccess = false

@@ -210,11 +210,11 @@ class FilterIndex<S : Any> {
                     is AuthorKey -> authors = authors.removeSub(key.author, subscriber)
                     is KindKey -> kinds = kinds.removeSub(key.kind, subscriber)
                     is TagKey -> tags = tags.removeTagSub(key.letter, key.value, subscriber)
-                    Unindexed -> unindexed = unindexed.remove(subscriber)
+                    Unindexed -> unindexed = unindexed.removing(subscriber)
                 }
             }
             val next =
-                State(ids, authors, tags, kinds, unindexed, current.assignments.remove(subscriber))
+                State(ids, authors, tags, kinds, unindexed, current.assignments.removing(subscriber))
             if (state.compareAndSet(current, next)) return
         }
     }
@@ -275,12 +275,12 @@ class FilterIndex<S : Any> {
                     is AuthorKey -> authors = authors.addSub(key.author, subscriber)
                     is KindKey -> kinds = kinds.addSub(key.kind, subscriber)
                     is TagKey -> tags = tags.addTagSub(key.letter, key.value, subscriber)
-                    Unindexed -> unindexed = unindexed.add(subscriber)
+                    Unindexed -> unindexed = unindexed.adding(subscriber)
                 }
             }
             val existing = current.assignments[subscriber]
-            val merged = existing?.addAll(keySet) ?: keySet
-            val next = State(ids, authors, tags, kinds, unindexed, current.assignments.put(subscriber, merged))
+            val merged = existing?.addingAll(keySet) ?: keySet
+            val next = State(ids, authors, tags, kinds, unindexed, current.assignments.putting(subscriber, merged))
             if (state.compareAndSet(current, next)) return
         }
     }
@@ -292,8 +292,8 @@ class FilterIndex<S : Any> {
         sub: S,
     ): PersistentMap<K, PersistentSet<S>> {
         val cur = this[key] ?: persistentHashSetOf()
-        val next = cur.add(sub)
-        return if (next === cur) this else put(key, next)
+        val next = cur.adding(sub)
+        return if (next === cur) this else putting(key, next)
     }
 
     private fun <K> PersistentMap<K, PersistentSet<S>>.removeSub(
@@ -301,11 +301,11 @@ class FilterIndex<S : Any> {
         sub: S,
     ): PersistentMap<K, PersistentSet<S>> {
         val cur = this[key] ?: return this
-        val next = cur.remove(sub)
+        val next = cur.removing(sub)
         return when {
             next === cur -> this
-            next.isEmpty() -> remove(key)
-            else -> put(key, next)
+            next.isEmpty() -> removing(key)
+            else -> putting(key, next)
         }
     }
 
@@ -316,7 +316,7 @@ class FilterIndex<S : Any> {
     ): PersistentMap<String, PersistentMap<String, PersistentSet<S>>> {
         val inner = this[letter] ?: persistentHashMapOf()
         val newInner = inner.addSub(value, sub)
-        return if (newInner === inner) this else put(letter, newInner)
+        return if (newInner === inner) this else putting(letter, newInner)
     }
 
     private fun PersistentMap<String, PersistentMap<String, PersistentSet<S>>>.removeTagSub(
@@ -328,8 +328,8 @@ class FilterIndex<S : Any> {
         val newInner = inner.removeSub(value, sub)
         return when {
             newInner === inner -> this
-            newInner.isEmpty() -> remove(letter)
-            else -> put(letter, newInner)
+            newInner.isEmpty() -> removing(letter)
+            else -> putting(letter, newInner)
         }
     }
 

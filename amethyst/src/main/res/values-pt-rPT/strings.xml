@@ -295,6 +295,7 @@
     <string name="chats_reply_not_found">Não foi possível encontrar esta mensagem</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Pesquisado em todos os relays · toque para ver</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Erro ao carregar respostas"</string>
     <string name="try_again">Tente novamente</string>
     <string name="notification_feed_is_empty">Ainda não há notificações.</string>
@@ -1196,6 +1197,14 @@
     <string name="app_notification_mentions_channel_description">Notifica você quando alguém menciona ou cita você em uma publicação</string>
     <string name="app_notification_mentions_channel_message">%1$s mencionou você</string>
     <string name="app_notification_mentions_summary">Novas menções</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Chamadas recebidas</string>
     <string name="app_notification_calls_channel_description">Notificações de chamadas de voz e vídeo recebidas</string>

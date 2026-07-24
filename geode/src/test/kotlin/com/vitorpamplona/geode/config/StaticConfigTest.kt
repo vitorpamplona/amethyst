@@ -78,6 +78,19 @@ class StaticConfigTest {
     }
 
     @Test
+    fun backendDefaultsToSqliteAndParses() {
+        // Unset → SQLite, so existing configs keep the current backend.
+        assertEquals("sqlite", StaticConfig.fromToml("").database.backend)
+        // Explicit values round-trip verbatim (case/keyword resolution is
+        // StoreFactory's job, not the parser's).
+        assertEquals("fs", StaticConfig.fromToml("[database]\nbackend = \"fs\"").database.backend)
+        assertEquals(
+            "com.example.MyStore",
+            StaticConfig.fromToml("[database]\nbackend = \"com.example.MyStore\"").database.backend,
+        )
+    }
+
+    @Test
     fun mirrorSectionDefaultsToEmpty() {
         assertTrue(StaticConfig.fromToml("").mirror.isEmpty())
     }

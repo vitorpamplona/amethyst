@@ -116,7 +116,6 @@ import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
-import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalDeniedEvent
@@ -1359,16 +1358,6 @@ object LocalCache : ILocalCache, ICacheProvider {
                         .map { it[1] }
                 val qTagTargets = event.quotedEvents().map { it.eventId }
                 (eTagTargets + qTagTargets).mapNotNull { checkGetOrCreateNote(it) }
-            }
-
-            is StreamMessageV2Event -> {
-                // Buzz threads 40002s with marked root/reply e-tags (thread_tags in
-                // buzz-sdk). Link both so inbound replies render their quote bubble —
-                // we emit these markers on send, so we must also read them.
-                listOfNotNull(
-                    event.tags.buzzThreadRoot(),
-                    event.tags.buzzThreadReply(),
-                ).distinct().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             else -> {

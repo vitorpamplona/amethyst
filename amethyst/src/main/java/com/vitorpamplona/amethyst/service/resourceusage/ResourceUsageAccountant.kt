@@ -75,7 +75,7 @@ class ResourceUsageAccountant(
     ) {
         if (amount <= 0) return
         live.computeIfAbsent(key) { AtomicLong() }.addAndGet(amount)
-        if (inHookRun.get()) return
+        if (inHookRun.get() == true) return
         if (flushScheduled.compareAndSet(false, true)) {
             scope.launch {
                 delay(flushDebounceMs)

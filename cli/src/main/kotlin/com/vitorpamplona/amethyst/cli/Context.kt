@@ -300,7 +300,7 @@ class Context(
                         .header("Accept", "application/nostr+json")
                         .build()
                 okhttp.newCall(request).execute().use { resp ->
-                    resp.body?.string()?.let { Nip11RelayInformation.fromJson(it) }
+                    resp.body.string().let { Nip11RelayInformation.fromJson(it) }
                 }
             }.getOrNull()
         }

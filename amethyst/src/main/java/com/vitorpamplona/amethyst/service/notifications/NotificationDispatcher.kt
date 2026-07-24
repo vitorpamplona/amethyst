@@ -24,7 +24,9 @@ import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -34,6 +36,8 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -41,8 +45,12 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -101,11 +109,15 @@ class NotificationDispatcher(
                 // Direct-arrival
                 PrivateDmEvent.KIND,
                 LnZapEvent.KIND,
+                NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
                 ReactionEvent.KIND,
+                RepostEvent.KIND,
+                GenericRepostEvent.KIND,
+                BadgeAwardEvent.KIND,
                 TextNoteEvent.KIND,
                 CommentEvent.KIND,
-                // Public content kinds — routed to the Mentions channel when p-tagged.
+                // Public content kinds — routed to their channel when p-tagged.
                 PictureEvent.KIND,
                 VideoNormalEvent.KIND,
                 VideoShortEvent.KIND,
@@ -115,12 +127,19 @@ class NotificationDispatcher(
                 PollEvent.KIND,
                 GitPatchEvent.KIND,
                 GitIssueEvent.KIND,
+                GitPullRequestEvent.KIND,
+                GitPullRequestUpdateEvent.KIND,
                 HighlightEvent.KIND,
                 LongTextNoteEvent.KIND,
                 WikiNoteEvent.KIND,
                 LiveChessGameAcceptEvent.KIND,
                 LiveChessMoveEvent.KIND,
                 WakeUpEvent.KIND,
+                // Buzz DM messages in a `t=dm` relay-group channel (participant-
+                // routed; gated to Buzz DMs only in the predicate so ordinary
+                // kind-9 chats — Concord/NIP-C7 — don't leak into the tray).
+                StreamMessageV2Event.KIND,
+                ChatEvent.KIND,
                 // Unwrapped from GiftWrap → Seal
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
@@ -204,6 +223,25 @@ class NotificationDispatcher(
                             // tagsAnEventByUser's replyTo check would otherwise
                             // always miss for replies into addressable posts.
                             val note = LocalCache.getNoteIfExists(event) ?: return@predicate false
+
+                            // Buzz DM messages (kind 40002 / kind 9 in a `t=dm`
+                            // relay-group channel) are participant-routed, not
+                            // p-tagged. Gate them EXCLUSIVELY on Buzz-DM
+                            // membership so ordinary kind-9 chats (Concord /
+                            // NIP-C7) don't fall through the generic gate below.
+                            if (event is StreamMessageV2Event || event is ChatEvent) {
+                                return@predicate pubkeys.any { pubkey ->
+                                    BuzzDmNotification.buzzDmChannelForMe(note, pubkey) != null
+                                }
+                            }
+
+                            // Reactions/reposts are routed by tagsAnEventByUser
+                            // (the reacted note's author == me), not by a `p`
+                            // tag — so a Buzz-style bare `["e", id]` like, which
+                            // carries no `p` tag, still notifies. tagsAnEventByUser
+                            // below keeps it scoped to reactions on MY note.
+                            val isReactionOrRepost =
+                                event is ReactionEvent || event is RepostEvent || event is GenericRepostEvent
                             pubkeys.any { pubkey ->
                                 // Public chat replies into my own messages often
                                 // omit the `p` tag; relax the gate for them (the
@@ -211,6 +249,7 @@ class NotificationDispatcher(
                                 // messages actually replying to me).
                                 (
                                     event.isTaggedUser(pubkey) ||
+                                        isReactionOrRepost ||
                                         NotificationFeedFilter.isNotifiablePublicChatReply(note, pubkey)
                                 ) &&
                                     NotificationFeedFilter.tagsAnEventByUser(note, pubkey)

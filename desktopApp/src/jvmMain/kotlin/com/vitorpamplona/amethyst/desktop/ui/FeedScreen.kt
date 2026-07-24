@@ -28,6 +28,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
@@ -205,29 +207,45 @@ fun FeedNoteCard(
     forceReveal: Boolean = false,
 ) {
     val event = note.event ?: return
+    var showReportDialog by remember(note.idHex) { mutableStateOf(false) }
+    // Same action list the ⋮ overflow uses, so right-click and ⋮ are identical.
+    val menuActions =
+        com.vitorpamplona.amethyst.desktop.ui.note.rememberNoteMenuActions(event, relayManager) {
+            showReportDialog = true
+        }
+
     SpamCheckedNoteRender(
         note = note,
         localCache = localCache,
         forceReveal = forceReveal,
     ) {
-        FeedNoteCardBody(
-            note = note,
-            event = event,
-            relayManager = relayManager,
-            localCache = localCache,
-            account = account,
-            nwcConnection = nwcConnection,
-            onReply = onReply,
-            onZapFeedback = onZapFeedback,
-            onNavigateToProfile = onNavigateToProfile,
-            onNavigateToThread = onNavigateToThread,
-            onImageClick = onImageClick,
-            onMediaClick = onMediaClick,
-            onHashtagClick = onHashtagClick,
-            followedUsers = followedUsers,
-            myPubKeyHex = myPubKeyHex,
-            onFollow = onFollow,
-        )
+        ContextMenuArea(items = {
+            menuActions.map { action -> ContextMenuItem(action.label) { action.onClick() } }
+        }) {
+            FeedNoteCardBody(
+                note = note,
+                event = event,
+                relayManager = relayManager,
+                localCache = localCache,
+                account = account,
+                nwcConnection = nwcConnection,
+                onReply = onReply,
+                onZapFeedback = onZapFeedback,
+                onNavigateToProfile = onNavigateToProfile,
+                onNavigateToThread = onNavigateToThread,
+                onImageClick = onImageClick,
+                onMediaClick = onMediaClick,
+                onHashtagClick = onHashtagClick,
+                followedUsers = followedUsers,
+                myPubKeyHex = myPubKeyHex,
+                onFollow = onFollow,
+            )
+        }
+    }
+
+    if (showReportDialog) {
+        com.vitorpamplona.amethyst.desktop.ui.note
+            .NoteReportDialog(event) { showReportDialog = false }
     }
 }
 
@@ -690,15 +708,16 @@ fun FeedScreen(
 
     // DesktopFeedViewModel keyed on feedMode — recreated on mode switch
     val viewModel =
-        remember(feedMode, activeFeedId) {
+        remember(feedMode, activeFeedId, iAccount) {
+            val hidden = { iAccount?.hiddenUsers?.value ?: com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY }
             val filter =
                 when (feedMode) {
                     FeedMode.GLOBAL -> {
-                        DesktopGlobalFeedFilter(localCache)
+                        DesktopGlobalFeedFilter(localCache, hidden)
                     }
 
                     FeedMode.FOLLOWING -> {
-                        DesktopFollowingFeedFilter(localCache) {
+                        DesktopFollowingFeedFilter(localCache, hidden) {
                             localCache.followedUsers.value
                         }
                     }
@@ -709,10 +728,11 @@ fun FeedScreen(
                             activeFeedId ?: "custom",
                             activeFeedSource ?: com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
                                 .Filter(),
+                            hidden,
                         )
                     }
                 }
-            DesktopFeedViewModel(filter, localCache)
+            DesktopFeedViewModel(filter, localCache, iAccount?.hiddenUsers)
         }
 
     // Cancel old ViewModel's viewModelScope on recreation

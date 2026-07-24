@@ -20,12 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import android.app.NotificationManager
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import android.os.PowerManager
 import android.os.SystemClock
-import androidx.core.content.ContextCompat
 import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
@@ -38,47 +36,49 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.InlineReplyTarget
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendChessNotification
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendMentionNotification
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReactionNotification
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendReplyNotification
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.ArticleNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.BadgeNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.ChessNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.CodeNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.DirectMessageNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.GroupMessageNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.MediaNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.MentionNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.ReactionNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.ReplyNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.RepostNotification
+import com.vitorpamplona.amethyst.service.notifications.renderers.ZapNotification
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -89,24 +89,31 @@ import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "EventNotificationConsumer"
-private const val ACCOUNT_QUERY_PARAM = "?account="
-private const val SCROLL_TO_QUERY_PARAM = "&scrollTo="
 
+/**
+ * Turns a notification-relevant [Event] into a tray notification. Owns only the
+ * *policy* — account matching, the shared suppress-when-foreground / don't-notify-
+ * myself / muted-thread gates, and the routing of each kind to its renderer.
+ * The *presentation* (title, body, style, accent, observability) lives in the
+ * per-kind files under `renderers/`.
+ */
 class EventNotificationConsumer(
     private val applicationContext: Context,
     /** Reports how long each notification-processing wakelock was held (resource-usage ledger). */
@@ -144,32 +151,15 @@ class EventNotificationConsumer(
     /**
      * Entry point for notification-relevant events arriving into [LocalCache]
      * from any source (FCM push, UnifiedPush, Pokey, active relay subscriptions,
-     * NotificationRelayService). The [NotificationDispatcher] only invokes this
-     * after [Account.newNotesPreProcessor] has fully unwrapped wraps and seals,
-     * so this method receives the final inner payload directly.
-     *
-     * Matches the event to a logged-in account by its `p` tags and dispatches
-     * to [dispatchForAccount].
+     * NotificationRelayService). Matches the event to a logged-in account by its
+     * `p` tags and dispatches to [dispatchForAccount].
      */
     suspend fun consumeFromCache(event: Event) =
         withWakeLock {
             Log.d(TAG) { "New Notification from cache: kind=${event.kind} id=${event.id}" }
 
-            if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
+            if (!applicationContext.notificationManager().areNotificationsEnabled()) return@withWakeLock
 
-            // Match the in-app Notifications feed exactly: the event must
-            // p-tag the account AND pass NotificationFeedFilter.tagsAnEventByUser
-            // — the latter is the per-kind "is this actually for me" rule
-            // (reply-to-me, citation of my post, fork of my content, community
-            // moderation, reaction targeting my note, etc.). WakeUpEvent is the
-            // one exception: its [Event.notifies] is `true` unconditionally so
-            // every signed-in account processes it (the dispatcher bypasses
-            // the same way).
-            //
-            // One LocalCache lookup per event regardless of account count —
-            // the note is the same for every saved account. Use the Event
-            // overload so AddressableEvent kinds resolve to their replaceable
-            // note (id-keyed version has empty replyTo after insertion).
             val matchingNote: Note? =
                 if (event is WakeUpEvent) {
                     null
@@ -182,9 +172,6 @@ class EventNotificationConsumer(
 
                 val accountHex = npubToHexOrNull(savedAccount.npub) ?: return@forEach
                 if (matchingNote != null) {
-                    // Public chat replies into my messages often omit the `p`
-                    // tag; relax the gate for them (tagsAnEventByUser keeps it
-                    // scoped to messages actually replying to me).
                     val taggedOrPublicChatReply =
                         event.isTaggedUser(accountHex) ||
                             NotificationFeedFilter.isNotifiablePublicChatReply(matchingNote, accountHex)
@@ -213,9 +200,6 @@ class EventNotificationConsumer(
         account: Account,
     ) {
         // Calls and wake-ups are high-priority and always notify, even when MainActivity is visible.
-        // They have their own freshness rules (CallManager.MAX_EVENT_AGE_SECONDS = 20s) and
-        // author-identity semantics (caller pubkey is the other party), so they bypass the
-        // shared gates below.
         when (event) {
             is CallOfferEvent -> {
                 notifyIncomingCall(event, account)
@@ -231,80 +215,150 @@ class EventNotificationConsumer(
         // Everything else is suppressed while the user is actively on the home screen.
         if (MainActivity.isResumed) return
 
-        // Shared per-account gate: don't push-notify events this account authored.
-        // Applied here (not at the observer) because in a multi-account session
-        // account A's outgoing event legitimately becomes account B's incoming
-        // notification on the same device. The observer already enforces the
-        // 15-min rolling age window, so individual notify() methods don't need
-        // to repeat either check.
+        // Don't push-notify events this account authored.
         if (event.pubKey == account.signer.pubKey) return
 
-        // Mirror NotificationFeedFilter: reactions and zaps target a note via
-        // `replyTo`, not via thread-root tags on the wrapper event, so checking
-        // the wrapper's own thread misses them. Resolve the target and drop if
-        // its thread is muted. (The feed extends this to reposts too, but
-        // RepostEvent / GenericRepostEvent aren't routed below — push doesn't
-        // notify on reposts at all today.)
-        if (event is ReactionEvent || event is LnZapEvent) {
+        // Drop reactions/zaps/reposts whose target note lives on a muted thread
+        // (matches the in-app feed, which mutes all four).
+        if (event is ReactionEvent || event is LnZapEvent || event is RepostEvent || event is GenericRepostEvent) {
             val target = LocalCache.getNoteIfExists(event)?.replyTo?.lastOrNull()
             if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
         }
 
         when (event) {
-            is PrivateDmEvent -> notify(event, account)
+            is PrivateDmEvent -> DirectMessageNotification.notify(applicationContext, account, event)
+            is ChatMessageEvent -> DirectMessageNotification.notify(applicationContext, account, event)
+            is ChatMessageEncryptedFileHeaderEvent -> DirectMessageNotification.notify(applicationContext, account, event)
 
-            is LnZapEvent -> notify(event, account)
+            // Buzz DM messages (participant-routed; the predicate already scoped
+            // these kinds to Buzz DMs addressed to me).
+            is StreamMessageV2Event -> BuzzDmNotification.notify(applicationContext, account, event)
+            is ChatEvent -> BuzzDmNotification.notify(applicationContext, account, event)
 
-            is ChatMessageEvent -> notify(event, account)
+            is LnZapEvent -> ZapNotification.notify(applicationContext, account, event)
+            is NutzapEvent -> ZapNotification.notify(applicationContext, account, event)
+            is OnchainZapEvent -> ZapNotification.notify(applicationContext, account, event)
 
-            is ChatMessageEncryptedFileHeaderEvent -> notify(event, account)
+            is ReactionEvent -> ReactionNotification.notify(applicationContext, account, event)
 
-            is ReactionEvent -> notify(event, account)
+            is RepostEvent -> RepostNotification.notify(applicationContext, account, event)
+            is GenericRepostEvent -> RepostNotification.notify(applicationContext, account, event)
 
-            is TextNoteEvent -> notify(event, account)
+            is BadgeAwardEvent -> BadgeNotification.notify(applicationContext, account, event)
 
-            is CommentEvent -> notify(event, account)
-
-            is ChannelMessageEvent -> notify(event, account)
+            is TextNoteEvent -> notifyTextNote(event, account)
+            is CommentEvent -> notifyComment(event, account)
+            is ChannelMessageEvent -> notifyChannelMessage(event, account)
 
             is PictureEvent,
             is VideoNormalEvent,
             is VideoShortEvent,
             is VideoHorizontalEvent,
             is VideoVerticalEvent,
-            is PollEvent,
-            is GitPatchEvent,
-            is GitIssueEvent,
-            is GitPullRequestEvent,
-            is GitPullRequestUpdateEvent,
+            -> MediaNotification.notify(applicationContext, account, event)
+
+            is PollEvent -> MentionNotification.notify(applicationContext, account, event, titleRes = R.string.app_notification_poll_channel_message)
+
             is HighlightEvent,
             is LongTextNoteEvent,
             is WikiNoteEvent,
-            -> notifyMention(event, account)
+            -> ArticleNotification.notify(applicationContext, account, event)
 
-            is LiveChessGameAcceptEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_challenge_accepted)
+            is GitIssueEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitPatchEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitPullRequestEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitPullRequestUpdateEvent -> CodeNotification.notify(applicationContext, account, event)
 
-            is LiveChessMoveEvent -> notifyChessEvent(event, account, R.string.app_notification_chess_your_turn)
-            // WelcomeEvent is dispatched directly from processMarmotWelcomeFlow
-            // (no `p` tag, so tag-based matching doesn't work).
+            is LiveChessGameAcceptEvent -> ChessNotification.notify(applicationContext, account, event, R.string.app_notification_chess_challenge_accepted)
+            is LiveChessMoveEvent -> ChessNotification.notify(applicationContext, account, event, R.string.app_notification_chess_your_turn)
         }
     }
 
-    suspend fun wakeUpFor(
+    // Reply-vs-mention decisions are source-kind-specific, so they stay in the
+    // dispatcher; the actual rendering is in ReplyNotification / MentionNotification.
+
+    private suspend fun notifyTextNote(
+        event: TextNoteEvent,
+        account: Account,
+    ) {
+        val replyTargetId = event.replyingTo()
+        if (replyTargetId != null) {
+            val repliedNote = LocalCache.getNoteIfExists(replyTargetId)
+            if (repliedNote?.author?.pubkeyHex == account.signer.pubKey) {
+                val threadRoot = event.markedRoot()?.eventId ?: event.unmarkedRoot()?.eventId ?: replyTargetId
+                ReplyNotification.notify(applicationContext, account, event, repliedNote, threadRoot)
+                return
+            }
+        }
+        MentionNotification.notify(applicationContext, account, event)
+    }
+
+    private suspend fun notifyComment(
+        event: CommentEvent,
+        account: Account,
+    ) {
+        val pubKey = account.signer.pubKey
+        val isTarget = event.replyAuthorKeys().contains(pubKey) || event.rootAuthorKeys().contains(pubKey)
+        if (!isTarget) return
+
+        val parentNote = event.replyingTo()?.let { LocalCache.getNoteIfExists(it) }
+        val threadRoot =
+            event.rootEventIds().firstOrNull()
+                ?: event.rootAddressIds().firstOrNull()
+                ?: event.replyingToAddressOrEvent()
+                ?: event.id
+
+        ReplyNotification.notify(applicationContext, account, event, parentNote, threadRoot)
+    }
+
+    private suspend fun notifyChannelMessage(
+        event: ChannelMessageEvent,
+        account: Account,
+    ) {
+        val note = LocalCache.getNoteIfExists(event.id) ?: return
+
+        if (NotificationFeedFilter.isNotifiablePublicChatReply(note, account.signer.pubKey)) {
+            val parentNote = note.replyTo?.lastOrNull()
+            val threadRoot = event.channelId() ?: event.id
+            ReplyNotification.notify(applicationContext, account, event, parentNote, threadRoot)
+        } else {
+            MentionNotification.notify(applicationContext, account, event)
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Directly-dispatched Marmot events (no `p` tag → routed by the caller)
+    // ---------------------------------------------------------------------
+
+    suspend fun notifyWelcome(
+        event: WelcomeEvent,
+        account: Account,
+    ) = withWakeLock {
+        GroupMessageNotification.notifyWelcome(applicationContext, account, event)
+    }
+
+    suspend fun notifyGroupMessage(
+        innerEvent: ChatEvent,
+        nostrGroupId: String,
+        account: Account,
+    ) = withWakeLock {
+        GroupMessageNotification.notifyGroupMessage(applicationContext, account, innerEvent, nostrGroupId)
+    }
+
+    // ---------------------------------------------------------------------
+    // Calls & wake-ups keep their bespoke, high-priority handling here.
+    // ---------------------------------------------------------------------
+
+    private suspend fun wakeUpFor(
         event: WakeUpEvent,
         account: Account,
     ) {
-        // A WakeUp's whole purpose is the events it references. If it carries
-        // none, there's nothing to fetch — skip the 30s subscription window.
         val referencedTags = event.events().distinctBy { it.eventId }
         if (referencedTags.isEmpty()) {
             Log.d(TAG) { "WakeUp ${event.id} has no referenced events — skipping" }
             return
         }
 
-        // Per spec, p-tags on a WakeUp are the authors of the referenced
-        // events; those are whose metadata we need to render the notification.
-        // Fall back to e-tag author hints and finally to the WakeUp signer.
         val referencedNotes = referencedTags.map { LocalCache.getOrCreateNote(it.eventId) }
         val authorCandidates =
             (event.authorKeys() + referencedTags.mapNotNull { it.author })
@@ -313,7 +367,6 @@ class EventNotificationConsumer(
                 .map { LocalCache.getOrCreateUser(it) }
 
         coroutineScope {
-            // keeps the relay connection active for 30 seconds.
             launch {
                 try {
                     withTimeout(WAKEUP_WINDOW_MS) {
@@ -325,9 +378,6 @@ class EventNotificationConsumer(
                 }
             }
 
-            // keeps subscriptions active for 30 seconds so EventFinder can pull
-            // the referenced events from relays and UserFinder can resolve the
-            // referenced authors' metadata.
             launch {
                 val accountState = ScreenAuthAccount(account)
                 val eventStates = referencedNotes.map { EventFinderQueryState(it, account) }
@@ -359,717 +409,15 @@ class EventNotificationConsumer(
         }
     }
 
-    private suspend fun notify(
-        event: ChatMessageEncryptedFileHeaderEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New ChatMessage File to Notify")
-        // Age + self-author gates run centrally in dispatchForAccount.
-        val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-        val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
-        val chatRoom = event.chatroomKey(account.signer.pubKey)
-
-        val followingKeySet = account.followingKeySet()
-
-        val isKnownRoom =
-            chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true ||
-                chatroomList.hasSentMessagesTo(chatRoom)
-
-        if (!isKnownRoom) return
-
-        val content = chatNote.event?.content ?: ""
-        val user = chatNote.author?.toBestDisplayName() ?: ""
-        val userPicture = chatNote.author?.profilePicture()
-        val accountNpub =
-            account.signer.pubKey
-                .hexToByteArray()
-                .toNpub()
-        val chatroomMembers = chatRoom.users.joinToString(",")
-        val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
-
-        notificationManager()
-            .sendDMNotification(
-                event.id,
-                content,
-                user,
-                event.createdAt,
-                userPicture,
-                noteUri,
-                applicationContext,
-                accountNpub = accountNpub,
-                accountPictureUrl = account.userProfile().profilePicture(),
-                chatroomMembers = chatroomMembers,
-            )
-    }
-
-    private suspend fun notify(
-        event: ChatMessageEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New ChatMessage to Notify")
-        // Age + self-author gates run centrally in dispatchForAccount.
-        val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-        val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
-        val chatRoom = event.chatroomKey(account.signer.pubKey)
-
-        val followingKeySet = account.followingKeySet()
-
-        val isKnownRoom =
-            chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true ||
-                chatroomList.hasSentMessagesTo(chatRoom)
-
-        if (!isKnownRoom) return
-
-        val content = chatNote.event?.content ?: ""
-        val user = chatNote.author?.toBestDisplayName() ?: ""
-        val userPicture = chatNote.author?.profilePicture()
-        val accountNpub =
-            account.signer.pubKey
-                .hexToByteArray()
-                .toNpub()
-        val chatroomMembers = chatRoom.users.joinToString(",")
-        val noteUri = chatNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
-
-        notificationManager()
-            .sendDMNotification(
-                id = event.id,
-                messageBody = content,
-                senderName = user,
-                time = event.createdAt,
-                pictureUrl = userPicture,
-                uri = noteUri,
-                applicationContext = applicationContext,
-                accountNpub = accountNpub,
-                accountPictureUrl = account.userProfile().profilePicture(),
-                chatroomMembers = chatroomMembers,
-            )
-    }
-
-    private suspend fun notify(
-        event: PrivateDmEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New Nip-04 DM to Notify")
-        // Age + self-author gates run centrally in dispatchForAccount. The
-        // dispatchForAccount self-check (event.pubKey != account.signer.pubKey)
-        // also covers the "don't notify myself about DMs I sent" case that
-        // was previously implicit via the recipient match below.
-        if (account.signer.pubKey != event.verifiedRecipientPubKey()) return
-
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-        val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
-
-        val followingKeySet = account.followingKeySet()
-
-        val chatRoom = event.chatroomKey(account.signer.pubKey)
-
-        val isKnownRoom =
-            chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true ||
-                chatroomList.hasSentMessagesTo(chatRoom)
-
-        if (!isKnownRoom) return
-
-        val author = note.author ?: return
-        val content = decryptContent(note, account.signer) ?: return
-        val user = author.toBestDisplayName()
-        val userPicture = author.profilePicture()
-        val accountNpub =
-            account.signer.pubKey
-                .hexToByteArray()
-                .toNpub()
-        val noteUri = note.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
-
-        notificationManager()
-            .sendDMNotification(
-                id = event.id,
-                messageBody = content,
-                senderName = user,
-                time = event.createdAt,
-                pictureUrl = userPicture,
-                uri = noteUri,
-                applicationContext = applicationContext,
-                accountNpub = accountNpub,
-                accountPictureUrl = account.userProfile().profilePicture(),
-                chatroomMembers = null,
-            )
-    }
-
-    /**
-     * Welcomes have no `p` tag, so [consumeFromCache]'s tag-based account match
-     * can't route them. They are instead dispatched here directly by
-     * [com.vitorpamplona.amethyst.ui.screen.loggedIn.processMarmotWelcomeFlow]
-     * after [MarmotManager.processWelcome] joins the group — which is also the
-     * only place we reliably know which account the invite was for.
-     */
-    suspend fun notifyWelcome(
-        event: WelcomeEvent,
-        account: Account,
-    ) = withWakeLock {
-        Log.d(TAG, "New Marmot Welcome to Notify")
-
-        if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
-        if (MainActivity.isResumed) return@withWakeLock
-
-        // old event being re-broadcast
-        if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return@withWakeLock
-        // a welcome we ourselves emitted
-        if (event.pubKey == account.signer.pubKey) return@withWakeLock
-
-        val nostrGroupId = event.nostrGroupId() ?: return@withWakeLock
-
-        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
-        val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "a private group"
-        val inviter = LocalCache.getOrCreateUser(event.pubKey)
-        val inviterName = inviter.toBestDisplayName()
-        val inviterPicture = inviter.profilePicture()
-
-        val accountNpub =
-            account.signer.pubKey
-                .hexToByteArray()
-                .toNpub()
-        // marmot:<groupHex>?account=<npub> — parsed by uriToRoute below.
-        val noteUri = "marmot:$nostrGroupId$ACCOUNT_QUERY_PARAM$accountNpub"
-
-        notificationManager()
-            .sendDMNotification(
-                id = event.id,
-                messageBody = "You've been added to $groupName",
-                senderName = inviterName,
-                time = event.createdAt,
-                pictureUrl = inviterPicture,
-                uri = noteUri,
-                applicationContext = applicationContext,
-                accountNpub = accountNpub,
-                accountPictureUrl = account.userProfile().profilePicture(),
-                chatroomMembers = null,
-            )
-    }
-
-    /**
-     * Marmot kind:445 group messages have no `p` tag (recipients are routed
-     * by the `h` tag carrying the nostr_group_id), so the cache-observer path
-     * in [NotificationDispatcher] can't match them to an account. They're
-     * dispatched here directly from [com.vitorpamplona.amethyst.ui.screen.loggedIn.GroupEventHandler]
-     * once [com.vitorpamplona.quartz.marmot.MarmotInboundProcessor] has
-     * decrypted the outer ChaCha20-Poly1305 layer and verified the inner
-     * MLS-signed payload.
-     *
-     * Typed to [ChatEvent] so the caller has to narrow first — reactions,
-     * control messages, and deletions stay silent at the type level,
-     * mirroring how NIP-17 (kind:14) is the only DM kind we notify.
-     */
-    suspend fun notifyGroupMessage(
-        innerEvent: ChatEvent,
-        nostrGroupId: String,
-        account: Account,
-    ) = withWakeLock {
-        Log.d(TAG, "New Marmot Group Message to Notify")
-
-        if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
-        if (MainActivity.isResumed) return@withWakeLock
-
-        // old event being re-broadcast
-        if (innerEvent.createdAt < TimeUtils.fifteenMinutesAgo()) return@withWakeLock
-        // a message we ourselves sent
-        if (innerEvent.pubKey == account.signer.pubKey) return@withWakeLock
-
-        val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
-        val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "Private group"
-        val sender = LocalCache.getOrCreateUser(innerEvent.pubKey)
-        val senderName = sender.toBestDisplayName()
-        val senderPicture = sender.profilePicture()
-        // Defensive fallback for the rare empty-content ChatEvent so the
-        // popup is still actionable. Non-chat inner kinds were filtered
-        // out at the call site by the ChatEvent type narrowing.
-        val body = innerEvent.content.takeIf { it.isNotBlank() } ?: "New message"
-
-        val accountNpub =
-            account.signer.pubKey
-                .hexToByteArray()
-                .toNpub()
-        // marmot:<groupHex>?account=<npub> — same scheme as notifyWelcome,
-        // taps deep-link straight to the group's chatroom.
-        val noteUri = "marmot:$nostrGroupId$ACCOUNT_QUERY_PARAM$accountNpub"
-
-        notificationManager()
-            .sendDMNotification(
-                id = innerEvent.id,
-                messageBody = "$senderName: $body",
-                senderName = groupName,
-                time = innerEvent.createdAt,
-                pictureUrl = senderPicture,
-                uri = noteUri,
-                applicationContext = applicationContext,
-                accountNpub = accountNpub,
-                accountPictureUrl = account.userProfile().profilePicture(),
-                chatroomMembers = null,
-                marmotNostrGroupId = nostrGroupId,
-                marmotReplyToInnerEventId = innerEvent.id,
-                marmotReplyToInnerAuthor = innerEvent.pubKey,
-            )
-    }
-
-    suspend fun decryptZapContentAuthor(
-        event: LnZapRequestEvent,
-        signer: NostrSigner,
-    ): Event? =
-        if (event.isPrivateZap() && event.zappedAuthor().contains(event.pubKey)) {
-            signer.decryptZapEvent(event)
-        } else {
-            event
-        }
-
-    suspend fun decryptContent(
-        note: Note,
-        signer: NostrSigner,
-    ): String? {
-        val event = note.event
-        return when (event) {
-            is PrivateDmEvent -> {
-                event.decryptContent(signer)
-            }
-
-            is LnZapRequestEvent -> {
-                decryptZapContentAuthor(event, signer)?.content
-            }
-
-            else -> {
-                event?.content
-            }
-        }
-    }
-
-    private suspend fun notify(
-        event: LnZapEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New Zap to Notify")
-        Log.d(TAG) { "Notify Start ${event.toNostrUri()}" }
-        LocalCache.getNoteIfExists(event.id) ?: return
-
-        // Age + self-author gates run centrally in dispatchForAccount. For zaps
-        // the self-check is effectively a no-op (receipts are signed by the LN
-        // service, not the zapper) but the uniform rule is cheap and keeps the
-        // downstream invariants simple.
-        val noteZapRequest = event.zapRequest?.id?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
-        val noteZapped = event.zappedPost().firstOrNull()?.let { LocalCache.checkGetOrCreateNote(it) } ?: return
-
-        Log.d(TAG) { "Notify ZapRequest $noteZapRequest zapped $noteZapped" }
-
-        // Drop zaps on muted threads, hidden authors, etc.
-        if (!account.isAcceptable(noteZapped)) return
-
-        if ((event.amount ?: BigDecimal.ZERO) < BigDecimal.TEN) return
-
-        Log.d(TAG, "Notify Amount Bigger than 10")
-
-        // Zap routing (recipient == account) is enforced by the dispatcher
-        // predicate + consumeFromCache via Event.notifies; no re-check here.
-        val amount = showAmount(event.amount)
-
-        Log.d(TAG) { "Notify Amount $amount" }
-
-        (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
-            decryptZapContentAuthor(event, account.signer)?.let { decryptedEvent ->
-                Log.d(TAG) { "Notify Decrypted if Private Zap ${event.id}" }
-
-                val author = LocalCache.getOrCreateUser(decryptedEvent.pubKey)
-                val senderInfo = Pair(author, decryptedEvent.content.ifBlank { null })
-
-                if (noteZapped.event?.content != null) {
-                    decryptContent(noteZapped, account.signer)?.let { decrypted ->
-                        Log.d(TAG, "Notify Decrypted if Private Note")
-
-                        val zappedContent = decrypted.split("\n")[0]
-
-                        val user = senderInfo.first.toBestDisplayName()
-                        var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
-                        senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
-
-                        var content =
-                            stringRes(
-                                applicationContext,
-                                R.string.app_notification_zaps_channel_message_from,
-                                user,
-                            )
-                        zappedContent.let {
-                            content +=
-                                " " +
-                                stringRes(
-                                    applicationContext,
-                                    R.string.app_notification_zaps_channel_message_for,
-                                    zappedContent,
-                                )
-                        }
-                        val userPicture = senderInfo.first.profilePicture()
-                        val noteUri =
-                            "notifications$ACCOUNT_QUERY_PARAM" +
-                                account.signer.pubKey
-                                    .hexToByteArray()
-                                    .toNpub() +
-                                SCROLL_TO_QUERY_PARAM + event.id
-
-                        Log.d(TAG) { "Notify ${event.id} $content $title $noteUri" }
-
-                        notificationManager()
-                            .sendZapNotification(
-                                event.id,
-                                content,
-                                title,
-                                event.createdAt,
-                                userPicture,
-                                noteUri,
-                                applicationContext,
-                            )
-                    }
-                } else {
-                    // doesn't have a base note to refer to.
-                    Log.d(TAG, "Notify Zapped note not available")
-
-                    val user = senderInfo.first.toBestDisplayName()
-                    var title = stringRes(applicationContext, R.string.app_notification_zaps_channel_message, amount)
-                    senderInfo.second?.ifBlank { null }?.let { title += " ($it)" }
-
-                    val content =
-                        stringRes(
-                            applicationContext,
-                            R.string.app_notification_zaps_channel_message_from,
-                            user,
-                        )
-
-                    val userPicture = senderInfo.first.profilePicture()
-                    val noteUri =
-                        "notifications$ACCOUNT_QUERY_PARAM" +
-                            account.signer.pubKey
-                                .hexToByteArray()
-                                .toNpub() +
-                            SCROLL_TO_QUERY_PARAM + event.id
-
-                    Log.d(TAG) { "Notify ${event.id} $title $noteUri" }
-
-                    notificationManager()
-                        .sendZapNotification(
-                            event.id,
-                            content,
-                            title,
-                            event.createdAt,
-                            userPicture,
-                            noteUri,
-                            applicationContext,
-                        )
-                }
-            }
-        }
-    }
-
-    private suspend fun notify(
-        event: ReactionEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New Reaction to Notify")
-
-        // Age + self-author gates run centrally in dispatchForAccount.
-        // p-tag match already enforced by consumeFromCache; no redundant
-        // isTaggedUser re-check needed.
-
-        // NIP-25: when a reaction carries multiple `e` tags (e.g. both the
-        // thread root and the replied-to note), the LAST one is the event
-        // actually being reacted to. Using the first tag would surface the
-        // root in the tray when the like was really on a reply. This matches
-        // the in-app card, which resolves the target via replyTo.lastOrNull().
-        val reactedPostId = event.originalPost().lastOrNull() ?: return
-        val reactedNote = LocalCache.checkGetOrCreateNote(reactedPostId)
-
-        // Drop reactions on muted threads, hidden authors, etc.
-        if (reactedNote != null && !account.isAcceptable(reactedNote)) return
-
-        val author = LocalCache.getOrCreateUser(event.pubKey)
-        val user = author.toBestDisplayName()
-        val userPicture = author.profilePicture()
-
-        val reactionContent = event.content
-
-        // NIP-30 custom emoji: content is ":shortcode:" backed by an ["emoji", shortcode, url]
-        // tag. The image can't be rendered as text, so it is surfaced as a badge on the author's
-        // avatar (see sendReactionNotification) and the title keeps just the author's name.
-        val customEmojiUrl = CustomEmoji.createEmojiMap(event.tags)[reactionContent]
-
-        val title =
-            if (customEmojiUrl != null) {
-                user
-            } else {
-                val reactionSymbol =
-                    when {
-                        reactionContent == ReactionEvent.LIKE || reactionContent.isBlank() -> "\uD83E\uDD19"
-                        reactionContent == ReactionEvent.DISLIKE -> "\uD83D\uDC4E"
-                        else -> reactionContent
-                    }
-                "$reactionSymbol $user"
-            }
-
-        val reactedContent =
-            reactedNote
-                ?.event
-                ?.content
-                ?.split("\n")
-                ?.firstOrNull() ?: ""
-
-        val content =
-            if (reactedContent.isNotBlank()) {
-                stringRes(
-                    applicationContext,
-                    R.string.app_notification_reactions_channel_message_for,
-                    reactedContent,
-                )
-            } else {
-                stringRes(
-                    applicationContext,
-                    R.string.app_notification_reactions_channel_message,
-                    user,
-                )
-            }
-
-        val noteUri =
-            "notifications$ACCOUNT_QUERY_PARAM" +
-                account.signer.pubKey
-                    .hexToByteArray()
-                    .toNpub() +
-                SCROLL_TO_QUERY_PARAM + event.id
-
-        notificationManager()
-            .sendReactionNotification(
-                event.id,
-                content,
-                title,
-                event.createdAt,
-                userPicture,
-                noteUri,
-                applicationContext,
-                emojiUrl = customEmojiUrl,
-            )
-    }
-
-    private suspend fun notify(
-        event: TextNoteEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New TextNote to Notify")
-        // Age + self-author gates run centrally in dispatchForAccount.
-
-        val replyTargetId = event.replyingTo()
-
-        if (replyTargetId != null) {
-            val repliedNote = LocalCache.getNoteIfExists(replyTargetId)
-            if (repliedNote?.author?.pubkeyHex == account.signer.pubKey) {
-                val threadRoot = event.markedRoot()?.eventId ?: event.unmarkedRoot()?.eventId ?: replyTargetId
-                notifyReply(event, account, repliedNote.event?.content, threadRoot)
-                return
-            }
-        }
-
-        // Not a reply to us but we're p-tagged — a mention or citation.
-        notifyMention(event, account)
-    }
-
-    private suspend fun notify(
-        event: CommentEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New NIP-22 Comment to Notify")
-        // Age + self-author gates run centrally in dispatchForAccount.
-
-        // NIP-22 marks direct-reply and root authors. Notify when the current
-        // account is either (someone commenting on our post, or replying to our comment).
-        val pubKey = account.signer.pubKey
-        val isTarget = event.replyAuthorKeys().contains(pubKey) || event.rootAuthorKeys().contains(pubKey)
-        if (!isTarget) return
-
-        val parentContent =
-            event
-                .replyingTo()
-                ?.let { LocalCache.getNoteIfExists(it)?.event?.content }
-
-        val threadRoot =
-            event.rootEventIds().firstOrNull()
-                ?: event.rootAddressIds().firstOrNull()
-                ?: event.replyingToAddressOrEvent()
-                ?: event.id
-
-        notifyReply(event, account, parentContent, threadRoot)
-    }
-
-    private suspend fun notify(
-        event: ChannelMessageEvent,
-        account: Account,
-    ) {
-        Log.d(TAG, "New Public Chat Message to Notify")
-        // Age + self-author gates run centrally in dispatchForAccount.
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-
-        // A reply into one of my messages in this channel — even when the
-        // sender didn't p-tag me. Render it as a reply (threaded + inline
-        // reply action) grouped by channel so a busy room collapses into one
-        // notification instead of spamming. Falls back to a plain mention when
-        // I'm only p-tagged (a citation, not a reply to my message).
-        if (NotificationFeedFilter.isNotifiablePublicChatReply(note, account.signer.pubKey)) {
-            val parentContent =
-                note.replyTo
-                    ?.lastOrNull()
-                    ?.event
-                    ?.content
-            val threadRoot = event.channelId() ?: event.id
-            notifyReply(event, account, parentContent, threadRoot)
-        } else {
-            notifyMention(event, account)
-        }
-    }
-
-    private suspend fun notifyReply(
-        event: Event,
-        account: Account,
-        parentContent: String?,
-        threadRootId: String,
-    ) {
-        val replyNote = LocalCache.getNoteIfExists(event.id) ?: return
-
-        // Drop events from muted threads, hidden authors, etc.
-        if (!account.isAcceptable(replyNote)) return
-
-        val author = LocalCache.getOrCreateUser(event.pubKey)
-        val user = author.toBestDisplayName()
-        val userPicture = author.profilePicture()
-
-        val title = stringRes(applicationContext, R.string.app_notification_replies_channel_message, user)
-
-        val replyExcerpt =
-            event.content
-                .split("\n")
-                .firstOrNull { it.isNotBlank() }
-                ?.take(280)
-                ?: ""
-
-        val parentExcerpt =
-            parentContent
-                ?.split("\n")
-                ?.firstOrNull { it.isNotBlank() }
-                ?.take(140)
-
-        val content =
-            if (!parentExcerpt.isNullOrBlank()) {
-                replyExcerpt + "\n\n" +
-                    stringRes(
-                        applicationContext,
-                        R.string.app_notification_replies_channel_message_for,
-                        parentExcerpt,
-                    )
-            } else {
-                replyExcerpt
-            }
-
-        val accountNpub =
-            account.signer.pubKey
-                .hexToByteArray()
-                .toNpub()
-        val noteUri = replyNote.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
-
-        notificationManager()
-            .sendReplyNotification(
-                id = event.id,
-                messageBody = content,
-                messageTitle = title,
-                time = event.createdAt,
-                pictureUrl = userPicture,
-                uri = noteUri,
-                applicationContext = applicationContext,
-                threadRootId = threadRootId,
-                inlineReply = InlineReplyTarget(accountNpub = accountNpub, targetEventId = event.id),
-            )
-    }
-
-    private suspend fun notifyMention(
-        event: Event,
-        account: Account,
-    ) {
-        // Age + self-author gates run centrally in dispatchForAccount.
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-
-        // Drop events from muted threads, hidden authors, etc.
-        if (!account.isAcceptable(note)) return
-
-        val author = LocalCache.getOrCreateUser(event.pubKey)
-        val user = author.toBestDisplayName()
-        val userPicture = author.profilePicture()
-
-        val title = stringRes(applicationContext, R.string.app_notification_mentions_channel_message, user)
-
-        val content =
-            event.content
-                .split("\n")
-                .firstOrNull { it.isNotBlank() }
-                ?.take(280)
-                ?: ""
-
-        val accountNpub =
-            account.signer.pubKey
-                .hexToByteArray()
-                .toNpub()
-        val noteUri = note.toNEvent() + ACCOUNT_QUERY_PARAM + accountNpub
-
-        notificationManager()
-            .sendMentionNotification(
-                id = event.id,
-                messageBody = content,
-                messageTitle = title,
-                time = event.createdAt,
-                pictureUrl = userPicture,
-                uri = noteUri,
-                applicationContext = applicationContext,
-            )
-    }
-
-    private suspend fun notifyChessEvent(
-        event: BaseChessEvent,
-        account: Account,
-        contentStringRes: Int,
-    ) {
-        // Age + self-author gates run centrally in dispatchForAccount.
-        val author = LocalCache.getOrCreateUser(event.pubKey)
-        val user = author.toBestDisplayName()
-        val userPicture = author.profilePicture()
-        val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
-        val content = stringRes(applicationContext, contentStringRes, user)
-        val noteUri =
-            "notifications$ACCOUNT_QUERY_PARAM" +
-                account.signer.pubKey
-                    .hexToByteArray()
-                    .toNpub() +
-                SCROLL_TO_QUERY_PARAM + event.id
-
-        notificationManager()
-            .sendChessNotification(
-                event.id,
-                content,
-                title,
-                event.createdAt,
-                userPicture,
-                noteUri,
-                applicationContext,
-            )
-    }
-
     private suspend fun notifyIncomingCall(
         event: CallOfferEvent,
         account: Account,
     ) {
         if (!account.isFollowing(event.pubKey)) return
-
         if (TimeUtils.now() - event.createdAt > CallManager.MAX_EVENT_AGE_SECONDS) return
 
         val callerUser = LocalCache.getOrCreateUser(event.pubKey)
 
-        // If the caller's metadata hasn't been loaded yet (e.g. fresh process from
-        // a push notification), briefly subscribe to the user finder so we can
-        // resolve the user's display name instead of showing the raw pubkey.
         if (callerUser.metadataOrNull()?.bestName() == null) {
             val authorState = UserFinderQueryState(callerUser, account)
             try {
@@ -1091,7 +439,7 @@ class EventNotificationConsumer(
 
         val callerBitmap =
             callerUser.profilePicture()?.let { pictureUrl ->
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                withContext(Dispatchers.IO) {
                     try {
                         val request =
                             ImageRequest
@@ -1113,8 +461,4 @@ class EventNotificationConsumer(
             applicationContext = applicationContext,
         )
     }
-
-    fun notificationManager(): NotificationManager =
-        ContextCompat.getSystemService(applicationContext, NotificationManager::class.java)
-            as NotificationManager
 }

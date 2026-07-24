@@ -204,7 +204,7 @@ fun RenderBuzzDiff(note: Note) {
                             it.language?.let { lang -> append(if (isEmpty()) lang else "  ·  $lang") }
                             it.prNumber?.let { pr -> append("  ·  PR #$pr") }
                             it.commitSha
-                                ?.takeIf { sha -> sha.isNotBlank() }
+                                .takeIf { sha -> sha.isNotBlank() }
                                 ?.let { sha -> append("  ·  ${sha.take(8)}") }
                         }.ifBlank { null }
                     }

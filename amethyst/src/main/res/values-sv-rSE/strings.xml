@@ -20,6 +20,10 @@
         <item quantity="one">+%1$d\nsvar</item>
         <item quantity="other">+%1$d\nsvar</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">Anmäld av %1$d person du följer</item>
+        <item quantity="other">Anmäld av %1$d personer du följer</item>
+    </plurals>
     <string name="post_not_found">Inlägg hittades inte</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanal bild</string>
@@ -406,6 +410,12 @@
     <string name="chats_reply_not_found">Kunde inte hitta detta meddelande</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Sökte på alla relayer · tryck för att visa</string>
+    <string name="dm_sender_reported_who">Vem anmälde detta?</string>
+    <string name="dm_sender_reported_dismiss">Avfärda</string>
+    <string name="dm_sender_reported_hide">Dölj</string>
+    <string name="dm_sender_reported_subtitle">Någon du följer har flaggat detta konto</string>
+    <string name="dm_sender_reported_icon">Anmäld</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Det gick inte att läsa in svar: "</string>
     <string name="try_again">Försök igen</string>
     <string name="notification_feed_is_empty">Inga aviseringar ännu.</string>
@@ -1733,6 +1743,9 @@
     <string name="app_notification_zaps_channel_message_for">till %1$s</string>
     <string name="app_notification_reply_label">Svara</string>
     <string name="app_notification_mark_read_label">Markera som läst</string>
+    <string name="app_notification_me">Jag</string>
+    <string name="app_notification_new_message">Nytt meddelande</string>
+    <string name="app_notification_added_to_group">Du har lagts till i %1$s</string>
     <string name="app_notification_dms_summary">Nya meddelanden</string>
     <string name="app_notification_zaps_summary">Nya zaps</string>
     <string name="app_notification_reactions_channel_name">Reaktioner</string>
@@ -1754,6 +1767,48 @@
     <string name="app_notification_mentions_channel_description">Meddelar dig när någon nämner eller citerar dig i ett inlägg</string>
     <string name="app_notification_mentions_channel_message">%1$s nämnde dig</string>
     <string name="app_notification_mentions_summary">Nya omnämnanden</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">Meddelanden</string>
+    <string name="app_notification_group_social">Socialt</string>
+    <string name="app_notification_group_payments">Betalningar</string>
+    <string name="app_notification_group_content">Innehåll</string>
+    <string name="app_notification_group_developer">Utvecklare</string>
+    <string name="app_notification_group_games">Spel</string>
+    <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">Reposter</string>
+    <string name="app_notification_reposts_channel_description">Meddelar dig när någon repostar ditt inlägg</string>
+    <string name="app_notification_reposts_channel_message">%1$s repostade ditt inlägg</string>
+    <string name="app_notification_reposts_summary">Nya reposter</string>
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_description">Meddelar dig när någon nämner dig i ett foto eller en video</string>
+    <string name="app_notification_media_channel_message_photo">%1$s delade ett foto</string>
+    <string name="app_notification_media_channel_message_video">%1$s delade en video</string>
+    <string name="app_notification_media_summary">Nya media</string>
+    <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_name">Artiklar &amp; markeringar</string>
+    <string name="app_notification_articles_channel_description">Meddelar dig när någon nämner eller markerar dig i en artikel</string>
+    <string name="app_notification_articles_channel_message">%1$s nämnde dig i en artikel</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s markerade din artikel</string>
+    <string name="app_notification_articles_summary">Nya artiklar</string>
+    <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">Kod &amp; Git</string>
+    <string name="app_notification_code_channel_description">Meddelar dig om issues, patchar och pull requests</string>
+    <string name="app_notification_code_channel_message_issue">%1$s öppnade ett issue</string>
+    <string name="app_notification_code_channel_message_patch">%1$s skickade en patch</string>
+    <string name="app_notification_code_channel_message_pr">%1$s öppnade en pull request</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s uppdaterade en pull request</string>
+    <string name="app_notification_code_summary">Ny kodaktivitet</string>
+    <!-- Badges -->
+    <string name="app_notification_badges_channel_name">Märken</string>
+    <string name="app_notification_badges_channel_description">Meddelar dig när du får ett märke</string>
+    <string name="app_notification_badges_channel_message">Du fick ett märke</string>
+    <string name="app_notification_badges_channel_message_from">Tilldelat av %1$s</string>
+    <string name="app_notification_badges_summary">Nya märken</string>
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">Nutzap från %1$s</string>
+    <string name="app_notification_onchain_channel_message_from">Onchain-zap från %1$s</string>
+    <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s ställde en fråga</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Inkommande samtal</string>
     <string name="app_notification_calls_channel_description">Aviseringar för inkommande röst- och videosamtal</string>
@@ -2004,6 +2059,11 @@
     <string name="settings_section_appearance">Utseende</string>
     <string name="settings_section_media">Media &amp; data</string>
     <string name="settings_section_general">Allmänt</string>
+    <string name="settings_section_tor_engine">Anslutning</string>
+    <string name="settings_section_tor_routing">Dirigera via Tor</string>
+    <string name="settings_section_profile_sections">Sektioner &amp; flöden</string>
+    <string name="settings_section_home_tabs">Synliga flikar</string>
+    <string name="settings_section_reminders">Påminnelser</string>
     <string name="wallet_connect">Plånboksanslut</string>
     <string name="language">Språk</string>
     <string name="theme">Tema</string>
@@ -2299,6 +2359,9 @@
     <string name="relay_group_browse_description">Bläddra bland grupperna som hostas på ett relä. Klistra in en reläadress eller välj en nedan.</string>
     <string name="relay_group_browse_relay_label">Reläadress</string>
     <string name="relay_group_browse_go">Bläddra</string>
+    <string name="relay_tor_clearnet_title">Kan inte nå denna relay via Tor</string>
+    <string name="relay_tor_clearnet_body">%1$s svarar inte via Tor — dess värd kan blockera Tor-exitnoder. Anslut till den via clearnet istället?</string>
+    <string name="relay_tor_clearnet_action">Använd clearnet</string>
     <string name="relay_group_browse_your_relays">Reläer du är på</string>
     <string name="relay_group_browse_popular">Populära reläer</string>
     <string name="relay_group_no_messages_yet">Inga meddelanden ännu</string>
@@ -3004,6 +3067,9 @@
     <string name="chat_system_created_channel">%1$s skapade kanalen %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s skapade kanalen</string>
     <string name="chat_system_updated_channel">%1$s uppdaterade kanalprofilen</string>
+    <string name="relay_group_section_channels">Kanaler</string>
+    <string name="relay_group_section_forums">Forum</string>
+    <string name="relay_group_add_member">Lägg till medlem</string>
     <string name="chat_delivery_details_title">Meddelandeleverans</string>
     <string name="close">Stäng</string>
     <string name="chat_delivery_pending">Väntar på att ett relä ska acceptera detta meddelande</string>
@@ -4019,6 +4085,11 @@
     <string name="pow_notification_channel_name">Mining av bevis på arbete</string>
     <string name="pow_notification_channel_description">Visar inlägg som fortfarande minar sitt NIP-13-bevis på arbete så att de kan slutföras efter att du lämnat appen.</string>
     <string name="pow_notification_cancel_all">Avbryt</string>
+    <string name="pow_notification_send_without_pow">Skicka nu</string>
+    <string name="pow_cancel_dialog_title">Sluta utvinna?</string>
+    <string name="pow_cancel_dialog_message">Detta inlägg utvinner fortfarande sitt proof of work. Du kan skicka det nu utan proof of work, eller kasta det.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Skicka utan PoW</string>
+    <string name="pow_cancel_dialog_discard">Kasta inlägg</string>
     <string name="pow_difficulty_estimate">≈ %1$s per inlägg på den här enheten</string>
     <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">

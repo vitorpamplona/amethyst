@@ -380,7 +380,7 @@ object BuzzCommands {
                         .get()
                         .build(),
                 ).execute()
-                .use { it.code to (it.body?.string() ?: "") }
+                .use { it.code to it.body.string() }
         }
 
     private suspend fun httpPost(
@@ -392,7 +392,7 @@ object BuzzCommands {
         withContext(Dispatchers.IO) {
             val builder = Request.Builder().url(url).post(body.toRequestBody(jsonMedia))
             if (auth != null) builder.header("Authorization", auth)
-            http.newCall(builder.build()).execute().use { it.code to (it.body?.string() ?: "") }
+            http.newCall(builder.build()).execute().use { it.code to it.body.string() }
         }
 
     /** `buzz post RELAY GID <text>` → publishes a kind-40002 stream message with an `h` tag. */
@@ -578,7 +578,7 @@ object BuzzCommands {
                     .groupBy { it.slug() }
                     .values
                     .mapNotNull { versions -> versions.maxByOrNull { it.createdAt } }
-                    .sortedBy { it.personaOrNull()?.displayName ?: it.slug() ?: "" }
+                    .sortedBy { it.personaOrNull()?.displayName ?: it.slug() }
                     .map {
                         val content = it.personaOrNull()
                         mapOf(

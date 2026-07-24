@@ -275,31 +275,6 @@ fun WalletColumnScreen(
     if (showReceiveDialog && nwcConnection != null) {
         ReceiveDialog(
             onDismiss = { showReceiveDialog = false },
-            onGenerate = { amountSats, description ->
-                scope.launch {
-                    val result =
-                        paymentHandler.makeInvoice(
-                            nwcConnection = nwcConnection,
-                            amountMsats = amountSats * 1000,
-                            description = description.ifBlank { null },
-                        )
-                    when (result) {
-                        is NwcPaymentHandler.InvoiceResult.Success -> {
-                            result.invoice
-                        }
-
-                        is NwcPaymentHandler.InvoiceResult.Error -> {
-                            snackbarHostState.showSnackbar("Error: ${result.message}")
-                            null
-                        }
-
-                        is NwcPaymentHandler.InvoiceResult.Timeout -> {
-                            snackbarHostState.showSnackbar("Invoice request timed out")
-                            null
-                        }
-                    }
-                }
-            },
             paymentHandler = paymentHandler,
             nwcConnection = nwcConnection,
             snackbarHostState = snackbarHostState,
@@ -833,7 +808,6 @@ private fun SendDialog(
 @Composable
 private fun ReceiveDialog(
     onDismiss: () -> Unit,
-    onGenerate: (Long, String) -> Unit,
     paymentHandler: NwcPaymentHandler,
     nwcConnection: Nip47URINorm,
     snackbarHostState: SnackbarHostState,

@@ -20,6 +20,10 @@
         <item quantity="one">+%1$d\nresposta</item>
         <item quantity="other">+%1$d\nrespostas</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">Denunciado por %1$d pessoa que você segue</item>
+        <item quantity="other">Denunciado por %1$d pessoas que você segue</item>
+    </plurals>
     <string name="post_not_found">postagem não encontrada</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Imagem do Canal</string>
@@ -406,6 +410,12 @@
     <string name="chats_reply_not_found">Não foi possível encontrar esta mensagem</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Pesquisado em todos os relays · toque para ver</string>
+    <string name="dm_sender_reported_who">Quem denunciou isto?</string>
+    <string name="dm_sender_reported_dismiss">Dispensar</string>
+    <string name="dm_sender_reported_hide">Ocultar</string>
+    <string name="dm_sender_reported_subtitle">Alguém que você segue sinalizou esta conta</string>
+    <string name="dm_sender_reported_icon">Denunciado</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Erro ao carregar respostas"</string>
     <string name="try_again">Tente novamente</string>
     <string name="notification_feed_is_empty">Ainda não há notificações.</string>
@@ -1733,6 +1743,9 @@
     <string name="app_notification_zaps_channel_message_for">por %1$s</string>
     <string name="app_notification_reply_label">Responder</string>
     <string name="app_notification_mark_read_label">Marcar como lida</string>
+    <string name="app_notification_me">Eu</string>
+    <string name="app_notification_new_message">Nova mensagem</string>
+    <string name="app_notification_added_to_group">Você foi adicionado a %1$s</string>
     <string name="app_notification_dms_summary">Novas mensagens</string>
     <string name="app_notification_zaps_summary">Novos zaps</string>
     <string name="app_notification_reactions_channel_name">Reações</string>
@@ -1754,6 +1767,47 @@
     <string name="app_notification_mentions_channel_description">Notifica você quando alguém menciona ou cita você em uma publicação</string>
     <string name="app_notification_mentions_channel_message">%1$s mencionou você</string>
     <string name="app_notification_mentions_summary">Novas menções</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">Mensagens</string>
+    <string name="app_notification_group_payments">Pagamentos</string>
+    <string name="app_notification_group_content">Conteúdo</string>
+    <string name="app_notification_group_developer">Desenvolvedor</string>
+    <string name="app_notification_group_games">Jogos</string>
+    <!-- Reposts -->
+    <string name="app_notification_reposts_channel_description">Notifica você quando alguém reposta sua publicação</string>
+    <string name="app_notification_reposts_channel_message">%1$s repostou sua publicação</string>
+    <string name="app_notification_reposts_summary">Novos reposts</string>
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_name">Mídia</string>
+    <string name="app_notification_media_channel_description">Notifica você quando alguém menciona você em uma foto ou vídeo</string>
+    <string name="app_notification_media_channel_message_photo">%1$s compartilhou uma foto</string>
+    <string name="app_notification_media_channel_message_video">%1$s compartilhou um vídeo</string>
+    <string name="app_notification_media_summary">Nova mídia</string>
+    <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_name">Artigos e destaques</string>
+    <string name="app_notification_articles_channel_description">Notifica você quando alguém menciona ou destaca você em um artigo</string>
+    <string name="app_notification_articles_channel_message">%1$s mencionou você em um artigo</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s destacou seu artigo</string>
+    <string name="app_notification_articles_summary">Novos artigos</string>
+    <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">Código e Git</string>
+    <string name="app_notification_code_channel_description">Notifica você sobre issues, patches e pull requests</string>
+    <string name="app_notification_code_channel_message_issue">%1$s abriu um issue</string>
+    <string name="app_notification_code_channel_message_patch">%1$s enviou um patch</string>
+    <string name="app_notification_code_channel_message_pr">%1$s abriu um pull request</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s atualizou um pull request</string>
+    <string name="app_notification_code_summary">Nova atividade de código</string>
+    <!-- Badges -->
+    <string name="app_notification_badges_channel_name">Selos</string>
+    <string name="app_notification_badges_channel_description">Notifica você quando você ganha um selo</string>
+    <string name="app_notification_badges_channel_message">Você ganhou um selo</string>
+    <string name="app_notification_badges_channel_message_from">Concedido por %1$s</string>
+    <string name="app_notification_badges_summary">Novos selos</string>
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">Nutzap de %1$s</string>
+    <string name="app_notification_onchain_channel_message_from">Zap onchain de %1$s</string>
+    <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s fez uma pergunta</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Chamadas recebidas</string>
     <string name="app_notification_calls_channel_description">Notificações de chamadas de voz e vídeo recebidas</string>
@@ -2004,6 +2058,11 @@
     <string name="settings_section_appearance">Aparência</string>
     <string name="settings_section_media">Mídia e Dados</string>
     <string name="settings_section_general">Geral</string>
+    <string name="settings_section_tor_engine">Conexão</string>
+    <string name="settings_section_tor_routing">Rotear pelo Tor</string>
+    <string name="settings_section_profile_sections">Seções e feeds</string>
+    <string name="settings_section_home_tabs">Abas visíveis</string>
+    <string name="settings_section_reminders">Lembretes</string>
     <string name="wallet_connect">Conectar Carteira</string>
     <string name="language">Linguagem</string>
     <string name="theme">Tema</string>
@@ -2299,6 +2358,9 @@
     <string name="relay_group_browse_description">Explore os grupos hospedados em um relay. Cole um endereço de relay ou escolha um abaixo.</string>
     <string name="relay_group_browse_relay_label">Endereço do relay</string>
     <string name="relay_group_browse_go">Explorar</string>
+    <string name="relay_tor_clearnet_title">Não é possível acessar este relay pelo Tor</string>
+    <string name="relay_tor_clearnet_body">%1$s não está respondendo pelo Tor — seu host pode estar bloqueando nós de saída do Tor. Conectar a ele via clearnet?</string>
+    <string name="relay_tor_clearnet_action">Usar clearnet</string>
     <string name="relay_group_browse_your_relays">Relays em que você está</string>
     <string name="relay_group_browse_popular">Relays populares</string>
     <string name="relay_group_no_messages_yet">Nenhuma mensagem ainda</string>
@@ -3004,6 +3066,9 @@
     <string name="chat_system_created_channel">%1$s criou o canal %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s criou o canal</string>
     <string name="chat_system_updated_channel">%1$s atualizou o perfil do canal</string>
+    <string name="relay_group_section_channels">Canais</string>
+    <string name="relay_group_section_forums">Fóruns</string>
+    <string name="relay_group_add_member">Adicionar membro</string>
     <string name="chat_delivery_details_title">Entrega da mensagem</string>
     <string name="close">Fechar</string>
     <string name="chat_delivery_pending">Aguardando um relay aceitar esta mensagem</string>
@@ -4019,6 +4084,11 @@
     <string name="pow_notification_channel_name">Mineração de prova de trabalho</string>
     <string name="pow_notification_channel_description">Mostra publicações que ainda estão minerando sua prova de trabalho NIP-13 para que possam terminar depois que você sair do app.</string>
     <string name="pow_notification_cancel_all">Cancelar</string>
+    <string name="pow_notification_send_without_pow">Enviar agora</string>
+    <string name="pow_cancel_dialog_title">Parar de minerar?</string>
+    <string name="pow_cancel_dialog_message">Esta publicação ainda está minerando seu proof of work. Você pode enviá-la agora sem proof of work ou descartá-la.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Enviar sem PoW</string>
+    <string name="pow_cancel_dialog_discard">Descartar publicação</string>
     <string name="pow_difficulty_estimate">≈ %1$s por publicação neste dispositivo</string>
     <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">
