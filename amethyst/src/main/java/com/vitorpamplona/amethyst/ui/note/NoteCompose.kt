@@ -2060,18 +2060,16 @@ fun observeEdits(
 
     val editState =
         remember(baseNote.idHex) {
+            // Edits are anchored on the note (Note.edits), so the current set is readable synchronously
+            // (no cache scan) — start Empty or Loaded, never Loading.
             val cached = accountViewModel.cachedModificationEventsForNote(baseNote)
             mutableStateOf(
-                if (cached != null) {
-                    if (cached.isEmpty()) {
-                        GenericLoadable.Empty()
-                    } else {
-                        val state = EditState()
-                        state.updateModifications(cached)
-                        GenericLoadable.Loaded(state)
-                    }
+                if (cached.isEmpty()) {
+                    GenericLoadable.Empty()
                 } else {
-                    GenericLoadable.Loading()
+                    val state = EditState()
+                    state.updateModifications(cached)
+                    GenericLoadable.Loaded(state)
                 },
             )
         }

@@ -22,7 +22,6 @@
 
 package com.vitorpamplona.amethyst.model
 
-import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
@@ -2241,15 +2240,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean =
         // Buzz's own timeline set excludes 40003: an edit is an OVERLAY replacing an
-        // earlier message's content, never a row of its own. Store it and record the
-        // overlay (keyed by the channel's UUID, so own sends with no provenance relay
-        // land too), but do NOT attach it to the timeline.
+        // earlier message's content, never a row of its own. Store it and anchor it to the
+        // message it edits (Note.edits) — like every other edit kind — so the overlay is held
+        // for as long as its message and never leaks into the timeline as a bubble.
         consumeBuzzRegularEvent(event, relay, wasVerified).also {
             val target = event.editedMessage() ?: return@also
-            val channelId = event.channel() ?: return@also
             val editNote = getOrCreateNote(event.id)
             if (editNote.event != null) {
-                BuzzWorkspaceStates.getOrCreate(channelId).addEdit(target, editNote)
+                getOrCreateNote(target).addEdit(editNote)
             }
         }
 
@@ -2776,12 +2774,11 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
+            // Anchor the modification to the note it edits, like every other edit kind — the read side
+            // ([findLatestModificationForNote]) then folds `edited.edits` instead of scanning the cache,
+            // and addEdit invalidates the note's edits flow so the UI re-derives.
             event.editedNote()?.let {
-                checkGetOrCreateNote(it.eventId)?.let { editedNote ->
-                    modificationCache.remove(editedNote.idHex)
-                    // must update list of Notes to quickly update the user.
-                    editedNote.flowSet?.edits?.invalidateData()
-                }
+                checkGetOrCreateNote(it.eventId)?.addEdit(note)
             }
 
             refreshNewNoteObservers(note)
@@ -3254,33 +3251,24 @@ object LocalCache : ILocalCache, ICacheProvider {
         return minTime
     }
 
-    val modificationCache = LruCache<HexKey, List<Note>>(20)
-
-    fun cachedModificationEventsForNote(note: Note): List<Note>? = modificationCache[note.idHex]
-
+    /**
+     * The NIP-1010 edits of [note] to apply, oldest first — folded from the note's own
+     * [Note.edits] (where [consume] anchors each modification) rather than scanned from the
+     * whole cache. Only the original author's edits count, and expired (NIP-40) ones are
+     * dropped. Cheap (bounded by this note's edits), so it's safe to call from any thread.
+     */
     fun findLatestModificationForNote(note: Note): List<Note> {
-        checkNotInMainThread()
-
         val noteAuthor = note.author ?: return emptyList()
-
-        modificationCache[note.idHex]?.let {
-            return it
-        }
-
         val time = TimeUtils.now()
 
-        val newNotes =
-            notes
-                .filter { _, item ->
-                    val noteEvent = item.event
-
-                    noteEvent is TextNoteModificationEvent && noteAuthor == item.author && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
-                }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-
-        modificationCache.put(note.idHex, newNotes)
-
-        return newNotes
+        return note.edits
+            .filter { item ->
+                val noteEvent = item.event
+                noteEvent is TextNoteModificationEvent && noteAuthor == item.author && !noteEvent.isExpirationBefore(time)
+            }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
     }
+
+    fun cachedModificationEventsForNote(note: Note): List<Note> = findLatestModificationForNote(note)
 
     fun cleanMemory() {
         Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
@@ -3370,13 +3358,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         // grow unbounded with every author who ever heartbeat here.
         if (channel is LiveActivitiesChannel) {
             channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
-        }
-
-        // A Buzz workspace's edit/canvas overlay is keyed off the channel id, outside
-        // `notes`, so the top-N reap never touches it. Drop overlay entries whose target
-        // message was just pruned, else they pin the edit note + author forever.
-        if (channel is RelayGroupChannel) {
-            BuzzWorkspaceStates.getIfExists(channel.groupId.id)?.pruneEdits(channel.notes.keys())
         }
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
