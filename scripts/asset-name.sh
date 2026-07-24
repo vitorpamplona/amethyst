@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Single source of truth for Amethyst release asset naming.
 #
-# Two product lines share this contract:
+# Three product lines share this contract:
 #   amethyst-desktop-<version>-<family>-<arch>.<ext>   (Compose Desktop app)
 #   amy-<version>-<family>-<arch>.<ext>                (Amy CLI — cli/ module)
+#   geode-<version>-<family>-<arch>.<ext>              (geode relay — geode/ module)
 #
 #   <version> = tag stripped of leading 'v' (e.g. "1.08.0")
 #   <family>  = macos | windows | linux
@@ -33,13 +34,18 @@
 #   amy-1.08.0-linux-x64.tar.gz
 #   amy-1.08.0-linux-x64.deb
 #   amy-1.08.0-linux-x64.rpm
+#   geode-1.08.0-macos-arm64.tar.gz
+#   geode-1.08.0-linux-x64.tar.gz
+#   geode-1.08.0-linux-x64.deb
+#   geode-1.08.0-linux-x64.rpm
 #
-# One CLI asset breaks the family/arch shape on purpose: the no-JRE jar bundle
-# for Homebrew-core is pure JVM bytecode (no bundled runtime), so a single
+# Two assets break the family/arch shape on purpose: the no-JRE jar bundles for
+# Homebrew-core are pure JVM bytecode (no bundled runtime), so a single
 # platform-independent artifact serves every OS:
 #   amy-1.08.0-jvm.tar.gz
-# It is packaged inline in create-release.yml (linux leg), not via the helpers
-# below, since it has no <family>/<arch> dimension.
+#   geode-1.08.0-jvm.tar.gz
+# They are packaged inline in create-release.yml (linux leg), not via the helpers
+# below, since they have no <family>/<arch> dimension.
 
 set -euo pipefail
 
@@ -55,6 +61,13 @@ asset_name() {
 cli_asset_name() {
     local family="$1" arch="$2" version="$3" ext="$4"
     printf 'amy-%s-%s-%s.%s' "$version" "$family" "$arch" "$ext"
+}
+
+# geode relay variant of asset_name — same shape, different product prefix.
+# Usage: geode_asset_name <family> <arch> <version> <ext>
+geode_asset_name() {
+    local family="$1" arch="$2" version="$3" ext="$4"
+    printf 'geode-%s-%s-%s.%s' "$version" "$family" "$arch" "$ext"
 }
 
 # Copy + rename build outputs into <dest_dir> using the canonical naming scheme.
@@ -131,6 +144,51 @@ collect_cli_assets() {
         base="$(basename "$src")"
         ext="${base##*.}"
         dst="$abs_dest/$(cli_asset_name "$family" "$arch" "$version" "$ext")"
+        cp "$src" "$dst"
+        echo "Collected: $dst"
+    done
+    shopt -u nullglob
+}
+
+# Copy + rename geode relay build outputs into <dest_dir> using the canonical
+# geode-<version>-<family>-<arch>.<ext> scheme.
+#
+# Expected inputs:
+#   geode/build/geode-image/geode/  flat app-image built by :geode:geodeImage
+#                                   (bin/geode + lib/*.jar + runtime/ + share/)
+#   geode/build/jpackage/*.deb      from :geode:jpackageDeb (Linux only)
+#   geode/build/jpackage/*.rpm      from :geode:jpackageRpm (Linux only)
+#
+# Usage: collect_geode_assets <family> <arch> <version> <dest_dir>
+collect_geode_assets() {
+    local family="$1" arch="$2" version="$3" dest="$4"
+    mkdir -p "$dest"
+    local abs_dest
+    abs_dest="$(cd "$dest" && pwd)"
+    shopt -s nullglob
+
+    # 1. Tar the flat app-image into geode-<version>-<family>-<arch>.tar.gz.
+    #    This is the portable-across-OS asset — macOS runners produce only
+    #    this one.
+    local app_image="geode/build/geode-image/geode"
+    if [ -d "$app_image" ]; then
+        local tarball="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" tar.gz)"
+        ( cd "$(dirname "$app_image")" && tar czf "$tarball" "$(basename "$app_image")" )
+        echo "Collected: $tarball"
+    fi
+
+    # 2. Linux native installers (.deb, .rpm). jpackage writes them directly
+    #    to geode/build/jpackage/ with its own naming, so we re-copy under the
+    #    canonical scheme.
+    local src base ext dst
+    for src in \
+        geode/build/jpackage/*.deb \
+        geode/build/jpackage/*.rpm \
+    ; do
+        [ -f "$src" ] || continue
+        base="$(basename "$src")"
+        ext="${base##*.}"
+        dst="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" "$ext")"
         cp "$src" "$dst"
         echo "Collected: $dst"
     done

@@ -111,6 +111,18 @@ import java.io.File
  *                      per-event tokenization cost on ingest.
  */
 fun main(args: Array<String>) {
+    // Terminal flags handled before verb dispatch so a packaged binary has a
+    // fast, exit-0 command that never opens a store or binds a port — the smoke
+    // test the Homebrew formula, the .deb/.rpm post-install check, and the
+    // Docker image healthcheck all invoke.
+    if (args.any { it == "--version" || it == "-V" }) {
+        println("geode ${BuildConfig.VERSION}")
+        return
+    }
+    if (args.any { it == "--help" || it == "-h" }) {
+        printHelp()
+        return
+    }
     when (args.firstOrNull()?.takeUnless { it.startsWith("--") }) {
         "import" -> runImport(args.copyOfRange(1, args.size))
         "export" -> runExport(args.copyOfRange(1, args.size))
@@ -119,6 +131,36 @@ fun main(args: Array<String>) {
         "relay" -> serve(args.copyOfRange(1, args.size))
         else -> serve(args)
     }
+}
+
+private fun printHelp() {
+    println(
+        """
+        geode ${BuildConfig.VERSION} - a standalone Nostr relay.
+
+        Usage:
+          geode [relay] [flags]         serve the relay (default when no verb is given)
+          geode import [flags] [FILE...] bulk-load NDJSON events into the store
+          geode export [flags]          dump the store as NDJSON to stdout
+
+        Common flags:
+          --config <file>    TOML config (see config.example.toml)
+          --host <addr>      bind address (default 0.0.0.0)
+          --port <n>         tcp port (default 7447, 0 to autobind)
+          --path <p>         websocket path (default /)
+          --db <file>        sqlite db path (persistent storage)
+          --store <backend>  event-store backend: sqlite (default), fs, or a
+                             fully-qualified IEventStore class name
+          --auth             require NIP-42 AUTH
+          --optional-auth    advertise NIP-42 AUTH but don't require it
+          --no-verify        do NOT verify event signatures (trusted input only)
+          --no-search        disable NIP-50 full-text search
+          --version, -V      print the version and exit
+          --help, -h         print this help and exit
+
+        Docs: https://github.com/vitorpamplona/amethyst/blob/main/geode/README.md
+        """.trimIndent(),
+    )
 }
 
 /**
