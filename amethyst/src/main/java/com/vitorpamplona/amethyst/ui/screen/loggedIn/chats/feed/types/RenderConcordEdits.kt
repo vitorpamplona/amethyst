@@ -41,47 +41,47 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.sample
 
 /**
  * Observes the newest kind-3302 Concord edit overlaying a Concord chat message [note],
  * recomposing when a new edit lands. Returns null for non-Concord messages or an
  * unedited one.
  *
- * Concord edits ride the encrypted channel plane (unlike public feed edits, there is
- * no relay subscription to start here — the session decrypts the wrap and lands the
- * kind-3302 rumor in [LocalCache] itself). Resolution goes through
- * [LocalCache.findLatestConcordEditForNote], which keeps only edits authored by the
- * original message's author — so a member can't rewrite someone else's message — and
- * the newest one wins (last write). Runs off the main thread because the finder scans
- * the cache.
+ * Concord edits ride the encrypted channel plane (unlike public feed edits, there is no
+ * relay subscription to start — the session decrypts the wrap and lands the kind-3302
+ * rumor in [LocalCache] itself). We watch the cache reactively through
+ * [LocalCache.observeEvents], narrowed on the `e` tag so it seeds from any edit already
+ * cached and wakes on each new one without scanning the whole store. Only edits authored
+ * by the original message's author are applied — so a member can't rewrite someone else's
+ * message — and the latest by CORD-02 §4 send time wins.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeConcordEdit(note: Note): Note? {
     // Key on note.event, not note: LocalCache mutates a Note in place, so keying on the Note instance
     // would cache a null gatherer taken before the event populated and never recompute for that row.
     val isConcord = remember(note.event) { note.inGatherers?.any { it is ConcordChannel } == true }
     if (!isConcord) return null
+    val authorHex = note.author?.pubkeyHex ?: return null
 
-    val latest by
-        produceState<Note?>(initialValue = null, note) {
-            note
-                .flow()
-                .edits
-                .stateFlow
-                .sample(500)
-                .mapLatest { LocalCache.findLatestConcordEditForNote(note).lastOrNull() }
-                .distinctUntilChanged()
+    val edits by
+        produceState<List<ConcordChatEditEvent>>(emptyList(), note.idHex) {
+            val filter = Filter(kinds = listOf(ConcordChatEditEvent.KIND), tags = mapOf("e" to listOf(note.idHex)))
+            LocalCache
+                .observeEvents<ConcordChatEditEvent>(filter)
                 .flowOn(Dispatchers.IO)
                 .collect { value = it }
         }
-    return latest
+
+    return remember(edits, authorHex) {
+        edits
+            .filter { it.pubKey == authorHex }
+            .maxWithOrNull(compareBy({ it.orderingMs() }, { it.id }))
+            ?.let { LocalCache.getNoteIfExists(it.id) }
+    }
 }
 
 /**

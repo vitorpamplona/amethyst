@@ -2813,14 +2813,9 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
-            event.editedMessageId()?.let {
-                checkGetOrCreateNote(it)?.let { editedNote ->
-                    concordEditCache.remove(editedNote.idHex)
-                    // Must invalidate so the chat bubble re-derives the latest edit overlay.
-                    editedNote.flowSet?.edits?.invalidateData()
-                }
-            }
-
+            // The bubble watches for these reactively via LocalCache.observeEvents narrowed on the
+            // edit's `e` tag, so simply landing it in the cache + waking observers is enough — the
+            // overlay re-derives without any target-note bookkeeping here.
             refreshNewNoteObservers(note)
 
             return true
@@ -3278,39 +3273,6 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
 
         modificationCache.put(note.idHex, newNotes)
-
-        return newNotes
-    }
-
-    val concordEditCache = LruCache<HexKey, List<Note>>(20)
-
-    /**
-     * Every Concord chat edit (kind 3302) targeting [note] that was authored by [note]'s own
-     * author — a member can't rewrite someone else's message — oldest first (createdAt, then id),
-     * so the caller applies the last as the winning edit. Mirrors [findLatestModificationForNote]
-     * but for the dedicated Concord edit kind rather than the kind-1010 feed edit.
-     */
-    fun findLatestConcordEditForNote(note: Note): List<Note> {
-        checkNotInMainThread()
-
-        val noteAuthor = note.author ?: return emptyList()
-
-        concordEditCache[note.idHex]?.let {
-            return it
-        }
-
-        val newNotes =
-            notes
-                .filter { _, item ->
-                    val noteEvent = item.event
-
-                    noteEvent is ConcordChatEditEvent && noteAuthor == item.author && noteEvent.editedMessageId() == note.idHex
-                }
-                // Order by CORD-02 §4 send time (createdAt*1000 + `ms` tag) so the caller's last is
-                // the winning edit, matching the reference client at sub-second precision.
-                .sortedWith(compareBy({ (it.event as ConcordChatEditEvent).orderingMs() }, { it.idHex }))
-
-        concordEditCache.put(note.idHex, newNotes)
 
         return newNotes
     }
