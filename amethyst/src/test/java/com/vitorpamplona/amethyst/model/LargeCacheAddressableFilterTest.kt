@@ -28,13 +28,21 @@ import org.junit.Test
 
 class LargeCacheAddressableFilterTest {
     companion object {
+        // LargeSoftCache stores values as WeakReferences, so the cache alone does not
+        // keep the mock notes alive. Without a strong referent they are cleared at the
+        // next GC and every query returns 0 — an order/GC-dependent flake. Hold the notes
+        // strongly here for the lifetime of the test class.
+        private val strongRefs = mutableListOf<AddressableNote>()
+
         fun LargeSoftCache<Address, AddressableNote>.addMock(
             kind: Int,
             pubkey: HexKey,
             dTag: String = "",
         ) {
             val address = Address(kind, pubkey, dTag)
-            put(address, AddressableNote(address))
+            val note = AddressableNote(address)
+            strongRefs.add(note)
+            put(address, note)
         }
 
         val cache =
@@ -62,6 +70,18 @@ class LargeCacheAddressableFilterTest {
                 addMock(32003, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
                 addMock(32003, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a")
             }
+    }
+
+    @Test
+    fun survivesGarbageCollection() {
+        // Regression guard for the flaky-fixture root cause: the mock notes must stay
+        // reachable across a GC. Before the strong-reference fix, WeakReference-backed
+        // entries were cleared here and every query returned 0.
+        System.gc()
+        System.gc()
+        Runtime.getRuntime().freeMemory()
+
+        assertEquals(19, cache.filterIntoSet(listOf(32_000, 32_001, 32_002, 32_003)).size)
     }
 
     @Test
