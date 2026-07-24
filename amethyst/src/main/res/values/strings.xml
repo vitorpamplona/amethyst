@@ -3437,8 +3437,6 @@
     <string name="buzz_invite_continue">Continue in browser</string>
     <string name="buzz_invite_invalid">This doesn\'t look like a valid Buzz invite link.</string>
     <string name="buzz_invite_expired">This invite has expired. Ask for a new one.</string>
-    <string name="buzz_invite_after_browser">Finish accepting the terms in the browser, then come back — your workspace will be waiting.</string>
-    <string name="buzz_invite_open_workspace">Open my workspaces</string>
     <string name="buzz_import_title">Import workspace channels</string>
     <string name="buzz_import_loading">Finding your channels…</string>
     <string name="buzz_import_your_channels">Your channels on this workspace</string>

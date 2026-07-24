@@ -39,17 +39,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -88,7 +84,6 @@ fun BuzzInviteScreen(
     val invite = remember(link) { BuzzInviteLink.parse(link) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var launched by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(R.string.buzz_invite_title), nav) },
@@ -157,51 +152,29 @@ fun BuzzInviteScreen(
 
             Spacer(Modifier.weight(1f))
 
-            if (launched) {
-                // After the browser hand-off: gently point back to the workspace, which now
-                // authenticates + discovers its channels (the claim granted membership).
-                Text(
-                    text = stringRes(R.string.buzz_invite_after_browser),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.size(4.dp))
-                Button(
-                    onClick = {
-                        // Open the relay's group screen, which now lists the channels the claim just
-                        // granted you membership to (importable into Amethyst).
-                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { relay ->
-                            nav.newStack(Route.RelayGroupServer(relay.url))
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(symbol = MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(stringRes(R.string.buzz_invite_open_workspace))
-                }
-            } else {
-                Button(
-                    onClick = {
+            Button(
+                onClick = {
+                    val relay = RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())
+                    if (relay != null) {
                         // Remember the workspace as joined (persisted; marks it a Buzz dialect) and
                         // pre-approve NIP-42 auth to its relay so the read-only channel/DM discovery
-                        // authenticates without a prompt, then hand off to the in-app window.nostr
-                        // browser to accept terms + sign the claim.
-                        RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { relay ->
-                            BuzzWorkspaces.join(relay)
-                            scope.launch { accountViewModel.account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
-                        }
-                        FavoriteAppLauncher.launchUrl(context, link)
-                        launched = true
-                    },
-                    enabled = !expired,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(symbol = MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(stringRes(R.string.buzz_invite_continue))
-                }
+                        // authenticates without a prompt.
+                        BuzzWorkspaces.join(relay)
+                        scope.launch { accountViewModel.account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
+                    }
+                    // Hand off to the in-app window.nostr browser to accept terms + sign the claim.
+                    FavoriteAppLauncher.launchUrl(context, link)
+                    // Drop the user onto the workspace's channel list underneath the browser, so returning
+                    // from it lands them where they browse + join channels (the claim just granted them
+                    // membership) instead of a dead-end "come back" screen. Channel selection stays theirs.
+                    if (relay != null) nav.newStack(Route.RelayGroupServer(relay.url))
+                },
+                enabled = !expired,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(symbol = MaterialSymbols.AutoMirrored.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringRes(R.string.buzz_invite_continue))
             }
         }
     }
