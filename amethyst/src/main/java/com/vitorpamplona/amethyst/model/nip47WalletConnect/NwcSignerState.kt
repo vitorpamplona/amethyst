@@ -37,15 +37,25 @@ import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectReque
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -61,6 +71,13 @@ class NwcSignerState(
     val cache: LocalCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
+    /**
+     * Shared cache of wallets' kind 13194 info events, used here to negotiate
+     * encryption. Injected by [com.vitorpamplona.amethyst.model.Account] (which
+     * owns the relay client). Null in tests / when unavailable — requests then
+     * fall back to NIP-04.
+     */
+    val infoCache: NwcInfoCache? = null,
 ) : INwcSignerState {
     /**
      * Flow of the default wallet's NWC URI, derived from multi-wallet settings.
@@ -101,18 +118,35 @@ class NwcSignerState(
             }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, NostrWalletConnectResponseCache(nip47Signer.value))
 
-    /**
-     * The NIP-47 method names the default wallet advertises (nwc#2 `get_info.methods`).
-     * Empty until fetched or when no wallet is set. [Account] refreshes it whenever the
-     * default wallet changes; the zap path reads it to decide whether the BOLT12 `pay`
-     * rail is available before preferring it over lightning.
-     */
-    val defaultWalletCapabilities = MutableStateFlow<Set<String>>(emptySet())
-
     fun buildSigner(uri: Nip47WalletConnect.Nip47URINorm?) =
         uri?.secret?.hexToByteArray()?.let {
             NostrSignerInternal(KeyPair(it))
         }
+
+    init {
+        // Warm the info cache in the background whenever the default wallet changes
+        // so the payment hot path can read the encryption preference without waiting.
+        scope.launch(Dispatchers.IO) {
+            defaultWalletUri
+                .filterNotNull()
+                .distinctUntilChanged { a, b -> a.pubKeyHex == b.pubKeyHex && a.relayUri == b.relayUri }
+                .collect { infoCache?.refreshIfStale(it) }
+        }
+    }
+
+    /**
+     * Non-blocking read of the negotiated encryption preference for a wallet.
+     * NIP-47 says a client "should always prefer nip44 if supported by the wallet
+     * service". Returns true only when the cached info event advertises `nip44_v2`;
+     * otherwise NIP-04 (the legacy default). Also nudges a background refresh so a
+     * stale/expired entry self-heals for the next transaction without blocking this
+     * one.
+     */
+    private fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
+        uri ?: return false
+        infoCache?.refreshIfStale(uri)
+        return infoCache?.current(uri)?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } ?: false
+    }
 
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
 
@@ -126,6 +160,42 @@ class NwcSignerState(
     override suspend fun decryptResponse(event: LnZapPaymentResponseEvent): Response? {
         if (!hasWalletConnectSetup()) return null
         return zapPaymentResponseDecryptionCache.value.decryptResponse(event)
+    }
+
+    // Non-zap incoming payments reported by connected wallets (NIP-47
+    // payment_received). Buffered + drop-oldest so a burst never blocks the
+    // decrypt coroutine; consumers (e.g. the tray-notification poster) collect it.
+    private val _incomingNonZapPayments =
+        MutableSharedFlow<NwcTransaction>(extraBufferCapacity = 32, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val incomingNonZapPayments: SharedFlow<NwcTransaction> = _incomingNonZapPayments.asSharedFlow()
+
+    /**
+     * Decrypts an incoming NWC notification (kind 23197/23196) with the matching
+     * wallet's connection secret and, when it is a non-zap `payment_received`,
+     * publishes its transaction to [incomingNonZapPayments]. Zap-carrying payments
+     * are dropped — those already surface via the kind-9735 ZapNotification path.
+     */
+    suspend fun handleIncomingNotification(event: NwcNotificationEvent) {
+        if (!hasWalletConnectSetup()) return
+
+        // The notification is `p`-tagged to the per-wallet client pubkey; match it
+        // to the wallet whose connection secret derives that key.
+        val clientPubKey = event.clientPubKey() ?: return
+        val wallet = settings.nwcWallets.value.firstOrNull { buildSigner(it.uri)?.pubKey == clientPubKey } ?: return
+        val walletSigner = buildSigner(wallet.uri) ?: return
+
+        val notification =
+            try {
+                event.decryptNotification(walletSigner)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                return
+            }
+
+        val tx = (notification as? PaymentReceivedNotification)?.notification ?: return
+        if (tx.parsedMetadata()?.nostr != null) return // zap — already shown by ZapNotification
+
+        _incomingNonZapPayments.tryEmit(tx)
     }
 
     /**
@@ -147,7 +217,7 @@ class NwcSignerState(
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
         val walletSigner = buildSigner(walletService) ?: signer
 
-        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner)
+        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(walletService))
 
         val filter =
             NWCPaymentQueryState(
@@ -193,7 +263,7 @@ class NwcSignerState(
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
 
-        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value)
+        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value, useNip44 = prefersNip44(walletService))
 
         val filter =
             NWCPaymentQueryState(

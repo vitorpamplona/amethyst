@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.GitRepositoryListState
@@ -293,8 +294,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
@@ -481,7 +481,21 @@ class Account(
     // account never surfaces under another (the old cache was a process-wide singleton).
     val relayNotifications = NotifyRequestsCache()
 
-    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
+    // Shared cache of connected wallets' kind 13194 info events (capabilities +
+    // encryption + notification support). Backs NIP-44 negotiation in
+    // NwcSignerState and notification gating in NwcPaymentNotificationWatcher.
+    val nwcInfoCache =
+        NwcInfoCache(
+            fetch = { uri ->
+                client.fetchFirst(
+                    uri.relayUri,
+                    Filter(kinds = listOf(NwcInfoEvent.KIND), authors = listOf(uri.pubKeyHex), limit = 1),
+                ) as? NwcInfoEvent
+            },
+            scope = scope,
+        )
+
+    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings, nwcInfoCache)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
@@ -1430,11 +1444,15 @@ class Account(
 
     /**
      * True when the default NWC wallet advertises the nwc#2 `pay` method — the rail a
-     * BOLT12 zap needs to obtain a payer proof. Empty capabilities (not yet fetched, or a
-     * wallet that doesn't advertise it) read as false, so the zap path falls back to
-     * lightning rather than attempting a `pay` the wallet can't honor.
+     * BOLT12 zap needs to obtain a payer proof. Read from the wallet's cached kind:13194
+     * info event (its capability advertisement), which [NwcSignerState] already refreshes
+     * on wallet change. A missing/unfetched info event reads as false, so the zap path
+     * falls back to lightning rather than attempting a `pay` the wallet can't honor.
      */
-    fun defaultWalletSupportsBolt12Pay(): Boolean = nip47SignerState.defaultWalletCapabilities.value.contains(NwcMethod.PAY)
+    fun defaultWalletSupportsBolt12Pay(): Boolean {
+        val uri = nip47SignerState.defaultWalletUri.value ?: return false
+        return nip47SignerState.infoCache?.current(uri)?.supportsMethod(NwcMethod.PAY) == true
+    }
 
     /**
      * Sends a NIP-XX BOLT12 zap to [recipientPubKey] over the default NWC wallet.
@@ -5867,24 +5885,6 @@ class Account(
                     ) {
                         hiddenUsers.hideUser(spammer.pubkeyHex)
                     }
-                }
-            }
-        }
-
-        // Track which methods the default NWC wallet advertises (nwc#2 `get_info.methods`)
-        // so a zap prefers the BOLT12 `pay` rail only when the wallet supports it, and
-        // otherwise falls back to lightning. Refetched whenever the default wallet changes.
-        scope.launch(Dispatchers.IO) {
-            nip47SignerState.defaultWalletUri.collect { uri ->
-                nip47SignerState.defaultWalletCapabilities.value = emptySet()
-                if (uri != null) {
-                    runCatching {
-                        sendNwcRequestToWallet(uri, GetInfoMethod.create()) { response ->
-                            if (response is GetInfoSuccessResponse) {
-                                nip47SignerState.defaultWalletCapabilities.value = response.result?.methods?.toSet() ?: emptySet()
-                            }
-                        }
-                    }.onFailure { Log.w("Account", "NWC get_info for capabilities failed", it) }
                 }
             }
         }
