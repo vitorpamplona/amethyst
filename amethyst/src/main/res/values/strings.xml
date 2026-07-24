@@ -1671,6 +1671,9 @@
     <string name="blossom_sync_channel_name">Blossom sync</string>
     <string name="blossom_sync_channel_description">Shows progress while copying your files across your Blossom servers.</string>
     <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
+    <string name="blossom_stored_on">Stored on</string>
+    <string name="blossom_on_all_servers">On all servers</string>
+    <string name="blossom_not_on_all_servers">Not on all servers</string>
     <string name="blossom_mirror_to_missing">Mirror to missing</string>
     <string name="blossom_delete_from">Delete from…</string>
     <string name="blossom_delete_from_host">Delete from %1$s</string>
