@@ -197,14 +197,11 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
@@ -1451,12 +1448,17 @@ object LocalCache : ILocalCache, ICacheProvider {
         val author = getOrCreateUser(event.pubKey)
 
         // Already processed this event.
-        if (version.event?.id == event.id) return false
+        if (version.event != null) return false
 
         if (wasVerified || justVerify(event)) {
-            if (version.event == null) {
-                version.loadEvent(event, author, emptyList())
-                version.flowSet?.ots?.invalidateData()
+            version.loadEvent(event, author, emptyList())
+
+            // Anchor the attestation to the note it timestamps (like an edit to its message), so it
+            // survives exactly as long as that note and is dropped when the note is deleted or pruned.
+            // addTimestamp invalidates the target's `ots` flow so the OTS pill re-derives — the old
+            // code invalidated the attestation's OWN (observer-less) flow, so the target never updated.
+            event.digestEventId()?.let { targetId ->
+                getOrCreateNote(targetId).addTimestamp(version)
             }
 
             refreshNewNoteObservers(version)
@@ -3201,45 +3203,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
 
-    suspend fun findEarliestOtsForNote(
-        note: Note,
-        otsVerifCacheBuilder: () -> VerificationStateCache,
-    ): Long? {
-        checkNotInMainThread()
-
-        var minTime: Long? = null
-        val time = TimeUtils.now()
-
-        val candidates =
-            notes.mapNotNull { _, item ->
-                val noteEvent = item.event
-                if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                    val cachedTime = (otsVerifCacheBuilder().justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
-                    if (cachedTime != null) {
-                        if (minTime == null || cachedTime < (minTime ?: Long.MAX_VALUE)) {
-                            minTime = cachedTime
-                        }
-                        null
-                    } else {
-                        // tries to verify again
-                        noteEvent
-                    }
-                } else {
-                    null
-                }
-            }
-
-        candidates.forEach { noteEvent ->
-            (otsVerifCacheBuilder().cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
-                if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
-                    minTime = stampedTime
-                }
-            }
-        }
-
-        return minTime
-    }
-
     fun cleanMemory() {
         Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
         notes.cleanUp()
@@ -3560,6 +3523,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         // back-link, so the unlink above can't reach them — resolve the target by the edit's `e` tag
         // and drop it there, or a deleted edit would keep overlaying its message.
         editedTargetIdOf(noteEvent)?.let { getNoteIfExists(it)?.removeEdit(note) }
+
+        // OTS attestations (kind 1040) are likewise anchored on their target's Note.timestamps with
+        // no `replyTo` back-link — resolve the target by the `e` tag and drop the proof there.
+        if (noteEvent is OtsEvent) {
+            noteEvent.digestEventId()?.let { getNoteIfExists(it)?.removeTimestamp(note) }
+        }
 
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
