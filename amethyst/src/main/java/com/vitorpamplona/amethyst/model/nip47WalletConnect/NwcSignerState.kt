@@ -37,13 +37,21 @@ import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectReque
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -152,6 +160,42 @@ class NwcSignerState(
     override suspend fun decryptResponse(event: LnZapPaymentResponseEvent): Response? {
         if (!hasWalletConnectSetup()) return null
         return zapPaymentResponseDecryptionCache.value.decryptResponse(event)
+    }
+
+    // Non-zap incoming payments reported by connected wallets (NIP-47
+    // payment_received). Buffered + drop-oldest so a burst never blocks the
+    // decrypt coroutine; consumers (e.g. the tray-notification poster) collect it.
+    private val _incomingNonZapPayments =
+        MutableSharedFlow<NwcTransaction>(extraBufferCapacity = 32, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val incomingNonZapPayments: SharedFlow<NwcTransaction> = _incomingNonZapPayments.asSharedFlow()
+
+    /**
+     * Decrypts an incoming NWC notification (kind 23197/23196) with the matching
+     * wallet's connection secret and, when it is a non-zap `payment_received`,
+     * publishes its transaction to [incomingNonZapPayments]. Zap-carrying payments
+     * are dropped — those already surface via the kind-9735 ZapNotification path.
+     */
+    suspend fun handleIncomingNotification(event: NwcNotificationEvent) {
+        if (!hasWalletConnectSetup()) return
+
+        // The notification is `p`-tagged to the per-wallet client pubkey; match it
+        // to the wallet whose connection secret derives that key.
+        val clientPubKey = event.clientPubKey() ?: return
+        val wallet = settings.nwcWallets.value.firstOrNull { buildSigner(it.uri)?.pubKey == clientPubKey } ?: return
+        val walletSigner = buildSigner(wallet.uri) ?: return
+
+        val notification =
+            try {
+                event.decryptNotification(walletSigner)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                return
+            }
+
+        val tx = (notification as? PaymentReceivedNotification)?.notification ?: return
+        if (tx.parsedMetadata()?.nostr != null) return // zap — already shown by ZapNotification
+
+        _incomingNonZapPayments.tryEmit(tx)
     }
 
     /**

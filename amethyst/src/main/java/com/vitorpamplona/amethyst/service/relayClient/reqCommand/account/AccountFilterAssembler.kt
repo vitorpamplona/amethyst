@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsHistoryEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip47WalletConnect.NwcNotificationsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
@@ -71,6 +72,8 @@ class AccountFilterAssembler(
             AccountDraftsEoseManager(client, ::allKeys),
             notifications,
             notificationsHistory,
+            // Live tail: NIP-47 wallet notifications (payment_received) on each connected wallet's own relay.
+            NwcNotificationsEoseManager(client, ::allKeys),
             MarmotGroupEventsEoseManager(client, ::allKeys),
         )
 

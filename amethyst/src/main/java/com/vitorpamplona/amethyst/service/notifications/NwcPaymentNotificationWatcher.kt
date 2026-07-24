@@ -21,149 +21,47 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
-import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.renderers.NwcPaymentNotifier
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
-import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
- * Always-on watcher that turns NIP-47 wallet notifications (kind 23197/23196) into
- * user-facing tray notifications for the logged-in account.
+ * Posts tray notifications for non-zap Lightning payments reported by the logged-in
+ * account's connected NWC wallets.
  *
- * For each configured NWC wallet it opens a standing subscription on that wallet's
- * own relay, filtered to notifications `p`-tagged to our client pubkey. Each event
- * is decrypted with the per-wallet connection secret and, when it is an incoming
- * `payment_received`, posted via [NwcPaymentNotifier] — **unless** the transaction
- * metadata carries a NIP-57 zap request, in which case it is dropped: zaps already
- * surface through the kind-9735 `ZapNotification` path, so notifying here would
- * double up.
+ * The relay subscription that receives these events is NOT here — it lives in
+ * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip47WalletConnect.NwcNotificationsEoseManager],
+ * grouped with the account's always-on zap/notification inbox subscriptions so it
+ * shares their lifecycle (open while logged in, warm in the background). That
+ * manager decrypts each notification and publishes non-zap payments to
+ * `NwcSignerState.incomingNonZapPayments`; this class is only the Context-bound
+ * bridge that drains that flow into an OS notification.
  *
- * Only new notifications (`since` = watch start) are surfaced, so relaunching the
- * app never replays old payments as fresh alerts; a per-subscription id set
- * de-duplicates re-delivery across relay reconnects.
+ * Keeping decode and display decoupled means the flow stays populated even when OS
+ * notifications are denied (a future in-app Notifications-tab consumer can drain
+ * the same flow); [NwcPaymentNotifier] itself is what no-ops when the tray is off.
  */
 class NwcPaymentNotificationWatcher(
     private val context: Context,
-    private val client: INostrClient,
     private val scope: CoroutineScope,
     private val accountFlow: Flow<Account?>,
 ) {
     fun start() {
         scope.launch(Dispatchers.IO) {
             accountFlow
-                // Key on pubkey to avoid re-subscribing on unrelated Account churn.
-                // Account switches pass through a null (Loading) emission, which is
-                // distinct from any pubkey and so still restarts the watch cleanly.
                 .distinctUntilChanged { a, b -> a?.signer?.pubKey == b?.signer?.pubKey }
                 .collectLatest { account ->
                     account ?: return@collectLatest
-                    account.settings.nwcWallets.collectLatest { wallets ->
-                        watchWallets(account, wallets)
+                    account.nip47SignerState.incomingNonZapPayments.collect { tx ->
+                        NwcPaymentNotifier.notify(context, account, tx)
                     }
                 }
         }
-    }
-
-    private suspend fun watchWallets(
-        account: Account,
-        wallets: List<NwcWalletEntryNorm>,
-    ) = coroutineScope {
-        wallets.forEach { wallet ->
-            val signer = account.nip47SignerState.buildSigner(wallet.uri) ?: return@forEach
-
-            launch(Dispatchers.IO) {
-                // Skip wallets that explicitly advertise no notification support, so we
-                // don't hold open a relay connection that will never deliver. Fail open
-                // when the info event is unknown (null) — better to listen than miss.
-                val info = account.nwcInfoCache.getFresh(wallet.uri)
-                if (info != null && !info.supportsNotifications()) return@launch
-
-                val filter =
-                    Filter(
-                        kinds = listOf(NwcNotificationEvent.KIND, NwcNotificationEvent.LEGACY_KIND),
-                        authors = listOf(wallet.uri.pubKeyHex),
-                        tags = mapOf("p" to listOf(signer.pubKey)),
-                        since = TimeUtils.now(),
-                    )
-
-                val seen = HashSet<HexKey>()
-                subscribe(wallet.uri.relayUri, filter).collect { event ->
-                    val notification = event as? NwcNotificationEvent ?: return@collect
-                    if (seen.add(notification.id)) {
-                        handle(account, notification, signer)
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * A standing subscription that emits each matching event once — unlike the
-     * accumulating `subscribeAsFlow`, which retains and re-emits the full event
-     * list on every event (wrong for a lifetime subscription). Reconnect
-     * re-delivery is de-duplicated by the caller's `seen` set.
-     */
-    private fun subscribe(
-        relay: NormalizedRelayUrl,
-        filter: Filter,
-    ): Flow<Event> =
-        callbackFlow {
-            val subId = newSubId()
-            val listener =
-                object : SubscriptionListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?,
-                    ) {
-                        trySend(event)
-                    }
-                }
-
-            client.subscribe(subId, mapOf(relay to listOf(filter)), listener)
-            awaitClose { client.unsubscribe(subId) }
-        }
-
-    private suspend fun handle(
-        account: Account,
-        event: NwcNotificationEvent,
-        signer: NostrSigner,
-    ) {
-        val notification =
-            try {
-                event.decryptNotification(signer)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                return
-            }
-
-        val tx = (notification as? PaymentReceivedNotification)?.notification ?: return
-
-        // A payment carrying a NIP-57 zap request is already shown by ZapNotification.
-        if (tx.parsedMetadata()?.nostr != null) return
-
-        NwcPaymentNotifier.notify(context, account, tx)
     }
 }

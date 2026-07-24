@@ -885,10 +885,11 @@ class AppModules(
 
     // Surfaces non-zap Lightning payments reported by the logged-in account's NWC
     // wallet(s) as tray notifications (zaps are already shown via ZapNotification).
+    // The relay subscription lives in the always-on AccountFilterAssembler; this
+    // only drains the decoded-payment flow into an OS notification.
     val nwcPaymentNotificationWatcher =
         NwcPaymentNotificationWatcher(
             context = appContext,
-            client = client,
             scope = applicationIOScope,
             accountFlow = sessionManager.accountContent.map { (it as? AccountState.LoggedIn)?.account },
         ).also { it.start() }
