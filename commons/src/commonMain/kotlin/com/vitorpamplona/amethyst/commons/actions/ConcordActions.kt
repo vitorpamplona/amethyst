@@ -255,6 +255,25 @@ object ConcordActions {
         return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
     }
 
+    /**
+     * Builds an encrypted-seal thread-reply wrap carrying one or more encrypted image [imetas]
+     * (kind-1111 NIP-22 comment on [parent]) on the [channel] plane — the minichat image path.
+     */
+    suspend fun buildChannelImageReply(
+        authorSigner: NostrSigner,
+        channel: GroupKey,
+        channelId: HexKey,
+        epoch: Long,
+        parent: Event,
+        text: String,
+        imetas: List<IMetaTag>,
+        createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
+    ): Event {
+        val rumor = ChannelChat.imageReply(authorSigner.pubKey, channelId, epoch, text, imetas, parent, createdAt, extraTags)
+        return ConcordStreamEnvelope.wrap(rumor, channel, authorSigner, encrypted = true)
+    }
+
     /** Builds an encrypted-seal reaction wrap (kind 7 against [target]) on the [channel] plane. */
     suspend fun buildChannelReaction(
         authorSigner: NostrSigner,

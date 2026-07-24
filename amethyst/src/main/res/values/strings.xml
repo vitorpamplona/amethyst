@@ -417,6 +417,8 @@
     <string name="chat_reply_in_thread">In thread</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Thread</string>
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
+    <string name="chat_send_image_title">Send image</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d reply</item>
