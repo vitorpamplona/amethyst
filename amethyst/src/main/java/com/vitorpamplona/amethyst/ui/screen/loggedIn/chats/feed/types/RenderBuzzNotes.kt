@@ -30,8 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -63,27 +60,6 @@ import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip29RelayGroups.groupId
-
-/**
- * Observes the newest kind-40003 edit overlaying [note], recomposing when new edits
- * arrive. Returns null when the message is unedited or has no channel scope.
- *
- * Resolution goes through [BuzzWorkspaceStates] keyed by the note's `h` channel id
- * (a Buzz UUID) rather than any channel object: the state exists independently of
- * when — or whether — the channel materialized, so a row composed before the first
- * edit arrived still starts rendering overlays the moment one lands.
- */
-@Composable
-fun observeBuzzEdit(note: Note): Note? {
-    // Key on note.event, not note: LocalCache mutates a Note in place, so keying on the Note instance
-    // would cache a null groupId taken before the event populated and never recompute for that row.
-    val channelId = remember(note.event) { note.event?.groupId() } ?: return null
-    val state = remember(channelId) { BuzzWorkspaceStates.getOrCreate(channelId) }
-    // Subscribing to the version counter is what re-runs editFor on new arrivals.
-    val version by state.editUpdates.collectAsState()
-    return remember(note, version) { state.editFor(note.idHex) }
-}
 
 /**
  * A Buzz stream message whose content has been superseded by a kind-40003 edit:

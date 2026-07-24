@@ -1673,6 +1673,10 @@
     <string name="blossom_sync_channel_name">Blossom sync</string>
     <string name="blossom_sync_channel_description">Shows progress while copying your files across your Blossom servers.</string>
     <string name="manage_stored_files_empty">No stored files found on your Blossom servers.</string>
+    <string name="blossom_stored_on">Stored on</string>
+    <string name="blossom_file_details">File details</string>
+    <string name="blossom_on_all_servers">On all servers</string>
+    <string name="blossom_not_on_all_servers">Not on all servers</string>
     <string name="blossom_mirror_to_missing">Mirror to missing</string>
     <string name="blossom_delete_from">Delete from…</string>
     <string name="blossom_delete_from_host">Delete from %1$s</string>
@@ -3387,6 +3391,9 @@
     <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
     <string name="buzz_edit_message">Edit</string>
     <string name="buzz_editing_banner">Editing message</string>
+    <string name="edit_message">Edit</string>
+    <string name="message_edited">(edited)</string>
+    <string name="concord_editing_banner">Editing message</string>
     <string name="buzz_typing_one">%1$s is typing…</string>
     <string name="buzz_typing_two">%1$s and %2$s are typing…</string>
     <string name="buzz_typing_many">Several people are typing…</string>

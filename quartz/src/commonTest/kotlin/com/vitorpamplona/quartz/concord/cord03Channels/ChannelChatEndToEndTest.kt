@@ -101,6 +101,35 @@ class ChannelChatEndToEndTest {
     }
 
     @Test
+    fun editIsAChannelBoundKind3302ThatPointsAtTheTargetAndRoundTrips() =
+        runTest {
+            val alice = NostrSignerInternal(KeyPair())
+            val channel = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+
+            val original = ChannelChat.message(alice.pubKey, channelIdHex, rootEpoch, "helo", createdAt = 1L)
+            val edit = ChannelChat.edit(alice.pubKey, channelIdHex, rootEpoch, original.id, "hello", createdAt = 2L)
+
+            // The dedicated Concord edit kind (Armada KIND_EDIT), e-tagging the original,
+            // still bound to the channel/epoch. Armada omits a `k` tag on edits, so we do too.
+            assertEquals(ConcordChatEditEvent.KIND, edit.kind)
+            assertEquals(3302, edit.kind)
+            assertEquals(original.id, edit.tags.first { it[0] == "e" }[1])
+            assertTrue(edit.tags.none { it[0] == "k" })
+            assertEquals("hello", edit.content)
+            assertTrue(ChannelChat.isBoundTo(edit, channelIdHex, rootEpoch))
+            assertFalse(ChannelChat.isBoundTo(edit, channelIdHex, 1L)) // wrong epoch can't be replayed
+
+            // Wraps + opens on the shared plane like any other Chat Plane rumor; the opened
+            // rumor is typed as a ConcordChatEditEvent that names the edited message.
+            val wrap = ConcordStreamEnvelope.wrap(edit, channel, alice, encrypted = true)
+            val opened = ConcordStreamEnvelope.open(wrap, channel)
+            assertEquals(3302, opened.rumor.kind)
+            assertEquals("hello", opened.rumor.content)
+            assertEquals(alice.pubKey, opened.author)
+            assertEquals(original.id, (opened.rumor as ConcordChatEditEvent).editedMessageId())
+        }
+
+    @Test
     fun typingHeartbeatIsAnEphemeralWrapReadableByAnotherMember() =
         runTest {
             val alice = NostrSignerInternal(KeyPair())
