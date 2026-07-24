@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,11 +33,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -58,11 +62,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,15 +85,22 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
@@ -98,6 +111,8 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.coroutines.launch
+import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.zoomable
 
 @Composable
 fun BlossomBlobManagerScreen(
@@ -115,8 +130,8 @@ fun BlossomBlobManagerScreen(
     val pendingPayment by vm.pendingPayment.collectAsStateWithLifecycle()
 
     // The tapped file, if any. We keep only the hash and re-resolve the row from the
-    // live list each recomposition so the open sheet stays in sync with mirror/delete
-    // updates (and closes itself when the last copy of the blob is deleted).
+    // live list each recomposition so the open viewer/sheet stays in sync with
+    // mirror/delete updates (and closes itself when the last copy of the blob is deleted).
     var selectedHash by remember { mutableStateOf<HexKey?>(null) }
 
     pendingPayment?.let { pending ->
@@ -131,14 +146,26 @@ fun BlossomBlobManagerScreen(
 
     selectedHash?.let { hash ->
         val selected = blobs.firstOrNull { it.hash == hash }
-        if (selected == null) {
-            selectedHash = null
-        } else {
-            BlobDetailSheet(
-                row = selected,
-                vm = vm,
-                onDismiss = { selectedHash = null },
-            )
+        when {
+            selected == null -> selectedHash = null
+
+            // Images and videos open in the full-screen zoomable viewer, which carries
+            // the actions in its own bottom drawer. Everything else (PDFs, arbitrary
+            // blobs) has nothing to zoom, so it goes straight to the actions sheet.
+            selected.url != null && selected.isViewable ->
+                BlossomBlobViewer(
+                    row = selected,
+                    vm = vm,
+                    accountViewModel = accountViewModel,
+                    onDismiss = { selectedHash = null },
+                )
+
+            else ->
+                BlobDetailSheet(
+                    row = selected,
+                    vm = vm,
+                    onDismiss = { selectedHash = null },
+                )
         }
     }
 
@@ -213,6 +240,10 @@ fun BlossomBlobManagerScreen(
     }
 }
 
+/** Whether a blob is an image or a video, i.e. it can be previewed and shown full-screen. */
+private val BlobRow.isViewable: Boolean
+    get() = type?.let { it.startsWith("image/") || it.startsWith("video/") } == true
+
 @Composable
 private fun CenteredState(content: @Composable () -> Unit) {
     Column(
@@ -262,9 +293,9 @@ private fun SyncAllBanner(onSyncAll: () -> Unit) {
 }
 
 /**
- * One gallery cell: a square thumbnail (image preview or a type glyph) with a small
- * corner badge summarizing how many of the user's servers hold this blob. Tapping it
- * opens [BlobDetailSheet] with the storage matrix and the sync/delete/report actions.
+ * One gallery cell: a square preview — the image itself, or a decoded first frame for a
+ * video (with a play badge) — plus a corner badge summarizing how many of the user's
+ * servers hold this blob. Tapping it opens the full-screen viewer / actions.
  */
 @Composable
 private fun GalleryTile(
@@ -279,29 +310,75 @@ private fun GalleryTile(
                 .background(MaterialTheme.colorScheme.surfaceContainer)
                 .clickable(onClick = onClick),
     ) {
-        if (row.url != null && row.type?.startsWith("image/") == true) {
-            AsyncImage(
-                model = row.url,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(
-                    symbol = glyphFor(row.type),
-                    contentDescription = null,
-                    modifier = Modifier.size(34.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        BlobPreview(row = row, modifier = Modifier.fillMaxSize())
 
         SyncBadge(
             row = row,
             modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
         )
     }
+}
+
+/**
+ * Renders a blob's visual preview inside [modifier]'s bounds: the image, or a video's
+ * first frame (decoded by Coil's VideoFrameDecoder) with a centered play glyph. Falls
+ * back to a type glyph while loading fails or for non-visual blobs (e.g. an HLS playlist
+ * Coil can't decode).
+ */
+@Composable
+private fun BlobPreview(
+    row: BlobRow,
+    modifier: Modifier = Modifier,
+    glyphSize: Dp = 34.dp,
+    playIconSize: Dp = 40.dp,
+) {
+    val isVideo = row.type?.startsWith("video/") == true
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (row.url != null && row.isViewable) {
+            SubcomposeAsyncImage(
+                model = row.url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                val state by painter.state.collectAsState()
+                when (state) {
+                    is AsyncImagePainter.State.Success -> {
+                        SubcomposeAsyncImageContent()
+                        if (isVideo) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    symbol = MaterialSymbols.PlayCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(playIconSize),
+                                    tint = Color.White,
+                                )
+                            }
+                        }
+                    }
+
+                    is AsyncImagePainter.State.Error -> BlobGlyph(row, glyphSize)
+
+                    else -> {}
+                }
+            }
+        } else {
+            BlobGlyph(row, glyphSize)
+        }
+    }
+}
+
+@Composable
+private fun BlobGlyph(
+    row: BlobRow,
+    size: Dp,
+) {
+    Icon(
+        symbol = glyphFor(row.type),
+        contentDescription = null,
+        modifier = Modifier.size(size),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 /**
@@ -342,7 +419,125 @@ private fun SyncBadge(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+/**
+ * Full-screen viewer opened from a gallery tile: the image is zoomable/pannable and a
+ * video plays inline, matching the app's [com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog].
+ * The blob's storage matrix and its sync/copy/open/share/report/delete actions live in a
+ * bottom drawer reached from the top bar, so they don't cover the media until asked for.
+ */
+@Composable
+private fun BlossomBlobViewer(
+    row: BlobRow,
+    vm: BlossomBlobManagerViewModel,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    var drawerOpen by remember { mutableStateOf(false) }
+    val isVideo = row.type?.startsWith("video/") == true
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties =
+            DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+    ) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            val url = row.url
+            if (url != null && isVideo) {
+                val controllerVisible = remember { mutableStateOf(true) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    VideoViewInner(
+                        videoUri = url,
+                        mimeType = row.type,
+                        contentScale = ContentScale.Fit,
+                        borderModifier = Modifier.fillMaxWidth(),
+                        automaticallyStartPlayback = true,
+                        controllerVisible = controllerVisible,
+                        isFullscreen = true,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            } else if (url != null) {
+                val zoomState = rememberZoomState()
+                AsyncImage(
+                    model = url,
+                    contentDescription = row.hash,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().zoomable(zoomState),
+                )
+            }
+
+            // Top bar: back, share, and the drawer toggle.
+            Row(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ViewerIconButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(R.string.back), onDismiss)
+                Spacer(Modifier.weight(1f))
+                if (url != null) {
+                    ViewerIconButton(MaterialSymbols.Share, stringRes(R.string.quick_action_share)) {
+                        shareUrl(context, url)
+                    }
+                }
+                ViewerIconButton(MaterialSymbols.Info, stringRes(R.string.blossom_file_details)) {
+                    drawerOpen = true
+                }
+            }
+
+            // Bottom drawer with the file's storage matrix and actions.
+            if (drawerOpen) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable(onClick = { drawerOpen = false }),
+                )
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                ) {
+                    BlobActionsContent(
+                        row = row,
+                        vm = vm,
+                        modifier =
+                            Modifier
+                                .fillMaxHeight(0.7f)
+                                .navigationBarsPadding()
+                                // Swallow taps so the scrim behind doesn't dismiss the drawer.
+                                .clickable(enabled = false) {},
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ViewerIconButton(
+    symbol: MaterialSymbol,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)),
+    ) {
+        Icon(symbol = symbol, contentDescription = contentDescription, tint = Color.White)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BlobDetailSheet(
     row: BlobRow,
@@ -350,90 +545,118 @@ private fun BlobDetailSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        BlobActionsContent(row = row, vm = vm, modifier = Modifier.navigationBarsPadding())
+    }
+}
+
+/**
+ * The blob's detail + action list, shared by the [BlobDetailSheet] (non-visual blobs)
+ * and by [BlossomBlobViewer]'s bottom drawer: a preview + hash/size header, the "Stored
+ * on" per-server matrix, the sync (mirror-to-missing) button, and the
+ * copy/open/share/report/delete actions.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BlobActionsContent(
+    row: BlobRow,
+    vm: BlossomBlobManagerViewModel,
+    modifier: Modifier = Modifier,
+) {
     var reportOpen by remember { mutableStateOf(false) }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // Preview + identity.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                DetailThumbnail(row)
-                Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text(
-                        text = row.hash.take(12) + "…" + row.hash.takeLast(6),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontFamily = FontFamily.Monospace,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = listOfNotNull(row.type, row.size?.let { humanBytes(it) }).joinToString("  ·  "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.grayText,
-                    )
-                }
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // Preview + identity.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                BlobPreview(row = row, modifier = Modifier.fillMaxSize(), glyphSize = 28.dp, playIconSize = 28.dp)
             }
-
-            // Where the file lives.
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(
-                    text = stringRes(R.string.blossom_stored_on),
-                    style = MaterialTheme.typography.labelLarge,
+                    text = row.hash.take(12) + "…" + row.hash.takeLast(6),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontFamily = FontFamily.Monospace,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                )
+                Text(
+                    text = listOfNotNull(row.type, row.size?.let { humanBytes(it) }).joinToString("  ·  "),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.grayText,
                 )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    row.servers.forEach { ServerPill(it) }
-                }
             }
+        }
 
-            // Primary CTA: fill the gaps for this file.
-            if (row.hasMissing && row.url != null) {
-                FilledTonalButton(
-                    onClick = { vm.mirrorToMissing(row) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(symbol = MaterialSymbols.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text(stringRes(R.string.blossom_mirror_to_missing))
-                }
+        // Where the file lives.
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = stringRes(R.string.blossom_stored_on),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                row.servers.forEach { ServerPill(it) }
             }
+        }
 
-            // Secondary actions.
-            if (row.url != null) {
-                DetailAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy)) {
-                    val url = row.url
-                    scope.launch { clipboard.setText(url) }
-                }
-                DetailAction(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(R.string.blossom_open)) {
-                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, row.url.toUri())) }
-                }
+        // Primary CTA: fill the gaps for this file.
+        if (row.hasMissing && row.url != null) {
+            FilledTonalButton(
+                onClick = { vm.mirrorToMissing(row) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(symbol = MaterialSymbols.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
+                Text(stringRes(R.string.blossom_mirror_to_missing))
             }
+        }
 
-            if (row.hasPresent) {
-                DetailAction(MaterialSymbols.Report, stringRes(R.string.blossom_report)) { reportOpen = true }
+        // Secondary actions.
+        if (row.url != null) {
+            val url = row.url
+            DetailAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy)) {
+                scope.launch { clipboard.setText(url) }
+            }
+            DetailAction(MaterialSymbols.Share, stringRes(R.string.quick_action_share)) {
+                shareUrl(context, url)
+            }
+            DetailAction(MaterialSymbols.AutoMirrored.OpenInNew, stringRes(R.string.blossom_open)) {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+            }
+        }
 
-                HorizontalDivider()
+        if (row.hasPresent) {
+            DetailAction(MaterialSymbols.Report, stringRes(R.string.blossom_report)) { reportOpen = true }
 
-                row.presentServers.forEach { server ->
-                    DetailAction(
-                        symbol = MaterialSymbols.Delete,
-                        label = stringRes(R.string.blossom_delete_from_host, vm.hostOf(server)),
-                        tint = MaterialTheme.colorScheme.error,
-                    ) { vm.delete(row.hash, server) }
-                }
+            HorizontalDivider()
+
+            row.presentServers.forEach { server ->
+                DetailAction(
+                    symbol = MaterialSymbols.Delete,
+                    label = stringRes(R.string.blossom_delete_from_host, vm.hostOf(server)),
+                    tint = MaterialTheme.colorScheme.error,
+                ) { vm.delete(row.hash, server) }
             }
         }
     }
@@ -465,37 +688,24 @@ private fun DetailAction(
     }
 }
 
-@Composable
-private fun DetailThumbnail(row: BlobRow) {
-    val shape = RoundedCornerShape(14.dp)
-    if (row.url != null && row.type?.startsWith("image/") == true) {
-        AsyncImage(
-            model = row.url,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(64.dp).clip(shape),
-        )
-    } else {
-        Box(
-            modifier = Modifier.size(64.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                symbol = glyphFor(row.type),
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
-    }
-}
-
 private fun glyphFor(type: String?): MaterialSymbol =
     when {
         type?.startsWith("image/") == true -> MaterialSymbols.Image
         type?.startsWith("video/") == true -> MaterialSymbols.PlayCircle
         else -> MaterialSymbols.Storage
     }
+
+private fun shareUrl(
+    context: Context,
+    url: String,
+) {
+    val send =
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, url)
+        }
+    runCatching { context.startActivity(Intent.createChooser(send, null)) }
+}
 
 @Composable
 private fun ServerPill(presence: ServerPresence) {
