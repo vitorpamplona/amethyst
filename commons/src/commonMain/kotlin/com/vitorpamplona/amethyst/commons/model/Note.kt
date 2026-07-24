@@ -187,6 +187,17 @@ open class Note(
     var boosts = listOf<Note>()
         private set
 
+    /**
+     * Concord chat edits (kind 3302) targeting this message, held here — like [reactions] and
+     * [replies] — so an edit survives exactly as long as its message does. Concord decrypts each
+     * wrap's rumor only once per session (the community session dedups re-delivered wraps), so an
+     * edit evicted from the soft event cache can never be re-downloaded; anchoring it to the
+     * (channel-retained) message keeps it strongly reachable. The chat bubble overlays the latest
+     * author-matching edit.
+     */
+    var edits = listOf<Note>()
+        private set
+
     var reports = mapOf<User, List<Note>>()
         private set
 
@@ -398,6 +409,20 @@ open class Note(
         }
     }
 
+    fun addEdit(note: Note) {
+        if (note !in edits) {
+            edits = edits + note
+            flowSet?.edits?.invalidateData()
+        }
+    }
+
+    fun removeEdit(note: Note) {
+        if (note in edits) {
+            edits = edits - note
+            flowSet?.edits?.invalidateData()
+        }
+    }
+
     fun removeBoost(note: Note) {
         if (note in boosts) {
             boosts = boosts - note
@@ -410,6 +435,7 @@ open class Note(
         val reactionsChanged = reactions.isNotEmpty()
         val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
+        val editsChanged = edits.isNotEmpty()
         val reportsChanged = reports.isNotEmpty()
         val labelsChanged = labels.isNotEmpty()
 
@@ -417,6 +443,7 @@ open class Note(
             replies +
                 reactions.values.flatten() +
                 boosts +
+                edits +
                 reports.values.flatten() +
                 labels.values.flatten() +
                 zaps.keys +
@@ -429,6 +456,7 @@ open class Note(
         replies = listOf()
         reactions = mapOf()
         boosts = listOf()
+        edits = listOf()
         reports = mapOf()
         labels = mapOf()
         zaps = mapOf()
@@ -442,6 +470,7 @@ open class Note(
         if (repliesChanged) flowSet?.replies?.invalidateData()
         if (reactionsChanged) flowSet?.reactions?.invalidateData()
         if (boostsChanged) flowSet?.boosts?.invalidateData()
+        if (editsChanged) flowSet?.edits?.invalidateData()
         if (reportsChanged) flowSet?.reports?.invalidateData()
         if (labelsChanged) flowSet?.labels?.invalidateData()
         if (zapsChanged) flowSet?.zaps?.invalidateData()

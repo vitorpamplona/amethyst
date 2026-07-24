@@ -2813,9 +2813,14 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
-            // The bubble watches for these reactively via LocalCache.observeEvents narrowed on the
-            // edit's `e` tag, so simply landing it in the cache + waking observers is enough — the
-            // overlay re-derives without any target-note bookkeeping here.
+            // Anchor the edit to the message it edits (like a reaction to its target), so it survives
+            // as long as that channel-retained message does. A Concord rumor is decrypted exactly once
+            // per session — the community session dedups re-delivered wraps — so an edit left orphaned
+            // in the soft cache could be GC'd and never re-downloaded. The bubble reads `note.edits`.
+            event.editedMessageId()?.let { targetId ->
+                getOrCreateNote(targetId).addEdit(note)
+            }
+
             refreshNewNoteObservers(note)
 
             return true

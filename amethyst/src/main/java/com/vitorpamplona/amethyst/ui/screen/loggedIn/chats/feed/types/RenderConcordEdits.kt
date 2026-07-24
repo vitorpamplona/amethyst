@@ -42,9 +42,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.flowOn
 
 /**
  * Observes the newest kind-3302 Concord edit overlaying a Concord chat message [note],
@@ -53,11 +50,12 @@ import kotlinx.coroutines.flow.flowOn
  *
  * Concord edits ride the encrypted channel plane (unlike public feed edits, there is no
  * relay subscription to start — the session decrypts the wrap and lands the kind-3302
- * rumor in [LocalCache] itself). We watch the cache reactively through
- * [LocalCache.observeEvents], narrowed on the `e` tag so it seeds from any edit already
- * cached and wakes on each new one without scanning the whole store. Only edits authored
- * by the original message's author are applied — so a member can't rewrite someone else's
- * message — and the latest by CORD-02 §4 send time wins.
+ * rumor in [LocalCache] itself). Each edit is attached to the message it edits ([Note.edits],
+ * like a reaction to its target), so it is held for exactly as long as the channel-retained
+ * message — a Concord rumor is decrypted once per session and can't be re-downloaded, so it
+ * must not be left orphaned in the soft cache. We recompute from that list whenever it changes.
+ * Only edits authored by the original message's author are applied — so a member can't rewrite
+ * someone else's message — and the latest by CORD-02 §4 send time wins.
  */
 @Composable
 fun observeConcordEdit(note: Note): Note? {
@@ -67,21 +65,18 @@ fun observeConcordEdit(note: Note): Note? {
     if (!isConcord) return null
     val authorHex = note.author?.pubkeyHex ?: return null
 
-    val edits by
-        produceState<List<ConcordChatEditEvent>>(emptyList(), note.idHex) {
-            val filter = Filter(kinds = listOf(ConcordChatEditEvent.KIND), tags = mapOf("e" to listOf(note.idHex)))
-            LocalCache
-                .observeEvents<ConcordChatEditEvent>(filter)
-                .flowOn(Dispatchers.IO)
-                .collect { value = it }
+    // `addEdit` invalidates this flow, so collecting it re-runs the fold below on each new edit.
+    val latest by
+        produceState<Note?>(initialValue = null, note.idHex) {
+            note.flow().edits.stateFlow.collect {
+                value =
+                    note.edits
+                        .filter { it.author?.pubkeyHex == authorHex && it.event is ConcordChatEditEvent }
+                        .maxWithOrNull(compareBy({ (it.event as ConcordChatEditEvent).orderingMs() }, { it.idHex }))
+                        ?.takeIf { it.event != null }
+            }
         }
-
-    return remember(edits, authorHex) {
-        edits
-            .filter { it.pubKey == authorHex }
-            .maxWithOrNull(compareBy({ it.orderingMs() }, { it.id }))
-            ?.let { LocalCache.getNoteIfExists(it.id) }
-    }
+    return latest
 }
 
 /**
