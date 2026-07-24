@@ -31,6 +31,8 @@
     <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">Decrypting…</string>
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
+    <string name="chat_preview_you_prefix">You: %1$s</string>
     <string name="group_picture">Group Picture</string>
     <string name="explicit_content">Explicit Content</string>
     <string name="relay_notice">Relay Notice</string>
@@ -3486,8 +3488,8 @@
     <string name="buzz_invite_copy">Copy</string>
     <string name="buzz_invite_error_title">Couldn\'t create invite</string>
     <string name="buzz_invite_dismiss">OK</string>
-    <string name="buzz_star">Star channel</string>
-    <string name="buzz_unstar">Unstar channel</string>
+    <string name="buzz_pin">Pin channel</string>
+    <string name="buzz_unpin">Unpin channel</string>
     <string name="buzz_dm_section_empty">No conversations yet</string>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">See %1$d more conversation</item>

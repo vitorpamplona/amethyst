@@ -864,7 +864,12 @@ private fun RowScope.LastMessagePreview(
 
         val text =
             when (preview) {
-                is ChatPreview.Body -> preview.text
+                is ChatPreview.Body -> {
+                    // Mark my own newest message with a "You:" prefix (like other messengers) so a
+                    // 1:1 room's preview shows who spoke last instead of reading like the counterpart.
+                    val sentByMe = lastMessage.author?.pubkeyHex == accountViewModel.account.signer.pubKey
+                    if (sentByMe) stringRes(R.string.chat_preview_you_prefix, preview.text) else preview.text
+                }
                 ChatPreview.Decrypting -> stringRes(R.string.chat_preview_decrypting)
                 ChatPreview.Undecryptable -> stringRes(R.string.could_not_decrypt_the_message)
                 ChatPreview.Missing -> stringRes(R.string.referenced_event_not_found)
