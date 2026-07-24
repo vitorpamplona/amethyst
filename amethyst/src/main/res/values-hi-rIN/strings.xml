@@ -406,6 +406,7 @@
     <string name="chats_reply_not_found">यह सन्देश अप्राप्त</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">प्रत्येक पुनःप्रसारक में खोज लिया। देखने के लिए दबाएँ</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"प्रतिवचनों को प्राप्त करने में अपक्रम : "</string>
     <string name="try_again">पुनः प्रयास करें</string>
     <string name="notification_feed_is_empty">अभी तक कोई सूचनाएँ नहीं।</string>
@@ -1756,6 +1757,14 @@
     <string name="app_notification_mentions_channel_description">आपको सूचित करता है जब किसी ने आपका उल्लेख अथवा उद्धरण किया हो</string>
     <string name="app_notification_mentions_channel_message">%1$s ने आपका उल्लेख किया</string>
     <string name="app_notification_mentions_summary">नए उल्लेख</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">आगामी आह्वान</string>
     <string name="app_notification_calls_channel_description">सूचनाएँ आगामी ध्वनि तथा दृश्य आह्वानों के लिए</string>

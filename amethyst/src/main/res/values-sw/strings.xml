@@ -296,6 +296,7 @@
     <string name="chats_reply_not_found">Haiwezi kupata ujumbe huu</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Imetafuta kila relay · gusa kuona</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Kosa katika kupakia majibu: "</string>
     <string name="try_again">Jaribu tena</string>
     <string name="notification_feed_is_empty">Hakuna arifa bado.</string>
@@ -1204,6 +1205,14 @@
     <string name="app_notification_mentions_channel_description">Inakuarifu mtu anapokutaja au kukununulia kwenye chapisho</string>
     <string name="app_notification_mentions_channel_message">%1$s amekutaja</string>
     <string name="app_notification_mentions_summary">Kutajwa mapya</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Simu zinazoingia</string>
     <string name="app_notification_calls_channel_description">Arifa za simu za sauti na video zinazoingia</string>

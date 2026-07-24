@@ -296,6 +296,7 @@
     <string name="chats_reply_not_found">Poruka nije pronađena</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Pretraženi svi relay-i · dodirnite za prikaz</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"Greška pri učitavanju odgovora: "</string>
     <string name="try_again">Pokušaj ponovo</string>
     <string name="notification_feed_is_empty">Još nema obaveštenja.</string>
@@ -1207,6 +1208,14 @@
     <string name="app_notification_mentions_channel_description">Obaveštava vas kada vas neko pomene ili citira u objavi</string>
     <string name="app_notification_mentions_channel_message">%1$s vas je pomenuo</string>
     <string name="app_notification_mentions_summary">Nova pominjanja</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Dolazni pozivi</string>
     <string name="app_notification_calls_channel_description">Obaveštenja za dolazne glasovne i video pozive</string>
