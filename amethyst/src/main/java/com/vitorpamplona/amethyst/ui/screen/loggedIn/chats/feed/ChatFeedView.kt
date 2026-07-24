@@ -80,7 +80,7 @@ fun RefreshingChatroomFeedView(
     // callers with no external jump affordance.
     jumpToNoteId: State<String?>? = null,
     onJumpHandled: () -> Unit = {},
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -98,7 +98,7 @@ fun RefreshingChatroomFeedView(
             sentinels,
             jumpToNoteId,
             onJumpHandled,
-            onWantsToEditBuzz,
+            onWantsToEditChatMessage,
         )
     }
 }
@@ -118,7 +118,7 @@ fun RenderChatFeedView(
     sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
     jumpToNoteId: State<String?>? = null,
     onJumpHandled: () -> Unit = {},
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -151,7 +151,7 @@ fun RenderChatFeedView(
                     sentinels,
                     jumpToNoteId,
                     onJumpHandled,
-                    onWantsToEditBuzz,
+                    onWantsToEditChatMessage,
                 )
             }
         }
@@ -173,7 +173,7 @@ fun ChatFeedLoaded(
     sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
     jumpToNoteId: State<String?>? = null,
     onJumpHandled: () -> Unit = {},
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -268,7 +268,7 @@ fun ChatFeedLoaded(
                         onHighlightFinished = { highlightedNoteId.value = null },
                         groupPosition = watchChatGroupPosition(newer, item, older),
                         previousNoteId = older?.idHex,
-                        onWantsToEditBuzz = onWantsToEditBuzz,
+                        onWantsToEditChatMessage = onWantsToEditChatMessage,
                     )
                 }
             }

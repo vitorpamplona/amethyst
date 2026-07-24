@@ -23,16 +23,15 @@ package com.vitorpamplona.amethyst.commons.model.buzz
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.concurrent.Volatile
 
 /**
- * Buzz-only overlay state for one workspace channel: the kind-40003 edit overlay
- * (newest edit per message — rendering the original without it shows stale text as
- * current) and the newest kind-40100 canvas.
+ * Buzz-only overlay state for one workspace channel: the newest kind-40100 canvas.
+ * (Kind-40003 message edits are no longer tracked here — like every other edit kind
+ * they are anchored on the message they edit via `Note.edits`.)
  *
  * This lives OUTSIDE the channel object on purpose. Screens, feed filters, and
  * composers capture their `RelayGroupChannel` instance once and hold it for the whole
@@ -41,17 +40,11 @@ import kotlin.concurrent.Volatile
  * orphaned instance. Keeping the overlay in a registry keyed by the channel id makes
  * dialect discovery a non-event for object identity.
  *
- * All mutations are guarded by a per-state lock: consume runs on multiple relay
- * dispatcher threads, and unsynchronized check-then-act would let an older edit
- * overwrite a newer one.
+ * The mutation is guarded by a per-state lock: consume runs on multiple relay dispatcher
+ * threads, and unsynchronized check-then-act would let an older canvas overwrite a newer one.
  */
 class BuzzWorkspaceState {
     private val lock = KmpLock()
-    private val editsByTarget = LargeCache<HexKey, Note>()
-    private val editVersion = MutableStateFlow(0)
-
-    /** Bumps when any overlay entry changes, so rows re-read [editFor]. */
-    val editUpdates: StateFlow<Int> = editVersion
 
     /** The newest canvas (kind 40100) note for this channel, or null when none seen. */
     @Volatile
@@ -63,39 +56,11 @@ class BuzzWorkspaceState {
     /** Bumps when [canvasNote] is replaced by a newer revision, so a canvas view re-reads it. */
     val canvasUpdates: StateFlow<Int> = canvasVersion
 
-    /** Records a 40003 edit; keeps only the newest per target (last-write-wins by created_at). */
-    fun addEdit(
-        targetId: HexKey,
-        editNote: Note,
-    ) = lock.withLock {
-        val current = editsByTarget.get(targetId)
-        if (current == null || (editNote.createdAt() ?: 0L) > (current.createdAt() ?: 0L)) {
-            editsByTarget.put(targetId, editNote)
-            editVersion.value = editVersion.value + 1
-        }
-    }
-
-    /** The newest edit note overlaying [targetId], or null when the message is unedited. */
-    fun editFor(targetId: HexKey): Note? = editsByTarget.get(targetId)
-
-    /** The effective display content for a message: its newest edit's text, or null when unedited. */
-    fun effectiveContentFor(targetId: HexKey): String? = editsByTarget.get(targetId)?.event?.content
-
     fun updateCanvas(note: Note) =
         lock.withLock {
             if ((note.createdAt() ?: 0L) > (canvasNote?.createdAt() ?: 0L)) {
                 canvasNote = note
                 canvasVersion.value = canvasVersion.value + 1
-            }
-        }
-
-    /** Drops overlay entries whose target message id is not in [aliveTargetIds] (memory pruning). */
-    fun pruneEdits(aliveTargetIds: Set<HexKey>) =
-        lock.withLock {
-            val dead = editsByTarget.keys().filter { it !in aliveTargetIds }
-            if (dead.isNotEmpty()) {
-                dead.forEach { editsByTarget.remove(it) }
-                editVersion.value = editVersion.value + 1
             }
         }
 }

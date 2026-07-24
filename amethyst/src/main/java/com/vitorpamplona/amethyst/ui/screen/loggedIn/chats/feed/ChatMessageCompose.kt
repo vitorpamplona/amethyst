@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.latestBuzzEdit
+import com.vitorpamplona.amethyst.model.latestConcordEdit
 import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -65,18 +67,20 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChan
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatRaid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderConcordEditedNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderDraftEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeBuzzEdit
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
@@ -114,9 +118,10 @@ fun ChatroomMessageCompose(
     // reply quotes inside a DM, where the target is simply older than the loaded window (see
     // LoadingReplyNote). Null keeps the default blank for every other caller.
     onBlank: (@Composable () -> Unit)? = null,
-    // Buzz-only: edit my own kind-40002 stream message (publishes a 40003 edit). Null for
-    // every non-Buzz chat surface, which hides the action.
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    // Edit my own chat message on surfaces that support it (Buzz kind-40002 → 40003,
+    // Concord kind-9 → 1010). Null for chat surfaces without message editing, which hides
+    // the action.
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     // Re-skin inline `nostr:...` quotes for everything inside this bubble: a quoted
     // chat message renders with the chat reply design instead of the quoted-note card.
@@ -171,7 +176,7 @@ fun ChatroomMessageCompose(
                     onHighlightFinished,
                     groupPosition,
                     previousNoteId,
-                    onWantsToEditBuzz,
+                    onWantsToEditChatMessage,
                 )
             }
         }
@@ -202,7 +207,7 @@ fun NormalChatNote(
     onHighlightFinished: (() -> Unit)? = null,
     groupPosition: ChatGroupPosition = ChatGroupPosition.SINGLE,
     previousNoteId: HexKey? = null,
-    onWantsToEditBuzz: ((Note) -> Unit)? = null,
+    onWantsToEditChatMessage: ((Note) -> Unit)? = null,
 ) {
     // A geohash chat renders "as" its anonymous per-cell identity (and the account, when posting as
     // self); LocalChatActingIdentities lets the renderer treat those pubkeys as "me" (alignment,
@@ -333,7 +338,7 @@ fun NormalChatNote(
                 onDismiss = onDismiss,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onWantsToEditBuzz = onWantsToEditBuzz,
+                onWantsToEditChatMessage = onWantsToEditChatMessage,
             )
         },
         reactionsRow =
@@ -612,16 +617,33 @@ fun NoteRow(
             note.event is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
             else -> {
-                // Buzz channels overlay kind-40003 edits on their messages: when one
-                // exists, render the newest edit's content instead of the stale
-                // original. Null for every non-Buzz chat surface.
-                val buzzEdit = observeBuzzEdit(note)
-                if (buzzEdit != null) {
-                    RenderBuzzEditedNote(note, buzzEdit, canPreview, innerQuote, bgColor, accountViewModel, nav)
-                } else {
-                    RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                // Concord and Buzz channels overlay edits on their messages (kind-3302 and
+                // kind-40003): when one exists, render the newest edit's content instead of the
+                // stale original. One observer for both — a message is only ever one kind, so a
+                // single edits-flow collector per row covers both (and is null for other surfaces).
+                val edit = observeChatEdit(note)
+                when (edit?.event) {
+                    is ConcordChatEditEvent -> RenderConcordEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    is StreamMessageEditEvent -> RenderBuzzEditedNote(note, edit, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
                 }
             }
         }
     }
+}
+
+/**
+ * The newest edit overlaying a chat message [note] (Concord kind-3302 or Buzz kind-40003), or null
+ * when unedited. A message is only ever one kind, so both resolve off the same [Note.edits] and one
+ * collector on the note's edits flow serves both — recomposing whenever an edit is added or removed.
+ */
+@Composable
+fun observeChatEdit(note: Note): Note? {
+    val latest by
+        produceState<Note?>(initialValue = null, note.idHex) {
+            note.flow().edits.stateFlow.collect {
+                value = note.latestConcordEdit() ?: note.latestBuzzEdit()
+            }
+        }
+    return latest
 }
