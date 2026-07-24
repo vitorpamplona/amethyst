@@ -24,6 +24,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -48,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -56,16 +58,22 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.LocalSuppressReplyToNoteId
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toPlainImetas
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
@@ -136,6 +144,13 @@ fun MinichatScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val canPost by remember { derivedStateOf { composer.text.isNotBlank() } }
+    val uploadState =
+        remember {
+            ChatFileUploadState(
+                accountViewModel.account.settings.defaultFileServer,
+                accountViewModel.account.settings.stripLocationOnUpload,
+            )
+        }
 
     Scaffold(
         topBar = {
@@ -188,6 +203,43 @@ fun MinichatScreen(
                 }
             }
 
+            // Picture attachments: the picked media opens this dialog, which uploads via the shared
+            // pipeline and sends the result as a thread reply. Concord minichats always encrypt (the
+            // channel is end-to-end); public-chat (NIP-28/NIP-29) minichats upload in plaintext and carry
+            // the URL + `imeta` on the kind-1111 comment. [Account.sendMinichatReply] routes by backend.
+            uploadState.multiOrchestrator?.let {
+                ChatFileUploadDialog(
+                    state = uploadState,
+                    title = { Text(stringRes(R.string.chat_send_image_title)) },
+                    upload = {
+                        scope.launch(Dispatchers.IO) {
+                            ChatFileUploader(accountViewModel.account).justUploadNIP17(
+                                viewState = uploadState,
+                                onError = { title, message ->
+                                    launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                                },
+                                onEncryptedUploadError = { title, message ->
+                                    launch(Dispatchers.Main) { Toast.makeText(context, "$title: $message", Toast.LENGTH_LONG).show() }
+                                },
+                                context = context,
+                                onceUploaded = { uploads ->
+                                    val caption = uploadState.caption
+                                    val imetas = if (isConcord) uploads.mapNotNull { it.toConcordImeta() } else uploads.toPlainImetas()
+                                    if (imetas.isNotEmpty()) {
+                                        accountViewModel.account.sendMinichatReply(rootNote, caption, imetas)
+                                    }
+                                },
+                            )
+                            accountViewModel.account.settings.changeDefaultFileServer(uploadState.selectedServer)
+                            accountViewModel.account.settings.changeStripLocationOnUpload(uploadState.stripMetadata)
+                        }
+                    },
+                    onCancel = uploadState::reset,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
             Column(modifier = EditFieldModifier) {
                 ThinPaddingTextField(
                     state = composer,
@@ -197,6 +249,19 @@ fun MinichatScreen(
                         Text(
                             text = stringRes(R.string.reply_here),
                             color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    leadingIcon = {
+                        SelectFromGallery(
+                            isUploading = uploadState.isUploadingImage,
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                            modifier = Modifier.height(32.dp).padding(start = 2.dp),
+                            onImageChosen = { media ->
+                                uploadState.load(media)
+                                // Encrypt only where the backend is end-to-end (Concord); public chats
+                                // send plaintext blobs, matching how their main composer uploads.
+                                uploadState.encryptFiles = isConcord
+                            },
                         )
                     },
                     trailingIcon = {

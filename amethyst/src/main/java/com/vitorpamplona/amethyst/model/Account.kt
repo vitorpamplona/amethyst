@@ -2207,6 +2207,7 @@ class Account(
         text: String,
         replyTo: Note? = null,
         replyMode: ReplyMode = ReplyMode.INLINE,
+        imetas: List<IMetaTag> = emptyList(),
     ): Boolean {
         if (!isWriteable()) return false
         val session = concordSessions.sessionFor(communityId) ?: return false
@@ -2220,8 +2221,11 @@ class Account(
         val parent = replyTo?.event
         val wrap =
             when {
-                // A minichat reply is a kind-1111 thread comment; an inline reply is a kind-9
-                // message quoting the parent; a fresh post is a plain kind-9 message.
+                // A minichat reply is a kind-1111 thread comment (carrying encrypted image imetas when
+                // the user attached media); an inline reply is a kind-9 message quoting the parent; a
+                // fresh post is a plain kind-9 message.
+                parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
+                    ConcordActions.buildChannelImageReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, imetas, TimeUtils.now(), emojiTags)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
                     ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
                 parent != null ->
@@ -2268,6 +2272,7 @@ class Account(
     suspend fun sendMinichatReply(
         rootNote: Note,
         text: String,
+        imetas: List<IMetaTag> = emptyList(),
     ): Boolean {
         if (!isWriteable()) return false
         val gatherers = rootNote.inGatherers
@@ -2279,16 +2284,24 @@ class Account(
                 text,
                 rootNote,
                 ReplyMode.MINICHAT,
+                imetas,
             )
         }
 
         // Public chats: a plain public kind-1111 comment rooted at the message. NIP-29 groups
-        // additionally carry the `h` tag and go only to the host relay.
+        // additionally carry the `h` tag and go only to the host relay. Attached media rides as
+        // NIP-92 `imeta` tags, with each URL appended to the content so any client renders it.
         val rootEvent = rootNote.event ?: return false
+        val finalText = appendMediaUrls(text, imetas)
 
         gatherers?.firstNotNullOfOrNull { it as? PublicChatChannel }?.let { chat ->
             val relays = chat.relays()
-            val signed = signer.sign(CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, relays.firstOrNull())))
+            val signed =
+                signer.sign(
+                    CommentEvent.replyBuilder(finalText, EventHintBundle(rootEvent, relays.firstOrNull())) {
+                        imetas(imetas)
+                    },
+                )
             cache.justConsumeMyOwnEvent(signed)
             client.publish(signed, relays.ifEmpty { outboxRelays.flow.value })
             return true
@@ -2299,10 +2312,11 @@ class Account(
             val signed =
                 if (BuzzRelayDialect.isBuzz(hostRelay)) {
                     // Buzz rejects kind-1111, so its minichat threads with a 40002 marked at the message's
-                    // root (never `broadcast` — a minichat reply always lives in the thread).
+                    // root (never `broadcast` — a minichat reply always lives in the thread). Attached
+                    // media is carried as URLs appended to the content (no `imeta` on the stream event).
                     val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id
                     signer.sign(
-                        StreamMessageV2Event.build(group.groupId.id, text) {
+                        StreamMessageV2Event.build(group.groupId.id, finalText) {
                             buzzThread(root, rootEvent.id)
                             rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
                             previous(group.previousEventRefs(pubKey))
@@ -2310,9 +2324,10 @@ class Account(
                     )
                 } else {
                     signer.sign(
-                        CommentEvent.replyBuilder(text, EventHintBundle(rootEvent, hostRelay)) {
+                        CommentEvent.replyBuilder(finalText, EventHintBundle(rootEvent, hostRelay)) {
                             hTag(group.groupId.id)
                             previous(group.previousEventRefs(pubKey))
+                            imetas(imetas)
                         },
                     )
                 }
@@ -2322,6 +2337,21 @@ class Account(
         }
 
         return false
+    }
+
+    /**
+     * Appends each attachment URL not already present in [text] to the message content (newline
+     * separated), so a plaintext media link renders inline in any client — mirroring
+     * [com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat.imageMessage]. Returns [text]
+     * unchanged when there are no attachments.
+     */
+    private fun appendMediaUrls(
+        text: String,
+        imetas: List<IMetaTag>,
+    ): String {
+        if (imetas.isEmpty()) return text
+        val extraUrls = imetas.map { it.url }.filter { it.isNotBlank() && !text.contains(it) }
+        return (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
     }
 
     /**

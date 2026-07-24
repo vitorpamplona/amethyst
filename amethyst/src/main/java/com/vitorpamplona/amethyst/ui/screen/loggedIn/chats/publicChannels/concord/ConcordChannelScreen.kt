@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ReplyModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
@@ -96,11 +97,9 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -580,23 +579,5 @@ private fun ConcordFileUploadDialog(
         onCancel = onCancel,
         accountViewModel = accountViewModel,
         nav = nav,
-    )
-}
-
-/**
- * Turns an encrypted upload into the Armada-shaped `imeta` (via [ChannelChat.encryptedImageImeta]).
- * Returns null when the upload carried no cipher — so a non-encrypted blob is never sent as a Concord
- * image (fails closed, protecting the community's end-to-end guarantee).
- */
-private fun SuccessfulUploads.toConcordImeta(): IMetaTag? {
-    val cipher = cipher ?: return null
-    return ChannelChat.encryptedImageImeta(
-        url = result.url,
-        mimeType = result.mimeTypeBeforeEncryption,
-        dim = result.fileHeader.dim?.toString(),
-        blurhash = result.fileHeader.blurHash?.blurhash,
-        cipher = cipher,
-        originalHash = result.hashBeforeEncryption,
-        thumbhash = result.fileHeader.thumbHash?.thumbhash,
     )
 }

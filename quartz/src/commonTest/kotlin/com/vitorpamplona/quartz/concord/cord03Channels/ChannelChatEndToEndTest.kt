@@ -203,6 +203,40 @@ class ChannelChatEndToEndTest {
     }
 
     @Test
+    fun encryptedImageReplyIsAKind1111CommentCarryingTheEncryptedAttachment() {
+        val author = KeyPair().pubKey.toHexKey()
+        val parent = ChannelChat.message(author, channelIdHex, 0L, "root", createdAt = 1L)
+        val cipher = AESGCM(ByteArray(32) { 0x33 }, ByteArray(16) { 0x44 })
+        val url = "https://blossom.example/reply-ciphertext.bin"
+
+        val imeta =
+            ChannelChat.encryptedImageImeta(
+                url = url,
+                mimeType = "image/png",
+                dim = "640x480",
+                blurhash = null,
+                cipher = cipher,
+                originalHash = "bb".repeat(32),
+            )
+        val reply = ChannelChat.imageReply(author, channelIdHex, 0L, "here", listOf(imeta), parent, createdAt = 6L)
+
+        // A thread reply keeps the kind-1111 NIP-22 shape (E root + e parent), stays channel-bound,
+        // and appends the ciphertext url to content — exactly like [imageMessage] but on a comment.
+        assertEquals(1111, reply.kind)
+        assertEquals(parent.id, reply.tags.first { it[0] == "E" }[1])
+        assertEquals(parent.id, reply.tags.first { it[0] == "e" }[1])
+        assertTrue(ChannelChat.isBoundTo(reply, channelIdHex, 0L))
+        assertEquals("here\n$url", reply.content)
+
+        // The encrypted attachment round-trips with the same key/nonce so the receiver can decrypt.
+        val parsed = ChannelChat.encryptedImagesOf(reply)
+        assertEquals(1, parsed.size)
+        assertEquals(url, parsed.first().url)
+        assertTrue(parsed.first().key.contentEquals(ByteArray(32) { 0x33 }))
+        assertTrue(parsed.first().nonce.contentEquals(ByteArray(16) { 0x44 }))
+    }
+
+    @Test
     fun nonMembersCannotDeriveThePlane() =
         runTest {
             val alice = NostrSignerInternal(KeyPair())

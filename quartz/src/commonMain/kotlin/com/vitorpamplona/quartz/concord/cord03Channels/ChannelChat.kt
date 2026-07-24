@@ -170,6 +170,37 @@ object ChannelChat {
         )
 
     /**
+     * Builds an unsigned kind-1111 **thread reply carrying encrypted image** attachments ([imetas]) to
+     * [parent], bound to [channelId]/[epoch]. Combines [reply]'s NIP-22 thread pointers with
+     * [imageMessage]'s attachment handling: each ciphertext URL not already in [text] is appended to the
+     * content (so the shared feed renders it) and each rides as a NIP-92 `imeta` tag
+     * ([encryptedImageImeta]). This is the minichat counterpart of [imageMessage] — an image sent as a
+     * thread reply instead of a top-level channel message.
+     */
+    fun imageReply(
+        authorPubKey: HexKey,
+        channelId: HexKey,
+        epoch: Long,
+        text: String,
+        imetas: List<IMetaTag>,
+        parent: Event,
+        createdAt: Long,
+        extraTags: Array<Array<String>> = emptyArray(),
+    ): Event {
+        val extraUrls = imetas.map { it.url }.filter { it.isNotBlank() && !text.contains(it) }
+        val finalText = (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
+        return reply(
+            authorPubKey = authorPubKey,
+            channelId = channelId,
+            epoch = epoch,
+            text = finalText,
+            parent = parent,
+            createdAt = createdAt,
+            extraTags = imetas.map { it.toTagArray() }.toTypedArray() + extraTags,
+        )
+    }
+
+    /**
      * Builds an unsigned kind-7 [ReactionEvent] rumor bound to [channelId]/[epoch]
      * against the target message ([targetId]/[targetAuthor]/[targetKind]). [content]
      * is the reaction (e.g. `"+"`, `"🤙"`). Kept to the minimal `e`/`p`/`k` tag form
