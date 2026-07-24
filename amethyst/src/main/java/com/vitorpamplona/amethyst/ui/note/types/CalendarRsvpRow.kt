@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -89,7 +91,7 @@ fun CalendarRsvpRow(
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         RsvpButton(
             label = stringResource(Res.string.calendar_rsvp_going),
@@ -128,22 +130,37 @@ private fun RsvpButton(
         FilledTonalButton(
             onClick = { onClick(status) },
             modifier = modifier,
+            contentPadding = RsvpButtonPadding,
             colors =
                 ButtonDefaults.filledTonalButtonColors(
                     containerColor = colorFor(status),
                     contentColor = Color.White,
                 ),
         ) {
-            Text(text = label)
+            RsvpButtonLabel(label)
         }
     } else {
         OutlinedButton(
             onClick = { onClick(status) },
             modifier = modifier,
+            contentPadding = RsvpButtonPadding,
         ) {
-            Text(text = label)
+            RsvpButtonLabel(label)
         }
     }
+}
+
+private val RsvpButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+
+@Composable
+private fun RsvpButtonLabel(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
