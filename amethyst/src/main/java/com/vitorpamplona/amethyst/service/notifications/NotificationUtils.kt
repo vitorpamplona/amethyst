@@ -152,6 +152,13 @@ object NotificationUtils {
         val senderName: String,
         val body: String,
         val pictureUrl: String?,
+        /**
+         * True when the parent was authored by the logged-in account, so it is
+         * attributed to the MessagingStyle `me` Person (avatar + "you") rather than
+         * shown as a separate participant. False for a third party's note — e.g. a
+         * reply to someone else's reply in a thread the account started.
+         */
+        val isFromMe: Boolean = false,
     )
 
     // ---------------------------------------------------------------------
@@ -284,13 +291,19 @@ object NotificationUtils {
         val messagingStyle = NotificationCompat.MessagingStyle(me)
 
         if (parent != null) {
-            val parentAvatar = parent.pictureUrl?.let { loadBitmap(it, applicationContext) }?.let { circleCrop(it) }
             val parentSender =
-                Person
-                    .Builder()
-                    .setName(parent.senderName)
-                    .apply { parentAvatar?.let { setIcon(IconCompat.createWithBitmap(it)) } }
-                    .build()
+                if (parent.isFromMe) {
+                    // The account authored the parent — reuse the `me` Person so it
+                    // renders as self with the account's avatar, not a stranger.
+                    me
+                } else {
+                    val parentAvatar = parent.pictureUrl?.let { loadBitmap(it, applicationContext) }?.let { circleCrop(it) }
+                    Person
+                        .Builder()
+                        .setName(parent.senderName)
+                        .apply { parentAvatar?.let { setIcon(IconCompat.createWithBitmap(it)) } }
+                        .build()
+                }
             messagingStyle.addMessage(parent.body, (time - 1) * 1000, parentSender)
         }
         messagingStyle.addMessage(messageBody, time * 1000, sender)

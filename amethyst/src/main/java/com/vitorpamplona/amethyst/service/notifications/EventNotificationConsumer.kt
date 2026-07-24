@@ -286,7 +286,7 @@ class EventNotificationConsumer(
             val repliedNote = LocalCache.getNoteIfExists(replyTargetId)
             if (repliedNote?.author?.pubkeyHex == account.signer.pubKey) {
                 val threadRoot = event.markedRoot()?.eventId ?: event.unmarkedRoot()?.eventId ?: replyTargetId
-                ReplyNotification.notify(applicationContext, account, event, repliedNote.event?.content, threadRoot)
+                ReplyNotification.notify(applicationContext, account, event, repliedNote, threadRoot)
                 return
             }
         }
@@ -301,14 +301,14 @@ class EventNotificationConsumer(
         val isTarget = event.replyAuthorKeys().contains(pubKey) || event.rootAuthorKeys().contains(pubKey)
         if (!isTarget) return
 
-        val parentContent = event.replyingTo()?.let { LocalCache.getNoteIfExists(it)?.event?.content }
+        val parentNote = event.replyingTo()?.let { LocalCache.getNoteIfExists(it) }
         val threadRoot =
             event.rootEventIds().firstOrNull()
                 ?: event.rootAddressIds().firstOrNull()
                 ?: event.replyingToAddressOrEvent()
                 ?: event.id
 
-        ReplyNotification.notify(applicationContext, account, event, parentContent, threadRoot)
+        ReplyNotification.notify(applicationContext, account, event, parentNote, threadRoot)
     }
 
     private suspend fun notifyChannelMessage(
@@ -318,13 +318,9 @@ class EventNotificationConsumer(
         val note = LocalCache.getNoteIfExists(event.id) ?: return
 
         if (NotificationFeedFilter.isNotifiablePublicChatReply(note, account.signer.pubKey)) {
-            val parentContent =
-                note.replyTo
-                    ?.lastOrNull()
-                    ?.event
-                    ?.content
+            val parentNote = note.replyTo?.lastOrNull()
             val threadRoot = event.channelId() ?: event.id
-            ReplyNotification.notify(applicationContext, account, event, parentContent, threadRoot)
+            ReplyNotification.notify(applicationContext, account, event, parentNote, threadRoot)
         } else {
             MentionNotification.notify(applicationContext, account, event)
         }

@@ -24,6 +24,7 @@ import android.content.Context
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher
@@ -51,7 +52,7 @@ object ReplyNotification {
         context: Context,
         account: Account,
         event: Event,
-        parentContent: String?,
+        parentNote: Note?,
         threadRootId: String,
     ) {
         val replyNote = LocalCache.getNoteIfExists(event.id) ?: return
@@ -63,17 +64,27 @@ object ReplyNotification {
 
         val citedUsers = NotificationContent.resolveMentions(event.content).citedUsers
 
+        // The parent may be the account's own note (a direct reply) OR a third
+        // party's — e.g. someone replying to another reply in a thread the account
+        // started. Attribute it to whoever actually wrote it, and observe that
+        // author so their name/avatar fill in like the replier's do.
+        val parentContent = parentNote?.event?.content
+        val parentAuthor = parentNote?.author
+        val parentIsFromMe = parentAuthor?.pubkeyHex == account.signer.pubKey
+        val observedParentAuthor = parentAuthor?.takeUnless { parentIsFromMe }
+
         val nm = context.notificationManager()
 
         NotificationEnricher.enrichAndPost(
             context = context,
             account = account,
             notificationId = event.id,
-            users = listOf(author) + citedUsers,
+            users = listOf(author) + citedUsers + listOfNotNull(observedParentAuthor),
             notes = listOf(replyNote),
             isComplete = {
                 author.metadataOrNull()?.bestName() != null &&
-                    citedUsers.all { it.metadataOrNull()?.bestName() != null }
+                    citedUsers.all { it.metadataOrNull()?.bestName() != null } &&
+                    (observedParentAuthor == null || observedParentAuthor.metadataOrNull()?.bestName() != null)
             },
         ) {
             val user = author.toBestDisplayName()
@@ -82,9 +93,15 @@ object ReplyNotification {
             val parent =
                 parentExcerpt?.let {
                     ParentMessage(
-                        senderName = stringRes(context, R.string.app_notification_me),
+                        senderName =
+                            if (parentIsFromMe || parentAuthor == null) {
+                                stringRes(context, R.string.app_notification_me)
+                            } else {
+                                parentAuthor.toBestDisplayName()
+                            },
                         body = it,
-                        pictureUrl = account.userProfile().profilePicture(),
+                        pictureUrl = if (parentIsFromMe) account.userProfile().profilePicture() else parentAuthor?.profilePicture(),
+                        isFromMe = parentIsFromMe,
                     )
                 }
             nm.postConversation(
