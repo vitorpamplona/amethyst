@@ -2775,7 +2775,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             note.loadEvent(event, author, emptyList())
 
             // Anchor the modification to the note it edits, like every other edit kind — the read side
-            // ([findLatestModificationForNote]) then folds `edited.edits` instead of scanning the cache,
+            // (Note.textNoteModifications) then folds `edited.edits` instead of scanning the cache,
             // and addEdit invalidates the note's edits flow so the UI re-derives.
             event.editedNote()?.let {
                 checkGetOrCreateNote(it.eventId)?.addEdit(note)
@@ -3249,36 +3249,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         return minTime
-    }
-
-    /**
-     * The NIP-1010 edits of [note] to apply, oldest first — folded from the note's own
-     * [Note.edits] (where [consume] anchors each modification) rather than scanned from the
-     * whole cache. Only the original author's edits count, and expired (NIP-40) ones are
-     * dropped. Cheap (bounded by this note's edits), so it's safe to call from any thread.
-     */
-    fun findLatestModificationForNote(note: Note): List<Note> {
-        val noteAuthor = note.author ?: return emptyList()
-        val time = TimeUtils.now()
-
-        return note.edits
-            .filter { item ->
-                val noteEvent = item.event
-                noteEvent is TextNoteModificationEvent && noteAuthor == item.author && !noteEvent.isExpirationBefore(time)
-            }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-    }
-
-    /**
-     * The kind-40003 Buzz edit currently overlaying [note], or null when unedited. Like every other
-     * edit kind, only the ORIGINAL message author's edits count — the send side already gates Edit to
-     * your own messages, and the relay is not trusted to reject a cross-author edit, so a 40003 signed
-     * by anyone else can never rewrite your message. The newest by created_at wins (Buzz's rule).
-     */
-    fun findLatestBuzzEditForNote(note: Note): Note? {
-        val authorHex = note.author?.pubkeyHex ?: return null
-        return note.edits
-            .filter { it.event is StreamMessageEditEvent && it.author?.pubkeyHex == authorHex }
-            .maxByOrNull { it.createdAt() ?: 0L }
     }
 
     fun cleanMemory() {

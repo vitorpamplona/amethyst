@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.textNoteModifications
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -2062,7 +2063,7 @@ fun observeEdits(
         remember(baseNote.idHex) {
             // Edits are anchored on the note (Note.edits), so the current set is readable synchronously
             // (no cache scan) — start Empty or Loaded, never Loading.
-            val cached = LocalCache.findLatestModificationForNote(baseNote)
+            val cached = baseNote.textNoteModifications()
             mutableStateOf(
                 if (cached.isEmpty()) {
                     GenericLoadable.Empty()

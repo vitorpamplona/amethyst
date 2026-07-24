@@ -199,13 +199,13 @@ class BuzzWorkspaceChannelTest {
             // …but the overlay only applies the ORIGINAL author's edits, so it is ignored.
             assertNull(
                 "an edit by a different author must never override the message",
-                LocalCache.findLatestBuzzEditForNote(target),
+                target.latestBuzzEdit(),
             )
 
             // The real author's own later edit does apply.
             val real = signer.sign(StreamMessageEditEvent.build(channelId, original.id, "the fix", createdAt = original.createdAt + 200))
             LocalCache.checkDeletionAndConsume(real, buzzRelay, false)
-            assertEquals("the fix", LocalCache.findLatestBuzzEditForNote(target)?.event?.content)
+            assertEquals("the fix", target.latestBuzzEdit()?.event?.content)
         }
 
     @Test

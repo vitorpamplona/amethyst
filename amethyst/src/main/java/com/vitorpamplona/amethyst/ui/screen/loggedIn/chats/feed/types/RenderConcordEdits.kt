@@ -33,15 +33,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.latestConcordEdit
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 
 /**
  * Observes the newest kind-3302 Concord edit overlaying a Concord chat message [note],
@@ -59,21 +58,12 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
  */
 @Composable
 fun observeConcordEdit(note: Note): Note? {
-    // Key on note.event, not note: LocalCache mutates a Note in place, so keying on the Note instance
-    // would cache a null gatherer taken before the event populated and never recompute for that row.
-    val isConcord = remember(note.event) { note.inGatherers?.any { it is ConcordChannel } == true }
-    if (!isConcord) return null
-    val authorHex = note.author?.pubkeyHex ?: return null
-
-    // `addEdit` invalidates this flow, so collecting it re-runs the fold below on each new edit.
+    // `addEdit` invalidates this flow, so collecting it re-runs the fold on each new edit. A non-Concord
+    // message simply has no kind-3302 edits, so [Note.latestConcordEdit] returns null for it.
     val latest by
         produceState<Note?>(initialValue = null, note.idHex) {
             note.flow().edits.stateFlow.collect {
-                value =
-                    note.edits
-                        .filter { it.author?.pubkeyHex == authorHex && it.event is ConcordChatEditEvent }
-                        .maxWithOrNull(compareBy({ (it.event as ConcordChatEditEvent).orderingMs() }, { it.idHex }))
-                        ?.takeIf { it.event != null }
+                value = note.latestConcordEdit()
             }
         }
     return latest

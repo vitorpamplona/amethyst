@@ -42,8 +42,8 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.latestBuzzEdit
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -68,17 +68,17 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
  * Observes the newest kind-40003 edit overlaying [note], recomposing when new edits
  * arrive. Returns null when the message is unedited.
  *
- * Each edit is anchored on the message it edits ([Note.edits], where [LocalCache] consumes it),
+ * Each edit is anchored on the message it edits ([Note.edits], where LocalCache consumes it),
  * so it is held for as long as its message and read straight off the note — no channel-keyed side
- * store. [LocalCache.findLatestBuzzEditForNote] applies only the original author's newest edit;
- * [addEdit] invalidates the note's edits flow, so collecting it re-runs the fold.
+ * store. [Note.latestBuzzEdit] applies only the original author's newest edit; [addEdit]
+ * invalidates the note's edits flow, so collecting it re-runs the fold.
  */
 @Composable
 fun observeBuzzEdit(note: Note): Note? {
     val latest by
         produceState<Note?>(initialValue = null, note.idHex) {
             note.flow().edits.stateFlow.collect {
-                value = LocalCache.findLatestBuzzEditForNote(note)
+                value = note.latestBuzzEdit()
             }
         }
     return latest
