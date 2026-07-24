@@ -37,6 +37,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
@@ -79,6 +81,14 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
 
                     is PayInvoiceSuccessResponse -> {
                         value.result?.let { put("result", serializePayInvoiceResult(it)) }
+                    }
+
+                    is PaySuccessResponse -> {
+                        value.result?.let { put("result", serializePayResult(it)) }
+                    }
+
+                    is ReceiveSuccessResponse -> {
+                        value.result?.let { put("result", serializeReceiveResult(it)) }
                     }
 
                     is PayInvoiceErrorResponse -> {
@@ -153,6 +163,28 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
         buildJsonObject {
             error.code?.let { put("code", it.name) }
             error.message?.let { put("message", it) }
+        }
+
+    private fun serializePayResult(result: PaySuccessResponse.PayResult): JsonObject =
+        buildJsonObject {
+            result.transaction_id?.let { put("transaction_id", it) }
+            result.state?.let { put("state", it) }
+            result.instruction_type?.let { put("instruction_type", it) }
+            result.amount?.let { put("amount", it) }
+            result.fees_paid?.let { put("fees_paid", it) }
+            result.payment_hash?.let { put("payment_hash", it) }
+            result.preimage?.let { put("preimage", it) }
+            result.payer_proof?.let { put("payer_proof", it) }
+            result.txid?.let { put("txid", it) }
+            result.failure_reason?.let { put("failure_reason", it) }
+            result.created_at?.let { put("created_at", it) }
+            result.settled_at?.let { put("settled_at", it) }
+        }
+
+    private fun serializeReceiveResult(result: ReceiveSuccessResponse.ReceiveResult): JsonObject =
+        buildJsonObject {
+            result.bip321?.let { put("bip321", it) }
+            result.transaction_id?.let { put("transaction_id", it) }
         }
 
     private fun serializePayKeysendResult(result: PayKeysendSuccessResponse.PayKeysendResult): JsonObject =
@@ -240,6 +272,14 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
             return when (resultType) {
                 NwcMethod.PAY_INVOICE -> {
                     parsePayInvoiceSuccess(jsonObject)
+                }
+
+                NwcMethod.PAY -> {
+                    parsePaySuccess(jsonObject)
+                }
+
+                NwcMethod.RECEIVE -> {
+                    parseReceiveSuccess(jsonObject)
                 }
 
                 NwcMethod.PAY_KEYSEND -> {
@@ -382,6 +422,40 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
                             }
                         },
                     message = it["message"]?.jsonPrimitive?.content,
+                )
+            },
+        )
+    }
+
+    private fun parsePaySuccess(json: JsonObject): PaySuccessResponse {
+        val result = json["result"]?.jsonObject
+        return PaySuccessResponse(
+            result?.let {
+                PaySuccessResponse.PayResult(
+                    transaction_id = it["transaction_id"]?.jsonPrimitive?.content,
+                    state = it["state"]?.jsonPrimitive?.content,
+                    instruction_type = it["instruction_type"]?.jsonPrimitive?.content,
+                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
+                    fees_paid = it["fees_paid"]?.jsonPrimitive?.longOrNull,
+                    payment_hash = it["payment_hash"]?.jsonPrimitive?.content,
+                    preimage = it["preimage"]?.jsonPrimitive?.content,
+                    payer_proof = it["payer_proof"]?.jsonPrimitive?.content,
+                    txid = it["txid"]?.jsonPrimitive?.content,
+                    failure_reason = it["failure_reason"]?.jsonPrimitive?.content,
+                    created_at = it["created_at"]?.jsonPrimitive?.longOrNull,
+                    settled_at = it["settled_at"]?.jsonPrimitive?.longOrNull,
+                )
+            },
+        )
+    }
+
+    private fun parseReceiveSuccess(json: JsonObject): ReceiveSuccessResponse {
+        val result = json["result"]?.jsonObject
+        return ReceiveSuccessResponse(
+            result?.let {
+                ReceiveSuccessResponse.ReceiveResult(
+                    bip321 = it["bip321"]?.jsonPrimitive?.content,
+                    transaction_id = it["transaction_id"]?.jsonPrimitive?.content,
                 )
             },
         )

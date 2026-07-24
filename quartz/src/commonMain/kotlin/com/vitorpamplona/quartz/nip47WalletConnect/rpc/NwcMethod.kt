@@ -34,4 +34,8 @@ object NwcMethod {
     const val MAKE_HOLD_INVOICE = "make_hold_invoice"
     const val CANCEL_HOLD_INVOICE = "cancel_hold_invoice"
     const val SETTLE_HOLD_INVOICE = "settle_hold_invoice"
+
+    // nostr-wallet-connect/nwc#2 — generalized payment instructions (BOLT12/BIP321).
+    const val PAY = "pay"
+    const val RECEIVE = "receive"
 }

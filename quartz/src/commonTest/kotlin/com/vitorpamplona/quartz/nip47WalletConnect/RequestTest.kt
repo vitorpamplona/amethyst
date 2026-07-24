@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
@@ -87,6 +89,67 @@ class RequestTest {
         assertIs<PayInvoiceMethod>(request)
         assertEquals("lnbc50n1...", request.params?.invoice)
         assertEquals(1000L, request.params?.amount)
+    }
+
+    // --- Pay (nwc#2 BOLT12/BIP321) ---
+
+    @Test
+    fun testPayCreateWithOfferAndPayerNote() {
+        val request = PayMethod.create("bitcoin:?lno=lno1abc", amount = 21_000L, payerNote = "nostr:nipXX:deadbeef")
+        assertEquals(NwcMethod.PAY, request.method)
+        assertEquals("bitcoin:?lno=lno1abc", request.params?.payment)
+        assertEquals(21_000L, request.params?.amount)
+        assertEquals("nostr:nipXX:deadbeef", request.params?.payer_note)
+    }
+
+    @Test
+    fun testPaySerialization() {
+        val request = PayMethod.create("bitcoin:?lno=lno1abc", amount = 21_000L, payerNote = "nostr:nipXX:deadbeef")
+        val json = OptimizedJsonMapper.toJson(request)
+        assertTrue(json.contains("\"method\":\"pay\""))
+        assertTrue(json.contains("\"payment\":\"bitcoin:?lno=lno1abc\""))
+        assertTrue(json.contains("\"amount\":21000"))
+        assertTrue(json.contains("\"payer_note\":\"nostr:nipXX:deadbeef\""))
+    }
+
+    @Test
+    fun testPayDeserialization() {
+        val json = """{"method":"pay","params":{"payment":"bitcoin:?lno=lno1abc","amount":21000,"payer_note":"nostr:nipXX:deadbeef"}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<PayMethod>(request)
+        assertEquals("bitcoin:?lno=lno1abc", request.params?.payment)
+        assertEquals(21_000L, request.params?.amount)
+        assertEquals("nostr:nipXX:deadbeef", request.params?.payer_note)
+    }
+
+    @Test
+    fun testPayAmountlessDeserialization() {
+        val json = """{"method":"pay","params":{"payment":"bitcoin:?lno=lno1abc"}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<PayMethod>(request)
+        assertEquals("bitcoin:?lno=lno1abc", request.params?.payment)
+        assertNull(request.params?.amount)
+        assertNull(request.params?.payer_note)
+    }
+
+    // --- Receive (nwc#2) ---
+
+    @Test
+    fun testReceiveSerialization() {
+        val request = ReceiveMethod.create(amount = 21_000L, description = "tip jar")
+        val json = OptimizedJsonMapper.toJson(request)
+        assertTrue(json.contains("\"method\":\"receive\""))
+        assertTrue(json.contains("\"amount\":21000"))
+        assertTrue(json.contains("\"description\":\"tip jar\""))
+    }
+
+    @Test
+    fun testReceiveDeserialization() {
+        val json = """{"method":"receive","params":{"amount":21000,"description":"tip jar"}}"""
+        val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<ReceiveMethod>(request)
+        assertEquals(21_000L, request.params?.amount)
+        assertEquals("tip jar", request.params?.description)
     }
 
     // --- PayKeysend ---
