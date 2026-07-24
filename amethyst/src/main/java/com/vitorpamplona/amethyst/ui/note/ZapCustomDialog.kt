@@ -543,6 +543,30 @@ fun payViaIntent(
     }
 }
 
+/**
+ * Hands a reusable BOLT12 offer (`lno1…`, from a recipient's kind:10058) off to an
+ * installed wallet via the `lightning:` scheme — the same handoff [payViaIntent] uses
+ * for a BOLT11 invoice. The wallet collects the amount and completes the payment; this
+ * is a plain intent, not a NIP-57/NIP-XX zap, so it produces no Nostr receipt.
+ */
+fun payViaBolt12Intent(
+    offer: String,
+    context: Context,
+    onPaid: () -> Unit,
+    onError: (String) -> Unit,
+) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, "lightning:$offer".toUri())
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+        context.startActivity(intent)
+        onPaid()
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        onError(stringRes(context, R.string.no_wallet_found))
+    }
+}
+
 @Composable
 fun PayButton(
     isActive: Boolean,
