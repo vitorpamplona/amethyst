@@ -1860,6 +1860,9 @@
 
     <string name="app_notification_reply_label">Reply</string>
     <string name="app_notification_mark_read_label">Mark Read</string>
+    <string name="app_notification_me">Me</string>
+    <string name="app_notification_new_message">New message</string>
+    <string name="app_notification_added_to_group">You\'ve been added to %1$s</string>
     <string name="app_notification_dms_summary">New messages</string>
     <string name="app_notification_zaps_summary">New zaps</string>
 
@@ -1886,6 +1889,62 @@
     <string name="app_notification_mentions_channel_description">Notifies you when somebody mentions or cites you in a post</string>
     <string name="app_notification_mentions_channel_message">%1$s mentioned you</string>
     <string name="app_notification_mentions_summary">New mentions</string>
+
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">Messages</string>
+    <string name="app_notification_group_social">Social</string>
+    <string name="app_notification_group_payments">Payments</string>
+    <string name="app_notification_group_content">Content</string>
+    <string name="app_notification_group_developer">Developer</string>
+    <string name="app_notification_group_games">Games</string>
+
+    <!-- Reposts -->
+    <string name="app_notification_reposts_channel_id" translatable="false">RepostsID</string>
+    <string name="app_notification_reposts_channel_name">Reposts</string>
+    <string name="app_notification_reposts_channel_description">Notifies you when somebody reposts your post</string>
+    <string name="app_notification_reposts_channel_message">%1$s reposted your post</string>
+    <string name="app_notification_reposts_summary">New reposts</string>
+
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_id" translatable="false">MediaID</string>
+    <string name="app_notification_media_channel_name">Media</string>
+    <string name="app_notification_media_channel_description">Notifies you when somebody mentions you in a photo or video</string>
+    <string name="app_notification_media_channel_message_photo">%1$s shared a photo</string>
+    <string name="app_notification_media_channel_message_video">%1$s shared a video</string>
+    <string name="app_notification_media_summary">New media</string>
+
+    <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_id" translatable="false">ArticlesID</string>
+    <string name="app_notification_articles_channel_name">Articles &amp; Highlights</string>
+    <string name="app_notification_articles_channel_description">Notifies you when somebody mentions or highlights you in an article</string>
+    <string name="app_notification_articles_channel_message">%1$s mentioned you in an article</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s highlighted your article</string>
+    <string name="app_notification_articles_summary">New articles</string>
+
+    <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_id" translatable="false">CodeID</string>
+    <string name="app_notification_code_channel_name">Code &amp; Git</string>
+    <string name="app_notification_code_channel_description">Notifies you about issues, patches, and pull requests</string>
+    <string name="app_notification_code_channel_message_issue">%1$s opened an issue</string>
+    <string name="app_notification_code_channel_message_patch">%1$s sent a patch</string>
+    <string name="app_notification_code_channel_message_pr">%1$s opened a pull request</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s updated a pull request</string>
+    <string name="app_notification_code_summary">New code activity</string>
+
+    <!-- Badges -->
+    <string name="app_notification_badges_channel_id" translatable="false">BadgesID</string>
+    <string name="app_notification_badges_channel_name">Badges</string>
+    <string name="app_notification_badges_channel_description">Notifies you when you earn a badge</string>
+    <string name="app_notification_badges_channel_message">You earned a badge</string>
+    <string name="app_notification_badges_channel_message_from">Awarded by %1$s</string>
+    <string name="app_notification_badges_summary">New badges</string>
+
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">Nutzap from %1$s</string>
+    <string name="app_notification_onchain_channel_message_from">Onchain zap from %1$s</string>
+
+    <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s asked a question</string>
 
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Incoming calls</string>

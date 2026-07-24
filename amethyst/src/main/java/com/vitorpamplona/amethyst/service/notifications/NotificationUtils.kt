@@ -21,20 +21,23 @@
 package com.vitorpamplona.amethyst.service.notifications
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
+import android.os.SystemClock
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import coil3.SingletonImageLoader
@@ -47,22 +50,22 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.min
 
+/**
+ * Low-level tray-notification builder. Every per-kind renderer funnels through
+ * [postStandard] (BigText / BigPicture) or [postConversation] (MessagingStyle),
+ * both driven by a [NotificationCategory] that supplies the channel, accent
+ * color, status-bar icon, group, and summary.
+ *
+ * Notifications are keyed by `id.hashCode()` (the triggering event id) so that
+ * (a) reading the underlying post in-app clears the tray entry via
+ * [dismissNotificationForEvent], and (b) re-posting the same id from the
+ * enrichment path replaces the notification in place. `setOnlyAlertOnce(true)`
+ * keeps those replacements silent.
+ */
 object NotificationUtils {
-    private var dmChannel: NotificationChannel? = null
-    private var zapChannel: NotificationChannel? = null
-    private var reactionChannel: NotificationChannel? = null
-    private var chessChannel: NotificationChannel? = null
-    private var replyChannel: NotificationChannel? = null
-    private var mentionChannel: NotificationChannel? = null
-
-    private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
-    private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
-    private const val REACTION_GROUP_KEY = "com.vitorpamplona.amethyst.REACTION_NOTIFICATION"
-    private const val CHESS_GROUP_KEY = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION"
-    const val REPLY_GROUP_KEY_PREFIX = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
-    private const val MENTION_GROUP_KEY = "com.vitorpamplona.amethyst.MENTION_NOTIFICATION"
-
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
     const val PUBLIC_REPLY_ACTION = "com.vitorpamplona.amethyst.PUBLIC_REPLY_ACTION"
     const val MARMOT_REPLY_ACTION = "com.vitorpamplona.amethyst.MARMOT_REPLY_ACTION"
@@ -76,12 +79,35 @@ object NotificationUtils {
     const val KEY_MARMOT_REPLY_TO_INNER_ID = "key_marmot_reply_to_inner_id"
     const val KEY_MARMOT_REPLY_TO_INNER_AUTHOR = "key_marmot_reply_to_inner_author"
 
-    private const val DM_SUMMARY_ID = 0x10000
-    private const val ZAP_SUMMARY_ID = 0x20000
-    private const val REACTION_SUMMARY_ID = 0x40000
-    private const val CHESS_SUMMARY_ID = 0x30000
+    const val REPLY_GROUP_KEY_PREFIX = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
     private const val REPLY_SUMMARY_ID_BASE = 0x50000
-    private const val MENTION_SUMMARY_ID = 0x60000
+
+    // Event ids the user has just read/dismissed in-app. The enrichment path
+    // re-posts a notification as metadata arrives; without this guard a
+    // notification the user already dismissed would be resurrected seconds later
+    // when its author's kind:0 lands. Keyed by the event id string (not the
+    // hashCode) so distinct events can't collide. Entries self-expire after a
+    // window comfortably longer than the 25s enrichment window.
+    private const val DISMISS_GUARD_MS = 90_000L
+    private val recentlyDismissed = ConcurrentHashMap<String, Long>()
+
+    private fun markDismissed(eventId: String) {
+        val now = SystemClock.elapsedRealtime()
+        recentlyDismissed[eventId] = now + DISMISS_GUARD_MS
+        if (recentlyDismissed.size > 256) {
+            recentlyDismissed.entries.removeAll { it.value < now }
+        }
+    }
+
+    /** True if [eventId] was read/dismissed in-app within the guard window. */
+    fun wasDismissed(eventId: String): Boolean {
+        val expiry = recentlyDismissed[eventId] ?: return false
+        if (SystemClock.elapsedRealtime() > expiry) {
+            recentlyDismissed.remove(eventId)
+            return false
+        }
+        return true
+    }
 
     /**
      * Derives a stable summary notification id for a per-thread reply group.
@@ -91,249 +117,6 @@ object NotificationUtils {
     fun replySummaryIdFor(threadRootId: String): Int = REPLY_SUMMARY_ID_BASE xor threadRootId.hashCode()
 
     fun replyGroupKeyFor(threadRootId: String): String = "$REPLY_GROUP_KEY_PREFIX:$threadRootId"
-
-    fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
-        if (dmChannel != null) return dmChannel!!
-
-        dmChannel =
-            NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_dms_channel_id),
-                stringRes(applicationContext, R.string.app_notification_dms_channel_name),
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description =
-                    stringRes(applicationContext, R.string.app_notification_dms_channel_description)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(dmChannel!!)
-
-        return dmChannel!!
-    }
-
-    fun getOrCreateZapChannel(applicationContext: Context): NotificationChannel {
-        if (zapChannel != null) return zapChannel!!
-
-        zapChannel =
-            NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_zaps_channel_id),
-                stringRes(applicationContext, R.string.app_notification_zaps_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description =
-                    stringRes(applicationContext, R.string.app_notification_zaps_channel_description)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(zapChannel!!)
-
-        return zapChannel!!
-    }
-
-    fun getOrCreateReactionChannel(applicationContext: Context): NotificationChannel {
-        if (reactionChannel != null) return reactionChannel!!
-
-        reactionChannel =
-            NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_reactions_channel_id),
-                stringRes(applicationContext, R.string.app_notification_reactions_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description =
-                    stringRes(applicationContext, R.string.app_notification_reactions_channel_description)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(reactionChannel!!)
-
-        return reactionChannel!!
-    }
-
-    fun getOrCreateChessChannel(applicationContext: Context): NotificationChannel {
-        if (chessChannel != null) return chessChannel!!
-
-        chessChannel =
-            NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_chess_channel_id),
-                stringRes(applicationContext, R.string.app_notification_chess_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description =
-                    stringRes(applicationContext, R.string.app_notification_chess_channel_description)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(chessChannel!!)
-
-        return chessChannel!!
-    }
-
-    fun getOrCreateReplyChannel(applicationContext: Context): NotificationChannel {
-        if (replyChannel != null) return replyChannel!!
-
-        replyChannel =
-            NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_replies_channel_id),
-                stringRes(applicationContext, R.string.app_notification_replies_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description =
-                    stringRes(applicationContext, R.string.app_notification_replies_channel_description)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(replyChannel!!)
-
-        return replyChannel!!
-    }
-
-    fun getOrCreateMentionChannel(applicationContext: Context): NotificationChannel {
-        if (mentionChannel != null) return mentionChannel!!
-
-        mentionChannel =
-            NotificationChannel(
-                stringRes(applicationContext, R.string.app_notification_mentions_channel_id),
-                stringRes(applicationContext, R.string.app_notification_mentions_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description =
-                    stringRes(applicationContext, R.string.app_notification_mentions_channel_description)
-            }
-
-        val notificationManager: NotificationManager =
-            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        notificationManager.createNotificationChannel(mentionChannel!!)
-
-        return mentionChannel!!
-    }
-
-    suspend fun NotificationManager.sendReactionNotification(
-        id: String,
-        messageBody: String,
-        messageTitle: String,
-        time: Long,
-        pictureUrl: String?,
-        uri: String,
-        applicationContext: Context,
-        emojiUrl: String? = null,
-    ) {
-        getOrCreateReactionChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_reactions_channel_id)
-
-        sendNotification(
-            id = id,
-            messageBody = messageBody,
-            messageTitle = messageTitle,
-            time = time,
-            pictureUrl = pictureUrl,
-            badgeUrl = emojiUrl,
-            uri = uri,
-            channelId = channelId,
-            notificationGroupKey = REACTION_GROUP_KEY,
-            category = NotificationCompat.CATEGORY_SOCIAL,
-            summaryId = REACTION_SUMMARY_ID,
-            summaryText = stringRes(applicationContext, R.string.app_notification_reactions_summary),
-            applicationContext = applicationContext,
-        )
-    }
-
-    suspend fun NotificationManager.sendChessNotification(
-        id: String,
-        messageBody: String,
-        messageTitle: String,
-        time: Long,
-        pictureUrl: String?,
-        uri: String,
-        applicationContext: Context,
-    ) {
-        getOrCreateChessChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_chess_channel_id)
-
-        sendNotification(
-            id = id,
-            messageBody = messageBody,
-            messageTitle = messageTitle,
-            time = time,
-            pictureUrl = pictureUrl,
-            uri = uri,
-            channelId = channelId,
-            notificationGroupKey = CHESS_GROUP_KEY,
-            category = NotificationCompat.CATEGORY_SOCIAL,
-            summaryId = CHESS_SUMMARY_ID,
-            summaryText = stringRes(applicationContext, R.string.app_notification_chess_summary),
-            applicationContext = applicationContext,
-        )
-    }
-
-    suspend fun NotificationManager.sendReplyNotification(
-        id: String,
-        messageBody: String,
-        messageTitle: String,
-        time: Long,
-        pictureUrl: String?,
-        uri: String,
-        applicationContext: Context,
-        threadRootId: String,
-        inlineReply: InlineReplyTarget? = null,
-    ) {
-        getOrCreateReplyChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_replies_channel_id)
-
-        sendNotification(
-            id = id,
-            messageBody = messageBody,
-            messageTitle = messageTitle,
-            time = time,
-            pictureUrl = pictureUrl,
-            uri = uri,
-            channelId = channelId,
-            notificationGroupKey = replyGroupKeyFor(threadRootId),
-            category = NotificationCompat.CATEGORY_SOCIAL,
-            summaryId = replySummaryIdFor(threadRootId),
-            summaryText = stringRes(applicationContext, R.string.app_notification_replies_summary),
-            applicationContext = applicationContext,
-            inlineReply = inlineReply,
-        )
-    }
-
-    suspend fun NotificationManager.sendMentionNotification(
-        id: String,
-        messageBody: String,
-        messageTitle: String,
-        time: Long,
-        pictureUrl: String?,
-        uri: String,
-        applicationContext: Context,
-    ) {
-        getOrCreateMentionChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_mentions_channel_id)
-
-        sendNotification(
-            id = id,
-            messageBody = messageBody,
-            messageTitle = messageTitle,
-            time = time,
-            pictureUrl = pictureUrl,
-            uri = uri,
-            channelId = channelId,
-            notificationGroupKey = MENTION_GROUP_KEY,
-            category = NotificationCompat.CATEGORY_SOCIAL,
-            summaryId = MENTION_SUMMARY_ID,
-            summaryText = stringRes(applicationContext, R.string.app_notification_mentions_summary),
-            applicationContext = applicationContext,
-        )
-    }
 
     /**
      * Payload for wiring a RemoteInput-powered inline reply action onto a public
@@ -346,69 +129,345 @@ object NotificationUtils {
         val targetEventId: String,
     )
 
-    suspend fun NotificationManager.sendZapNotification(
+    /**
+     * Wiring for a direct-message / group inline reply action. One of the three
+     * shapes routes to the matching action in [NotificationReplyReceiver].
+     */
+    sealed interface ReplyAction {
+        data class Dm(
+            val accountNpub: String,
+            val chatroomMembers: String,
+        ) : ReplyAction
+
+        data class Marmot(
+            val accountNpub: String,
+            val nostrGroupId: String,
+            val replyToInnerEventId: String?,
+            val replyToInnerAuthor: String?,
+        ) : ReplyAction
+    }
+
+    /** A prior message rendered above the main one in a MessagingStyle notification (thread context). */
+    data class ParentMessage(
+        val senderName: String,
+        val body: String,
+        val pictureUrl: String?,
+        /**
+         * True when the parent was authored by the logged-in account, so it is
+         * attributed to the MessagingStyle `me` Person (avatar + "you") rather than
+         * shown as a separate participant. False for a third party's note — e.g. a
+         * reply to someone else's reply in a thread the account started.
+         */
+        val isFromMe: Boolean = false,
+    )
+
+    // ---------------------------------------------------------------------
+    // Standard notification (BigText, or BigPicture when [bigPictureUrl] set)
+    // ---------------------------------------------------------------------
+
+    suspend fun NotificationManager.postStandard(
+        category: NotificationCategory,
         id: String,
-        messageBody: String,
         messageTitle: String,
-        time: Long,
-        pictureUrl: String?,
-        uri: String,
-        applicationContext: Context,
-    ) {
-        getOrCreateZapChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_zaps_channel_id)
-
-        sendNotification(
-            id = id,
-            messageBody = messageBody,
-            messageTitle = messageTitle,
-            time = time,
-            pictureUrl = pictureUrl,
-            uri = uri,
-            channelId = channelId,
-            notificationGroupKey = ZAP_GROUP_KEY,
-            category = NotificationCompat.CATEGORY_SOCIAL,
-            summaryId = ZAP_SUMMARY_ID,
-            summaryText = stringRes(applicationContext, R.string.app_notification_zaps_summary),
-            applicationContext = applicationContext,
-        )
-    }
-
-    suspend fun NotificationManager.sendDMNotification(
-        id: String,
         messageBody: String,
-        senderName: String,
         time: Long,
         pictureUrl: String?,
         uri: String,
         applicationContext: Context,
-        accountNpub: String? = null,
-        accountPictureUrl: String? = null,
-        chatroomMembers: String? = null,
-        marmotNostrGroupId: String? = null,
-        marmotReplyToInnerEventId: String? = null,
-        marmotReplyToInnerAuthor: String? = null,
+        bigPictureUrl: String? = null,
+        badgeUrl: String? = null,
+        inlineReply: InlineReplyTarget? = null,
+        groupKey: String = category.group,
+        summaryId: Int = category.summaryId,
     ) {
-        getOrCreateDMChannel(applicationContext)
-        val channelId = stringRes(applicationContext, R.string.app_notification_dms_channel_id)
+        // The user read/dismissed this event in-app while enrichment was still
+        // running — don't resurrect it (and skip the bitmap work).
+        if (wasDismissed(id)) return
 
-        sendDMNotificationStyled(
-            id = id,
-            messageBody = messageBody,
-            senderName = senderName,
-            time = time,
-            pictureUrl = pictureUrl,
-            uri = uri,
-            channelId = channelId,
-            applicationContext = applicationContext,
-            accountNpub = accountNpub,
-            accountPictureUrl = accountPictureUrl,
-            chatroomMembers = chatroomMembers,
-            marmotNostrGroupId = marmotNostrGroupId,
-            marmotReplyToInnerEventId = marmotReplyToInnerEventId,
-            marmotReplyToInnerAuthor = marmotReplyToInnerAuthor,
+        val channelId = category.ensureChannel(applicationContext)
+        val notId = id.hashCode()
+
+        val avatar = pictureUrl?.let { loadBitmap(it, applicationContext) }?.let { circleCrop(it) }
+        val largeIcon = badgeUrl?.let { overlayBadge(avatar, it, applicationContext) } ?: avatar
+        val bigPicture = bigPictureUrl?.let { loadBitmap(it, applicationContext) }
+
+        val contentPendingIntent = contentIntent(applicationContext, notId, uri)
+
+        val builderPublic =
+            NotificationCompat
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(category.smallIcon)
+                .setColor(category.color)
+                .setContentTitle(messageTitle)
+                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setContentIntent(contentPendingIntent)
+                .setPriority(category.priority())
+                .setAutoCancel(true)
+                .setWhen(time * 1000)
+
+        val builder =
+            NotificationCompat
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(category.smallIcon)
+                .setColor(category.color)
+                .setContentTitle(messageTitle)
+                .setContentText(messageBody)
+                .setLargeIcon(largeIcon)
+                .setContentIntent(contentPendingIntent)
+                .setPublicVersion(builderPublic.build())
+                .setPriority(category.priority())
+                .setCategory(NotificationCompat.CATEGORY_SOCIAL)
+                .setGroup(groupKey)
+                .setAutoCancel(true)
+                .setOnlyAlertOnce(true)
+                .setWhen(time * 1000)
+
+        if (category.colorized) builder.setColorized(true)
+
+        if (bigPicture != null) {
+            builder.setStyle(
+                NotificationCompat
+                    .BigPictureStyle()
+                    .bigPicture(bigPicture)
+                    .bigLargeIcon(null as Bitmap?),
+            )
+        } else {
+            builder.setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
+        }
+
+        if (inlineReply != null) {
+            builder.addAction(publicReplyAction(applicationContext, notId, inlineReply))
+        }
+
+        notify(notId, builder.build())
+        sendGroupSummary(category, groupKey, summaryId, applicationContext)
+    }
+
+    // ---------------------------------------------------------------------
+    // Conversation notification (MessagingStyle: DMs, replies, group chat)
+    // ---------------------------------------------------------------------
+
+    suspend fun NotificationManager.postConversation(
+        category: NotificationCategory,
+        id: String,
+        senderName: String,
+        pictureUrl: String?,
+        messageBody: String,
+        time: Long,
+        uri: String,
+        applicationContext: Context,
+        accountPictureUrl: String? = null,
+        parent: ParentMessage? = null,
+        replyAction: ReplyAction? = null,
+        publicInlineReply: InlineReplyTarget? = null,
+        addMarkRead: Boolean = true,
+        groupKey: String = category.group,
+        summaryId: Int = category.summaryId,
+    ) {
+        // The user read/dismissed this event in-app while enrichment was still
+        // running — don't resurrect it (and skip the bitmap work).
+        if (wasDismissed(id)) return
+
+        val channelId = category.ensureChannel(applicationContext)
+        val notId = id.hashCode()
+
+        val avatar = pictureUrl?.let { loadBitmap(it, applicationContext) }?.let { circleCrop(it) }
+        val accountAvatar = accountPictureUrl?.let { loadBitmap(it, applicationContext) }?.let { circleCrop(it) }
+
+        val sender =
+            Person
+                .Builder()
+                .setName(senderName)
+                .apply { avatar?.let { setIcon(IconCompat.createWithBitmap(it)) } }
+                .build()
+
+        val me =
+            Person
+                .Builder()
+                .setName(stringRes(applicationContext, R.string.app_notification_me))
+                .apply { accountAvatar?.let { setIcon(IconCompat.createWithBitmap(it)) } }
+                .build()
+
+        val messagingStyle = NotificationCompat.MessagingStyle(me)
+
+        if (parent != null) {
+            val parentSender =
+                if (parent.isFromMe) {
+                    // The account authored the parent — reuse the `me` Person so it
+                    // renders as self with the account's avatar, not a stranger.
+                    me
+                } else {
+                    val parentAvatar = parent.pictureUrl?.let { loadBitmap(it, applicationContext) }?.let { circleCrop(it) }
+                    Person
+                        .Builder()
+                        .setName(parent.senderName)
+                        .apply { parentAvatar?.let { setIcon(IconCompat.createWithBitmap(it)) } }
+                        .build()
+                }
+            messagingStyle.addMessage(parent.body, (time - 1) * 1000, parentSender)
+        }
+        messagingStyle.addMessage(messageBody, time * 1000, sender)
+
+        val contentPendingIntent = contentIntent(applicationContext, notId, uri)
+
+        val builderPublic =
+            NotificationCompat
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(category.smallIcon)
+                .setColor(category.color)
+                .setContentTitle(senderName)
+                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
+                .setLargeIcon(avatar)
+                .setContentIntent(contentPendingIntent)
+                .setPriority(category.priority())
+                .setAutoCancel(true)
+                .setWhen(time * 1000)
+
+        val builder =
+            NotificationCompat
+                .Builder(applicationContext, channelId)
+                .setSmallIcon(category.smallIcon)
+                .setColor(category.color)
+                .setLargeIcon(avatar)
+                .setStyle(messagingStyle)
+                .setContentIntent(contentPendingIntent)
+                .setPublicVersion(builderPublic.build())
+                .setPriority(category.priority())
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setGroup(groupKey)
+                .setAutoCancel(true)
+                .setOnlyAlertOnce(true)
+                .setWhen(time * 1000)
+
+        when (replyAction) {
+            is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, replyAction))
+            is ReplyAction.Marmot -> builder.addAction(marmotReplyAction(applicationContext, notId, replyAction))
+            null -> publicInlineReply?.let { builder.addAction(publicReplyAction(applicationContext, notId, it)) }
+        }
+
+        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId))
+
+        notify(notId, builder.build())
+        sendGroupSummary(category, groupKey, summaryId, applicationContext)
+    }
+
+    // ---------------------------------------------------------------------
+    // Intents & actions
+    // ---------------------------------------------------------------------
+
+    private fun contentIntent(
+        applicationContext: Context,
+        notId: Int,
+        uri: String,
+    ): PendingIntent {
+        val contentIntent =
+            Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
+        return PendingIntent.getActivity(
+            applicationContext,
+            notId,
+            contentIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
+
+    private fun replyRemoteInput(applicationContext: Context): RemoteInput =
+        RemoteInput
+            .Builder(KEY_REPLY_TEXT)
+            .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+            .build()
+
+    private fun buildReplyAction(
+        applicationContext: Context,
+        notId: Int,
+        intent: Intent,
+    ): NotificationCompat.Action {
+        val replyPendingIntent =
+            PendingIntent.getBroadcast(
+                applicationContext,
+                notId,
+                intent,
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        return NotificationCompat.Action
+            .Builder(R.drawable.ic_notif_reply, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+            .addRemoteInput(replyRemoteInput(applicationContext))
+            .setAllowGeneratedReplies(true)
+            .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+            .build()
+    }
+
+    private fun dmReplyAction(
+        applicationContext: Context,
+        notId: Int,
+        action: ReplyAction.Dm,
+    ): NotificationCompat.Action {
+        val intent =
+            Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                this.action = REPLY_ACTION
+                putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_ACCOUNT_NPUB, action.accountNpub)
+                putExtra(KEY_CHATROOM_MEMBERS, action.chatroomMembers)
+            }
+        return buildReplyAction(applicationContext, notId, intent)
+    }
+
+    private fun marmotReplyAction(
+        applicationContext: Context,
+        notId: Int,
+        action: ReplyAction.Marmot,
+    ): NotificationCompat.Action {
+        val intent =
+            Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                this.action = MARMOT_REPLY_ACTION
+                putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_ACCOUNT_NPUB, action.accountNpub)
+                putExtra(KEY_MARMOT_GROUP_ID, action.nostrGroupId)
+                action.replyToInnerEventId?.let { putExtra(KEY_MARMOT_REPLY_TO_INNER_ID, it) }
+                action.replyToInnerAuthor?.let { putExtra(KEY_MARMOT_REPLY_TO_INNER_AUTHOR, it) }
+            }
+        return buildReplyAction(applicationContext, notId, intent)
+    }
+
+    private fun publicReplyAction(
+        applicationContext: Context,
+        notId: Int,
+        target: InlineReplyTarget,
+    ): NotificationCompat.Action {
+        val intent =
+            Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                action = PUBLIC_REPLY_ACTION
+                putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_ACCOUNT_NPUB, target.accountNpub)
+                putExtra(KEY_TARGET_EVENT_ID, target.targetEventId)
+            }
+        return buildReplyAction(applicationContext, notId, intent)
+    }
+
+    private fun markReadAction(
+        applicationContext: Context,
+        notId: Int,
+    ): NotificationCompat.Action {
+        val markReadIntent =
+            Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                action = MARK_READ_ACTION
+                putExtra(KEY_NOTIFICATION_ID, notId)
+            }
+        val markReadPendingIntent =
+            PendingIntent.getBroadcast(
+                applicationContext,
+                notId + 1,
+                markReadIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        return NotificationCompat.Action
+            .Builder(R.drawable.ic_notif_message, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
+            .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
+            .build()
+    }
+
+    // ---------------------------------------------------------------------
+    // Bitmap helpers
+    // ---------------------------------------------------------------------
 
     private suspend fun loadBitmap(
         pictureUrl: String,
@@ -430,6 +489,32 @@ object NotificationUtils {
             }
         }
 
+    /** Crops [src] to a centered circle so avatars render round in the tray. */
+    private suspend fun circleCrop(src: Bitmap): Bitmap =
+        withContext(Dispatchers.Default) {
+            try {
+                val size = min(src.width, src.height)
+                val squared =
+                    if (src.width != src.height) {
+                        Bitmap.createBitmap(src, (src.width - size) / 2, (src.height - size) / 2, size, size)
+                    } else {
+                        src
+                    }
+                val output = createBitmap(size, size)
+                val canvas = Canvas(output)
+                val paint =
+                    Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        isFilterBitmap = true
+                        shader = BitmapShader(squared, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+                    }
+                val r = size / 2f
+                canvas.drawCircle(r, r, r, paint)
+                output
+            } catch (_: Exception) {
+                src
+            }
+        }
+
     /**
      * Draws the badge image (e.g. a NIP-30 custom-emoji reaction) onto the bottom-right corner
      * of the base avatar. Returns the base unchanged if the badge can't be loaded, or the badge
@@ -446,7 +531,7 @@ object NotificationUtils {
         return withContext(Dispatchers.Default) {
             val result = base.copy(base.config ?: Bitmap.Config.ARGB_8888, true)
             val canvas = Canvas(result)
-            val badgeSize = minOf(result.width, result.height) * 0.45f
+            val badgeSize = min(result.width, result.height) * 0.45f
             val dest =
                 RectF(
                     result.width - badgeSize,
@@ -460,303 +545,14 @@ object NotificationUtils {
         }
     }
 
-    private suspend fun NotificationManager.sendDMNotificationStyled(
-        id: String,
-        messageBody: String,
-        senderName: String,
-        time: Long,
-        pictureUrl: String?,
-        uri: String,
-        channelId: String,
-        applicationContext: Context,
-        accountNpub: String?,
-        accountPictureUrl: String?,
-        chatroomMembers: String?,
-        marmotNostrGroupId: String? = null,
-        marmotReplyToInnerEventId: String? = null,
-        marmotReplyToInnerAuthor: String? = null,
-    ) {
-        val notId = id.hashCode()
-
-        if (isDuplicate(notId)) return
-
-        val bitmap = pictureUrl?.let { loadBitmap(it, applicationContext) }
-        val accountBitmap = accountPictureUrl?.let { loadBitmap(it, applicationContext) }
-
-        val senderIcon = bitmap?.let { IconCompat.createWithBitmap(it) }
-        val accountIcon = accountBitmap?.let { IconCompat.createWithBitmap(it) }
-
-        val sender =
-            Person
-                .Builder()
-                .setName(senderName)
-                .apply { senderIcon?.let { setIcon(it) } }
-                .build()
-
-        val messagingStyle =
-            NotificationCompat
-                .MessagingStyle(
-                    Person
-                        .Builder()
-                        .setName("Me")
-                        .setIcon(accountIcon)
-                        .build(),
-                ).addMessage(messageBody, time * 1000, sender)
-
-        val contentIntent =
-            Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
-
-        val contentPendingIntent =
-            PendingIntent.getActivity(
-                applicationContext,
-                notId,
-                contentIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val builderPublic =
-            NotificationCompat
-                .Builder(applicationContext, channelId)
-                .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(senderName)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
-                .setLargeIcon(bitmap)
-                .setContentIntent(contentPendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true)
-                .setWhen(time * 1000)
-
-        val builder =
-            NotificationCompat
-                .Builder(applicationContext, channelId)
-                .setSmallIcon(R.drawable.amethyst)
-                .setLargeIcon(bitmap)
-                .setStyle(messagingStyle)
-                .setContentIntent(contentPendingIntent)
-                .setPublicVersion(builderPublic.build())
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setGroup(DM_GROUP_KEY)
-                .setAutoCancel(true)
-                .setWhen(time * 1000)
-
-        // Direct Reply action
-        if (accountNpub != null && chatroomMembers != null) {
-            val remoteInput =
-                RemoteInput
-                    .Builder(KEY_REPLY_TEXT)
-                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
-                    .build()
-
-            val replyIntent =
-                Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
-                    action = REPLY_ACTION
-                    putExtra(KEY_NOTIFICATION_ID, notId)
-                    putExtra(KEY_ACCOUNT_NPUB, accountNpub)
-                    putExtra(KEY_CHATROOM_MEMBERS, chatroomMembers)
-                }
-
-            val replyPendingIntent =
-                PendingIntent.getBroadcast(
-                    applicationContext,
-                    notId,
-                    replyIntent,
-                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                )
-
-            val replyAction =
-                NotificationCompat.Action
-                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
-                    .addRemoteInput(remoteInput)
-                    .setAllowGeneratedReplies(true)
-                    .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
-                    .build()
-
-            builder.addAction(replyAction)
-        } else if (accountNpub != null && marmotNostrGroupId != null) {
-            // Marmot/MLS Reply action: sends the user's text as an encrypted
-            // kind:9 inside the Marmot group, replying to the inner event
-            // that triggered this notification. Mirrors the NIP-17 path
-            // above but routes through NotificationReplyReceiver's
-            // MARMOT_REPLY_ACTION branch so we never publish a plaintext
-            // public reply for an encrypted group message.
-            val remoteInput =
-                RemoteInput
-                    .Builder(KEY_REPLY_TEXT)
-                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
-                    .build()
-
-            val replyIntent =
-                Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
-                    action = MARMOT_REPLY_ACTION
-                    putExtra(KEY_NOTIFICATION_ID, notId)
-                    putExtra(KEY_ACCOUNT_NPUB, accountNpub)
-                    putExtra(KEY_MARMOT_GROUP_ID, marmotNostrGroupId)
-                    if (marmotReplyToInnerEventId != null) {
-                        putExtra(KEY_MARMOT_REPLY_TO_INNER_ID, marmotReplyToInnerEventId)
-                    }
-                    if (marmotReplyToInnerAuthor != null) {
-                        putExtra(KEY_MARMOT_REPLY_TO_INNER_AUTHOR, marmotReplyToInnerAuthor)
-                    }
-                }
-
-            val replyPendingIntent =
-                PendingIntent.getBroadcast(
-                    applicationContext,
-                    notId,
-                    replyIntent,
-                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                )
-
-            val replyAction =
-                NotificationCompat.Action
-                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
-                    .addRemoteInput(remoteInput)
-                    .setAllowGeneratedReplies(true)
-                    .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
-                    .build()
-
-            builder.addAction(replyAction)
-        }
-
-        // Mark as Read action
-        val markReadIntent =
-            Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
-                action = MARK_READ_ACTION
-                putExtra(KEY_NOTIFICATION_ID, notId)
-            }
-
-        val markReadPendingIntent =
-            PendingIntent.getBroadcast(
-                applicationContext,
-                notId + 1,
-                markReadIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val markReadAction =
-            NotificationCompat.Action
-                .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
-                .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
-                .build()
-
-        builder.addAction(markReadAction)
-
-        notify(notId, builder.build())
-
-        // Group summary notification
-        sendGroupSummary(channelId, DM_GROUP_KEY, DM_SUMMARY_ID, stringRes(applicationContext, R.string.app_notification_dms_summary), applicationContext)
-    }
-
-    private suspend fun NotificationManager.sendNotification(
-        id: String,
-        messageBody: String,
-        messageTitle: String,
-        time: Long,
-        pictureUrl: String?,
-        uri: String,
-        channelId: String,
-        notificationGroupKey: String,
-        category: String,
-        summaryId: Int,
-        summaryText: String,
-        applicationContext: Context,
-        inlineReply: InlineReplyTarget? = null,
-        badgeUrl: String? = null,
-    ) {
-        val notId = id.hashCode()
-
-        if (isDuplicate(notId)) return
-
-        val bitmap = pictureUrl?.let { loadBitmap(it, applicationContext) }
-
-        // For custom-emoji (NIP-30) reactions, the emoji is an image URL that can't render
-        // as text in the notification, so overlay it as a badge on the author's avatar.
-        val largeIcon = badgeUrl?.let { overlayBadge(bitmap, it, applicationContext) } ?: bitmap
-
-        val contentIntent =
-            Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
-
-        val contentPendingIntent =
-            PendingIntent.getActivity(
-                applicationContext,
-                notId,
-                contentIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        val builderPublic =
-            NotificationCompat
-                .Builder(applicationContext, channelId)
-                .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(messageTitle)
-                .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
-                .setLargeIcon(bitmap)
-                .setContentIntent(contentPendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true)
-                .setWhen(time * 1000)
-
-        val builder =
-            NotificationCompat
-                .Builder(applicationContext, channelId)
-                .setSmallIcon(R.drawable.amethyst)
-                .setContentTitle(messageTitle)
-                .setContentText(messageBody)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
-                .setLargeIcon(largeIcon)
-                .setContentIntent(contentPendingIntent)
-                .setPublicVersion(builderPublic.build())
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(category)
-                .setGroup(notificationGroupKey)
-                .setAutoCancel(true)
-                .setWhen(time * 1000)
-
-        if (inlineReply != null) {
-            val remoteInput =
-                RemoteInput
-                    .Builder(KEY_REPLY_TEXT)
-                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
-                    .build()
-
-            val replyIntent =
-                Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
-                    action = PUBLIC_REPLY_ACTION
-                    putExtra(KEY_NOTIFICATION_ID, notId)
-                    putExtra(KEY_ACCOUNT_NPUB, inlineReply.accountNpub)
-                    putExtra(KEY_TARGET_EVENT_ID, inlineReply.targetEventId)
-                }
-
-            val replyPendingIntent =
-                PendingIntent.getBroadcast(
-                    applicationContext,
-                    notId,
-                    replyIntent,
-                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                )
-
-            val replyAction =
-                NotificationCompat.Action
-                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
-                    .addRemoteInput(remoteInput)
-                    .setAllowGeneratedReplies(true)
-                    .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
-                    .build()
-
-            builder.addAction(replyAction)
-        }
-
-        notify(notId, builder.build())
-
-        sendGroupSummary(channelId, notificationGroupKey, summaryId, summaryText, applicationContext)
-    }
+    // ---------------------------------------------------------------------
+    // Group summaries, dedup, dismissal
+    // ---------------------------------------------------------------------
 
     private fun NotificationManager.sendGroupSummary(
-        channelId: String,
+        category: NotificationCategory,
         groupKey: String,
         summaryId: Int,
-        summaryText: String,
         applicationContext: Context,
     ) {
         val activeCount = activeNotifications.count { it.notification.group == groupKey && it.id != summaryId }
@@ -765,28 +561,20 @@ object NotificationUtils {
 
         val summaryBuilder =
             NotificationCompat
-                .Builder(applicationContext, channelId)
-                .setSmallIcon(R.drawable.amethyst)
+                .Builder(applicationContext, category.channelId(applicationContext))
+                .setSmallIcon(category.smallIcon)
+                .setColor(category.color)
                 .setGroup(groupKey)
                 .setGroupSummary(true)
                 .setAutoCancel(true)
+                .setOnlyAlertOnce(true)
                 .setStyle(
                     NotificationCompat
                         .InboxStyle()
-                        .setSummaryText(summaryText),
+                        .setSummaryText(stringRes(applicationContext, category.summaryTextRes)),
                 )
 
         notify(summaryId, summaryBuilder.build())
-    }
-
-    private fun NotificationManager.isDuplicate(notId: Int): Boolean {
-        val notifications: Array<StatusBarNotification> = activeNotifications
-        for (notification in notifications) {
-            if (notification.id == notId) {
-                return true
-            }
-        }
-        return false
     }
 
     /** Cancels all notifications. */
@@ -798,13 +586,18 @@ object NotificationUtils {
      * Dismisses the tray notification posted for [eventId] — used to auto-clear a
      * notification once the user reads the underlying event in-app.
      *
-     * Per-event notifications are keyed by `id.hashCode()` (see [sendNotification]
-     * and [sendDMNotificationStyled]), so hashing the same event id targets exactly
-     * the notification posted for it. Cancelling an id that isn't currently shown is
-     * a harmless no-op. After removing the child, any group summary left without
-     * children is cancelled too so the tray doesn't keep an empty summary around.
+     * Per-event notifications are keyed by `id.hashCode()`, so hashing the same
+     * event id targets exactly the notification posted for it. Cancelling an id
+     * that isn't currently shown is a harmless no-op. After removing the child,
+     * any group summary left without children is cancelled too so the tray
+     * doesn't keep an empty summary around.
      */
     fun NotificationManager.dismissNotificationForEvent(eventId: HexKey) {
+        // Record the dismissal first, unconditionally, so an in-flight enrichment
+        // window can't re-post this notification after the user has read it — even
+        // in the race where the initial post isn't visible in activeNotifications yet.
+        markDismissed(eventId)
+
         val notId = eventId.hashCode()
 
         // Most events the user reads never had a tray notification (regular feed
@@ -816,7 +609,7 @@ object NotificationUtils {
     }
 
     private fun NotificationManager.cancelChildlessGroupSummaries() {
-        val active = activeNotifications
+        val active: Array<StatusBarNotification> = activeNotifications
         for (summary in active) {
             if (summary.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0) continue
             val group = summary.notification.group ?: continue
@@ -824,4 +617,11 @@ object NotificationUtils {
             if (!hasChildren) cancel(summary.id)
         }
     }
+
+    private fun NotificationCategory.priority(): Int =
+        when (importance) {
+            NotificationManager.IMPORTANCE_HIGH, NotificationManager.IMPORTANCE_MAX -> NotificationCompat.PRIORITY_HIGH
+            NotificationManager.IMPORTANCE_LOW, NotificationManager.IMPORTANCE_MIN -> NotificationCompat.PRIORITY_LOW
+            else -> NotificationCompat.PRIORITY_DEFAULT
+        }
 }
