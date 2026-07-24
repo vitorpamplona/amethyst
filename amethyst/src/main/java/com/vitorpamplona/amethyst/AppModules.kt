@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
+import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
@@ -881,6 +882,16 @@ class AppModules(
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
         )
+
+    // Surfaces non-zap Lightning payments reported by the logged-in account's NWC
+    // wallet(s) as tray notifications (zaps are already shown via ZapNotification).
+    val nwcPaymentNotificationWatcher =
+        NwcPaymentNotificationWatcher(
+            context = appContext,
+            client = client,
+            scope = applicationIOScope,
+            accountFlow = sessionManager.accountContent.map { (it as? AccountState.LoggedIn)?.account },
+        ).also { it.start() }
 
     fun subscribedFlow(
         address: Address,

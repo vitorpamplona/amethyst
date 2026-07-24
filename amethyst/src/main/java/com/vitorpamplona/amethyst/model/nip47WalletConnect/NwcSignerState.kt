@@ -37,18 +37,24 @@ import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectReque
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Manages NIP-47 (Nostr Wallet Connect) related signing operations and decryption cache for a given account.
@@ -60,6 +66,12 @@ class NwcSignerState(
     val cache: LocalCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
+    /**
+     * Fetches a wallet's kind 13194 info event so we can negotiate encryption.
+     * Injected by [com.vitorpamplona.amethyst.model.Account] (which owns the relay
+     * client). Null in tests / when unavailable — requests then fall back to NIP-04.
+     */
+    val fetchInfoEvent: (suspend (Nip47WalletConnect.Nip47URINorm) -> NwcInfoEvent?)? = null,
 ) : INwcSignerState {
     /**
      * Flow of the default wallet's NWC URI, derived from multi-wallet settings.
@@ -105,6 +117,54 @@ class NwcSignerState(
             NostrSignerInternal(KeyPair(it))
         }
 
+    /**
+     * Per-wallet (keyed by wallet service pubkey) cache of whether the wallet
+     * advertises NIP-44 (`nip44_v2`) support in its kind 13194 info event.
+     * NIP-47 says a client "should always prefer nip44 if supported by the wallet
+     * service"; absent/unknown means we keep the NIP-04 legacy default.
+     */
+    private val nip44SupportByWallet = ConcurrentHashMap<HexKey, Boolean>()
+
+    init {
+        // Warm the encryption preference in the background whenever the default
+        // wallet changes so the payment hot path can read it without blocking.
+        scope.launch(Dispatchers.IO) {
+            defaultWalletUri
+                .filterNotNull()
+                .distinctUntilChanged { a, b -> a.pubKeyHex == b.pubKeyHex && a.relayUri == b.relayUri }
+                .collectLatest { warmEncryptionPreference(it) }
+        }
+    }
+
+    /**
+     * Fetches the wallet's info event once and records whether it supports NIP-44.
+     * Best-effort: any failure leaves the wallet on the NIP-04 fallback.
+     */
+    private suspend fun warmEncryptionPreference(uri: Nip47WalletConnect.Nip47URINorm) {
+        val fetch = fetchInfoEvent ?: return
+        if (nip44SupportByWallet.containsKey(uri.pubKeyHex)) return
+
+        val supports =
+            try {
+                fetch(uri)?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                false
+            }
+
+        nip44SupportByWallet[uri.pubKeyHex] = supports
+    }
+
+    /**
+     * Non-blocking read of the negotiated encryption preference for a wallet.
+     * Returns true only once the info event has been fetched and advertised
+     * `nip44_v2`; otherwise NIP-04 (the legacy default).
+     */
+    private fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
+        uri ?: return false
+        return nip44SupportByWallet[uri.pubKeyHex] ?: false
+    }
+
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
 
     override fun isNIP47Author(pubKey: HexKey?): Boolean = nip47Signer.value.pubKey == pubKey
@@ -138,7 +198,7 @@ class NwcSignerState(
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
         val walletSigner = buildSigner(walletService) ?: signer
 
-        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner)
+        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(walletService))
 
         val filter =
             NWCPaymentQueryState(
@@ -184,7 +244,7 @@ class NwcSignerState(
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
 
-        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value)
+        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value, useNip44 = prefersNip44(walletService))
 
         val filter =
             NWCPaymentQueryState(

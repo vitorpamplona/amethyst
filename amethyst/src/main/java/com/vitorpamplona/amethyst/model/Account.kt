@@ -291,6 +291,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -470,7 +471,22 @@ class Account(
     // account never surfaces under another (the old cache was a process-wide singleton).
     val relayNotifications = NotifyRequestsCache()
 
-    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
+    override val nip47SignerState =
+        NwcSignerState(
+            signer,
+            nwcFilterAssembler,
+            cache,
+            scope,
+            settings,
+            fetchInfoEvent = { uri ->
+                // Fetch the wallet's kind 13194 info event so NwcSignerState can prefer
+                // NIP-44 when the wallet advertises it (NIP-47 encryption negotiation).
+                client.fetchFirst(
+                    uri.relayUri,
+                    Filter(kinds = listOf(NwcInfoEvent.KIND), authors = listOf(uri.pubKeyHex), limit = 1),
+                ) as? NwcInfoEvent
+            },
+        )
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
