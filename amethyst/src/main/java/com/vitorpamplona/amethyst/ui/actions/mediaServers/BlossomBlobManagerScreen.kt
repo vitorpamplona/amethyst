@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -121,12 +122,15 @@ fun BlossomBlobManagerScreen(
                 showBackButton = nav.canPop(),
                 popBack = { nav.popBack() },
                 actions = {
-                    IconButton(onClick = { vm.refresh() }, enabled = !loading) {
-                        if (loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(symbol = MaterialSymbols.Sync, contentDescription = stringRes(R.string.blossom_refresh))
-                        }
+                    if (loading) {
+                        // Keep the spinner as immediate feedback that a refresh is in flight; the
+                        // overflow menu returns once it settles.
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                    } else {
+                        BlobManagerOverflowMenu(
+                            onRefresh = { vm.refresh() },
+                            onImport = { nav.nav(Route.ImportBlossomBlobs) },
+                        )
                     }
                 },
             )
@@ -177,6 +181,41 @@ fun BlossomBlobManagerScreen(
                         }
                     }
             }
+        }
+    }
+}
+
+/**
+ * The top-bar overflow: "Refresh" re-reads the presence matrix; "Import" opens the flow
+ * that pulls the user's files off other Blossom servers into their own.
+ */
+@Composable
+private fun BlobManagerOverflowMenu(
+    onRefresh: () -> Unit,
+    onImport: () -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(R.string.blossom_more_actions))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.blossom_refresh)) },
+                leadingIcon = { MenuIcon(MaterialSymbols.Sync) },
+                onClick = {
+                    open = false
+                    onRefresh()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.blossom_import_menu)) },
+                leadingIcon = { MenuIcon(MaterialSymbols.CloudDownload) },
+                onClick = {
+                    open = false
+                    onImport()
+                },
+            )
         }
     }
 }
