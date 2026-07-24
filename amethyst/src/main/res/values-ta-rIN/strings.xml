@@ -299,6 +299,7 @@
     <string name="chats_reply_not_found">இந்த செய்தியை கண்டுபிடிக்க முடியவில்லை</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">ஒவ்வொரு relay யும் தேடப்பட்டது · காண தட்டவும்</string>
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <string name="error_loading_replies">"பதில்களை ஏற்றுவதில் பிழை: "</string>
     <string name="try_again">மறுமுயற்சி செய்</string>
     <string name="notification_feed_is_empty">இன்னும் அறிவிப்புகள் எதுவும் இல்லை.</string>
@@ -1207,6 +1208,14 @@
     <string name="app_notification_mentions_channel_description">யாரோ ஒரு இடுகையில் உங்களை குறிப்பிடும்போது அல்லது மேற்கோள் காட்டும்போது அறிவிக்கிறது</string>
     <string name="app_notification_mentions_channel_message">%1$s உங்களை குறிப்பிட்டார்</string>
     <string name="app_notification_mentions_summary">புதிய குறிப்பீடுகள்</string>
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">வரும் அழைப்புகள்</string>
     <string name="app_notification_calls_channel_description">வரும் குரல் மற்றும் வீடியோ அழைப்புகளுக்கான அறிவிப்புகள்</string>

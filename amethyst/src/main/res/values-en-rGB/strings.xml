@@ -13,6 +13,7 @@
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
+    <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
     <!-- Napplet sandbox chrome (host top bar + live action notices) -->
     <!-- Napplet capability names -->
     <!-- Napplet consent dialog -->
@@ -40,6 +41,14 @@
     <!-- Relay Authentication (NIP-42) settings -->
     <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
     <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <!-- Reposts -->
+    <!-- Media (picture &amp; video posts that mention you) -->
+    <!-- Articles &amp; highlights -->
+    <!-- Code &amp; git -->
+    <!-- Badges -->
+    <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
