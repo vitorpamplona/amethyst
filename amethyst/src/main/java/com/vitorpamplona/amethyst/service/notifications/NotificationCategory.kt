@@ -226,6 +226,19 @@ enum class NotificationCategory(
         group = "com.vitorpamplona.amethyst.CHESS_NOTIFICATION",
         summaryId = 0x30000,
     ),
+    PAYMENT_RECEIVED(
+        channelIdRes = R.string.app_notification_payments_channel_id,
+        channelNameRes = R.string.app_notification_payments_channel_name,
+        channelDescriptionRes = R.string.app_notification_payments_channel_description,
+        summaryTextRes = R.string.app_notification_payments_summary,
+        importance = NotificationManager.IMPORTANCE_DEFAULT,
+        color = 0xFF16B979.toInt(), // lightning green — distinct from the gold zap channel
+        smallIcon = R.drawable.ic_notif_zap,
+        settingsIcon = MaterialSymbols.AccountBalanceWallet,
+        channelGroup = NotifChannelGroup.PAYMENTS,
+        group = "com.vitorpamplona.amethyst.PAYMENT_RECEIVED_NOTIFICATION",
+        summaryId = 0xC0000,
+    ),
     ;
 
     fun channelId(context: Context): String = stringRes(context, channelIdRes)
