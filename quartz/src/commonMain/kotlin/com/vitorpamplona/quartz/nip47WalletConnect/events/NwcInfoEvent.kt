@@ -44,9 +44,22 @@ class NwcInfoEvent(
 
     fun supportsNotifications(): Boolean = capabilities().contains("notifications")
 
-    fun encryptionSchemes() = tags.mapNotNull(EncryptionTag::parse).flatten()
+    // NIP-47 carries the schemes/types as a single space-separated string in one
+    // tag value (e.g. ["encryption", "nip44_v2 nip04"]). Split on whitespace so we
+    // return individual tokens, while still tolerating a multi-element tag.
+    fun encryptionSchemes() =
+        tags
+            .mapNotNull(EncryptionTag::parse)
+            .flatten()
+            .flatMap { it.split(" ") }
+            .filter { it.isNotBlank() }
 
-    fun notificationTypes() = tags.mapNotNull(NotificationsTag::parse).flatten()
+    fun notificationTypes() =
+        tags
+            .mapNotNull(NotificationsTag::parse)
+            .flatten()
+            .flatMap { it.split(" ") }
+            .filter { it.isNotBlank() }
 
     companion object {
         const val KIND = 13194

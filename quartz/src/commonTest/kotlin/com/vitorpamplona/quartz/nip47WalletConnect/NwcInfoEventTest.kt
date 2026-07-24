@@ -97,6 +97,37 @@ class NwcInfoEventTest {
     }
 
     @Test
+    fun testEncryptionSchemesSpaceSeparated() {
+        // NIP-47 wire format: all schemes in a single space-separated tag value.
+        val event =
+            NwcInfoEvent("id", "pub", 0L, arrayOf(arrayOf("encryption", "nip44_v2 nip04")), "pay_invoice", "sig")
+
+        val schemes = event.encryptionSchemes()
+        assertEquals(2, schemes.size)
+        assertTrue(schemes.contains("nip44_v2"))
+        assertTrue(schemes.contains("nip04"))
+    }
+
+    @Test
+    fun testNotificationTypesSpaceSeparated() {
+        // NIP-47 wire format: all types in a single space-separated tag value.
+        val event =
+            NwcInfoEvent(
+                "id",
+                "pub",
+                0L,
+                arrayOf(arrayOf("notifications", "payment_received payment_sent")),
+                "pay_invoice notifications",
+                "sig",
+            )
+
+        val types = event.notificationTypes()
+        assertEquals(2, types.size)
+        assertTrue(types.contains("payment_received"))
+        assertTrue(types.contains("payment_sent"))
+    }
+
+    @Test
     fun testNotificationTypes() {
         val capabilities = listOf("pay_invoice", "notifications")
         val template = NwcInfoEvent.build(capabilities, notificationTypes = listOf("payment_received", "payment_sent"))

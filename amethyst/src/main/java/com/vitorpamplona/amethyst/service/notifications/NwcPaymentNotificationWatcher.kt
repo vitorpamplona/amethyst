@@ -24,10 +24,13 @@ import android.content.Context
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.renderers.NwcPaymentNotifier
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
@@ -35,8 +38,11 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -66,6 +72,9 @@ class NwcPaymentNotificationWatcher(
     fun start() {
         scope.launch(Dispatchers.IO) {
             accountFlow
+                // Key on pubkey to avoid re-subscribing on unrelated Account churn.
+                // Account switches pass through a null (Loading) emission, which is
+                // distinct from any pubkey and so still restarts the watch cleanly.
                 .distinctUntilChanged { a, b -> a?.signer?.pubKey == b?.signer?.pubKey }
                 .collectLatest { account ->
                     account ?: return@collectLatest
@@ -99,17 +108,43 @@ class NwcPaymentNotificationWatcher(
                     )
 
                 val seen = HashSet<HexKey>()
-                client.subscribeAsFlow(wallet.uri.relayUri, filter).collect { events ->
-                    events.forEach { event ->
-                        val notification = event as? NwcNotificationEvent ?: return@forEach
-                        if (seen.add(notification.id)) {
-                            handle(account, notification, signer)
-                        }
+                subscribe(wallet.uri.relayUri, filter).collect { event ->
+                    val notification = event as? NwcNotificationEvent ?: return@collect
+                    if (seen.add(notification.id)) {
+                        handle(account, notification, signer)
                     }
                 }
             }
         }
     }
+
+    /**
+     * A standing subscription that emits each matching event once — unlike the
+     * accumulating `subscribeAsFlow`, which retains and re-emits the full event
+     * list on every event (wrong for a lifetime subscription). Reconnect
+     * re-delivery is de-duplicated by the caller's `seen` set.
+     */
+    private fun subscribe(
+        relay: NormalizedRelayUrl,
+        filter: Filter,
+    ): Flow<Event> =
+        callbackFlow {
+            val subId = newSubId()
+            val listener =
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        trySend(event)
+                    }
+                }
+
+            client.subscribe(subId, mapOf(relay to listOf(filter)), listener)
+            awaitClose { client.unsubscribe(subId) }
+        }
 
     private suspend fun handle(
         account: Account,
