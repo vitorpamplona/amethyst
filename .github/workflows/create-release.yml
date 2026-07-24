@@ -519,6 +519,305 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
+  # geode relay build matrix. Same shape as build-cli — geode is the same kind
+  # of `application`-plugin JVM module — producing a self-contained bundle with a
+  # minimal jlink'd JRE (no system Java required) plus native Linux packages.
+  #
+  # geodeImage task (all legs):  geode/build/geode-image/geode/ → geode-*.tar.gz
+  # jpackageDeb / jpackageRpm:   geode/build/jpackage/geode_*.deb + geode-*.rpm
+  # no-JRE jvm bundle (linux):   geode-<ver>-jvm.tar.gz for the Homebrew formula
+  #
+  # Unlike build-cli there is no "no Compose UI" assertion — geode depends only on
+  # :quartz and never pulls the Compose render stack. The GHCR Docker image is a
+  # separate job (docker-geode) below.
+  #
+  # Asset naming: geode-<version>-<family>-<arch>.<ext>. See scripts/asset-name.sh.
+  # ---------------------------------------------------------------------------
+  build-geode:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-14,      arch: arm64, family: macos, tasks: "geodeImage" }
+          - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "geodeImage jpackageDeb jpackageRpm" }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45  # macOS leg also codesigns + notarizes the jlink image
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Resolve tag + version
+        id: ver
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          TEST_TAG: ${{ github.event.inputs.test_tag || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${TEST_TAG:-v0.0.0-dryrun}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          VER="${TAG#v}"
+          TOML_VER=$(grep -E '^app\s*=' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]]; then
+            if [[ "$TOML_VER" != "$VER" ]]; then
+              echo "::error::gradle/libs.versions.toml app=$TOML_VER but tag is $TAG"
+              exit 1
+            fi
+          fi
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Install RPM tooling (linux only)
+        if: matrix.family == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+
+      - name: Build geode artifacts
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        with:
+          max_attempts: 2
+          timeout_minutes: 15
+          command: ./gradlew --no-daemon :geode:${{ matrix.tasks }}
+
+      # Boot the bundled jlink image before shipping it. `--version` proves the
+      # JVM starts and the main class loads; the serve leg proves the jlink
+      # module list is complete for the real relay path (Ktor CIO + SQLite +
+      # NIP-11 serialization) — a too-tight module list links fine but fails
+      # here with NoClassDefFound instead of on an operator's machine.
+      - name: Smoke-test the geode image
+        run: |
+          set -euo pipefail
+          IMG="geode/build/geode-image/geode"
+          "$IMG/bin/geode" --version
+          "$IMG/bin/geode" --port 17447 &
+          PID=$!
+          ok=0
+          for i in $(seq 1 20); do
+            if curl -fsS -H 'Accept: application/nostr+json' http://127.0.0.1:17447/ -o /tmp/nip11.json; then ok=1; break; fi
+            sleep 1
+          done
+          kill "$PID" 2>/dev/null || true
+          wait "$PID" 2>/dev/null || true
+          [[ "$ok" == 1 ]] || { echo "::error::geode image did not serve NIP-11 within 20s"; exit 1; }
+          echo "NIP-11 doc:"; head -c 400 /tmp/nip11.json; echo
+          grep -q '"supported_nips"' /tmp/nip11.json || { echo "::error::NIP-11 doc missing supported_nips"; exit 1; }
+
+      # macOS only: import the Developer ID cert (no-op without the secret) so
+      # the next step can codesign the jlink image. The jvm bundle for
+      # Homebrew-core is NOT signed here — Homebrew strips quarantine itself.
+      - name: Import Apple Developer ID certificate (macOS leg, if configured)
+        if: matrix.family == 'macos'
+        id: mac_keychain
+        uses: ./.github/actions/import-macos-cert
+        with:
+          certificate-p12-base64: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          certificate-password: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+
+      # Codesign + notarize the macOS jlink image (geode-<ver>-macos-arm64.tar.gz)
+      # for operators who download it directly. A loose tarball can't be stapled
+      # (stapler only does .app/.dmg/.pkg), so Gatekeeper verifies notarization
+      # online on first run. Runs before "Collect" so the tarred image is signed.
+      - name: Sign + notarize geode image (macOS leg, if configured)
+        if: matrix.family == 'macos' && steps.mac_keychain.outputs.signing == 'true'
+        env:
+          SIGN_IDENTITY: ${{ secrets.MAC_SIGN_IDENTITY }}
+          NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          IMG="geode/build/geode-image/geode"
+          ENTITLEMENTS="geode/packaging/macos/geode.entitlements"
+          # Sign the macOS Mach-O natives buried INSIDE the bundled jars
+          # (secp256k1/sqlite) first — Apple's notary recurses into jars and
+          # rejects any unsigned Mach-O, so this must run before notarize.
+          SIGN_IDENTITY="$SIGN_IDENTITY" scripts/sign-macos-jar-natives.sh "$IMG"
+          # Sign every loose Mach-O binary in the bundled JRE. Executables get
+          # the hardened-runtime entitlements; dylibs don't.
+          while IFS= read -r f; do
+            case "$(file -b "$f")" in
+              *Mach-O*executable*)
+                codesign --force --options runtime --timestamp \
+                  --entitlements "$ENTITLEMENTS" --sign "$SIGN_IDENTITY" "$f" ;;
+              *Mach-O*)
+                codesign --force --options runtime --timestamp \
+                  --sign "$SIGN_IDENTITY" "$f" ;;
+            esac
+          done < <(find "$IMG" -type f)
+          codesign --verify --strict --verbose=2 "$IMG/runtime/bin/java"
+          # Notarize: zip the signed image, submit, wait for Apple's verdict.
+          ZIP="$RUNNER_TEMP/geode-notarize.zip"
+          OUT="$RUNNER_TEMP/notary-submit.json"
+          ditto -c -k --keepParent "$IMG" "$ZIP"
+          if ! xcrun notarytool submit "$ZIP" \
+                --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
+                --team-id "$NOTARY_TEAM_ID" --wait --output-format json > "$OUT"; then
+            echo "::warning::notarytool submit exited non-zero"
+          fi
+          cat "$OUT"
+          STATUS="$(jq -r '.status // "Unknown"' "$OUT" 2>/dev/null || echo Unknown)"
+          SUBMISSION_ID="$(jq -r '.id // empty' "$OUT" 2>/dev/null || true)"
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "::error::Notarization status: $STATUS"
+            if [ -n "$SUBMISSION_ID" ]; then
+              echo "----- notary log -----"
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
+                --team-id "$NOTARY_TEAM_ID" || true
+            fi
+            exit 1
+          fi
+
+      # jpackage pins libicu to the build host's version (libicu74 on
+      # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
+      - name: Relax libicu dependency in .deb
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh geode/build/jpackage/*.deb
+
+      - name: Collect + rename assets
+        run: |
+          set -euo pipefail
+          # shellcheck source=scripts/asset-name.sh
+          source scripts/asset-name.sh
+          collect_geode_assets "${{ matrix.family }}" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
+
+      # Homebrew-core ships a no-JRE jar bundle and depends_on "openjdk" — it
+      # cannot use the jlink tarball above (bundled runtime) nor build from
+      # source (its sandbox blocks Gradle's Maven downloads). installDist
+      # (bin/geode + lib/*.jar, no runtime/) is exactly that bundle. It is pure
+      # JVM bytecode, so one platform-independent asset serves every OS; we cut
+      # it on the linux leg only. geodeImage depends on installDist, so the
+      # geode/build/install/geode tree already exists here.
+      - name: Package no-JRE jvm bundle for Homebrew (linux leg only)
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          VER="${{ steps.ver.outputs.version }}"
+          SRC="geode/build/install/geode"
+          test -x "$SRC/bin/geode"
+          ( cd "$SRC" && tar czf "$OLDPWD/dist/geode-${VER}-jvm.tar.gz" bin lib )
+          echo "Collected: dist/geode-${VER}-jvm.tar.gz"
+
+      - name: Enforce geode size budget (200 MB per asset)
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in dist/*; do
+            if [[ -f "$f" ]]; then
+              size=$(wc -c < "$f")
+              mb=$(( size / 1048576 ))
+              if (( size > 209715200 )); then
+                echo "::error file=$f::asset is ${mb} MB — exceeds 200 MB geode budget"
+                fail=1
+              else
+                echo "OK: $f — ${mb} MB"
+              fi
+            fi
+          done
+          [[ "$fail" == 0 ]]
+
+      - name: Classify release
+        id: classify
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to GH Release (skip on dry-run)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true'
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
+        with:
+          files: dist/*
+          tag_name: ${{ steps.ver.outputs.tag }}
+          prerelease: ${{ steps.classify.outputs.prerelease }}
+          draft: false
+          fail_on_unmatched_files: true
+          generate_release_notes: false  # Android job writes release notes (last-writer-wins race)
+
+      - name: Dry-run summary
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          echo "### Dry-run: geode ${{ matrix.family }}/${{ matrix.arch }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -la dist >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # geode Docker image → GitHub Container Registry (GHCR). A relay is most often
+  # deployed as a container, so this is geode's primary distribution channel.
+  # Builds geode/Dockerfile (multi-stage: gradle installDist → temurin JRE) and
+  # pushes ghcr.io/<owner>/geode:<version> (+ :latest on a stable release).
+  # Tag-push only — skipped on the workflow_dispatch dry-run.
+  # ---------------------------------------------------------------------------
+  docker-geode:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Resolve version + tags
+        id: meta
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VER="${TAG#v}"
+          # Lowercase owner — GHCR repository paths must be lowercase.
+          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE="ghcr.io/${OWNER}/geode"
+          TAGS="${IMAGE}:${VER}"
+          # Only move :latest for a stable vX.Y.Z tag, never a prerelease.
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAGS="${TAGS},${IMAGE}:latest"
+          fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: geode/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
   # Android build + sign + direct-upload. Logic preserved from previous workflow;
   # uses softprops/action-gh-release@v2 instead of deprecated upload-release-asset.
   # ---------------------------------------------------------------------------

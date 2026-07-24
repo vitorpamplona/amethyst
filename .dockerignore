@@ -1,0 +1,17 @@
+# Keep the Docker build context small + reproducible: exclude VCS metadata,
+# Gradle/build outputs, IDE files, and local caches. The build stage runs a
+# fresh `./gradlew :geode:installDist` inside the image, so nothing under any
+# build/ directory needs to travel with the context.
+.git
+.github
+**/build/
+.gradle/
+**/.gradle/
+.idea/
+*.iml
+.kotlin/
+**/.kotlin/
+local.properties
+# Docs + non-geode app modules aren't needed to build the relay, but the Gradle
+# settings reference every module, so we can't drop the module source trees;
+# only their build artifacts (covered above) are excluded.

@@ -137,3 +137,208 @@ dependencies {
     testImplementation(libs.secp256k1.kmp.jni.jvm)
     testImplementation(libs.okhttp)
 }
+
+// ---------------------------------------------------------------------------
+// Native distribution (jlink + jpackage)
+//
+// geode is a long-running server daemon, so unlike a desktop app the useful
+// artifacts are a bundled-runtime tarball and native Linux packages an operator
+// can drop onto a box. This mirrors the amy CLI's pipeline (cli/build.gradle.kts)
+// — geode is the same kind of `application`-plugin JVM module — but geode drags
+// in no Compose UI (it depends only on :quartz), so there's no render-stack to
+// exclude and no "no Compose" CI assertion to guard.
+//
+// Outputs land under geode/build/:
+//   - geode-image/geode/    portable, flat directory (bin/ + lib/ + runtime/ +
+//                           share/ with config.example.toml + geode.service).
+//                           tar this on every OS → geode-<ver>-<fam>-<arch>.tar.gz
+//   - jpackage/geode_*.deb  Debian/Ubuntu package (Linux runners only)
+//   - jpackage/geode-*.rpm  Fedora/RHEL package (Linux runners only)
+//
+// We build our own flat app-image instead of `jpackage --type app-image` because
+// on macOS jpackage buries the binary inside an `.app` bundle — wrong for a CLI-
+// launched daemon. The flat tree matches the Linux jpackage layout on every OS.
+//
+// Release wiring lives in .github/workflows/create-release.yml (build-geode job)
+// and geode/Dockerfile (the GHCR image). See the plan at
+// geode/plans/2026-07-24-geode-release.md.
+// ---------------------------------------------------------------------------
+
+val appVersion: String = project.version.toString()
+
+// RPM rejects dashes in version strings — replace with tilde (~), which RPM
+// treats as prerelease-lower-than: 1.08.0~rc1 < 1.08.0.
+val rpmVersion: String = appVersion.replace("-", "~")
+
+val mainJarName: String = "geode-$appVersion.jar"
+val mainClassName: String = "com.vitorpamplona.geode.MainKt"
+
+// Minimal JDK 21 module set for geode. Keep this tight — every module adds
+// megabytes. geode needs more than the CLI: java.management (Ktor CIO / JVM
+// metrics), java.sql (the bundled SQLite driver), java.net.http +
+// java.security.jgss (okhttp mirror WebSockets over TLS), jdk.crypto.ec (EC
+// used by the TLS handshake), jdk.unsupported (sun.misc.Unsafe, touched by
+// coroutines/SQLite/CIO). If a transitive dep needs more, `jlink` succeeds at
+// link time but the server fails at runtime with NoClassDefFound — the CI
+// dry-run (workflow_dispatch) boots the image to catch that early.
+val jlinkModules: String = listOf(
+    "java.base",
+    "java.logging",
+    "java.management",
+    "java.naming",
+    "java.net.http",
+    "java.security.jgss",
+    "java.sql",
+    "java.xml",
+    "jdk.crypto.ec",
+    "jdk.unsupported",
+).joinToString(",")
+
+fun javaToolBin(name: String): Provider<String> =
+    javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }.map {
+        val exe = if (org.gradle.internal.os.OperatingSystem.current().isWindows) "$name.exe" else name
+        it.metadata.installationPath.file("bin/$exe").asFile.absolutePath
+    }
+
+val jlinkRuntimeDir = layout.buildDirectory.dir("jlink-runtime")
+val geodeImageDir = layout.buildDirectory.dir("geode-image/geode")
+val installLibDir = layout.buildDirectory.dir("install/geode/lib")
+val jpackageOutDir = layout.buildDirectory.dir("jpackage")
+
+val jlinkRuntime =
+    tasks.register<Exec>("jlinkRuntime") {
+        group = "distribution"
+        description = "Build a minimal JRE for geode via jlink."
+
+        outputs.dir(jlinkRuntimeDir)
+
+        val jlinkBin = javaToolBin("jlink")
+        val outDir = jlinkRuntimeDir
+        val modules = jlinkModules
+
+        doFirst {
+            // jlink refuses to write into an existing directory.
+            outDir.get().asFile.deleteRecursively()
+            executable = jlinkBin.get()
+            args(
+                "--add-modules", modules,
+                "--no-header-files",
+                "--no-man-pages",
+                "--strip-debug",
+                // JDK 21+: --compress <int> is deprecated; use zip-<level>.
+                "--compress", "zip-6",
+                "--output", outDir.get().asFile.absolutePath,
+            )
+        }
+    }
+
+// Flat app-image: bin/geode launcher + lib/*.jar + runtime/ (the jlink'd JRE) +
+// share/geode/ (config.example.toml + the systemd unit). Cross-platform — the
+// release workflow tars this up on every OS.
+val geodeImage =
+    tasks.register<Sync>("geodeImage") {
+        group = "distribution"
+        description = "Assemble a portable geode app-image (bin/ + lib/ + runtime/ + share/)."
+
+        dependsOn(tasks.named("installDist"), jlinkRuntime)
+
+        into(geodeImageDir)
+
+        // jars from installDist
+        from(installLibDir) {
+            into("lib")
+        }
+        // jlink'd JRE
+        from(jlinkRuntimeDir) {
+            into("runtime")
+        }
+        // Operator seed files: an example config and the systemd unit.
+        from(layout.projectDirectory.file("config.example.toml")) {
+            into("share/geode")
+        }
+        from(layout.projectDirectory.file("packaging/systemd/geode.service")) {
+            into("share/geode")
+        }
+
+        val mainJar = mainJarName
+        val mainClass = mainClassName
+        val unixLauncher =
+            """
+            #!/bin/sh
+            # geode launcher — uses the bundled jlink'd JRE so no system Java is required.
+            DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")/.." && pwd)"
+            exec "${'$'}DIR/runtime/bin/java" -cp "${'$'}DIR/lib/*" $mainClass "${'$'}@"
+            """.trimIndent() + "\n"
+
+        doLast {
+            val binDir = geodeImageDir.get().asFile.resolve("bin")
+            binDir.mkdirs()
+            val launcher = binDir.resolve("geode")
+            launcher.writeText(unixLauncher)
+            launcher.setExecutable(true, false)
+        }
+    }
+
+fun registerJpackage(
+    taskName: String,
+    type: String,
+    extraArgs: List<String> = emptyList(),
+) = tasks.register<Exec>(taskName) {
+    group = "distribution"
+    description = "Run jpackage --type $type for geode."
+
+    dependsOn(tasks.named("installDist"), jlinkRuntime)
+
+    inputs.dir(installLibDir)
+    inputs.dir(jlinkRuntimeDir)
+    outputs.dir(jpackageOutDir)
+
+    val jpackageBin = javaToolBin("jpackage")
+    val inDir = installLibDir
+    val runtimeDir = jlinkRuntimeDir
+    val outDir = jpackageOutDir
+    val versionArg = if (type == "rpm") rpmVersion else appVersion
+    val extra = extraArgs
+
+    doFirst {
+        outDir.get().asFile.mkdirs()
+        executable = jpackageBin.get()
+        args(
+            "--type", type,
+            "--name", "geode",
+            "--app-version", versionArg,
+            "--vendor", "Amethyst Contributors",
+            "--description", "geode — a standalone Nostr relay.",
+            "--input", inDir.get().asFile.absolutePath,
+            "--runtime-image", runtimeDir.get().asFile.absolutePath,
+            "--main-jar", mainJarName,
+            "--main-class", mainClassName,
+            "--dest", outDir.get().asFile.absolutePath,
+        )
+        args(extra)
+    }
+}
+
+// .deb for Debian/Ubuntu. Installs under /opt/geode/ with /opt/geode/bin/geode
+// as the launcher. No .desktop entry — geode is a headless daemon. The systemd
+// unit + example config are shipped for the operator to wire up (see README).
+registerJpackage(
+    "jpackageDeb",
+    "deb",
+    extraArgs = listOf(
+        "--linux-package-name", "geode",
+        "--linux-deb-maintainer", "vitor@vitorpamplona.com",
+    ),
+)
+
+// .rpm for Fedora/RHEL/openSUSE.
+registerJpackage(
+    "jpackageRpm",
+    "rpm",
+    extraArgs = listOf(
+        "--linux-package-name", "geode",
+        "--linux-rpm-license-type", "MIT",
+    ),
+)
