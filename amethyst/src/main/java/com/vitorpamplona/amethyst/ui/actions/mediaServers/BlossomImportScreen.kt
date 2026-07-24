@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -97,6 +99,11 @@ fun BlossomImportScreen(
     val scanning by vm.isScanning.collectAsStateWithLifecycle()
     val scanned by vm.scanned.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
+    // Collect the user's own server list so the empty-state ↔ picker switch recomposes if the
+    // kind-10063 list arrives from a relay just after the screen opens (common on cold start).
+    val targetServers by accountViewModel.account.blossomServers.flow
+        .collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -106,7 +113,7 @@ fun BlossomImportScreen(
             )
         },
     ) { padding ->
-        if (vm.hasNoTargets) {
+        if (targetServers.isEmpty()) {
             NoTargetsState(
                 modifier =
                     Modifier
@@ -224,8 +231,14 @@ fun BlossomImportScreen(
                         ImportResultCard(
                             count = candidates.size,
                             onImport = {
-                                vm.importSelected()
-                                nav.popBack()
+                                when (vm.importSelected()) {
+                                    is ImportStart.Started -> nav.popBack()
+                                    ImportStart.Busy ->
+                                        Toast
+                                            .makeText(context, stringRes(context, R.string.blossom_import_busy), Toast.LENGTH_LONG)
+                                            .show()
+                                    ImportStart.Empty -> {}
+                                }
                             },
                         )
                     }

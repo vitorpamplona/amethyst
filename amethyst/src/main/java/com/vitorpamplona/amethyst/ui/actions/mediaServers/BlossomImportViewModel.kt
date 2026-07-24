@@ -82,6 +82,17 @@ data class ImportSource(
     val scan: SourceScanState = SourceScanState.Idle,
 )
 
+/** Outcome of tapping "import": either the sweep started, the queue was busy, or nothing to do. */
+sealed interface ImportStart {
+    data class Started(
+        val count: Int,
+    ) : ImportStart
+
+    data object Busy : ImportStart
+
+    data object Empty : ImportStart
+}
+
 /**
  * A blob found on a source server that at least one of the user's own servers is
  * missing — i.e. something worth importing. [sourceUrl] is the absolute URL the
@@ -109,7 +120,7 @@ data class ImportCandidate(
 @Stable
 class BlossomImportViewModel : ViewModel() {
     private lateinit var account: Account
-    private var initialized = false
+    private var seeded = false
 
     private val _sources = MutableStateFlow<List<ImportSource>>(emptyList())
     val sources = _sources.asStateFlow()
@@ -128,9 +139,11 @@ class BlossomImportViewModel : ViewModel() {
     val error = _error.asStateFlow()
 
     fun init(accountViewModel: AccountViewModel) {
-        if (initialized) return
-        initialized = true
+        // Re-point at the current account every call (matches the sibling BlobManager VM), but
+        // seed the source list only once so we don't clobber the user's toggles on recomposition.
         this.account = accountViewModel.account
+        if (seeded) return
+        seeded = true
         seedSources()
     }
 
@@ -138,9 +151,6 @@ class BlossomImportViewModel : ViewModel() {
     private fun targets(): List<String> =
         account.blossomServers.flow.value
             .distinct()
-
-    /** True when the user hasn't configured any of their own servers to import into. */
-    val hasNoTargets get() = targets().isEmpty()
 
     private fun seedSources() {
         val ownHosts = targets().mapTo(HashSet()) { BlossomServerUrl.domain(it) }
@@ -162,10 +172,12 @@ class BlossomImportViewModel : ViewModel() {
 
     fun toggle(baseUrl: String) {
         _sources.update { list -> list.map { if (it.baseUrl == baseUrl) it.copy(enabled = !it.enabled) else it } }
+        invalidateResults()
     }
 
     fun setAll(enabled: Boolean) {
         _sources.update { list -> list.map { it.copy(enabled = enabled) } }
+        invalidateResults()
     }
 
     /** Add a hand-typed server. Ignores blanks and duplicates (matched by host). */
@@ -190,10 +202,27 @@ class BlossomImportViewModel : ViewModel() {
                 list + ImportSource(normalized, host, host, enabled = true, custom = true)
             }
         }
+        invalidateResults()
     }
 
     fun remove(baseUrl: String) {
         _sources.update { list -> list.filterNot { it.baseUrl == baseUrl } }
+        invalidateResults()
+    }
+
+    /**
+     * Drop the previous scan's results whenever the source selection changes — otherwise the
+     * "Import N files" button could mirror blobs sourced from a server the user just disabled
+     * or removed. Forces a fresh scan against the current selection.
+     */
+    private fun invalidateResults() {
+        // Cancel an in-flight scan too, so its results (for the old selection) can't land after the change.
+        scanJob?.cancel()
+        _isScanning.value = false
+        _candidates.value = emptyList()
+        _scanned.value = false
+        _error.value = null
+        _sources.update { list -> list.map { if (it.scan == SourceScanState.Idle) it else it.copy(scan = SourceScanState.Idle) } }
     }
 
     private fun clientFor(server: String) = BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(server))
@@ -235,6 +264,10 @@ class BlossomImportViewModel : ViewModel() {
         targets: List<String>,
     ) {
         val pubkey = account.signer.pubKey
+        // A BUD-02 `t=list` token with no `server` tag is generic, so one signature covers
+        // every source AND target list call. Signing once (instead of per server) avoids a
+        // round-trip storm with remote NIP-46 signers.
+        val listAuth = account.createBlossomListAuth("List blobs").toAuthorizationHeader()
 
         // Phase 1 — /list each enabled source. Collect the user's blobs and remember the
         // first source that can serve each hash (its descriptor URL is the mirror source).
@@ -245,8 +278,7 @@ class BlossomImportViewModel : ViewModel() {
                     async {
                         val listed =
                             try {
-                                val auth = account.createBlossomListAuth("List blobs").toAuthorizationHeader()
-                                clientFor(source).list(source, pubkey, auth)
+                                clientFor(source).list(source, pubkey, listAuth)
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
@@ -273,7 +305,7 @@ class BlossomImportViewModel : ViewModel() {
 
         // Phase 2 — which of the user's own servers already hold each hash? /list where the
         // server supports it, HEAD-probe (bounded) the rest, so we only offer the true gaps.
-        val holders = targetHolders(allHashes, targets, pubkey)
+        val holders = targetHolders(allHashes, targets, listAuth)
 
         _candidates.value =
             allHashes
@@ -289,8 +321,9 @@ class BlossomImportViewModel : ViewModel() {
     private suspend fun targetHolders(
         hashes: List<HexKey>,
         targets: List<String>,
-        pubkey: HexKey,
+        listAuth: String,
     ): Map<String, Set<HexKey>> {
+        val pubkey = account.signer.pubKey
         val listed: List<Pair<String, Set<HexKey>?>> =
             coroutineScope {
                 targets
@@ -298,8 +331,7 @@ class BlossomImportViewModel : ViewModel() {
                         async {
                             target to
                                 try {
-                                    val auth = account.createBlossomListAuth("List blobs").toAuthorizationHeader()
-                                    clientFor(target).list(target, pubkey, auth).mapNotNull { it.sha256 }.toSet()
+                                    clientFor(target).list(target, pubkey, listAuth).mapNotNull { it.sha256 }.toSet()
                                 } catch (e: CancellationException) {
                                     throw e
                                 } catch (e: Exception) {
@@ -337,15 +369,23 @@ class BlossomImportViewModel : ViewModel() {
     /**
      * Hand every discovered gap to the app-level mirror queue, which asks each of the
      * user's servers to fetch the blob from its source. Reuses the same queue (and
-     * floating progress banner) as the on-screen "sync all". Returns the file count so
-     * the caller can surface it.
+     * floating progress banner) as the on-screen "sync all".
+     *
+     * There is a single global queue, so if a sweep (or another import) is already in
+     * flight the queue would silently drop this one — [ImportStart.Busy] lets the caller
+     * keep the screen up and tell the user instead of navigating away to nothing.
      */
-    fun importSelected(): Int {
+    fun importSelected(): ImportStart {
         val candidates = _candidates.value
         val tasks = candidates.map { BlossomMirrorQueue.Task(it.hash, it.sourceUrl, it.size, it.missingTargets) }
-        if (tasks.isEmpty()) return 0
-        Amethyst.instance.blossomMirrorQueue.start(account, tasks)
-        return candidates.size
+        if (tasks.isEmpty()) return ImportStart.Empty
+        // start() itself atomically no-ops if a sweep is already running, so key off its return
+        // rather than a separate isRunning check that could race with a sweep starting.
+        return if (Amethyst.instance.blossomMirrorQueue.start(account, tasks)) {
+            ImportStart.Started(candidates.size)
+        } else {
+            ImportStart.Busy
+        }
     }
 
     private fun setScanState(

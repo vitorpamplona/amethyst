@@ -1706,6 +1706,7 @@
     <string name="blossom_import_none_found">No new files were found on the selected servers.</string>
     <string name="blossom_import_no_targets">Add your own Blossom servers first, so there\'s somewhere to copy the imported files into.</string>
     <string name="blossom_import_manage_servers">Manage my servers</string>
+    <string name="blossom_import_busy">A file sync is already running. Try importing again once it finishes.</string>
     <plurals name="blossom_import_files_found">
         <item quantity="one">%1$d file</item>
         <item quantity="other">%1$d files</item>
