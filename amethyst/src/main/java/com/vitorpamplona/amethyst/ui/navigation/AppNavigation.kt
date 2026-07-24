@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.Disp
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
+import com.vitorpamplona.amethyst.ui.actions.bolt12Offers.Bolt12OffersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
@@ -591,6 +592,7 @@ fun BuildNavigation(
         }
         composableFromEnd<Route.EditFavoriteAlgoFeeds> { FavoriteAlgoFeedsListScreen(accountViewModel, nav) }
         composableFromEnd<Route.EditPaymentTargets> { PaymentTargetsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.EditBolt12Offers> { Bolt12OffersScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
         composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
