@@ -45,7 +45,7 @@ Two simplifications vs. the CLI:
 | Asset naming (`geode-<ver>-<fam>-<arch>`) | `scripts/asset-name.sh` |
 | Release matrix + GHCR push | `.github/workflows/create-release.yml` (`build-geode`, `docker-geode`) |
 | Homebrew formula auto-sync | `.github/workflows/bump-homebrew-geode-formula.yml` |
-| geode tests in CI | `.github/workflows/build.yml` (`:geode:test`) |
+| geode tests in CI (dedicated `test-geode` job) | `.github/workflows/build.yml` |
 | Operator docs | `geode/README.md` |
 
 ## Distribution channels
