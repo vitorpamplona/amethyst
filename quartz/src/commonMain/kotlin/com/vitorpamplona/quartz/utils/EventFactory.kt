@@ -395,6 +395,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.intent.Bolt12ZapIntentEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
@@ -733,6 +734,7 @@ class EventFactory {
                 OnchainZapEvent.KIND -> OnchainZapEvent(id, pubKey, createdAt, tags, content, sig)
                 Bolt12ZapEvent.KIND -> Bolt12ZapEvent(id, pubKey, createdAt, tags, content, sig)
                 Bolt12ZapIntentEvent.KIND -> Bolt12ZapIntentEvent(id, pubKey, createdAt, tags, content, sig)
+                Bolt12OfferListEvent.KIND -> Bolt12OfferListEvent(id, pubKey, createdAt, tags, content, sig)
                 OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
                 PaymentTargetsEvent.KIND -> PaymentTargetsEvent(id, pubKey, createdAt, tags, content, sig)
                 PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
