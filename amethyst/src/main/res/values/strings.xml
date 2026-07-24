@@ -1729,6 +1729,9 @@
     <string name="bolt12_payment_amount_sats">Amount (sats)</string>
     <string name="bolt12_payment_sent">BOLT12 payment sent</string>
     <string name="bolt12_payment_failed">BOLT12 payment failed: %1$s</string>
+    <string name="bolt12_zap_error">BOLT12 zap error</string>
+    <string name="bolt12_zap_paid_no_receipt">Paid over BOLT12, but the wallet returned no proof, so no zap receipt was published.</string>
+    <string name="bolt12_zap_invalid_receipt">Paid over BOLT12, but the payment proof did not validate, so no zap receipt was published.</string>
 
     <string name="uploading_state_ready">Not Started</string>
     <string name="uploading_state_compressing">Compressing</string>
