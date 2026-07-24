@@ -37,16 +37,14 @@ import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectReque
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -54,7 +52,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Manages NIP-47 (Nostr Wallet Connect) related signing operations and decryption cache for a given account.
@@ -67,11 +64,12 @@ class NwcSignerState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
     /**
-     * Fetches a wallet's kind 13194 info event so we can negotiate encryption.
-     * Injected by [com.vitorpamplona.amethyst.model.Account] (which owns the relay
-     * client). Null in tests / when unavailable — requests then fall back to NIP-04.
+     * Shared cache of wallets' kind 13194 info events, used here to negotiate
+     * encryption. Injected by [com.vitorpamplona.amethyst.model.Account] (which
+     * owns the relay client). Null in tests / when unavailable — requests then
+     * fall back to NIP-04.
      */
-    val fetchInfoEvent: (suspend (Nip47WalletConnect.Nip47URINorm) -> NwcInfoEvent?)? = null,
+    val infoCache: NwcInfoCache? = null,
 ) : INwcSignerState {
     /**
      * Flow of the default wallet's NWC URI, derived from multi-wallet settings.
@@ -117,52 +115,29 @@ class NwcSignerState(
             NostrSignerInternal(KeyPair(it))
         }
 
-    /**
-     * Per-wallet (keyed by wallet service pubkey) cache of whether the wallet
-     * advertises NIP-44 (`nip44_v2`) support in its kind 13194 info event.
-     * NIP-47 says a client "should always prefer nip44 if supported by the wallet
-     * service"; absent/unknown means we keep the NIP-04 legacy default.
-     */
-    private val nip44SupportByWallet = ConcurrentHashMap<HexKey, Boolean>()
-
     init {
-        // Warm the encryption preference in the background whenever the default
-        // wallet changes so the payment hot path can read it without blocking.
+        // Warm the info cache in the background whenever the default wallet changes
+        // so the payment hot path can read the encryption preference without waiting.
         scope.launch(Dispatchers.IO) {
             defaultWalletUri
                 .filterNotNull()
                 .distinctUntilChanged { a, b -> a.pubKeyHex == b.pubKeyHex && a.relayUri == b.relayUri }
-                .collectLatest { warmEncryptionPreference(it) }
+                .collect { infoCache?.refreshIfStale(it) }
         }
     }
 
     /**
-     * Fetches the wallet's info event once and records whether it supports NIP-44.
-     * Best-effort: any failure leaves the wallet on the NIP-04 fallback.
-     */
-    private suspend fun warmEncryptionPreference(uri: Nip47WalletConnect.Nip47URINorm) {
-        val fetch = fetchInfoEvent ?: return
-        if (nip44SupportByWallet.containsKey(uri.pubKeyHex)) return
-
-        val supports =
-            try {
-                fetch(uri)?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                false
-            }
-
-        nip44SupportByWallet[uri.pubKeyHex] = supports
-    }
-
-    /**
      * Non-blocking read of the negotiated encryption preference for a wallet.
-     * Returns true only once the info event has been fetched and advertised
-     * `nip44_v2`; otherwise NIP-04 (the legacy default).
+     * NIP-47 says a client "should always prefer nip44 if supported by the wallet
+     * service". Returns true only when the cached info event advertises `nip44_v2`;
+     * otherwise NIP-04 (the legacy default). Also nudges a background refresh so a
+     * stale/expired entry self-heals for the next transaction without blocking this
+     * one.
      */
     private fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
         uri ?: return false
-        return nip44SupportByWallet[uri.pubKeyHex] ?: false
+        infoCache?.refreshIfStale(uri)
+        return infoCache?.current(uri)?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } ?: false
     }
 
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()

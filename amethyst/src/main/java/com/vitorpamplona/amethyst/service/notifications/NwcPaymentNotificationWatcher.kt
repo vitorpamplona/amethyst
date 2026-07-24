@@ -83,15 +83,21 @@ class NwcPaymentNotificationWatcher(
         wallets.forEach { wallet ->
             val signer = account.nip47SignerState.buildSigner(wallet.uri) ?: return@forEach
 
-            val filter =
-                Filter(
-                    kinds = listOf(NwcNotificationEvent.KIND, NwcNotificationEvent.LEGACY_KIND),
-                    authors = listOf(wallet.uri.pubKeyHex),
-                    tags = mapOf("p" to listOf(signer.pubKey)),
-                    since = TimeUtils.now(),
-                )
-
             launch(Dispatchers.IO) {
+                // Skip wallets that explicitly advertise no notification support, so we
+                // don't hold open a relay connection that will never deliver. Fail open
+                // when the info event is unknown (null) — better to listen than miss.
+                val info = account.nwcInfoCache.getFresh(wallet.uri)
+                if (info != null && !info.supportsNotifications()) return@launch
+
+                val filter =
+                    Filter(
+                        kinds = listOf(NwcNotificationEvent.KIND, NwcNotificationEvent.LEGACY_KIND),
+                        authors = listOf(wallet.uri.pubKeyHex),
+                        tags = mapOf("p" to listOf(signer.pubKey)),
+                        since = TimeUtils.now(),
+                    )
+
                 val seen = HashSet<HexKey>()
                 client.subscribeAsFlow(wallet.uri.relayUri, filter).collect { events ->
                     events.forEach { event ->
