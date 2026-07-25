@@ -144,13 +144,8 @@ fun JobBoardScreen(
             relay?.let { RelayStatusBar(it, accountViewModel) }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                val running = jobs.filter { it.state == JobState.IN_PROGRESS || it.state == JobState.ACCEPTED }
-                val queued =
-                    jobs
-                        .filter { it.state == JobState.REQUESTED }
-                        .sortedWith(compareByDescending<JobView> { it.upvotes }.thenBy { it.createdAt })
-                val done = jobs.filter { it.state == JobState.COMPLETED }
-                val closed = jobs.filter { it.state == JobState.FAILED || it.state == JobState.CANCELLED }
+                // Bucketed once per new backlog, not on every recomposition (e.g. isLoading toggles).
+                val groups = remember(jobs) { JobGroups.from(jobs) }
 
                 if (jobs.isEmpty() && !isLoading) {
                     EmptyBoard()
@@ -160,10 +155,10 @@ fun JobBoardScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                     ) {
-                        section("Working now", running, JobStyle.HERO, me, accountViewModel, nav, viewModel)
-                        section("Up next", queued, JobStyle.QUEUED, me, accountViewModel, nav, viewModel)
-                        section("Shipped", done, JobStyle.SHIPPED, me, accountViewModel, nav, viewModel)
-                        section("Closed", closed, JobStyle.CLOSED, me, accountViewModel, nav, viewModel)
+                        section("Working now", groups.running, JobStyle.HERO, me, accountViewModel, nav, viewModel)
+                        section("Up next", groups.queued, JobStyle.QUEUED, me, accountViewModel, nav, viewModel)
+                        section("Shipped", groups.done, JobStyle.SHIPPED, me, accountViewModel, nav, viewModel)
+                        section("Closed", groups.closed, JobStyle.CLOSED, me, accountViewModel, nav, viewModel)
                     }
                 }
 
@@ -190,6 +185,27 @@ fun JobBoardScreen(
 }
 
 private enum class JobStyle { HERO, QUEUED, SHIPPED, CLOSED }
+
+/** The backlog bucketed by lifecycle; the queue is ordered by the group's upvotes. */
+private class JobGroups(
+    val running: List<JobView>,
+    val queued: List<JobView>,
+    val done: List<JobView>,
+    val closed: List<JobView>,
+) {
+    companion object {
+        fun from(jobs: List<JobView>) =
+            JobGroups(
+                running = jobs.filter { it.state == JobState.IN_PROGRESS || it.state == JobState.ACCEPTED },
+                queued =
+                    jobs
+                        .filter { it.state == JobState.REQUESTED }
+                        .sortedWith(compareByDescending<JobView> { it.upvotes }.thenBy { it.createdAt }),
+                done = jobs.filter { it.state == JobState.COMPLETED },
+                closed = jobs.filter { it.state == JobState.FAILED || it.state == JobState.CANCELLED },
+            )
+    }
+}
 
 private fun LazyListScope.section(
     title: String,

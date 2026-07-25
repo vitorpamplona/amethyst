@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -451,19 +452,28 @@ object BuzzAgentCommands {
             workdir?.let { pb.directory(File(it)) }
             pb.environment().putAll(env)
             val proc = pb.start()
-            proc.outputStream.use { it.write(input.encodeToByteArray()) }
-            // Read both pipes before waiting so a chatty child can't deadlock on a full buffer.
-            val out = proc.inputStream.readBytes().decodeToString()
-            val err = proc.errorStream.readBytes().decodeToString()
-            if (timeoutSecs > 0) {
-                if (!proc.waitFor(timeoutSecs, TimeUnit.SECONDS)) {
-                    proc.destroyForcibly()
-                    return@withContext ExecResult(124, out, "exec timed out after ${timeoutSecs}s")
-                }
-            } else {
-                proc.waitFor()
+            coroutineScope {
+                // Drain stdout and stderr on their own coroutines and feed stdin on another, so a
+                // child that fills one pipe while we block on the other can't deadlock. The timeout
+                // is enforced by waitFor (NOT by the reads, which have none): on expiry we
+                // destroyForcibly, which closes the child's pipes and lets the readers finish.
+                val outDeferred = async { proc.inputStream.readBytes().decodeToString() }
+                val errDeferred = async { proc.errorStream.readBytes().decodeToString() }
+                launch { runCatching { proc.outputStream.use { it.write(input.encodeToByteArray()) } } }
+
+                val finished =
+                    if (timeoutSecs > 0) {
+                        proc.waitFor(timeoutSecs, TimeUnit.SECONDS)
+                    } else {
+                        proc.waitFor()
+                        true
+                    }
+                if (!finished) proc.destroyForcibly()
+
+                val out = outDeferred.await()
+                val err = errDeferred.await()
+                if (finished) ExecResult(proc.exitValue(), out, err) else ExecResult(124, out, "exec timed out after ${timeoutSecs}s")
             }
-            ExecResult(proc.exitValue(), out, err)
         }
 
     /** Run `git -C dir args…`, capturing exit + both streams. */
@@ -473,10 +483,13 @@ object BuzzAgentCommands {
     ): ExecResult =
         withContext(Dispatchers.IO) {
             val proc = ProcessBuilder(listOf("git", "-C", dir) + gitArgs).start()
-            val out = proc.inputStream.readBytes().decodeToString()
-            val err = proc.errorStream.readBytes().decodeToString()
-            proc.waitFor()
-            ExecResult(proc.exitValue(), out, err)
+            coroutineScope {
+                // Drain both pipes concurrently (same rationale as runExec) before waiting.
+                val outDeferred = async { proc.inputStream.readBytes().decodeToString() }
+                val errDeferred = async { proc.errorStream.readBytes().decodeToString() }
+                proc.waitFor()
+                ExecResult(proc.exitValue(), outDeferred.await(), errDeferred.await())
+            }
         }
 
     private suspend fun publish(
