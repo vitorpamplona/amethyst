@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip29RelayGroups
 
+import com.vitorpamplona.quartz.buzz.huddles.HuddleStartedEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -251,6 +255,40 @@ class Nip29ArmadaInteropTest {
 
         val react = parse(ReactionEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("e", "ee".repeat(32))), content = "🔥", pubKey = alice)
         assertEquals(gid, react.groupId())
+    }
+
+    @Test
+    fun buzzTimelineRowsCountAsGroupChatContent() {
+        // A kind-9 chat message is group content.
+        val kind9 = parse(ChatEvent.KIND, arrayOf(arrayOf("h", gid)), content = "gm", pubKey = alice)
+        assertTrue(kind9.isGroupChatContent())
+
+        // Every Buzz chat-timeline row (stream message, system line, huddle lifecycle, …) is
+        // `h`-scoped and attaches to the same RelayGroupChannel as a kind-9 and renders as a chat
+        // row, so each must count as a room's newest message — otherwise a Buzz channel's
+        // Messages-list preview and unread dot never reflect its real activity.
+        val stream = parse(StreamMessageV2Event.KIND, arrayOf(arrayOf("h", gid)), content = "hi from buzz", pubKey = alice)
+        assertTrue(stream is StreamMessageV2Event)
+        assertEquals(gid, stream.groupId())
+        assertTrue(stream.isGroupChatContent())
+
+        val system = parse(SystemMessageEvent.KIND, arrayOf(arrayOf("h", gid)), content = """{"type":"topic_changed"}""", pubKey = relaySelf)
+        assertTrue(system is SystemMessageEvent)
+        assertTrue(system.isGroupChatContent())
+
+        val huddle = parse(HuddleStartedEvent.KIND, arrayOf(arrayOf("h", gid)), content = """{"ephemeral_channel_id":"x"}""", pubKey = alice)
+        assertTrue(huddle is HuddleStartedEvent)
+        assertTrue(huddle.isGroupChatContent())
+
+        // A stream EDIT (40003) folds into its target message — it is NOT its own chat row, so it
+        // must not become a room's last message.
+        val edit = parse(StreamMessageEditEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("e", "ee".repeat(32))), content = "fixed typo", pubKey = alice)
+        assertFalse(edit.isGroupChatContent())
+
+        // A reaction is group-scoped but NOT content — it must never become a room's last message.
+        val react = parse(ReactionEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("e", "ee".repeat(32))), content = "🔥", pubKey = alice)
+        assertTrue(react.isGroupScoped())
+        assertFalse(react.isGroupChatContent())
     }
 
     @Test

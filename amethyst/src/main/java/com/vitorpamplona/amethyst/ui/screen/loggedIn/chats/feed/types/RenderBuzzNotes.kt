@@ -58,7 +58,9 @@ import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzChatTimelineContent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
@@ -116,19 +118,23 @@ fun RenderBuzzEditedNote(
 @Composable
 fun RenderBuzzSystemMessage(note: Note) {
     val event = note.event as? SystemMessageEvent ?: return
-    // Relay-emitted machine text (join/leave/topic); shown as-is rather than through
-    // string resources — the payload vocabulary is Buzz's, not ours to translate yet.
-    val text =
-        remember(event) {
-            val payload = event.payload()
-            when (payload?.type) {
-                "topic_changed" -> payload.topic?.let { "topic: $it" } ?: "topic changed"
-                "purpose_changed" -> payload.purpose?.let { "purpose: $it" } ?: "purpose changed"
-                else -> payload?.type?.replace('_', ' ')
-            } ?: event.content.take(120)
-        }
-
+    val text = remember(event) { buzzSystemMessageText(event) }
     ChatSystemMessage(text = text)
+}
+
+/**
+ * The one-line label for a Buzz kind-40099 system message. Relay-emitted machine text
+ * (join/leave/topic); shown as-is rather than through string resources — the payload
+ * vocabulary is Buzz's, not ours to translate yet. Pure so the Messages-list preview and
+ * the in-chat system line render identical text.
+ */
+fun buzzSystemMessageText(event: SystemMessageEvent): String {
+    val payload = event.payload()
+    return when (payload?.type) {
+        "topic_changed" -> payload.topic?.let { "topic: $it" } ?: "topic changed"
+        "purpose_changed" -> payload.purpose?.let { "purpose: $it" } ?: "purpose changed"
+        else -> payload?.type?.replace('_', ' ')
+    } ?: event.content.take(120)
 }
 
 /**
@@ -157,24 +163,45 @@ fun isBuzzActivityRow(event: Event?): Boolean =
 @Composable
 fun RenderBuzzActivityRow(note: Note) {
     val event = note.event ?: return
-    val text =
-        remember(event) {
-            when (event) {
-                is JobRequestEvent -> "⚙ job requested" + event.request().snippet()
-                is JobAcceptedEvent -> "⚙ job accepted"
-                is JobProgressEvent -> "⚙ job progress" + (event.status()?.let { ": $it" } ?: "") + event.content.snippet()
-                is JobResultEvent -> "⚙ job result" + event.result().snippet()
-                is JobCancelEvent -> "⚙ job cancelled"
-                is JobErrorEvent -> "⚠ job error" + event.error().snippet()
-                is HuddleStartedEvent -> "🔊 huddle started"
-                is HuddleParticipantJoinedEvent -> "🔊 someone joined the huddle"
-                is HuddleParticipantLeftEvent -> "🔊 someone left the huddle"
-                is HuddleEndedEvent -> "🔊 huddle ended"
-                else -> event.content.take(120)
-            }
-        }
+    val text = remember(event) { buzzActivityLabel(event) ?: event.content.take(120) }
     ChatSystemMessage(text = text)
 }
+
+/**
+ * The centered-system-line label for a Buzz agent-job or huddle lifecycle event, or null if
+ * [event] isn't one. Pure so the Messages-list preview and the in-chat activity row read the
+ * same. The label is derived from the kind; job progress/result/error also append a short
+ * content snippet (the human-readable status/result/error the agent wrote).
+ */
+fun buzzActivityLabel(event: Event): String? =
+    when (event) {
+        is JobRequestEvent -> "⚙ job requested" + event.request().snippet()
+        is JobAcceptedEvent -> "⚙ job accepted"
+        is JobProgressEvent -> "⚙ job progress" + (event.status()?.let { ": $it" } ?: "") + event.content.snippet()
+        is JobResultEvent -> "⚙ job result" + event.result().snippet()
+        is JobCancelEvent -> "⚙ job cancelled"
+        is JobErrorEvent -> "⚠ job error" + event.error().snippet()
+        is HuddleStartedEvent -> "🔊 huddle started"
+        is HuddleParticipantJoinedEvent -> "🔊 someone joined the huddle"
+        is HuddleParticipantLeftEvent -> "🔊 someone left the huddle"
+        is HuddleEndedEvent -> "🔊 huddle ended"
+        else -> null
+    }
+
+/**
+ * A human-readable one-line preview of a Buzz chat-timeline event for the Messages list, or null
+ * for a plain [StreamMessageV2Event] (whose `content` IS the text — the caller shows that with the
+ * usual "author: message" framing). Every other Buzz timeline kind carries JSON/diff in `content`,
+ * so this returns the same summary the in-chat system/activity/diff row shows instead of dumping
+ * raw payload into the preview. Keyed off the exact set in [isBuzzChatTimelineContent].
+ */
+fun buzzTimelinePreviewSummary(event: Event): String? =
+    when (event) {
+        is StreamMessageV2Event -> null
+        is SystemMessageEvent -> buzzSystemMessageText(event)
+        is StreamMessageDiffEvent -> event.diffMeta()?.filePath?.let { "📄 $it" } ?: "📄 diff"
+        else -> buzzActivityLabel(event)
+    }
 
 /** A short one-line snippet of free-text content appended after a label, or "" if blank. */
 private fun String.snippet(): String {

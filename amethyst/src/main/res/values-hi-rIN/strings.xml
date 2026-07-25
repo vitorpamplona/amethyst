@@ -3154,8 +3154,8 @@
     <string name="buzz_invite_copy">अनुकृति</string>
     <string name="buzz_invite_error_title">आमन्त्रण बनाने में असफल</string>
     <string name="buzz_invite_dismiss">ठीक</string>
-    <string name="buzz_star">प्रणाली ताराचिह्नित करें</string>
-    <string name="buzz_unstar">प्रणाली ताराचिह्न हटाएँ</string>
+    <string name="buzz_pin">चैनल पिन करें</string>
+    <string name="buzz_unpin">चैनल अनपिन करें</string>
     <string name="buzz_dm_section_empty">कोई संवाद नहीं अब तक</string>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">देखें %1$d और संवाद</item>
