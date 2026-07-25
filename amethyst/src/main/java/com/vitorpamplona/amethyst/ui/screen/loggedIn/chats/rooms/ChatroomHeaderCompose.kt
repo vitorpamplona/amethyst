@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
@@ -450,7 +451,10 @@ private fun RelayGroupRoomCompose(
     val lastContent =
         if (author != null && noteEvent != null) {
             val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
+            // A Buzz timeline row (system line, huddle/job activity, diff) carries JSON/diff in its
+            // content, so show its human-readable summary — the same text the in-chat row renders —
+            // rather than "author: {json}". Plain chat messages fall through to the usual framing.
+            buzzTimelinePreviewSummary(noteEvent) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
             // Event-less placeholder row for a just-joined group with no messages yet — say so
             // explicitly (like Marmot groups) instead of an empty second line.
@@ -586,7 +590,9 @@ private fun RelayGroupServerRoomCompose(
     val lastContent =
         if (author != null && noteEvent != null) {
             val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
+            // Buzz timeline rows (system/huddle/job/diff) carry JSON/diff content — summarize them
+            // like the in-chat row instead of printing raw payload; plain chat falls through.
+            buzzTimelinePreviewSummary(noteEvent) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
             stringRes(R.string.relay_group_no_messages_yet)
         }

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip29RelayGroups
 
-import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzChatTimelineContent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -69,10 +69,14 @@ fun Event.isGroupScoped(): Boolean = groupId() != null
  * Only content represents a room's latest message in list views: a kind-7 reaction
  * to my group message is group-scoped too, so without this distinction it would be
  * picked as the group's "last message" and render as a bogus, unopenable row on the
- * Messages tab. Content kinds: 9 ([ChatEvent]), 1068 ([PollEvent]), 11
- * ([ThreadEvent]), 1111 ([CommentEvent]), and 40002 ([StreamMessageV2Event]) — the
- * Buzz dialect's stream-channel chat message, which is `h`-scoped and attaches to the
- * same channel as a kind-9, so it must count as a room's newest message too (otherwise
- * a Buzz channel's Messages-list preview and unread dot never reflect its real chat).
+ * Messages tab. NIP-29 content kinds: 9 ([ChatEvent]), 1068 ([PollEvent]), 11
+ * ([ThreadEvent]), 1111 ([CommentEvent]).
+ *
+ * Plus the Buzz dialect's own chat-timeline rows ([isBuzzChatTimelineContent] — stream
+ * messages, system lines, diffs, agent-job and huddle lifecycle): they are `h`-scoped, attach
+ * to the same channel as a kind-9 and render as chat rows, so they must count as a room's
+ * newest message too — otherwise a Buzz channel's Messages-list preview and unread dot never
+ * reflect its real activity. (A caller previewing these must summarize their `content`, which
+ * is JSON/diff for the non-plain kinds; see the Buzz preview-summary helpers in the UI.)
  */
-fun Event.isGroupChatContent(): Boolean = this is ChatEvent || this is PollEvent || this is ThreadEvent || this is CommentEvent || this is StreamMessageV2Event
+fun Event.isGroupChatContent(): Boolean = this is ChatEvent || this is PollEvent || this is ThreadEvent || this is CommentEvent || isBuzzChatTimelineContent()
