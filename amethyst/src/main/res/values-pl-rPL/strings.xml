@@ -40,6 +40,7 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">Rozszyfrowywanie…</string>
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
+    <string name="chat_preview_you_prefix">Ty: %1$s</string>
     <string name="group_picture">Zdjęcie grupy</string>
     <string name="explicit_content">Niedozwolona zawartość</string>
     <string name="relay_notice">Uwagi transmitera</string>
@@ -426,6 +427,7 @@
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Wątek</string>
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
+    <string name="chat_send_image_title">Wyślij zdjęcie</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d odpowiedź</item>
@@ -1672,6 +1674,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="blossom_sync_channel_name">Synchronizacja Blossom</string>
     <string name="blossom_sync_channel_description">Wyświetla postęp kopiowania plików między serwerami Blossom.</string>
     <string name="manage_stored_files_empty">Na serwerach Blossom nie znaleziono żadnych zapisanych plików.</string>
+    <string name="blossom_stored_on">Przechowywane na</string>
+    <string name="blossom_file_details">Szczegóły pliku</string>
+    <string name="blossom_on_all_servers">Na wszystkich serwerach</string>
+    <string name="blossom_not_on_all_servers">Nie na wszystkich serwerach</string>
     <string name="blossom_mirror_to_missing">Kopiowanie lustrzane do przeoczonych</string>
     <string name="blossom_delete_from">Usuń z…</string>
     <string name="blossom_delete_from_host">Usuń z %1$s</string>
@@ -1691,6 +1697,39 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="blossom_report_title">Zgłoś blob</string>
     <string name="blossom_report_comment_hint">Powód (Opcjonalne)</string>
     <string name="blossom_send">Wyślij</string>
+    <string name="blossom_more_actions">Więcej akcji</string>
+    <string name="blossom_import_menu">Importuj pliki…</string>
+    <string name="blossom_import_title">Importuj pliki</string>
+    <string name="blossom_import_intro">Sprawdź inne serwery Blossom w poszukiwaniu plików, które przesłałeś gdzie indziej, i skopiuj je na własne serwery.</string>
+    <string name="blossom_import_sources_section">Serwery do sprawdzenia</string>
+    <string name="blossom_import_enable_all">Włącz wszystkie</string>
+    <string name="blossom_import_disable_all">Wyłącz wszystkie</string>
+    <string name="blossom_import_add_url_label">Lub wklej adres serwera</string>
+    <string name="blossom_import_scan">Sprawdź serwery</string>
+    <string name="blossom_import_scanning">Sprawdzanie…</string>
+    <string name="blossom_import_source_failed">Nie można połączyć się z tym serwerem</string>
+    <string name="blossom_import_none_found">Nie znaleziono nowych plików na wybranych serwerach.</string>
+    <string name="blossom_import_no_targets">Najpierw dodaj swoje serwery Blossom, aby mieć miejsce, do którego można skopiować zaimportowane pliki.</string>
+    <string name="blossom_import_manage_servers">Zarządzaj swoimi serwerami</string>
+    <string name="blossom_import_busy">Synchronizacja plików już trwa. Spróbuj ponownie zaimportować dane po jej zakończeniu.</string>
+    <plurals name="blossom_import_files_found">
+        <item quantity="one">%1$d plik</item>
+        <item quantity="few">%1$d plików</item>
+        <item quantity="many">%1$d plików</item>
+        <item quantity="other">%1$d pliki</item>
+    </plurals>
+    <plurals name="blossom_import_found_files">
+        <item quantity="one">Znaleziono %1$d plik do zaimportowania na Twoje serwery.</item>
+        <item quantity="few">Znaleziono %1$d plików do zaimportowania na Twoje serwery.</item>
+        <item quantity="many">Znaleziono %1$d plików do zaimportowania na Twoje serwery.</item>
+        <item quantity="other">Znaleziono %1$d pliki do zaimportowania do serwerów.</item>
+    </plurals>
+    <plurals name="blossom_import_start_button">
+        <item quantity="one">Importuj %1$d plik</item>
+        <item quantity="few">Importuj %1$d plików</item>
+        <item quantity="many">Importuj %1$d plików</item>
+        <item quantity="other">Importuj %1$d pliki</item>
+    </plurals>
     <string name="recommended_media_servers">Polecane serwery multimediów</string>
     <string name="built_in_servers_description">Domyślna lista Amethyst-a. Możesz dodawać je pojedynczo lub dodać pełną listę.</string>
     <string name="use_default_servers">Użyj domyślnej listy</string>
@@ -1719,6 +1758,20 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="no_payment_app_found">Nie znaleziono aplikacji do obsługi tej płatności. Zainstaluj kompatybilny portfel.</string>
     <string name="no_payment_app_found_for_type">Nie zainstalowano aplikacji do obsługi płatności %1$s . Zainstaluj kompatybilny portfel.</string>
     <string name="error_dialog_payment_error">Nie można otworzyć płatności</string>
+    <string name="bolt12_offers">Oferty BOLT12</string>
+    <string name="bolt12_offers_explainer">Opublikuj oferty BOLT12 wielokrotnego użytku, aby inni mogli dokonywać płatności na Twoją rzecz za pośrednictwem Lightning bez konieczności wystawiania za każdym razem osobnej faktury.</string>
+    <string name="bolt12_offers_section_explainer">Dodaj jedną lub więcej ofert BOLT12 (lno1…). Są one udostępniane publicznie, aby każdy mógł Ci zapłacić.</string>
+    <string name="no_bolt12_offers_message">Nie ustawiono ofert BOLT12. Dodaj jedną poniżej ↓</string>
+    <string name="bolt12_offer">Oferta BOLT12 (lno1…)</string>
+    <string name="invalid_bolt12_offer">Niepoprawna oferta BOLT12</string>
+    <string name="delete_bolt12_offer">Usuń ofertę BOLT12</string>
+    <string name="bolt12_pay_with_wallet">Zapłać połączonym portfelem</string>
+    <string name="bolt12_payment_amount_sats">Kwota (satoszy)</string>
+    <string name="bolt12_payment_sent">Wysłano płatność BOLT12</string>
+    <string name="bolt12_payment_failed">Płatność BOLT12 nie powiodła się: %1$s</string>
+    <string name="bolt12_zap_error">BOLT12 błąd zap</string>
+    <string name="bolt12_zap_paid_no_receipt">Płatność została zrealizowana za pośrednictwem BOLT12, ale portfel nie zwrócił potwierdzenia, więc nie opublikowano potwierdzenia zapa.</string>
+    <string name="bolt12_zap_invalid_receipt">Płatność została zrealizowana za pośrednictwem BOLT12, ale dowód płatności nie został zweryfikowany, więc nie opublikowano potwierdzenia zapłaty.</string>
     <string name="uploading_state_ready">Nie rozpoczęte</string>
     <string name="uploading_state_compressing">Kompresja</string>
     <string name="uploading_state_uploading">Wgrywanie</string>
@@ -1825,6 +1878,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="app_notification_zaps_channel_message">%1$s Satoszy</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
+    <string name="app_notification_payments_channel_name">Otrzymane płatności</string>
+    <string name="app_notification_payments_channel_description">Powiadamia Cię, gdy do podłączonego portfela wpłynie płatność, która nie jest przelewem Nostr zap</string>
+    <string name="app_notification_payments_channel_message">Otrzymano %1$s satoszy</string>
+    <string name="app_notification_payments_summary">Nowe płatności</string>
     <string name="app_notification_reply_label">Odpowiedz</string>
     <string name="app_notification_mark_read_label">Przeczytane</string>
     <string name="app_notification_me">Ja</string>
@@ -3198,6 +3255,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_canvas_body_label">Płótno (Markdown)</string>
     <string name="buzz_edit_message">Edytuj</string>
     <string name="buzz_editing_banner">Edytuj wiadomość</string>
+    <string name="edit_message">Edytuj</string>
+    <string name="message_edited">(edytowana)</string>
+    <string name="concord_editing_banner">Edytowanie wiadomości</string>
     <string name="buzz_typing_one">%1$s pisze…</string>
     <string name="buzz_typing_two">%1$s i %2$s piszą…</string>
     <string name="buzz_typing_many">Kilka osób pisze…</string>
@@ -3262,6 +3322,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_invite_copy">Kopiuj</string>
     <string name="buzz_invite_error_title">Nie udało się utworzyć zaproszenia</string>
     <string name="buzz_invite_dismiss">OK</string>
+    <string name="buzz_pin">Przypnij kanał</string>
+    <string name="buzz_unpin">Odepnij kanał</string>
     <string name="buzz_dm_section_empty">Brak konwersacji</string>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">Zobacz %1$d rozmowę więcej</item>
