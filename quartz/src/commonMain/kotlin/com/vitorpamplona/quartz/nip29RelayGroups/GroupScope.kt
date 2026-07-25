@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip29RelayGroups
 
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -69,6 +70,9 @@ fun Event.isGroupScoped(): Boolean = groupId() != null
  * to my group message is group-scoped too, so without this distinction it would be
  * picked as the group's "last message" and render as a bogus, unopenable row on the
  * Messages tab. Content kinds: 9 ([ChatEvent]), 1068 ([PollEvent]), 11
- * ([ThreadEvent]), 1111 ([CommentEvent]).
+ * ([ThreadEvent]), 1111 ([CommentEvent]), and 40002 ([StreamMessageV2Event]) — the
+ * Buzz dialect's stream-channel chat message, which is `h`-scoped and attaches to the
+ * same channel as a kind-9, so it must count as a room's newest message too (otherwise
+ * a Buzz channel's Messages-list preview and unread dot never reflect its real chat).
  */
-fun Event.isGroupChatContent(): Boolean = this is ChatEvent || this is PollEvent || this is ThreadEvent || this is CommentEvent
+fun Event.isGroupChatContent(): Boolean = this is ChatEvent || this is PollEvent || this is ThreadEvent || this is CommentEvent || this is StreamMessageV2Event

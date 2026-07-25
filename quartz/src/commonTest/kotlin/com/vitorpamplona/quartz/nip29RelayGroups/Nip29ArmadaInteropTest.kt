@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip29RelayGroups
 
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -251,6 +252,26 @@ class Nip29ArmadaInteropTest {
 
         val react = parse(ReactionEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("e", "ee".repeat(32))), content = "🔥", pubKey = alice)
         assertEquals(gid, react.groupId())
+    }
+
+    @Test
+    fun buzzStreamMessageCountsAsGroupChatContent() {
+        // A kind-9 chat message is group content.
+        val kind9 = parse(ChatEvent.KIND, arrayOf(arrayOf("h", gid)), content = "gm", pubKey = alice)
+        assertTrue(kind9.isGroupChatContent())
+
+        // A Buzz stream-channel chat message (kind 40002) is `h`-scoped and attaches to the same
+        // RelayGroupChannel as a kind-9, so it must count as a room's newest message too — otherwise
+        // a Buzz channel's Messages-list preview and unread dot never reflect its real chat.
+        val buzz = parse(StreamMessageV2Event.KIND, arrayOf(arrayOf("h", gid)), content = "hi from buzz", pubKey = alice)
+        assertTrue(buzz is StreamMessageV2Event)
+        assertEquals(gid, buzz.groupId())
+        assertTrue(buzz.isGroupChatContent())
+
+        // A reaction is group-scoped but NOT content — it must never become a room's last message.
+        val react = parse(ReactionEvent.KIND, arrayOf(arrayOf("h", gid), arrayOf("e", "ee".repeat(32))), content = "🔥", pubKey = alice)
+        assertTrue(react.isGroupScoped())
+        assertFalse(react.isGroupChatContent())
     }
 
     @Test
