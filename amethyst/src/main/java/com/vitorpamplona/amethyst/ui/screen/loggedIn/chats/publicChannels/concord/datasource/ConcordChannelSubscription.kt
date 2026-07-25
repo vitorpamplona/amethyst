@@ -127,9 +127,14 @@ private fun bootstrapPinnedCommunities(accountViewModel: AccountViewModel) {
         remember(items, communities) {
             val known = communities.mapTo(HashSet()) { it.id }
             items
-                .filterIsInstance<BottomBarEntry.Concord>()
-                .map { it.communityId }
-                .filterTo(sortedSetOf()) { it !in known }
+                .mapNotNull {
+                    // Both a pinned community and a pinned channel need their community's list fetched.
+                    when (it) {
+                        is BottomBarEntry.Concord -> it.communityId
+                        is BottomBarEntry.ConcordChannel -> it.communityId
+                        else -> null
+                    }
+                }.filterTo(sortedSetOf()) { it !in known }
         }
 
     LaunchedEffect(missingPinned) {

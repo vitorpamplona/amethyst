@@ -235,7 +235,9 @@ internal fun rememberBottomBarSlot(
         }
         is BottomBarEntry.PublicChat,
         is BottomBarEntry.RelayGroup,
+        is BottomBarEntry.RelayServer,
         is BottomBarEntry.Concord,
+        is BottomBarEntry.ConcordChannel,
         is BottomBarEntry.Geohash,
         -> {
             val display = rememberGroupEntryDisplay(entry, accountViewModel) ?: return null

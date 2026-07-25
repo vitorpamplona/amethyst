@@ -40,7 +40,9 @@ class BottomBarEntrySerializationTest {
             BottomBarEntry.Favorite("url:https://example.com"),
             BottomBarEntry.PublicChat("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb"),
             BottomBarEntry.RelayGroup("abcd1234", "wss://groups.example.com"),
+            BottomBarEntry.RelayServer("wss://groups.example.com"),
             BottomBarEntry.Concord("f".repeat(64), listOf("wss://relay.ditto.pub", "wss://community.example.com")),
+            BottomBarEntry.ConcordChannel("f".repeat(64), "a".repeat(32), listOf("wss://relay.ditto.pub")),
         )
 
     @Test
@@ -50,7 +52,11 @@ class BottomBarEntrySerializationTest {
         assertTrue("expected stable discriminators, got: $json", json.contains("\"builtIn\"") && json.contains("\"favorite\""))
         assertTrue(
             "expected group discriminators, got: $json",
-            json.contains("\"publicChat\"") && json.contains("\"relayGroup\"") && json.contains("\"concord\""),
+            json.contains("\"publicChat\"") &&
+                json.contains("\"relayGroup\"") &&
+                json.contains("\"relayServer\"") &&
+                json.contains("\"concord\"") &&
+                json.contains("\"concordChannel\""),
         )
         assertEquals(sample, JsonMapper.fromJson<List<BottomBarEntry>>(json))
     }

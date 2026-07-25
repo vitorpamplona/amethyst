@@ -38,6 +38,11 @@ import kotlinx.serialization.Serializable
  * - [PublicChat], [RelayGroup] and [Concord] each pin one specific joined chat the user picked from
  *   their joined list (NIP-28 channel, NIP-29 relay group, or a Concord community). The bar resolves
  *   each to the chat's avatar + name from the local cache and to its chat/home route for navigation.
+ * - [RelayServer] and [ConcordChannel] pin the *other* level of the two grouped chat systems: a NIP-29
+ *   host relay (whose home page lists every group on it) and one channel inside a Concord community.
+ *   A NIP-29 relay is the analog of a Concord community (the container), and a Concord channel is the
+ *   analog of a NIP-29 group (the item) — so together the five group entries let the user pin either
+ *   the whole server or a single room in both systems.
  */
 @Serializable
 sealed interface BottomBarEntry {
@@ -71,6 +76,17 @@ sealed interface BottomBarEntry {
     ) : BottomBarEntry
 
     /**
+     * A pinned NIP-29 host relay ("server"), keyed by its relay url; opens the relay's home page that
+     * lists every group the user has joined on it. The relay-level analog of pinning a whole [Concord]
+     * community, so both grouped chat systems can pin the container as well as an individual room.
+     */
+    @Serializable
+    @SerialName("relayServer")
+    data class RelayServer(
+        val relayUrl: String,
+    ) : BottomBarEntry
+
+    /**
      * A pinned Concord community, keyed by its community id; opens the community's channel list.
      *
      * [relays] are the community's bootstrap relays, captured from the joined-list entry at pin
@@ -85,6 +101,20 @@ sealed interface BottomBarEntry {
     @SerialName("concord")
     data class Concord(
         val communityId: String,
+        val relays: List<String> = emptyList(),
+    ) : BottomBarEntry
+
+    /**
+     * A pinned Concord channel inside a community, keyed by the (community id, channel id) pair; opens
+     * that specific channel. The channel-level analog of pinning a single [RelayGroup]. [relays] carry
+     * the community's bootstrap relays (same reason as [Concord.relays]) so a pinned channel whose
+     * community list we haven't cached can still be resolved.
+     */
+    @Serializable
+    @SerialName("concordChannel")
+    data class ConcordChannel(
+        val communityId: String,
+        val channelId: String,
         val relays: List<String> = emptyList(),
     ) : BottomBarEntry
 
@@ -107,7 +137,9 @@ val BottomBarEntry.stableKey: String
             is BottomBarEntry.Favorite -> "favorite:$favoriteId"
             is BottomBarEntry.PublicChat -> "publicChat:$channelId"
             is BottomBarEntry.RelayGroup -> "relayGroup:$relayUrl|$groupId"
+            is BottomBarEntry.RelayServer -> "relayServer:$relayUrl"
             is BottomBarEntry.Concord -> "concord:$communityId"
+            is BottomBarEntry.ConcordChannel -> "concordChannel:$communityId|$channelId"
             is BottomBarEntry.Geohash -> "geohash:$geohash"
         }
 
