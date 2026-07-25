@@ -55,6 +55,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -431,17 +432,19 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
         val result = json["result"]?.jsonObject
         return PaySuccessResponse(
             result?.let {
+                // contentOrNull, not content: an explicit JSON `null` (which Jackson writes
+                // for every null field) must read back as a real null, not the string "null".
                 PaySuccessResponse.PayResult(
-                    transaction_id = it["transaction_id"]?.jsonPrimitive?.content,
-                    state = it["state"]?.jsonPrimitive?.content,
-                    instruction_type = it["instruction_type"]?.jsonPrimitive?.content,
+                    transaction_id = it["transaction_id"]?.jsonPrimitive?.contentOrNull,
+                    state = it["state"]?.jsonPrimitive?.contentOrNull,
+                    instruction_type = it["instruction_type"]?.jsonPrimitive?.contentOrNull,
                     amount = it["amount"]?.jsonPrimitive?.longOrNull,
                     fees_paid = it["fees_paid"]?.jsonPrimitive?.longOrNull,
-                    payment_hash = it["payment_hash"]?.jsonPrimitive?.content,
-                    preimage = it["preimage"]?.jsonPrimitive?.content,
-                    payer_proof = it["payer_proof"]?.jsonPrimitive?.content,
-                    txid = it["txid"]?.jsonPrimitive?.content,
-                    failure_reason = it["failure_reason"]?.jsonPrimitive?.content,
+                    payment_hash = it["payment_hash"]?.jsonPrimitive?.contentOrNull,
+                    preimage = it["preimage"]?.jsonPrimitive?.contentOrNull,
+                    payer_proof = it["payer_proof"]?.jsonPrimitive?.contentOrNull,
+                    txid = it["txid"]?.jsonPrimitive?.contentOrNull,
+                    failure_reason = it["failure_reason"]?.jsonPrimitive?.contentOrNull,
                     created_at = it["created_at"]?.jsonPrimitive?.longOrNull,
                     settled_at = it["settled_at"]?.jsonPrimitive?.longOrNull,
                 )
@@ -454,8 +457,8 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
         return ReceiveSuccessResponse(
             result?.let {
                 ReceiveSuccessResponse.ReceiveResult(
-                    bip321 = it["bip321"]?.jsonPrimitive?.content,
-                    transaction_id = it["transaction_id"]?.jsonPrimitive?.content,
+                    bip321 = it["bip321"]?.jsonPrimitive?.contentOrNull,
+                    transaction_id = it["transaction_id"]?.jsonPrimitive?.contentOrNull,
                 )
             },
         )

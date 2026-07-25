@@ -64,6 +64,7 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
@@ -298,11 +299,14 @@ object Nip47RequestKSerializer : KSerializer<Request> {
         val params = json["params"]?.jsonObject
         return PayMethod(
             params?.let {
+                // contentOrNull / `as? JsonObject` treat an explicit JSON `null` as absent —
+                // Jackson (JVM/Android) writes null-valued keys, so a native/iOS peer parsing
+                // that output must not read `JsonNull` as the string "null" or crash on it.
                 PayParams(
-                    payment = it["payment"]?.jsonPrimitive?.content,
+                    payment = it["payment"]?.jsonPrimitive?.contentOrNull,
                     amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    payer_note = it["payer_note"]?.jsonPrimitive?.content,
-                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
+                    payer_note = it["payer_note"]?.jsonPrimitive?.contentOrNull,
+                    metadata = (it["metadata"] as? JsonObject)?.toAnyMap(),
                 )
             },
         )
@@ -314,8 +318,8 @@ object Nip47RequestKSerializer : KSerializer<Request> {
             params?.let {
                 ReceiveParams(
                     amount = it["amount"]?.jsonPrimitive?.longOrNull,
-                    description = it["description"]?.jsonPrimitive?.content,
-                    metadata = it["metadata"]?.jsonObject?.toAnyMap(),
+                    description = it["description"]?.jsonPrimitive?.contentOrNull,
+                    metadata = (it["metadata"] as? JsonObject)?.toAnyMap(),
                 )
             },
         )
