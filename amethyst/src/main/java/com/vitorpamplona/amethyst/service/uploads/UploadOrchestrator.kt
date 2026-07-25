@@ -297,11 +297,12 @@ class UploadOrchestrator {
 
         if (targets.isEmpty()) return
 
+        val contentType = result.type ?: "application/octet-stream"
         targets.forEach { target ->
             try {
                 val auth = account.createBlossomUploadAuth(hash, result.size ?: 0L, "Mirror $hash").toAuthorizationHeader()
                 BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
-                    .mirror(sourceUrl, target, auth)
+                    .mirrorOrUpload(sourceUrl, hash, contentType, target, auth)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("UploadOrchestrator", "Failed to mirror $hash to $target", e)

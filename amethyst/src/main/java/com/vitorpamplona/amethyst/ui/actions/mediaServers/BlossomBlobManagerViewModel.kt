@@ -325,7 +325,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
             for (target in targets) {
                 setServerState(row.hash, target, PresenceState.PENDING)
                 try {
-                    mirrorOne(source, row.hash, row.size, target, null)
+                    mirrorOne(source, row.hash, row.size, row.type, target, null)
                     setServerState(row.hash, target, PresenceState.PRESENT)
                 } catch (e: BlossomPaymentException) {
                     setServerState(row.hash, target, PresenceState.MISSING)
@@ -362,7 +362,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
         val tasks =
             _blobs.value
                 .filter { it.hasMissing && it.url != null }
-                .map { BlossomMirrorQueue.Task(it.hash, it.url!!, it.size, it.missingServers) }
+                .map { BlossomMirrorQueue.Task(it.hash, it.url!!, it.size, it.type, it.missingServers) }
         if (tasks.isEmpty()) return
 
         _blobs.update { list ->
@@ -381,11 +381,12 @@ class BlossomBlobManagerViewModel : ViewModel() {
         source: String,
         hash: HexKey,
         size: Long?,
+        contentType: String?,
         target: String,
         proof: BlossomPaymentProof?,
     ) {
         val auth = account.createBlossomUploadAuth(hash, size ?: 0L, "Mirror $hash").toAuthorizationHeader()
-        clientFor(target).mirror(source, target, auth, proof)
+        clientFor(target).mirrorOrUpload(source, hash, contentType ?: DEFAULT_MIME_TYPE, target, auth, proof)
     }
 
     /** User confirmed the BUD-07 prompt: pay via the wallet, retry that server, then continue. */
@@ -420,7 +421,8 @@ class BlossomBlobManagerViewModel : ViewModel() {
                     }
                 }
             try {
-                mirrorOne(pending.sourceUrl, pending.hash, currentRow(pending.hash)?.size, pending.target, proof)
+                val row = currentRow(pending.hash)
+                mirrorOne(pending.sourceUrl, pending.hash, row?.size, row?.type, pending.target, proof)
                 setServerState(pending.hash, pending.target, PresenceState.PRESENT)
             } catch (e: Exception) {
                 setServerState(pending.hash, pending.target, PresenceState.MISSING)
@@ -468,5 +470,8 @@ class BlossomBlobManagerViewModel : ViewModel() {
     companion object {
         /** Cap on concurrent HEAD probes during the /list backfill. */
         private const val MAX_HEAD_PROBES = 8
+
+        /** Fallback MIME for a `/upload` when a target lacks `/mirror` and the row has no type. */
+        private const val DEFAULT_MIME_TYPE = "application/octet-stream"
     }
 }

@@ -21,21 +21,27 @@
 package com.vitorpamplona.amethyst.desktop.service.upload
 
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomMirrorUnsupportedException
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import okhttp3.Call
 import okhttp3.Headers
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BlossomClientTest {
@@ -62,6 +68,167 @@ class BlossomClientTest {
 
         return mockClient
     }
+
+    /** An OkHttpClient whose every call is answered by [handler], keyed off the request. */
+    private fun dispatchingOkHttp(handler: (Request) -> Response): OkHttpClient {
+        val mockClient = mockk<OkHttpClient>()
+        every { mockClient.newCall(any()) } answers {
+            val request = firstArg<Request>()
+            val call = mockk<Call>()
+            every { call.execute() } returns handler(request)
+            call
+        }
+        return mockClient
+    }
+
+    private fun response(
+        request: Request,
+        code: Int,
+        body: ResponseBody = "".toResponseBody(),
+        headers: Headers = Headers.headersOf(),
+    ): Response =
+        Response
+            .Builder()
+            .request(request)
+            .protocol(Protocol.HTTP_1_1)
+            .code(code)
+            .message(if (code in 200..299) "OK" else "Error")
+            .headers(headers)
+            .body(body)
+            .build()
+
+    @Test
+    fun mirrorThrowsUnsupportedOnMissingEndpoint() =
+        runTest {
+            // 404/405/501 on PUT /mirror means the endpoint is absent, not a rejected mirror.
+            for (code in listOf(404, 405, 501)) {
+                val client = BlossomClient(mockOkHttp(code))
+                assertFailsWith<BlossomMirrorUnsupportedException> {
+                    client.mirror(
+                        sourceUrl = "https://source.example.com/abc",
+                        serverBaseUrl = "https://target.example.com",
+                        authHeader = "Nostr abc",
+                    )
+                }
+            }
+        }
+
+    @Test
+    fun mirrorRejectionStaysPlainRuntimeException() =
+        runTest {
+            // A mirror the server understood but refused must NOT be read as "no /mirror".
+            val client = BlossomClient(mockOkHttp(413, "", Headers.headersOf("X-Reason", "too big")))
+            val ex =
+                assertFailsWith<RuntimeException> {
+                    client.mirror("https://source.example.com/abc", "https://target.example.com", null)
+                }
+            assertFalse(ex is BlossomMirrorUnsupportedException)
+            assertTrue(ex.message!!.contains("too big"))
+        }
+
+    @Test
+    fun mirrorOrUploadFallsBackToUploadWhenUnsupported() =
+        runTest {
+            val bytes = byteArrayOf(9, 8, 7, 6, 5)
+            val expectedHash = sha256(bytes).toHexKey()
+            val descriptor = """{"url":"https://target.example.com/$expectedHash","sha256":"$expectedHash","size":${bytes.size}}"""
+            var uploadedTo: String? = null
+
+            val client =
+                BlossomClient(
+                    dispatchingOkHttp { req ->
+                        when {
+                            req.method == "PUT" && req.url.encodedPath.endsWith("/mirror") -> response(req, 404)
+                            req.method == "GET" -> response(req, 200, bytes.toResponseBody("application/octet-stream".toMediaType()))
+                            req.method == "PUT" && req.url.encodedPath.endsWith("/upload") -> {
+                                uploadedTo = req.url.toString()
+                                response(req, 200, descriptor.toResponseBody())
+                            }
+                            else -> response(req, 500)
+                        }
+                    },
+                )
+
+            val result =
+                client.mirrorOrUpload(
+                    sourceUrl = "https://source.example.com/$expectedHash",
+                    expectedHash = expectedHash,
+                    contentType = "image/png",
+                    serverBaseUrl = "https://target.example.com",
+                    authHeader = "Nostr abc",
+                )
+
+            assertEquals("https://target.example.com/upload", uploadedTo)
+            assertEquals(expectedHash, result.sha256)
+        }
+
+    @Test
+    fun mirrorOrUploadRejectsHashMismatchAndDoesNotUpload() =
+        runTest {
+            val servedBytes = byteArrayOf(1, 2, 3)
+            // Ask for a DIFFERENT blob than the source will serve — a substituted download.
+            val expectedHash = sha256(byteArrayOf(4, 5, 6)).toHexKey()
+            var uploaded = false
+
+            val client =
+                BlossomClient(
+                    dispatchingOkHttp { req ->
+                        when {
+                            req.method == "PUT" && req.url.encodedPath.endsWith("/mirror") -> response(req, 405)
+                            req.method == "GET" -> response(req, 200, servedBytes.toResponseBody("application/octet-stream".toMediaType()))
+                            req.method == "PUT" && req.url.encodedPath.endsWith("/upload") -> {
+                                uploaded = true
+                                response(req, 200, "{}".toResponseBody())
+                            }
+                            else -> response(req, 500)
+                        }
+                    },
+                )
+
+            assertFailsWith<RuntimeException> {
+                client.mirrorOrUpload(
+                    sourceUrl = "https://source.example.com/blob",
+                    expectedHash = expectedHash,
+                    contentType = "image/png",
+                    serverBaseUrl = "https://target.example.com",
+                    authHeader = null,
+                )
+            }
+            assertFalse(uploaded)
+        }
+
+    @Test
+    fun mirrorOrUploadUsesMirrorWhenSupported() =
+        runTest {
+            val descriptor = """{"url":"https://target.example.com/abc","sha256":"abc","size":3}"""
+            var uploadCalled = false
+
+            val client =
+                BlossomClient(
+                    dispatchingOkHttp { req ->
+                        when {
+                            req.method == "PUT" && req.url.encodedPath.endsWith("/mirror") -> response(req, 201, descriptor.toResponseBody())
+                            req.method == "PUT" && req.url.encodedPath.endsWith("/upload") -> {
+                                uploadCalled = true
+                                response(req, 200, descriptor.toResponseBody())
+                            }
+                            else -> response(req, 500)
+                        }
+                    },
+                )
+
+            val result =
+                client.mirrorOrUpload(
+                    sourceUrl = "https://source.example.com/abc",
+                    expectedHash = "abc",
+                    contentType = "image/png",
+                    serverBaseUrl = "https://target.example.com",
+                    authHeader = "Nostr abc",
+                )
+
+            assertFalse(uploadCalled)
+            assertEquals("abc", result.sha256)
+        }
 
     @Test
     fun uploadSuccessReturnsResult() =

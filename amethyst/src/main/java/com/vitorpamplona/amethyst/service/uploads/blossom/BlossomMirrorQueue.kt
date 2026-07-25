@@ -76,6 +76,8 @@ class BlossomMirrorQueue(
         val hash: HexKey,
         val sourceUrl: String,
         val size: Long?,
+        /** Descriptor MIME, used when a target lacks `/mirror` and we fall back to `/upload`. */
+        val contentType: String?,
         val targets: List<String>,
     )
 
@@ -137,7 +139,7 @@ class BlossomMirrorQueue(
         try {
             val auth = account.createBlossomUploadAuth(task.hash, task.size ?: 0L, "Mirror ${task.hash}").toAuthorizationHeader()
             BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
-                .mirror(task.sourceUrl, target, auth)
+                .mirrorOrUpload(task.sourceUrl, task.hash, task.contentType ?: DEFAULT_MIME_TYPE, target, auth)
             true
         } catch (e: CancellationException) {
             throw e
@@ -156,5 +158,10 @@ class BlossomMirrorQueue(
     /** Dismiss the finished-summary banner (no effect while still running). */
     fun dismiss() {
         if (!isRunning) _state.value = null
+    }
+
+    companion object {
+        /** Fallback MIME for a `/upload` when the source descriptor carried no type. */
+        private const val DEFAULT_MIME_TYPE = "application/octet-stream"
     }
 }
