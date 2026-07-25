@@ -189,6 +189,8 @@ ingest `model/LocalCache.kt` (~L4780-4855); subscription
 
 1. Reconcile 43001-43006 with Buzz upstream once it defines the job protocol.
 2. Wire the P0 mobile screens (approvals inbox + jobs board) on top of `BuzzJobAggregator`.
-3. A reference `--exec` wrapper that runs Claude Code, opens a PR with a PR-only token, and
-   returns the PR URL — plus a documented branch-protection + token-scope checklist.
+3. ✅ **Done** — a reference `--exec` wrapper (`tools/buzz-agent/agent-exec.sh` + README) runs
+   the coding agent in the job worktree, commits, pushes the feature branch, opens a PR with a
+   PR-only token, and prints the URL as the job result — with the branch-protection + token-scope
+   checklist documented. Verified end-to-end against a stubbed `gh`/agent.
 4. Consider promoting the approval gate (46010) into the responder for irreversible steps.
