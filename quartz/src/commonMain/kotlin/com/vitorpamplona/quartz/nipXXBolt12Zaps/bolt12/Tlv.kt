@@ -147,8 +147,13 @@ class TlvStream(
 
     fun has(type: Long): Boolean = get(type) != null
 
-    /** The truncated-uint64 value of a record, or null if absent. */
-    fun tu64(type: Long): Long? = value(type)?.let { Bolt12Values.tu64(it) }
+    /**
+     * The truncated-uint64 value of a record, or null if absent **or malformed**.
+     * A `tu64` is at most 8 bytes; a longer value is invalid encoding, so this
+     * returns null rather than throwing — untrusted proofs/offers reach this on the
+     * validation path and must degrade to a clean rejection, not an exception.
+     */
+    fun tu64(type: Long): Long? = value(type)?.let { if (it.size > 8) null else Bolt12Values.tu64(it) }
 
     fun encode(): ByteArray {
         var size = 0

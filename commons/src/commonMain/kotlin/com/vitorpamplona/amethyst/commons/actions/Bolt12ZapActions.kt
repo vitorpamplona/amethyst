@@ -55,9 +55,9 @@ object Bolt12ZapActions {
 
     /**
      * Decode a BOLT12 offer (`lno1…`) to its interesting fields, or null when unparseable.
-     * A field read can still throw on a well-encoded-but-malformed TLV (e.g. an amount
-     * value longer than 8 bytes), so the whole field extraction is guarded to honor the
-     * null contract rather than leak an exception to the caller.
+     * Individual field reads degrade to null on malformed values (e.g. an amount longer
+     * than 8 bytes), so a structurally-valid offer still decodes without its bad field;
+     * the extraction stays guarded as defense-in-depth against any future throwing read.
      */
     fun decodeOffer(raw: String): Map<String, Any?>? {
         val offer = Bolt12Offer.parse(raw) ?: return null

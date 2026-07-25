@@ -108,10 +108,12 @@ class Bolt12PayerProofVectorTest {
 
             // Deterministic compression fields don't depend on the signatures, so
             // dummy signers suffice; we read the minted proof back and compare.
+            val note = obj["input"]!!.jsonObject["note"]?.jsonPrimitive?.content
             val minted =
                 Bolt12ProofBuilder.build(
                     invoiceFields = invoiceFields,
                     preimage = Hex.decode(obj["input"]!!.jsonObject["preimage"]!!.jsonPrimitive.content),
+                    proofNote = note,
                     signInvoiceDigest = { ByteArray(64) },
                     signProofDigest = { ByteArray(64) },
                 )
@@ -125,6 +127,9 @@ class Bolt12PayerProofVectorTest {
 
             val expectedLeaves = working["proof_leaf_hashes"]!!.jsonArray.map { it.jsonPrimitive.content }
             assertEquals(expectedLeaves, proof.leafHashList()!!.map { Hex.encode(it) }, "proof_leaf_hashes mismatch for '$name'")
+
+            // The optional proof_note (1005) must round-trip when the vector carries one.
+            assertEquals(note, proof.proofNote(), "proof_note mismatch for '$name'")
         }
     }
 }

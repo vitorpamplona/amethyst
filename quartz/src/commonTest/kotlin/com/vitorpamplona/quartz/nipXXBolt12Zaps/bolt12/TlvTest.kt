@@ -65,6 +65,18 @@ class TlvTest {
     }
 
     @Test
+    fun tu64FieldReturnsNullForAnOversizedValueInsteadOfThrowing() {
+        // A tu64 value must be at most 8 bytes. A hostile proof/offer can carry a 9-byte
+        // amount that parses as a TLV; reading it via the stream accessor must degrade to
+        // null (a clean rejection on the validation path), not throw.
+        val stream = TlvStream(listOf(TlvRecord(170, ByteArray(9) { 1 })))
+        val decoded = TlvStream.read(stream.encode())
+        assertNull(decoded.tu64(170))
+        // The exact-8-byte boundary still decodes.
+        assertEquals(Long.MAX_VALUE, TlvStream(listOf(TlvRecord(170, Bolt12Values.tu64ToBytes(Long.MAX_VALUE)))).tu64(170))
+    }
+
+    @Test
     fun tlvStreamRoundTrips() {
         val records =
             listOf(

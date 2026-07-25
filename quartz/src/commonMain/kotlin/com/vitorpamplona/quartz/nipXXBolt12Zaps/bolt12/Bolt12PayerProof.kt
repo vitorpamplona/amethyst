@@ -56,6 +56,9 @@ class Bolt12PayerProof(
 
     fun proofPreimage(): ByteArray? = tlv.value(TYPE_PROOF_PREIMAGE)
 
+    /** The optional free-text `proof_note` (1005) a challenge-response verifier may request. */
+    fun proofNote(): String? = tlv.value(TYPE_PROOF_NOTE)?.decodeToString()
+
     fun proofOmittedTlvs(): ByteArray? = tlv.value(TYPE_PROOF_OMITTED_TLVS)
 
     fun proofMissingHashes(): ByteArray? = tlv.value(TYPE_PROOF_MISSING_HASHES)
