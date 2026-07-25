@@ -67,6 +67,7 @@ class ZapPaymentHandler(
         val weight: Double = 1.0,
         val relay: NormalizedRelayUrl? = null,
         val user: User? = null,
+        val bolt12Offer: String? = null,
     )
 
     data class MyZapSplitSetup(
@@ -74,6 +75,13 @@ class ZapPaymentHandler(
         val weight: Double = 1.0,
         val relay: NormalizedRelayUrl? = null,
         val user: User? = null,
+    )
+
+    /** A recipient routed over BOLT12 (NIP-XX): they publish a kind:10058 [offer] and we hold an NWC wallet. */
+    data class Bolt12Recipient(
+        val user: User,
+        val offer: String,
+        val weight: Double = 1.0,
     )
 
     suspend fun zap(
@@ -111,6 +119,7 @@ class ZapPaymentHandler(
                                     weight = setup.weight,
                                     relay = setup.relay,
                                     user = user,
+                                    bolt12Offer = user?.bolt12Offers()?.firstOrNull(),
                                 )
                             }
                         }
@@ -121,7 +130,7 @@ class ZapPaymentHandler(
                     noteEvent.hosts().map {
                         val user = LocalCache.checkGetOrCreateUser(it.pubKey)
                         val lnAddress = user?.lnAddress()
-                        UnverifiedZapSplitSetup(lnAddress, relay = it.relayHint, user = user)
+                        UnverifiedZapSplitSetup(lnAddress, relay = it.relayHint, user = user, bolt12Offer = user?.bolt12Offers()?.firstOrNull())
                     }
                 }
 
@@ -130,23 +139,62 @@ class ZapPaymentHandler(
                     if (appLud16 != null) {
                         listOf(UnverifiedZapSplitSetup(appLud16))
                     } else {
-                        val lud16 =
-                            note.author?.lnAddress()
-                        listOf(UnverifiedZapSplitSetup(lud16))
+                        val author = note.author
+                        listOf(UnverifiedZapSplitSetup(author?.lnAddress(), user = author, bolt12Offer = author?.bolt12Offers()?.firstOrNull()))
                     }
                 }
 
                 else -> {
+                    val author = note.author
                     listOf(
                         UnverifiedZapSplitSetup(
-                            note.author?.lnAddress(),
+                            lnAddress = author?.lnAddress(),
+                            user = author,
+                            bolt12Offer = author?.bolt12Offers()?.firstOrNull(),
                         ),
                     )
                 }
             }
 
+        // BOLT12-first: a recipient who publishes a kind:10058 offer is zapped over
+        // BOLT12 when our default NWC wallet advertises the nwc#2 `pay` method (needed for
+        // the payer proof). Otherwise — no wallet, or a wallet without `pay` — the recipient
+        // stays on lightning, so an unsupported wallet degrades gracefully instead of erroring.
+        val canBolt12 =
+            account.settings.nwcWallets.value
+                .isNotEmpty() &&
+                account.defaultWalletSupportsBolt12Pay()
+
+        val bolt12Recipients =
+            unverifiedZapsToSend.mapNotNull {
+                val user = it.user
+                if (canBolt12 && it.bolt12Offer != null && user != null) {
+                    Bolt12Recipient(user, it.bolt12Offer, it.weight)
+                } else {
+                    null
+                }
+            }
+        val bolt12Users = bolt12Recipients.mapTo(HashSet()) { it.user }
+
+        val zapsToSend =
+            unverifiedZapsToSend.mapNotNull {
+                // Never lightning-zap a recipient already routed over BOLT12.
+                if (it.user != null && it.user in bolt12Users) {
+                    null
+                } else if (it.lnAddress != null) {
+                    MyZapSplitSetup(it.lnAddress, it.weight, it.relay, it.user)
+                } else {
+                    null
+                }
+            }
+
         if (showErrorIfNoLnAddress) {
-            val errors = unverifiedZapsToSend.filter { it.lnAddress.isNullOrBlank() }
+            // Only a recipient with neither a BOLT12 route nor an lnAddress is unpayable.
+            val errors =
+                unverifiedZapsToSend.filter {
+                    val routedBolt12 = canBolt12 && it.bolt12Offer != null && it.user != null
+                    !routedBolt12 && it.lnAddress.isNullOrBlank()
+                }
             errors.forEach {
                 val message =
                     if (it.user != null) {
@@ -167,71 +215,77 @@ class ZapPaymentHandler(
             }
         }
 
-        val zapsToSend =
-            unverifiedZapsToSend.mapNotNull {
-                if (it.lnAddress != null) {
-                    MyZapSplitSetup(
-                        it.lnAddress,
-                        it.weight,
-                        it.relay,
-                        it.user,
-                    )
-                } else {
-                    null
-                }
-            }
+        // Weight is shared across both lanes so splits stay proportional regardless of rail.
+        val totalWeight = bolt12Recipients.sumOf { it.weight } + zapsToSend.sumOf { it.weight }
+        if (totalWeight <= 0.0) {
+            onProgress(0.00f)
+            return@withContext
+        }
 
         onProgress(0.02f)
 
-        val splitZapRequests = signAllZapRequests(note, pollOption, message, zapType, zapsToSend, amountMilliSats)
+        // --- Lightning lane -----------------------------------------------------------
+        if (zapsToSend.isNotEmpty()) {
+            val splitZapRequests = signAllZapRequests(note, pollOption, message, zapType, zapsToSend, amountMilliSats, totalWeight)
 
-        if (splitZapRequests.isEmpty()) {
-            onProgress(0.00f)
-            return@withContext
-        } else {
-            onProgress(0.05f)
+            if (splitZapRequests.isNotEmpty()) {
+                onProgress(0.05f)
+
+                val payables =
+                    assembleAllInvoices(
+                        requests = splitZapRequests,
+                        totalAmountMilliSats = amountMilliSats,
+                        message = message,
+                        okHttpClient = okHttpClient,
+                        onError = onError,
+                        onProgress = { onProgress(it * 0.7f + 0.05f) },
+                        context = context,
+                        totalWeight = totalWeight,
+                    )
+
+                if (payables.isNotEmpty()) {
+                    onProgress(0.75f)
+
+                    // Route through the user's selected default payment source. A CLINK debit takes
+                    // precedence over NWC when it is the chosen default; NWC-only users are unaffected
+                    // (defaultPaymentSource() resolves to their NWC wallet). No source -> wallet app.
+                    when (val source = account.settings.defaultPaymentSource()) {
+                        is PaymentSource.ClinkDebit -> {
+                            payViaClinkDebit(payables, source.wallet.pointer, onError = onError, onProgress = {
+                                onProgress(it * 0.25f + 0.75f)
+                            }, context)
+                        }
+
+                        is PaymentSource.Nwc -> {
+                            payViaNWC(payables, note, onError = onError, onProgress = {
+                                onProgress(it * 0.25f + 0.75f) // keeps within range.
+                            }, context)
+                        }
+
+                        null -> {
+                            onPayViaIntent(payables.toImmutableList())
+                        }
+                    }
+                }
+            }
         }
 
-        val payables =
-            assembleAllInvoices(
-                requests = splitZapRequests,
+        // --- BOLT12 lane --------------------------------------------------------------
+        if (bolt12Recipients.isNotEmpty()) {
+            payViaBolt12(
+                recipients = bolt12Recipients,
+                note = note,
                 totalAmountMilliSats = amountMilliSats,
+                totalWeight = totalWeight,
                 message = message,
-                okHttpClient = okHttpClient,
+                zapType = zapType,
                 onError = onError,
-                onProgress = { onProgress(it * 0.7f + 0.05f) },
+                onProgress = { onProgress(it * 0.25f + 0.75f) },
                 context = context,
             )
-
-        if (payables.isEmpty()) {
-            onProgress(0.00f)
-            return@withContext
-        } else {
-            onProgress(0.75f)
         }
 
-        // Route through the user's selected default payment source. A CLINK debit takes
-        // precedence over NWC when it is the chosen default; NWC-only users are unaffected
-        // (defaultPaymentSource() resolves to their NWC wallet). No source -> wallet app.
-        when (val source = account.settings.defaultPaymentSource()) {
-            is PaymentSource.ClinkDebit -> {
-                payViaClinkDebit(payables, source.wallet.pointer, onError = onError, onProgress = {
-                    onProgress(it * 0.25f + 0.75f)
-                }, context)
-            }
-
-            is PaymentSource.Nwc -> {
-                payViaNWC(payables, note, onError = onError, onProgress = {
-                    onProgress(it * 0.25f + 0.75f) // keeps within range.
-                }, context)
-                // onProgress(1f)
-            }
-
-            null -> {
-                onPayViaIntent(payables.toImmutableList())
-                onProgress(0f)
-            }
-        }
+        onProgress(1f)
     }
 
     private fun calculateZapValue(
@@ -256,9 +310,10 @@ class ZapPaymentHandler(
         zapType: LnZapEvent.ZapType,
         zapsToSend: List<MyZapSplitSetup>,
         totalAmountMilliSats: Long,
-    ): List<ZapRequestReady> {
-        val totalWeight = zapsToSend.sumOf { it.weight }
-        return mapNotNullAsync(zapsToSend) { next: MyZapSplitSetup ->
+        // Shared across the lightning + BOLT12 lanes so a mixed split stays proportional.
+        totalWeight: Double = zapsToSend.sumOf { it.weight },
+    ): List<ZapRequestReady> =
+        mapNotNullAsync(zapsToSend) { next: MyZapSplitSetup ->
             // makes sure the author receives the zap event
             val authorRelayList = note.author?.inboxRelays()?.toSet() ?: emptySet()
 
@@ -291,7 +346,6 @@ class ZapPaymentHandler(
 
             ZapRequestReady(next, zapRequest)
         }
-    }
 
     suspend fun assembleAllInvoices(
         requests: List<ZapRequestReady>,
@@ -301,9 +355,10 @@ class ZapPaymentHandler(
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
+        // Shared across the lightning + BOLT12 lanes so a mixed split stays proportional.
+        totalWeight: Double = requests.sumOf { it.inputSetup.weight },
     ): List<Payable> {
         var progressAllPayments = 0.00f
-        val totalWeight = requests.sumOf { it.inputSetup.weight }
 
         return mapNotNullAsync(requests) { splitZapRequestPair: ZapRequestReady ->
             try {
@@ -384,6 +439,47 @@ class ZapPaymentHandler(
                 Paid(payable, true)
             },
         )
+    }
+
+    /**
+     * BOLT12 zap rail (NIP-XX). For each recipient that publishes a kind:10058 offer,
+     * signs a 9737 intent, pays the offer over NWC with the intent-bound `payer_note`,
+     * and (if the returned proof validates) publishes a 9736 zap — see
+     * [Account.sendBolt12Zap]. Fire-and-forget like [payViaNWC]: dispatch is optimistic
+     * and settlement/errors surface later through the async NWC response.
+     */
+    suspend fun payViaBolt12(
+        recipients: List<Bolt12Recipient>,
+        note: Note,
+        totalAmountMilliSats: Long,
+        totalWeight: Double,
+        message: String,
+        zapType: LnZapEvent.ZapType,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        context: Context,
+    ) {
+        val progress = PaymentProgress(recipients.size, onProgress)
+
+        mapNotNullAsync(recipients) { recipient: Bolt12Recipient ->
+            account.sendBolt12Zap(
+                zappedEvent = note.event,
+                recipientPubKey = recipient.user.pubkeyHex,
+                offer = recipient.offer,
+                amountMillisats = calculateZapValue(totalAmountMilliSats, recipient.weight, totalWeight),
+                message = message,
+                zapType = zapType,
+                onError = { msgRes, detail ->
+                    val msg = if (detail != null) stringRes(context, msgRes, detail) else stringRes(context, msgRes)
+                    onError(stringRes(context, R.string.bolt12_zap_error), msg, recipient.user)
+                },
+                onProcessed = { progress.step() },
+            )
+
+            progress.step()
+
+            recipient
+        }
     }
 
     /**

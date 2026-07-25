@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -168,7 +169,7 @@ private fun ZapsCollector(
     LaunchedEffect(viewModel, roomATag) {
         val filter =
             Filter(
-                kinds = listOf(LnZapEvent.KIND),
+                kinds = listOf(LnZapEvent.KIND, Bolt12ZapEvent.KIND),
                 tags = mapOf("a" to listOf(roomATag)),
             )
         LocalCache.observeNotes(filter).collect { notes ->
@@ -176,6 +177,7 @@ private fun ZapsCollector(
             notes.forEach { note ->
                 viewModel.onChatEvent(note)
                 (note.event as? LnZapEvent)?.let { viewModel.onZapEvent(it, nowSec) }
+                (note.event as? Bolt12ZapEvent)?.let { viewModel.onZapEvent(it, nowSec) }
             }
         }
     }

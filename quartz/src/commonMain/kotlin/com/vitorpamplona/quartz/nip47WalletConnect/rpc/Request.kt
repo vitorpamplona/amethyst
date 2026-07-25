@@ -47,6 +47,48 @@ class PayInvoiceMethod(
     }
 }
 
+// pay (nostr-wallet-connect/nwc#2) — settle any BIP321 payment instruction
+// (bolt11 `lightning=`, BOLT12 `lno=`, or on-chain). `payment` is the BIP321 URI;
+// `amount` (msats) is required only when the instruction has no amount; `payer_note`
+// is delivered to the payee when the instruction supports payer messages (for a
+// BOLT12 zap this carries `nostr:nipXX:<intent-id>`).
+class PayParams(
+    var payment: String? = null,
+    var amount: Long? = null,
+    var payer_note: String? = null,
+    var metadata: Map<String, Any?>? = null,
+)
+
+class PayMethod(
+    var params: PayParams? = null,
+) : Request(NwcMethod.PAY) {
+    companion object {
+        fun create(
+            payment: String,
+            amount: Long? = null,
+            payerNote: String? = null,
+        ): PayMethod = PayMethod(PayParams(payment, amount, payerNote))
+    }
+}
+
+// receive (nostr-wallet-connect/nwc#2) — mint a payment instruction to be paid.
+class ReceiveParams(
+    var amount: Long? = null,
+    var description: String? = null,
+    var metadata: Map<String, Any?>? = null,
+)
+
+class ReceiveMethod(
+    var params: ReceiveParams? = null,
+) : Request(NwcMethod.RECEIVE) {
+    companion object {
+        fun create(
+            amount: Long? = null,
+            description: String? = null,
+        ): ReceiveMethod = ReceiveMethod(ReceiveParams(amount, description))
+    }
+}
+
 // pay_keysend
 class PayKeysendParams(
     var amount: Long? = null,

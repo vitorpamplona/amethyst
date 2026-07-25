@@ -27,8 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
-val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND)
+val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND)
 
 fun filterUserProfileZapsReceived(
     user: User,

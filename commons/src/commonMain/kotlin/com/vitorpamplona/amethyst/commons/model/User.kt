@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import kotlin.concurrent.Volatile
 
@@ -77,6 +78,8 @@ class User(
 
     val nutzapInfoNote: Note = context.addressableNote(NutzapInfoEvent.createAddress(pubkeyHex))
 
+    val bolt12OfferListNote: Note = context.addressableNote(Bolt12OfferListEvent.createAddress(pubkeyHex))
+
     // These objects are designed to keep the cache
     // while this user obj is being used anywhere.
     //
@@ -112,6 +115,12 @@ class User(
     fun authorRelayList() = nip65RelayListNote.event as? AdvertisedRelayListEvent
 
     fun nutzapInfo() = nutzapInfoNote.event as? NutzapInfoEvent
+
+    /** This user's published BOLT12 offer list (NIP-XX kind 10058), or null if none seen. */
+    fun bolt12OfferList() = bolt12OfferListNote.event as? Bolt12OfferListEvent
+
+    /** The canonical raw BOLT12 offers (`lno1...`) this user accepts, empty when none published. */
+    fun bolt12Offers(): List<String> = bolt12OfferList()?.offers().orEmpty()
 
     /** True when this user has published a kind:10019 with a P2PK pubkey. */
     fun acceptsNutzaps(): Boolean = nutzapInfo()?.p2pkPubkey() != null

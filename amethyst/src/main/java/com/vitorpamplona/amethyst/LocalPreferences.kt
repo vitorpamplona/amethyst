@@ -70,6 +70,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -211,6 +212,7 @@ private object PrefKeys {
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
     const val LATEST_PAYMENT_TARGETS = "latestPaymentTargets"
+    const val LATEST_BOLT12_OFFERS = "latestBolt12Offers"
     const val LATEST_CASHU_WALLET = "latestCashuWallet"
     const val LATEST_NUTZAP_INFO = "latestNutzapInfo"
 }
@@ -588,6 +590,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, settings.backupKeyPackageRelayList)
                     putOrRemove(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, settings.backupFavoriteAlgoFeedsList)
                     putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
+                    putOrRemove(PrefKeys.LATEST_BOLT12_OFFERS, settings.backupBolt12Offers)
                     putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
                     putOrRemove(PrefKeys.LATEST_NUTZAP_INFO, settings.backupNutzapInfo)
 
@@ -777,6 +780,7 @@ object LocalPreferences {
                     val latestKeyPackageRelayListStr = getString(PrefKeys.LATEST_KEY_PACKAGE_RELAY_LIST, null)
                     val latestFavoriteAlgoFeedsListStr = getString(PrefKeys.LATEST_FAVORITE_ALGO_FEEDS_LIST, null)
                     val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
+                    val latestBolt12OffersStr = getString(PrefKeys.LATEST_BOLT12_OFFERS, null)
                     val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
                     val latestNutzapInfoStr = getString(PrefKeys.LATEST_NUTZAP_INFO, null)
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
@@ -840,6 +844,7 @@ object LocalPreferences {
                     val latestKeyPackageRelayList = async { parseEventOrNull<KeyPackageRelayListEvent>(latestKeyPackageRelayListStr) }
                     val latestFavoriteAlgoFeedsList = async { parseEventOrNull<FavoriteAlgoFeedsListEvent>(latestFavoriteAlgoFeedsListStr) }
                     val latestPaymentTargets = async { parseEventOrNull<PaymentTargetsEvent>(latestPaymentTargetsStr) }
+                    val latestBolt12Offers = async { parseEventOrNull<Bolt12OfferListEvent>(latestBolt12OffersStr) }
                     val latestCashuWallet =
                         async {
                             parseEventOrNull<com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent>(latestCashuWalletStr)
@@ -895,6 +900,7 @@ object LocalPreferences {
                     val latestKeyPackageRelayListResolved = latestKeyPackageRelayList.await()
                     val latestFavoriteAlgoFeedsListResolved = latestFavoriteAlgoFeedsList.await()
                     val latestPaymentTargetsResolved = latestPaymentTargets.await()
+                    val latestBolt12OffersResolved = latestBolt12Offers.await()
                     val latestCashuWalletResolved = latestCashuWallet.await()
                     val latestNutzapInfoResolved = latestNutzapInfo.await()
 
@@ -997,6 +1003,7 @@ object LocalPreferences {
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIdsResolved),
                         pendingAttestations = MutableStateFlow(pendingAttestationsResolved),
                         backupNipA3PaymentTargets = latestPaymentTargetsResolved,
+                        backupBolt12Offers = latestBolt12OffersResolved,
                         backupCashuWallet = latestCashuWalletResolved,
                         backupNutzapInfo = latestNutzapInfoResolved,
                         callsEnabled = MutableStateFlow(callsEnabled),

@@ -40,6 +40,10 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceParams
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveParams
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceParams
@@ -60,6 +64,7 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
@@ -83,6 +88,14 @@ object Nip47RequestKSerializer : KSerializer<Request> {
                 when (value) {
                     is PayInvoiceMethod -> {
                         value.params?.let { put("params", serializePayInvoiceParams(it)) }
+                    }
+
+                    is PayMethod -> {
+                        value.params?.let { put("params", serializePayParams(it)) }
+                    }
+
+                    is ReceiveMethod -> {
+                        value.params?.let { put("params", serializeReceiveParams(it)) }
                     }
 
                     is PayKeysendMethod -> {
@@ -135,6 +148,21 @@ object Nip47RequestKSerializer : KSerializer<Request> {
         buildJsonObject {
             params.invoice?.let { put("invoice", it) }
             params.amount?.let { put("amount", it) }
+            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+        }
+
+    private fun serializePayParams(params: PayParams): JsonObject =
+        buildJsonObject {
+            params.payment?.let { put("payment", it) }
+            params.amount?.let { put("amount", it) }
+            params.payer_note?.let { put("payer_note", it) }
+            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+        }
+
+    private fun serializeReceiveParams(params: ReceiveParams): JsonObject =
+        buildJsonObject {
+            params.amount?.let { put("amount", it) }
+            params.description?.let { put("description", it) }
             params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
         }
 
@@ -236,6 +264,8 @@ object Nip47RequestKSerializer : KSerializer<Request> {
 
         return when (method) {
             NwcMethod.PAY_INVOICE -> parsePayInvoice(jsonObject)
+            NwcMethod.PAY -> parsePay(jsonObject)
+            NwcMethod.RECEIVE -> parseReceive(jsonObject)
             NwcMethod.PAY_KEYSEND -> parsePayKeysend(jsonObject)
             NwcMethod.MAKE_INVOICE -> parseMakeInvoice(jsonObject)
             NwcMethod.LOOKUP_INVOICE -> parseLookupInvoice(jsonObject)
@@ -260,6 +290,36 @@ object Nip47RequestKSerializer : KSerializer<Request> {
                     invoice = it["invoice"]?.jsonPrimitive?.content,
                     amount = it["amount"]?.jsonPrimitive?.longOrNull,
                     metadata = it["metadata"]?.jsonObject?.toAnyMap(),
+                )
+            },
+        )
+    }
+
+    private fun parsePay(json: JsonObject): PayMethod {
+        val params = json["params"]?.jsonObject
+        return PayMethod(
+            params?.let {
+                // contentOrNull / `as? JsonObject` treat an explicit JSON `null` as absent —
+                // Jackson (JVM/Android) writes null-valued keys, so a native/iOS peer parsing
+                // that output must not read `JsonNull` as the string "null" or crash on it.
+                PayParams(
+                    payment = it["payment"]?.jsonPrimitive?.contentOrNull,
+                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
+                    payer_note = it["payer_note"]?.jsonPrimitive?.contentOrNull,
+                    metadata = (it["metadata"] as? JsonObject)?.toAnyMap(),
+                )
+            },
+        )
+    }
+
+    private fun parseReceive(json: JsonObject): ReceiveMethod {
+        val params = json["params"]?.jsonObject
+        return ReceiveMethod(
+            params?.let {
+                ReceiveParams(
+                    amount = it["amount"]?.jsonPrimitive?.longOrNull,
+                    description = it["description"]?.jsonPrimitive?.contentOrNull,
+                    metadata = (it["metadata"] as? JsonObject)?.toAnyMap(),
                 )
             },
         )

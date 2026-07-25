@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.nip53LiveActivities.ZapContribution
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
@@ -144,6 +145,11 @@ class LiveStreamTopZappersViewModel(
                     goalContributions[it.receiptId] = it
                 }
             }
+            goal?.bolt12Zaps?.values?.forEach { entry ->
+                contributionFromStreamZap(entry.source)?.let {
+                    goalContributions[it.receiptId] = it
+                }
+            }
         }
     }
 
@@ -152,12 +158,19 @@ class LiveStreamTopZappersViewModel(
         _topZappers.value = LiveActivityTopZappersAggregator.aggregate(merged, limit)
     }
 
-    private fun contributionFromStreamZap(note: Note): ZapContribution? {
-        val ev = note.event as? LnZapEvent ?: return null
-        val request = ev.zapRequest ?: return null
-        val sats = ev.amount()?.toLong() ?: return null
-        return ZapContribution(note.idHex, request.pubKey, request.isAnonTagged(), sats)
-    }
+    private fun contributionFromStreamZap(note: Note): ZapContribution? =
+        when (val ev = note.event) {
+            is LnZapEvent -> {
+                val request = ev.zapRequest ?: return null
+                val sats = ev.amount()?.toLong() ?: return null
+                ZapContribution(note.idHex, request.pubKey, request.isAnonTagged(), sats)
+            }
+            is Bolt12ZapEvent -> {
+                val sats = ev.amount()?.div(1000) ?: return null
+                ZapContribution(note.idHex, ev.payer() ?: ev.pubKey, ev.isAnonymous(), sats)
+            }
+            else -> null
+        }
 
     private fun contributionFromGoalZap(
         zapRequestNote: Note,

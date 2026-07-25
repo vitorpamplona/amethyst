@@ -486,6 +486,8 @@ sealed class Route {
 
     @Serializable object EditPaymentTargets : Route()
 
+    @Serializable object EditBolt12Offers : Route()
+
     @Serializable object UpdateReactionType : Route()
 
     @Serializable data class Nip47NWCSetup(

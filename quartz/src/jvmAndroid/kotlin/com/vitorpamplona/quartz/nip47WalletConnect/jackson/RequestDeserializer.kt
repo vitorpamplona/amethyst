@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
@@ -51,6 +53,8 @@ class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
 
         return when (method) {
             NwcMethod.PAY_INVOICE -> jp.codec.treeToValue(jsonObject, PayInvoiceMethod::class.java)
+            NwcMethod.PAY -> jp.codec.treeToValue(jsonObject, PayMethod::class.java)
+            NwcMethod.RECEIVE -> jp.codec.treeToValue(jsonObject, ReceiveMethod::class.java)
             NwcMethod.PAY_KEYSEND -> jp.codec.treeToValue(jsonObject, PayKeysendMethod::class.java)
             NwcMethod.MAKE_INVOICE -> jp.codec.treeToValue(jsonObject, MakeInvoiceMethod::class.java)
             NwcMethod.LOOKUP_INVOICE -> jp.codec.treeToValue(jsonObject, LookupInvoiceMethod::class.java)

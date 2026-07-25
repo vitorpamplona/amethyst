@@ -1753,6 +1753,21 @@
     <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
     <string name="error_dialog_payment_error">Unable to open payment</string>
 
+    <string name="bolt12_offers">BOLT12 Offers</string>
+    <string name="bolt12_offers_explainer">Publish reusable BOLT12 offers so others can zap you over Lightning without a separate invoice each time.</string>
+    <string name="bolt12_offers_section_explainer">Add one or more BOLT12 offers (lno1…). They are shared publicly so anyone can pay you.</string>
+    <string name="no_bolt12_offers_message">No BOLT12 offers set. Add one below ↓</string>
+    <string name="bolt12_offer">BOLT12 offer (lno1…)</string>
+    <string name="invalid_bolt12_offer">Not a valid BOLT12 offer</string>
+    <string name="delete_bolt12_offer">Delete BOLT12 offer</string>
+    <string name="bolt12_pay_with_wallet">Pay with connected wallet</string>
+    <string name="bolt12_payment_amount_sats">Amount (sats)</string>
+    <string name="bolt12_payment_sent">BOLT12 payment sent</string>
+    <string name="bolt12_payment_failed">BOLT12 payment failed: %1$s</string>
+    <string name="bolt12_zap_error">BOLT12 zap error</string>
+    <string name="bolt12_zap_paid_no_receipt">Paid over BOLT12, but the wallet returned no proof, so no zap receipt was published.</string>
+    <string name="bolt12_zap_invalid_receipt">Paid over BOLT12, but the payment proof did not validate, so no zap receipt was published.</string>
+
     <string name="uploading_state_ready">Not Started</string>
     <string name="uploading_state_compressing">Compressing</string>
     <string name="uploading_state_uploading">Uploading</string>
@@ -2255,6 +2270,7 @@
     <string name="video_player_search_keywords" translatable="false">video, player, playback, autoplay, mute</string>
     <string name="audio_visualizer_search_keywords" translatable="false">audio, visualizer, spectrum, bars, waves, radial, aurora, animation</string>
     <string name="payment_targets_search_keywords" translatable="false">zap split, split, recipients, forward zaps</string>
+    <string name="bolt12_offers_search_keywords" translatable="false">bolt12, bolt 12, offer, lno, lightning, zap, reusable invoice</string>
     <string name="call_settings_search_keywords" translatable="false">webrtc, video call, voice call, calls</string>
     <string name="translations_search_keywords" translatable="false">language, translate, locale</string>
     <string name="ots_explorer_search_keywords" translatable="false">opentimestamps, timestamp, ots, proof</string>
