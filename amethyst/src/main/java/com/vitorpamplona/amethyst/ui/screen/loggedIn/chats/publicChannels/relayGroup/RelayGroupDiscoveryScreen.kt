@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -441,7 +442,10 @@ private fun RelayGroupRailRow(
         .notes.stateFlow
         .collectAsStateWithLifecycle()
     val messageCount = notesState.channel.notes.size()
-    val lastNote = notesState.channel.lastNote
+    // Derive the newest message from the note cache (not Channel.lastNote) so the preview + its
+    // timestamp advance in lockstep with the count as new kind-9s stream in — the same approach
+    // Concord's list previews use. Reading lastNote directly can lag behind the cache.
+    val lastNote = remember(notesState) { newestGroupChatMessage(notesState.channel) }
 
     val participatingFollows = remember(channelState, follows) { channel.participatingFollows(follows) }
 
@@ -697,6 +701,18 @@ private fun CompactFollowFaces(
         }
     }
 }
+
+/**
+ * The newest chat message loaded for this group, derived from the note cache each time it changes
+ * rather than read from [Channel.lastNote] — so the row's preview + timestamp advance in lockstep
+ * with the live message count as the warm-up subscription streams new kind-9s in (mirrors how
+ * Concord's list previews stay current). NIP-29 threads (kind-11/1111) live in a separate collection,
+ * so `notes` is already just the chat timeline; only skip notes whose event hasn't loaded yet.
+ */
+private fun newestGroupChatMessage(channel: Channel): Note? =
+    channel.notes
+        .filter { _, note -> note.event != null }
+        .minWithOrNull(Channel.DefaultFeedOrder)
 
 /**
  * Display cap for the loaded-message counter — kept in step with the discovery preview's fetch
