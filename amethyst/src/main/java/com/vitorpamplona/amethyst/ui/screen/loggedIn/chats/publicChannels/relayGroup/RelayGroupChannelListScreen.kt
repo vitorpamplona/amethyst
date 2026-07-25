@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.looksLikeNonNip29Relay
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -256,6 +257,12 @@ fun RelayGroupChannelListScreen(
     val scope = rememberCoroutineScope()
     val showTorHint = torType != TorType.OFF && !isOnion && relay !in trustedRelays && connectTimedOut
 
+    // A pinned relay works both as a pushed detail (from the drawer or another screen) and as a
+    // bottom-nav tab. Read once here (it is @Composable): the back arrow shows only when pushed;
+    // as a bottom-nav root the bar below takes its place and the arrow hides.
+    val canPop = nav.canPop()
+    val selfRoute = remember(relay) { Route.RelayGroupServer(relay.url) }
+
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
@@ -267,6 +274,7 @@ fun RelayGroupChannelListScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
+                showBackButton = canPop,
                 popBack = nav::popBack,
                 actions = {
                     if (isBuzz) {
@@ -278,6 +286,13 @@ fun RelayGroupChannelListScreen(
                     }
                 },
             )
+        },
+        bottomBar = {
+            // Renders only when this is a bottom-nav root (AppBottomBar hides itself when canPop),
+            // so a pinned NIP-29 relay works both as a pushed detail and as a bottom-nav tab.
+            AppBottomBar(selfRoute, nav, accountViewModel) { route ->
+                if (route != selfRoute) nav.navBottomBar(route)
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
