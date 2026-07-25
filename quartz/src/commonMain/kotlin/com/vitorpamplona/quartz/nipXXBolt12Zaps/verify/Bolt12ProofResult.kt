@@ -52,22 +52,18 @@ sealed interface Bolt12ProofResult {
         val reason: Reason,
     ) : Bolt12ProofResult
 
-    /**
-     * The proof could not be verified with the currently-implemented checks (e.g.
-     * a compressed proof needing the not-yet-validated merkle reconstruction).
-     * Whether to surface it as unverified or drop it is the caller's policy.
-     */
-    @Immutable
-    data class Unsupported(
-        val reason: Reason,
-    ) : Bolt12ProofResult
-
     enum class Reason {
         MISSING_REQUIRED_FIELDS,
         PREIMAGE_MISMATCH,
+
+        /**
+         * The selective-disclosure fields (`proof_omitted_tlvs` /
+         * `proof_missing_hashes` / `proof_leaf_hashes`) are malformed or don't
+         * describe a closable merkle tree, so the invoice root can't be rebuilt.
+         */
+        RECONSTRUCTION_FAILED,
         INVOICE_SIGNATURE_INVALID,
         PROOF_SIGNATURE_INVALID,
         MALFORMED_KEY,
-        COMPRESSED_PROOF_UNSUPPORTED,
     }
 }

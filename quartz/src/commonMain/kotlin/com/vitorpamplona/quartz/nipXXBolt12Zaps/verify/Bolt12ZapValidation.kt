@@ -36,10 +36,12 @@ sealed interface Bolt12ZapValidation {
      * @property paymentHashHex the proof's `invoice_payment_hash`, hex-encoded —
      *   the key clients MUST deduplicate on before summing.
      * @property proofCryptoVerified true when the BOLT12 payer-proof signatures
-     *   were fully verified; false when the proof is structurally valid and bound
-     *   but its signatures could not yet be checked (a compressed proof — see
-     *   [Bolt12ProofVerifier]). Callers decide whether to count or merely display
-     *   the latter, and MUST label it as unverified.
+     *   verified **and** the settled invoice is provably the embedded offer's (the
+     *   offer publishes an `offer_issuer_id`, uses no blinded paths, and the
+     *   invoice node key equals it). False when the signatures verify but the offer
+     *   hides its destination (blinded paths / no issuer id), so paying *this* offer
+     *   isn't proven — see [Bolt12ProofVerifier]. Callers decide whether to count or
+     *   merely display the latter, and MUST label it as unverified.
      */
     @Immutable
     data class Valid(
@@ -94,6 +96,7 @@ sealed interface Bolt12ZapValidation {
         OFFER_PROOF_MISMATCH,
         PROOF_MISSING_REQUIRED_FIELDS,
         PROOF_PREIMAGE_MISMATCH,
+        PROOF_RECONSTRUCTION_FAILED,
         PROOF_INVOICE_SIGNATURE_INVALID,
         PROOF_SIGNATURE_INVALID,
         PROOF_MALFORMED_KEY,

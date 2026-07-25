@@ -24,9 +24,11 @@ package com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12
  * A parsed BOLT12 payer proof (`lnp1...`), per lightning/bolts#1346.
  *
  * A payer proof copies the relevant offer / invoice-request / invoice TLV fields,
- * plus the invoice's `signature`, and adds the payer's own `proof_signature`,
- * the `proof_preimage`, and (for compressed proofs) the merkle-reconstruction
- * fields `proof_missing_hashes` / `proof_leaf_hashes` / `proof_omitted_tlvs`.
+ * plus the invoice's `signature`, and adds the payer's own `proof_signature`, the
+ * `proof_preimage`, and the merkle-reconstruction fields `proof_missing_hashes` /
+ * `proof_leaf_hashes` / `proof_omitted_tlvs` that let [Bolt12ProofVerifier] rebuild
+ * the invoice root even though `invreq_metadata` (and optionally other fields) are
+ * withheld for privacy.
  *
  * The type numbers below are the ones proposed in lightning/bolts#1346 and MUST
  * be reconciled against the final merged BOLT if they change.
@@ -61,32 +63,59 @@ class Bolt12PayerProof(
     fun proofLeafHashes(): ByteArray? = tlv.value(TYPE_PROOF_LEAF_HASHES)
 
     /**
-     * True when the proof omits some of the original invoice's TLV fields and
-     * relies on `proof_missing_hashes` to reconstruct the merkle tree. Such
-     * proofs need the compressed-tree reconstruction to verify the invoice
-     * signature (not yet implemented — see [Bolt12ProofVerifier]).
+     * The `proof_omitted_tlvs` marker numbers (BigSize-decoded), empty when the
+     * field is absent. Returns null if the bytes don't decode as a BigSize list —
+     * a malformed proof the verifier must reject.
      */
-    fun isCompressed(): Boolean {
-        if (tlv.has(TYPE_PROOF_OMITTED_TLVS)) return true
-        val missing = proofMissingHashes()
-        return missing != null && missing.isNotEmpty()
+    fun omittedTlvMarkers(): List<Long>? {
+        val bytes = proofOmittedTlvs() ?: return emptyList()
+        return try {
+            val reader = TlvReader(bytes)
+            buildList { while (reader.remaining() > 0) add(reader.readBigSize()) }
+        } catch (_: Exception) {
+            null
+        }
     }
 
-    /** The signable invoice records (types < 240) — used to recompute the invoice merkle root when fully disclosed. */
-    fun invoiceSignableRecords(): List<TlvRecord> = tlv.records.filter { it.type < TlvRecord.SIGNATURE_TYPE_MIN }
+    /** `proof_leaf_hashes` split into 32-byte hashes, or null if not a whole multiple of 32. */
+    fun leafHashList(): List<ByteArray>? = split32(proofLeafHashes())
+
+    /** `proof_missing_hashes` split into 32-byte hashes, or null if not a whole multiple of 32. */
+    fun missingHashList(): List<ByteArray>? = split32(proofMissingHashes())
+
+    /**
+     * The disclosed invoice (offer / invoice-request / invoice) records — the
+     * fields whose types fall in the invoice ranges 1..239 and
+     * 1_000_000_000..3_999_999_999 (lightning/bolts#1346), excluding the signature
+     * elements and the proof-specific fields (240..999_999_999).
+     */
+    fun invoiceIncludedRecords(): List<TlvRecord> = tlv.records.filter { isInvoiceField(it.type) }
+
+    /**
+     * True when the proof omits some of the original invoice's TLV fields (i.e.
+     * carries `proof_omitted_tlvs` markers). Every proof reconstructs the invoice
+     * root through the merkle machinery — `invreq_metadata` (type 0) is always
+     * omitted — but this flags the extra selective disclosure for display.
+     */
+    fun isCompressed(): Boolean = omittedTlvMarkers()?.isNotEmpty() == true
 
     /** The signable proof records (everything but the 240..1000 signature elements) — used for the payer proof signature. */
     fun proofSignableRecords(): List<TlvRecord> = tlv.records.filter { !it.isSignatureElement() }
 
-    /** True when every field NIP-XX validation requires is present. */
-    fun hasAllRequiredFields(): Boolean =
+    /**
+     * True when every field the BOLT12 crypto verification requires is present and
+     * well-sized (lightning/bolts#1346 reader rules). `invreq_payer_note` is *not*
+     * required here — the NIP-XX zap binding checks it separately in the validator.
+     */
+    fun hasAllCryptoFields(): Boolean =
         invreqPayerId() != null &&
-            invreqPayerNote() != null &&
-            invoicePaymentHash() != null &&
+            invoicePaymentHash()?.size == 32 &&
             invoiceNodeId() != null &&
             invoiceSignature()?.size == 64 &&
             proofSignature()?.size == 64 &&
-            proofPreimage()?.size == 32
+            proofPreimage()?.size == 32 &&
+            tlv.has(TYPE_PROOF_MISSING_HASHES) &&
+            tlv.has(TYPE_PROOF_LEAF_HASHES)
 
     companion object {
         // Offer / invoice-request fields copied into the proof.
@@ -121,6 +150,20 @@ class Bolt12PayerProof(
         const val TYPE_PROOF_MISSING_HASHES = 1003L
         const val TYPE_PROOF_LEAF_HASHES = 1004L
         const val TYPE_PROOF_NOTE = 1005L
+
+        /**
+         * The invoice TLV type ranges that participate in the invoice merkle tree,
+         * per lightning/bolts#1346: 1..239 (offer/invreq/invoice) and
+         * 1_000_000_000..3_999_999_999 (high/unknown invoice fields). Excludes the
+         * signature range 240..1000 and the proof-specific fields 1001..999_999_999.
+         */
+        fun isInvoiceField(type: Long): Boolean = type in 1L..239L || type in 1_000_000_000L..3_999_999_999L
+
+        private fun split32(bytes: ByteArray?): List<ByteArray>? {
+            if (bytes == null) return null
+            if (bytes.size % 32 != 0) return null
+            return (0 until bytes.size / 32).map { bytes.copyOfRange(it * 32, it * 32 + 32) }
+        }
 
         fun parse(canonicalProof: String): Bolt12PayerProof? {
             val bytes = Bolt12Bech32.decodeToBytesOrNull(canonicalProof, Bolt12Bech32.PAYER_PROOF_HRP) ?: return null

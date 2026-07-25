@@ -36,8 +36,8 @@ import kotlin.test.assertTrue
  * Proves the send-side assembly ([Bolt12ZapBuilder.buildProfileIntent] →
  * [Bolt12ZapBuilder.payerNote] → [Bolt12ZapBuilder.buildZap]) — the exact path
  * `Account.sendBolt12Zap` drives — produces a kind:9736 the validator accepts. Uses
- * a self-consistent fixture proof bound to the built intent (not a wallet interop
- * vector), so it exercises structure + binding, not the compressed-merkle gap.
+ * a self-consistent fixture proof bound to the built intent; byte-exact wallet
+ * interop is covered separately by [Bolt12PayerProofVectorTest].
  */
 class Bolt12ZapBuilderTest {
     private val validator = Bolt12ZapValidator()

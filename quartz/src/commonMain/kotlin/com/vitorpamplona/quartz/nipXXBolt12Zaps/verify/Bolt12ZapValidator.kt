@@ -138,7 +138,6 @@ class Bolt12ZapValidator(
         val cryptoOk =
             when (cryptoResult) {
                 is Bolt12ProofResult.Valid -> true
-                is Bolt12ProofResult.Unsupported -> false
                 is Bolt12ProofResult.Invalid -> return invalid(mapProofReason(cryptoResult.reason))
             }
 
@@ -225,11 +224,10 @@ class Bolt12ZapValidator(
         when (reason) {
             Bolt12ProofResult.Reason.MISSING_REQUIRED_FIELDS -> Reason.PROOF_MISSING_REQUIRED_FIELDS
             Bolt12ProofResult.Reason.PREIMAGE_MISMATCH -> Reason.PROOF_PREIMAGE_MISMATCH
+            Bolt12ProofResult.Reason.RECONSTRUCTION_FAILED -> Reason.PROOF_RECONSTRUCTION_FAILED
             Bolt12ProofResult.Reason.INVOICE_SIGNATURE_INVALID -> Reason.PROOF_INVOICE_SIGNATURE_INVALID
             Bolt12ProofResult.Reason.PROOF_SIGNATURE_INVALID -> Reason.PROOF_SIGNATURE_INVALID
             Bolt12ProofResult.Reason.MALFORMED_KEY -> Reason.PROOF_MALFORMED_KEY
-            // A compressed proof never reaches here (it returns Unsupported, not Invalid).
-            Bolt12ProofResult.Reason.COMPRESSED_PROOF_UNSUPPORTED -> Reason.PROOF_MISSING_REQUIRED_FIELDS
         }
 
     private fun invalid(reason: Reason) = Bolt12ZapValidation.Invalid(reason)

@@ -23,19 +23,20 @@ package com.vitorpamplona.quartz.nipXXBolt12Zaps.verify
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Bech32
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Merkle
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Offer
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12PayerProof
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12ProofBuilder
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Values
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.TlvRecord
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.TlvStream
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
- * Builds matched BOLT12 offers and payer proofs for tests, self-signing them with
- * Quartz's own secp256k1 so the whole merkle + BIP-340 path is exercised. This is
- * a self-consistent construction, not a CLN/LDK interop vector — see
- * [Bolt12ProofVerifier].
+ * Builds matched BOLT12 offers and payer proofs for tests, minting spec-compliant
+ * (lightning/bolts#1346) proofs through [Bolt12ProofBuilder] and self-signing them
+ * with Quartz's own secp256k1 so the whole reconstruction + merkle + BIP-340 path
+ * is exercised. This is a self-consistent construction; byte-exact CLN/LDK interop
+ * is covered separately by [Bolt12PayerProofVectorTest].
  */
 object Bolt12ProofFixture {
     /** A 33-byte compressed point (even parity) wrapping an x-only key. */
@@ -73,48 +74,31 @@ object Bolt12ProofFixture {
         // the preimage check (SHA256(preimage) != invoice_payment_hash) is what rejects it.
         val paymentHash = sha256(preimage).also { if (corruptPaymentHash) it[0] = (it[0] + 1).toByte() }
 
-        // The invoice's signed records (types < 240), in ascending order.
-        val invoiceRecords =
+        // The full invoice's non-signature TLVs, ascending. invreq_metadata (type 0)
+        // is always present and always withheld; invreq_amount (82) is the field the
+        // `compressed` flag selectively omits.
+        val invoiceFields =
             listOf(
-                TlvRecord(Bolt12PayerProof.TYPE_OFFER_ISSUER_ID, nodePoint),
-                TlvRecord(Bolt12PayerProof.TYPE_INVREQ_AMOUNT, Bolt12Values.tu64ToBytes(amountMillisats)),
-                TlvRecord(Bolt12PayerProof.TYPE_INVREQ_PAYER_ID, payerPoint),
-                TlvRecord(Bolt12PayerProof.TYPE_INVREQ_PAYER_NOTE, payerNote.encodeToByteArray()),
-                TlvRecord(Bolt12PayerProof.TYPE_INVOICE_PAYMENT_HASH, paymentHash),
-                TlvRecord(Bolt12PayerProof.TYPE_INVOICE_AMOUNT, Bolt12Values.tu64ToBytes(amountMillisats)),
-                TlvRecord(Bolt12PayerProof.TYPE_INVOICE_NODE_ID, nodePoint),
+                Bolt12ProofBuilder.InvoiceField(TYPE_INVREQ_METADATA, ByteArray(16), include = false),
+                Bolt12ProofBuilder.InvoiceField(Bolt12PayerProof.TYPE_OFFER_ISSUER_ID, nodePoint, include = true),
+                Bolt12ProofBuilder.InvoiceField(Bolt12PayerProof.TYPE_INVREQ_AMOUNT, Bolt12Values.tu64ToBytes(amountMillisats), include = !compressed),
+                Bolt12ProofBuilder.InvoiceField(Bolt12PayerProof.TYPE_INVREQ_PAYER_ID, payerPoint, include = true),
+                Bolt12ProofBuilder.InvoiceField(Bolt12PayerProof.TYPE_INVREQ_PAYER_NOTE, payerNote.encodeToByteArray(), include = true),
+                Bolt12ProofBuilder.InvoiceField(Bolt12PayerProof.TYPE_INVOICE_PAYMENT_HASH, paymentHash, include = true),
+                Bolt12ProofBuilder.InvoiceField(Bolt12PayerProof.TYPE_INVOICE_AMOUNT, Bolt12Values.tu64ToBytes(amountMillisats), include = true),
+                Bolt12ProofBuilder.InvoiceField(Bolt12PayerProof.TYPE_INVOICE_NODE_ID, nodePoint, include = true),
             )
-        val invoiceRoot = Bolt12Merkle.rootHash(invoiceRecords)
+
         val invoiceSigningKey = if (breakInvoiceSignature) payerLightningKey else nodeKey
-        val invoiceSig =
-            Nip01Crypto.sign(
-                Bolt12Merkle.signatureDigest(Bolt12ProofVerifier.INVOICE_MESSAGE, Bolt12ProofVerifier.SIGNATURE_FIELD, invoiceRoot),
-                invoiceSigningKey.privKey!!,
-            )
-
-        val preimageRecord = TlvRecord(Bolt12PayerProof.TYPE_PROOF_PREIMAGE, preimage)
-
-        // The payer proof signs everything but the 240..1000 signature elements.
-        val proofSignable = invoiceRecords + preimageRecord
-        val proofRoot = Bolt12Merkle.rootHash(proofSignable)
         val proofSigningKey = if (breakProofSignature) nodeKey else payerLightningKey
-        val proofSig =
-            Nip01Crypto.sign(
-                Bolt12Merkle.signatureDigest(Bolt12ProofVerifier.PROOF_MESSAGE, Bolt12ProofVerifier.SIGNATURE_FIELD, proofRoot),
-                proofSigningKey.privKey!!,
-            )
 
-        val records =
-            buildList {
-                addAll(invoiceRecords)
-                add(TlvRecord(Bolt12PayerProof.TYPE_SIGNATURE, invoiceSig))
-                add(TlvRecord(Bolt12PayerProof.TYPE_PROOF_SIGNATURE, proofSig))
-                add(preimageRecord)
-                if (compressed) {
-                    // A non-empty proof_missing_hashes marks the proof as compressed.
-                    add(TlvRecord(Bolt12PayerProof.TYPE_PROOF_MISSING_HASHES, ByteArray(32) { 9 }))
-                }
-            }
-        return Bolt12Bech32.encode(Bolt12Bech32.PAYER_PROOF_HRP, TlvStream(records).encode())
+        return Bolt12ProofBuilder.build(
+            invoiceFields = invoiceFields,
+            preimage = preimage,
+            signInvoiceDigest = { digest -> Nip01Crypto.sign(digest, invoiceSigningKey.privKey!!) },
+            signProofDigest = { digest -> Nip01Crypto.sign(digest, proofSigningKey.privKey!!) },
+        )
     }
+
+    private const val TYPE_INVREQ_METADATA = 0L
 }

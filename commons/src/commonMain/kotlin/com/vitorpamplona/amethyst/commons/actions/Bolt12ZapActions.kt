@@ -81,7 +81,7 @@ object Bolt12ZapActions {
         val proof = Bolt12PayerProof.parse(raw) ?: return null
         return runCatching {
             buildMap {
-                put("has_all_required_fields", proof.hasAllRequiredFields())
+                put("has_all_required_fields", proof.hasAllCryptoFields())
                 put("compressed", proof.isCompressed())
                 proof.invreqPayerNote()?.let { put("invreq_payer_note", it) }
                 proof.invreqPayerId()?.let { put("invreq_payer_id", Hex.encode(it)) }

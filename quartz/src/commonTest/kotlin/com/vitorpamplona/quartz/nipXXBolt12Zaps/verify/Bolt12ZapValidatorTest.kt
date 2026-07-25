@@ -76,8 +76,11 @@ class Bolt12ZapValidatorTest {
         }
 
     @Test
-    fun acceptsButFlagsACompressedProofAsUnverified() =
+    fun verifiesACompressedProofThroughMerkleReconstruction() =
         runTest {
+            // The proof withholds `invreq_amount`, forcing the verifier to rebuild the
+            // invoice merkle root from `proof_missing_hashes` before checking the
+            // invoice signature. Bound to a directly-addressed offer, it is fully verified.
             val signer = NostrSignerInternal(KeyPair())
             val nodeKey = KeyPair()
             val preimage = ByteArray(32) { (it + 1).toByte() }
@@ -88,7 +91,7 @@ class Bolt12ZapValidatorTest {
 
             val result = validator.validate(signedZap(signer, intent, proof))
             assertIs<Bolt12ZapValidation.Valid>(result)
-            assertTrue(!result.proofCryptoVerified, "a compressed proof is bound but not yet crypto-verified")
+            assertTrue(result.proofCryptoVerified, "a compressed proof bound to the offer must verify")
         }
 
     @Test
