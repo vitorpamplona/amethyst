@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,10 +34,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +62,8 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.WarmNip11
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -75,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
@@ -83,7 +87,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsDiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -154,21 +160,32 @@ fun RelayGroupDiscoveryScreen(
                     routeForLastRead = null,
                     onLoaded = { loaded ->
                         val items by loaded.feed.collectAsStateWithLifecycle()
-                        // Collect the kind-3 follow set once for the whole list; each card highlights
+                        // Collect the kind-3 follow set once for the whole list; each row highlights
                         // the members it contains ("people you follow who are in here").
                         val follows by accountViewModel.account.kind3FollowList.flow
                             .collectAsStateWithLifecycle()
+                        // Relay Rail: instead of a flat list of tall cards, cluster the groups by their
+                        // host relay. Each relay becomes a slim header + a block of thin inbox-style
+                        // rows. Resolving a note to its channel is a cache lookup (no subscription), so
+                        // bucketing the whole feed here is cheap; the per-row live state (metadata,
+                        // message preview) still streams lazily inside each row as it scrolls on.
+                        val entries = remember(items.list) { toRelayRailEntries(items.list) }
                         LazyColumn(
                             contentPadding = rememberFeedContentPadding(FeedPadding),
                             modifier = Modifier.fillMaxWidth(),
                             state = listState,
                         ) {
                             itemsIndexed(
-                                items.list,
-                                key = { _, item -> item.idHex },
-                                contentType = { _, item -> item.event?.kind ?: -1 },
-                            ) { _, item ->
-                                RelayGroupDiscoveryRow(item, Modifier.animateItem(), follows.authors, accountViewModel, nav)
+                                entries,
+                                key = { _, entry -> entry.key },
+                                contentType = { _, entry -> entry::class },
+                            ) { _, entry ->
+                                when (entry) {
+                                    is RelayRailEntry.Header ->
+                                        RelayRailHeader(entry.relay, entry.groupCount, Modifier.animateItem(), accountViewModel, nav)
+                                    is RelayRailEntry.GroupRow ->
+                                        RelayGroupRailRow(entry.note, entry.isFirst, entry.isLast, Modifier.animateItem(), follows.authors, accountViewModel, nav)
+                                }
                             }
                         }
                     },
@@ -256,27 +273,154 @@ private fun WatchAccountForRelayGroupDiscovery(
 }
 
 /**
- * Resolves the 39000 metadata note to its live [RelayGroupChannel] (keyed by host relay + group
- * id) and recomposes in place as the relay-signed metadata / roster changes, so member counts and
- * membership stay current without moving the row. While the row is on screen it also warms the
- * group — the newest handful of chat messages / threads — so tapping it opens an already-populated
- * screen. The warm-up is lifecycle-aware and tears down as the row scrolls off.
+ * One flattened entry in the Relay Rail list: either a relay [Header] that opens a cluster, or a
+ * [GroupRow] for one group inside the cluster just above it. [isFirst]/[isLast] mark a row's
+ * position in its relay block so it can round the right corners and skip the top divider.
+ */
+private sealed interface RelayRailEntry {
+    val key: String
+
+    data class Header(
+        val relay: NormalizedRelayUrl,
+        val groupCount: Int,
+    ) : RelayRailEntry {
+        override val key get() = "relay:" + relay.url
+    }
+
+    data class GroupRow(
+        val note: Note,
+        val isFirst: Boolean,
+        val isLast: Boolean,
+    ) : RelayRailEntry {
+        override val key get() = note.idHex
+    }
+}
+
+/**
+ * Bucket the flat discovery feed by each group's host relay, preserving the relay's first-seen
+ * order and the feed order within it, then flatten into header + row entries. Resolving a note to
+ * its channel is a cache lookup ([relayGroupDiscoveryChannelFor]) with no subscription, so doing it
+ * for the whole list here is cheap; the live per-row state still streams lazily as rows scroll on.
+ */
+private fun toRelayRailEntries(notes: List<Note>): List<RelayRailEntry> {
+    val buckets = LinkedHashMap<NormalizedRelayUrl, MutableList<Note>>()
+    notes.forEach { note ->
+        val relay = relayGroupDiscoveryChannelFor(note)?.groupId?.relayUrl ?: return@forEach
+        buckets.getOrPut(relay) { ArrayList() }.add(note)
+    }
+    val entries = ArrayList<RelayRailEntry>(buckets.size + notes.size)
+    buckets.forEach { (relay, groupNotes) ->
+        entries.add(RelayRailEntry.Header(relay, groupNotes.size))
+        groupNotes.forEachIndexed { i, note ->
+            entries.add(RelayRailEntry.GroupRow(note, isFirst = i == 0, isLast = i == groupNotes.lastIndex))
+        }
+    }
+    return entries
+}
+
+/**
+ * The slim header that owns a relay's cluster: the relay's NIP-11 icon + name, how many groups it
+ * hosts, and the favorite star. Tapping the name area opens that relay's full group list
+ * ([Route.RelayGroupServer]); the star is a separate tap target that toggles the relay in the
+ * kind-10012 relay-feeds list (favoriting it, and every group it hosts, under the relay filter).
  */
 @Composable
-private fun RelayGroupDiscoveryRow(
+private fun RelayRailHeader(
+    relay: NormalizedRelayUrl,
+    groupCount: Int,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val info = loadRelayInfo(relay)
+    val host = relay.displayUrl()
+    val name = info.value.name?.takeIf { it.isNotBlank() } ?: host
+    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
+        .collectAsStateWithLifecycle()
+    val isFavorite = relay in favoriteRelays
+
+    Row(
+        modifier = modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 16.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { nav.nav(Route.RelayGroupServer(relay.url)) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            RenderRelayIcon(
+                displayUrl = host,
+                iconUrl = info.value.icon,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+                pingInMs = 0,
+                iconModifier = Modifier.size(Size25dp).clip(CircleShape),
+            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (name != host) {
+                    Text(
+                        text = host,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Text(
+                text = pluralStringResource(R.plurals.relay_group_relay_group_count, groupCount, groupCount),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+        Icon(
+            symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
+            contentDescription = stringRes(R.string.relay_group_favorite_relay),
+            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier
+                    .clip(CircleShape)
+                    .clickable {
+                        if (isFavorite) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
+                    }.padding(6.dp)
+                    .size(18.dp),
+        )
+    }
+}
+
+/**
+ * Resolves the 39000 metadata note to its live [RelayGroupChannel] and renders it as a thin
+ * inbox-style row inside its relay's block. Recomposes in place as the relay-signed metadata /
+ * roster / message preview streams in. While on screen it warms the group's recent content
+ * (contentOnly) so tapping it opens an already-populated screen; the warm-up tears down as the row
+ * scrolls off. The card's old `about` description is intentionally dropped — the last message and
+ * activity signals below say what's happening far better than a static blurb.
+ */
+@Composable
+private fun RelayGroupRailRow(
     note: Note,
+    isFirst: Boolean,
+    isLast: Boolean,
     modifier: Modifier,
     follows: Set<HexKey>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Resolve the note to its channel the SAME way the feed filter matched/sorted it, so the row
-    // never binds a different relay's (empty) channel than the one the feed qualified.
     val baseChannel = remember(note) { relayGroupDiscoveryChannelFor(note) } ?: return
 
-    // Prefetch the group's recent content so opening the card lands on a populated screen. The
-    // metadata/rosters are already streaming from the directory subscription, so only ask for
-    // content here (contentOnly) instead of re-requesting 39000-39003 per visible row.
     RelayGroupCardWarmupSubscription(baseChannel, accountViewModel.dataSources().relayGroupCardWarmup, accountViewModel, contentOnly = true)
 
     val channelState by baseChannel
@@ -285,312 +429,249 @@ private fun RelayGroupDiscoveryRow(
         .collectAsStateWithLifecycle()
     val channel = channelState.channel as? RelayGroupChannel ?: baseChannel
 
-    // Reactive loaded-message count: the preview subscription streams kind-9 chats into the
-    // channel's note cache, and each arrival re-emits this flow, so the "50+ messages" activity
-    // signal grows live while the row is on screen.
+    // The preview subscription streams kind-9 chats into the channel's note cache; each arrival
+    // re-emits this flow, so the last-message line and the "50+" activity badge grow live on screen.
     val notesState by baseChannel
         .flow()
         .notes.stateFlow
         .collectAsStateWithLifecycle()
     val messageCount = notesState.channel.notes.size()
+    val lastNote = notesState.channel.lastNote
 
-    // People I follow who are in this group (relay-signed roster ∩ my kind-3 follows). Recomputed
-    // when the roster changes (channelState) or my follow list does.
     val participatingFollows = remember(channelState, follows) { channel.participatingFollows(follows) }
 
-    val favoriteRelays by accountViewModel.account.relayFeedsList.flow
-        .collectAsStateWithLifecycle()
+    val blockColor = MaterialTheme.colorScheme.surfaceContainerLow
+    val shape =
+        RoundedCornerShape(
+            topStart = if (isFirst) 14.dp else 0.dp,
+            topEnd = if (isFirst) 14.dp else 0.dp,
+            bottomStart = if (isLast) 14.dp else 0.dp,
+            bottomEnd = if (isLast) 14.dp else 0.dp,
+        )
 
-    RelayGroupDiscoveryCard(
-        channel = channel,
-        modifier = modifier,
-        myPubkey = accountViewModel.userProfile().pubkeyHex,
-        isFavoriteRelay = channel.groupId.relayUrl in favoriteRelays,
-        messageCount = messageCount,
-        participatingFollows = participatingFollows,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    Column(modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
+        Surface(
+            onClick = { nav.nav(routeFor(channel)) },
+            shape = shape,
+            color = blockColor,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column {
+                if (!isFirst) {
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        modifier = Modifier.padding(start = 63.dp),
+                    )
+                }
+                RelayGroupRailRowContent(
+                    channel = channel,
+                    lastNote = lastNote,
+                    messageCount = messageCount,
+                    participatingFollows = participatingFollows,
+                    blockColor = blockColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+    }
 }
 
 @Composable
-private fun RelayGroupDiscoveryCard(
+private fun RelayGroupRailRowContent(
     channel: RelayGroupChannel,
-    modifier: Modifier,
-    myPubkey: String,
-    isFavoriteRelay: Boolean,
+    lastNote: Note?,
     messageCount: Int,
     participatingFollows: List<HexKey>,
+    blockColor: Color,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
-    val isMember = channel.membershipOf(myPubkey).isMember()
-    val memberCount = channel.memberCount()
-    val relay = channel.groupId.relayUrl
 
-    ElevatedCard(
-        onClick = { nav.nav(routeFor(channel)) },
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp),
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(11.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                RobohashFallbackAsyncImage(
-                    robot = channel.groupId.id,
-                    model = channel.profilePicture(),
-                    contentDescription = channel.toBestDisplayName(),
-                    modifier =
-                        Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
-                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-                    autoPlayGif = autoPlayGif,
-                )
+        RobohashFallbackAsyncImage(
+            robot = channel.groupId.id,
+            model = channel.profilePicture(),
+            contentDescription = channel.toBestDisplayName(),
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif = autoPlayGif,
+        )
 
-                Column(Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = channel.toBestDisplayName(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        DiscoveryStatusPill(channel)
-                    }
-                    if (memberCount > 0 || messageCount > 0) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            if (memberCount > 0) {
-                                Icon(
-                                    symbol = MaterialSymbols.Group,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Text(
-                                    text = pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            if (memberCount > 0 && messageCount > 0) {
-                                Text(
-                                    text = "·",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            if (messageCount > 0) {
-                                // Loaded from the preview page; a full page reads as "50+", fewer as
-                                // the exact count. DISCOVERY_MESSAGE_CAP tracks the preview limit.
-                                Text(
-                                    text =
-                                        if (messageCount >= DISCOVERY_MESSAGE_CAP) {
-                                            pluralStringResource(R.plurals.relay_group_message_count_capped, DISCOVERY_MESSAGE_CAP, DISCOVERY_MESSAGE_CAP)
-                                        } else {
-                                            pluralStringResource(R.plurals.relay_group_message_count, messageCount, messageCount)
-                                        },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (!isMember && channel.requiresMembershipToPost()) {
-                    FilledTonalButton(onClick = {
-                        // Open groups join directly; closed ones open the group where the invite
-                        // code can be entered.
-                        if (channel.isClosed()) {
-                            nav.nav(routeFor(channel))
-                        } else {
-                            accountViewModel.joinRelayGroup(channel)
-                        }
-                    }) {
-                        Text(stringRes(R.string.join))
-                    }
-                }
-            }
-
-            // Prominent social proof: the people I follow who are already in this group.
-            if (participatingFollows.isNotEmpty()) {
-                FollowsInGroupRow(
-                    follows = participatingFollows,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    modifier = Modifier.padding(top = 10.dp),
-                )
-            }
-
-            // The host relay as its own chip. Tapping the chip opens that relay's full group list;
-            // the star INSIDE it is a separate tap target that only favorites the relay (surfacing
-            // its groups under the relay filter). Joining the group is the separate button above.
-            RelayChip(
-                relay = relay,
-                isFavorite = isFavoriteRelay,
-                onToggleFavorite = {
-                    if (isFavoriteRelay) accountViewModel.unfollowRelayFeed(relay) else accountViewModel.followRelayFeed(relay)
-                },
-                onOpenRelay = { nav.nav(Route.RelayGroupServer(relay.url)) },
-                modifier = Modifier.padding(top = 8.dp),
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = channel.toBestDisplayName(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-
-            channel.summary()?.takeIf { it.isNotBlank() }?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                )
-            }
+            RelayGroupPreviewLine(channel, lastNote, accountViewModel)
         }
-    }
-}
 
-/**
- * The group's host relay as a tappable chip. The chip body opens that relay's full group list
- * ([Route.RelayGroupServer]); the star inside it is an independent tap target that only toggles the
- * relay in the kind-10012 relay-feeds list (a favorited relay, and every group it hosts, then
- * surfaces under the relay chip in the top-nav filter). Filled/primary when favorited, tonal outline
- * otherwise — visually distinct from the group's Join button so the scopes don't read as one action.
- */
-@Composable
-private fun RelayChip(
-    relay: NormalizedRelayUrl,
-    isFavorite: Boolean,
-    onToggleFavorite: () -> Unit,
-    onOpenRelay: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier = modifier.fillMaxWidth()) {
-        Surface(
-            onClick = onOpenRelay,
-            shape = RoundedCornerShape(8.dp),
-            color =
-                if (isFavorite) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-            modifier = Modifier.weight(1f, fill = false),
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.padding(start = 2.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
-            ) {
-                Icon(
-                    symbol = if (isFavorite) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-                    contentDescription = stringRes(R.string.relay_group_favorite_relay),
-                    tint =
-                        if (isFavorite) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    modifier =
-                        Modifier
-                            .clip(CircleShape)
-                            .clickable(onClick = onToggleFavorite)
-                            .padding(4.dp)
-                            .size(16.dp),
-                )
-                Text(
-                    text = relay.displayUrl(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color =
-                        if (isFavorite) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            RelayGroupStatusPill(channel)
+            if (participatingFollows.isNotEmpty()) {
+                CompactFollowFaces(participatingFollows, blockColor, accountViewModel, nav)
+            } else if (messageCount > 0) {
+                MessageActivityBadge(messageCount)
             }
         }
     }
 }
 
 /**
- * Overlapping avatars of the people I follow who are in the group, with a "%d people you follow"
- * caption — social proof that a group is worth joining. Shows up to five faces; the caption always
- * carries the true total.
+ * The line under a group name: the newest message as "author: text" — the live "what's happening"
+ * signal that replaces the old static description. Author names resolve reactively (hex → profile
+ * name). Before any message has streamed in, falls back to the member count so the row isn't bare.
  */
 @Composable
-private fun FollowsInGroupRow(
+private fun RelayGroupPreviewLine(
+    channel: RelayGroupChannel,
+    lastNote: Note?,
+    accountViewModel: AccountViewModel,
+) {
+    val event = lastNote?.event
+    val author = lastNote?.author
+    val preview: String =
+        if (event != null && author != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            val body = event.content.take(80)
+            if (body.isBlank()) authorName else "$authorName: $body"
+        } else if (event != null) {
+            event.content.take(80)
+        } else {
+            val memberCount = channel.memberCount()
+            if (memberCount > 0) {
+                pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
+            } else {
+                return
+            }
+        }
+    Text(
+        text = preview,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/**
+ * The top badge on a row's right edge. A live audio room (NIP-53 / LiveKit) wins with a green
+ * pulsing "LIVE"; otherwise invite-only, then private. Open groups show nothing here so the row
+ * stays quiet.
+ */
+@Composable
+private fun RelayGroupStatusPill(channel: RelayGroupChannel) {
+    when {
+        channel.hasLivekit() ->
+            Surface(shape = RoundedCornerShape(6.dp), color = RelayGroupLiveColor.copy(alpha = 0.16f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Box(Modifier.size(6.dp).clip(CircleShape).background(RelayGroupLiveColor))
+                    Text(
+                        text = stringRes(R.string.relay_group_badge_live),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = RelayGroupLiveColor,
+                    )
+                }
+            }
+        // `closed` alone doesn't mean invite-only on Buzz (it stamps every channel); only badge it
+        // where membership is actually required to participate.
+        channel.requiresMembershipToPost() && channel.isClosed() ->
+            TonalTextPill(stringRes(R.string.relay_group_badge_invite_only))
+        channel.isPrivate() ->
+            TonalTextPill(stringRes(R.string.relay_group_badge_private))
+        else -> {}
+    }
+}
+
+/** A small amber tonal status pill (invite-only / private). */
+@Composable
+private fun TonalTextPill(label: String) {
+    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.warningColor.copy(alpha = 0.16f)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.warningColor,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+    }
+}
+
+/**
+ * The loaded-message counter as a compact violet pill ("50+" when the preview page is full,
+ * [DISCOVERY_MESSAGE_CAP] tracking that limit; the exact count otherwise).
+ */
+@Composable
+private fun MessageActivityBadge(messageCount: Int) {
+    val label =
+        if (messageCount >= DISCOVERY_MESSAGE_CAP) {
+            stringRes(R.string.relay_group_message_count_short_capped, DISCOVERY_MESSAGE_CAP)
+        } else {
+            messageCount.toString()
+        }
+    Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+        )
+    }
+}
+
+/**
+ * Overlapping avatars (up to three) of the people I follow who are already in this group — the
+ * strongest join signal, so it takes the row's right edge over the message counter when present.
+ * Faces border in the row's own background so they cut cleanly out of the block.
+ */
+@Composable
+private fun CompactFollowFaces(
     follows: List<HexKey>,
+    blockColor: Color,
     accountViewModel: AccountViewModel,
     nav: INav,
-    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy((-9).dp)) {
-            follows.take(5).forEach { pubkey ->
-                UserPicture(
-                    userHex = pubkey,
-                    size = Size25dp,
-                    pictureModifier = Modifier.border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+    Row(horizontalArrangement = Arrangement.spacedBy((-7).dp)) {
+        follows.take(3).forEach { pubkey ->
+            UserPicture(
+                userHex = pubkey,
+                size = Size20dp,
+                pictureModifier = Modifier.border(1.5.dp, blockColor, CircleShape),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
         }
-        Text(
-            text = pluralStringResource(R.plurals.relay_group_follows_participating, follows.size, follows.size),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
 /**
  * Display cap for the loaded-message counter — kept in step with the discovery preview's fetch
- * limit (RELAY_GROUP_WARMUP_LIMIT), so a chat that returns the full page reads as "50+ messages".
+ * limit (RELAY_GROUP_WARMUP_LIMIT), so a chat that returns the full page reads as "50+".
  */
 private const val DISCOVERY_MESSAGE_CAP = 50
 
-/** Small tonal pill: Invite-only wins over Private, matching the inline group card. */
-@Composable
-private fun DiscoveryStatusPill(channel: RelayGroupChannel) {
-    val label =
-        when {
-            // `closed` alone doesn't mean invite-only on Buzz (it stamps every channel); only badge
-            // it where membership is actually required to participate. See [RelayGroupChannel.requiresMembershipToPost].
-            channel.requiresMembershipToPost() && channel.isClosed() -> stringRes(R.string.relay_group_badge_invite_only)
-            channel.isPrivate() -> stringRes(R.string.relay_group_badge_private)
-            else -> return
-        }
-    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-        )
-    }
-}
+/** Live-audio accent (green) for the row's LIVE pill — reads on both light and dark grounds. */
+private val RelayGroupLiveColor = Color(0xFF17B978)

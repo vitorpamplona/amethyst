@@ -2563,6 +2563,8 @@
     <string name="relay_group_invite_preparing">Preparing invite…</string>
     <string name="relay_group_badge_private">Private</string>
     <string name="relay_group_badge_invite_only">Invite-only</string>
+    <string name="relay_group_badge_live">LIVE</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Enter a valid relay URL (wss://…).</string>
     <string name="relay_group_field_name">Name</string>
     <string name="relay_group_field_about">Description</string>
@@ -2644,6 +2646,10 @@
     <plurals name="relay_group_follows_participating">
         <item quantity="one">%1$d person you follow</item>
         <item quantity="other">%1$d people you follow</item>
+    </plurals>
+    <plurals name="relay_group_relay_group_count">
+        <item quantity="one">%1$d group</item>
+        <item quantity="other">%1$d groups</item>
     </plurals>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
