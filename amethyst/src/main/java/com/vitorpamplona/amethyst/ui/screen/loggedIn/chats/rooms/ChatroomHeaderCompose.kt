@@ -886,7 +886,7 @@ private fun RowScope.LastMessagePreview(
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
             modifier = Modifier.weight(1f),
         )
     }
@@ -965,7 +965,7 @@ fun ChannelName(
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
                     modifier = Modifier.weight(1f),
                 )
             } else {
@@ -974,6 +974,7 @@ fun ChannelName(
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
                     modifier = Modifier.weight(1f),
                 )
             }
