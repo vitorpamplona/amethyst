@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.relayGroupDiscoveryChannelFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.dal.toGroupConstraints
@@ -429,8 +431,11 @@ private fun RelayGroupRailRow(
         .collectAsStateWithLifecycle()
     val channel = channelState.channel as? RelayGroupChannel ?: baseChannel
 
-    // The preview subscription streams kind-9 chats into the channel's note cache; each arrival
-    // re-emits this flow, so the last-message line and the "50+" activity badge grow live on screen.
+    // The warm-up prefetch loads the group's recent kind-9 chats into the channel's note cache and
+    // re-emits this flow as they land, so the last-message line, its timestamp, and the activity
+    // count fill in (and refresh whenever the row reloads). It's a recent-activity snapshot, not a
+    // live ticker: the always-on live chat tail is joined-groups-only, and a non-member generally
+    // isn't streamed a discovery group's new messages.
     val notesState by baseChannel
         .flow()
         .notes.stateFlow
@@ -510,13 +515,30 @@ private fun RelayGroupRailRowContent(
         )
 
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = channel.toBestDisplayName(),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = channel.toBestDisplayName(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                // When the group last had activity — the honest recency signal on a discovery screen,
+                // where a non-joined group's chat isn't a live stream. Recomputed as newer messages
+                // load, so it tracks whatever the preview shows.
+                lastNote?.createdAt()?.let { ts ->
+                    Text(
+                        text = timeAgo(ts, LocalContext.current, prefix = ""),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+            }
             RelayGroupPreviewLine(channel, lastNote, accountViewModel)
         }
 
