@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzForumThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzNewDmScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.JobBoardScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
@@ -773,6 +774,7 @@ fun BuildNavigation(
             )
         }
         composableFromEndArgs<Route.BuzzCanvas> { BuzzCanvasScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
+        composableFromEndArgs<Route.BuzzJobBoard> { JobBoardScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
         composableFromBottomArgs<Route.BuzzForumPost> { BuzzForumPostScreen(it.channelId, it.relayUrl, accountViewModel, nav) }
         composableFromEndArgs<Route.BuzzForumThread> { BuzzForumThreadScreen(it.channelId, it.relayUrl, it.rootId, accountViewModel, nav) }
 

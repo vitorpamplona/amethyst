@@ -162,6 +162,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concor
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
@@ -237,6 +239,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNu
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
@@ -289,6 +292,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -3264,6 +3268,53 @@ class Account(
     ) {
         val template = DmAddMemberEvent.build(channel.groupId.id, member)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * File a Buzz agent job (kind-43001) into channel [channelId] on [relay] — a shared
+     * feature-request the workspace bot can pick up. Untargeted: any agent watching the
+     * channel may accept it. Returns the new job id (the request event id), or null when the
+     * account can't write. See [com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator].
+     */
+    suspend fun fileBuzzJob(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        request: String,
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val signed = signer.sign(JobRequestEvent.build(request, channelId, null))
+        client.publish(signed, setOf(relay))
+        return signed.id
+    }
+
+    /** Cancel a Buzz job [jobId] with a kind-43005 scoped to [channelId] on [relay]. */
+    suspend fun cancelBuzzJob(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        jobId: HexKey,
+    ) {
+        if (!isWriteable()) return
+        val signed = signer.sign(JobCancelEvent.build(jobId, "", channelId))
+        client.publish(signed, setOf(relay))
+    }
+
+    /**
+     * Upvote a Buzz job [jobId] — a NIP-25 like (kind-7 `+`) `e`-tagging the request and
+     * `h`-scoped to [channelId] so the scheduler (and the board) count it toward priority.
+     */
+    suspend fun upvoteBuzzJob(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        jobId: HexKey,
+    ) {
+        if (!isWriteable()) return
+        val template =
+            eventTemplate<ReactionEvent>(ReactionEvent.KIND, ReactionEvent.LIKE) {
+                addUnique(ETag.assemble(jobId, null, null))
+                addUnique(GroupIdTag.assemble(channelId))
+            }
+        val signed = signer.sign(template)
+        client.publish(signed, setOf(relay))
     }
 
     /** Send a kind 9022 leave request to the host relay and drop it from our list. */

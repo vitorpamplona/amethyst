@@ -131,20 +131,42 @@ Kinds 43001-43006 are *reserved* in Buzz with no upstream builder; the tag layou
 implements the job protocol. The prototype is deliberately isolated so that reconciliation
 touches only the quartz models + this aggregator.
 
+## Mobile app — placement evaluation
+
+The existing agent screens are **owner-global concepts entered per-relay, and buried**:
+`AgentConsole(relayUrl)` (Costs/Personas/Observer, read-only telemetry) is only reachable via
+a footer in the channel list or a bot-member tap; Costs/Personas/Observer are really the
+owner's whole fleet, not one relay's. That's a discoverability + scoping smell, but the Console
+is a coherent *owner telemetry* surface and should stay that — just get a better entry later.
+
+The **shared work surface is a different thing and belongs at the channel level.** A Buzz job is
+`h`-scoped to a channel, so the backlog is *per-channel* — exactly like the Canvas (40100) and
+Forum, which launch from `RelayGroupTopBar` gated by `BuzzRelayDialect.isBuzz`. So the Jobs
+board sits there too (a `Checklist` action → `Route.BuzzJobBoard(channelId, relayUrl)`), NOT
+inside the owner Console. Keeping "owner fleet telemetry" and "this channel's shared backlog"
+as separate surfaces is the right call.
+
+Note the model change also **deprioritizes the workflow-approval inbox (46010/46030/46031)**: with
+full-auto intake and merge-on-GitHub, the human gate moved to the PR — so the approvals inbox is
+now P1/optional, not P0. The true P0 is the shared board.
+
 ## Mobile app gaps (prioritized)
 
 The quartz layer + LocalCache ingest are complete for every kind; the app has **zero
 create/interact surface** for the two kinds that define the workflow. Priorities:
 
-**P0 — the human-in-the-loop loop**
-- **P0-1 Approvals inbox** — render 46010, publish 46030/46031 grant/deny (token-hash
-  correlation; 46010 is NIP-PL push-urgent). Build on `AgentConsoleViewModel` fetch pattern
-  + `ApprovalGrantEvent.build`/`ApprovalDenyEvent.build`. Size **M**.
-- **P0-2 Jobs board** — create 43001, watch 43002-43006, see result, grouped by `e`. Reuse
-  the new `BuzzJobAggregator`; jobs already render as inline system rows + are subscribed in
-  `RelayGroupFilterBuilders`. Size **L**.
-- **P0-3 Agent picker** — choose a target agent when filing a job/approval, from stored
-  30177/10100 + the fleet list. Size **S**.
+**P0 — the shared work surface**
+- **P0-2 Jobs board — ✅ LANDED.** `JobBoardScreen` + `JobBoardViewModel` (per-channel,
+  `Route.BuzzJobBoard(channelId, relayUrl)`, entered from `RelayGroupTopBar` on Buzz relays).
+  Reads job kinds + kind-7 upvotes scoped to the channel `h`, folds via `BuzzJobAggregator`,
+  groups by state (In progress / Queued-by-upvotes / Done / Closed), live via `subscribeAsFlow`.
+  Three write actions through new `Account` helpers: **file** a task (43001, FAB → dialog),
+  **upvote** (kind-7 `+` with `h`), **cancel** own job (43005). Merge stays on GitHub.
+- **P0-1 Approvals inbox** — deprioritized to P1 by the full-auto/merge-on-GitHub model (the
+  human gate is now the PR, not a 46010 gate). Still worth it if a workflow-gate flow returns:
+  render 46010, publish 46030/46031, token-hash correlation, push-urgent.
+- **P0-3 Agent picker** — the board files **untargeted** jobs (any channel agent claims them),
+  so a picker isn't needed for the shared-channel model; revisit only for directed jobs.
 
 **P1 — a credible agent-driving client**
 - **P1-1 Diff/PR review surface** — upgrade read-only 40008 (`RenderBuzzDiff`) into a

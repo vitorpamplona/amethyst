@@ -192,6 +192,14 @@ fun RelayGroupTopBar(
                         modifier = Modifier.size(20.dp),
                     )
                 }
+                // Buzz agent backlog (kinds 43001-43006): the channel's shared job board.
+                IconButton(onClick = { nav.nav(Route.BuzzJobBoard(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
+                    Icon(
+                        symbol = MaterialSymbols.Checklist,
+                        contentDescription = "Backlog",
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
 
             // remember the bech32 (naddr) encode — this top bar recomposes on every roster/metadata
