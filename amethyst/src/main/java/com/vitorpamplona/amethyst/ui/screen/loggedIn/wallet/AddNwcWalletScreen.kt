@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47DeepLink
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -137,7 +138,11 @@ fun AddNwcWalletScreen(
                     onClick = {
                         try {
                             uri.openUri(
-                                "nostrnwc://connect?appname=Amethyst&appicon=https%3A%2F%2Fraw.githubusercontent.com%2Fvitorpamplona%2Famethyst%2Frefs%2Fheads%2Fmain%2Ficon.png&callback=amethyst%2Bwalletconnect%3A%2F%2Fdlnwc",
+                                Nip47DeepLink.buildConnectUri(
+                                    callback = "amethyst+walletconnect://dlnwc",
+                                    appName = "Amethyst",
+                                    appIcon = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png",
+                                ),
                             )
                         } catch (_: IllegalArgumentException) {
                             accountViewModel.toastManager.toast(

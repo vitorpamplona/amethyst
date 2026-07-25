@@ -543,6 +543,33 @@ fun payViaIntent(
     }
 }
 
+/**
+ * Hands a reusable BOLT12 offer (`lno1…`, from a recipient's kind:10058) off to an
+ * installed wallet. Unlike a BOLT11 invoice, a BOLT12 offer is NOT a `lightning:`
+ * payload — that scheme is defined for `lnbc…` invoices. Offers travel as the `lno`
+ * parameter of a BIP21/BIP321 bitcoin URI (`bitcoin:?lno=lno1…`), where the on-chain
+ * address is optional so a Lightning-only offer stands on its own. The wallet resolves
+ * the offer, collects the amount, and completes the payment; this is a plain intent,
+ * not a NIP-57/NIP-XX zap, so it produces no Nostr receipt.
+ */
+fun payViaBolt12Intent(
+    offer: String,
+    context: Context,
+    onPaid: () -> Unit,
+    onError: (String) -> Unit,
+) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, "bitcoin:?lno=$offer".toUri())
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+        context.startActivity(intent)
+        onPaid()
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        onError(stringRes(context, R.string.no_wallet_found))
+    }
+}
+
 @Composable
 fun PayButton(
     isActive: Boolean,

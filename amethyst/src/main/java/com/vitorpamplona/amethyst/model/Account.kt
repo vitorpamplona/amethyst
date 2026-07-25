@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
+import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -99,6 +101,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.GitRepositoryListState
@@ -222,6 +225,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
@@ -291,6 +295,11 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -362,6 +371,8 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.builder.Bolt12ZapBuilder
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -471,7 +482,21 @@ class Account(
     // account never surfaces under another (the old cache was a process-wide singleton).
     val relayNotifications = NotifyRequestsCache()
 
-    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
+    // Shared cache of connected wallets' kind 13194 info events (capabilities +
+    // encryption + notification support). Backs NIP-44 negotiation in
+    // NwcSignerState and notification gating in NwcPaymentNotificationWatcher.
+    val nwcInfoCache =
+        NwcInfoCache(
+            fetch = { uri ->
+                client.fetchFirst(
+                    uri.relayUri,
+                    Filter(kinds = listOf(NwcInfoEvent.KIND), authors = listOf(uri.pubKeyHex), limit = 1),
+                ) as? NwcInfoEvent
+            },
+            scope = scope,
+        )
+
+    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings, nwcInfoCache)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
@@ -762,6 +787,8 @@ class Account(
     val marmotManager: MarmotManager? = mlsGroupStateStore?.let { MarmotManager(signer, it, marmotMessageStore, marmotKeyPackageStore) }
 
     val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
+
+    val bolt12OfferList = Bolt12OfferListState(signer, cache, scope, settings)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(
@@ -1414,6 +1441,106 @@ class Account(
     ) {
         val (event, relay) = nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
         client.publish(event, setOf(relay))
+    }
+
+    /**
+     * True when the default NWC wallet advertises the nwc#2 `pay` method — the rail a
+     * BOLT12 zap needs to obtain a payer proof. Read from the wallet's cached kind:13194
+     * info event (its capability advertisement), which [NwcSignerState] already refreshes
+     * on wallet change. A missing/unfetched info event reads as false, so the zap path
+     * falls back to lightning rather than attempting a `pay` the wallet can't honor.
+     */
+    fun defaultWalletSupportsBolt12Pay(): Boolean {
+        val uri = nip47SignerState.defaultWalletUri.value ?: return false
+        return nip47SignerState.infoCache?.current(uri)?.supportsMethod(NwcMethod.PAY) == true
+    }
+
+    /**
+     * Sends a NIP-XX BOLT12 zap to [recipientPubKey] over the default NWC wallet.
+     *
+     * Signs a kind 9737 intent, pays [offer] via the nwc#2 `pay` method with the
+     * intent-bound `payer_note`, then — only if the wallet returns a payer proof that
+     * validates — builds, self-consumes, and publishes the kind 9736 zap. Validation
+     * is the fail-safe: a wallet that drops or misroutes the note yields a proof that
+     * fails the binding check, so no invalid receipt is ever published (the payment
+     * still happened; [onError] reports "paid, no receipt"). [zappedEvent] is null for
+     * a profile zap. Requires an NWC wallet (see [hasNwcWallet]); BOLT12 zaps have no
+     * external-wallet or LNURL fallback because only NWC returns the proof.
+     */
+    suspend fun sendBolt12Zap(
+        zappedEvent: Event?,
+        recipientPubKey: HexKey,
+        offer: String,
+        amountMillisats: Long,
+        message: String,
+        zapType: LnZapEvent.ZapType,
+        // (messageResId, detail) — the caller localizes; detail carries a wallet error, if any.
+        onError: (Int, String?) -> Unit,
+        onProcessed: () -> Unit,
+    ) {
+        // NONZAP means "pay, but publish no receipt" — settle the offer without binding
+        // a zap intent or emitting a 9736, matching the privacy of a bolt11 NONZAP.
+        if (zapType == LnZapEvent.ZapType.NONZAP) {
+            sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
+                scope.launch {
+                    if (response is IErrorResponseLike) onError(R.string.bolt12_payment_failed, response.errorMessage())
+                    onProcessed()
+                }
+            }
+            return
+        }
+
+        val anonymous = zapType == LnZapEvent.ZapType.ANONYMOUS
+        // The 9737 intent and the 9736 zap MUST be signed by the same key. An anonymous
+        // zap uses a fresh ephemeral key so it carries no `P` tag and isn't traceable.
+        val zapSigner = if (anonymous) NostrSignerInternal(KeyPair()) else signer
+
+        val intent =
+            if (zappedEvent == null) {
+                Bolt12ZapBuilder.buildProfileIntent(zapSigner, recipientPubKey, amountMillisats, offer, message)
+            } else {
+                Bolt12ZapBuilder.buildIntent(zapSigner, recipientPubKey, amountMillisats, offer, EventHintBundle(zappedEvent), message)
+            }
+
+        val payerNote = Bolt12ZapBuilder.payerNote(intent)
+
+        sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats, payerNote)) { response ->
+            scope.launch {
+                // try/finally so a failure while assembling/publishing the receipt (e.g. a
+                // remote signer error) still steps progress and surfaces an error, instead
+                // of vanishing as an uncaught coroutine exception. The payment already
+                // settled at this point, so such a failure means "paid, no receipt".
+                try {
+                    when (response) {
+                        is PaySuccessResponse -> {
+                            val proof = response.result?.payer_proof
+                            if (proof.isNullOrBlank()) {
+                                onError(R.string.bolt12_zap_paid_no_receipt, null)
+                            } else {
+                                val zap = Bolt12ZapBuilder.buildZap(zapSigner, intent, proof, anonymous)
+                                if (cache.bolt12ZapValidator.validate(zap, verifyEventSignature = false) is Bolt12ZapValidation.Valid) {
+                                    cache.justConsumeMyOwnEvent(zap)
+                                    client.publish(zap, computeRelayListToBroadcast(zap))
+                                } else {
+                                    onError(R.string.bolt12_zap_invalid_receipt, null)
+                                }
+                            }
+                        }
+
+                        is IErrorResponseLike -> onError(R.string.bolt12_payment_failed, response.errorMessage())
+
+                        else -> onError(R.string.bolt12_zap_paid_no_receipt, null)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("Account", "BOLT12 zap receipt assembly failed after payment", e)
+                    onError(R.string.bolt12_zap_paid_no_receipt, null)
+                } finally {
+                    onProcessed()
+                }
+            }
+        }
     }
 
     suspend fun createZapRequestFor(
@@ -3014,6 +3141,44 @@ class Account(
         if (filters.isEmpty()) return
         val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
         client.fetchAll(filters = byRelay, timeoutMs = 20_000L)
+    }
+
+    /**
+     * COMPLETE-mode Control-Plane sync — Armada's plane-sweep discipline for the one plane that must
+     * never fold on a truncated edition set.
+     *
+     * The Control Plane defines the channel list, the roster and the banlist, so a *partial* fold
+     * silently drops channels or mis-renders membership. Two ways that happens, both closed here:
+     *  - **Forward-cursor gap:** the live plane subscription advances a `since` cursor, so an edition
+     *    with a `created_at` below the high-water mark that we never actually ingested — an unban
+     *    published while we were offline, a CORD-06 compaction re-wrap under a newly-held epoch — is
+     *    never asked for again and stays invisible. This sweep uses **no `since`**: it re-fetches the
+     *    whole plane every run.
+     *  - **Per-filter cap:** a relay caps a REQ's result (~100/filter on relay.dreamith.to), which can
+     *    crop a busy Control Plane. This **pages past the cap** ([fetchAllPagesFromPool] walks `until`
+     *    cursors until a plane is drained), so the fold sees every edition regardless of the cap.
+     *
+     * Current + every held-prior epoch's Control Plane is swept (the anti-rollback floor folds from the
+     * priors). Wraps ingest through the global cache connector → [concordSessions] like every other
+     * Concord drain; AUTH is the shared stream-key handler. Merging communities that share a relay into
+     * one filter is safe here precisely because we page — the cap no longer truncates. The live control
+     * subscription still carries brand-new editions in real time; this is the periodic completeness pass.
+     */
+    suspend fun syncConcordControlPlanes(entries: List<ConcordCommunityListEntry>) {
+        if (entries.isEmpty()) return
+        val authorsByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
+        for (entry in entries) {
+            for (sub in ConcordSubscriptionPlanner.controlPlaneSubs(listOf(entry))) {
+                for (relay in sub.relays) authorsByRelay.getOrPut(relay) { HashSet() }.add(sub.pubKeyHex)
+            }
+        }
+        if (authorsByRelay.isEmpty()) return
+        // No `since`, no `limit` → fetchAllPages treats each filter as unbounded and pages until a
+        // plane is fully drained (empty page), so the whole Control Plane lands regardless of the cap.
+        val byRelay = authorsByRelay.mapValues { (_, authors) -> listOf(ConcordActions.planeFilterFor(authors.toList())) }
+        var drained = 0
+        client.fetchAllPagesFromPool(filters = byRelay) { _, _ -> drained++ }
+        Log.d("Concord", "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)")
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
@@ -5631,6 +5796,8 @@ class Account(
     suspend fun sendNestsServersList(servers: List<com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 
     suspend fun savePaymentTargets(targets: List<PaymentTarget>) = sendMyPublicAndPrivateOutbox(paymentTargetsState.savePaymentTargets(targets))
+
+    suspend fun saveBolt12Offers(offers: List<String>) = sendMyPublicAndPrivateOutbox(bolt12OfferList.saveOffers(offers))
 
     fun markAsRead(
         route: String,

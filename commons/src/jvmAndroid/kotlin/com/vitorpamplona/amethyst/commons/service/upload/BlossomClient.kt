@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.commons.service.upload
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -48,6 +50,20 @@ class BlossomPaymentException(
     val server: String,
     val payment: BlossomPaymentRequired,
 ) : RuntimeException("Payment required by $server: ${payment.reason ?: "402 Payment Required"}")
+
+/**
+ * Thrown by [BlossomClient.mirror] when a server does not implement the BUD-04
+ * `/mirror` endpoint. Blossom has no capability-discovery mechanism (BUD-04 defines
+ * none), so the only reliable signal is the status of the `PUT /mirror` itself:
+ * `404 Not Found`, `405 Method Not Allowed`, or `501 Not Implemented` mean the
+ * endpoint is absent — as opposed to a mirror the server understood but refused
+ * (`400`/`403`/`413`/…, which stay a plain [RuntimeException]). Callers can catch
+ * this to fall back to a direct download-and-upload (see [BlossomClient.mirrorOrUpload]).
+ */
+class BlossomMirrorUnsupportedException(
+    val server: String,
+    val status: Int,
+) : RuntimeException("$server does not support the /mirror endpoint (HTTP $status)")
 
 /** Result of a BUD-06 `HEAD /upload` or `HEAD /media` preflight. */
 data class BlossomPreflightResult(
@@ -111,6 +127,10 @@ open class BlossomClient(
      * BUD-04 mirror: ask [serverBaseUrl] to fetch and store the blob already at
      * [sourceUrl]. The server verifies the downloaded bytes hash to the `x` tag in
      * the (upload) auth token. Returns the mirrored blob's descriptor.
+     *
+     * Throws [BlossomMirrorUnsupportedException] when the server has no `/mirror`
+     * endpoint (HTTP 404/405/501) so the caller can tell "can't mirror here" apart
+     * from "mirror failed" — see [mirrorOrUpload] for the download-and-upload fallback.
      */
     open suspend fun mirror(
         sourceUrl: String,
@@ -129,7 +149,45 @@ open class BlossomClient(
                         paymentProof?.headers()?.forEach { (name, value) -> addHeader(name, value) }
                     }.put(body)
                     .build()
-            okHttpClient.newCall(request).execute().use { parseDescriptor(it, serverBaseUrl) }
+            okHttpClient.newCall(request).execute().use { response ->
+                if (response.code in MIRROR_UNSUPPORTED_CODES) {
+                    throw BlossomMirrorUnsupportedException(serverBaseUrl, response.code)
+                }
+                parseDescriptor(response, serverBaseUrl)
+            }
+        }
+
+    /**
+     * Mirror [sourceUrl] to [serverBaseUrl], falling back to a direct upload when the
+     * server doesn't implement BUD-04 `/mirror`. First tries [mirror]; if that reports
+     * [BlossomMirrorUnsupportedException], the blob is downloaded here, verified against
+     * [expectedHash], then re-uploaded with [BlossomServerUrl.UPLOAD_PATH] — so a file
+     * still lands on servers of every capability. Payment (`402`) and every other
+     * failure propagate unchanged from [mirror].
+     *
+     * The downloaded bytes are hash-checked before re-upload: a Blossom server is
+     * untrusted and could return substituted content, and the same `t=upload` auth
+     * (whose `x` tag is the expected hash) is reused for the fallback `PUT /upload`.
+     */
+    open suspend fun mirrorOrUpload(
+        sourceUrl: String,
+        expectedHash: HexKey,
+        contentType: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+        paymentProof: BlossomPaymentProof? = null,
+    ): BlossomUploadResult =
+        try {
+            mirror(sourceUrl, serverBaseUrl, authHeader, paymentProof)
+        } catch (e: BlossomMirrorUnsupportedException) {
+            val bytes =
+                download(sourceUrl)
+                    ?: throw RuntimeException("Could not download $sourceUrl to upload to $serverBaseUrl")
+            val actualHash = sha256(bytes).toHexKey()
+            if (actualHash != expectedHash) {
+                throw RuntimeException("$sourceUrl returned content ($actualHash) that does not match the expected $expectedHash")
+            }
+            upload(bytes, contentType, serverBaseUrl, authHeader)
         }
 
     /**
@@ -340,4 +398,12 @@ open class BlossomClient(
     private data class MirrorRequest(
         val url: String,
     )
+
+    companion object {
+        /**
+         * `PUT /mirror` statuses that mean the endpoint isn't implemented (so the caller
+         * should fall back to a direct upload) rather than a mirror the server rejected.
+         */
+        private val MIRROR_UNSUPPORTED_CODES = setOf(404, 405, 501)
+    }
 }

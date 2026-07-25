@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
 
 val AccountInfoAndListsFromKeyKinds =
     listOf(
@@ -80,6 +81,7 @@ val AccountInfoAndListsFromKeyKinds2 =
         GeohashListEvent.KIND,
         TrustProviderListEvent.KIND,
         PaymentTargetsEvent.KIND,
+        Bolt12OfferListEvent.KIND,
         RelayFeedsListEvent.KIND,
         InterestSetEvent.KIND,
         // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups + servers.

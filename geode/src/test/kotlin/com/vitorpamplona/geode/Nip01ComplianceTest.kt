@@ -39,6 +39,7 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -518,8 +519,13 @@ class Nip01ComplianceTest : RelayClientTest() {
             hub.getOrCreate(relayA).preload(fakeEvent(1, kind = 1, content = "from-a"))
             hub.getOrCreate(relayB).preload(fakeEvent(2, kind = 1, content = "from-b"))
 
-            val received = mutableMapOf<NormalizedRelayUrl, String>()
-            val eosed = mutableSetOf<NormalizedRelayUrl>()
+            // Each relay delivers its EVENT/EOSE on its own InProcessWebSocket
+            // scope, so these callbacks fire concurrently from two threads. The
+            // shared collections MUST be thread-safe — a plain HashMap loses a
+            // write when both threads put during a rehash, leaving a relay's
+            // entry null and flaking the assertions below.
+            val received = ConcurrentHashMap<NormalizedRelayUrl, String>()
+            val eosed = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
             val ch = Channel<Unit>(UNLIMITED)
             client.subscribe(
                 "multi-1",

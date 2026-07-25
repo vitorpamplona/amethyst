@@ -146,15 +146,20 @@ private fun BuzzImportRowContent(
         if (onToggleStar != null) {
             IconButton(onClick = onToggleStar) {
                 Icon(
-                    symbol = if (isStarred) MaterialSymbols.Star else MaterialSymbols.StarBorder,
-                    contentDescription = stringRes(if (isStarred) R.string.buzz_unstar else R.string.buzz_star),
+                    symbol = MaterialSymbols.PushPin,
+                    contentDescription = stringRes(if (isStarred) R.string.buzz_unpin else R.string.buzz_pin),
                     tint = if (isStarred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
             }
         }
         if (isAdded) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Match the OutlinedButton's trailing content padding so the label doesn't jam against
+            // the row edge (and doesn't jump horizontally) when Add flips to Added.
+            Row(
+                modifier = Modifier.padding(end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Icon(
                     symbol = MaterialSymbols.Check,
                     contentDescription = null,

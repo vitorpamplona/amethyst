@@ -68,6 +68,38 @@ class PayInvoiceErrorResponse(
     override fun errorMessage() = error?.message
 }
 
+// pay success response (nostr-wallet-connect/nwc#2). For a settled BOLT12 payment
+// `payer_proof` carries the `lnp1...` proof — the input a kind:9736 BOLT12 zap needs.
+// It is best-effort ("optional if unavailable"), so callers must tolerate its absence.
+class PaySuccessResponse(
+    val result: PayResult? = null,
+) : Response(NwcMethod.PAY) {
+    class PayResult(
+        val transaction_id: String? = null,
+        val state: String? = null,
+        val instruction_type: String? = null,
+        val amount: Long? = null,
+        val fees_paid: Long? = null,
+        val payment_hash: String? = null,
+        val preimage: String? = null,
+        val payer_proof: String? = null,
+        val txid: String? = null,
+        val failure_reason: String? = null,
+        val created_at: Long? = null,
+        val settled_at: Long? = null,
+    )
+}
+
+// receive success response (nostr-wallet-connect/nwc#2).
+class ReceiveSuccessResponse(
+    val result: ReceiveResult? = null,
+) : Response(NwcMethod.RECEIVE) {
+    class ReceiveResult(
+        val bip321: String? = null,
+        val transaction_id: String? = null,
+    )
+}
+
 // pay_keysend success response
 class PayKeysendSuccessResponse(
     val result: PayKeysendResult? = null,

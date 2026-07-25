@@ -48,6 +48,8 @@ class NwcMethodTest {
         assertEquals("make_hold_invoice", NwcMethod.MAKE_HOLD_INVOICE)
         assertEquals("cancel_hold_invoice", NwcMethod.CANCEL_HOLD_INVOICE)
         assertEquals("settle_hold_invoice", NwcMethod.SETTLE_HOLD_INVOICE)
+        assertEquals("pay", NwcMethod.PAY)
+        assertEquals("receive", NwcMethod.RECEIVE)
     }
 
     @Test
@@ -60,7 +62,7 @@ class NwcMethodTest {
     @Test
     fun testErrorCodeValues() {
         val codes = NwcErrorCode.entries
-        assertEquals(13, codes.size)
+        assertEquals(15, codes.size)
         assertEquals(NwcErrorCode.RATE_LIMITED, NwcErrorCode.valueOf("RATE_LIMITED"))
         assertEquals(NwcErrorCode.NOT_IMPLEMENTED, NwcErrorCode.valueOf("NOT_IMPLEMENTED"))
         assertEquals(NwcErrorCode.INSUFFICIENT_BALANCE, NwcErrorCode.valueOf("INSUFFICIENT_BALANCE"))
@@ -73,6 +75,8 @@ class NwcMethodTest {
         assertEquals(NwcErrorCode.BAD_REQUEST, NwcErrorCode.valueOf("BAD_REQUEST"))
         assertEquals(NwcErrorCode.NOT_FOUND, NwcErrorCode.valueOf("NOT_FOUND"))
         assertEquals(NwcErrorCode.EXPIRED, NwcErrorCode.valueOf("EXPIRED"))
+        assertEquals(NwcErrorCode.UNSUPPORTED_PAYMENT_INSTRUCTION, NwcErrorCode.valueOf("UNSUPPORTED_PAYMENT_INSTRUCTION"))
+        assertEquals(NwcErrorCode.UNSUPPORTED_NETWORK, NwcErrorCode.valueOf("UNSUPPORTED_NETWORK"))
         assertEquals(NwcErrorCode.OTHER, NwcErrorCode.valueOf("OTHER"))
     }
 

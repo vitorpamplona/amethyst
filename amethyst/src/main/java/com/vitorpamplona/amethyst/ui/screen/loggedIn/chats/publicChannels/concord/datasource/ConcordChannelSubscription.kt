@@ -24,11 +24,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Mount on any screen that lists the user's joined Concord Channels (the Messages
@@ -100,12 +103,84 @@ fun ConcordChannelPreload(accountViewModel: AccountViewModel) {
 
     bootstrapPinnedCommunities(accountViewModel)
 
+    // COMPLETE-mode Control-Plane sweep: page every joined community's whole Control Plane (no `since`,
+    // past the relay's per-filter cap) so the channel/roster/banlist fold is never silently truncated.
+    ConcordControlPlaneSync(accountViewModel)
+
     // Warm the last-message preview of every channel of every joined community (one drain per relay),
     // so the Messages inbox shows a preview for channels the user has never opened.
     ConcordChannelPreviewAccountPreload(accountViewModel)
 
     KeyDataSourceSubscription(state, dataSource)
 }
+
+/**
+ * Account-wide COMPLETE-mode sync of every joined community's Control Plane — the completeness pass
+ * that pairs with the always-on live subscription. The live plane subscription
+ * ([ConcordChannelFilterAssembler]) carries brand-new editions in real time, but it advances a
+ * `since` cursor and rides the relay's per-filter cap, so it can miss an edition below the high-water
+ * mark or a cropped initial page — either of which folds a partial channel list / stale roster.
+ * [com.vitorpamplona.amethyst.model.Account.syncConcordControlPlanes] closes both by re-fetching the
+ * whole plane with no `since`, paging past the cap.
+ *
+ * It fires only on the **events** that can create a gap — never on a wall-clock poll, because a
+ * persistent live subscription already keeps a connected relay complete:
+ *  1. **Load / membership / held-epoch change** — keyed on a signature of the joined set + held
+ *     epochs (the moments a new Control-Plane address appears: join/leave, Refounding). NOT the fold
+ *     revision — a revision-keyed sweep would loop (drain → ingest → fold → revision → drain).
+ *  2. **Reconnect** — a relay hosting a joined community that comes back online may have missed
+ *     editions published while it was down; that gap is exactly what the live sub can't backfill. We
+ *     re-sweep when the connected-relay set *gains* one of our relays, coalescing flaps with a min
+ *     interval.
+ */
+@Composable
+private fun ConcordControlPlaneSync(accountViewModel: AccountViewModel) {
+    val account = accountViewModel.account
+    val communities by account.concordChannelList.liveCommunities.collectAsStateWithLifecycle()
+    // Always-current set for the reconnect collector, whose effect is keyed on relays (which don't
+    // change when a same-relay community leaves) — so it must not close over a stale `communities`.
+    val liveCommunities by rememberUpdatedState(communities)
+
+    val sig =
+        remember(communities) {
+            communities.joinToString(",") { entry ->
+                "${entry.id}@${entry.rootEpoch}:" + entry.heldRoots.joinToString("-") { it.epoch.toString() }
+            }
+        }
+
+    // (1) Load + membership/epoch change: one complete sweep of the whole set.
+    LaunchedEffect(sig) {
+        if (communities.isNotEmpty()) account.syncConcordControlPlanes(communities)
+    }
+
+    // (2) Reconnect: re-sweep when a relay of ours transitions disconnected → connected.
+    val ourRelays =
+        remember(communities) {
+            communities
+                .flatMap { it.relays }
+                .mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+        }
+    LaunchedEffect(ourRelays) {
+        if (ourRelays.isEmpty()) return@LaunchedEffect
+        val connectedFlow = account.client.connectedRelaysFlow()
+        // Baseline = already-open relays; the (1) sweep covered those, so only NEW connections sweep.
+        var open = connectedFlow.value.intersect(ourRelays)
+        var lastSweep = 0L
+        connectedFlow.collect { nowConnected ->
+            val ours = nowConnected.intersect(ourRelays)
+            val newlyUp = ours - open
+            open = ours
+            if (newlyUp.isEmpty()) return@collect
+            val now = TimeUtils.nowMillis()
+            if (now - lastSweep < RECONNECT_RESWEEP_MIN_INTERVAL_MS) return@collect
+            lastSweep = now
+            account.syncConcordControlPlanes(liveCommunities)
+        }
+    }
+}
+
+/** Coalesce relay flaps: at most one reconnect-driven completeness sweep per this window. */
+private const val RECONNECT_RESWEEP_MIN_INTERVAL_MS = 60_000L
 
 /**
  * Fetch the private kind-13302 list of any Concord community pinned to the bottom bar whose list we
@@ -127,9 +202,14 @@ private fun bootstrapPinnedCommunities(accountViewModel: AccountViewModel) {
         remember(items, communities) {
             val known = communities.mapTo(HashSet()) { it.id }
             items
-                .filterIsInstance<BottomBarEntry.Concord>()
-                .map { it.communityId }
-                .filterTo(sortedSetOf()) { it !in known }
+                .mapNotNull {
+                    // Both a pinned community and a pinned channel need their community's list fetched.
+                    when (it) {
+                        is BottomBarEntry.Concord -> it.communityId
+                        is BottomBarEntry.ConcordChannel -> it.communityId
+                        else -> null
+                    }
+                }.filterTo(sortedSetOf()) { it !in known }
         }
 
     LaunchedEffect(missingPinned) {

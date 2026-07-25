@@ -31,6 +31,7 @@
     <string name="could_not_decrypt_the_message">सन्देश का अरहस्यीकरण असफल</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">अरसहस्यीकरण…</string>
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="group_picture">समूह चित्र</string>
     <string name="explicit_content">अभद्र विषयवस्तु</string>
     <string name="relay_notice">पुनःप्रसारक सूचना</string>
@@ -406,6 +407,7 @@
     <string name="chat_reply_in_thread">सूत्र में</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">सूत्र</string>
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d उत्तर</item>
@@ -3154,8 +3156,8 @@
     <string name="buzz_invite_copy">अनुकृति</string>
     <string name="buzz_invite_error_title">आमन्त्रण बनाने में असफल</string>
     <string name="buzz_invite_dismiss">ठीक</string>
-    <string name="buzz_star">प्रणाली ताराचिह्नित करें</string>
-    <string name="buzz_unstar">प्रणाली ताराचिह्न हटाएँ</string>
+    <string name="buzz_pin">चैनल पिन करें</string>
+    <string name="buzz_unpin">चैनल अनपिन करें</string>
     <string name="buzz_dm_section_empty">कोई संवाद नहीं अब तक</string>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">देखें %1$d और संवाद</item>

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.cli
 import com.vitorpamplona.amethyst.cli.commands.AdminCommand
 import com.vitorpamplona.amethyst.cli.commands.AwaitCommands
 import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
+import com.vitorpamplona.amethyst.cli.commands.Bolt12Commands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
 import com.vitorpamplona.amethyst.cli.commands.BuzzCommands
 import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
@@ -300,6 +301,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "graperank" -> GrapeRankCommand.dispatch(dataDir, tail)
         "search" -> SearchCommand.dispatch(dataDir, tail)
         "zap" -> ZapCommand.dispatch(dataDir, tail)
+        "bolt12" -> Bolt12Commands.dispatch(dataDir, tail)
         "offer" -> OfferCommands.dispatch(dataDir, tail)
         "debit" -> DebitCommands.dispatch(dataDir, tail)
         "event" -> EventCommand.run(dataDir, tail)
@@ -747,6 +749,16 @@ private fun printUsage() {
         |  zap event EVENT-ID SATS           same, but attribute the zap to a specific
         |    [--comment X] [--anon|--private]  event (must be in local store)
         |    [--timeout SECS]
+        |
+        |BOLT12 zaps (NIP-XX):
+        |  bolt12 decode LNO1|LNP1           decode a BOLT12 offer or payer proof
+        |  bolt12 verify EVENT-ID            validate a kind:9736 zap in the local store
+        |  bolt12 offer get USER             fetch + show a user's kind:10058 offers
+        |  bolt12 offer set LNO1 [LNO1 …]    publish your own kind:10058 offer list
+        |  bolt12 intent [event] TARGET SATS sign a 9737 intent; prints its payer_note
+        |    --offer LNO1 [--comment X]        (pay the offer out-of-band with that note)
+        |  bolt12 zap --intent JSON          wrap a signed intent + settled proof into a
+        |    --proof LNP1                      kind:9736, validate, and publish
         |
         |CLINK Offers:
         |  offer info NOFFER                          decode a noffer1… pointer (local, no network)

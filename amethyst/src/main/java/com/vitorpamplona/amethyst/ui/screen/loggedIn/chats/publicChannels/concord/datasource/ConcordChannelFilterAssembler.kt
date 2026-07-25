@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource
 
-import com.vitorpamplona.amethyst.commons.actions.ConcordPlaneSub
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
@@ -77,27 +76,18 @@ class ConcordChannelSubAssembler(
         val entries = account.concordChannelList.liveCommunities.value
         if (entries.isEmpty()) return null
 
-        // Control planes for every joined community, plus channel planes for the
-        // ones whose Control Plane has already folded. Deriving the channel planes
-        // is the only account-dependent step; collapsing planes into per-relay
-        // kind-1059 filters lives in the shared planner.
-        val subs = ArrayList<ConcordPlaneSub>()
-        subs += ConcordSubscriptionPlanner.controlPlaneSubs(entries)
-        // The Guestbook (membership) + next-epoch base-rekey planes. Their stream keys derive from
-        // the entry alone, so they AUTH on the initial connection; and since the relay now
-        // re-authenticates on an `auth-required` CLOSED, naming them here no longer starves the
-        // control/channel REQ the way it did before that fix.
-        subs += ConcordSubscriptionPlanner.auxiliaryPlaneSubs(entries)
-        for (entry in entries) {
-            val state =
+        // The Control Plane rides its OWN filter, kept apart from the Guestbook / rekey / channel
+        // planes, so a chatty Guestbook can't crowd its channel-defining editions out of a relay's
+        // per-filter result cap (the "Soapbox shows 1 of 12 channels" bug). See
+        // [ConcordSubscriptionPlanner.controlIsolatedFilters].
+        val all =
+            ConcordSubscriptionPlanner.controlIsolatedFilters(entries, since = since) { entry ->
                 account.concordSessions
                     .sessionFor(entry.id)
                     ?.state
-                    ?.value ?: continue
-            subs += ConcordSubscriptionPlanner.channelPlaneSubs(entry, state)
-        }
-
-        return ConcordSubscriptionPlanner.relayBasedFilters(subs, since)
+                    ?.value
+            }
+        return all.ifEmpty { null }
     }
 
     override fun id(key: ConcordChannelQueryState) = key.account

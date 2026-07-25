@@ -39,6 +39,7 @@
     <string name="could_not_decrypt_the_message">Nepodařilo se dešifrovat zprávu</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">Dešifrování…</string>
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="group_picture">Obrázek skupiny</string>
     <string name="explicit_content">Explicitní obsah</string>
     <string name="relay_notice">Oznámení relé</string>
@@ -412,6 +413,7 @@
     <string name="chat_reply_in_thread">Ve vlákně</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Vlákno</string>
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d odpověď</item>

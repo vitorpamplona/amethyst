@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
@@ -47,6 +49,18 @@ class RequestSerializer : StdSerializer<Request>(Request::class.java) {
         }
         when (value) {
             is PayInvoiceMethod -> {
+                if (value.params != null) {
+                    gen.writeObjectField("params", value.params)
+                }
+            }
+
+            is PayMethod -> {
+                if (value.params != null) {
+                    gen.writeObjectField("params", value.params)
+                }
+            }
+
+            is ReceiveMethod -> {
                 if (value.params != null) {
                     gen.writeObjectField("params", value.params)
                 }

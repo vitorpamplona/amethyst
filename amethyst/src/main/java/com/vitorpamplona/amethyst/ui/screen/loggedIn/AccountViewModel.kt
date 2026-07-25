@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -144,7 +145,6 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -159,10 +159,12 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -685,9 +687,13 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val pinnedRelays =
                 settings.uiSettingsFlow.bottomBarItems.value
-                    .filterIsInstance<BottomBarEntry.Concord>()
-                    .flatMap { it.relays }
-                    .mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .flatMap {
+                        when (it) {
+                            is BottomBarEntry.Concord -> it.relays
+                            is BottomBarEntry.ConcordChannel -> it.relays
+                            else -> emptyList()
+                        }
+                    }.mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
             account.importConcordCommunities(pinnedRelays)
         }
 
@@ -1199,6 +1205,34 @@ class AccountViewModel(
             onPayViaIntent = onPayViaIntent,
             zapType = effectiveType,
         )
+    }
+
+    /** True when the account has at least one NIP-47 wallet configured. */
+    fun hasNwcWallet(): Boolean =
+        account.settings.nwcWallets.value
+            .isNotEmpty()
+
+    /** True when a BOLT12 offer can be paid in-app: an NWC wallet is set and advertises `pay` (nwc#2). */
+    fun canPayBolt12ViaNwc(): Boolean = hasNwcWallet() && account.defaultWalletSupportsBolt12Pay()
+
+    /**
+     * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
+     * `pay` method, wrapping it as a BIP321 `bitcoin:?lno=` instruction. This is a
+     * plain payment, not a NIP-XX zap (no Nostr receipt); the outcome is surfaced as
+     * a toast. Callers should gate on [hasNwcWallet].
+     */
+    fun payBolt12OfferViaNwc(
+        offer: String,
+        amountMillisats: Long,
+    ) = launchSigner {
+        account.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
+            when (response) {
+                is PaySuccessResponse -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_sent)
+                is IErrorResponseLike ->
+                    toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, response.errorMessage() ?: "")
+                else -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_failed, "")
+            }
+        }
     }
 
     /**
@@ -2131,27 +2165,10 @@ class AccountViewModel(
 
     fun markAllChatNotesAsRead(notes: List<Note>) {
         viewModelScope.launch(Dispatchers.IO) {
-            for (note in notes) {
-                val noteEvent = note.event
-                when {
-                    noteEvent is IsInPublicChatChannel -> {
-                        account.markAsRead("Channel/${noteEvent.channelId()}", noteEvent.createdAt)
-                    }
-
-                    noteEvent is ChatroomKeyable -> {
-                        account.markAsRead(privateChatLastReadRoute(noteEvent.chatroomKey(account.signer.pubKey)), noteEvent.createdAt)
-                    }
-
-                    noteEvent is DraftWrapEvent -> {
-                        val innerEvent = account.draftsDecryptionCache.preCachedDraft(noteEvent)
-                        if (innerEvent is IsInPublicChatChannel) {
-                            account.markAsRead("Channel/${innerEvent.channelId()}", noteEvent.createdAt)
-                        } else if (innerEvent is ChatroomKeyable) {
-                            account.markAsRead(privateChatLastReadRoute(innerEvent.chatroomKey(account.signer.pubKey)), noteEvent.createdAt)
-                        }
-                    }
-                }
-            }
+            // markRoomNoteAsRead resolves each row's last-read route the same way ChatroomEntry does,
+            // so every room kind shown on the Messages screen — public chats, DMs, NIP-29 relay groups,
+            // Concord, Marmot, geohash, ephemeral, and the collapsed per-server rows — is covered.
+            notes.forEach { markRoomNoteAsRead(account, it) }
 
             markHiddenChatroomsAsRead()
         }

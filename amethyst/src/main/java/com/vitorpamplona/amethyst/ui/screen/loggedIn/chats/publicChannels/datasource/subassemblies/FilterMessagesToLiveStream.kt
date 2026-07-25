@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 fun filterMessagesToLiveActivities(
     channel: LiveActivitiesChannel,
@@ -46,6 +47,7 @@ fun filterMessagesToLiveActivities(
                             LiveActivitiesClipEvent.KIND,
                             LnZapEvent.KIND,
                             OnchainZapEvent.KIND,
+                            Bolt12ZapEvent.KIND,
                         ),
                     tags = mapOf("a" to listOfNotNull(channel.address.toValue())),
                     limit = 200,

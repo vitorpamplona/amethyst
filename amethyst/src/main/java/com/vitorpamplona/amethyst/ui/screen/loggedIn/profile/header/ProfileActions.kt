@@ -42,6 +42,8 @@ fun ProfileActions(
 
     PaymentButton(baseUser, accountViewModel, nav)
 
+    Bolt12PayButton(baseUser, accountViewModel)
+
     val isMe by
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 

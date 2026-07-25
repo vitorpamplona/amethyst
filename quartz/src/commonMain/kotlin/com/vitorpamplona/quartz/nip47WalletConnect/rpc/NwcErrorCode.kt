@@ -33,6 +33,10 @@ enum class NwcErrorCode {
     BAD_REQUEST,
     NOT_FOUND,
     EXPIRED,
+
+    // nostr-wallet-connect/nwc#2 — pay/receive payment-instruction errors.
+    UNSUPPORTED_PAYMENT_INSTRUCTION,
+    UNSUPPORTED_NETWORK,
     OTHER,
 }
 

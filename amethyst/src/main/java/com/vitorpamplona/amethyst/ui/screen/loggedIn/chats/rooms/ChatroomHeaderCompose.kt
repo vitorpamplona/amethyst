@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -85,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
@@ -101,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServ
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.ChatLabelMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -450,7 +453,10 @@ private fun RelayGroupRoomCompose(
     val lastContent =
         if (author != null && noteEvent != null) {
             val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
+            // A Buzz timeline row (system line, huddle/job activity, diff) carries JSON/diff in its
+            // content, so show its human-readable summary — the same text the in-chat row renders —
+            // rather than "author: {json}". Plain chat messages fall through to the usual framing.
+            buzzTimelinePreviewSummary(noteEvent) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
             // Event-less placeholder row for a just-joined group with no messages yet — say so
             // explicitly (like Marmot groups) instead of an empty second line.
@@ -586,7 +592,9 @@ private fun RelayGroupServerRoomCompose(
     val lastContent =
         if (author != null && noteEvent != null) {
             val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
+            // Buzz timeline rows (system/huddle/job/diff) carry JSON/diff content — summarize them
+            // like the in-chat row instead of printing raw payload; plain chat falls through.
+            buzzTimelinePreviewSummary(noteEvent) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
             stringRes(R.string.relay_group_no_messages_yet)
         }
@@ -677,7 +685,7 @@ private fun RelayNameChip(
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.widthIn(max = ChatLabelMaxWidth).clickable(onClick = onClick),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -695,7 +703,7 @@ private fun RelayNameChip(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.MiddleEllipsis,
             )
         }
     }
@@ -727,6 +735,7 @@ private fun ChannelTitleWithLabelInfo(
         HeaderPill(
             symbol = labelIcon,
             text = stringRes(id = label),
+            modifier = Modifier.widthIn(max = ChatLabelMaxWidth),
         )
     }
 }
@@ -864,7 +873,12 @@ private fun RowScope.LastMessagePreview(
 
         val text =
             when (preview) {
-                is ChatPreview.Body -> preview.text
+                is ChatPreview.Body -> {
+                    // Mark my own newest message with a "You:" prefix (like other messengers) so a
+                    // 1:1 room's preview shows who spoke last instead of reading like the counterpart.
+                    val sentByMe = lastMessage.author?.pubkeyHex == accountViewModel.account.signer.pubKey
+                    if (sentByMe) stringRes(R.string.chat_preview_you_prefix, preview.text) else preview.text
+                }
                 ChatPreview.Decrypting -> stringRes(R.string.chat_preview_decrypting)
                 ChatPreview.Undecryptable -> stringRes(R.string.could_not_decrypt_the_message)
                 ChatPreview.Missing -> stringRes(R.string.referenced_event_not_found)
@@ -875,7 +889,7 @@ private fun RowScope.LastMessagePreview(
             color = MaterialTheme.colorScheme.grayText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
             modifier = Modifier.weight(1f),
         )
     }
@@ -954,7 +968,7 @@ fun ChannelName(
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                    style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
                     modifier = Modifier.weight(1f),
                 )
             } else {
@@ -963,6 +977,7 @@ fun ChannelName(
                     color = MaterialTheme.colorScheme.grayText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
                     modifier = Modifier.weight(1f),
                 )
             }

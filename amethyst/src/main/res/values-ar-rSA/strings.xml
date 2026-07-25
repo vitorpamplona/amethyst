@@ -37,6 +37,7 @@
     <string name="referenced_event_not_found">لم يتم العثور على الحدث المشار إليه</string>
     <string name="could_not_decrypt_the_message">لا يمكن فك تشفير الرسالة</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="group_picture">صورة المجموعة</string>
     <string name="explicit_content">محتوى فاضح</string>
     <string name="relay_notice">إشعار relay</string>
@@ -304,6 +305,7 @@
     <string name="loading_account">جاري تحميل الحساب</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">مشفَّر</string>
     <string name="chats_history_proto_nip04">قديم</string>

@@ -35,6 +35,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
@@ -89,6 +91,53 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<PayInvoiceErrorResponse>(response)
         assertEquals(NwcErrorCode.PAYMENT_FAILED, response.error?.code)
+    }
+
+    // --- Pay Success (nwc#2 BOLT12) ---
+
+    @Test
+    fun testPaySuccessWithPayerProofDeserialization() {
+        val json =
+            """{"result_type":"pay","result":{"state":"settled","instruction_type":"bolt12","amount":21000,"fees_paid":100,"payment_hash":"abc","preimage":"def","payer_proof":"lnp1xyz","settled_at":1693876497}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<PaySuccessResponse>(response)
+        assertEquals("settled", response.result?.state)
+        assertEquals("bolt12", response.result?.instruction_type)
+        assertEquals(21_000L, response.result?.amount)
+        assertEquals(100L, response.result?.fees_paid)
+        assertEquals("abc", response.result?.payment_hash)
+        assertEquals("def", response.result?.preimage)
+        assertEquals("lnp1xyz", response.result?.payer_proof)
+        assertEquals(1693876497L, response.result?.settled_at)
+    }
+
+    @Test
+    fun testPaySuccessWithoutPayerProof() {
+        // payer_proof is best-effort ("optional if unavailable") — absence must parse fine.
+        val json = """{"result_type":"pay","result":{"state":"settled","preimage":"def"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<PaySuccessResponse>(response)
+        assertEquals("def", response.result?.preimage)
+        assertNull(response.result?.payer_proof)
+    }
+
+    @Test
+    fun testPayErrorUnsupportedInstruction() {
+        val json = """{"result_type":"pay","error":{"code":"UNSUPPORTED_PAYMENT_INSTRUCTION","message":"no bolt12"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<NwcErrorResponse>(response)
+        assertEquals(NwcErrorCode.UNSUPPORTED_PAYMENT_INSTRUCTION, response.error?.code)
+    }
+
+    // --- Receive Success (nwc#2) ---
+
+    @Test
+    fun testReceiveSuccessDeserialization() {
+        val json = """{"result_type":"receive","result":{"bip321":"bitcoin:?lightning=lnbc1&lno=lno1","transaction_id":"tx1"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<ReceiveSuccessResponse>(response)
+        assertEquals("bitcoin:?lightning=lnbc1&lno=lno1", response.result?.bip321)
+        assertEquals("tx1", response.result?.transaction_id)
     }
 
     // --- PayKeysend Success ---

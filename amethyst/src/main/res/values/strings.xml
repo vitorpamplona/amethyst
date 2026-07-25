@@ -31,6 +31,8 @@
     <string name="could_not_decrypt_the_message">Could not decrypt the message</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">Decrypting…</string>
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
+    <string name="chat_preview_you_prefix">You: %1$s</string>
     <string name="group_picture">Group Picture</string>
     <string name="explicit_content">Explicit Content</string>
     <string name="relay_notice">Relay Notice</string>
@@ -1751,6 +1753,21 @@
     <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
     <string name="error_dialog_payment_error">Unable to open payment</string>
 
+    <string name="bolt12_offers">BOLT12 Offers</string>
+    <string name="bolt12_offers_explainer">Publish reusable BOLT12 offers so others can zap you over Lightning without a separate invoice each time.</string>
+    <string name="bolt12_offers_section_explainer">Add one or more BOLT12 offers (lno1…). They are shared publicly so anyone can pay you.</string>
+    <string name="no_bolt12_offers_message">No BOLT12 offers set. Add one below ↓</string>
+    <string name="bolt12_offer">BOLT12 offer (lno1…)</string>
+    <string name="invalid_bolt12_offer">Not a valid BOLT12 offer</string>
+    <string name="delete_bolt12_offer">Delete BOLT12 offer</string>
+    <string name="bolt12_pay_with_wallet">Pay with connected wallet</string>
+    <string name="bolt12_payment_amount_sats">Amount (sats)</string>
+    <string name="bolt12_payment_sent">BOLT12 payment sent</string>
+    <string name="bolt12_payment_failed">BOLT12 payment failed: %1$s</string>
+    <string name="bolt12_zap_error">BOLT12 zap error</string>
+    <string name="bolt12_zap_paid_no_receipt">Paid over BOLT12, but the wallet returned no proof, so no zap receipt was published.</string>
+    <string name="bolt12_zap_invalid_receipt">Paid over BOLT12, but the payment proof did not validate, so no zap receipt was published.</string>
+
     <string name="uploading_state_ready">Not Started</string>
     <string name="uploading_state_compressing">Compressing</string>
     <string name="uploading_state_uploading">Uploading</string>
@@ -1890,6 +1907,12 @@
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">From %1$s</string>
     <string name="app_notification_zaps_channel_message_for">for %1$s</string>
+
+    <string name="app_notification_payments_channel_id" translatable="false">PaymentsReceivedID</string>
+    <string name="app_notification_payments_channel_name">Payments Received</string>
+    <string name="app_notification_payments_channel_description">Notifies you when your connected wallet receives a payment that is not a Nostr zap</string>
+    <string name="app_notification_payments_channel_message">Received %1$s sats</string>
+    <string name="app_notification_payments_summary">New payments</string>
 
     <string name="app_notification_reply_label">Reply</string>
     <string name="app_notification_mark_read_label">Mark Read</string>
@@ -2247,6 +2270,7 @@
     <string name="video_player_search_keywords" translatable="false">video, player, playback, autoplay, mute</string>
     <string name="audio_visualizer_search_keywords" translatable="false">audio, visualizer, spectrum, bars, waves, radial, aurora, animation</string>
     <string name="payment_targets_search_keywords" translatable="false">zap split, split, recipients, forward zaps</string>
+    <string name="bolt12_offers_search_keywords" translatable="false">bolt12, bolt 12, offer, lno, lightning, zap, reusable invoice</string>
     <string name="call_settings_search_keywords" translatable="false">webrtc, video call, voice call, calls</string>
     <string name="translations_search_keywords" translatable="false">language, translate, locale</string>
     <string name="ots_explorer_search_keywords" translatable="false">opentimestamps, timestamp, ots, proof</string>
@@ -3492,8 +3516,8 @@
     <string name="buzz_invite_copy">Copy</string>
     <string name="buzz_invite_error_title">Couldn\'t create invite</string>
     <string name="buzz_invite_dismiss">OK</string>
-    <string name="buzz_star">Star channel</string>
-    <string name="buzz_unstar">Unstar channel</string>
+    <string name="buzz_pin">Pin channel</string>
+    <string name="buzz_unpin">Unpin channel</string>
     <string name="buzz_dm_section_empty">No conversations yet</string>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">See %1$d more conversation</item>

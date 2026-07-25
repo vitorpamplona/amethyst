@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -111,6 +112,7 @@ class NotificationDispatcher(
                 LnZapEvent.KIND,
                 NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
+                Bolt12ZapEvent.KIND,
                 ReactionEvent.KIND,
                 RepostEvent.KIND,
                 GenericRepostEvent.KIND,

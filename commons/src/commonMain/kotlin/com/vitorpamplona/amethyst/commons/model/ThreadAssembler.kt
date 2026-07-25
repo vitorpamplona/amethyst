@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -182,7 +183,7 @@ class ThreadAssembler(
  */
 fun Event?.anchorsItsOwnThread(): Boolean =
     when (this) {
-        is ReactionEvent, is LnZapEvent, is NutzapEvent, is OnchainZapEvent -> true
+        is ReactionEvent, is LnZapEvent, is NutzapEvent, is OnchainZapEvent, is Bolt12ZapEvent -> true
         else -> false
     }
 

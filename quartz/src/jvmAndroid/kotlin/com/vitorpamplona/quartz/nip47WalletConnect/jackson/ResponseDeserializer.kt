@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
@@ -71,6 +73,14 @@ class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
             return when (resultType) {
                 NwcMethod.PAY_INVOICE -> {
                     jp.codec.treeToValue(jsonObject, PayInvoiceSuccessResponse::class.java)
+                }
+
+                NwcMethod.PAY -> {
+                    jp.codec.treeToValue(jsonObject, PaySuccessResponse::class.java)
+                }
+
+                NwcMethod.RECEIVE -> {
+                    jp.codec.treeToValue(jsonObject, ReceiveSuccessResponse::class.java)
                 }
 
                 NwcMethod.PAY_KEYSEND -> {

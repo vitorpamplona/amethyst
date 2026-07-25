@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -136,6 +137,17 @@ class NotificationSummaryState(
                         }
                     }
 
+                    noteEvent is Bolt12ZapEvent -> {
+                        if (noteEvent.isTaggedUser(currentUser)) {
+                            val amount = noteEvent.amount()
+                            if (amount != null) {
+                                val netDate = formatDate(noteEvent.createdAt)
+                                zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + BigDecimal.valueOf(amount / 1000)
+                                takenIntoAccount.add(noteEvent.id)
+                            }
+                        }
+                    }
+
                     noteEvent is BaseThreadedEvent &&
                         noteEvent.isTaggedUser(currentUser) &&
                         noteEvent.pubKey != currentUser -> {
@@ -216,6 +228,18 @@ class NotificationSummaryState(
                                 if (amount != null) {
                                     val netDate = formatDate(noteEvent.createdAt)
                                     zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + BigDecimal.valueOf(amount)
+                                    takenIntoAccount.add(noteEvent.id)
+                                    hasNewElements = true
+                                }
+                            }
+                        }
+
+                        noteEvent is Bolt12ZapEvent -> {
+                            if (noteEvent.isTaggedUser(currentUser)) {
+                                val amount = noteEvent.amount()
+                                if (amount != null) {
+                                    val netDate = formatDate(noteEvent.createdAt)
+                                    zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + BigDecimal.valueOf(amount / 1000)
                                     takenIntoAccount.add(noteEvent.id)
                                     hasNewElements = true
                                 }

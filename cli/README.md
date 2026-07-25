@@ -672,6 +672,24 @@ output then also reports `paid` + the preimage.
 | `amy zap user USER SATS [--comment X] [--anon\|--private] [--with NDEBIT] [--timeout SECS]` | Profile zap: build the zap request and fetch a BOLT11 from USER's LN service. |
 | `amy zap event EVENT-ID SATS [--comment X] [--anon\|--private] [--with NDEBIT] [--timeout SECS]` | Same, attributed to a specific event (must be in the local store). Zap splits are honored — one invoice per recipient. |
 
+### BOLT12 zaps (NIP-XX)
+
+BOLT12 zaps (kinds 9736/9737, offers in kind:10058). amy has no NWC payment
+rail, so sending is a **two-step, out-of-band** flow: `bolt12 intent` signs the
+kind:9737 and prints its `payer_note`; you pay the offer elsewhere putting that
+note in the invoice request's `invreq_payer_note`; then `bolt12 zap` wraps the
+same signed intent and the settled `lnp` proof into a kind:9736 (validated
+before publishing).
+
+| Command | What it does |
+|---|---|
+| `amy bolt12 decode LNO1\|LNP1` | Decode a BOLT12 offer or payer proof to its fields (offline). |
+| `amy bolt12 verify EVENT-ID` | Validate a kind:9736 zap in the local store — reports `valid`, `crypto_verified`, recipient, amount, payment hash. |
+| `amy bolt12 offer get USER [--timeout SECS]` | Fetch + show a user's kind:10058 BOLT12 offers. |
+| `amy bolt12 offer set LNO1 [LNO1 …]` | Publish your own kind:10058 offer list. |
+| `amy bolt12 intent [event] TARGET SATS --offer LNO1 [--comment X]` | Sign a kind:9737 intent for a user (or event); prints its `intent_id`, `payer_note`, and `intent_json`. |
+| `amy bolt12 zap --intent JSON --proof LNP1` | Wrap a signed intent + settled payer proof into a kind:9736, validate, and publish. |
+
 ### CLINK Offers
 
 | Command | What it does |

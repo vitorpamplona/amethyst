@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageSuccessResponse
@@ -64,6 +66,18 @@ class ResponseSerializer : StdSerializer<Response>(Response::class.java) {
             }
 
             is PayInvoiceSuccessResponse -> {
+                if (value.result != null) {
+                    gen.writeObjectField("result", value.result)
+                }
+            }
+
+            is PaySuccessResponse -> {
+                if (value.result != null) {
+                    gen.writeObjectField("result", value.result)
+                }
+            }
+
+            is ReceiveSuccessResponse -> {
                 if (value.result != null) {
                     gen.writeObjectField("result", value.result)
                 }
