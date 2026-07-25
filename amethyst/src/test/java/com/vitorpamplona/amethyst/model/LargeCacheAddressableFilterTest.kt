@@ -28,60 +28,53 @@ import org.junit.Test
 
 class LargeCacheAddressableFilterTest {
     companion object {
-        // LargeSoftCache stores values as WeakReferences, so the cache alone does not
-        // keep the mock notes alive. Without a strong referent they are cleared at the
-        // next GC and every query returns 0 — an order/GC-dependent flake. Hold the notes
-        // strongly here for the lifetime of the test class.
-        private val strongRefs = mutableListOf<AddressableNote>()
-
-        fun LargeSoftCache<Address, AddressableNote>.addMock(
+        fun mock(
             kind: Int,
             pubkey: HexKey,
             dTag: String = "",
-        ) {
-            val address = Address(kind, pubkey, dTag)
-            val note = AddressableNote(address)
-            strongRefs.add(note)
-            put(address, note)
-        }
+        ) = AddressableNote(Address(kind, pubkey, dTag))
+
+        // LargeSoftCache stores values as WeakReferences, so the cache alone does not keep
+        // the mock notes alive. Without a strong referent they are cleared at the next GC
+        // and every query returns 0 — an order/GC-dependent flake. This list is the fixture's
+        // source of truth and holds them strongly for the lifetime of the test class.
+        val notes =
+            listOf(
+                mock(32000, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad"),
+                mock(32000, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43"),
+                mock(32000, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab"),
+                mock(32000, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a"),
+                mock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad"),
+                mock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad", "a"),
+                mock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad", "z"),
+                mock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad", "askldfjaljksdflkaj"),
+                mock(32001, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43"),
+                mock(32001, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab"),
+                mock(32001, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a"),
+                mock(32002, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad"),
+                mock(32002, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43"),
+                mock(32002, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab"),
+                mock(32002, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a"),
+                mock(32003, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad"),
+                mock(32003, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43"),
+                mock(32003, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab"),
+                mock(32003, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a"),
+            )
 
         val cache =
             LargeSoftCache<Address, AddressableNote>().apply {
-                addMock(32000, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad")
-                addMock(32000, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43")
-                addMock(32000, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
-                addMock(32000, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a")
-
-                addMock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad")
-                addMock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad", "a")
-                addMock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad", "z")
-                addMock(32001, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad", "askldfjaljksdflkaj")
-                addMock(32001, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43")
-                addMock(32001, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
-                addMock(32001, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a")
-
-                addMock(32002, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad")
-                addMock(32002, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43")
-                addMock(32002, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
-                addMock(32002, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a")
-
-                addMock(32003, "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad")
-                addMock(32003, "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43")
-                addMock(32003, "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
-                addMock(32003, "f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a")
+                notes.forEach { put(it.address, it) }
             }
     }
 
     @Test
     fun survivesGarbageCollection() {
         // Regression guard for the flaky-fixture root cause: the mock notes must stay
-        // reachable across a GC. Before the strong-reference fix, WeakReference-backed
+        // reachable across a GC. Before `notes` held them strongly, the WeakReference-backed
         // entries were cleared here and every query returned 0.
         System.gc()
-        System.gc()
-        Runtime.getRuntime().freeMemory()
 
-        assertEquals(19, cache.filterIntoSet(listOf(32_000, 32_001, 32_002, 32_003)).size)
+        assertEquals(notes.size, cache.filterIntoSet(listOf(32_000, 32_001, 32_002, 32_003)).size)
     }
 
     @Test
