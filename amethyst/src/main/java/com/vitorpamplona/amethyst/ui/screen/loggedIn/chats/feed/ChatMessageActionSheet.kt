@@ -287,7 +287,7 @@ fun ChatMessageActionSheet(
                 TileRow {
                     val label = if (canEditBuzz) R.string.buzz_edit_message else R.string.edit_message
                     ActionTile(MaterialSymbols.Edit, stringRes(label)) {
-                        onWantsToEditChatMessage!!(note)
+                        onWantsToEditChatMessage(note)
                         onDismiss()
                     }
                 }
