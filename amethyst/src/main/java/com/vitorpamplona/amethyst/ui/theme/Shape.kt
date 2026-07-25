@@ -133,6 +133,14 @@ val Size100dp = 100.dp
 val Size110dp = 110.dp
 val Size165dp = 165.dp
 
+/**
+ * Max width for a type/label chip sitting beside a room name on a Messages-list row (the NIP-28
+ * "Public Chat" pill, the NIP-29 relay-host chip, the Concord community chip, ...). Roughly half a
+ * phone row so a long relay URL or community name is truncated (middle ellipsis) instead of crowding
+ * the room name out — the name is weighted and keeps whatever the capped chip doesn't take.
+ */
+val ChatLabelMaxWidth = 140.dp
+
 val StdEndPadding = Modifier.padding(end = 10.dp)
 val HalfEndPadding = Modifier.padding(end = 5.dp)
 val HalfStartPadding = Modifier.padding(start = 5.dp)
