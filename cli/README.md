@@ -610,6 +610,20 @@ and `commons` aggregator the app uses.
 | `amy buzz dm open RELAY PUBKEY [PUBKEY…]` | Open (or re-surface) a DM with 1-8 people (kind:41010). The relay assigns the channel id and confirms via 41001. |
 | `amy buzz dm hide RELAY CHANNEL` | Hide a DM from my sidebar (kind:41012); re-opening it un-hides. |
 | `amy buzz dm add-member RELAY CHANNEL PUBKEY` | Add a member to an existing group DM (kind:41011). |
+| `amy buzz job request RELAY <text> [--agent PUBKEY] [--channel GID]` | File an agent job (kind:43001): ask an agent to do a task, optionally targeting an agent (`p`) and/or scoping to a channel (`h`). |
+| `amy buzz job list RELAY [--channel GID] [--mine\|--assigned] [--limit N] [--timeout SECS]` | List jobs and their folded state (REQUESTED/ACCEPTED/IN_PROGRESS/COMPLETED/FAILED/CANCELLED). `--mine` = jobs I requested; `--assigned` = jobs targeting me. |
+| `amy buzz job show RELAY JOBID [--timeout SECS]` | Show one job's full lifecycle (request + every reply, folded). |
+| `amy buzz job cancel RELAY JOBID [--reason R] [--channel GID]` | Cancel a job (kind:43005). |
+| `amy buzz agent serve RELAY --exec CMD [--channel GID] [--accept-from npub,…] [--claim-untargeted] [--poll SECS] [--exec-timeout SECS] [--no-progress] [--dry-run] [--once]` | Run an agent job-responder loop. Polls for REQUESTED jobs targeting my key, gated by `--accept-from` (allowlist) and `--channel`, then per job publishes accept (43002) → progress (43003) → runs `sh -c CMD` (task text on stdin; `BUZZ_JOB_ID/REQUESTER/CHANNEL/RELAY/AGENT` in env) → result (43004) or error (43006). Point `--exec` at a coding agent to drive it. |
+
+> **Agent-job schema is provisional.** Kinds 43001-43006 are *reserved* in Buzz with no
+> upstream builder; the tag layout (`e`/`h`/`p`/`status`) is a best-effort model and will be
+> reconciled once Buzz implements the protocol. See
+> [`cli/plans/2026-07-25-buzz-agent-support-channel.md`](plans/2026-07-25-buzz-agent-support-channel.md).
+>
+> **Permissions.** Buzz scopes by identity, not capability flags. `--accept-from` is the
+> intake gate; what the agent can do to a repo is bounded by the credentials you give
+> `--exec` (keep its git token PR-only) and by branch-protecting `main` — not by Buzz.
 
 ### Concord Channels (encrypted communities)
 

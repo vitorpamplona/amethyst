@@ -822,6 +822,9 @@ private fun printUsage() {
         |  buzz attest AGENT [--kind K]               issue a NIP-OA attestation (offline)
         |  buzz console [--relays R,R]                aggregate my kind-44200 agent turn metrics
         |  buzz personas [--relays R,R]               list my kind-30175 personas
+        |  buzz job request RELAY <text>              file an agent job (kind-43001)
+        |  buzz job list/show/cancel RELAY …          track agent jobs (43001-43006)
+        |  buzz agent serve RELAY --exec CMD          run an agent job-responder loop
         |
         |Marmot (MLS group messaging):
         |  marmot key-package publish                 publish a fresh KeyPackage
