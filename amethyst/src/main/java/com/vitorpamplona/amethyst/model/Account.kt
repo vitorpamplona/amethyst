@@ -3283,6 +3283,8 @@ class Account(
     ): HexKey? {
         if (!isWriteable()) return null
         val signed = signer.sign(JobRequestEvent.build(request, channelId, null))
+        // Reflect it locally so the board updates immediately (publish only sends to relays).
+        cache.justConsumeMyOwnEvent(signed)
         client.publish(signed, setOf(relay))
         return signed.id
     }
@@ -3295,25 +3297,31 @@ class Account(
     ) {
         if (!isWriteable()) return
         val signed = signer.sign(JobCancelEvent.build(jobId, "", channelId))
+        cache.justConsumeMyOwnEvent(signed)
         client.publish(signed, setOf(relay))
     }
 
     /**
-     * Upvote a Buzz job [jobId] — a NIP-25 like (kind-7 `+`) `e`-tagging the request and
+     * Upvote a Buzz job [jobId] (authored by [jobAuthor]) — a NIP-25 like (kind-7 `+`) `e`-tagging
+     * the request, `p`-tagging its author and `k`-tagging the reacted kind per NIP-25, and
      * `h`-scoped to [channelId] so the scheduler (and the board) count it toward priority.
      */
     suspend fun upvoteBuzzJob(
         relay: NormalizedRelayUrl,
         channelId: String,
         jobId: HexKey,
+        jobAuthor: HexKey?,
     ) {
         if (!isWriteable()) return
         val template =
             eventTemplate<ReactionEvent>(ReactionEvent.KIND, ReactionEvent.LIKE) {
                 addUnique(ETag.assemble(jobId, null, null))
+                jobAuthor?.let { addUnique(PTag.assemble(it, null)) }
+                addUnique(arrayOf("k", JobRequestEvent.KIND.toString()))
                 addUnique(GroupIdTag.assemble(channelId))
             }
         val signed = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signed)
         client.publish(signed, setOf(relay))
     }
 

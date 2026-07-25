@@ -41,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,17 +81,21 @@ fun RelayStatusBar(
     relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
 ) {
-    val connected by accountViewModel.account.client
-        .connectedRelaysFlow()
-        .collectAsStateWithLifecycle()
-    val authMap by Amethyst.instance.authCoordinator.receiver.authStateFlow
-        .collectAsStateWithLifecycle()
-    val buzzRelays by BuzzRelayDialect.flow.collectAsStateWithLifecycle()
+    // These are global StateFlows (a change on ANY relay re-emits). Derive this relay's booleans
+    // so the bar only recomposes when THIS relay's connection/auth/dialect actually changes.
+    val connectedState =
+        accountViewModel.account.client
+            .connectedRelaysFlow()
+            .collectAsStateWithLifecycle()
+    val authState =
+        Amethyst.instance.authCoordinator.receiver.authStateFlow
+            .collectAsStateWithLifecycle()
+    val buzzState = BuzzRelayDialect.flow.collectAsStateWithLifecycle()
     val info by loadRelayInfo(relay)
 
-    val isConnected = relay in connected
-    val phase = authMap[relay]?.phase ?: RelayAuthSnapshot.Phase.IDLE
-    val isBuzz = relay in buzzRelays
+    val isConnected by remember(relay) { derivedStateOf { relay in connectedState.value } }
+    val phase by remember(relay) { derivedStateOf { authState.value[relay]?.phase ?: RelayAuthSnapshot.Phase.IDLE } }
+    val isBuzz by remember(relay) { derivedStateOf { relay in buzzState.value } }
     val stat = remember(relay, isConnected) { Amethyst.instance.relayStats.get(relay) }
 
     val (dotColor, statusLabel) = health(isConnected, phase)

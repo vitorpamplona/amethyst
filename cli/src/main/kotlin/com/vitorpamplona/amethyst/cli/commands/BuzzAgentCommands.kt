@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -51,6 +52,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 
 /**
@@ -98,6 +100,10 @@ object BuzzAgentCommands {
         """.trimMargin()
 
     private val worktreeMutex = Mutex() // git worktree add/remove touch shared repo metadata
+
+    // (worktreePath, branch) for jobs currently executing — a JVM shutdown hook force-removes
+    // these on Ctrl-C/kill, when coroutine `finally` blocks don't run.
+    private val activeWorktrees = Collections.synchronizedSet(mutableSetOf<Pair<String, String>>())
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -214,6 +220,19 @@ object BuzzAgentCommands {
                 return Output.error("bad_args", "--worktree is not a git repo: $worktreeBase")
             }
 
+            // Coroutine `finally` blocks don't run on a hard kill, so a Ctrl-C mid-job would leak
+            // its worktree + branch. Force-remove any still-active ones on JVM shutdown.
+            if (worktreeBase != null) {
+                Runtime.getRuntime().addShutdownHook(
+                    Thread {
+                        activeWorktrees.toList().forEach { (path, branch) ->
+                            runCatching { ProcessBuilder("git", "-C", worktreeBase, "worktree", "remove", "--force", path).start().waitFor() }
+                            runCatching { ProcessBuilder("git", "-C", worktreeBase, "branch", "-D", branch).start().waitFor() }
+                        }
+                    },
+                )
+            }
+
             // Resolve the intake allowlist: explicit --accept-from ∪ the channel's kind-39002
             // member roster (when --accept-from-channel). Null = obey anyone (no gate).
             val allow: Set<HexKey>? =
@@ -268,7 +287,15 @@ object BuzzAgentCommands {
                 handled.add(job.jobId)
                 launch {
                     sem.withPermit {
-                        val r = handle(ctx, me, opts, job)
+                        // Isolate a throwing job so it can't cancel its siblings in this batch.
+                        val r =
+                            try {
+                                handle(ctx, me, opts, job)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                mapOf("job_id" to job.jobId, "state" to "failed", "error" to (e.message ?: "exception"))
+                            }
                         doneMutex.withLock { done.add(r) }
                     }
                 }
@@ -290,22 +317,34 @@ object BuzzAgentCommands {
             val inflight = mutableSetOf<HexKey>()
             val mutex = Mutex()
             while (true) {
-                val busy = mutex.withLock { inflight.toSet() }
-                val free = opts.parallel - busy.size
-                if (free > 0) {
-                    val pending = selectPending(ctx, me, opts, allow, handled + busy).take(free)
-                    pending.forEach { job ->
-                        handled.add(job.jobId)
-                        mutex.withLock { inflight.add(job.jobId) }
-                        launch {
-                            try {
-                                val r = handle(ctx, me, opts, job)
-                                System.err.println("[agent] ${r["state"]} job ${job.jobId.take(12)}… (${job.upvotes} upvotes)")
-                            } finally {
-                                mutex.withLock { inflight.remove(job.jobId) }
+                // A poll runs selectPending()/drain() directly in this scope; a transient relay
+                // error must not kill the unattended daemon, so isolate each poll and retry.
+                try {
+                    val busy = mutex.withLock { inflight.toSet() }
+                    val free = opts.parallel - busy.size
+                    if (free > 0) {
+                        val pending = selectPending(ctx, me, opts, allow, handled + busy).take(free)
+                        pending.forEach { job ->
+                            handled.add(job.jobId)
+                            mutex.withLock { inflight.add(job.jobId) }
+                            launch {
+                                try {
+                                    val r = handle(ctx, me, opts, job)
+                                    System.err.println("[agent] ${r["state"]} job ${job.jobId.take(12)}… (${job.upvotes} upvotes)")
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    System.err.println("[agent] job ${job.jobId.take(12)}… errored: ${e.message}")
+                                } finally {
+                                    mutex.withLock { inflight.remove(job.jobId) }
+                                }
                             }
                         }
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    System.err.println("[agent] poll error: ${e.message} — retrying in ${opts.pollSecs}s")
                 }
                 delay(opts.pollSecs * 1000)
             }
@@ -360,25 +399,28 @@ object BuzzAgentCommands {
         val branch = opts.branchPrefix + short
         var workdir: String? = null
         var worktreePath: String? = null
-        if (opts.worktreeBase != null) {
-            val wt = File(System.getProperty("java.io.tmpdir"), "buzz-worktrees/$short")
-            worktreePath = wt.absolutePath
-            val add =
-                worktreeMutex.withLock {
-                    wt.parentFile?.mkdirs()
-                    // Clear anything a crashed prior run left behind for this exact job id.
-                    git(opts.worktreeBase, "worktree", "prune")
-                    wt.deleteRecursively()
-                    git(opts.worktreeBase, "worktree", "add", "-b", branch, worktreePath, opts.baseRef)
-                }
-            if (add.exit != 0) {
-                publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, "worktree setup failed: ${add.stderr.take(MAX_BODY)}", channel, "error"))
-                return mapOf("job_id" to job.jobId, "state" to "failed", "error" to "worktree")
-            }
-            workdir = worktreePath
-        }
-
         try {
+            if (opts.worktreeBase != null) {
+                val wt = File(System.getProperty("java.io.tmpdir"), "buzz-worktrees/$short")
+                worktreePath = wt.absolutePath
+                val add =
+                    worktreeMutex.withLock {
+                        wt.parentFile?.mkdirs()
+                        // Clear anything a crashed prior run left behind for this exact job id. `-B`
+                        // (reset-or-create) makes the branch idempotent so a leftover branch from a
+                        // hard-killed run doesn't make the job permanently un-runnable.
+                        git(opts.worktreeBase, "worktree", "prune")
+                        wt.deleteRecursively()
+                        git(opts.worktreeBase, "worktree", "add", "-B", branch, worktreePath, opts.baseRef)
+                    }
+                if (add.exit != 0) {
+                    publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, "worktree setup failed: ${add.stderr.take(MAX_BODY)}", channel, "error"))
+                    return mapOf("job_id" to job.jobId, "state" to "failed", "error" to "worktree")
+                }
+                workdir = worktreePath
+                activeWorktrees.add(worktreePath to branch)
+            }
+
             if (opts.postProgress) {
                 publish(ctx, opts.relay, JobProgressEvent.build(job.jobId, "working on $branch…", channel, "running"))
             }
@@ -408,9 +450,12 @@ object BuzzAgentCommands {
                 mapOf("job_id" to job.jobId, "state" to "failed", "exit" to run.exit)
             }
         } finally {
-            // Drop the worktree; the branch stays in the base repo (the exec pushed it).
+            // Drop the worktree; the branch stays in the base repo (the exec pushed it). Runs on
+            // normal completion AND on a failed/early-return worktree setup (removal no-ops if the
+            // worktree was never created).
             if (worktreePath != null) {
                 worktreeMutex.withLock { git(opts.worktreeBase!!, "worktree", "remove", "--force", worktreePath) }
+                activeWorktrees.remove(worktreePath to branch)
             }
         }
     }

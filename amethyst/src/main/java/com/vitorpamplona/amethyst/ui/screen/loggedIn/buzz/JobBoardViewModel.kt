@@ -132,10 +132,12 @@ class JobBoardViewModel : ViewModel() {
             account.fileBuzzJob(relay, channelId, request)
         }
 
-    fun upvote(jobId: String) =
-        act { account, relay, channelId ->
-            account.upvoteBuzzJob(relay, channelId, jobId)
-        }
+    fun upvote(
+        jobId: String,
+        jobAuthor: String?,
+    ) = act { account, relay, channelId ->
+        account.upvoteBuzzJob(relay, channelId, jobId, jobAuthor)
+    }
 
     fun cancel(jobId: String) =
         act { account, relay, channelId ->

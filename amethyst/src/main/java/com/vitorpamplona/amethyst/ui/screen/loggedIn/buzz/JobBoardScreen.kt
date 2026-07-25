@@ -119,7 +119,7 @@ fun JobBoardScreen(
     val viewModel: JobBoardViewModel = viewModel(key = "JobBoard-$relayUrl-$channelId")
     viewModel.bind(accountViewModel.account, channelId, relayUrl)
 
-    DisposableEffect(channelId) {
+    DisposableEffect(channelId, relayUrl) {
         viewModel.startWatching()
         onDispose { viewModel.stopWatching() }
     }
@@ -267,7 +267,7 @@ private fun LazyItemScope.JobCard(
                     StatePill(job.state, accent)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TimeAgo(time = job.createdAt, style = TimeAgoStyle.Short)
-                        UpvoteChip(job.upvotes) { viewModel.upvote(job.jobId) }
+                        UpvoteChip(job.upvotes) { viewModel.upvote(job.jobId, job.requester) }
                     }
                 }
 
