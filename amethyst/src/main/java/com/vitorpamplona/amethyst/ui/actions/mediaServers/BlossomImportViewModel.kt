@@ -377,7 +377,7 @@ class BlossomImportViewModel : ViewModel() {
      */
     fun importSelected(): ImportStart {
         val candidates = _candidates.value
-        val tasks = candidates.map { BlossomMirrorQueue.Task(it.hash, it.sourceUrl, it.size, it.missingTargets) }
+        val tasks = candidates.map { BlossomMirrorQueue.Task(it.hash, it.sourceUrl, it.size, it.type, it.missingTargets) }
         if (tasks.isEmpty()) return ImportStart.Empty
         // start() itself atomically no-ops if a sweep is already running, so key off its return
         // rather than a separate isRunning check that could race with a sweep starting.
