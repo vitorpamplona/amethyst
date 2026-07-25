@@ -20,29 +20,48 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -51,8 +70,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,21 +85,29 @@ import com.vitorpamplona.amethyst.commons.model.buzz.JobState
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**
  * The shared **backlog** of one Buzz channel — where a team drives an AI agent together.
  *
  * Every member sees the same board: file a task (kind-43001), upvote to reprioritize (kind-7),
  * and watch the workspace bot work items back through accept → progress → result/error
- * (43002-43006). Jobs are grouped by lifecycle state; the queue is ordered by the group's
- * upvotes. The heavy lifting is the shared
- * [com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator]; this screen renders its
- * [JobView] output and routes the three write actions through [JobBoardViewModel].
+ * (43002-43006). A live [RelayStatusBar] pins the relay's health up top; jobs are grouped by
+ * lifecycle with the **active work** as the visual hero, the queue ordered by the group's
+ * upvotes. Correlation/state/priority is the shared
+ * [com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator]; this screen renders it and
+ * routes file/upvote/cancel through [JobBoardViewModel].
  *
- * Merge is deliberately NOT here — a completed job's result is its PR; the merge happens on
- * GitHub, the only human gate left.
+ * Merge is deliberately NOT here — a shipped job's result is its PR; the merge happens on GitHub.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobBoardScreen(
     channelId: String,
@@ -97,51 +126,60 @@ fun JobBoardScreen(
 
     val jobs by viewModel.jobs.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) }
 
     var composing by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopBarWithBackButton("Backlog", nav) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { composing = true }, shape = CircleShape) {
-                Icon(symbol = MaterialSymbols.Add, contentDescription = "New task")
-            }
+            ExtendedFloatingActionButton(
+                onClick = { composing = true },
+                icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
+                text = { Text("New task") },
+            )
         },
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            val running = jobs.filter { it.state == JobState.IN_PROGRESS || it.state == JobState.ACCEPTED }
-            val queued =
-                jobs
-                    .filter { it.state == JobState.REQUESTED }
-                    .sortedWith(compareByDescending<JobView> { it.upvotes }.thenBy { it.createdAt })
-            val done = jobs.filter { it.state == JobState.COMPLETED }
-            val closed = jobs.filter { it.state == JobState.FAILED || it.state == JobState.CANCELLED }
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            relay?.let { RelayStatusBar(it, accountViewModel) }
 
-            if (jobs.isEmpty() && !isLoading) {
-                EmptyBoard()
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp),
-                ) {
-                    section("In progress", running, me, viewModel)
-                    section("Queued", queued, me, viewModel)
-                    section("Done", done, me, viewModel)
-                    section("Closed", closed, me, viewModel)
+            Box(modifier = Modifier.fillMaxSize()) {
+                val running = jobs.filter { it.state == JobState.IN_PROGRESS || it.state == JobState.ACCEPTED }
+                val queued =
+                    jobs
+                        .filter { it.state == JobState.REQUESTED }
+                        .sortedWith(compareByDescending<JobView> { it.upvotes }.thenBy { it.createdAt })
+                val done = jobs.filter { it.state == JobState.COMPLETED }
+                val closed = jobs.filter { it.state == JobState.FAILED || it.state == JobState.CANCELLED }
+
+                if (jobs.isEmpty() && !isLoading) {
+                    EmptyBoard()
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
+                    ) {
+                        section("Working now", running, JobStyle.HERO, me, accountViewModel, nav, viewModel)
+                        section("Up next", queued, JobStyle.QUEUED, me, accountViewModel, nav, viewModel)
+                        section("Shipped", done, JobStyle.SHIPPED, me, accountViewModel, nav, viewModel)
+                        section("Closed", closed, JobStyle.CLOSED, me, accountViewModel, nav, viewModel)
+                    }
                 }
-            }
 
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp).size(24.dp),
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp).size(24.dp),
+                    )
+                }
             }
         }
     }
 
     if (composing) {
-        NewTaskDialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        NewTaskSheet(
+            sheetState = sheetState,
             onDismiss = { composing = false },
             onFile = { text ->
                 viewModel.file(text)
@@ -151,10 +189,15 @@ fun JobBoardScreen(
     }
 }
 
+private enum class JobStyle { HERO, QUEUED, SHIPPED, CLOSED }
+
 private fun LazyListScope.section(
     title: String,
     jobs: List<JobView>,
+    style: JobStyle,
     me: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     viewModel: JobBoardViewModel,
 ) {
     if (jobs.isEmpty()) return
@@ -163,83 +206,152 @@ private fun LazyListScope.section(
             text = "$title · ${jobs.size}",
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp),
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
         )
     }
     items(jobs, key = { it.jobId }) { job ->
-        JobCard(job, me, viewModel)
+        JobCard(job, style, me, accountViewModel, nav, viewModel)
     }
 }
 
 @Composable
-private fun JobCard(
+private fun LazyItemScope.JobCard(
     job: JobView,
+    style: JobStyle,
     me: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     viewModel: JobBoardViewModel,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+    val (container, accent) = styleColors(style)
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(16.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .animateItem()
+                .alpha(if (style == JobStyle.CLOSED) 0.7f else 1f),
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            // Left status rail — a quick-scan colour strip.
+            Box(modifier = Modifier.fillMaxHeight().width(4.dp).background(accent))
+
+            Column(
+                modifier = Modifier.padding(14.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                StatePill(job.state)
-                UpvoteChip(job.upvotes) { viewModel.upvote(job.jobId) }
-            }
-
-            Text(
-                text = job.request?.takeIf { it.isNotBlank() } ?: "(no description)",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-
-            val meta =
-                buildString {
-                    append("by ${shortKey(job.requester)}")
-                    job.agent?.let { append("  ·  agent ${shortKey(it)}") }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    StatePill(job.state, accent)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TimeAgo(time = job.createdAt, style = TimeAgoStyle.Short)
+                        UpvoteChip(job.upvotes) { viewModel.upvote(job.jobId) }
+                    }
                 }
-            Text(
-                text = meta,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
 
-            when (job.state) {
-                JobState.COMPLETED ->
-                    job.result?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium)
-                    }
-                JobState.FAILED ->
-                    job.error?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-                    }
-                JobState.CANCELLED ->
-                    job.cancelReason?.let {
-                        Text("Cancelled: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                else ->
-                    job.lastProgress?.takeIf { it.isNotBlank() }?.let {
-                        Text("… $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-            }
+                Text(
+                    text = job.request?.takeIf { it.isNotBlank() } ?: "(no description)",
+                    style = if (style == JobStyle.HERO) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (style == JobStyle.HERO) FontWeight.SemiBold else FontWeight.Normal,
+                )
 
-            // The requester can cancel their own job while it's still open.
-            if (!job.isTerminal && job.requester == me) {
-                TextButton(onClick = { viewModel.cancel(job.jobId) }, modifier = Modifier.align(Alignment.End)) {
-                    Text("Cancel")
+                // Who's involved — real avatars + names, not hex.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Person("by", job.requester, accountViewModel, nav)
+                    if (job.agent != null && job.agent != job.requester) Person("agent", job.agent, accountViewModel, nav)
+                }
+
+                when (style) {
+                    JobStyle.HERO ->
+                        job.lastProgress?.takeIf { it.isNotBlank() }?.let { WorkingLine(it, accent) }
+                    JobStyle.SHIPPED ->
+                        job.result?.takeIf { it.isNotBlank() }?.let { ResultLine(it) }
+                    JobStyle.CLOSED ->
+                        (job.error ?: job.cancelReason?.let { "Cancelled: $it" })?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = if (job.state == JobState.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    JobStyle.QUEUED -> Unit
+                }
+
+                if (!job.isTerminal && job.requester == me) {
+                    TextButton(onClick = { viewModel.cancel(job.jobId) }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel")
+                    }
                 }
             }
         }
     }
 }
 
+/** The active-work pulse: the streaming progress line breathes while the agent runs. */
 @Composable
-private fun StatePill(state: JobState) {
-    val (label, symbol, color) = stateStyle(state)
+private fun WorkingLine(
+    text: String,
+    accent: Color,
+) {
+    val pulse = rememberInfiniteTransition(label = "working")
+    val a by pulse.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "workingAlpha",
+    )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.alpha(a)) {
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(accent))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = accent, fontWeight = FontWeight.Medium)
+    }
+}
+
+/** A shipped result — if it carries a URL, offer a prominent "View PR" instead of raw text. */
+@Composable
+private fun ResultLine(result: String) {
+    val url = remember(result) { Regex("https?://\\S+").find(result)?.value }
+    if (url != null) {
+        val uriHandler = LocalUriHandler.current
+        Button(onClick = { uriHandler.openUri(url) }) {
+            Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("View PR")
+        }
+    } else {
+        Text(result, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun Person(
+    prefix: String,
+    hex: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (hex == null) return
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(prefix, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        UserPicture(userHex = hex, size = Size20dp, accountViewModel = accountViewModel, nav = nav)
+        LoadUser(baseUserHex = hex, accountViewModel = accountViewModel) { user ->
+            if (user != null) {
+                UsernameDisplay(baseUser = user, fontWeight = FontWeight.Medium, accountViewModel = accountViewModel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatePill(
+    state: JobState,
+    accent: Color,
+) {
+    val (label, symbol) = pillContent(state)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(symbol = symbol, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = color, fontWeight = FontWeight.Bold)
+        Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -248,75 +360,95 @@ private fun UpvoteChip(
     count: Int,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.clickable(onClick = onClick).padding(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.clickable(onClick = onClick),
     ) {
-        Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = "Upvote", modifier = Modifier.size(18.dp))
-        Text(text = count.toString(), style = MaterialTheme.typography.labelLarge)
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp).animateContentSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = "Upvote", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+            Text(text = count.toString(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NewTaskDialog(
+private fun NewTaskSheet(
+    sheetState: SheetState,
     onDismiss: () -> Unit,
     onFile: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("New task") },
-        text = {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Ask the workspace agent", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Describe a feature or fix. The whole channel sees it, and the agent opens a PR.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Fix a bug", "Add a setting", "Improve a screen").forEach { example ->
+                    SuggestionChip(onClick = { if (text.isBlank()) text = "$example: " }, label = { Text(example) })
+                }
+            }
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("Describe the feature or fix") },
+                label = { Text("What should we build?") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
-        },
-        confirmButton = {
-            TextButton(
+            Button(
                 onClick = { onFile(text.trim()) },
                 enabled = text.isNotBlank(),
-            ) { Text("File") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("File task")
+            }
+        }
+    }
 }
 
 @Composable
 private fun EmptyBoard() {
-    Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+    ) {
+        Icon(symbol = MaterialSymbols.Checklist, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+        Text("No tasks yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            text = "No tasks yet. Tap + to ask the workspace agent to build or fix something — the whole channel will see it.",
+            "Tap “New task” to ask the workspace agent to build or fix something. The whole channel will see it, upvote it, and watch it ship.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
-private data class StateStyle(
-    val label: String,
-    val symbol: MaterialSymbol,
-    val color: Color,
-)
-
 @Composable
-private fun stateStyle(state: JobState): StateStyle =
-    when (state) {
-        JobState.REQUESTED -> StateStyle("Queued", MaterialSymbols.Schedule, MaterialTheme.colorScheme.onSurfaceVariant)
-        JobState.ACCEPTED -> StateStyle("Picked up", MaterialSymbols.Bolt, MaterialTheme.colorScheme.primary)
-        JobState.IN_PROGRESS -> StateStyle("Working", MaterialSymbols.Bolt, MaterialTheme.colorScheme.primary)
-        JobState.COMPLETED -> StateStyle("Done", MaterialSymbols.CheckCircle, MaterialTheme.colorScheme.tertiary)
-        JobState.FAILED -> StateStyle("Failed", MaterialSymbols.Error, MaterialTheme.colorScheme.error)
-        JobState.CANCELLED -> StateStyle("Cancelled", MaterialSymbols.Cancel, MaterialTheme.colorScheme.onSurfaceVariant)
+private fun styleColors(style: JobStyle): Pair<Color, Color> =
+    when (style) {
+        JobStyle.HERO -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
+        JobStyle.QUEUED -> MaterialTheme.colorScheme.surfaceContainer to MaterialTheme.colorScheme.onSurfaceVariant
+        JobStyle.SHIPPED -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.tertiary
+        JobStyle.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow to MaterialTheme.colorScheme.outline
     }
 
-private fun shortKey(hex: String?): String =
-    when {
-        hex == null -> "unknown"
-        hex.length <= 16 -> hex
-        else -> hex.take(8) + "…" + hex.takeLast(4)
+private fun pillContent(state: JobState): Pair<String, MaterialSymbol> =
+    when (state) {
+        JobState.REQUESTED -> "Queued" to MaterialSymbols.Schedule
+        JobState.ACCEPTED -> "Picked up" to MaterialSymbols.Bolt
+        JobState.IN_PROGRESS -> "Working" to MaterialSymbols.Bolt
+        JobState.COMPLETED -> "Shipped" to MaterialSymbols.CheckCircle
+        JobState.FAILED -> "Failed" to MaterialSymbols.Error
+        JobState.CANCELLED -> "Cancelled" to MaterialSymbols.Cancel
     }
