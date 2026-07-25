@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -102,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ConcordServ
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.RelayGroupServerRoomNote
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.ChatLabelMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -683,7 +685,7 @@ private fun RelayNameChip(
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.widthIn(max = ChatLabelMaxWidth).clickable(onClick = onClick),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -701,7 +703,7 @@ private fun RelayNameChip(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.MiddleEllipsis,
             )
         }
     }
@@ -733,6 +735,7 @@ private fun ChannelTitleWithLabelInfo(
         HeaderPill(
             symbol = labelIcon,
             text = stringRes(id = label),
+            modifier = Modifier.widthIn(max = ChatLabelMaxWidth),
         )
     }
 }

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,27 +37,26 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.ChatLabelMaxWidth
 
 /**
- * A tappable chip naming the Concord community a message belongs to. Deliberately **muted** — the same
- * faint wash the note-header markers use — because the community's logo is now the row avatar, so the
- * name only needs to read as tappable metadata, not compete with it. (The NIP-29 relay-host chip stays
- * highlighted; a relay group has no avatar of its own.) Shared by the Messages row and the Notifications
- * feed so a Concord message reads the same wherever it surfaces; the name is hard-capped so a long title
- * can't crowd the row.
+ * A tappable chip naming the Concord community a message belongs to. Wears the same highlighted wash as
+ * the NIP-29 relay-host chip ([secondaryContainer] — a gray on the dark theme) so every "which server /
+ * community does this room belong to" chip reads the same across the Messages screen. Shared by the
+ * Messages row and the Notifications feed so a Concord message reads the same wherever it surfaces; the
+ * width is capped at [ChatLabelMaxWidth] with a middle ellipsis so a long community name is truncated
+ * instead of crowding the room name out.
  */
 @Composable
 fun ConcordCommunityPill(
     communityName: String,
     onClick: () -> Unit,
-    maxChars: Int = 20,
 ) {
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
-        contentColor = MaterialTheme.colorScheme.placeholderText,
-        modifier = Modifier.clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier.widthIn(max = ChatLabelMaxWidth).clickable(onClick = onClick),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -66,15 +66,15 @@ fun ConcordCommunityPill(
             Icon(
                 symbol = MaterialSymbols.Group,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.placeholderText,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(11.dp),
             )
             Text(
-                text = if (communityName.length > maxChars) communityName.take(maxChars).trimEnd() + "…" else communityName,
+                text = communityName,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.placeholderText,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.MiddleEllipsis,
             )
         }
     }
