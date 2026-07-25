@@ -194,4 +194,41 @@ class ConcordSubscriptionPlannerTest {
             // No planes resolve to a relay -> nothing to subscribe.
             assertNull(ConcordSubscriptionPlanner.relayBasedFilters(emptyList(), null))
         }
+
+    @Test
+    fun controlIsolatedFiltersKeepControlPlaneOffTheGuestbookAndChannelFilter() =
+        runTest {
+            // Regression: a Concord community whose Control Plane got collapsed into the same
+            // `authors=[…]` filter as the Guestbook + channel planes folded only a fraction of its
+            // channels — a chatty Guestbook crowded the channel-defining editions out of the relay's
+            // per-filter cap (Soapbox showed 1 of 12 channels). The Control Plane must ride its own filter.
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val entry =
+                com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    relays = listOf("wss://r.example"),
+                    name = "Nostrichs",
+                )
+            val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
+
+            val controlPk = community.controlPlane.publicKeyHex
+            val guestbookPk = ConcordActions.guestbookPlane(community.communityRoot, community.communityId, community.rootEpoch).publicKeyHex
+            val generalPk = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch).publicKeyHex
+
+            val filters = ConcordSubscriptionPlanner.controlIsolatedFilters(listOf(entry), stateOf = { state }, since = null)
+
+            // The filter carrying the Control Plane must NOT also carry the Guestbook or a channel plane.
+            val controlFilter = filters.map { it.filter }.single { controlPk in it.authors.orEmpty() }
+            assertTrue(guestbookPk !in controlFilter.authors.orEmpty(), "Guestbook leaked into the Control Plane filter")
+            assertTrue(generalPk !in controlFilter.authors.orEmpty(), "a channel plane leaked into the Control Plane filter")
+
+            // The Guestbook and the channel plane share the OTHER filter, and it must not carry Control.
+            val otherFilter = filters.map { it.filter }.single { guestbookPk in it.authors.orEmpty() }
+            assertTrue(generalPk in otherFilter.authors.orEmpty(), "channel plane missing from the non-control filter")
+            assertTrue(controlPk !in otherFilter.authors.orEmpty(), "Control Plane leaked into the Guestbook/channel filter")
+        }
 }

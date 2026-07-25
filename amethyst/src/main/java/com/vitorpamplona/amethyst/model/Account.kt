@@ -223,6 +223,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
@@ -3030,6 +3031,44 @@ class Account(
         if (filters.isEmpty()) return
         val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
         client.fetchAll(filters = byRelay, timeoutMs = 20_000L)
+    }
+
+    /**
+     * COMPLETE-mode Control-Plane sync — Armada's plane-sweep discipline for the one plane that must
+     * never fold on a truncated edition set.
+     *
+     * The Control Plane defines the channel list, the roster and the banlist, so a *partial* fold
+     * silently drops channels or mis-renders membership. Two ways that happens, both closed here:
+     *  - **Forward-cursor gap:** the live plane subscription advances a `since` cursor, so an edition
+     *    with a `created_at` below the high-water mark that we never actually ingested — an unban
+     *    published while we were offline, a CORD-06 compaction re-wrap under a newly-held epoch — is
+     *    never asked for again and stays invisible. This sweep uses **no `since`**: it re-fetches the
+     *    whole plane every run.
+     *  - **Per-filter cap:** a relay caps a REQ's result (~100/filter on relay.dreamith.to), which can
+     *    crop a busy Control Plane. This **pages past the cap** ([fetchAllPagesFromPool] walks `until`
+     *    cursors until a plane is drained), so the fold sees every edition regardless of the cap.
+     *
+     * Current + every held-prior epoch's Control Plane is swept (the anti-rollback floor folds from the
+     * priors). Wraps ingest through the global cache connector → [concordSessions] like every other
+     * Concord drain; AUTH is the shared stream-key handler. Merging communities that share a relay into
+     * one filter is safe here precisely because we page — the cap no longer truncates. The live control
+     * subscription still carries brand-new editions in real time; this is the periodic completeness pass.
+     */
+    suspend fun syncConcordControlPlanes(entries: List<ConcordCommunityListEntry>) {
+        if (entries.isEmpty()) return
+        val authorsByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
+        for (entry in entries) {
+            for (sub in ConcordSubscriptionPlanner.controlPlaneSubs(listOf(entry))) {
+                for (relay in sub.relays) authorsByRelay.getOrPut(relay) { HashSet() }.add(sub.pubKeyHex)
+            }
+        }
+        if (authorsByRelay.isEmpty()) return
+        // No `since`, no `limit` → fetchAllPages treats each filter as unbounded and pages until a
+        // plane is fully drained (empty page), so the whole Control Plane lands regardless of the cap.
+        val byRelay = authorsByRelay.mapValues { (_, authors) -> listOf(ConcordActions.planeFilterFor(authors.toList())) }
+        var drained = 0
+        client.fetchAllPagesFromPool(filters = byRelay) { _, _ -> drained++ }
+        Log.d("Concord", "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)")
     }
 
     // ── NIP-29 relay-group actions ───────────────────────────────────────────
