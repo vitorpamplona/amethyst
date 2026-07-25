@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.JobState
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.quartz.buzz.jobs.JobAcceptedEvent
@@ -33,32 +34,46 @@ import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
- * `amy buzz agent …` — the AGENT side of the Buzz job protocol: a headless responder loop
- * that turns an incoming job request (kind-43001 targeting my key) into a spawned command,
- * and reports the outcome back as accept/progress/result/error events (43002/43003/43004/43006).
+ * `amy buzz agent …` — the AGENT side of the Buzz job protocol: a headless SCHEDULER that
+ * manages a shared backlog by itself. It watches a channel's job requests (kind-43001),
+ * orders them by the group's upvotes, and runs up to `--parallel N` at a time — each in its
+ * own git worktree/branch so concurrent runs never clobber each other — reporting every step
+ * back as accept/progress/result/error events (43002/43003/43004/43006) the whole room sees.
  *
- * This is the "drive this agent to build Amethyst" prototype: point `--exec` at a coding
- * agent (e.g. `claude -p`, a Goose/Codex wrapper, or a build script). The job's task text is
- * piped to the command's stdin; `BUZZ_JOB_ID`, `BUZZ_REQUESTER`, `BUZZ_CHANNEL`, and
- * `BUZZ_RELAY` are exported into its environment; its stdout becomes the job result.
+ * This is the "shared channel where the team drives an AI to build Amethyst" model:
+ * **anyone in the channel files a job, the bot works them autonomously in parallel, and the
+ * only human gate left is the merge — which happens on GitHub, never here.** Point `--exec`
+ * at a coding agent (Claude Code via buzz-acp, a Goose/Codex wrapper, or a script): the job's
+ * task text is piped to its stdin, and it runs inside a fresh worktree whose branch is
+ * exported as `BUZZ_BRANCH`. The agent commits + pushes that branch and opens the PR; its
+ * stdout (e.g. the PR URL) becomes the job result.
  *
- * PERMISSIONS — read this. Buzz authorizes by identity, not by capability flags, so this
- * responder is only as safe as the two guardrails around it:
- *   1. `--accept-from` is the intake gate: only listed requester keys are obeyed (your team's
- *      npubs). Without it the agent answers anyone who can post to the relay.
- *   2. What `--exec` can DO to a repo is bounded entirely by the credentials/tooling you give
- *      that command — NOT by Buzz. Keep its git token scoped to open PRs on feature branches
- *      (never merge, never force-push), and branch-protect `main`. See
- *      `cli/plans/2026-07-25-buzz-agent-support-channel.md`.
+ * PERMISSIONS — Buzz authorizes by identity, not capability flags, so this is only as safe as:
+ *   1. INTAKE — `--accept-from` / `--accept-from-channel` gate WHO the bot obeys (the channel
+ *      roster). Without either, it answers anyone who can post to the relay.
+ *   2. BLAST RADIUS — what `--exec` can DO to a repo is bounded by the credentials you give it,
+ *      NOT by Buzz. Each job gets its own branch off `--base-ref`; the exec's git token should
+ *      only open PRs on feature branches (never merge, never force-push), and `main` must be
+ *      branch-protected. See `cli/plans/2026-07-25-buzz-agent-support-channel.md`.
  *
  * SCHEMA CAVEAT: kinds 43001-43006 are *reserved* in Buzz with no upstream builder; see
  * [com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent].
@@ -66,17 +81,22 @@ import java.util.concurrent.TimeUnit
 object BuzzAgentCommands {
     private val USAGE =
         """
-        |amy buzz agent serve RELAY --exec CMD         run a job-responder loop
+        |amy buzz agent serve RELAY --exec CMD         run a backlog scheduler
         |    [--channel GID]                             only handle jobs scoped to this channel
-        |    [--accept-from npub,npub]                   allowlist of requester keys (STRONGLY advised)
+        |    [--accept-from npub,npub]                   allowlist of requester keys
+        |    [--accept-from-channel]                     obey any member of --channel (kind-39002 roster)
         |    [--claim-untargeted]                        also handle jobs with no `p` target
+        |    [--parallel N]                              run up to N jobs at once (default 1)
+        |    [--worktree REPODIR]                        base git repo; each job gets its own worktree+branch
+        |    [--base-ref REF]                            branch base for worktrees (default HEAD)
+        |    [--branch-prefix P]                         job branch prefix (default claude/job-)
         |    [--poll SECS]                               poll interval (default 5)
         |    [--exec-timeout SECS]                       kill --exec after N seconds (default 1800; 0 = none)
         |    [--timeout SECS]                            per-fetch relay timeout (default 8)
-        |    [--no-progress]                             don't post a 43003 "working" ping
-        |    [--dry-run]                                 accept + canned result, never run --exec
-        |    [--once]                                    drain currently-pending jobs, then exit
+        |    [--no-progress] [--dry-run] [--once]
         """.trimMargin()
+
+    private val worktreeMutex = Mutex() // git worktree add/remove touch shared repo metadata
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -90,6 +110,22 @@ object BuzzAgentCommands {
                 "serve" to { rest -> serve(dataDir, rest) },
             ),
         )
+
+    private class Opts(
+        val relay: NormalizedRelayUrl,
+        val exec: String?,
+        val channel: String?,
+        val claimUntargeted: Boolean,
+        val postProgress: Boolean,
+        val dryRun: Boolean,
+        val parallel: Int,
+        val pollSecs: Long,
+        val timeoutSecs: Long,
+        val execTimeoutSecs: Long,
+        val worktreeBase: String?,
+        val baseRef: String,
+        val branchPrefix: String,
+    )
 
     private suspend fun serve(
         dataDir: DataDir,
@@ -105,9 +141,14 @@ object BuzzAgentCommands {
         val claimUntargeted = args.bool("claim-untargeted")
         val postProgress = !args.bool("no-progress")
         val once = args.bool("once")
+        val parallel = args.flag("parallel")?.toIntOrNull()?.coerceAtLeast(1) ?: 1
         val pollSecs = args.flag("poll")?.toLongOrNull() ?: 5
         val timeoutSecs = args.flag("timeout")?.toLongOrNull() ?: 8
         val execTimeoutSecs = args.flag("exec-timeout")?.toLongOrNull() ?: 1800
+        val worktreeBase = args.flag("worktree")
+        val baseRef = args.flag("base-ref") ?: "HEAD"
+        val branchPrefix = args.flag("branch-prefix") ?: "claude/job-"
+        val fromChannel = args.bool("accept-from-channel")
         val acceptFrom =
             args
                 .flag("accept-from")
@@ -116,12 +157,17 @@ object BuzzAgentCommands {
                 ?.map {
                     decodePublicKeyAsHexOrNull(it)?.takeIf { hex -> hex.isValid() }
                         ?: return Output.error("bad_args", "invalid --accept-from key (npub or 64-char hex): $it")
-                }?.toSet()
+                }?.toMutableSet()
         args.rejectUnknown(
             "exec",
             "channel",
             "accept-from",
+            "accept-from-channel",
             "claim-untargeted",
+            "parallel",
+            "worktree",
+            "base-ref",
+            "branch-prefix",
             "poll",
             "exec-timeout",
             "timeout",
@@ -130,59 +176,156 @@ object BuzzAgentCommands {
             "once",
         )
 
+        // Parallel runs share one working tree unless each gets its own worktree — that's a
+        // guaranteed clobber. Require --worktree once concurrency is on.
+        if (parallel > 1 && worktreeBase == null) {
+            return Output.error("bad_args", "--parallel > 1 needs --worktree REPODIR so concurrent jobs don't clobber one working tree")
+        }
+        if (fromChannel && channel == null) {
+            return Output.error("bad_args", "--accept-from-channel needs --channel GID")
+        }
+        if (worktreeBase != null && !File(worktreeBase).isDirectory) {
+            return Output.error("bad_args", "--worktree is not a directory: $worktreeBase")
+        }
+
+        val opts =
+            Opts(
+                relay,
+                exec,
+                channel,
+                claimUntargeted,
+                postProgress,
+                dryRun,
+                parallel,
+                pollSecs,
+                timeoutSecs,
+                execTimeoutSecs,
+                worktreeBase,
+                baseRef,
+                branchPrefix,
+            )
+
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
 
-            // Seed the handled set from jobs already accepted/terminated so a restart doesn't
-            // re-run work. Any job past REQUESTED — someone (maybe a previous run of me)
-            // already picked it up — is treated as done for intake purposes.
+            if (worktreeBase != null && git(worktreeBase, "rev-parse", "--git-dir").exit != 0) {
+                return Output.error("bad_args", "--worktree is not a git repo: $worktreeBase")
+            }
+
+            // Resolve the intake allowlist: explicit --accept-from ∪ the channel's kind-39002
+            // member roster (when --accept-from-channel). Null = obey anyone (no gate).
+            val allow: Set<HexKey>? =
+                if (fromChannel) {
+                    val members = channelMembers(ctx, relay, channel!!, timeoutSecs)
+                    (acceptFrom ?: mutableSetOf()).apply { addAll(members) }
+                } else {
+                    acceptFrom
+                }
+
+            // Seed the handled set so a restart doesn't re-run work already picked up.
             val handled = mutableSetOf<HexKey>()
             BuzzJobCommands.fetchJobs(ctx, relay, channel, timeoutSecs).forEach { job ->
                 if (job.state != JobState.REQUESTED) handled.add(job.jobId)
             }
 
-            if (!once) {
-                Output.emit(
-                    mapOf(
-                        "serving" to me,
-                        "relay" to relay.url,
-                        "channel" to channel,
-                        "exec" to (exec ?: "(dry-run)"),
-                        "accept_from" to acceptFrom?.toList(),
-                        "poll_secs" to pollSecs,
-                        "already_handled" to handled.size,
-                    ),
-                )
-                System.err.println("[agent] serving as $me on ${relay.url} — Ctrl-C to stop")
-            }
+            if (once) return runOnce(ctx, me, opts, allow, handled)
 
-            val donePass = mutableListOf<Map<String, Any?>>()
-            while (true) {
-                val pending =
-                    BuzzJobCommands
-                        .fetchJobs(ctx, relay, channel, timeoutSecs)
-                        .filter { it.state == JobState.REQUESTED && it.jobId !in handled }
-                        .filter { targetedAtMe(it, me, claimUntargeted) }
-                        .filter { acceptFrom == null || it.requester in acceptFrom }
-                        .sortedBy { it.createdAt }
-
-                for (job in pending) {
-                    handled.add(job.jobId) // mark before working so a slow --exec isn't double-run
-                    val outcome = handle(ctx, relay, me, job, exec, dryRun, postProgress, execTimeoutSecs)
-                    if (once) donePass.add(outcome) else System.err.println("[agent] ${outcome["state"]} job ${job.jobId.take(12)}…")
-                }
-
-                if (once) {
-                    Output.emit(mapOf("relay" to relay.url, "handled" to donePass.size, "jobs" to donePass))
-                    return 0
-                }
-                delay(pollSecs * 1000)
-            }
+            Output.emit(
+                mapOf(
+                    "serving" to me,
+                    "relay" to relay.url,
+                    "channel" to channel,
+                    "exec" to (exec ?: "(dry-run)"),
+                    "parallel" to parallel,
+                    "worktree" to worktreeBase,
+                    "accept_from" to allow?.toList(),
+                    "already_handled" to handled.size,
+                ),
+            )
+            System.err.println("[agent] serving as $me on ${relay.url} — parallel=$parallel — Ctrl-C to stop")
+            runForever(ctx, me, opts, allow, handled)
         }
         @Suppress("UNREACHABLE_CODE")
         return 0
     }
+
+    /** One pass: launch every pending job (throttled to --parallel), wait for all, emit a summary. */
+    private suspend fun runOnce(
+        ctx: Context,
+        me: HexKey,
+        opts: Opts,
+        allow: Set<HexKey>?,
+        handled: MutableSet<HexKey>,
+    ): Int {
+        val pending = selectPending(ctx, me, opts, allow, handled)
+        val done = mutableListOf<Map<String, Any?>>()
+        val doneMutex = Mutex()
+        coroutineScope {
+            val sem = Semaphore(opts.parallel)
+            pending.forEach { job ->
+                handled.add(job.jobId)
+                launch {
+                    sem.withPermit {
+                        val r = handle(ctx, me, opts, job)
+                        doneMutex.withLock { done.add(r) }
+                    }
+                }
+            }
+        }
+        Output.emit(mapOf("relay" to opts.relay.url, "handled" to done.size, "jobs" to done))
+        return 0
+    }
+
+    /** The long-running loop: keep the in-flight count at ≤ --parallel, launching by priority. */
+    private suspend fun runForever(
+        ctx: Context,
+        me: HexKey,
+        opts: Opts,
+        allow: Set<HexKey>?,
+        handled: MutableSet<HexKey>,
+    ) {
+        supervisorScope {
+            val inflight = mutableSetOf<HexKey>()
+            val mutex = Mutex()
+            while (true) {
+                val busy = mutex.withLock { inflight.toSet() }
+                val free = opts.parallel - busy.size
+                if (free > 0) {
+                    val pending = selectPending(ctx, me, opts, allow, handled + busy).take(free)
+                    pending.forEach { job ->
+                        handled.add(job.jobId)
+                        mutex.withLock { inflight.add(job.jobId) }
+                        launch {
+                            try {
+                                val r = handle(ctx, me, opts, job)
+                                System.err.println("[agent] ${r["state"]} job ${job.jobId.take(12)}… (${job.upvotes} upvotes)")
+                            } finally {
+                                mutex.withLock { inflight.remove(job.jobId) }
+                            }
+                        }
+                    }
+                }
+                delay(opts.pollSecs * 1000)
+            }
+        }
+    }
+
+    /** REQUESTED jobs targeting me, from an allowed requester, not already taken — priority-ordered. */
+    private suspend fun selectPending(
+        ctx: Context,
+        me: HexKey,
+        opts: Opts,
+        allow: Set<HexKey>?,
+        exclude: Set<HexKey>,
+    ): List<JobView> =
+        BuzzJobAggregator.byPriority(
+            BuzzJobCommands
+                .fetchJobs(ctx, opts.relay, opts.channel, opts.timeoutSecs)
+                .filter { it.state == JobState.REQUESTED && it.jobId !in exclude }
+                .filter { targetedAtMe(it, me, opts.claimUntargeted) }
+                .filter { allow == null || it.requester in allow },
+        )
 
     /** A REQUESTED job is mine to handle if it `p`-targets me, or has no target and I opted in. */
     private fun targetedAtMe(
@@ -196,47 +339,97 @@ object BuzzAgentCommands {
             else -> false
         }
 
-    /** Accept → (progress) → run --exec → result/error. Returns a summary row. */
+    /** Accept → (worktree) → (progress) → run --exec → result/error. Returns a summary row. */
     private suspend fun handle(
         ctx: Context,
-        relay: NormalizedRelayUrl,
         me: HexKey,
+        opts: Opts,
         job: JobView,
-        exec: String?,
-        dryRun: Boolean,
-        postProgress: Boolean,
-        execTimeoutSecs: Long,
     ): Map<String, Any?> {
         val channel = job.channel
-        publish(ctx, relay, JobAcceptedEvent.build(job.jobId, channel, job.requester, "picked up by amy"))
+        publish(ctx, opts.relay, JobAcceptedEvent.build(job.jobId, channel, job.requester, "picked up by amy"))
 
-        if (dryRun) {
-            publish(ctx, relay, JobResultEvent.build(job.jobId, "[dry-run] would run: ${exec ?: "(none)"}", channel, job.requester, "completed"))
+        if (opts.dryRun) {
+            publish(ctx, opts.relay, JobResultEvent.build(job.jobId, "[dry-run] would run: ${opts.exec ?: "(none)"}", channel, job.requester, "completed"))
             return mapOf("job_id" to job.jobId, "state" to "completed", "dry_run" to true)
         }
-        if (postProgress) {
-            publish(ctx, relay, JobProgressEvent.build(job.jobId, "working…", channel, "running"))
-        }
 
-        val env =
-            buildMap {
-                put("BUZZ_JOB_ID", job.jobId)
-                job.requester?.let { put("BUZZ_REQUESTER", it) }
-                channel?.let { put("BUZZ_CHANNEL", it) }
-                put("BUZZ_RELAY", relay.url)
-                put("BUZZ_AGENT", me)
+        // Each job gets its own worktree+branch off base-ref so N run without collision.
+        val short = job.jobId.take(12)
+        val branch = opts.branchPrefix + short
+        var workdir: String? = null
+        var worktreePath: String? = null
+        if (opts.worktreeBase != null) {
+            val wt = File(System.getProperty("java.io.tmpdir"), "buzz-worktrees/$short")
+            worktreePath = wt.absolutePath
+            val add =
+                worktreeMutex.withLock {
+                    wt.parentFile?.mkdirs()
+                    // Clear anything a crashed prior run left behind for this exact job id.
+                    git(opts.worktreeBase, "worktree", "prune")
+                    wt.deleteRecursively()
+                    git(opts.worktreeBase, "worktree", "add", "-b", branch, worktreePath, opts.baseRef)
+                }
+            if (add.exit != 0) {
+                publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, "worktree setup failed: ${add.stderr.take(MAX_BODY)}", channel, "error"))
+                return mapOf("job_id" to job.jobId, "state" to "failed", "error" to "worktree")
             }
-        val run = runExec(exec!!, job.request ?: "", env, execTimeoutSecs)
-
-        return if (run.exit == 0) {
-            val body = run.stdout.ifBlank { "(no output)" }
-            publish(ctx, relay, JobResultEvent.build(job.jobId, body.take(MAX_BODY), channel, job.requester, "completed"))
-            mapOf("job_id" to job.jobId, "state" to "completed", "exit" to 0)
-        } else {
-            val body = (run.stderr.ifBlank { run.stdout }).ifBlank { "exited ${run.exit}" }
-            publish(ctx, relay, JobErrorEvent.build(job.jobId, body.take(MAX_BODY), channel, "error"))
-            mapOf("job_id" to job.jobId, "state" to "failed", "exit" to run.exit)
+            workdir = worktreePath
         }
+
+        try {
+            if (opts.postProgress) {
+                publish(ctx, opts.relay, JobProgressEvent.build(job.jobId, "working on $branch…", channel, "running"))
+            }
+            val env =
+                buildMap {
+                    put("BUZZ_JOB_ID", job.jobId)
+                    job.requester?.let { put("BUZZ_REQUESTER", it) }
+                    channel?.let { put("BUZZ_CHANNEL", it) }
+                    put("BUZZ_RELAY", opts.relay.url)
+                    put("BUZZ_AGENT", me)
+                    put("BUZZ_UPVOTES", job.upvotes.toString())
+                    if (opts.worktreeBase != null) {
+                        put("BUZZ_BRANCH", branch)
+                        put("BUZZ_WORKTREE", worktreePath!!)
+                        put("BUZZ_BASE_REF", opts.baseRef)
+                    }
+                }
+            val run = runExec(opts.exec!!, job.request ?: "", env, opts.execTimeoutSecs, workdir)
+
+            return if (run.exit == 0) {
+                val body = run.stdout.ifBlank { "(no output)" }
+                publish(ctx, opts.relay, JobResultEvent.build(job.jobId, body.take(MAX_BODY), channel, job.requester, "completed"))
+                mapOf("job_id" to job.jobId, "state" to "completed", "exit" to 0, "branch" to if (opts.worktreeBase != null) branch else null)
+            } else {
+                val body = (run.stderr.ifBlank { run.stdout }).ifBlank { "exited ${run.exit}" }
+                publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, body.take(MAX_BODY), channel, "error"))
+                mapOf("job_id" to job.jobId, "state" to "failed", "exit" to run.exit)
+            }
+        } finally {
+            // Drop the worktree; the branch stays in the base repo (the exec pushed it).
+            if (worktreePath != null) {
+                worktreeMutex.withLock { git(opts.worktreeBase!!, "worktree", "remove", "--force", worktreePath) }
+            }
+        }
+    }
+
+    /** Latest kind-39002 roster for the channel → its member pubkeys. Empty if none served. */
+    private suspend fun channelMembers(
+        ctx: Context,
+        relay: NormalizedRelayUrl,
+        channel: String,
+        timeoutSecs: Long,
+    ): Set<HexKey> {
+        val filter = Filter(kinds = listOf(GroupMembersEvent.KIND), tags = mapOf("d" to listOf(channel)))
+        return ctx
+            .drain(mapOf(relay to listOf(filter)), timeoutSecs * 1000, pendingOnAuthRequired = true)
+            .map { it.second }
+            .filterIsInstance<GroupMembersEvent>()
+            .maxByOrNull { it.createdAt }
+            ?.members()
+            ?.toSet()
+            .orEmpty()
     }
 
     private class ExecResult(
@@ -245,15 +438,17 @@ object BuzzAgentCommands {
         val stderr: String,
     )
 
-    /** Run `sh -c CMD`, piping [input] to its stdin and exporting [env]; capture both streams. */
+    /** Run `sh -c CMD` in [workdir], piping [input] to stdin and exporting [env]; capture both streams. */
     private suspend fun runExec(
         cmd: String,
         input: String,
         env: Map<String, String>,
         timeoutSecs: Long,
+        workdir: String?,
     ): ExecResult =
         withContext(Dispatchers.IO) {
             val pb = ProcessBuilder("sh", "-c", cmd)
+            workdir?.let { pb.directory(File(it)) }
             pb.environment().putAll(env)
             val proc = pb.start()
             proc.outputStream.use { it.write(input.encodeToByteArray()) }
@@ -268,6 +463,19 @@ object BuzzAgentCommands {
             } else {
                 proc.waitFor()
             }
+            ExecResult(proc.exitValue(), out, err)
+        }
+
+    /** Run `git -C dir args…`, capturing exit + both streams. */
+    private suspend fun git(
+        dir: String,
+        vararg gitArgs: String,
+    ): ExecResult =
+        withContext(Dispatchers.IO) {
+            val proc = ProcessBuilder(listOf("git", "-C", dir) + gitArgs).start()
+            val out = proc.inputStream.readBytes().decodeToString()
+            val err = proc.errorStream.readBytes().decodeToString()
+            proc.waitFor()
             ExecResult(proc.exitValue(), out, err)
         }
 

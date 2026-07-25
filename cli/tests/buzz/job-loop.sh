@@ -96,6 +96,20 @@ check "requester" _ "$(echo "$SHOW" | jkey requester)" "$ALICE"
 check "agent" _ "$(echo "$SHOW" | jkey agent)" "$BOT"
 contains "result carries exec stdout with piped stdin" "$(echo "$SHOW" | jkey result)" "PR opened for: hello from alice"
 
+echo "> 5. parallel scheduler: 3 jobs, --parallel 3, one worktree+branch each" >&2
+REPO="$STATE_DIR/repo"; mkdir -p "$REPO"
+git -C "$REPO" -c init.defaultBranch=main init -q
+git -C "$REPO" -c user.email=a@b.c -c user.name=t commit -q --allow-empty -m init
+for n in one two three; do run_req buzz job request "$RELAY" "parallel $n" --agent "$BOT" >/dev/null; done
+PAR=$(run_agent buzz agent serve "$RELAY" \
+    --exec 'printf "on %s: " "$BUZZ_BRANCH"; cat' \
+    --accept-from "$ALICE" --parallel 3 --worktree "$REPO" --base-ref main --once)
+check "parallel scheduler handled 3" _ "$(echo "$PAR" | jkey handled)" "3"
+BRANCHES=$(git -C "$REPO" branch --list 'claude/job-*' | wc -l | tr -d ' ')
+check "created one branch per job" _ "$BRANCHES" "3"
+LEFTOVER=$(git -C "$REPO" worktree list | sed 1d | wc -l | tr -d ' ')
+check "worktrees cleaned up after runs" _ "$LEFTOVER" "0"
+
 echo "" >&2
 echo "> RESULTS: $PASS passed, $FAIL failed" >&2
 [[ $FAIL -eq 0 ]] && exit 0 || exit 1

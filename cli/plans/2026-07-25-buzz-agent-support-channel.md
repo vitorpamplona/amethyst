@@ -6,10 +6,36 @@
 
 ## Goal
 
-Let the Amethyst team (and, gated, users) drive an AI coding agent — Claude Code
-running as *this* Anthropic account — to develop Amethyst, over a self-hosted
-[`block/buzz`](https://github.com/block/buzz) workspace. Every request and result is a
-signed, audited Nostr event; the agent opens PRs but can never merge or damage `main`.
+Give the Amethyst team a **shared feature-request channel** where anyone can drive work: the
+team debates and files requests, an AI coding agent — Claude Code running as *this* Anthropic
+account — **manages the backlog by itself and works items in parallel**, over a self-hosted
+[`block/buzz`](https://github.com/block/buzz) workspace. Every request, upvote, and result is
+a signed, audited Nostr event the whole room sees. This is **not** a 1:1 chat with the bot.
+
+Interaction model (decided):
+- **Anyone in the channel can drive** a work stream — no propose-and-confirm gate; a member's
+  job request is auto-accepted and scheduled (**full auto from intake**).
+- The bot **owns a stack**: it orders the backlog by the group's upvotes and runs up to N in
+  parallel, each isolated in its own git worktree/branch.
+- **The only human gate is the merge, and it happens on GitHub** (branch protection + review) —
+  never inside Amy or the channel. The agent opens PRs; it can never merge or damage `main`.
+
+### Can this live in Amy? Yes — Amy is the scheduler, the coding agent is `--exec`.
+
+A clean three-way split, no separate project needed for the team-on-a-box case:
+- **Amy** owns the Buzz side: watch the backlog, order by upvotes, dispatch up to `--parallel N`,
+  isolate each job in a worktree/branch, report status as job events. Reuses everything already
+  built (relay client, job models, `BuzzJobAggregator`, the responder, subprocess spawning, the
+  long-running `serve` pattern). Decision logic lives in `commons` (pure/testable); git +
+  process I/O lives in the `cli` command — so Amy stays a thin assembly layer.
+- **`--exec`** is the coding agent (Claude Code via buzz-acp / Goose / a script) Amy spawns per
+  job. Not a new project — an existing tool. It runs inside the job's worktree (`BUZZ_BRANCH`,
+  `BUZZ_WORKTREE` exported), commits, pushes the branch, opens the PR; its stdout is the result.
+- **GitHub** owns review + merge, entirely outside the loop.
+
+Graduate to a separate service only if you outgrow one host (hosted, multi-tenant, a web
+dashboard, a cross-machine worker fleet) — and even then Amy/`quartz`/`commons` stay the library
+underneath.
 
 ## Why Buzz is the right substrate (and what it is NOT)
 
@@ -78,16 +104,25 @@ Thin assembly over quartz job models + a shared aggregator; no protocol logic in
 - **`amy buzz job request|list|show|cancel`** (`BuzzJobCommands.kt`) — the requester side:
   file a 43001 (optional `--agent`, `--channel`), list/fold jobs (`--mine`/`--assigned`),
   show one job's lifecycle, cancel (43005).
-- **`amy buzz agent serve RELAY --exec CMD`** (`BuzzAgentCommands.kt`) — the responder loop.
-  Polls for REQUESTED jobs targeting my key, gates on `--accept-from` (allowlist) and
-  `--channel`, then per job: publishes 43002 accept → optional 43003 progress → runs
-  `sh -c CMD` (task text on stdin; `BUZZ_JOB_ID/REQUESTER/CHANNEL/RELAY/AGENT` in env) →
-  publishes 43004 result or 43006 error. `--dry-run`, `--once`, `--claim-untargeted`,
-  `--exec-timeout` for testing/ops. This is where Claude Code plugs in: `--exec 'claude -p'`
-  or a wrapper that runs the agent, opens the PR, and echoes the PR URL as the result.
+- **`amy buzz agent serve RELAY --exec CMD`** (`BuzzAgentCommands.kt`) — the **backlog
+  scheduler**. Watches a channel's REQUESTED jobs, orders them by `BuzzJobAggregator.byPriority`
+  (upvotes desc, oldest-first tiebreak), and runs up to `--parallel N` at once — each in its own
+  `git worktree` + branch (`--worktree REPODIR`, off `--base-ref`, named `<branch-prefix><jobid>`)
+  so concurrent runs never collide (`--parallel > 1` requires `--worktree`; worktree add/remove
+  is mutex-serialized, the agent work runs concurrently). Per job: 43002 accept → 43003 progress
+  → `sh -c CMD` inside the worktree (task text on stdin; `BUZZ_JOB_ID/REQUESTER/CHANNEL/RELAY/
+  AGENT/UPVOTES/BRANCH/WORKTREE/BASE_REF` in env) → 43004 result or 43006 error. Intake gate:
+  `--accept-from` (explicit npubs) and/or `--accept-from-channel` (the channel's kind-39002
+  member roster — "anyone in the channel drives"). `--dry-run`, `--once`, `--claim-untargeted`,
+  `--exec-timeout` for testing/ops. This is where Claude Code plugs in: `--exec` runs the agent,
+  which opens the PR and echoes the URL as the result.
+- **Upvote priority** (`BuzzJobs.kt`): `BuzzJobAggregator` folds kind-7 likes (distinct reactors,
+  dislikes excluded) targeting a job into `JobView.upvotes`; `byPriority` orders the backlog. The
+  group reprioritizes the stack just by reacting.
 
-Guardrails restated in the command's KDoc: `--accept-from` is the Buzz-layer intake gate;
-repo safety is the `--exec` credential + branch protection, not Buzz.
+Guardrails restated in the command's KDoc: `--accept-from` / `--accept-from-channel` is the
+Buzz-layer intake gate; repo blast radius is the `--exec` credential (PR-only) + branch
+protection, not Buzz. Merge is never done here — only on GitHub.
 
 ### Schema caveat
 

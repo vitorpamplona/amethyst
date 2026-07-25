@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -77,6 +78,14 @@ class BuzzJobAggregatorTest {
         val t = JobCancelEvent.build(jobId, "changed my mind", channel, createdAt)
         return JobCancelEvent("5".repeat(64), requester, t.createdAt, t.tags, t.content, "sig")
     }
+
+    // A NIP-25 like targeting a job's request id — the group's upvote signal.
+    private fun like(
+        reactor: String,
+        target: String = jobId,
+        id: String,
+        content: String = "+",
+    ): ReactionEvent = ReactionEvent(id, reactor, 1050, arrayOf(arrayOf("e", target)), content, "sig")
 
     @Test
     fun emptyInput() {
@@ -170,6 +179,48 @@ class BuzzJobAggregatorTest {
         assertEquals(agent, job.agent)
         // requester is recovered from the reply's `p` tag when the request event is absent.
         assertEquals(requester, job.requester)
+    }
+
+    @Test
+    fun upvotesCountDistinctReactorsIgnoringDislikes() {
+        val bob = "b".repeat(64)
+        val carol = "c".repeat(64)
+        val events =
+            listOf(
+                request(),
+                like(bob, id = "e1".padEnd(64, '0')),
+                like(carol, id = "e2".padEnd(64, '0')),
+                like(bob, id = "e3".padEnd(64, '0')), // same reactor again → not double-counted
+                like(carol, id = "e4".padEnd(64, '0'), content = "-"), // dislike → excluded
+            )
+        val job = BuzzJobAggregator.aggregate(events).single()
+        assertEquals(2, job.upvotes)
+    }
+
+    @Test
+    fun byPriorityOrdersByUpvotesThenAge() {
+        val jobA = "a".repeat(64) // older, 0 upvotes
+        val jobB = "b".repeat(64) // newer, 2 upvotes
+        val jobC = "c".repeat(64) // oldest, 0 upvotes
+
+        fun req(
+            id: String,
+            at: Long,
+        ): JobRequestEvent {
+            val t = JobRequestEvent.build("task $id", channel, agent, at)
+            return JobRequestEvent(id, requester, t.createdAt, t.tags, t.content, "sig")
+        }
+        val events =
+            listOf(
+                req(jobA, 2000),
+                req(jobB, 3000),
+                req(jobC, 1000),
+                like("1".repeat(64), target = jobB, id = "u1".padEnd(64, '0')),
+                like("2".repeat(64), target = jobB, id = "u2".padEnd(64, '0')),
+            )
+        val ordered = BuzzJobAggregator.byPriority(BuzzJobAggregator.aggregate(events))
+        // B first (2 upvotes), then the 0-upvote jobs oldest-first: C (1000) before A (2000).
+        assertEquals(listOf(jobB, jobC, jobA), ordered.map { it.jobId })
     }
 
     @Test

@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 
 /**
  * `amy buzz job …` — the requester side of the Buzz agent-job protocol (kinds
@@ -162,11 +163,12 @@ object BuzzJobCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            // Fetch the request by id plus every reply that references it via `e`.
+            // Fetch the request by id, every reply that references it via `e`, and every
+            // upvote (kind-7 reaction) targeting it.
             val filters =
                 listOf(
                     Filter(kinds = JOB_KINDS, ids = listOf(jobId)),
-                    Filter(kinds = JOB_REPLY_KINDS, tags = mapOf("e" to listOf(jobId))),
+                    Filter(kinds = JOB_REPLY_KINDS + ReactionEvent.KIND, tags = mapOf("e" to listOf(jobId))),
                 )
             val events =
                 ctx
@@ -212,7 +214,11 @@ object BuzzJobCommands {
         }
     }
 
-    /** Drain every job kind (optionally channel-scoped) and fold via the shared aggregator. */
+    /**
+     * Drain every job kind (optionally channel-scoped) plus, when a channel is given, its
+     * kind-7 upvotes, and fold via the shared aggregator. Upvotes are only fetched with a
+     * channel scope — a bare kind-7 query would pull the relay's entire reaction firehose.
+     */
     internal suspend fun fetchJobs(
         ctx: Context,
         relay: NormalizedRelayUrl,
@@ -220,10 +226,14 @@ object BuzzJobCommands {
         timeoutSecs: Long,
     ): List<JobView> {
         val tags = channel?.let { mapOf("h" to listOf(it)) }
-        val filter = Filter(kinds = JOB_KINDS, tags = tags)
+        val filters =
+            buildList {
+                add(Filter(kinds = JOB_KINDS, tags = tags))
+                if (channel != null) add(Filter(kinds = listOf(ReactionEvent.KIND), tags = tags))
+            }
         val events =
             ctx
-                .drain(mapOf(relay to listOf(filter)), timeoutSecs * 1000, pendingOnAuthRequired = true)
+                .drain(mapOf(relay to filters), timeoutSecs * 1000, pendingOnAuthRequired = true)
                 .map { it.second }
         return BuzzJobAggregator.aggregate(events)
     }
@@ -236,6 +246,7 @@ object BuzzJobCommands {
             "agent" to agent,
             "channel" to channel,
             "request" to request,
+            "upvotes" to upvotes,
             "progress_updates" to progressUpdates,
             "last_progress" to lastProgress,
             "result" to result,

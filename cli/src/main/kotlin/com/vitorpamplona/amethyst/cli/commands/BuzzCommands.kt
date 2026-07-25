@@ -81,7 +81,7 @@ object BuzzCommands {
         |amy buzz dm hide RELAY CHANNEL              hide a DM from my sidebar (kind-41012)
         |amy buzz dm add-member RELAY CHANNEL PUBKEY add a member to a group DM (kind-41011)
         |amy buzz job …                             file/list/show/cancel agent jobs (43001-43006)
-        |amy buzz agent serve RELAY --exec CMD       run an agent job-responder loop
+        |amy buzz agent serve RELAY --exec CMD       run a parallel backlog scheduler (worktree-isolated)
         """.trimMargin()
 
     suspend fun dispatch(

@@ -824,7 +824,7 @@ private fun printUsage() {
         |  buzz personas [--relays R,R]               list my kind-30175 personas
         |  buzz job request RELAY <text>              file an agent job (kind-43001)
         |  buzz job list/show/cancel RELAY …          track agent jobs (43001-43006)
-        |  buzz agent serve RELAY --exec CMD          run an agent job-responder loop
+        |  buzz agent serve RELAY --exec CMD          run a parallel backlog scheduler (worktree-isolated)
         |
         |Marmot (MLS group messaging):
         |  marmot key-package publish                 publish a fresh KeyPackage

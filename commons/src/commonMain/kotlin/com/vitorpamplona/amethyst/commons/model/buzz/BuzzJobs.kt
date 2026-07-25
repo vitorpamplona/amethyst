@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 
 /** The lifecycle state of one Buzz agent job, folded from its 43001-43006 events. */
 enum class JobState {
@@ -79,6 +80,12 @@ data class JobView(
     val error: String?,
     /** The 43005 cancel reason, when [state] is CANCELLED. */
     val cancelReason: String?,
+    /**
+     * Distinct channel members who upvoted this job — a NIP-25 like (kind-7, content not `-`)
+     * whose `e` tag targets the job's request id. The group's priority signal: a scheduler
+     * orders the backlog by this, newest-first as a tiebreaker.
+     */
+    val upvotes: Int,
     /** The request timestamp, or the earliest correlated event when the request is absent. */
     val createdAt: Long,
     /** The timestamp of the most recent event in the thread. */
@@ -101,10 +108,21 @@ object BuzzJobAggregator {
     fun aggregate(events: List<Event>): List<JobView> {
         if (events.isEmpty()) return emptyList()
 
-        // Correlate every event to a job id: the request is its own id; a reply carries
+        val distinct = events.distinctBy { it.id }
+
+        // Upvotes: distinct authors of a NIP-25 like (kind-7, content not `-`) per targeted
+        // event id. Counting distinct pubkeys stops one member inflating priority by spamming.
+        val upvoters = HashMap<HexKey, MutableSet<HexKey>>()
+        distinct.forEach { e ->
+            if (e is ReactionEvent && e.content != ReactionEvent.DISLIKE) {
+                e.originalPost().forEach { target -> upvoters.getOrPut(target) { mutableSetOf() }.add(e.pubKey) }
+            }
+        }
+
+        // Correlate every job event to a job id: the request is its own id; a reply carries
         // the request id in its `e` tag. Replies we can't correlate (no `e`) are dropped.
         val byJob = LinkedHashMap<HexKey, MutableList<Event>>()
-        events.distinctBy { it.id }.forEach { e ->
+        distinct.forEach { e ->
             val jobId =
                 when (e) {
                     is JobRequestEvent -> e.id
@@ -119,13 +137,14 @@ object BuzzJobAggregator {
         }
 
         return byJob
-            .map { (jobId, thread) -> fold(jobId, thread) }
+            .map { (jobId, thread) -> fold(jobId, thread, upvoters[jobId]?.size ?: 0) }
             .sortedByDescending { it.updatedAt }
     }
 
     private fun fold(
         jobId: HexKey,
         thread: List<Event>,
+        upvotes: Int,
     ): JobView {
         val request = thread.filterIsInstance<JobRequestEvent>().maxByOrNull { it.createdAt }
         val accepted = thread.filterIsInstance<JobAcceptedEvent>().maxByOrNull { it.createdAt }
@@ -166,8 +185,16 @@ object BuzzJobAggregator {
             result = result?.result(),
             error = error?.error(),
             cancelReason = cancel?.reason()?.ifBlank { null },
+            upvotes = upvotes,
             createdAt = request?.createdAt ?: thread.minOf { it.createdAt },
             updatedAt = thread.maxOf { it.createdAt },
         )
     }
+
+    /**
+     * Backlog ordering for a scheduler: most-upvoted first (the group's priority signal),
+     * oldest-first as the tiebreaker so an un-upvoted item still drains FIFO. Applies to the
+     * caller-provided set (typically the REQUESTED jobs targeting the agent).
+     */
+    fun byPriority(jobs: List<JobView>): List<JobView> = jobs.sortedWith(compareByDescending<JobView> { it.upvotes }.thenBy { it.createdAt })
 }
