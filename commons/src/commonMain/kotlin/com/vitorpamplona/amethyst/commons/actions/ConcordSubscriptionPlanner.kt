@@ -208,6 +208,39 @@ object ConcordSubscriptionPlanner {
     }
 
     /**
+     * The live-subscription filters for every joined community, with the **Control Plane kept in
+     * its own filter**, apart from the Guestbook / next-epoch rekey / channel planes.
+     *
+     * This is the anti-starvation split. The Control Plane is what folds the channel *list* (and
+     * roster/roles); collapsing it into one `authors=[…every plane…]` filter lets a chatty plane —
+     * the Guestbook can carry dozens of membership wraps — crowd its editions out of a relay's
+     * per-filter result cap (measured ~100/filter on relay.dreamith.to), so only a fraction of the
+     * channels fold (the "Soapbox shows 1 of 12 channels" bug). A dedicated filter gives the Control
+     * Plane an isolated per-filter budget, so the whole plane folds no matter how busy the Guestbook
+     * is. Mirrors Armada's plane-sweep design (one filter per plane scope). Both groups ride the same
+     * per-relay REQ downstream (groupByRelay), so no extra socket/subscription is opened.
+     *
+     * [stateOf] supplies each entry's folded state (null → its channels aren't known yet, so only its
+     * Control/aux planes are subscribed). [since] is the per-relay EOSE cursor, applied to every filter.
+     */
+    fun controlIsolatedFilters(
+        entries: List<ConcordCommunityListEntry>,
+        since: SincePerRelayMap?,
+        stateOf: (ConcordCommunityListEntry) -> ConcordCommunityState?,
+    ): List<RelayBasedFilter> {
+        val controlSubs = controlPlaneSubs(entries)
+
+        val otherSubs = ArrayList<ConcordPlaneSub>()
+        otherSubs += auxiliaryPlaneSubs(entries)
+        for (entry in entries) {
+            val state = stateOf(entry) ?: continue
+            otherSubs += channelPlaneSubs(entry, state)
+        }
+
+        return relayBasedFilters(controlSubs, since).orEmpty() + relayBasedFilters(otherSubs, since).orEmpty()
+    }
+
+    /**
      * Collapses [subs] into one [RelayBasedFilter] per host relay for a live
      * subscription: each relay gets a single `{kinds:[1059], authors:[…all plane
      * pks on it…], since}` filter, with [since] applied per relay from the EOSE
