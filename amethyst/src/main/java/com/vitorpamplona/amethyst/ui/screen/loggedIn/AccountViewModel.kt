@@ -685,9 +685,13 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val pinnedRelays =
                 settings.uiSettingsFlow.bottomBarItems.value
-                    .filterIsInstance<BottomBarEntry.Concord>()
-                    .flatMap { it.relays }
-                    .mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .flatMap {
+                        when (it) {
+                            is BottomBarEntry.Concord -> it.relays
+                            is BottomBarEntry.ConcordChannel -> it.relays
+                            else -> emptyList()
+                        }
+                    }.mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
             account.importConcordCommunities(pinnedRelays)
         }
 

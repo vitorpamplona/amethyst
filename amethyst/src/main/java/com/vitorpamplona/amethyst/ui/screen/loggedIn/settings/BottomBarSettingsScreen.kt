@@ -99,6 +99,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
+import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /** The chat catalog items whose picker row expands to a per-item picker (favorites / joined groups). */
 private val ExpandableItems =
@@ -557,7 +560,7 @@ private fun PickerChildren(
                         label = fav.label,
                         pinned = entry.stableKey in pinnedKeys,
                         onToggle = { onTogglePin(entry) },
-                        indent = true,
+                        indentLevel = 1,
                     )
                 }
             }
@@ -573,20 +576,41 @@ private fun PickerChildren(
         NavBarItem.RELAY_GROUPS -> {
             val groups by accountViewModel.account.relayGroupList.liveRelayGroupList
                 .collectAsStateWithLifecycle()
-            val entries =
-                remember(groups) {
-                    groups
-                        .sortedBy { (it.name ?: it.groupId).lowercase() }
-                        .map { BottomBarEntry.RelayGroup(it.groupId, it.relayUrl) }
+            if (groups.isEmpty()) {
+                EmptyChildHint(R.string.bottom_bar_settings_no_groups)
+            } else {
+                // Group joined groups by their host relay: the relay itself is addable (opens its home
+                // page listing every group on it) with each individual group nested beneath it. NIP-29
+                // relays are the container, like Concord communities below.
+                val byRelay =
+                    remember(groups) {
+                        groups
+                            .groupBy { it.relayUrl }
+                            .toList()
+                            .sortedBy { it.first.lowercase() }
+                    }
+                byRelay.forEach { (relayUrl, relayGroups) ->
+                    key(relayUrl) {
+                        RelayServerPickerGroup(relayUrl, relayGroups, pinnedKeys, accountViewModel, onTogglePin)
+                    }
                 }
-            GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
+            }
         }
 
         NavBarItem.CONCORD -> {
             val communities by accountViewModel.account.concordChannelList.liveCommunities
                 .collectAsStateWithLifecycle()
-            val entries = remember(communities) { communities.map { BottomBarEntry.Concord(it.id, it.relays) } }
-            GroupChildList(entries, pinnedKeys, accountViewModel, onTogglePin)
+            if (communities.isEmpty()) {
+                EmptyChildHint(R.string.bottom_bar_settings_no_groups)
+            } else {
+                // Group by community: the community itself is addable (opens its channel list) with each
+                // channel nested beneath it — the mirror of the relay-group layout above.
+                communities.forEach { community ->
+                    key(community.id) {
+                        ConcordServerPickerGroup(community, pinnedKeys, accountViewModel, onTogglePin)
+                    }
+                }
+            }
         }
 
         NavBarItem.GEOHASH_CHATS -> {
@@ -619,7 +643,110 @@ private fun GroupChildList(
             label = display.label,
             pinned = entry.stableKey in pinnedKeys,
             onToggle = { onTogglePin(entry) },
-            indent = true,
+            indentLevel = 1,
+        )
+    }
+}
+
+/**
+ * One NIP-29 host relay in the picker: the relay "server" row (level 1 — pin the whole relay, opening
+ * its home page of all joined groups) followed by each individual joined group nested at level 2.
+ */
+@Composable
+private fun RelayServerPickerGroup(
+    relayUrl: String,
+    relayGroups: List<GroupTag>,
+    pinnedKeys: Set<String>,
+    accountViewModel: AccountViewModel,
+    onTogglePin: (BottomBarEntry) -> Unit,
+) {
+    val serverEntry = remember(relayUrl) { BottomBarEntry.RelayServer(relayUrl) }
+    val serverDisplay = rememberGroupEntryDisplay(serverEntry, accountViewModel, subscribe = false)
+    AvailableRow(
+        leading = {
+            if (serverDisplay != null) {
+                GroupEntryAvatar(serverDisplay, 34.dp, accountViewModel)
+            } else {
+                LeadingGlyph(MaterialSymbols.Dns)
+            }
+        },
+        label = serverDisplay?.label ?: relayUrl,
+        pinned = serverEntry.stableKey in pinnedKeys,
+        onToggle = { onTogglePin(serverEntry) },
+        indentLevel = 1,
+    )
+
+    val sorted = remember(relayGroups) { relayGroups.sortedBy { (it.name ?: it.groupId).lowercase() } }
+    sorted.forEach { tag ->
+        val entry = BottomBarEntry.RelayGroup(tag.groupId, tag.relayUrl)
+        val display = rememberGroupEntryDisplay(entry, accountViewModel, subscribe = false) ?: return@forEach
+        AvailableRow(
+            leading = { GroupEntryAvatar(display, 30.dp, accountViewModel) },
+            label = display.label,
+            pinned = entry.stableKey in pinnedKeys,
+            onToggle = { onTogglePin(entry) },
+            indentLevel = 2,
+        )
+    }
+}
+
+/**
+ * One Concord community in the picker: the community "server" row (level 1 — pin the whole community,
+ * opening its channel list) followed by each folded channel nested at level 2. Channels come from the
+ * community session's folded Control Plane; before it folds (or if its relays are dead) the list is
+ * empty and only the community itself can be pinned.
+ */
+@Composable
+private fun ConcordServerPickerGroup(
+    community: ConcordCommunityListEntry,
+    pinnedKeys: Set<String>,
+    accountViewModel: AccountViewModel,
+    onTogglePin: (BottomBarEntry) -> Unit,
+) {
+    val serverEntry = remember(community.id, community.relays) { BottomBarEntry.Concord(community.id, community.relays) }
+    val serverDisplay = rememberGroupEntryDisplay(serverEntry, accountViewModel, subscribe = false)
+    AvailableRow(
+        leading = {
+            if (serverDisplay != null) {
+                GroupEntryAvatar(serverDisplay, 34.dp, accountViewModel)
+            } else {
+                LeadingGlyph(MaterialSymbols.Group)
+            }
+        },
+        label = serverDisplay?.label ?: community.name.ifBlank { community.id.take(8) },
+        pinned = serverEntry.stableKey in pinnedKeys,
+        onToggle = { onTogglePin(serverEntry) },
+        indentLevel = 1,
+    )
+
+    val account = accountViewModel.account
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val session = remember(community.id, revision) { account.concordSessions.sessionFor(community.id) }
+    val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
+
+    val channels =
+        remember(state) {
+            state
+                ?.channels
+                ?.values
+                ?.toList()
+                .orEmpty()
+        }
+    channels.forEach { channel ->
+        val entry = BottomBarEntry.ConcordChannel(community.id, channel.channelIdHex, community.relays)
+        val def = channel.definition
+        val icon =
+            when {
+                def.voice -> MaterialSymbols.Mic
+                def.private -> MaterialSymbols.Lock
+                else -> MaterialSymbols.Tag
+            }
+        AvailableRow(
+            leading = { LeadingGlyph(icon) },
+            label = def.name.ifBlank { channel.channelIdHex.take(8) },
+            pinned = entry.stableKey in pinnedKeys,
+            onToggle = { onTogglePin(entry) },
+            indentLevel = 2,
         )
     }
 }
@@ -628,20 +755,32 @@ private fun GroupChildList(
 // Rows & shared bits
 // ------------------------------------------------------------------------------------------------
 
+/**
+ * Start padding per nesting depth: 0 = a top-level catalog row, 1 = an item under an expandable
+ * category (a favorite, or a relay/community "server" row), 2 = a room nested under its server (a
+ * NIP-29 group under its relay, or a Concord channel under its community).
+ */
+private fun indentPadding(level: Int) =
+    when (level) {
+        0 -> 13.dp
+        1 -> 24.dp
+        else -> 40.dp
+    }
+
 @Composable
 private fun AvailableRow(
     leading: @Composable () -> Unit,
     label: String,
     pinned: Boolean,
     onToggle: () -> Unit,
-    indent: Boolean = false,
+    indentLevel: Int = 0,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onToggle)
-                .padding(start = if (indent) 24.dp else 13.dp, end = 13.dp, top = 7.dp, bottom = 7.dp),
+                .padding(start = indentPadding(indentLevel), end = 13.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -773,12 +912,15 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
-private fun EmptyChildHint(textRes: Int) {
+private fun EmptyChildHint(
+    textRes: Int,
+    indentLevel: Int = 1,
+) {
     Text(
         text = stringRes(textRes),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 24.dp, end = 13.dp, top = 6.dp, bottom = 6.dp),
+        modifier = Modifier.padding(start = indentPadding(indentLevel), end = 13.dp, top = 6.dp, bottom = 6.dp),
     )
 }
 
@@ -835,7 +977,9 @@ private fun rememberPinnedVisual(
         }
         is BottomBarEntry.PublicChat,
         is BottomBarEntry.RelayGroup,
+        is BottomBarEntry.RelayServer,
         is BottomBarEntry.Concord,
+        is BottomBarEntry.ConcordChannel,
         is BottomBarEntry.Geohash,
         -> {
             // Read-only: the settings list resolves from cache; the live bar owns the subscription.

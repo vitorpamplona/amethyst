@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.ChannelState
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -132,6 +134,29 @@ fun rememberRelayGroupEntryDisplay(
     )
 }
 
+/**
+ * A pinned NIP-29 host relay ("server"). Its name/icon come from the relay's NIP-11 document (cached,
+ * shared with the browse/server rows), falling back to the display host; tapping opens the relay's
+ * home page listing every joined group on it.
+ */
+@Composable
+fun rememberRelayServerEntryDisplay(
+    entry: BottomBarEntry.RelayServer,
+    accountViewModel: AccountViewModel,
+): GroupEntryDisplay {
+    val relay = remember(entry.relayUrl) { RelayUrlNormalizer.normalizeOrNull(entry.relayUrl) }
+    val host = remember(relay, entry.relayUrl) { relay?.displayUrl() ?: entry.relayUrl }
+    // NIP-11 is its own HTTP cache (not a relay REQ), so this is safe even for the read-only picker.
+    val info = relay?.let { loadRelayInfo(it) }
+    val name = info?.value?.name?.takeIf { it.isNotBlank() } ?: host
+    return GroupEntryDisplay(
+        label = name,
+        robotSeed = entry.relayUrl,
+        model = info?.value?.icon?.ifBlank { null },
+        route = Route.RelayGroupServer(entry.relayUrl),
+    )
+}
+
 /** [observeChannelMetadata] tolerant of a null channel (unresolvable relay), so callers avoid an early return. */
 @Composable
 private fun observeChannelMetadataOrNull(
@@ -170,6 +195,40 @@ fun rememberConcordEntryDisplay(
 }
 
 /**
+ * A pinned Concord channel inside a community. The label is the channel's folded name; the avatar is
+ * the *community's* icon (so the tab reads as "this community's channel"), keyed by the channel id so
+ * distinct channels still get distinct robohash fallbacks. Tapping opens that channel directly.
+ */
+@Composable
+fun rememberConcordChannelEntryDisplay(
+    entry: BottomBarEntry.ConcordChannel,
+    accountViewModel: AccountViewModel,
+): GroupEntryDisplay {
+    val account = accountViewModel.account
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val session = remember(entry.communityId, revision) { account.concordSessions.sessionFor(entry.communityId) }
+    val state by (session?.state ?: remember { MutableStateFlow(null) }).collectAsStateWithLifecycle()
+
+    val folded = state.takeIf { revision >= 0 }
+    val channelName =
+        folded
+            ?.channels
+            ?.get(entry.channelId)
+            ?.definition
+            ?.name
+            ?.ifBlank { null }
+    val label = channelName ?: entry.channelId.take(8)
+    val model = rememberConcordImageModel(folded?.metadata?.icon, accountViewModel)
+
+    return GroupEntryDisplay(
+        label = label,
+        robotSeed = entry.channelId,
+        model = model,
+        route = Route.Concord(entry.communityId, entry.channelId),
+    )
+}
+
+/**
  * A pinned geohash location channel. Anonymous by design — no metadata REQ; the row is a location
  * pin robohash keyed by the cell, labelled with the geohash, opening the location chat.
  */
@@ -198,7 +257,9 @@ fun rememberGroupEntryDisplay(
     when (entry) {
         is BottomBarEntry.PublicChat -> rememberPublicChatEntryDisplay(entry, accountViewModel, subscribe)
         is BottomBarEntry.RelayGroup -> rememberRelayGroupEntryDisplay(entry, accountViewModel, subscribe)
+        is BottomBarEntry.RelayServer -> rememberRelayServerEntryDisplay(entry, accountViewModel)
         is BottomBarEntry.Concord -> rememberConcordEntryDisplay(entry, accountViewModel)
+        is BottomBarEntry.ConcordChannel -> rememberConcordChannelEntryDisplay(entry, accountViewModel)
         is BottomBarEntry.Geohash -> rememberGeohashEntryDisplay(entry)
         is BottomBarEntry.BuiltIn -> null
         is BottomBarEntry.Favorite -> null
