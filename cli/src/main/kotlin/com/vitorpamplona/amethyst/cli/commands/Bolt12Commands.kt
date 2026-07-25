@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.Bolt12ZapActions
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Bech32
@@ -113,8 +114,13 @@ object Bolt12Commands {
         if (eventId.length != 64) return Output.error("bad_args", "event-id must be 64-hex")
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
+            // Constrain by kind AND cast defensively: the store filters by id alone and
+            // returns whatever kind that id actually is, so querying <Bolt12ZapEvent>
+            // directly would ClassCastException if the id points at a non-9736 event.
             val zap =
-                ctx.store.query<Bolt12ZapEvent>(Filter(ids = listOf(eventId), limit = 1)).firstOrNull()
+                ctx.store
+                    .query<Event>(Filter(kinds = listOf(Bolt12ZapEvent.KIND), ids = listOf(eventId), limit = 1))
+                    .firstOrNull() as? Bolt12ZapEvent
                     ?: return Output.error("not_found", "no kind:9736 event $eventId in local store; sync or fetch first")
 
             when (val result = Bolt12ZapActions.validate(zap)) {

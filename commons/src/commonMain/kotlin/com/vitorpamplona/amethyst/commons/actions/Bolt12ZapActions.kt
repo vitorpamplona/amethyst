@@ -53,32 +53,44 @@ object Bolt12ZapActions {
         return if (Bolt12Bech32.isOffer(canonical)) canonical else null
     }
 
-    /** Decode a BOLT12 offer (`lno1…`) to its interesting fields, or null when unparseable. */
+    /**
+     * Decode a BOLT12 offer (`lno1…`) to its interesting fields, or null when unparseable.
+     * A field read can still throw on a well-encoded-but-malformed TLV (e.g. an amount
+     * value longer than 8 bytes), so the whole field extraction is guarded to honor the
+     * null contract rather than leak an exception to the caller.
+     */
     fun decodeOffer(raw: String): Map<String, Any?>? {
         val offer = Bolt12Offer.parse(raw) ?: return null
-        return buildMap {
-            put("canonical", Bolt12Bech32.canonicalize(raw))
-            offer.amount()?.let { put("amount_msat", it) }
-            offer.currency()?.let { put("currency", it) }
-            offer.description()?.let { put("description", it) }
-            offer.issuerId()?.let { put("issuer_id", Hex.encode(it)) }
-            put("has_paths", offer.hasPaths())
-        }
+        return runCatching {
+            buildMap {
+                put("canonical", Bolt12Bech32.canonicalize(raw))
+                offer.amount()?.let { put("amount_msat", it) }
+                offer.currency()?.let { put("currency", it) }
+                offer.description()?.let { put("description", it) }
+                offer.issuerId()?.let { put("issuer_id", Hex.encode(it)) }
+                put("has_paths", offer.hasPaths())
+            }
+        }.getOrNull()
     }
 
-    /** Decode a BOLT12 payer proof (`lnp1…`) to its interesting fields, or null when unparseable. */
+    /**
+     * Decode a BOLT12 payer proof (`lnp1…`) to its interesting fields, or null when
+     * unparseable. Guarded like [decodeOffer] against a malformed-but-encoded field.
+     */
     fun decodeProof(raw: String): Map<String, Any?>? {
         val proof = Bolt12PayerProof.parse(raw) ?: return null
-        return buildMap {
-            put("has_all_required_fields", proof.hasAllRequiredFields())
-            put("compressed", proof.isCompressed())
-            proof.invreqPayerNote()?.let { put("invreq_payer_note", it) }
-            proof.invreqPayerId()?.let { put("invreq_payer_id", Hex.encode(it)) }
-            proof.invoiceAmount()?.let { put("invoice_amount_msat", it) }
-            proof.invoicePaymentHash()?.let { put("invoice_payment_hash", Hex.encode(it)) }
-            proof.invoiceNodeId()?.let { put("invoice_node_id", Hex.encode(it)) }
-            proof.offerIssuerId()?.let { put("offer_issuer_id", Hex.encode(it)) }
-        }
+        return runCatching {
+            buildMap {
+                put("has_all_required_fields", proof.hasAllRequiredFields())
+                put("compressed", proof.isCompressed())
+                proof.invreqPayerNote()?.let { put("invreq_payer_note", it) }
+                proof.invreqPayerId()?.let { put("invreq_payer_id", Hex.encode(it)) }
+                proof.invoiceAmount()?.let { put("invoice_amount_msat", it) }
+                proof.invoicePaymentHash()?.let { put("invoice_payment_hash", Hex.encode(it)) }
+                proof.invoiceNodeId()?.let { put("invoice_node_id", Hex.encode(it)) }
+                proof.offerIssuerId()?.let { put("offer_issuer_id", Hex.encode(it)) }
+            }
+        }.getOrNull()
     }
 
     /** The value a payer MUST put in the BOLT12 `invreq_payer_note` to bind a payment to [intent]. */

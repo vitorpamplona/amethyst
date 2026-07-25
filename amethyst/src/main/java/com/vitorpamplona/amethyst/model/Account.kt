@@ -1505,27 +1505,39 @@ class Account(
 
         sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats, payerNote)) { response ->
             scope.launch {
-                when (response) {
-                    is PaySuccessResponse -> {
-                        val proof = response.result?.payer_proof
-                        if (proof.isNullOrBlank()) {
-                            onError(R.string.bolt12_zap_paid_no_receipt, null)
-                        } else {
-                            val zap = Bolt12ZapBuilder.buildZap(zapSigner, intent, proof, anonymous)
-                            if (cache.bolt12ZapValidator.validate(zap, verifyEventSignature = false) is Bolt12ZapValidation.Valid) {
-                                cache.justConsumeMyOwnEvent(zap)
-                                client.publish(zap, computeRelayListToBroadcast(zap))
+                // try/finally so a failure while assembling/publishing the receipt (e.g. a
+                // remote signer error) still steps progress and surfaces an error, instead
+                // of vanishing as an uncaught coroutine exception. The payment already
+                // settled at this point, so such a failure means "paid, no receipt".
+                try {
+                    when (response) {
+                        is PaySuccessResponse -> {
+                            val proof = response.result?.payer_proof
+                            if (proof.isNullOrBlank()) {
+                                onError(R.string.bolt12_zap_paid_no_receipt, null)
                             } else {
-                                onError(R.string.bolt12_zap_invalid_receipt, null)
+                                val zap = Bolt12ZapBuilder.buildZap(zapSigner, intent, proof, anonymous)
+                                if (cache.bolt12ZapValidator.validate(zap, verifyEventSignature = false) is Bolt12ZapValidation.Valid) {
+                                    cache.justConsumeMyOwnEvent(zap)
+                                    client.publish(zap, computeRelayListToBroadcast(zap))
+                                } else {
+                                    onError(R.string.bolt12_zap_invalid_receipt, null)
+                                }
                             }
                         }
+
+                        is IErrorResponseLike -> onError(R.string.bolt12_payment_failed, response.errorMessage())
+
+                        else -> onError(R.string.bolt12_zap_paid_no_receipt, null)
                     }
-
-                    is IErrorResponseLike -> onError(R.string.bolt12_payment_failed, response.errorMessage())
-
-                    else -> onError(R.string.bolt12_zap_paid_no_receipt, null)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("Account", "BOLT12 zap receipt assembly failed after payment", e)
+                    onError(R.string.bolt12_zap_paid_no_receipt, null)
+                } finally {
+                    onProcessed()
                 }
-                onProcessed()
             }
         }
     }

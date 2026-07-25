@@ -71,6 +71,18 @@ class Bolt12ZapActionsTest {
     }
 
     @Test
+    fun decodeOfferReturnsNullForAParseableButMalformedAmount() {
+        // The TLV stream parses (ascending type, valid length), but the amount value is
+        // 9 bytes — reading it throws in tu64. decodeOffer must honor its null contract.
+        val bad =
+            Bolt12Bech32.encode(
+                Bolt12Bech32.OFFER_HRP,
+                TlvStream(listOf(TlvRecord(Bolt12Offer.TYPE_AMOUNT, ByteArray(9) { 1 }))).encode(),
+            )
+        assertNull(Bolt12ZapActions.decodeOffer(bad))
+    }
+
+    @Test
     fun offerListRoundTrips() =
         runTest {
             val signer = NostrSignerInternal(KeyPair())
