@@ -8,8 +8,10 @@
     <string name="show_anyway">Show Anyway</string>
     <string name="post_not_found_short">👀</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <!-- A reply whose target was searched for across all reachable history and never found. -->
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->

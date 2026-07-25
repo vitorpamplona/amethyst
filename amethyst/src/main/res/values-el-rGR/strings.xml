@@ -25,6 +25,7 @@
     <string name="referenced_event_not_found">Η δημοσίευση δεν βρέθηκε</string>
     <string name="could_not_decrypt_the_message">Αδυναμία αποκρυπτογράφησης μηνύματος</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="group_picture">Εικόνα Ομάδας</string>
     <string name="explicit_content">Ακριβές Περιεχόμενο</string>
     <string name="relay_notice">Ειδοποίηση relay</string>
@@ -289,6 +290,7 @@
     <string name="loading_account">Φόρτωση λογαριασμού</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <string name="chats_history_proto_nip17">κρυπτογραφημένο</string>
     <string name="chats_history_proto_nip04">παλαιό</string>

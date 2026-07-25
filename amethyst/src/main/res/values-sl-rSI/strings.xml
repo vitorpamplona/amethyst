@@ -32,6 +32,7 @@
     <string name="referenced_event_not_found">Referenčni dogodek ni najden</string>
     <string name="could_not_decrypt_the_message">Dešifriranje sporočila ni uspelo</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="group_picture">Slika skupine</string>
     <string name="explicit_content">Eksplicitna vsebina</string>
     <string name="relay_notice">Obvestilo releja</string>
@@ -361,6 +362,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="chat_reply_in_chat">v pogovoru</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Niz objav</string>
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d odgovor</item>

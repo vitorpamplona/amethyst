@@ -26,6 +26,12 @@
         <item quantity="many">+%1$d\nOdpowiedzi</item>
         <item quantity="other">+%1$d\nodpowiedzi</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">Zgłoszone przez %1$d osobę, którą obserwujesz</item>
+        <item quantity="few">Zgłoszone przez %1$d osób, które obserwujesz</item>
+        <item quantity="many">Zgłoszone przez %1$d osób, które obserwujesz</item>
+        <item quantity="other">Zgłoszone przez %1$d osoby, które obserwujesz</item>
+    </plurals>
     <string name="post_not_found">Wydarzenie jest wczytywane lub nie można go znaleźć na liście transmiterów</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Zdjęcie kanału</string>
@@ -33,6 +39,7 @@
     <string name="could_not_decrypt_the_message">Nie można odszyfrować wiadomości</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">Rozszyfrowywanie…</string>
+    <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
     <string name="group_picture">Zdjęcie grupy</string>
     <string name="explicit_content">Niedozwolona zawartość</string>
     <string name="relay_notice">Uwagi transmitera</string>
@@ -347,6 +354,18 @@
         <item quantity="many">%1$d kanałów</item>
         <item quantity="other">%1$d kanały</item>
     </plurals>
+    <plurals name="buzz_workspaces_count">
+        <item quantity="one">%1$d przestrzeń robocza</item>
+        <item quantity="few">%1$d przestrzeni roboczych</item>
+        <item quantity="many">%1$d przestrzeni roboczych</item>
+        <item quantity="other">%1$d przestrzenie robocze</item>
+    </plurals>
+    <plurals name="buzz_workspaces_channel_count">
+        <item quantity="one">%1$d kanał</item>
+        <item quantity="few">%1$d kanałów</item>
+        <item quantity="many">%1$d kanały</item>
+        <item quantity="other">%1$d kanały</item>
+    </plurals>
     <plurals name="concord_member_count">
         <item quantity="one">%1$d członek</item>
         <item quantity="few">%1$d członków</item>
@@ -406,6 +425,7 @@
     <string name="chat_reply_in_thread">W wątku</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Wątek</string>
+    <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d odpowiedź</item>
@@ -420,7 +440,13 @@
     <string name="chats_reply_not_found">Nie można znaleźć tej wiadomości</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Przeszukano wszystkie transmitery · kliknij, by wyświetlić</string>
+    <string name="dm_sender_reported_who">Kto to zgłosił?</string>
+    <string name="dm_sender_reported_dismiss">Ignoruj</string>
+    <string name="dm_sender_reported_hide">Ukryj</string>
+    <string name="dm_sender_reported_subtitle">Ktoś, kogo obserwujesz, zgłosił to konto</string>
+    <string name="dm_sender_reported_icon">Zgłoszono</string>
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Błąd wczytywania odpowiedzi: "</string>
     <string name="try_again">Spróbuj ponownie</string>
     <string name="notification_feed_is_empty">Brak powiadomień.</string>
@@ -1295,6 +1321,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nest_create_submit">Strefa startowa</string>
     <string name="nest_create_schedule_toggle">Zaplanuj na później</string>
     <string name="nest_create_when">Wybierz godzinę rozpoczęcia</string>
+    <string name="agent_console_title">Konsola agenta</string>
     <string name="nests_servers_title">Serwery Nest</string>
     <string name="nests_servers_explainer">Wybierz serwery MoQ, na których Amethyst ma publikować Twoje Nesty. Pierwszy wpis jest domyślnie używany przy tworzeniu nowej strefy.</string>
     <string name="nests_servers_my_section">Twoje serwery</string>
@@ -1800,6 +1827,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
     <string name="app_notification_reply_label">Odpowiedz</string>
     <string name="app_notification_mark_read_label">Przeczytane</string>
+    <string name="app_notification_me">Ja</string>
+    <string name="app_notification_new_message">Nowa wiadomość</string>
+    <string name="app_notification_added_to_group">Zostałeś dodany do %1$s</string>
     <string name="app_notification_dms_summary">Nowe wiadomości</string>
     <string name="app_notification_zaps_summary">Nowe zapy</string>
     <string name="app_notification_reactions_channel_name">Reakcje</string>
@@ -1822,13 +1852,48 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="app_notification_mentions_channel_message">%1$s wspomniał o Tobie</string>
     <string name="app_notification_mentions_summary">Nowe wzmianki</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">Wiadomości</string>
+    <string name="app_notification_group_social">Społecznościowe</string>
+    <string name="app_notification_group_payments">Płatności</string>
+    <string name="app_notification_group_content">Zawartość</string>
+    <string name="app_notification_group_developer">Deweloper</string>
+    <string name="app_notification_group_games">Gry</string>
     <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">Reposty</string>
+    <string name="app_notification_reposts_channel_description">Powiadamia Cię, gdy ktoś prześle twój post</string>
+    <string name="app_notification_reposts_channel_message">%1$s ponownie opublikował twój post</string>
+    <string name="app_notification_reposts_summary">Nowe reposty</string>
     <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_name">Multimedia</string>
+    <string name="app_notification_media_channel_description">Powiadamia Cię, gdy ktoś wspomina o tobie w zdjęciu lub wideo</string>
+    <string name="app_notification_media_channel_message_photo">%1$s udostępnił(a) zdjęcie</string>
+    <string name="app_notification_media_channel_message_video">%1$s udostępnił(a) film</string>
+    <string name="app_notification_media_summary">Nowe multimedia</string>
     <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_name">Artykuły &amp; Wyróżnienia</string>
+    <string name="app_notification_articles_channel_description">Powiadamia Cię, gdy ktoś wspomni o Tobie lub wyróżni Cię w artykule</string>
+    <string name="app_notification_articles_channel_message">%1$s wspomniał o tobie w artykule</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s wyróżnił Twój artykuł</string>
+    <string name="app_notification_articles_summary">Nowe artykuły</string>
     <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">Code &amp; Git</string>
+    <string name="app_notification_code_channel_description">Powiadamia Cię o problemach, patchach i pull requestach</string>
+    <string name="app_notification_code_channel_message_issue">%1$s otworzył problem</string>
+    <string name="app_notification_code_channel_message_patch">%1$s wysłał łatkę</string>
+    <string name="app_notification_code_channel_message_pr">%1$s otworzył Pull Request</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s zaktualizował Pull Request</string>
+    <string name="app_notification_code_summary">Nowa aktywność związana z kodem</string>
     <!-- Badges -->
+    <string name="app_notification_badges_channel_name">Odznaki</string>
+    <string name="app_notification_badges_channel_description">Powiadamia Cię, gdy zdobędziesz odznakę</string>
+    <string name="app_notification_badges_channel_message">Otrzymałeś odznakę</string>
+    <string name="app_notification_badges_channel_message_from">Przyznana przez %1$s</string>
+    <string name="app_notification_badges_summary">Nowe odznaki</string>
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">Nutzap od %1$s</string>
+    <string name="app_notification_onchain_channel_message_from">Onchain zap od %1$s</string>
     <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s zadał pytanie</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Połączenia przychodzące</string>
     <string name="app_notification_calls_channel_description">Powiadomienia o przychodzących połączeniach głosowych i wideo</string>
@@ -2083,6 +2148,11 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="settings_section_appearance">Wygląd</string>
     <string name="settings_section_media">Media &amp; Dane</string>
     <string name="settings_section_general">Ogólne</string>
+    <string name="settings_section_tor_engine">Połączenie</string>
+    <string name="settings_section_tor_routing">Przejście przez Tor</string>
+    <string name="settings_section_profile_sections">Sekcje &amp; Wątki</string>
+    <string name="settings_section_home_tabs">Widoczne karty</string>
+    <string name="settings_section_reminders">Przypomnienia</string>
     <string name="wallet_connect">Podłącz portfel</string>
     <string name="language">Język</string>
     <string name="theme">Motyw</string>
@@ -2382,6 +2452,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_browse_description">Przeglądaj grupy hostowane na transmiterze. Wklej adres transmitera lub wybierz jeden z poniższych.</string>
     <string name="relay_group_browse_relay_label">Adres transmitera</string>
     <string name="relay_group_browse_go">Wybierz</string>
+    <string name="relay_tor_clearnet_title">Nie można dotrzeć do tego transmitera przez Tor</string>
+    <string name="relay_tor_clearnet_body">%1$s nie odpowiada przez Tor — jego host może blokować węzły wyjściowe Tor. Połączyć się z nim przez clearnet?</string>
+    <string name="relay_tor_clearnet_action">Użyj Clenet</string>
     <string name="relay_group_browse_your_relays">Transmitery, których używasz</string>
     <string name="relay_group_browse_popular">Popularne transmitery</string>
     <string name="relay_group_no_messages_yet">Brak wiadomości</string>
@@ -3116,6 +3189,86 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="chat_system_created_channel">%1$s utworzył kanał %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s utworzył kanał</string>
     <string name="chat_system_updated_channel">%1$s zaktualizował profil kanału</string>
+    <string name="buzz_message_edited">(edytowane)</string>
+    <string name="buzz_diff_truncated">(diff skrócony)</string>
+    <string name="buzz_canvas_title">Płótno</string>
+    <string name="buzz_canvas_empty">Żadne płótno nie zostało jeszcze udostępnione w tym projekcie.</string>
+    <string name="buzz_canvas_edit">Edytuj płótno</string>
+    <string name="buzz_canvas_save">Zapisz płótno</string>
+    <string name="buzz_canvas_body_label">Płótno (Markdown)</string>
+    <string name="buzz_edit_message">Edytuj</string>
+    <string name="buzz_editing_banner">Edytuj wiadomość</string>
+    <string name="buzz_typing_one">%1$s pisze…</string>
+    <string name="buzz_typing_two">%1$s i %2$s piszą…</string>
+    <string name="buzz_typing_many">Kilka osób pisze…</string>
+    <string name="buzz_workspaces_title">Przestrzenie robocze Buzz</string>
+    <string name="buzz_workspaces_hero_tagline">Gdzie ludzie i agenci tworzą wspólnie</string>
+    <string name="buzz_workspaces_leave">Opuść przestrzeń roboczą</string>
+    <string name="buzz_workspaces_section">Twoja przestrzeń robocza</string>
+    <string name="buzz_workspaces_empty_title">Brak przestrzeni roboczej</string>
+    <string name="buzz_workspaces_empty_body">Przestrzeń robocza Buzz to przestrzenie gdzie ludzie i agenci AI budują wspólnie. Dołącz, aby zobaczyć ją tutaj.</string>
+    <string name="buzz_workspaces_browse">Przeglądaj grupy</string>
+    <string name="buzz_console_card_title">Konsola Agenta</string>
+    <string name="buzz_console_card_subtitle">Koszty · Osoby · Obserwator na żywo</string>
+    <string name="buzz_forum_new_title">Nowy temat forum</string>
+    <string name="buzz_forum_body_label">Co chcesz przedyskutować?</string>
+    <string name="buzz_forum_post_action">Temat postu</string>
+    <string name="buzz_forum_thread_title">Wątek forum</string>
+    <string name="buzz_forum_no_replies">Brak odpowiedzi. Bądź pierwszym, który odpowiedział.</string>
+    <string name="buzz_dm_title">Wiadomości bezpośrednie</string>
+    <string name="buzz_dm_nav_label">Buzz DM</string>
+    <string name="buzz_dm_card_subtitle">Prywatne rozmowy na twoich przestrzeniach roboczych</string>
+    <string name="buzz_dm_new">Nowa wiadomość</string>
+    <string name="buzz_dm_empty_title">Brak bezpośrednich wiadomości</string>
+    <string name="buzz_dm_empty_body">Rozpocznij prywatną rozmowę z kimkolwiek w przestrzeni roboczej Buzz.</string>
+    <string name="buzz_dm_more">Więcej</string>
+    <string name="buzz_dm_hide">Ukryj konwersację</string>
+    <string name="buzz_dm_add_member">Dodaj członka</string>
+    <string name="buzz_dm_add_member_title">Dodaj kogoś do tej wiadomości DM</string>
+    <string name="buzz_dm_add_member_invalid">Nieprawidłowy klucz npub lub hex</string>
+    <string name="buzz_dm_just_you">Tylko ty</string>
+    <string name="buzz_dm_workspace">Przestrzeń robocza</string>
+    <string name="buzz_dm_recipients">Do</string>
+    <string name="buzz_dm_add_hint">Dodaj kogoś (npub lub hex)</string>
+    <string name="buzz_dm_start">Rozpocznij konwersację</string>
+    <string name="buzz_dm_opening">Otwieranie…</string>
+    <string name="buzz_dm_remove">Usuń</string>
+    <string name="buzz_invite_title">Zaproszenie do przestrzeni roboczej</string>
+    <string name="buzz_invite_heading">Dołącz do tej przestrzeni roboczej</string>
+    <string name="buzz_invite_workspace">Przestrzeń robocza</string>
+    <string name="buzz_invite_role">Rola</string>
+    <string name="buzz_invite_body">Otworzysz przestrzeń roboczą w bezpiecznej przeglądarce wbudowanej w aplikację, aby zapoznać się z jej warunkami i zakończyć proces dołączania. Zostaniesz zalogowany za pomocą klucza Amethyst — bez hasła.</string>
+    <string name="buzz_invite_continue">Kontynuuj w przeglądarce</string>
+    <string name="buzz_invite_invalid">To nie wygląda na poprawny link zaproszenia Buzz.</string>
+    <string name="buzz_invite_expired">To zaproszenie wygasło. Poproś o nowe.</string>
+    <string name="buzz_invite_after_browser">Zaakceptuj warunki w przeglądarce, a potem wróć — Twoja przestrzeń robocza będzie już na Ciebie czekała.</string>
+    <string name="buzz_invite_open_workspace">Otwórz moje przestrzenie robocze</string>
+    <string name="buzz_import_title">Importuj kanały przestrzeni roboczej</string>
+    <string name="buzz_import_loading">Znajdowanie kanałów…</string>
+    <string name="buzz_import_your_channels">Twoje kanały na tej przestrzeni roboczej</string>
+    <string name="buzz_import_add">Dodaj</string>
+    <string name="buzz_import_add_all">Dodaj wszystko</string>
+    <string name="buzz_import_added">Dodano</string>
+    <string name="buzz_import_empty_title">Nie znaleziono kanałów</string>
+    <string name="buzz_import_empty_body">Wygląda na to, że nie jesteś jeszcze członkiem żadnego kanału w tym transmiterze. Najpierw zaakceptuj zaproszenie do przestrzeni roboczej w przeglądarce, a następnie spróbuj ponownie.</string>
+    <string name="relay_group_section_channels">Kanały</string>
+    <string name="relay_group_section_forums">Fora</string>
+    <string name="buzz_agent_working">Pracuję…</string>
+    <string name="relay_group_add_member">Dodaj członka</string>
+    <string name="buzz_community_add_people">Dodaj osoby do tej przestrzeni roboczej</string>
+    <string name="buzz_invite_create">Utwórz link zaproszenia</string>
+    <string name="buzz_invite_link_title">Link zaproszenia</string>
+    <string name="buzz_invite_share">Udostępnij</string>
+    <string name="buzz_invite_copy">Kopiuj</string>
+    <string name="buzz_invite_error_title">Nie udało się utworzyć zaproszenia</string>
+    <string name="buzz_invite_dismiss">OK</string>
+    <string name="buzz_dm_section_empty">Brak konwersacji</string>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">Zobacz %1$d rozmowę więcej</item>
+        <item quantity="few">Zobacz %1$d rozmów więcej</item>
+        <item quantity="many">Zobacz %1$d rozmów więcej</item>
+        <item quantity="other">Zobacz wszystkie %1$d rozmowy</item>
+    </plurals>
     <string name="chat_delivery_details_title">Dostarczenie wiadomości</string>
     <string name="close">Zamknij</string>
     <string name="chat_delivery_pending">Oczekiwanie na akceptację tej wiadomości przez transmiter</string>
@@ -4167,6 +4320,11 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="pow_notification_channel_name">Wydobywanie dowodów wykonania pracy</string>
     <string name="pow_notification_channel_description">Wyświetla posty, które wciąż generują dowód pracy zgodnie ze standardem NIP-13, aby proces ten mógł się zakończyć po zamknięciu aplikacji.</string>
     <string name="pow_notification_cancel_all">Anuluj</string>
+    <string name="pow_notification_send_without_pow">Wyślij teraz</string>
+    <string name="pow_cancel_dialog_title">Zatrzymać wydobycie?</string>
+    <string name="pow_cancel_dialog_message">Ten post nadal wydobywa dowód pracy. Możesz go wysłać bez dowodu pracy lub odrzucić.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Wyślij bez PoW</string>
+    <string name="pow_cancel_dialog_discard">Odrzuć post</string>
     <string name="pow_difficulty_estimate">◆ %1$s na posta na tym urządzeniu</string>
     <plurals name="pow_estimate_seconds">
         <item quantity="one">%1$d sekundę</item>
