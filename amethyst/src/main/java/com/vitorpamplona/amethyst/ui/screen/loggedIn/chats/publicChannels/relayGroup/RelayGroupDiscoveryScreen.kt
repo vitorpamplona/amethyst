@@ -620,8 +620,10 @@ private fun TonalTextPill(label: String) {
 }
 
 /**
- * The loaded-message counter as a compact violet pill ("50+" when the preview page is full,
- * [DISCOVERY_MESSAGE_CAP] tracking that limit; the exact count otherwise).
+ * The loaded-message counter, rendered as a neutral chat-icon + count stat ("50+" when the preview
+ * page is full, [DISCOVERY_MESSAGE_CAP] tracking that limit; the exact count otherwise). Deliberately
+ * NOT the accent color and NOT a filled pill — a violet badge here read as an unread indicator, which
+ * this is not; it's an at-a-glance activity signal, so it uses the muted onSurfaceVariant tone.
  */
 @Composable
 private fun MessageActivityBadge(messageCount: Int) {
@@ -631,13 +633,20 @@ private fun MessageActivityBadge(messageCount: Int) {
         } else {
             messageCount.toString()
         }
-    Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Chat,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(13.dp),
+        )
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
