@@ -232,8 +232,23 @@ wire handling, both verified against geode:
   carol approves/denies) through embedded geode; 14/14 green, including the deny path and
   worktree cleanup.
 
-The jobs code stays for now (the board already ships) but the workflow path is the one that matches
-Buzz upstream; the mobile P1 approvals-inbox below is really the 46010/46030/46031 surface.
+**Landed (Android app):**
+- `WorkflowRunBoardScreen` + `WorkflowRunBoardViewModel` (per channel, `Route.BuzzWorkflowBoard`,
+  entered from `RelayGroupTopBar` on Buzz relays). Folds the workflow kinds via
+  `WorkflowRunAggregator`, groups runs by state with **"Needs your approval" pinned first**, and the
+  named approver grants/denies a paused run inline (46030/46031). Merge stays on GitHub.
+- `Account.triggerBuzzWorkflow` / `approveBuzzWorkflowRun` / `denyBuzzWorkflowRun` (same
+  sign → local-echo → publish-to-group-relay contract as the job helpers).
+- `RelayGroupFilterBuilders` subscribes the `#h`-scoped workflow kinds; the board fetches the
+  `d`-only grant/deny decisions **by author** (the CLI's approach).
+- `NotificationFeedFilter` — a 46010 gate addressed to me notifies and is **push-eligible** (added
+  to `NOTIFICATION_KINDS` + an `acceptableEvent` early-return gating on `approver() == me`).
+- Backbone reused as-is: quartz `EventFactory` already registers the 46xxx kinds and `LocalCache`
+  already ingests them (store-only), so no protocol/ingest changes were needed.
+
+So the workflow **run board + approval gate is the P0-1 approvals surface** the mobile section below
+anticipated. The jobs board/code stays for now, but the workflow path is the one matching Buzz
+upstream.
 
 ## Follow-ups
 
