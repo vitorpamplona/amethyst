@@ -31,14 +31,10 @@ class RichTextParserAudioUrlTest {
     }
 
     @Test
-    fun otherAudioContainersAreAudio() {
-        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.wav"))
-        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.flac"))
-        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.aac"))
-        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.opus"))
-        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.m4a"))
-        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.f4a"))
-        assertTrue(RichTextParser.isAudioUrl("https://example.com/a.ogg"))
+    fun everyAudioContainerIsAudio() {
+        RichTextParser.audioExt.forEach {
+            assertTrue(RichTextParser.isAudioUrl("https://example.com/a.$it"), it)
+        }
     }
 
     @Test
@@ -72,10 +68,14 @@ class RichTextParserAudioUrlTest {
     }
 
     @Test
-    fun audioExtensionsAreASubsetOfVideoExtensions() {
-        // Audio arrives as MediaUrlVideo precisely because videoExt lumps the two together.
-        RichTextParser.audioExt.forEach {
-            assertTrue(RichTextParser.videoExt.contains(it), "videoExt must still contain $it")
-        }
+    fun mimeTypeIsAuthoritativeOverTheUrl() {
+        assertTrue(RichTextParser.isAudioContent("audio/mpeg", "https://example.com/download?id=7"))
+        assertFalse(RichTextParser.isAudioContent("video/mp4", "https://example.com/a.mp3"))
+    }
+
+    @Test
+    fun urlExtensionIsTheFallbackWithoutAMimeType() {
+        assertTrue(RichTextParser.isAudioContent(null, "https://example.com/a.mp3"))
+        assertFalse(RichTextParser.isAudioContent(null, "https://example.com/a.mp4"))
     }
 }

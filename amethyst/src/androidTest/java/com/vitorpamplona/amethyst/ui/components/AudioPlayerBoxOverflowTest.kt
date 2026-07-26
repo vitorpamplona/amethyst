@@ -55,18 +55,19 @@ class AudioPlayerBoxOverflowTest {
     private class Bounds {
         var top = 0f
         var bottom = 0f
+        var width = 0
         var height = 0
 
         fun modifier() =
             Modifier.onGloballyPositioned {
                 top = it.positionInRoot().y
+                width = it.size.width
                 height = it.size.height
                 bottom = top + height
             }
     }
 
     private fun measure(
-        mimeType: String?,
         url: String,
         square: Boolean,
     ): Pair<Bounds, Bounds> {
@@ -76,7 +77,7 @@ class AudioPlayerBoxOverflowTest {
         rule.setContent {
             Box(Modifier.size(width = 400.dp, height = 1200.dp)) {
                 Box(
-                    modifier = mediaSizingModifier(unknownMediaAspectRatio(mimeType, url), ContentScale.Fit).then(box.modifier()),
+                    modifier = mediaSizingModifier(unknownMediaAspectRatio(null, url), ContentScale.Fit).then(box.modifier()),
                     contentAlignment = Alignment.Center,
                 ) {
                     Box((if (square) Modifier.audioSquare() else Modifier).then(player.modifier()))
@@ -90,7 +91,7 @@ class AudioPlayerBoxOverflowTest {
 
     @Test
     fun squareAudioPlayerStaysInsideItsMediaBox() {
-        val (box, player) = measure(null, "https://haven.sdbitcoiners.com/f28a5a2e.mp3", square = true)
+        val (box, player) = measure("https://haven.sdbitcoiners.com/f28a5a2e.mp3", square = true)
 
         assertTrue(
             "player overflows above the media box by ${box.top - player.top}px",
@@ -104,22 +105,9 @@ class AudioPlayerBoxOverflowTest {
     }
 
     @Test
-    fun audioWithAnExplicitMimeAlsoStaysInside() {
-        val (box, player) = measure("audio/mpeg", "https://example.com/download?id=7", square = true)
-
-        assertTrue(player.top >= box.top && player.bottom <= box.bottom)
-        assertEquals(player.height, box.height)
-    }
-
-    @Test
     fun videoOfUnknownSizeKeeps16by9() {
-        val (box, _) = measure(null, "https://example.com/a.mp4", square = false)
+        val (box, _) = measure("https://example.com/a.mp4", square = false)
 
-        // 400.dp wide at 16:9. Rounding lands within a pixel either way.
-        val expected = box.height * 16f / 9f
-        assertTrue(
-            "expected a 16:9 box, got height=${box.height} for width=$expected",
-            kotlin.math.abs(expected - 400 * rule.density.density) <= 1f,
-        )
+        assertEquals(16f / 9f, box.width.toFloat() / box.height, 0.01f)
     }
 }

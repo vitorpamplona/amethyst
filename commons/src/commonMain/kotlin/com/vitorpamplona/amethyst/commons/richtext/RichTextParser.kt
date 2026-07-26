@@ -495,13 +495,20 @@ class RichTextParser {
             )
 
         val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
-        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
-        val pdfExt = listOf("pdf")
 
-        // The audio-only members of [videoExt] — both play through the same video pipeline, but audio
-        // has no picture, so anything that reasons about the shape of the media (aspect ratios, player
-        // sizing) has to tell them apart. `m3u8` stays out: a playlist carries either.
+        // Audio is folded into [videoExt] because both play through the same video pipeline — but
+        // audio has no picture, so anything that reasons about the shape of the media (aspect
+        // ratios, player sizing) has to tell them apart. `m3u8` stays video-only: a playlist
+        // carries either.
+        //
+        // Composing [videoExt] out of [audioExt] is what keeps "every audio extension is also a
+        // video extension" true by construction rather than by convention — the two lists cannot
+        // drift apart. It is also why [audioExt] is declared first; the compiler rejects the
+        // reverse order outright ("Variable 'audioExt' must be initialized"), so this note is
+        // intent, not a guard rail.
         val audioExt = listOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
+        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "m3u8") + audioExt
+        val pdfExt = listOf("pdf")
 
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }
@@ -518,14 +525,13 @@ class RichTextParser {
                     it.uppercase()
                 }
 
-        private fun removeQueryParamsForExtensionComparison(fullUrl: String): String =
-            if (fullUrl.contains("?")) {
-                fullUrl.split("?")[0]
-            } else if (fullUrl.contains("#")) {
-                fullUrl.split("#")[0]
-            } else {
-                fullUrl
-            }
+        private fun removeQueryParamsForExtensionComparison(fullUrl: String): String {
+            // Called per URL during feed render — substringBefore allocates nothing when the
+            // separator is absent, unlike split().
+            val queryStart = fullUrl.indexOf('?')
+            if (queryStart >= 0) return fullUrl.substring(0, queryStart)
+            return fullUrl.substringBefore('#')
+        }
 
         fun isImageExtension(ext: String) = imageExtensions.any { it == ext }
 
@@ -552,6 +558,13 @@ class RichTextParser {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
             return audioExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
+
+        // A declared MIME type is authoritative when present; the URL extension is only a fallback
+        // for the common bare-URL case.
+        fun isAudioContent(
+            mimeType: String?,
+            url: String,
+        ): Boolean = mimeType?.startsWith("audio/") ?: isAudioUrl(url)
 
         // Mirrors the canonical HLS-playlist MIME list also kept in MediaItemCache.toExoPlayerMimeType.
         // Called per URL during feed render — uses `equals(ignoreCase)` instead of `lowercase()` to

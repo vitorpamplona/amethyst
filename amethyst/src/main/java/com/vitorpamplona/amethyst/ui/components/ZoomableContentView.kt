@@ -160,12 +160,7 @@ private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
 internal fun unknownMediaAspectRatio(
     mimeType: String?,
     url: String,
-): Float? =
-    when {
-        mimeType != null -> if (mimeType.startsWith("audio/")) null else DEFAULT_VIDEO_ASPECT_RATIO
-        RichTextParser.isAudioUrl(url) -> null
-        else -> DEFAULT_VIDEO_ASPECT_RATIO
-    }
+): Float? = if (RichTextParser.isAudioContent(mimeType, url)) null else DEFAULT_VIDEO_ASPECT_RATIO
 
 @Composable
 fun ZoomableContentView(
@@ -226,10 +221,16 @@ fun ZoomableContentView(
         }
 
         is MediaUrlVideo -> {
+            // The fallback classifies the URL string, so compute it once per content — for audio
+            // the cache miss is permanent and this branch re-runs on every recomposition.
+            val fallbackRatio =
+                remember(content.url, content.mimeType) {
+                    unknownMediaAspectRatio(content.mimeType, content.url)
+                }
             val ratio =
                 content.dim?.aspectRatio()
                     ?: MediaAspectRatioCache.get(content.url)
-                    ?: unknownMediaAspectRatio(content.mimeType, content.url)
+                    ?: fallbackRatio
             val bridgedUrl =
                 remember(content.url, useLocalBlossomBridge) {
                     content.toCoilModel(useLocalBlossomBridge)
