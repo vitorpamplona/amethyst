@@ -371,7 +371,7 @@ private fun ApprovalActions(
         ) {
             Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Approve & ship", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text("Approve & open PR", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
     }
 }
