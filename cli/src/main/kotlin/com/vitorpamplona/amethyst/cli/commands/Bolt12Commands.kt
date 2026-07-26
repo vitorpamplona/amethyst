@@ -28,13 +28,13 @@ import com.vitorpamplona.amethyst.commons.actions.Bolt12ZapActions
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Bech32
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Bech32
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 
 /**
- * `amy bolt12 …` — NIP-XX BOLT12 zaps from the command line, for headless interop
+ * `amy bolt12 …` — NIP-B1 BOLT12 zaps from the command line, for headless interop
  * testing of the quartz BOLT12 stack.
  *
  * Sub-verbs:
@@ -54,7 +54,7 @@ import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 object Bolt12Commands {
     val USAGE: String =
         """
-        |BOLT12 zaps (NIP-XX):
+        |BOLT12 zaps (NIP-B1):
         |  bolt12 decode LNO1|LNP1            decode an offer or payer proof to fields
         |  bolt12 verify EVENT-ID             validate a kind:9736 zap in the local store
         |  bolt12 offer get USER              fetch + show a user's kind:10058 offers

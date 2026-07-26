@@ -294,6 +294,8 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
@@ -303,8 +305,6 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
@@ -541,8 +541,8 @@ object KindNames {
             RelayAddMemberEvent.KIND to KindName("Relay Add Member", "43"),
             RelayRemoveMemberEvent.KIND to KindName("Relay Remove Member", "43"),
             OnchainZapEvent.KIND to KindName("Onchain Zap", "BC"),
-            Bolt12ZapEvent.KIND to KindName("Bolt12 Zap", "XX"),
-            Bolt12OfferListEvent.KIND to KindName("Bolt12 Offers", "XX"),
+            Bolt12ZapEvent.KIND to KindName("Bolt12 Zap", "B1"),
+            Bolt12OfferListEvent.KIND to KindName("Bolt12 Offers", "B1"),
             PutUserEvent.KIND to KindName("Group Put User", "29"),
             RemoveUserEvent.KIND to KindName("Group Remove User", "29"),
             EditMetadataEvent.KIND to KindName("Group Edit Metadata", "29"),

@@ -41,7 +41,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import kotlin.concurrent.Volatile
 
@@ -116,7 +116,7 @@ class User(
 
     fun nutzapInfo() = nutzapInfoNote.event as? NutzapInfoEvent
 
-    /** This user's published BOLT12 offer list (NIP-XX kind 10058), or null if none seen. */
+    /** This user's published BOLT12 offer list (NIP-B1 kind 10058), or null if none seen. */
     fun bolt12OfferList() = bolt12OfferListNote.event as? Bolt12OfferListEvent
 
     /** The canonical raw BOLT12 offers (`lno1...`) this user accepts, empty when none published. */

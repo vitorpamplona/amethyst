@@ -287,7 +287,7 @@ open class Note(
         private set
 
     /**
-     * NIP-XX BOLT12 zaps (kind 9736) targeting this note.
+     * NIP-B1 BOLT12 zaps (kind 9736) targeting this note.
      * Key: the payer proof's `invoice_payment_hash` (hex) — the spec's dedup key,
      * so two zap events proving the same settled payment collapse to one entry.
      * Value: entry with the source Bolt12ZapEvent note (so `source.author` is the
@@ -829,7 +829,7 @@ open class Note(
                 } else {
                     // Same verification status: dedup by the settled payment and, if amounts
                     // differ, keep the LOWER — so a re-publish with a bigger amount tag can't
-                    // inflate the total (NIP-XX). Both share the same cryptoVerified flag.
+                    // inflate the total (NIP-B1). Both share the same cryptoVerified flag.
                     if (entry.amountMillisats < existing.amountMillisats) entry else existing
                 }
             if (merged == existing) return@withLock false
@@ -846,10 +846,10 @@ open class Note(
         }
 
     /**
-     * Register a NIP-XX BOLT12 zap targeting this note. [source] is the kind:9736
+     * Register a NIP-B1 BOLT12 zap targeting this note. [source] is the kind:9736
      * event's own note — `source.author` is the payer shown in the reactions
      * gallery and notifications. [amountMillisats] and [cryptoVerified] come from
-     * the synchronous [com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidator]
+     * the synchronous [com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidator]
      * verdict; the caller MUST only call this for a `Valid` result. Deduplicated by
      * [paymentHashHex] (the proof's `invoice_payment_hash`).
      */
@@ -1189,7 +1189,7 @@ open class Note(
             sumOfAmounts += BigDecimal(entry.claimedSats)
         }
 
-        // NIP-XX BOLT12 zaps — count only the crypto-verified ones. An unverified
+        // NIP-B1 BOLT12 zaps — count only the crypto-verified ones. An unverified
         // (compressed, or offer-unbindable) proof carries a self-chosen preimage,
         // amount, and payment hash with no settled-payment guarantee, so counting it
         // would let anyone inflate a note's total for free. Unverified entries stay

@@ -369,9 +369,9 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.builder.Bolt12ZapBuilder
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -1455,7 +1455,7 @@ class Account(
     }
 
     /**
-     * Sends a NIP-XX BOLT12 zap to [recipientPubKey] over the default NWC wallet.
+     * Sends a NIP-B1 BOLT12 zap to [recipientPubKey] over the default NWC wallet.
      *
      * Signs a kind 9737 intent, pays [offer] via the nwc#2 `pay` method with the
      * intent-bound `payer_note`, then — only if the wallet returns a payer proof that

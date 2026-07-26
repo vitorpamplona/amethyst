@@ -77,7 +77,7 @@ class ZapPaymentHandler(
         val user: User? = null,
     )
 
-    /** A recipient routed over BOLT12 (NIP-XX): they publish a kind:10058 [offer] and we hold an NWC wallet. */
+    /** A recipient routed over BOLT12 (NIP-B1): they publish a kind:10058 [offer] and we hold an NWC wallet. */
     data class Bolt12Recipient(
         val user: User,
         val offer: String,
@@ -442,7 +442,7 @@ class ZapPaymentHandler(
     }
 
     /**
-     * BOLT12 zap rail (NIP-XX). For each recipient that publishes a kind:10058 offer,
+     * BOLT12 zap rail (NIP-B1). For each recipient that publishes a kind:10058 offer,
      * signs a 9737 intent, pays the offer over NWC with the intent-bound `payer_note`,
      * and (if the returned proof validates) publishes a 9736 zap — see
      * [Account.sendBolt12Zap]. Fire-and-forget like [payViaNWC]: dispatch is optimistic

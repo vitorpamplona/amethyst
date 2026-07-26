@@ -1207,7 +1207,7 @@ class AccountViewModel(
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
      * `pay` method, wrapping it as a BIP321 `bitcoin:?lno=` instruction. This is a
-     * plain payment, not a NIP-XX zap (no Nostr receipt); the outcome is surfaced as
+     * plain payment, not a NIP-B1 zap (no Nostr receipt); the outcome is surfaced as
      * a toast. Callers should gate on [hasNwcWallet].
      */
     fun payBolt12OfferViaNwc(
