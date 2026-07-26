@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -46,4 +47,16 @@ interface TorBackend {
      * this is a `suspend` call.
      */
     suspend fun hasBootstrappedBefore(): Boolean
+
+    /**
+     * Emits when Arti has reported `AllGuardsDown` persistently enough that the guard sample is
+     * considered rotten at runtime, regardless of what `guards.json` claims.
+     *
+     * The on-disk heuristic ([ArtiGuardState.hasNoUsableGuards]) only sees guards Arti has
+     * permanently retired. A guard that is merely unreachable stays "usable" on disk forever, so a
+     * sample can be entirely dead in practice while still looking healthy to that check — which is
+     * exactly the state that survived repeated restarts in the field. This is the runtime half:
+     * Arti itself says every guard was rejected, so believe it.
+     */
+    val guardsDownSignal: Flow<Unit>
 }

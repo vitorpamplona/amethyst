@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.tor
 
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -505,6 +507,11 @@ private class FakeTorBackend : TorBackend {
 
     /** Simulates a persisted confirmed guard on disk (prior successful bootstrap). */
     var bootstrappedBefore = false
+
+    /** Lets a test fire Arti's "every guard was rejected" signal (see [TorBackend.guardsDownSignal]). */
+    val guardsDown = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    override val guardsDownSignal: Flow<Unit> = guardsDown
 
     override suspend fun hasBootstrappedBefore(): Boolean = bootstrappedBefore
 
