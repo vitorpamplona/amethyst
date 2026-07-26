@@ -2738,6 +2738,11 @@
     <string name="chat_system_created_channel">%1$s létrehozta a(z) %2$s nevű csatornát</string>
     <string name="chat_system_created_channel_unnamed">%1$s létrehozta a csatornát</string>
     <string name="chat_system_updated_channel">%1$s frissítette a csatorna profilját</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="chat_delivery_details_title">Üzenet kézbesítése</string>
     <string name="close">Bezárás</string>
     <string name="chat_delivery_pending">Várakozás egy átjátszóra az üzenet elfogadásához</string>

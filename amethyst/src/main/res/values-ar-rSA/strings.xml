@@ -2260,6 +2260,11 @@
     <string name="remove_location">إزالة الموقع</string>
     <string name="add_content_warning">إضافة تحذير محتوى</string>
     <string name="remove_content_warning">إزالة تحذير المحتوى</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="add_expiration_date">إضافة تاريخ انتهاء الصلاحية</string>
     <string name="remove_expiration_date">إزالة تاريخ انتهاء الصلاحية</string>
     <string name="expiration_date_label">تاريخ انتهاء الصلاحية</string>

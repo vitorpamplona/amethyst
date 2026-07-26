@@ -3141,6 +3141,11 @@
     <string name="chat_system_updated_channel">%1$s uppdaterade kanalprofilen</string>
     <string name="buzz_message_edited">(redigerat)</string>
     <string name="buzz_diff_truncated">(diff avkortad)</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="buzz_canvas_empty">Ingen canvas har delats i den här arbetsytan än.</string>
     <string name="buzz_canvas_edit">Redigera canvas</string>
     <string name="buzz_canvas_save">Spara canvas</string>
