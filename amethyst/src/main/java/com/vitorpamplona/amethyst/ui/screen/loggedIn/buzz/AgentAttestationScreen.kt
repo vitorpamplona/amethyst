@@ -20,49 +20,83 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+
+// Common event kinds an agent might be restricted to — suggestions for the "Restrict to kind" field;
+// any 0–65535 is still accepted by free numeric entry.
+private val KIND_OPTIONS =
+    listOf(
+        DropdownOption("1", "1 · Text note"),
+        DropdownOption("7", "7 · Reaction"),
+        DropdownOption("9", "9 · Group chat message"),
+        DropdownOption("1111", "1111 · Comment"),
+        DropdownOption("30023", "30023 · Long-form article"),
+        DropdownOption("40002", "40002 · Buzz minichat message"),
+    )
+
+private val KIND_LABELS = KIND_OPTIONS.associate { it.value to it.label }
 
 /**
  * Owner-side NIP-OA attestation issuance. The owner signs a standalone commitment
@@ -106,7 +140,7 @@ fun AgentAttestationScreen(
             if (privKey == null) {
                 ReadOnlyKeyNotice()
             } else {
-                AttestationForm(ownerKey = keyPair)
+                AttestationForm(ownerKey = keyPair, accountViewModel = accountViewModel, nav = nav)
             }
         }
     }
@@ -246,11 +280,15 @@ private fun ReadOnlyKeyNotice() {
 }
 
 @Composable
-private fun AttestationForm(ownerKey: KeyPair) {
+private fun AttestationForm(
+    ownerKey: KeyPair,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
-    var agentInput by remember { mutableStateOf("") }
+    var selectedAgent by remember { mutableStateOf<HexKey?>(null) }
     var kindInput by remember { mutableStateOf("") }
     var afterInput by remember { mutableStateOf("") }
     var beforeInput by remember { mutableStateOf("") }
@@ -265,16 +303,23 @@ private fun AttestationForm(ownerKey: KeyPair) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    OutlinedTextField(
-        value = agentInput,
-        onValueChange = {
-            agentInput = it
+    // #1: pick the agent by name from the local user cache — or paste an npub/hex for a key that
+    // isn't a contact yet (the common case for an external agent operator).
+    AgentKeyPicker(
+        selected = selectedAgent,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        onSelect = {
+            selectedAgent = it
             error = null
             result = null
         },
-        label = { Text("Agent public key (npub or hex)") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        onClear = {
+            selectedAgent = null
+            error = null
+            result = null
+        },
+        onInvalidPaste = { error = "Invalid agent public key. Enter an npub or 64-char hex key." },
     )
 
     Text(
@@ -283,17 +328,18 @@ private fun AttestationForm(ownerKey: KeyPair) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    OutlinedTextField(
+    // #3: kind is any 0–65535, but the common ones have names — offer them, keep free numeric entry.
+    EditableSuggestDropdown(
         value = kindInput,
         onValueChange = {
             kindInput = it.filter(Char::isDigit)
             error = null
             result = null
         },
-        label = { Text("Restrict to kind (0–65535)") },
-        singleLine = true,
+        label = "Restrict to kind (0–65535)",
+        options = KIND_OPTIONS,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth(),
+        supportingText = KIND_LABELS[kindInput],
     )
 
     OutlinedTextField(
@@ -332,7 +378,8 @@ private fun AttestationForm(ownerKey: KeyPair) {
 
     Button(
         onClick = {
-            when (val outcome = buildAttestation(agentInput, kindInput, afterInput, beforeInput, ownerKey)) {
+            val agent = selectedAgent ?: return@Button
+            when (val outcome = buildAttestation(agent, kindInput, afterInput, beforeInput, ownerKey)) {
                 is AttestationOutcome.Failure -> {
                     error = outcome.message
                     result = null
@@ -343,7 +390,7 @@ private fun AttestationForm(ownerKey: KeyPair) {
                 }
             }
         },
-        enabled = agentInput.isNotBlank(),
+        enabled = selectedAgent != null,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text("Generate attestation")
@@ -355,6 +402,106 @@ private fun AttestationForm(ownerKey: KeyPair) {
             onCopy = { scope.launch { clipboard.setText(attestation.toTagJson()) } },
         )
     }
+}
+
+/**
+ * Single-agent people picker: once an agent is chosen it shows as a removable chip; otherwise a
+ * name typeahead over the local user cache with an npub/hex paste escape hatch (Enter accepts it).
+ * Mirrors the New-DM recipient picker so authorizing an agent stops being the one raw-key field.
+ */
+@Composable
+private fun AgentKeyPicker(
+    selected: HexKey?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onSelect: (HexKey) -> Unit,
+    onClear: () -> Unit,
+    onInvalidPaste: () -> Unit,
+) {
+    if (selected != null) {
+        AgentChip(selected, accountViewModel, nav, onClear)
+        return
+    }
+
+    var query by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf<List<HexKey>>(emptyList()) }
+
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            suggestions = emptyList()
+            return@LaunchedEffect
+        }
+        delay(150)
+        suggestions =
+            withContext(Dispatchers.IO) {
+                LocalCache.findUsersStartingWith(query.trim(), accountViewModel.account).map { it.pubkeyHex }.take(8)
+            }
+    }
+
+    OutlinedTextField(
+        value = query,
+        onValueChange = { query = it },
+        label = { Text("Agent (search a name, or paste npub / hex)") },
+        leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions =
+            KeyboardActions(
+                onDone = {
+                    val hex = decodePublicKeyAsHexOrNull(query.trim())?.takeIf { it.isValid() }
+                    if (hex != null) onSelect(hex) else onInvalidPaste()
+                },
+            ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    // A plain Column (not LazyColumn) — this form lives inside a verticalScroll parent.
+    suggestions.forEach { hex ->
+        AgentSuggestionRow(hex, accountViewModel, nav) { onSelect(hex) }
+    }
+}
+
+/** One tappable agent search result — avatar + resolved name. */
+@Composable
+private fun AgentSuggestionRow(
+    hex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onClick: () -> Unit,
+) {
+    val user: User = remember(hex) { LocalCache.getOrCreateUser(hex) }
+    val name by observeUserName(user, accountViewModel)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        UserPicture(hex, 34.dp, accountViewModel = accountViewModel, nav = nav)
+        Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** The chosen agent as a removable chip — tapping the close affordance clears the selection. */
+@Composable
+private fun AgentChip(
+    hex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onRemove: () -> Unit,
+) {
+    val user: User = remember(hex) { LocalCache.getOrCreateUser(hex) }
+    val name by observeUserName(user, accountViewModel)
+    InputChip(
+        selected = false,
+        onClick = onRemove,
+        label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        avatar = { UserPicture(hex, 22.dp, accountViewModel = accountViewModel, nav = nav) },
+        trailingIcon = { Icon(symbol = MaterialSymbols.Close, contentDescription = "Change agent", modifier = Modifier.size(16.dp)) },
+    )
 }
 
 @Composable

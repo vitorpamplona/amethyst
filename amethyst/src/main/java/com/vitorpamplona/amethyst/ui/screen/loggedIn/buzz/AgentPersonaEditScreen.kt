@@ -42,6 +42,28 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+// Well-known values for the persona's optional model / provider / runtime — suggestions only; any
+// string is still accepted (the fields are free-form both in NIP-AP and in Buzz's persona events).
+private val MODEL_OPTIONS =
+    listOf(
+        "claude-opus-4-8",
+        "claude-opus-4",
+        "claude-sonnet-4-5",
+        "claude-haiku-4-5",
+        "gpt-4o",
+        "gpt-4.1",
+        "o3",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "llama-3.3-70b",
+    ).map { DropdownOption(it) }
+
+private val PROVIDER_OPTIONS =
+    listOf("anthropic", "openai", "google", "groq", "openrouter", "ollama", "bedrock", "azure").map { DropdownOption(it) }
+
+private val RUNTIME_OPTIONS =
+    listOf("goose", "claude-code", "custom").map { DropdownOption(it) }
+
 /**
  * Create or edit a Buzz Agent Persona (NIP-AP `kind:30175`). [slug] null → a new persona;
  * otherwise edits the existing one (slug locked). Publishes to the workspace's Buzz relays
@@ -96,26 +118,25 @@ fun AgentPersonaEditScreen(
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            // Model / provider / runtime are free-form strings upstream, but their real-world values
+            // are a small known set — offer them as suggestions while keeping free entry.
+            EditableSuggestDropdown(
                 value = state.model,
                 onValueChange = viewModel::onModelChange,
-                label = { Text("Model (optional)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                label = "Model (optional)",
+                options = MODEL_OPTIONS,
             )
-            OutlinedTextField(
+            EditableSuggestDropdown(
                 value = state.provider,
                 onValueChange = viewModel::onProviderChange,
-                label = { Text("Provider (optional)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                label = "Provider (optional)",
+                options = PROVIDER_OPTIONS,
             )
-            OutlinedTextField(
+            EditableSuggestDropdown(
                 value = state.runtime,
                 onValueChange = viewModel::onRuntimeChange,
-                label = { Text("Runtime (optional)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                label = "Runtime (optional)",
+                options = RUNTIME_OPTIONS,
             )
             OutlinedTextField(
                 value = state.avatarUrl,
