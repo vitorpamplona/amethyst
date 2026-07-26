@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -75,7 +76,6 @@ import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientB
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
-import com.vitorpamplona.amethyst.model.unreadPrivateChatRoute
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.Marm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -439,6 +440,15 @@ class AccountViewModel(
             .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
+    /**
+     * The bottom-bar envelope dot: true when ANY Messages row is showing its blue dot.
+     *
+     * Per-row via [rowHasUnreadFlow], which mirrors what each row composable computes for itself.
+     * This used to call `unreadPrivateChatRoute` directly, which returns null for anything that is not
+     * `ChatroomKeyable` — so only NIP-17/NIP-04 DMs counted, and a public chat, ephemeral room, geohash
+     * cell, Marmot group, NIP-29/Buzz channel or Concord channel could sit there with a visible dot
+     * while the envelope stayed clean.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
     val messagesHasNewItems =
         feedStates.dmKnown.feedContent
@@ -449,14 +459,7 @@ class AccountViewModel(
                     MutableStateFlow(null)
                 }
             }.flatMapLatest { loadedFeedState ->
-                val flows =
-                    loadedFeedState?.list?.mapNotNull { chat ->
-                        unreadPrivateChatRoute(chat)?.let { (route, createdAt) ->
-                            account.settings.getLastReadFlow(route).map { lastReadAt ->
-                                createdAt > lastReadAt
-                            }
-                        }
-                    }
+                val flows = loadedFeedState?.list?.mapNotNull { chat -> rowHasUnreadFlow(chat, account) }
 
                 if (!flows.isNullOrEmpty()) {
                     combine(flows) { newItems ->
@@ -464,20 +467,6 @@ class AccountViewModel(
                     }
                 } else {
                     MutableStateFlow(false)
-                }
-            }.onStart {
-                val feed = feedStates.dmKnown.feedContent.value
-                if (feed is FeedState.Loaded) {
-                    val newItems =
-                        feed.feed.value.list.any { chat ->
-                            unreadPrivateChatRoute(chat)?.let { (route, createdAt) ->
-                                val lastReadAt =
-                                    account.settings.lastReadPerRoute.value[route]
-                                        ?.value ?: 0L
-                                createdAt > lastReadAt
-                            } == true
-                        }
-                    emit(newItems)
                 }
             }
 
@@ -1218,7 +1207,7 @@ class AccountViewModel(
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
      * `pay` method, wrapping it as a BIP321 `bitcoin:?lno=` instruction. This is a
-     * plain payment, not a NIP-XX zap (no Nostr receipt); the outcome is surfaced as
+     * plain payment, not a NIP-B1 zap (no Nostr receipt); the outcome is surfaced as
      * a toast. Callers should gate on [hasNwcWallet].
      */
     fun payBolt12OfferViaNwc(
@@ -1682,6 +1671,34 @@ class AccountViewModel(
     ) = launchSigner { account.joinRelayGroup(channel, code) }
 
     fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
+
+    /**
+     * Accept a channel somebody added me to: write it into my kind-10009 so it shows on Messages and
+     * follows me to other devices. No kind-9021 join — the relay already put me in the roster, which is
+     * why the channel opens and accepts posts today; this only records *my* decision to surface it.
+     */
+    fun acceptChannelInvite(channel: RelayGroupChannel) =
+        launchSigner {
+            account.settings.undismissChannelInvite(channel.groupId.id)
+            account.follow(channel)
+            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
+        }
+
+    /**
+     * Keep the channel off Messages without touching membership. Local and reversible — I stay in the
+     * roster and can still open and post; [leaveChannelInvite] is the one that actually removes me.
+     */
+    fun dismissChannelInvite(channelId: String) {
+        account.settings.dismissChannelInvite(channelId)
+        BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channelId)
+    }
+
+    /** Actually leave: kind-9022 to the host relay, and drop it from my list and the pending set. */
+    fun leaveChannelInvite(channel: RelayGroupChannel) =
+        launchSigner {
+            account.leaveRelayGroup(channel)
+            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
+        }
 
     /**
      * Drop a Concord community from this account's private kind-13302 list. Fire-and-forget on the
@@ -2173,8 +2190,6 @@ class AccountViewModel(
             markHiddenChatroomsAsRead()
         }
     }
-
-    private fun unreadPrivateChatRoute(chat: Note): Pair<String, Long>? = unreadPrivateChatRoute(chat.event, account.signer.pubKey, account::isAllHidden)
 
     private fun markHiddenChatroomsAsRead() {
         account.chatroomList.rooms.forEach { roomKey, chatroom ->

@@ -111,33 +111,6 @@ fun RenderBuzzEditedNote(
 }
 
 /**
- * A Buzz kind-40099 system message ("X joined", "channel created", "topic changed"):
- * narrates the room rather than speaking in it, so it renders as a centered system
- * line like the NIP-28 admin events, from the relay-signed JSON payload.
- */
-@Composable
-fun RenderBuzzSystemMessage(note: Note) {
-    val event = note.event as? SystemMessageEvent ?: return
-    val text = remember(event) { buzzSystemMessageText(event) }
-    ChatSystemMessage(text = text)
-}
-
-/**
- * The one-line label for a Buzz kind-40099 system message. Relay-emitted machine text
- * (join/leave/topic); shown as-is rather than through string resources — the payload
- * vocabulary is Buzz's, not ours to translate yet. Pure so the Messages-list preview and
- * the in-chat system line render identical text.
- */
-fun buzzSystemMessageText(event: SystemMessageEvent): String {
-    val payload = event.payload()
-    return when (payload?.type) {
-        "topic_changed" -> payload.topic?.let { "topic: $it" } ?: "topic changed"
-        "purpose_changed" -> payload.purpose?.let { "purpose: $it" } ?: "purpose changed"
-        else -> payload?.type?.replace('_', ' ')
-    } ?: event.content.take(120)
-}
-
-/**
  * True for the Buzz agent-job and huddle lifecycle kinds that [RenderBuzzActivityRow]
  * narrates as a centered system line rather than a chat bubble. Huddle events in
  * particular MUST be caught here — their `content` is JSON, so rendering them as a plain
@@ -161,32 +134,59 @@ fun isBuzzActivityRow(event: Event?): Boolean =
  * snippet (the human-readable status/result/error the agent wrote).
  */
 @Composable
-fun RenderBuzzActivityRow(note: Note) {
+fun RenderBuzzActivityRow(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
     val event = note.event ?: return
-    val text = remember(event) { buzzActivityLabel(event) ?: event.content.take(120) }
+    val text = buzzActivityLabel(event, accountViewModel) ?: remember(event) { event.content.take(120) }
     ChatSystemMessage(text = text)
 }
 
 /**
  * The centered-system-line label for a Buzz agent-job or huddle lifecycle event, or null if
- * [event] isn't one. Pure so the Messages-list preview and the in-chat activity row read the
- * same. The label is derived from the kind; job progress/result/error also append a short
- * content snippet (the human-readable status/result/error the agent wrote).
+ * [event] isn't one. Shared by the Messages-list preview and the in-chat activity row so the
+ * two read the same.
+ *
+ * Huddle joins/leaves name the participant from the event's `p` tag (falling back to the
+ * signer), and job lines name the signer — the agent that accepted, the human that requested —
+ * because "someone joined the huddle" in a busy channel says nothing about who to talk to.
+ * Job progress/result/error also append a short snippet of what the agent wrote.
  */
-fun buzzActivityLabel(event: Event): String? =
-    when (event) {
-        is JobRequestEvent -> "⚙ job requested" + event.request().snippet()
-        is JobAcceptedEvent -> "⚙ job accepted"
-        is JobProgressEvent -> "⚙ job progress" + (event.status()?.let { ": $it" } ?: "") + event.content.snippet()
-        is JobResultEvent -> "⚙ job result" + event.result().snippet()
-        is JobCancelEvent -> "⚙ job cancelled"
-        is JobErrorEvent -> "⚠ job error" + event.error().snippet()
-        is HuddleStartedEvent -> "🔊 huddle started"
-        is HuddleParticipantJoinedEvent -> "🔊 someone joined the huddle"
-        is HuddleParticipantLeftEvent -> "🔊 someone left the huddle"
-        is HuddleEndedEvent -> "🔊 huddle ended"
+@Composable
+fun buzzActivityLabel(
+    event: Event,
+    accountViewModel: AccountViewModel,
+): String? {
+    val signer = observeUserNameByHex(event.pubKey, accountViewModel)
+    val participant =
+        observeUserNameByHex(
+            remember(event) {
+                when (event) {
+                    is HuddleParticipantJoinedEvent -> event.participant() ?: event.pubKey
+                    is HuddleParticipantLeftEvent -> event.participant() ?: event.pubKey
+                    else -> null
+                }
+            },
+            accountViewModel,
+        )
+
+    return when (event) {
+        is JobRequestEvent -> stringRes(R.string.buzz_job_requested, signer) + remember(event) { event.request().snippet() }
+        is JobAcceptedEvent -> stringRes(R.string.buzz_job_accepted, signer)
+        is JobProgressEvent ->
+            stringRes(R.string.buzz_job_progress) +
+                remember(event) { (event.status()?.let { ": $it" } ?: "") + event.content.snippet() }
+        is JobResultEvent -> stringRes(R.string.buzz_job_result) + remember(event) { event.result().snippet() }
+        is JobCancelEvent -> stringRes(R.string.buzz_job_cancelled)
+        is JobErrorEvent -> stringRes(R.string.buzz_job_error) + remember(event) { event.error().snippet() }
+        is HuddleStartedEvent -> stringRes(R.string.buzz_huddle_started, signer)
+        is HuddleParticipantJoinedEvent -> stringRes(R.string.buzz_huddle_joined, participant)
+        is HuddleParticipantLeftEvent -> stringRes(R.string.buzz_huddle_left, participant)
+        is HuddleEndedEvent -> stringRes(R.string.buzz_huddle_ended)
         else -> null
     }
+}
 
 /**
  * A human-readable one-line preview of a Buzz chat-timeline event for the Messages list, or null
@@ -195,12 +195,16 @@ fun buzzActivityLabel(event: Event): String? =
  * so this returns the same summary the in-chat system/activity/diff row shows instead of dumping
  * raw payload into the preview. Keyed off the exact set in [isBuzzChatTimelineContent].
  */
-fun buzzTimelinePreviewSummary(event: Event): String? =
+@Composable
+fun buzzTimelinePreviewSummary(
+    event: Event,
+    accountViewModel: AccountViewModel,
+): String? =
     when (event) {
         is StreamMessageV2Event -> null
-        is SystemMessageEvent -> buzzSystemMessageText(event)
-        is StreamMessageDiffEvent -> event.diffMeta()?.filePath?.let { "📄 $it" } ?: "📄 diff"
-        else -> buzzActivityLabel(event)
+        is SystemMessageEvent -> buzzSystemMessageText(event, accountViewModel)
+        is StreamMessageDiffEvent -> remember(event) { event.diffMeta()?.filePath?.let { "📄 $it" } ?: "📄 diff" }
+        else -> buzzActivityLabel(event, accountViewModel)
     }
 
 /** A short one-line snippet of free-text content appended after a label, or "" if blank. */
@@ -265,9 +269,21 @@ fun RenderBuzzDiff(note: Note) {
 
 /** A Buzz kind-45002 forum vote: a lightweight up/down signal, shown as a system line. */
 @Composable
-fun RenderBuzzForumVote(note: Note) {
+fun RenderBuzzForumVote(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
     val event = note.event as? ForumVoteEvent ?: return
     // Content is the vote token ("+"/"-" or similar); show a compact glyph line.
-    val text = remember(event) { if (event.content.trim().startsWith("-")) "▼ downvoted a post" else "▲ upvoted a post" }
-    ChatSystemMessage(text = text)
+    val isDownVote = remember(event) { event.content.trim().startsWith("-") }
+    val voter = observeUserNameByHex(event.pubKey, accountViewModel)
+
+    ChatSystemMessage(
+        text =
+            if (isDownVote) {
+                stringRes(R.string.buzz_forum_downvoted, voter)
+            } else {
+                stringRes(R.string.buzz_forum_upvoted, voter)
+            },
+    )
 }

@@ -68,6 +68,23 @@ object BuzzDmChannels {
             true
         }
 
+    /**
+     * Drops a channel that turned out not to be a DM. Discovery provisionally records every kind-44100
+     * here so the channel's kind-39000 can be fetched by id; once that reveals a `t` other than `dm` the
+     * entry is withdrawn, because the always-on DM tail must not silently subscribe the viewer to a named
+     * channel somebody added them to (see [BuzzChannelInvites]).
+     */
+    fun remove(
+        viewer: HexKey,
+        channelId: String,
+    ): Boolean =
+        lock.withLock {
+            val channels = byViewer[viewer] ?: return@withLock false
+            if (channels.remove(channelId) == null) return@withLock false
+            mutableFlow.value = snapshot()
+            true
+        }
+
     /** The DM channels [viewer] is in (`channelId` -> relay), possibly empty. */
     fun channelsFor(viewer: HexKey): Map<String, NormalizedRelayUrl> = mutableFlow.value[viewer] ?: emptyMap()
 

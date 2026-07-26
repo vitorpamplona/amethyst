@@ -49,6 +49,16 @@ class MemberAddedNotificationEvent(
     /** The channel UUID the member was added to - the `h` tag. */
     fun channel() = tags.notificationChannel()
 
+    /**
+     * The relay-reported body: who performed the change ([MembershipNotificationContent.actor]) and the
+     * channel it applies to. The relay emits this kind for a self-join too, so the actor is what
+     * separates "I joined" from "somebody added me" — see [MembershipNotificationContent].
+     */
+    fun notification() = MembershipNotificationContent.parse(content)
+
+    /** The pubkey that performed the add/remove, or null when the body is missing or malformed. */
+    fun actor() = notification()?.actor
+
     companion object {
         const val KIND = 44100
 

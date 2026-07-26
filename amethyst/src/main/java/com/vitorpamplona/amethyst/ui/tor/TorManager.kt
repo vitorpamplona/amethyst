@@ -250,6 +250,24 @@ class TorManager(
                 if (it is TorServiceStatus.Active) hasEverBootstrapped = true
             }.launchIn(scope)
 
+        // Rotten guard sample while Tor is otherwise UP. The watchdog above only fires on a status
+        // stuck at Connecting, and the on-disk check only sees guards Arti has permanently retired —
+        // so a sample whose guards are all merely *unreachable* falls between them: status reaches
+        // Active, `guards.json` still lists usable entries, and every circuit fails anyway. Observed
+        // in the field surviving repeated restarts with ~87% of relay connections failing. Arti's own
+        // AllGuardsDown log is the only reliable signal, so route it through the same rate-limited
+        // wipe. Always a clean-state reset: the whole point is that the persisted sample is the
+        // problem.
+        service.guardsDownSignal
+            .onEach {
+                val now = nowMs()
+                if (now - lastSelfHealAtMs < SELF_HEAL_COOLDOWN_MS) return@onEach
+                lastSelfHealAtMs = now
+                Log.w("TorManager") { "Arti guard sample rotten at runtime — self-healing (drop client + wipe state)" }
+                service.resetWithCleanState()
+                resetEpoch.update { it + 1 }
+            }.launchIn(scope)
+
         selfHealSignal
             .onEach {
                 val now = nowMs()

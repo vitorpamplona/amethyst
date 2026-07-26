@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
@@ -391,6 +392,10 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidator
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
@@ -400,10 +405,6 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidator
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -472,7 +473,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val onchainZapResolver = OnchainZapResolver(this)
 
     /**
-     * NIP-XX BOLT12 zap validator. Unlike onchain zaps, BOLT12 proof verification
+     * NIP-B1 BOLT12 zap validator. Unlike onchain zaps, BOLT12 proof verification
      * is synchronous (a self-contained `lnp` payer proof), so `consume(Bolt12ZapEvent)`
      * validates inline and needs no async resolver.
      */
@@ -1293,7 +1294,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
             is Bolt12ZapEvent -> {
-                // NIP-XX BOLT12 zaps target an event (e), an addressable event (a),
+                // NIP-B1 BOLT12 zaps target an event (e), an addressable event (a),
                 // or just the recipient profile (p) — same shape as onchain zaps.
                 buildList {
                     event.zappedEvent()?.let { checkGetOrCreateNote(it)?.let { add(it) } }
@@ -2293,6 +2294,22 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
     /**
+     * A kind-44101 "you were removed from a channel". Consumed like any other Buzz event, then used to
+     * withdraw any pending add-prompt for that channel: once the relay has taken the membership away
+     * there is nothing left to accept, so leaving the card up would offer an action that cannot succeed.
+     */
+    private fun consume(
+        event: MemberRemovedNotificationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        consumeBuzzRegularEvent(event, relay, wasVerified).also {
+            val target = event.target() ?: return@also
+            val channelId = event.channel() ?: return@also
+            BuzzChannelInvites.remove(target, channelId)
+        }
+
+    /**
      * Attach a group-scoped content event (a kind-9 chat, kind-1068 poll, …
      * carrying an `h` tag) to its [RelayGroupChannel]. NIP-29 reuses the generic
      * content kinds and scopes them with `h`, so the note is consumed normally
@@ -2701,7 +2718,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (!(wasVerified || justVerify(event))) return false
 
-        // NIP-XX validation is fully synchronous: zap-event structure, the embedded
+        // NIP-B1 validation is fully synchronous: zap-event structure, the embedded
         // kind:9737 intent match, and the `lnp` payer-proof binding + crypto. A failed
         // validation drops the zap entirely — it never contributes to a zap total.
         // The outer event signature was already verified above (wasVerified/justVerify),
@@ -4821,7 +4838,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is DmAddMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is DmHideEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is MemberAddedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is MemberRemovedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is MemberRemovedNotificationEvent -> consume(event, relay, wasVerified)
                 is RelayMembershipListEvent -> consume(event, relay, wasVerified)
                 is RelayAddMemberEvent -> consume(event, relay, wasVerified)
                 is RelayRemoveMemberEvent -> consume(event, relay, wasVerified)

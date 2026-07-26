@@ -23,13 +23,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
+import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**
@@ -52,18 +55,35 @@ fun RelayGroupJoinedStatePreload(accountViewModel: AccountViewModel) {
 
 /**
  * Always-on preview **live tail** for joined groups' recent chat, mounted alongside [RelayGroupJoinedStatePreload]
- * — keeps the Messages-list previews reflecting the true newest message app-wide. Re-derives on join/leave.
+ * — keeps the Messages-list previews reflecting the true newest message app-wide.
+ *
+ * Mounts **one subscription per joined group** (not one per host relay): a subscription whose `#h` carries
+ * more than one group id is registered as a *global* subscription by `block/buzz` and then never receives
+ * channel-scoped events, so a batched tail backfills once and goes deaf. See
+ * [buildRelayGroupJoinedChatTailFilter]. Joining/leaving adds or removes a key, so nothing needs an
+ * explicit invalidate; a group whose relay url won't normalize is skipped, exactly as the Messages feed
+ * filter skips it.
  */
 @Composable
 fun RelayGroupJoinedChatTailPreload(accountViewModel: AccountViewModel) {
     val account = accountViewModel.account
     val dataSource = accountViewModel.dataSources().relayGroupJoinedChatTail
-    val state = remember(account) { RelayGroupJoinedChatTailQueryState(account) }
 
     val joined by account.relayGroupList.liveRelayGroupList.collectAsStateWithLifecycle()
-    LaunchedEffect(joined) { dataSource.invalidateFilters() }
+    val enabledFeeds by account.settings.enabledChatFeeds.collectAsStateWithLifecycle()
 
-    KeyDataSourceSubscription(state, dataSource)
+    if (ChatFeedType.NIP29 in enabledFeeds) {
+        joined.forEach { tag ->
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag.relayUrl)
+            if (relay != null) {
+                val groupId = GroupId(tag.groupId, relay)
+                key(groupId) {
+                    val state = remember(account, groupId) { RelayGroupJoinedChatTailQueryState(account, groupId) }
+                    KeyDataSourceSubscription(state, dataSource)
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -77,13 +97,27 @@ fun RelayGroupJoinedChatTailPreload(accountViewModel: AccountViewModel) {
 fun BuzzDmJoinedChatTailPreload(accountViewModel: AccountViewModel) {
     val account = accountViewModel.account
     val dataSource = accountViewModel.dataSources().buzzDmJoinedChatTail
-    val state = remember(account) { BuzzDmJoinedChatTailQueryState(account) }
+    val me = account.userProfile().pubkeyHex
 
+    // Both values must be read (not just collected) so the snapshot system recomposes this
+    // preload — and re-derives the mounted set — whenever a DM is discovered or hidden.
     val channels by BuzzDmChannels.flow.collectAsStateWithLifecycle()
     val hidden by BuzzDmRegistry.hidden.collectAsStateWithLifecycle()
-    LaunchedEffect(channels, hidden) { dataSource.invalidateFilters() }
 
-    KeyDataSourceSubscription(state, dataSource)
+    val visible =
+        remember(channels, hidden, me) {
+            BuzzDmChannels.channelsFor(me).filterKeys { it !in BuzzDmRegistry.hiddenFor(me) }
+        }
+
+    // One subscription per DM channel — batching their ids into a single `#h` makes buzz treat the
+    // subscription as global and stop delivering live messages. See [buildRelayGroupJoinedChatTailFilter].
+    visible.forEach { (channelId, relay) ->
+        val groupId = GroupId(channelId, relay)
+        key(groupId) {
+            val state = remember(account, groupId) { BuzzDmJoinedChatTailQueryState(account, groupId) }
+            KeyDataSourceSubscription(state, dataSource)
+        }
+    }
 }
 
 /**

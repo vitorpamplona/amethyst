@@ -24,19 +24,19 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Bech32
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Offer
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12PayerProof
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.builder.Bolt12ZapBuilder
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.intent.Bolt12ZapIntentEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidator
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Bech32
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Offer
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12PayerProof
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidator
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
- * NIP-XX BOLT12 zap building, decoding, and validation — the shared, UI-free
+ * NIP-B1 BOLT12 zap building, decoding, and validation — the shared, UI-free
  * surface a non-Android caller (amy CLI, interop harnesses) drives.
  *
  * Assembly-only: it re-exposes [Bolt12ZapBuilder] / [Bolt12ZapValidator] and the

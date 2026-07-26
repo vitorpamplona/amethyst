@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.zonedDrawerSwipeIfModal
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ChannelInvitesSection
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
@@ -131,6 +132,17 @@ fun MessagesPager(
             scrollStateKey = tabs[page].scrollStateKey,
             accountViewModel = accountViewModel,
             nav = nav,
+            // Channels somebody added you to are pending decisions, exactly like an unaccepted DM — so
+            // they belong on New Requests, pinned above the rows. Passed as the feed's header rather
+            // than stacked beside it: the collapsing top bar draws over this area, so a header outside
+            // the list renders underneath it. The Notifications tab shows the same prompts from the
+            // same state holder, so the two surfaces cannot disagree.
+            headerContent =
+                if (tabs[page].resource == R.string.new_requests) {
+                    { ChannelInvitesSection(accountViewModel) }
+                } else {
+                    null
+                },
         )
     }
 }

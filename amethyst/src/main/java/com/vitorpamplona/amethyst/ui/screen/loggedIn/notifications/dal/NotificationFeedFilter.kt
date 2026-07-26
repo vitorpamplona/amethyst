@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
+import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
@@ -87,11 +89,11 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -151,10 +153,16 @@ class NotificationFeedFilter(
                 //    filterGroupNotificationsToPubkey.
                 //  • NIP-C7 / Concord: an inline reply (Concord's default reply mode) or an @-mention
                 //    p-tags me; a minichat reply is a kind-1111 CommentEvent below.
-                // Either way it notifies only when it p-tags me — a plain channel message tags no one
-                // and never reaches here. Without kind 9 the acceptableEvent kind gate would drop these
-                // replies before the p-tag check, so they'd never render on the Notifications tab.
+                //  • Buzz channels: a THREAD reply carries no `p` tag at all (Buzz only p-tags
+                //    @mentions), so it qualifies through [isBuzzThreadReplyToMyEvent] instead, which
+                //    resolves the author of its `root`/`reply` marked `e` tags.
+                // A plain channel message tags no one and matches none of those, so it never reaches
+                // here. Without kind 9 the acceptableEvent kind gate would drop these replies before
+                // any of the checks, so they'd never render on the Notifications tab.
                 ChatEvent.KIND,
+                // Legacy Buzz thread replies (nothing writes 40002 any more, but they exist in the
+                // wild). Same no-`p`-tag shape as kind 9 above.
+                StreamMessageV2Event.KIND,
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
                 CommentEvent.KIND,
@@ -420,6 +428,36 @@ class NotificationFeedFilter(
             ?.pubkeyHex == me
     }
 
+    /**
+     * A Buzz chat **thread reply** into one of my messages, when the reply carries no `p` tag.
+     *
+     * Buzz's clients thread with `["e", <id>, "", "reply"]` (nested: `root` + `reply`) and only ever
+     * `p`-tag @mentions, so a reply to my message names me nowhere. That is the same shape as a Buzz
+     * reaction, which [isReactionToMyEvent] already rescues by resolving the target's author instead of
+     * trusting a tag — this does the same for replies, looking at the author of the `root`/`reply`
+     * targets specifically (never a bare `e`, which is WhiteNoise/Marmot's in-chat reply, not a thread).
+     *
+     * Without it a reply to my message in a Buzz channel notifies nothing — and since a thread reply is
+     * deliberately kept out of the channel timeline and its unread dot
+     * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.isRelayGroupTimelineMessage]),
+     * it would be invisible on every surface.
+     *
+     * Only consulted when there is no `p` tag: a reply that does name me already passes the p-tag gate.
+     */
+    private fun isBuzzThreadReplyToMyEvent(
+        note: Note,
+        me: HexKey,
+    ): Boolean {
+        val event = note.event
+        if (event !is ChatEvent && event !is StreamMessageV2Event) return false
+        if (event.tags.any { it.getOrNull(0) == "p" }) return false
+
+        val threadTargets = setOfNotNull(event.tags.buzzThreadReply(), event.tags.buzzThreadRoot())
+        if (threadTargets.isEmpty()) return false
+
+        return note.replyTo?.any { it.idHex in threadTargets && it.author?.pubkeyHex == me } == true
+    }
+
     fun acceptableEvent(
         it: Note,
         filterParams: FilterByListParams,
@@ -555,6 +593,9 @@ class NotificationFeedFilter(
         // exactly like a Concord reaction, since being the author of the liked post is the only signal.
         val isReactionToMe = isReactionToMyEvent(it, loggedInUserHex)
 
+        // Same no-`p`-tag rescue for Buzz thread replies into my messages.
+        val isThreadReplyToMe = isBuzzThreadReplyToMyEvent(it, loggedInUserHex)
+
         // Concord CHAT (a message/reply) honors the "Messages in notifications" toggle that silences DMs
         // and Marmot groups above. A reaction isn't a message — regular reactions ignore that toggle, so
         // Concord reactions do too (only isConcordMessage is gated).
@@ -573,14 +614,14 @@ class NotificationFeedFilter(
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || noteEvent is Bolt12ZapEvent || notifAuthor != loggedInUserHex) &&
-            (isChessEvent || isConcord || isReactionToMe || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
-            (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex) || isReactionToMe) &&
+            (isChessEvent || isConcord || isReactionToMe || isThreadReplyToMe || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex) || isReactionToMe || isThreadReplyToMe) &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             // For a Concord note the explicit p-tag above IS the relevance signal (the reply/reaction/
             // mention targets me directly), so skip the per-kind heuristic — which for a reaction would
             // otherwise need my target message already loaded to resolve replyTo.
-            (isRawGlobal || isConcord || tagsAnEventByUser(it, loggedInUserHex))
+            (isRawGlobal || isConcord || isThreadReplyToMe || tagsAnEventByUser(it, loggedInUserHex))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()

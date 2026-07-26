@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
@@ -193,6 +194,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -386,6 +388,9 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
@@ -395,9 +400,6 @@ import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.intent.Bolt12ZapIntentEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 
@@ -559,7 +561,25 @@ class EventFactory {
                 GroupMembersEvent.KIND -> GroupMembersEvent(id, pubKey, createdAt, tags, content, sig)
                 SupportedRolesEvent.KIND -> SupportedRolesEvent(id, pubKey, createdAt, tags, content, sig)
                 GroupParticipantsEvent.KIND -> GroupParticipantsEvent(id, pubKey, createdAt, tags, content, sig)
-                GroupPinnedEvent.KIND -> GroupPinnedEvent(id, pubKey, createdAt, tags, content, sig)
+                // kind:39005 is shared by two relay-signed, addressable events that never coexist on
+                // one relay: NIP-29's group pin list (relay29 family) and Buzz's NIP-CW thread
+                // summary. Disambiguate by Buzz's required `h` (channel) tag — a thread summary is
+                // addressed by `d` = the thread ROOT EVENT ID and also carries `e` = that root and
+                // `h` = the channel, while a pin list is addressed by `d` = the GROUP ID with the
+                // pinned ids as `e` tags and no `h` at all.
+                //
+                // Without this, a Buzz thread summary parses as a GroupPinnedEvent — silently, since
+                // nothing throws — and `pinnedEventIds()` would read the summary's `e` tag and report
+                // the thread root as a pinned message. Buzz publishes these live to channel
+                // subscribers (`side_effects.rs`, Redis fan-out to `EventTopic::Channel`), not only on
+                // its HTTP bridge, so any future channel-scoped filter that asks for 39005 receives
+                // them. Buzz's own pinned message is a different kind entirely (40004).
+                GroupPinnedEvent.KIND ->
+                    if (tags.any { it.size > 1 && it[0] == GroupIdTag.TAG_NAME }) {
+                        ThreadSummaryEvent(id, pubKey, createdAt, tags, content, sig)
+                    } else {
+                        GroupPinnedEvent(id, pubKey, createdAt, tags, content, sig)
+                    }
                 UpdatePinListEvent.KIND -> UpdatePinListEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
                 CodeSnippetEvent.KIND -> CodeSnippetEvent(id, pubKey, createdAt, tags, content, sig)

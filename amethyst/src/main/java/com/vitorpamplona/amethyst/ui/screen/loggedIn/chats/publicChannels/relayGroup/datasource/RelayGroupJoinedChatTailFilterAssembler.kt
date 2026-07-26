@@ -27,19 +27,21 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.filterGroupNotificationsToPubkey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 
-/** One screen's request to keep the user's joined groups' recent chat live. */
+/** One joined group whose recent chat is kept live for the Messages-list preview. */
 class RelayGroupJoinedChatTailQueryState(
     val account: Account,
+    val groupId: GroupId,
 )
 
 /**
@@ -47,15 +49,17 @@ class RelayGroupJoinedChatTailQueryState(
  * analog of the NIP-04 rooms-list live tail
  * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListNip04SubAssembler]).
  *
- * One `#h`-scoped filter **per host relay** carries every joined group id on that relay at once,
- * `since = recentBoundary()` and **no per-group limit** — a time floor bounds it, so unlike the fixed
- * `limit=50` window it can batch all of a relay's groups into a single REQ. This keeps the Messages-list
- * previews reflecting the true newest message and joined groups' recent chat warm in cache without
+ * **One subscription per joined group**, each a single-valued `#h` filter with `since = recentBoundary()`
+ * and no `limit` — a time floor bounds it, so it stays reconnect-safe. This keeps the Messages-list
+ * previews reflecting the true newest message, and joined groups' recent chat warm in cache, without
  * opening each one. Older history is the [RelayGroupOpenChatHistorySubAssembler]'s job (below the floor).
  *
- * Batching by a shared time floor (rather than a per-group `limit` + shared per-relay EOSE `since`) is
- * what makes this both correct — every joined group is covered the moment it joins — and reconnect-safe:
- * a reconnect re-issues one `since=window` REQ per relay, never a per-group page replay.
+ * These used to be batched into one subscription per host relay carrying every group id in a single `#h`.
+ * That is valid NIP-01 and relays answer it correctly for stored queries, but it silently breaks *live*
+ * delivery on `block/buzz`, which can only index a subscription under one channel and downgrades a
+ * multi-id one to "global" — a class that by design receives no channel-scoped events. The batched tail
+ * therefore backfilled at EOSE and then went permanently deaf, freezing the Messages row while the open
+ * chat (always single-valued) stayed live. See [buildRelayGroupJoinedChatTailFilter] for the full trace.
  */
 class RelayGroupJoinedChatTailFilterAssembler(
     client: INostrClient,
@@ -74,7 +78,7 @@ class RelayGroupJoinedChatTailFilterAssembler(
 class RelayGroupJoinedChatTailSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<RelayGroupJoinedChatTailQueryState>,
-) : PerUniqueIdEoseManager<RelayGroupJoinedChatTailQueryState, Account>(client, allKeys) {
+) : PerUniqueIdEoseManager<RelayGroupJoinedChatTailQueryState, GroupId>(client, allKeys) {
     private val windowLoad = WindowLoadTracker("relayGroup.preview.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
@@ -82,42 +86,51 @@ class RelayGroupJoinedChatTailSubAssembler(
         key: RelayGroupJoinedChatTailQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP29)) {
-            windowLoad.setExpectedRelays(emptySet())
-            return null
-        }
-        val joined = key.account.relayGroupList.liveRelayGroupList.value
-        if (joined.isEmpty()) {
-            windowLoad.setExpectedRelays(emptySet())
-            return null
-        }
+        // The preload only mounts keys while the toggle is on; re-checked here so a flip to off
+        // empties any subscription that outlives the recomposition.
+        if (!key.account.settings.isChatFeedEnabled(ChatFeedType.NIP29)) return null
 
-        // One #h filter per host relay carrying every joined group id on it; bounded by the shared
-        // recent-tail floor, so no per-group limit and no per-group re-subscribe on join.
-        val filters = buildRelayGroupJoinedChatTailFilters(joined, DmHistoryTuning.recentBoundary())
-        windowLoad.setExpectedRelays(filters.mapTo(mutableSetOf()) { it.relay })
-        return filters
+        val relay = key.groupId.relayUrl
+        // The tracker is shared by every key of this assembler, so it must describe the whole joined
+        // fleet rather than whichever channel happened to rebuild last — otherwise each key would
+        // overwrite the expected set with its own single relay. [loadingMore] is what the Messages rows
+        // read to tell "still fetching this channel's newest message" apart from "channel is empty".
+        windowLoad.setExpectedRelays(
+            key.account.relayGroupList.liveRelayGroupList.value
+                .mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it.relayUrl) },
+        )
+
+        // Two filters, both `#h`-scoped to THIS group, so the subscription still resolves to a single
+        // channel on buzz (its resolver only bails when two *distinct* ids appear, or when some filter
+        // carries no channel tag at all). Each is queried independently, so they keep their own window:
+        //  - the chat tail: every timeline kind, time-floored, no limit
+        //  - group activity addressed to me: reactions/zaps/reports/replies (kinds the tail doesn't ask
+        //    for), `#p` = me + `limit`, `since` from EOSE so a cold start is all-time and a reconnect is
+        //    cheap. This used to ride the account-wide notifications subscription, which also carries
+        //    inbox filters with no `#h` — that alone forces the whole subscription global on buzz, so
+        //    live group reactions never arrived until the next launch.
+        return listOf(
+            buildRelayGroupJoinedChatTailFilter(key.groupId, DmHistoryTuning.recentBoundary()),
+            // The row's newest message at ANY age. The tail above floors at 7 days to keep recent chat
+            // warm, which on its own strands a channel quiet for longer than that on a placeholder row.
+            buildRelayGroupPreviewFilter(key.groupId, since?.get(relay)?.time),
+            // Reactions/deletions for every message in this channel — the shape Buzz's own client uses.
+            buildRelayGroupAuxFilter(key.groupId, DmHistoryTuning.recentBoundary()),
+        ) +
+            filterGroupNotificationsToPubkey(
+                relay = relay,
+                pubkey = key.account.userProfile().pubkeyHex,
+                groupIds = listOf(key.groupId.id),
+                since = since?.get(relay)?.time,
+            )
     }
 
-    override fun id(key: RelayGroupJoinedChatTailQueryState) = key.account
-
-    private val toggleJobs = mutableMapOf<Account, Job>()
+    override fun id(key: RelayGroupJoinedChatTailQueryState) = key.groupId
 
     override fun newSub(key: RelayGroupJoinedChatTailQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)
-        toggleJobs.remove(key.account)?.cancel()
-        toggleJobs[key.account] =
-            key.account.scope.launchChatFeedToggleObserver(key.account, ChatFeedType.NIP29) { invalidateFilters() }
         return requestNewSubscription(
             windowLoad.trackingListener { relay: NormalizedRelayUrl, filters -> newEose(key, relay, TimeUtils.now(), filters) },
         )
-    }
-
-    override fun endSub(
-        key: Account,
-        subId: String,
-    ) {
-        super.endSub(key, subId)
-        toggleJobs.remove(key)?.cancel()
     }
 }

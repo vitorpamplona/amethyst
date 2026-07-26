@@ -40,11 +40,11 @@ import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import java.text.NumberFormat
 
 /**
- * Standalone card for a NIP-XX BOLT12 zap (kind 9736), styled like the NIP-57
+ * Standalone card for a NIP-B1 BOLT12 zap (kind 9736), styled like the NIP-57
  * lightning-zap card but labeled BOLT12. The sender is the `P` payer tag (or the
  * event pubkey when anonymous); the amount comes straight off the validated
  * `amount` tag — no LNURL provider or private-zap decryption is involved.

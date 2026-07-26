@@ -95,31 +95,31 @@ class RequestTest {
 
     @Test
     fun testPayCreateWithOfferAndPayerNote() {
-        val request = PayMethod.create("bitcoin:?lno=lno1abc", amount = 21_000L, payerNote = "nostr:nipXX:deadbeef")
+        val request = PayMethod.create("bitcoin:?lno=lno1abc", amount = 21_000L, payerNote = "nostr:nipB1:deadbeef")
         assertEquals(NwcMethod.PAY, request.method)
         assertEquals("bitcoin:?lno=lno1abc", request.params?.payment)
         assertEquals(21_000L, request.params?.amount)
-        assertEquals("nostr:nipXX:deadbeef", request.params?.payer_note)
+        assertEquals("nostr:nipB1:deadbeef", request.params?.payer_note)
     }
 
     @Test
     fun testPaySerialization() {
-        val request = PayMethod.create("bitcoin:?lno=lno1abc", amount = 21_000L, payerNote = "nostr:nipXX:deadbeef")
+        val request = PayMethod.create("bitcoin:?lno=lno1abc", amount = 21_000L, payerNote = "nostr:nipB1:deadbeef")
         val json = OptimizedJsonMapper.toJson(request)
         assertTrue(json.contains("\"method\":\"pay\""))
         assertTrue(json.contains("\"payment\":\"bitcoin:?lno=lno1abc\""))
         assertTrue(json.contains("\"amount\":21000"))
-        assertTrue(json.contains("\"payer_note\":\"nostr:nipXX:deadbeef\""))
+        assertTrue(json.contains("\"payer_note\":\"nostr:nipB1:deadbeef\""))
     }
 
     @Test
     fun testPayDeserialization() {
-        val json = """{"method":"pay","params":{"payment":"bitcoin:?lno=lno1abc","amount":21000,"payer_note":"nostr:nipXX:deadbeef"}}"""
+        val json = """{"method":"pay","params":{"payment":"bitcoin:?lno=lno1abc","amount":21000,"payer_note":"nostr:nipB1:deadbeef"}}"""
         val request = OptimizedJsonMapper.fromJsonTo<Request>(json)
         assertIs<PayMethod>(request)
         assertEquals("bitcoin:?lno=lno1abc", request.params?.payment)
         assertEquals(21_000L, request.params?.amount)
-        assertEquals("nostr:nipXX:deadbeef", request.params?.payer_note)
+        assertEquals("nostr:nipB1:deadbeef", request.params?.payer_note)
     }
 
     @Test

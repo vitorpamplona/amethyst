@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Bech32
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Offer
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Values
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.TlvRecord
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.TlvStream
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Bech32
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Offer
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Values
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.TlvRecord
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.TlvStream
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

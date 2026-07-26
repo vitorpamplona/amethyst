@@ -51,7 +51,7 @@ class PayInvoiceMethod(
 // (bolt11 `lightning=`, BOLT12 `lno=`, or on-chain). `payment` is the BIP321 URI;
 // `amount` (msats) is required only when the instruction has no amount; `payer_note`
 // is delivered to the payee when the instruction supports payer messages (for a
-// BOLT12 zap this carries `nostr:nipXX:<intent-id>`).
+// BOLT12 zap this carries `nostr:nipB1:<intent-id>`).
 class PayParams(
     var payment: String? = null,
     var amount: Long? = null,

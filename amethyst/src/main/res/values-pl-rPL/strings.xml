@@ -737,7 +737,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="profile_badges_empty">Nie otrzymałeś jeszcze żadnych odznak.</string>
     <string name="profile_apps_header">Aplikacje · %1$d</string>
     <string name="profile_apps_header_empty">Aplikacje</string>
-    <string name="profile_apps_empty_hint">Poleć aplikacjom Nostr, których używasz, aby inni mogli je odkryć.</string>
+    <string name="profile_apps_empty_hint">Poleć aplikacje Nostr, z których korzystasz, aby inni mogli je odkryć.</string>
     <string name="profile_app_recommendations_title">Polecane aplikacje</string>
     <string name="profile_app_recommendations_description">Wybierz aplikacje Nostr, które chcesz publicznie polecić. Twoje rekomendacje pojawią się na Twoim profilu i pomogą innym użytkownikom znaleźć aplikacje z treściami, których ten klient nie może otworzyć.</string>
     <string name="profile_app_recommendations_empty">Nie znaleziono jeszcze żadnych aplikacji. Aplikacje będą się tu pojawiać w miarę ich wykrywania na Twoich transmiterach.</string>
@@ -2451,6 +2451,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_invite_preparing">Przygotowywanie zaproszenia…</string>
     <string name="relay_group_badge_private">Prywatna</string>
     <string name="relay_group_badge_invite_only">Tylko na zaproszenie</string>
+    <string name="relay_group_badge_live">NA ŻYWO</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Wprowadź poprawny adres URL transmitera (wss://…).</string>
     <string name="relay_group_field_name">Nazwa</string>
     <string name="relay_group_field_about">Opis</string>
@@ -2540,6 +2542,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="few">%1$d osób, które obserwujesz</item>
         <item quantity="many">%1$d osób, które obserwujesz</item>
         <item quantity="other">%1$d osoby, które obserwujesz</item>
+    </plurals>
+    <plurals name="relay_group_relay_group_count">
+        <item quantity="one">%1$d grupa</item>
+        <item quantity="few">%1$d grup</item>
+        <item quantity="many">%1$d grup</item>
+        <item quantity="other">%1$d grupy</item>
     </plurals>
     <string name="messages_new_message">Prywatna</string>
     <string name="messages_new_message_to">Do</string>
@@ -4388,6 +4396,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="pow_cancel_dialog_send_without_pow">Wyślij bez PoW</string>
     <string name="pow_cancel_dialog_discard">Odrzuć post</string>
     <string name="pow_difficulty_estimate">◆ %1$s na posta na tym urządzeniu</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">
         <item quantity="one">%1$d sekundę</item>
         <item quantity="few">%1$d sekund</item>

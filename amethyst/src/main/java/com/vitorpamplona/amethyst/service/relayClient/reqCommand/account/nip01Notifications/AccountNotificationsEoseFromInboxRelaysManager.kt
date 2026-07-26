@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
@@ -29,7 +27,6 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -84,45 +81,17 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                     )
             }
 
-        // NIP-29 group activity (reactions/replies to my messages) lives on the group's host relay,
-        // not my inbox relays — poll each host relay for those, scoped by `#h` to my joined groups.
-        val groups =
-            key.account.relayGroupList.liveRelayGroupList.value
-                .groupBy({ it.relayUrl }, { it.groupId })
-                .flatMap { (relayUrl, groupIds) ->
-                    val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@flatMap emptyList()
-                    filterGroupNotificationsToPubkey(
-                        relay = relay,
-                        pubkey = user(key).pubkeyHex,
-                        groupIds = groupIds.distinct(),
-                        // Same reasoning as the inbox filters above: `#p` + `#h` + `limit = 200`
-                        // already bound this, so a week floor only hides older group activity.
-                        since = since?.get(relay)?.time ?: pagingBoundary,
-                    )
-                }
-
-        // Buzz DM channels are NOT in the published group list (membership is server-side, tracked in
-        // BuzzDmChannels), so the joined-group query above skips them. Poll each DM host relay the same
-        // way — `#p` = me + `#h` = my DM channels — so a reaction/zap/repost on my DM message surfaces
-        // in notifications, not only as a chip inside the open conversation. Hidden DMs are excluded.
-        val myPubkey = user(key).pubkeyHex
-        val hiddenDms = BuzzDmRegistry.hiddenFor(myPubkey)
-        val dmGroups =
-            BuzzDmChannels
-                .channelsFor(myPubkey)
-                .filterKeys { it !in hiddenDms }
-                .entries
-                .groupBy({ it.value }, { it.key })
-                .flatMap { (relay, channelIds) ->
-                    filterGroupNotificationsToPubkey(
-                        relay = relay,
-                        pubkey = myPubkey,
-                        groupIds = channelIds.distinct(),
-                        since = since?.get(relay)?.time ?: pagingBoundary,
-                    )
-                }
-
-        return inbox + groups + dmGroups
+        // NIP-29 group activity (reactions/replies to my messages) is deliberately NOT requested here.
+        // It lives on the group's host relay and used to be one `#h` filter per relay carrying every
+        // joined group id — but this subscription also carries the inbox filters above, which have no
+        // `#h` at all, and `block/buzz` downgrades any subscription with a channel-less (or multi-
+        // channel) filter to "global", a class that by design never receives channel-scoped events. So
+        // those filters answered the stored query at EOSE and then went deaf until the next launch.
+        //
+        // Group and Buzz-DM activity now rides the per-channel subscriptions that are already scoped to
+        // exactly one channel — RelayGroupJoinedChatTailSubAssembler and BuzzDmJoinedChatTailSubAssembler,
+        // both mounted app-wide from LoggedInPage, so coverage is unchanged and delivery is live.
+        return inbox
     }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
@@ -138,21 +107,8 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                         invalidateFilters()
                     }
                 },
-                // Re-subscribe when I join/leave a group so its host relay is added to (or dropped
-                // from) the notification query.
-                key.account.scope.launch(Dispatchers.IO) {
-                    key.account.relayGroupList.liveRelayGroupList.sample(1000).collectLatest {
-                        invalidateFilters()
-                    }
-                },
-                // Re-subscribe when a Buzz DM is discovered/hidden so its host relay is polled for
-                // reactions/zaps on my DM messages.
-                key.account.scope.launch(Dispatchers.IO) {
-                    BuzzDmChannels.flow.sample(1000).collectLatest { invalidateFilters() }
-                },
-                key.account.scope.launch(Dispatchers.IO) {
-                    BuzzDmRegistry.hidden.sample(1000).collectLatest { invalidateFilters() }
-                },
+                // No group/Buzz-DM watchers here any more: those filters moved to the per-channel
+                // subscriptions, which mount and unmount with the channel itself.
                 key.account.scope.launch(Dispatchers.IO) {
                     key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()

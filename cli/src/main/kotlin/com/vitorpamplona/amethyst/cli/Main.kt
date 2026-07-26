@@ -750,7 +750,7 @@ private fun printUsage() {
         |    [--comment X] [--anon|--private]  event (must be in local store)
         |    [--timeout SECS]
         |
-        |BOLT12 zaps (NIP-XX):
+        |BOLT12 zaps (NIP-B1):
         |  bolt12 decode LNO1|LNP1           decode a BOLT12 offer or payer proof
         |  bolt12 verify EVENT-ID            validate a kind:9736 zap in the local store
         |  bolt12 offer get USER             fetch + show a user's kind:10058 offers

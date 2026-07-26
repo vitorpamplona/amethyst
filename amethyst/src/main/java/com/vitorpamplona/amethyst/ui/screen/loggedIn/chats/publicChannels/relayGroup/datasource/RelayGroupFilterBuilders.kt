@@ -54,13 +54,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
@@ -173,6 +176,33 @@ val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
 val RELAY_GROUP_ALL_TIMELINE_KINDS = RELAY_GROUP_TIMELINE_KINDS + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS
 
 /**
+ * Channel **aux** kinds — overlays that modify an existing row rather than being a row: reactions (7),
+ * NIP-09 deletions (5) and the Buzz-native NIP-29 delete (9005).
+ *
+ * Requested `#h`-scoped on the channel subscription, which is how the Buzz reference client does it
+ * (`channelEventKinds` in its Flutter client bundles deletion + reaction + the message kinds into the
+ * one `#h` channel REQ). Amethyst otherwise only learns about reactions through the shared `#e`
+ * EventFinder query keyed on the ids of notes currently on screen — and that query carries no `#h`, so
+ * on a relay that scopes live delivery per channel it is registered as a *global* subscription and can
+ * never receive them live (a reaction inherits its target's channel, so it IS channel-scoped). The
+ * result was reaction chips that only ever appeared on a re-query, never as they happened.
+ *
+ * Kept OUT of [RELAY_GROUP_ALL_TIMELINE_KINDS] on purpose: that set feeds the backward history pager,
+ * whose `until` cursor walks `created_at`. Letting reactions consume a page's `limit` would advance the
+ * cursor past chat messages that were never delivered — the same class of cursor-skip bug that the
+ * unconditional-Buzz-kinds note above records.
+ */
+val RELAY_GROUP_AUX_KINDS =
+    listOf(
+        DeletionEvent.KIND,
+        ReactionEvent.KIND,
+        DeleteEventEvent.KIND,
+    )
+
+/** How many aux events a channel replays on subscribe. Bounds the backfill; live delivery is unbounded. */
+const val RELAY_GROUP_AUX_LIMIT = 500
+
+/**
  * Kinds requested on the **open channel's live tail only** — the timeline set plus the
  * ephemeral kind-20002 typing indicator. Typing is scoped to the one channel on screen
  * (not the whole joined fleet) because it's a live "someone is typing" signal, never
@@ -233,25 +263,100 @@ fun buildRelayGroupStateFilters(
     }
 
 /**
- * Recent chat of every joined group, **one `#h` filter per host relay** carrying that relay's group ids,
- * bounded by a shared time floor ([sinceEpoch]) and **no per-group `limit`** — this is what lets the whole
- * relay's groups batch into a single REQ and makes it reconnect-safe.
+ * Recent chat of **one** joined group: a single-valued `#h` filter on its host relay, bounded by a shared
+ * time floor ([sinceEpoch]) and **no `limit`** — a time floor bounds it, so it stays reconnect-safe (a
+ * reconnect re-issues one `since=window` REQ, never a page replay).
+ *
+ * ### Why one group per filter — and per *subscription*
+ *
+ * This used to batch every joined group on a relay into ONE filter carrying every group id in `#h`. That
+ * shape is valid NIP-01 (a multi-value tag filter is an OR), and relays serve it correctly for **stored**
+ * queries — which is exactly what made the bug so confusing: the boot backfill populated every group, so
+ * the Messages list looked right until it needed to update.
+ *
+ * But `block/buzz` (the relay behind `*.communities.buzz.xyz`) indexes each live subscription under a
+ * *single* channel uuid, resolved from the filters' `#h`. When two or more distinct ids appear anywhere
+ * across a subscription's filters, `extract_channel_id_from_filters` returns `None` and the subscription
+ * is registered as **global** — and global subscriptions deliberately never receive channel-scoped events
+ * (`fan_out_scoped`: "Global subscriptions do NOT receive channel-scoped events", guarding against leaking
+ * private channel content to a subscriber whose membership wasn't checked per channel). Net effect: a
+ * batched tail gets full history at EOSE and then goes permanently deaf, so the Messages row froze while
+ * the open chat — which always used a single-valued `#h` — stayed live.
+ *
+ * The resolution scans **all filters of a subscription**, so splitting into one filter per group is not
+ * enough: each group needs its **own subscription** (see [RelayGroupJoinedChatTailFilterAssembler], which
+ * keys its EOSE manager on [GroupId]). Relays advertise room for this — buzz allows `max_subscriptions:
+ * 1024` against `max_filters: 10` — and it sidesteps the filter cap for anyone in more than ten groups.
  */
-fun buildRelayGroupJoinedChatTailFilters(
-    joined: Collection<GroupTag>,
+fun buildRelayGroupJoinedChatTailFilter(
+    groupId: GroupId,
     sinceEpoch: Long,
-): List<RelayBasedFilter> =
-    byHostRelay(joined).map { (relay, ids) ->
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
-                    tags = mapOf(GroupIdTag.TAG_NAME to ids.distinct()),
-                    since = sinceEpoch,
-                ),
-        )
-    }
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = groupId.relayUrl,
+        filter =
+            Filter(
+                kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
+                tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
+                since = sinceEpoch,
+            ),
+    )
+
+/**
+ * The **newest message** of one joined channel, at any age: single-valued `#h`, `limit = 1`, and a
+ * `since` that is null until this relay EOSEs.
+ *
+ * This is what fills the channel's Messages-list row, and it is deliberately count-bounded rather than
+ * time-bounded. [buildRelayGroupJoinedChatTailFilter] floors at `now - 7 days` to keep recent chat warm
+ * in cache; on its own that means a channel nobody has posted in for eight days returns *zero* events,
+ * so `newestChatNote()` stays null and the row is stuck on its "No messages yet" placeholder forever —
+ * sorted to the bottom of Messages by `createdAt = 0`, indistinguishable from a channel you just joined.
+ *
+ * Every other roster-driven protocol on that screen already bounds by count for exactly this reason:
+ * NIP-28 asks `limit = 1` per followed channel
+ * ([com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.filterLastMessageFollowingPublicChats]),
+ * Concord asks `limit = 10` per channel with no floor (`ConcordSubscriptionPlanner.channelPreviewFilters`).
+ * They can, because their row set comes from a list event — unlike NIP-17/NIP-04, whose *rooms* are
+ * discovered from the messages themselves and therefore need the backward pagers on the Messages list.
+ * A NIP-29 channel is roster-driven (kind 10009), so it needs one newest message per row, not a window.
+ *
+ * `since` comes from the per-relay EOSE map: null on a cold start (newest message whatever its age),
+ * then advancing, so a reconnect re-asks for one event rather than replaying a window.
+ */
+fun buildRelayGroupPreviewFilter(
+    groupId: GroupId,
+    sinceEpoch: Long?,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = groupId.relayUrl,
+        filter =
+            Filter(
+                kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
+                tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
+                since = sinceEpoch,
+                limit = 1,
+            ),
+    )
+
+/**
+ * Reactions/deletions for **every** message in one channel, `#h`-scoped on its host relay — see
+ * [RELAY_GROUP_AUX_KINDS]. Single-valued `#h`, so it can share a channel-scoped subscription with the
+ * chat tail without downgrading it.
+ */
+fun buildRelayGroupAuxFilter(
+    groupId: GroupId,
+    sinceEpoch: Long,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = groupId.relayUrl,
+        filter =
+            Filter(
+                kinds = RELAY_GROUP_AUX_KINDS,
+                tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
+                since = sinceEpoch,
+                limit = RELAY_GROUP_AUX_LIMIT,
+            ),
+    )
 
 /** The recent-chat live tail for a single open group, `#h`-scoped on its host relay. */
 fun buildRelayGroupOpenChatTailFilter(

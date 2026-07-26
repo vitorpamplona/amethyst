@@ -2367,6 +2367,8 @@
     <string name="relay_group_invite_preparing">आमन्त्रण उत्पादन…</string>
     <string name="relay_group_badge_private">निजी</string>
     <string name="relay_group_badge_invite_only">केवल आमन्त्रित</string>
+    <string name="relay_group_badge_live">वर्तमान</string>
+    <string name="relay_group_message_count_short_capped">%1$d से अधिक</string>
     <string name="relay_group_browse_invalid_url">प्रविष्ट करें एक मान्य पुनःप्रसारक पता (wss://…)।</string>
     <string name="relay_group_field_name">नाम</string>
     <string name="relay_group_field_about">विवरण</string>
@@ -2448,6 +2450,10 @@
     <plurals name="relay_group_follows_participating">
         <item quantity="one">%1$d व्यक्ति जिसके आप अनुचर</item>
         <item quantity="other">%1$d व्यक्ति जिसके आप अनुचर</item>
+    </plurals>
+    <plurals name="relay_group_relay_group_count">
+        <item quantity="one">%1$d समूह</item>
+        <item quantity="other">%1$d समूह</item>
     </plurals>
     <string name="messages_new_message">निजी</string>
     <string name="messages_new_message_to">के लिए</string>

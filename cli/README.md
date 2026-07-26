@@ -715,7 +715,7 @@ output then also reports `paid` + the preimage.
 | `amy zap user USER SATS [--comment X] [--anon\|--private] [--with NDEBIT] [--timeout SECS]` | Profile zap: build the zap request and fetch a BOLT11 from USER's LN service. |
 | `amy zap event EVENT-ID SATS [--comment X] [--anon\|--private] [--with NDEBIT] [--timeout SECS]` | Same, attributed to a specific event (must be in the local store). Zap splits are honored — one invoice per recipient. |
 
-### BOLT12 zaps (NIP-XX)
+### BOLT12 zaps (NIP-B1)
 
 BOLT12 zaps (kinds 9736/9737, offers in kind:10058). amy has no NWC payment
 rail, so sending is a **two-step, out-of-band** flow: `bolt12 intent` signs the

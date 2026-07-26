@@ -28,9 +28,9 @@ import com.vitorpamplona.amethyst.commons.actions.Bolt12ZapActions
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.bolt12.Bolt12Bech32
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.intent.Bolt12ZapIntentEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Bech32
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
 
 /**
  * The BOLT12 send-side sub-verbs of `amy bolt12` (split from [Bolt12Commands] to keep

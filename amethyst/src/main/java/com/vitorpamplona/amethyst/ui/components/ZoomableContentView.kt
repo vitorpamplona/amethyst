@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
@@ -143,6 +144,23 @@ private const val SHARED_VIDEO_CLEANUP_DELAY_MS = 120_000L
 // and bottom. Guessing the overwhelmingly common video shape puts the first layout in the right
 // place; [MediaAspectRatioCache] then corrects anything unusual once the decoder reports its size.
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
+
+/**
+ * Shape to assume for a [MediaUrlVideo] nobody has reported dimensions for — no imeta `dim` and
+ * nothing in [MediaAspectRatioCache].
+ *
+ * Video gets [DEFAULT_VIDEO_ASPECT_RATIO]. Audio gets null, meaning "no ratio, wrap whatever the
+ * player asks for": audio has no picture, and the inline player sizes itself as a square (see
+ * `AudioPlayerSquare.audioSquare`) so the visualizer and controls get room. A square is taller than
+ * 16:9, so caging it in a 16:9 box — which is centre-aligned and unclipped all the way up through
+ * NoteComposeLayout — makes the player paint over the note header above it and the reactions row
+ * below. Audio also never reaches the cache, since it has no video track to report a size, so the
+ * miss is permanent rather than first-play-only.
+ */
+internal fun unknownMediaAspectRatio(
+    mimeType: String?,
+    url: String,
+): Float? = if (RichTextParser.isAudioContent(mimeType, url)) null else DEFAULT_VIDEO_ASPECT_RATIO
 
 @Composable
 fun ZoomableContentView(
@@ -203,7 +221,16 @@ fun ZoomableContentView(
         }
 
         is MediaUrlVideo -> {
-            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url) ?: DEFAULT_VIDEO_ASPECT_RATIO
+            // The fallback classifies the URL string, so compute it once per content — for audio
+            // the cache miss is permanent and this branch re-runs on every recomposition.
+            val fallbackRatio =
+                remember(content.url, content.mimeType) {
+                    unknownMediaAspectRatio(content.mimeType, content.url)
+                }
+            val ratio =
+                content.dim?.aspectRatio()
+                    ?: MediaAspectRatioCache.get(content.url)
+                    ?: fallbackRatio
             val bridgedUrl =
                 remember(content.url, useLocalBlossomBridge) {
                     content.toCoilModel(useLocalBlossomBridge)

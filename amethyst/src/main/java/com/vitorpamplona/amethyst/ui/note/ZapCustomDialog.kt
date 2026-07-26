@@ -550,7 +550,7 @@ fun payViaIntent(
  * parameter of a BIP21/BIP321 bitcoin URI (`bitcoin:?lno=lno1…`), where the on-chain
  * address is optional so a Lightning-only offer stands on its own. The wallet resolves
  * the offer, collects the amount, and completes the payment; this is a plain intent,
- * not a NIP-57/NIP-XX zap, so it produces no Nostr receipt.
+ * not a NIP-57/NIP-B1 zap, so it produces no Nostr receipt.
  */
 fun payViaBolt12Intent(
     offer: String,
