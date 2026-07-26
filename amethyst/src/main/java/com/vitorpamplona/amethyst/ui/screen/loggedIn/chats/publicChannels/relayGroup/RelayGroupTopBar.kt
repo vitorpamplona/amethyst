@@ -200,6 +200,14 @@ fun RelayGroupTopBar(
                         modifier = Modifier.size(20.dp),
                     )
                 }
+                // Buzz workflow runs (46020 + lifecycle): the channel's shared run board + approval gates.
+                IconButton(onClick = { nav.nav(Route.BuzzWorkflowBoard(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
+                    Icon(
+                        symbol = MaterialSymbols.Gavel,
+                        contentDescription = "Workflow runs",
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
 
             // remember the bech32 (naddr) encode — this top bar recomposes on every roster/metadata

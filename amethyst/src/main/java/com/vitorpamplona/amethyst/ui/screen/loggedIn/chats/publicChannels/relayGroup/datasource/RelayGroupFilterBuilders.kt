@@ -39,6 +39,17 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalDeniedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalGrantedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCancelledEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepStartedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -116,6 +127,9 @@ val RELAY_GROUP_TIMELINE_KINDS = listOf(ChatEvent.KIND, PollEvent.KIND)
  * - stream messages v2 (40002), edits (40003), diffs (40008), system rows (40099), canvas (40100)
  * - forum posts/votes/comments (45001-45003)
  * - agent jobs (43001-43006)
+ * - workflow trigger + run/step lifecycle + approval gate (46020, 46001-46007, 46010-46012);
+ *   note the client-signed grant/deny (46030/46031) carry only a `d` tag (no `h`), so they're
+ *   NOT here — surfaces that need them fetch by author (see the workflow board VM / CLI)
  * - huddle lifecycle (48100-48103)
  *
  * Consumption for every one of these already exists in `LocalCache` (see
@@ -138,6 +152,17 @@ val BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS =
         JobResultEvent.KIND,
         JobCancelEvent.KIND,
         JobErrorEvent.KIND,
+        WorkflowTriggerEvent.KIND,
+        WorkflowTriggeredEvent.KIND,
+        WorkflowStepStartedEvent.KIND,
+        WorkflowStepCompletedEvent.KIND,
+        WorkflowStepFailedEvent.KIND,
+        WorkflowCompletedEvent.KIND,
+        WorkflowFailedEvent.KIND,
+        WorkflowCancelledEvent.KIND,
+        WorkflowApprovalRequestedEvent.KIND,
+        WorkflowApprovalGrantedEvent.KIND,
+        WorkflowApprovalDeniedEvent.KIND,
         HuddleStartedEvent.KIND,
         HuddleParticipantJoinedEvent.KIND,
         HuddleParticipantLeftEvent.KIND,

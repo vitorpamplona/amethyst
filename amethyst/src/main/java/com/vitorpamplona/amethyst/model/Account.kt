@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -171,6 +172,10 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
+import com.vitorpamplona.quartz.buzz.workflow.workflowChannel
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
@@ -397,6 +402,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
@@ -3299,6 +3306,56 @@ class Account(
         val signed = signer.sign(JobCancelEvent.build(jobId, "", channelId))
         cache.justConsumeMyOwnEvent(signed)
         client.publish(signed, setOf(relay))
+    }
+
+    /**
+     * Trigger a Buzz **workflow** run (kind-46020) for [workflowId] into channel [channelId] on
+     * [relay], carrying [task] as the run's request. The trigger's event id IS the run id (and the
+     * approval token), returned here. A run pauses on a human-approval gate before anything ships —
+     * see [com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator].
+     */
+    suspend fun triggerBuzzWorkflow(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        workflowId: String,
+        task: String,
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val content = Json.encodeToString(WorkflowRunPayload(task = task, workflow = workflowId))
+        val signed = signer.sign(WorkflowTriggerEvent.build(workflowId, content) { workflowChannel(channelId) })
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return signed.id
+    }
+
+    /**
+     * Grant a paused Buzz workflow run's approval gate (kind-46030). [runId] is the run id, which
+     * doubles as the approval token (the grant's `d` tag). Resuming lets the runner ship the work.
+     * Publishing to the single group [relay]; the runner discovers the decision by author.
+     */
+    suspend fun approveBuzzWorkflowRun(
+        relay: NormalizedRelayUrl,
+        runId: HexKey,
+        note: String = "",
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val signed = signer.sign(ApprovalGrantEvent.build(runId, note))
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return signed.id
+    }
+
+    /** Deny a paused Buzz workflow run's approval gate (kind-46031); the run is terminal (DENIED). */
+    suspend fun denyBuzzWorkflowRun(
+        relay: NormalizedRelayUrl,
+        runId: HexKey,
+        note: String = "",
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val signed = signer.sign(ApprovalDenyEvent.build(runId, note))
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return signed.id
     }
 
     /**
