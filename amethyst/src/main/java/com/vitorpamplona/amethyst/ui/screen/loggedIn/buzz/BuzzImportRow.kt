@@ -87,6 +87,12 @@ private const val CARD_WARMUP_LIMIT = 10
  * per-channel actions — Pin/Unpin and Add-to-my-list — so the row stays clean.
  *
  * Reused by the relay group-list screen where Buzz membership discovery is folded in.
+ *
+ * [showActivityPreview] gates the chat-activity machinery — the recent-message warmup, the
+ * last-message preview, the recent-posters facepile and the unread badge. Enable it for **chat**
+ * channels (whose content lives in [RelayGroupChannel.notes]); leave it off for **forum** channels,
+ * whose posts are threads (a separate store), so the row doesn't open a kind-9 chat subscription that
+ * would return nothing and drives a member-count summary instead.
  */
 @Composable
 fun BuzzImportRow(
@@ -97,6 +103,7 @@ fun BuzzImportRow(
     onOpen: (() -> Unit)? = null,
     isStarred: Boolean = false,
     onToggleStar: (() -> Unit)? = null,
+    showActivityPreview: Boolean = true,
 ) {
     val account = accountViewModel.account
     val baseChannel = remember(groupId) { LocalCache.getOrCreateRelayGroupChannel(groupId) }
@@ -104,32 +111,46 @@ fun BuzzImportRow(
     // Warm a first screen's worth of recent messages while this card is visible (content only — the
     // directory subscription already streams metadata), so the preview + facepile fill in ahead of a
     // tap instead of staying blank until the channel is opened. Bounded to visible rows by the
-    // LazyColumn and released as they scroll off.
-    RelayGroupCardWarmupSubscription(
-        baseChannel,
-        accountViewModel.dataSources().relayGroupCardWarmup,
-        accountViewModel,
-        contentOnly = true,
-        contentLimit = CARD_WARMUP_LIMIT,
-    )
+    // LazyColumn and released as they scroll off. Skipped for forum channels (no chat to warm).
+    if (showActivityPreview) {
+        RelayGroupCardWarmupSubscription(
+            baseChannel,
+            accountViewModel.dataSources().relayGroupCardWarmup,
+            accountViewModel,
+            contentOnly = true,
+            contentLimit = CARD_WARMUP_LIMIT,
+        )
+    }
 
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
-    // The channel's own notes flow drives the preview/facepile so they update the moment a message
-    // folds in, independent of the metadata-scoped [observeChannel] above.
-    val notesState by channel
-        .flow()
-        .notes.stateFlow
-        .collectAsStateWithLifecycle()
 
     val name = channel.toBestDisplayName()
     val memberCount = channel.memberCount()
     val isPrivate = channel.isPrivate()
-    val lastNote = remember(notesState) { channel.newestTimelineNote(account) }
-    val faceAuthors = remember(notesState) { channel.recentAuthorHexes(account, FACEPILE_MAX) }
-    val unread by
-        remember(groupId) { relayGroupChannelUnreadCountFlow(account, groupId) }
-            .collectAsStateWithLifecycle(0)
+
+    // The channel's own notes flow drives the preview/facepile so they update the moment a message
+    // folds in, independent of the metadata-scoped [observeChannel] above. Only collected for chat
+    // channels; a forum row shows a member-count summary with no facepile/unread.
+    val lastNote: Note?
+    val faceAuthors: List<String>
+    val unread: Int
+    if (showActivityPreview) {
+        val notesState by channel
+            .flow()
+            .notes.stateFlow
+            .collectAsStateWithLifecycle()
+        lastNote = remember(notesState) { channel.newestTimelineNote(account) }
+        faceAuthors = remember(notesState) { channel.recentAuthorHexes(account, FACEPILE_MAX) }
+        unread =
+            remember(groupId) { relayGroupChannelUnreadCountFlow(account, groupId) }
+                .collectAsStateWithLifecycle(0)
+                .value
+    } else {
+        lastNote = null
+        faceAuthors = emptyList()
+        unread = 0
+    }
     val hasUnread = unread > 0
 
     val content =

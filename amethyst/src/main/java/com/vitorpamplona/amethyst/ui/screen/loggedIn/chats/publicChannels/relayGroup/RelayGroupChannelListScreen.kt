@@ -413,6 +413,9 @@ fun RelayGroupChannelListScreen(
                                     onOpen = { nav.nav(Route.RelayGroupThreads(groupId.id, relay.url)) },
                                     isStarred = groupId.id in starred,
                                     onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
+                                    // Forum posts live in a separate thread store, not the chat notes the
+                                    // activity preview reads — so don't warm a kind-9 sub that returns nothing.
+                                    showActivityPreview = false,
                                 )
                             }
                         }
