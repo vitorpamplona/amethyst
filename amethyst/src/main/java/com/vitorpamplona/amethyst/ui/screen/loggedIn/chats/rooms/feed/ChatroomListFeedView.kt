@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -85,6 +87,13 @@ fun ChatroomListFeedView(
     scrollStateKey: String,
     accountViewModel: AccountViewModel,
     nav: INav,
+    /**
+     * Pinned above the rows. Rendered INSIDE the feed rather than beside it so it inherits
+     * [rememberFeedContentPadding] — the collapsing top bar draws over this area, and a header placed
+     * outside the list lands underneath it. Shown in every state, so a standing prompt is still
+     * reachable when the list itself is empty.
+     */
+    headerContent: (@Composable () -> Unit)? = null,
 ) {
     DisposableEffect(Unit) {
         Log.d("DMPagination") { "rooms.list: OPEN" }
@@ -92,7 +101,7 @@ fun ChatroomListFeedView(
     }
     RefresheableBox(feedContentState, true) {
         SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
-            CrossFadeState(feedContentState, listState, accountViewModel, nav)
+            CrossFadeState(feedContentState, listState, accountViewModel, nav, headerContent)
         }
     }
 }
@@ -103,6 +112,7 @@ private fun CrossFadeState(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
+    headerContent: (@Composable () -> Unit)? = null,
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
@@ -131,10 +141,13 @@ private fun CrossFadeState(
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
-                if (historyExhausted) {
-                    FeedEmpty { feedContentState.invalidateData() }
-                } else {
-                    LoadingFeed()
+                Column(Modifier.padding(rememberFeedContentPadding(FeedPadding))) {
+                    headerContent?.invoke()
+                    if (historyExhausted) {
+                        FeedEmpty { feedContentState.invalidateData() }
+                    } else {
+                        LoadingFeed()
+                    }
                 }
             }
 
@@ -143,7 +156,7 @@ private fun CrossFadeState(
             }
 
             is FeedState.Loaded -> {
-                FeedLoaded(state, listState, accountViewModel, nav)
+                FeedLoaded(state, listState, accountViewModel, nav, headerContent)
             }
 
             FeedState.Loading -> {
@@ -159,6 +172,7 @@ private fun FeedLoaded(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
+    headerContent: (@Composable () -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -214,6 +228,8 @@ private fun FeedLoaded(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
+        headerContent?.let { item("chatroom-list-header") { it() } }
+
         itemsIndexed(
             items.list,
             key = { _, item -> chatroomLazyKey(item, myPubKey) },

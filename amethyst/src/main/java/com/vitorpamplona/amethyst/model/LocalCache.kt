@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
@@ -2290,6 +2291,22 @@ object LocalCache : ILocalCache, ICacheProvider {
             if (note.event != null) {
                 BuzzWorkspaceStates.getOrCreate(channelId).updateCanvas(note)
             }
+        }
+
+    /**
+     * A kind-44101 "you were removed from a channel". Consumed like any other Buzz event, then used to
+     * withdraw any pending add-prompt for that channel: once the relay has taken the membership away
+     * there is nothing left to accept, so leaving the card up would offer an action that cannot succeed.
+     */
+    private fun consume(
+        event: MemberRemovedNotificationEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        consumeBuzzRegularEvent(event, relay, wasVerified).also {
+            val target = event.target() ?: return@also
+            val channelId = event.channel() ?: return@also
+            BuzzChannelInvites.remove(target, channelId)
         }
 
     /**
@@ -4821,7 +4838,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is DmAddMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is DmHideEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is MemberAddedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is MemberRemovedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is MemberRemovedNotificationEvent -> consume(event, relay, wasVerified)
                 is RelayMembershipListEvent -> consume(event, relay, wasVerified)
                 is RelayAddMemberEvent -> consume(event, relay, wasVerified)
                 is RelayRemoveMemberEvent -> consume(event, relay, wasVerified)
