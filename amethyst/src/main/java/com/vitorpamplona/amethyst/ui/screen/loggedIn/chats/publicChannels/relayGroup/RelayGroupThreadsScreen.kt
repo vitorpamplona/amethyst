@@ -70,6 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
+import com.vitorpamplona.quartz.buzz.workspace.buzzChannelType
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -99,6 +101,26 @@ fun RelayGroupThreadsScreen(
     }
 }
 
+/**
+ * Whether *starting* a thread belongs on this channel, given its Buzz `t` [channelType] (null on a
+ * relay that doesn't declare one) and whether its host speaks the Buzz dialect.
+ *
+ * On a Buzz relay the compose FAB writes a kind-45001 forum post, and Buzz only ever puts those in a
+ * `t=forum` channel — its own client mounts the forum view for `channelType === "forum"` alone, so a
+ * 45001 in a `t=stream` chat channel is a post nobody outside Amethyst can see. The relay itself
+ * accepts it (nothing there gates 45001 by channel type), which is exactly why the client has to.
+ *
+ * A Buzz channel whose kind-39000 hasn't landed yet reads as null and is treated as not-a-forum: the
+ * FAB appearing a moment later is a smaller error than publishing into the wrong channel.
+ *
+ * This gates writing only. Reading stays open on every channel — an existing thread is worth showing
+ * wherever it came from — and non-Buzz relays are untouched, where the FAB writes a NIP-7D kind-11.
+ */
+fun canStartThreadHere(
+    channelType: String?,
+    isBuzzRelay: Boolean,
+): Boolean = !isBuzzRelay || channelType == BUZZ_CHANNEL_TYPE_FORUM
+
 @Composable
 private fun RelayGroupThreads(
     channel: RelayGroupChannel,
@@ -121,7 +143,10 @@ private fun RelayGroupThreads(
 
     // Hide the compose FAB where the relay would reject the kind-11: on membership-gated groups
     // that don't list me. Open Buzz channels accept any authenticated member. See [RelayGroupChannel.canPost].
-    val canPost = channel.canPost(accountViewModel.userProfile().pubkeyHex)
+    val isBuzz = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
+    val canPost =
+        channel.canPost(accountViewModel.userProfile().pubkeyHex) &&
+            canStartThreadHere(channel.event?.buzzChannelType(), isBuzz)
 
     Scaffold(
         topBar = {
@@ -153,7 +178,7 @@ private fun RelayGroupThreads(
                         // On a Buzz workspace, "new thread" is a Buzz forum post (kind 45001);
                         // vanilla NIP-29 relays use a kind-11 thread. Buzz relays reject
                         // unknown kinds, so a kind-11 thread would be refused there.
-                        if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+                        if (isBuzz) {
                             nav.nav(Route.BuzzForumPost(channel.groupId.id, channel.groupId.relayUrl.url))
                         } else {
                             nav.nav(
@@ -178,7 +203,12 @@ private fun RelayGroupThreads(
         if (threads.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    text = stringRes(R.string.relay_group_threads_empty),
+                    text =
+                        if (canPost) {
+                            stringRes(R.string.relay_group_threads_empty)
+                        } else {
+                            stringRes(R.string.relay_group_threads_empty_read_only)
+                        },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(32.dp),
