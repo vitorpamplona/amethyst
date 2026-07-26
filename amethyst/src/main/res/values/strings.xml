@@ -3447,6 +3447,48 @@
     <string name="chat_system_updated_channel">%1$s updated the channel profile</string>
     <string name="buzz_message_edited">(edited)</string>
     <string name="buzz_diff_truncated">(diff truncated)</string>
+
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s joined</string>
+    <string name="buzz_system_member_added">%1$s was added by %2$s</string>
+    <string name="buzz_system_member_left">%1$s left</string>
+    <string name="buzz_system_member_removed">%1$s was removed by %2$s</string>
+    <string name="buzz_system_topic_changed">%1$s set the topic to \"%2$s\"</string>
+    <string name="buzz_system_topic_cleared">%1$s cleared the topic</string>
+    <string name="buzz_system_purpose_changed">%1$s set the purpose to \"%2$s\"</string>
+    <string name="buzz_system_purpose_cleared">%1$s cleared the purpose</string>
+    <string name="buzz_system_visibility_open">%1$s made this channel open — anyone can find and join it</string>
+    <string name="buzz_system_visibility_private">%1$s made this channel private — invite only</string>
+    <string name="buzz_system_visibility_other">%1$s changed the visibility to %2$s</string>
+    <string name="buzz_system_ttl_set">%1$s set messages to disappear after %2$s</string>
+    <string name="buzz_system_ttl_cleared">%1$s turned off disappearing messages</string>
+    <string name="buzz_system_channel_archived">%1$s archived this channel</string>
+    <string name="buzz_system_channel_unarchived">%1$s restored this channel</string>
+    <string name="buzz_system_channel_created">%1$s created this channel</string>
+    <string name="buzz_system_channel_deleted">%1$s deleted this channel</string>
+    <string name="buzz_system_message_deleted">%1$s deleted a message</string>
+    <string name="buzz_system_message_deleted_reason">%1$s deleted a message: %2$s</string>
+    <string name="buzz_system_dm_created">%1$s started this conversation</string>
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
+
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s started a huddle</string>
+    <string name="buzz_huddle_joined">🔊 %1$s joined the huddle</string>
+    <string name="buzz_huddle_left">🔊 %1$s left the huddle</string>
+    <string name="buzz_huddle_ended">🔊 Huddle ended</string>
+
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙ %1$s requested a job</string>
+    <string name="buzz_job_accepted">⚙ %1$s accepted the job</string>
+    <string name="buzz_job_progress">⚙ Job progress</string>
+    <string name="buzz_job_result">⚙ Job result</string>
+    <string name="buzz_job_cancelled">⚙ Job cancelled</string>
+    <string name="buzz_job_error">⚠ Job error</string>
+
+    <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">▲ %1$s upvoted a post</string>
+    <string name="buzz_forum_downvoted">▼ %1$s downvoted a post</string>
     <string name="buzz_canvas_title">Canvas</string>
     <string name="buzz_canvas_empty">No canvas has been shared in this workspace yet.</string>
     <string name="buzz_canvas_edit">Edit canvas</string>

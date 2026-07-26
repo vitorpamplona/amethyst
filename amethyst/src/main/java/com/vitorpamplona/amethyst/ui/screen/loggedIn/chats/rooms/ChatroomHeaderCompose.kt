@@ -456,7 +456,7 @@ private fun RelayGroupRoomCompose(
             // A Buzz timeline row (system line, huddle/job activity, diff) carries JSON/diff in its
             // content, so show its human-readable summary — the same text the in-chat row renders —
             // rather than "author: {json}". Plain chat messages fall through to the usual framing.
-            buzzTimelinePreviewSummary(noteEvent) ?: "$authorName: ${noteEvent.content.take(200)}"
+            buzzTimelinePreviewSummary(noteEvent, accountViewModel) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
             // Event-less placeholder row. Until the channel's `limit = 1` preview REQ settles we cannot
             // tell an empty channel from one whose newest message simply hasn't arrived, and claiming
@@ -604,7 +604,7 @@ private fun RelayGroupServerRoomCompose(
             val authorName by observeUserName(author, accountViewModel)
             // Buzz timeline rows (system/huddle/job/diff) carry JSON/diff content — summarize them
             // like the in-chat row instead of printing raw payload; plain chat falls through.
-            buzzTimelinePreviewSummary(noteEvent) ?: "$authorName: ${noteEvent.content.take(200)}"
+            buzzTimelinePreviewSummary(noteEvent, accountViewModel) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
             stringRes(R.string.relay_group_no_messages_yet)
         }
