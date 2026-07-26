@@ -3490,7 +3490,7 @@
     <string name="buzz_forum_upvoted">▲ %1$s upvoted a post</string>
     <string name="buzz_forum_downvoted">▼ %1$s downvoted a post</string>
     <string name="buzz_canvas_title">Canvas</string>
-    <string name="buzz_canvas_empty">No canvas has been shared in this workspace yet.</string>
+    <string name="buzz_canvas_empty">No canvas has been shared in this channel yet.</string>
     <string name="buzz_canvas_edit">Edit canvas</string>
     <string name="buzz_canvas_save">Save canvas</string>
     <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
