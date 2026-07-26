@@ -460,7 +460,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 
 | Command | What it does |
 |---|---|
-| `amy serve [--host H] [--port N] [--path P] [--db FILE] [--admin NPUBS]` | Run a Nostr relay by embedding **geode** (the standalone Ktor relay on quartz's relay-server code). In-memory by default; `--db FILE` for SQLite. The active account is always an admin, so `amy admin ws://host:port …` works against it. Blocks until interrupted. |
+| `amy serve [--host H] [--port N] [--path P] [--db FILE] [--admin NPUBS] [--buzz [--members NPUBS]]` | Run a Nostr relay by embedding **geode** (the standalone Ktor relay on quartz's relay-server code). In-memory by default; `--db FILE` for SQLite. The active account is always an admin, so `amy admin ws://host:port …` works against it. `--buzz` makes it a **private Buzz workspace relay** (`BuzzMembershipPolicy`): NIP-42 required, and only members (admins + `--members`) or NIP-OA-attested agents may read/write — so a team can self-host the agent channel on one JVM process instead of Block's Rust `buzz-relay` + Postgres/Redis/MinIO. Blocks until interrupted. |
 
 ### Identity
 

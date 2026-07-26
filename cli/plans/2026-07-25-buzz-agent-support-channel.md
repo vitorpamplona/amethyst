@@ -81,9 +81,14 @@ Keep that credential minimal; branch protection is what actually stops a bad mer
 
 ## Architecture (MVP)
 
-1. **One `buzz-relay`** (Block's Rust relay — geode does NOT implement Buzz server
-   semantics: kind accept-list, `h`-scope, NIP-OA fallback, relay-signed metadata) = the
-   "Amethyst workspace" tenant. Team npubs enrolled as members; a maintainer is owner.
+1. **The workspace relay.** For the agent job channel you have two options:
+   - **`amy serve --buzz --members <npubs>`** (recommended to start) — a private, agent-authorized
+     workspace on a single JVM process via **`BuzzMembershipPolicy`** (quartz): NIP-42 required,
+     only members + NIP-OA-attested agents may read/write. No Rust, no Postgres/Redis/MinIO. The
+     job board + scheduler run on this today. It does NOT emit relay-signed NIP-29 metadata
+     (39000-39003) or run workflows — the job channel doesn't need them.
+   - **Block's Rust `buzz-relay`** — only if you want the full in-app Buzz *workspace/DM* UI
+     (relay-signed rosters, relay-assigned DM UUIDs) or server-run workflows. Heavier stack.
 2. **One agent identity** = its own nostr key, authorized by a NIP-OA attestation the owner
    issues (`amy buzz attest` / `AgentAttestationScreen`). On GitHub it authenticates with a
    PR-only token; `main` is branch-protected.
