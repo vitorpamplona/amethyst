@@ -25,14 +25,27 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+
+/** Arti's log marker for "no usable guard could be found". */
+private const val ALL_GUARDS_DOWN_MARKER = "AllGuardsDown"
+
+/** How many [ALL_GUARDS_DOWN_MARKER] lines inside [GUARDS_DOWN_WINDOW_MS] mean the sample is rotten. */
+private const val GUARDS_DOWN_THRESHOLD = 40
+
+/** Window for [GUARDS_DOWN_THRESHOLD]. Wide enough that ordinary transient churn never trips it. */
+private const val GUARDS_DOWN_WINDOW_MS = 60_000L
 
 private const val DEFAULT_SOCKS_PORT = 17392
 private const val MAX_PORT_RETRIES = 10
@@ -84,6 +97,47 @@ class TorService(
 
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     override val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
+
+    /**
+     * Runtime detector for a rotten guard sample. Arti logs [ALL_GUARDS_DOWN_MARKER] every time it
+     * fails to find a usable guard; [GUARDS_DOWN_THRESHOLD] of those inside [GUARDS_DOWN_WINDOW_MS]
+     * means every guard in the sample is unreachable *right now* — which the on-disk check cannot
+     * see, because an unreachable guard is not a `disabled` one (see
+     * [ArtiGuardState.hasNoUsableGuards]).
+     *
+     * Counted here because the log callback is the only place Arti surfaces it; acted on by
+     * [TorManager], which owns the reset cadence and its rate limiting. Both counters are only
+     * touched from Arti's log thread.
+     */
+    private var guardsDownCount = 0
+
+    private var guardsDownWindowStartMs = 0L
+
+    private val _guardsDownSignal =
+        MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    override val guardsDownSignal: Flow<Unit> = _guardsDownSignal.asSharedFlow()
+
+    /**
+     * Feeds one Arti log line to the [guardsDownSignal] detector. Cheap by design: this runs for
+     * every log line, and a wedged Arti emits tens of thousands of them.
+     */
+    private fun trackGuardFailures(text: String) {
+        if (!text.contains(ALL_GUARDS_DOWN_MARKER)) return
+
+        val now = System.currentTimeMillis()
+        if (now - guardsDownWindowStartMs > GUARDS_DOWN_WINDOW_MS) {
+            guardsDownWindowStartMs = now
+            guardsDownCount = 0
+        }
+        guardsDownCount++
+        if (guardsDownCount >= GUARDS_DOWN_THRESHOLD) {
+            guardsDownCount = 0
+            guardsDownWindowStartMs = now
+            Log.w("TorService") { "Arti reported $ALL_GUARDS_DOWN_MARKER $GUARDS_DOWN_THRESHOLD times in ${GUARDS_DOWN_WINDOW_MS}ms — guard sample is rotten at runtime" }
+            _guardsDownSignal.tryEmit(Unit)
+        }
+    }
 
     private fun artiDataDir() = File(context.filesDir, "arti")
 
@@ -181,6 +235,7 @@ class TorService(
                     // (gated on proxyRunning) intermittently dropped the transition. start()
                     // now sets Active deterministically once the proxy is bound.
                     ArtiNative.setLogCallback { text ->
+                        trackGuardFailures(text)
                         Log.d("TorService") {
                             val newLine = text.indexOf('\n')
                             if (newLine > 1) {
