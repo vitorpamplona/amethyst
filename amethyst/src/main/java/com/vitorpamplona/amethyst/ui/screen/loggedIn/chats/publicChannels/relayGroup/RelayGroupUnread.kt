@@ -23,6 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -78,11 +81,41 @@ fun relayGroupServerHasUnreadFlow(
             }
         }.distinctUntilChanged()
 
-/** Whether this group's message store holds any acceptable chat content created after [sinceSecs]. */
+/**
+ * Whether [note] is one of this group's **timeline** messages — what the channel feed renders, what
+ * the Messages row previews, and what the unread dot counts.
+ *
+ * Two exclusions, and both matter for the same reason: the row summary must not disagree with what
+ * opening the channel shows.
+ * - Non-content (`reaction`/deletion/label) carries the group's `h` tag too, so [isGroupChatContent]
+ *   gates it out — a trailing 👍 must not become the "last message".
+ * - A **minichat thread reply** lives in the thread opened from its parent, not in the timeline
+ *   ([isMinichatReply], the same predicate `ChannelFeedFilter` uses). Without this the Messages row
+ *   previews a reply the channel never displays, and the unread dot lights for activity that leaves
+ *   the timeline unchanged — you open the group, see nothing new, and the dot clears.
+ *
+ * The Concord side solves this identically with `isConcordTimelineMessage`.
+ */
+fun isRelayGroupTimelineMessage(
+    note: Note,
+    account: Account,
+): Boolean = note.event?.isGroupChatContent() == true && !isMinichatReply(note.event) && account.isAcceptable(note)
+
+/**
+ * The newest timeline message in this group (see [isRelayGroupTimelineMessage]), or null if none —
+ * the note the Messages row shows as the group's "last message".
+ */
+fun RelayGroupChannel.newestTimelineNote(account: Account): Note? =
+    notes
+        .filter { _, note -> isRelayGroupTimelineMessage(note, account) }
+        .sortedByDefaultFeedOrder()
+        .firstOrNull()
+
+/** Whether this group's message store holds any acceptable timeline message created after [sinceSecs]. */
 private fun RelayGroupChannel.hasChatNewerThan(
     account: Account,
     sinceSecs: Long,
 ): Boolean =
     notes.count { _, note ->
-        (note.createdAt() ?: 0L) > sinceSecs && account.isAcceptable(note) && note.event?.isGroupChatContent() == true
+        (note.createdAt() ?: 0L) > sinceSecs && isRelayGroupTimelineMessage(note, account)
     } > 0
