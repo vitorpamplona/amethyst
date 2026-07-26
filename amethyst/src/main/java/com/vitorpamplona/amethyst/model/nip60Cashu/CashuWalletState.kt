@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
@@ -312,6 +313,19 @@ class CashuWalletState(
      * external signers may reject the decrypt). Callers should handle null.
      */
     suspend fun exportP2pkPrivkeyHex(): String? = walletPrivkeyHex()
+
+    /**
+     * Private keys that can sign a NUT-11 P2PK witness when redeeming a pasted
+     * `cashuA`/`cashuB` token — see [CashuWalletOps.redeemToken].
+     *
+     * `first` is the wallet's kind:17375 P2PK key (for tokens locked to our
+     * wallet key, e.g. an inbound nutzap handed over out-of-band). `second` is
+     * the account identity key, present ONLY for a local nsec signer — some
+     * senders (e.g. Bey Wallet's P2PK send) lock ecash directly to the
+     * recipient's npub, and only a local key can produce that raw signature.
+     * A remote (NIP-46) / external (NIP-55) signer yields null there.
+     */
+    suspend fun redeemSigningKeys(): Pair<String?, String?> = walletPrivkeyHex() to (signer as? NostrSignerInternal)?.keyPair?.privKey?.toHexKey()
 
     private suspend fun walletPrivkeyHex(): String? =
         _walletEvent.value?.let { evt ->

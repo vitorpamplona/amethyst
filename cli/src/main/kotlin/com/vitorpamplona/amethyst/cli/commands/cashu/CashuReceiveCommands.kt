@@ -26,6 +26,9 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PKUnredeemableException
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 
 /**
@@ -156,12 +159,25 @@ object CashuReceiveCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             return try {
+                // Keys that can unlock a P2PK-locked token: the wallet's kind:17375
+                // key, plus — for a local key account — the identity key (some
+                // senders, e.g. Bey Wallet, P2PK-lock ecash to the recipient npub).
+                val snap = ctx.cashuSnapshot()
+                val walletKey = snap.walletEvent?.let { runCatching { it.privkey(ctx.signer) }.getOrNull() }
+                val identityKey = (ctx.signer as? NostrSignerInternal)?.keyPair?.privKey?.toHexKey()
                 var total = 0L
                 var lastTokenEventId: String? = null
                 var lastHistoryEventId: String? = null
                 var mint = ""
                 for (t in parsed) {
-                    val redeemed = ctx.cashuOps().redeemToken(raw, t.proofs, t.mint)
+                    val redeemed =
+                        ctx.cashuOps().redeemToken(
+                            cashuToken = raw,
+                            proofs = t.proofs,
+                            mintUrl = t.mint,
+                            walletP2pkPrivkeyHex = walletKey,
+                            identityPrivkeyHex = identityKey,
+                        )
                     total += redeemed.amount
                     lastTokenEventId = redeemed.tokenEvent.id
                     lastHistoryEventId = redeemed.historyEvent.id
@@ -176,6 +192,8 @@ object CashuReceiveCommands {
                     ),
                 )
                 0
+            } catch (e: P2PKUnredeemableException) {
+                Output.error("p2pk_locked", "token is P2PK-locked to a key this wallet can't sign for (${e.lockPubKeyHex})")
             } catch (e: Exception) {
                 Output.error("mint_proofs_spent", describe(e))
             }

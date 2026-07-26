@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.MintQuoteStarted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeRedeemError
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -905,10 +906,25 @@ class CashuWalletViewModel : ViewModel() {
         _redeemState.value = CashuRedeemFlowState.Redeeming
         vm.launchSigner {
             try {
-                val total = parsedTokens.sumOf { ops.redeemToken(trimmed, it.proofs, it.mint).amount }
+                // Keys that can unlock a P2PK-locked token: our wallet key, and
+                // — for a local nsec login only — the identity key (some senders,
+                // e.g. Bey Wallet, P2PK-lock ecash straight to the recipient npub).
+                val (walletKey, identityKey) = state.redeemSigningKeys()
+                val total =
+                    parsedTokens.sumOf {
+                        ops
+                            .redeemToken(
+                                cashuToken = trimmed,
+                                proofs = it.proofs,
+                                mintUrl = it.mint,
+                                walletP2pkPrivkeyHex = walletKey,
+                                identityPrivkeyHex = identityKey,
+                            ).amount
+                    }
                 _redeemState.value = CashuRedeemFlowState.Completed(total)
             } catch (e: Exception) {
-                _redeemState.value = CashuRedeemFlowState.Error(describeMintError(e))
+                _redeemState.value =
+                    CashuRedeemFlowState.Error(describeRedeemError(e, account!!.signer.pubKey))
             }
         }
     }
