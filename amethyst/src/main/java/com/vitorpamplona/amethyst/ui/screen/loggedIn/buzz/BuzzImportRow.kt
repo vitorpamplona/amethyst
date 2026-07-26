@@ -247,21 +247,27 @@ private fun BuzzChannelPreviewLine(
 ) {
     val event = lastNote?.event
     val author = lastNote?.author
-    // A Buzz timeline row (system line, huddle/job activity, diff) carries JSON/diff in its content,
-    // so show its human-readable summary — the same text the in-chat row renders — rather than
-    // "author: {json}". A plain chat message falls through to the usual "author: message" framing.
-    val summary = remember(event) { event?.let { buzzTimelinePreviewSummary(it) } }
     val preview: String =
-        when {
-            summary != null -> summary
-            event != null && author != null -> {
-                val authorName by observeUserName(author, accountViewModel)
-                val body = event.content.take(80)
-                if (body.isBlank()) authorName else "$authorName: $body"
+        if (event == null) {
+            if (memberCount > 0) {
+                pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
+            } else {
+                stringRes(R.string.relay_group_no_messages_yet)
             }
-            event != null -> event.content.take(80)
-            memberCount > 0 -> pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount)
-            else -> stringRes(R.string.relay_group_no_messages_yet)
+        } else {
+            // A Buzz timeline row (system line, huddle/job activity, diff) carries JSON/diff in its
+            // content, so show its human-readable summary — the same text the in-chat row renders —
+            // rather than "author: {json}". A plain chat message falls through to "author: message".
+            val summary = buzzTimelinePreviewSummary(event, accountViewModel)
+            when {
+                summary != null -> summary
+                author != null -> {
+                    val authorName by observeUserName(author, accountViewModel)
+                    val body = event.content.take(80)
+                    if (body.isBlank()) authorName else "$authorName: $body"
+                }
+                else -> event.content.take(80)
+            }
         }
     Text(
         preview,

@@ -28,18 +28,20 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.filterGroupNotificationsToPubkey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.StateFlow
 
-/** One screen's request to keep the viewer's Buzz DM channels' recent chat live. */
+/** One Buzz DM channel whose recent chat is kept live. */
 class BuzzDmJoinedChatTailQueryState(
     val account: Account,
+    val groupId: GroupId,
 )
 
 /**
@@ -71,7 +73,7 @@ class BuzzDmJoinedChatTailFilterAssembler(
 class BuzzDmJoinedChatTailSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<BuzzDmJoinedChatTailQueryState>,
-) : PerUniqueIdEoseManager<BuzzDmJoinedChatTailQueryState, Account>(client, allKeys) {
+) : PerUniqueIdEoseManager<BuzzDmJoinedChatTailQueryState, GroupId>(client, allKeys) {
     private val windowLoad = WindowLoadTracker("buzzDm.preview.live")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
@@ -79,23 +81,35 @@ class BuzzDmJoinedChatTailSubAssembler(
         key: BuzzDmJoinedChatTailQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
+        // The preload only mounts visible channels; re-checked here so hiding a conversation
+        // empties its subscription even if the key outlives the recomposition.
         val me = key.account.userProfile().pubkeyHex
-        val hidden = BuzzDmRegistry.hiddenFor(me)
-        val channels = BuzzDmChannels.channelsFor(me).filterKeys { it !in hidden }
-        if (channels.isEmpty()) {
-            windowLoad.setExpectedRelays(emptySet())
-            return null
-        }
+        if (key.groupId.id in BuzzDmRegistry.hiddenFor(me)) return null
 
-        // Reuse the joined-group tail builder: one #h filter per host relay carrying every DM channel id
-        // on it, bounded by the shared recent floor (no per-channel limit, reconnect-safe).
-        val asTags = channels.map { (channelId, relay) -> GroupTag(channelId, relay.url) }
-        val filters = buildRelayGroupJoinedChatTailFilters(asTags, DmHistoryTuning.recentBoundary())
-        windowLoad.setExpectedRelays(filters.mapTo(mutableSetOf()) { it.relay })
-        return filters
+        // Same one-subscription-per-channel shape as the joined-group tail: a Buzz DM is a
+        // relay-authoritative NIP-29 group, so batching ids into one `#h` would register the
+        // subscription as global on buzz and never deliver live messages. See
+        // [buildRelayGroupJoinedChatTailFilter]. The second filter carries the DM's activity
+        // addressed to me (reactions/zaps/reports) — same channel, so the subscription stays scoped.
+        val relay = key.groupId.relayUrl
+        windowLoad.setExpectedRelays(setOf(relay))
+        return listOf(
+            buildRelayGroupJoinedChatTailFilter(key.groupId, DmHistoryTuning.recentBoundary()),
+            // Newest message at any age — a DM conversation dormant for over a week must still show its
+            // last message on Messages, not a placeholder. See [buildRelayGroupPreviewFilter].
+            buildRelayGroupPreviewFilter(key.groupId, since?.get(relay)?.time),
+            // A DM channel takes reactions/deletions the same way a group channel does.
+            buildRelayGroupAuxFilter(key.groupId, DmHistoryTuning.recentBoundary()),
+        ) +
+            filterGroupNotificationsToPubkey(
+                relay = relay,
+                pubkey = me,
+                groupIds = listOf(key.groupId.id),
+                since = since?.get(relay)?.time,
+            )
     }
 
-    override fun id(key: BuzzDmJoinedChatTailQueryState) = key.account
+    override fun id(key: BuzzDmJoinedChatTailQueryState) = key.groupId
 
     override fun newSub(key: BuzzDmJoinedChatTailQueryState): Subscription {
         windowLoad.startLoading(key.account.scope)

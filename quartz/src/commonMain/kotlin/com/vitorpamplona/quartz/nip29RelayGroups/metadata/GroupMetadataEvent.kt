@@ -70,6 +70,25 @@ class GroupMetadataEvent(
      */
     fun geohashes() = tags.geohashes()
 
+    /**
+     * The Buzz channel type, carried as a `t` tag alongside the NIP-29 metadata:
+     * `stream` (linear chat, the default), `forum`, `dm`, or `workflow`. Ground truth:
+     * `ChannelType` in Buzz's `buzz-core/src/channel.rs`, emitted by the relay in
+     * `side_effects.rs` as `["t", channel_type]`.
+     *
+     * Read through this rather than [hashtags], which returns every `t` tag: on a Buzz relay the
+     * type shares the tag name with real hashtags, so only a value in the known set is a type.
+     * Returns null on a vanilla NIP-29 relay, which has no such concept.
+     */
+    fun buzzChannelType(): String? = tags.firstNotNullOfOrNull { if (it.size > 1 && it[0] == "t" && it[1] in BUZZ_CHANNEL_TYPES) it[1] else null }
+
+    /**
+     * True when this channel is a Buzz direct-message conversation rather than a named channel. The
+     * distinction decides whether a kind-44100 "you were added" belongs in the DM list or needs the
+     * viewer's consent before it shows up on Messages.
+     */
+    fun isBuzzDmChannel() = buzzChannelType() == BUZZ_CHANNEL_TYPE_DM
+
     /** Only members can read. Presence of the `private` flag; absent = public read. */
     fun isPrivate() = tags.hasTagName("private")
 
@@ -134,6 +153,11 @@ class GroupMetadataEvent(
     }
 
     companion object {
+        const val BUZZ_CHANNEL_TYPE_DM = "dm"
+
+        /** Every value Buzz's `ChannelType` can serialize to. */
+        val BUZZ_CHANNEL_TYPES = setOf("stream", "forum", BUZZ_CHANNEL_TYPE_DM, "workflow")
+
         const val KIND = 39000
 
         fun build(

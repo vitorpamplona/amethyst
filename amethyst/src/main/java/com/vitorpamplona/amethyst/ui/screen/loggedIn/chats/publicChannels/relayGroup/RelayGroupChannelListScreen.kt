@@ -640,16 +640,16 @@ private fun BuzzDmPreviewLine(
 ) {
     val event = lastNote?.event ?: return
     val author = lastNote.author
-    val summary = remember(event) { buzzTimelinePreviewSummary(event) }
+    val summary = buzzTimelinePreviewSummary(event, accountViewModel)
     val preview: String =
-        if (summary != null) {
-            summary
-        } else if (author != null) {
-            val authorName by observeUserName(author, accountViewModel)
-            val body = event.content.take(80)
-            if (body.isBlank()) authorName else "$authorName: $body"
-        } else {
-            event.content.take(80)
+        when {
+            summary != null -> summary
+            author != null -> {
+                val authorName by observeUserName(author, accountViewModel)
+                val body = event.content.take(80)
+                if (body.isBlank()) authorName else "$authorName: $body"
+            }
+            else -> event.content.take(80)
         }
     Text(
         preview,

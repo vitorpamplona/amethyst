@@ -26,13 +26,21 @@
         <item quantity="few">+%1$d\nodgovorov</item>
         <item quantity="other">+%1$d\nodgovorov</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">%1$d oseba, ki ji sledite, je prijavila</item>
+        <item quantity="two">%1$d osebi, ki jima sledite, sta se prijavili</item>
+        <item quantity="few">%1$d osebe, ki jim sledite, so se prijavile</item>
+        <item quantity="other">%1$d oseb, ki ji sledite, so se prijavile</item>
+    </plurals>
     <string name="post_not_found">Dogodek se nalaga ali pa ni najden v tvojih relejih</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Slika kanala</string>
     <string name="referenced_event_not_found">Referenčni dogodek ni najden</string>
     <string name="could_not_decrypt_the_message">Dešifriranje sporočila ni uspelo</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <string name="chat_preview_decrypting">Dekodiranje…</string>
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
+    <string name="chat_preview_you_prefix">Ti: %1$s</string>
     <string name="group_picture">Slika skupine</string>
     <string name="explicit_content">Eksplicitna vsebina</string>
     <string name="relay_notice">Obvestilo releja</string>
@@ -314,7 +322,19 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="already_have_an_account">Že imam Nostr račun?</string>
     <string name="loading_feed">Nalagam vir vsebin</string>
     <string name="loading_account">Račun se nalaga</string>
+    <string name="concord_redeeming_invite">Prevzem povabila…</string>
+    <string name="concord_invite_failed">Povabila ni mogoče pridobiti. Povezava je morda potekla ali pa so njeni releji nedosegljivi.</string>
+    <string name="concord_invite_failed_invalid">Ta povezava do povabila ni veljavna ali pa je ni mogoče odpreti s tem računom.</string>
+    <string name="concord_invite_failed_incompatible">Te povezave do povabila ni mogoče odpreti. Morda je zastarela, jo je nadomestila nova ali pa je bila ustvarjena z novejšo različico aplikacije. Zaprosite za novo povezavo do povabila.</string>
+    <string name="concord_invite_failed_revoked">Ta povezava do povabila je bila preklicana in je ni več mogoče uporabiti. Zaprosite za novo.</string>
+    <string name="concord_invite_failed_expired">Ta povezava do povabila je potekla in je ni več mogoče uporabiti. Zaprosite za novo povezavo.</string>
+    <string name="concord_invite_preview_unknown_name">Ime skupnosti je razkrito šele, ko se ji pridružite.</string>
+    <string name="concord_invite_preview_explainer">Pridružitev se poveže z releji tega povabila, objavi obvestilo o pridružitvi, podpisano z vašim računom, in doda skupnost na vaš seznam. Dokler ne tapnete »Pridruži se«, se ne pošlje ničesar.</string>
+    <string name="concord_invite_preview_relays">Releji, s katerimi se bo povezalo to povabilo: %1$s</string>
+    <string name="concord_home_title">Kanali Concord</string>
+    <string name="concord_home_empty">Pridružili se niste še nobenemu kanalu Concord. Ustvarite ga ali odprite povezavo do povabila.</string>
     <string name="concord_channels_empty">Še ni kanalov.</string>
+    <string name="concord_show_all_channels">Prikaži vse kanale</string>
     <string name="concord_send_image_title">Pošlji sliko</string>
     <string name="concord_open_channel">Odpri kanal</string>
     <string name="concord_edit_banner_hint">Dodaj pasico</string>
@@ -324,10 +344,45 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="concord_channel_name_label">Ime kanala</string>
     <string name="concord_channel_delete">Izbriši kanal</string>
     <string name="concord_channel_delete_title">Izbrišem kanal?</string>
+    <string name="concord_channel_delete_message">Želite izbrisati kanal #%1$s? Tega ni mogoče razveljaviti, kanala pa tudi ni mogoče ponovno ustvariti z istim ID-jem.</string>
     <string name="concord_channel_delete_confirm">Izbriši</string>
+    <string name="concord_leave_community">Zapusti skupnost</string>
+    <string name="concord_leave_title">Zapustim skupnost?</string>
+    <string name="concord_leave_message">Želite zapustiti skupnost %1$s? Odstranjena bo iz seznama tega računa in sinhronizacija v vaših napravah se bo ustavila. Skupnost o tem ne bo obveščena in ne boste odstranjeni iz seznama njenih članov. Sporočil, ki jih ne boste mogli več dešifrirati, morda ne bo mogoče obnoviti, vrnete pa se lahko le z novim povabilom.</string>
+    <string name="concord_leave_owner_warning">To skupnost ste ustvarili vi. Z izhodom je ne boste izbrisali ali predali komu drugemu, vendar boste zavrgli lastniški ključ, shranjen na vašem seznamu – tako je ne boste mogli več upravljati.</string>
+    <string name="concord_edit_relays_desc">Kjer so objavljeni in prebrani šifrirani ravninski sloji (encrypted planes) te skupnosti</string>
+    <string name="concord_typing_one">%1$s tipka…</string>
+    <string name="concord_typing_two">%1$s in %2$s tipkata…</string>
+    <string name="concord_typing_many">Več ljudi tipka…</string>
+    <string name="concord_create_title">Nov kanal Concord</string>
     <string name="concord_create_name">Ime</string>
     <string name="concord_create_about">Opis (neobvezno)</string>
     <string name="concord_create_relays">Releji</string>
+    <string name="concord_create_icon">URL ikone (izbirno)</string>
+    <plurals name="concord_channel_count">
+        <item quantity="one">%1$d kanal</item>
+        <item quantity="two">%1$d kanala</item>
+        <item quantity="few">%1$d kanali</item>
+        <item quantity="other">%1$d kanalov</item>
+    </plurals>
+    <plurals name="buzz_workspaces_count">
+        <item quantity="one">%1$d delovni prostor</item>
+        <item quantity="two">%1$d delovna prostora</item>
+        <item quantity="few">%1$d delovni prostori</item>
+        <item quantity="other">%1$d delovnih prostorov</item>
+    </plurals>
+    <plurals name="buzz_workspaces_channel_count">
+        <item quantity="one">%1$d kanal</item>
+        <item quantity="two">%1$d kanala</item>
+        <item quantity="few">%1$d kanali</item>
+        <item quantity="other">%1$d kanalov</item>
+    </plurals>
+    <plurals name="concord_member_count">
+        <item quantity="one">%1$d član</item>
+        <item quantity="two">%1$d člana</item>
+        <item quantity="few">%1$d člani</item>
+        <item quantity="other">%1$d članov</item>
+    </plurals>
     <plurals name="concord_unread_messages">
         <item quantity="one">%1$d novo sporočilo</item>
         <item quantity="two">%1$d nova sporočila</item>
@@ -337,32 +392,52 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="concord_channel_no_messages">Še ni sporočil</string>
     <string name="concord_create_action">Ustvari</string>
     <string name="concord_invite_action">Povabi ljudi</string>
+    <string name="concord_invite_title">Povezava za povabilo</string>
     <string name="concord_make_admin">Povišaj v administratorja</string>
     <string name="concord_remove_admin">Odstrani administratorja</string>
     <string name="concord_ban_user">Izključi</string>
     <string name="concord_ban_user_title">Izključim iz te skupnosti?</string>
+    <string name="concord_ban_user_body">Ta član bo dodan na seznam prepovedi skupnosti. Vsi člani bodo skrili njegova sporočila in zavrgli njegove prihodnje objave. Pozneje ga lahko ponovno omogočite.</string>
     <string name="concord_create_icon_hint">Nastavi ikono skupnosti</string>
+    <string name="concord_create_relays_desc">Releji, ki shranjujejo šifrirana sporočila te skupnosti. Pustite prazno, če želite uporabiti svoje.</string>
     <string name="concord_edit_title">Uredi skupnost</string>
     <string name="concord_edit_save">Shrani</string>
     <string name="concord_members_title">Člani</string>
+    <string name="concord_members_empty">Za zdaj ni lastnika, skrbnikov ali blokiranih članov za prikaz.</string>
     <string name="concord_members_make_admin">Povišaj v administratorja</string>
+    <string name="concord_members_remove_admin">Odstrani skrbnika</string>
     <string name="concord_members_ban">Blokiraj</string>
     <string name="concord_members_unban">Odstrani blokado</string>
     <string name="concord_members_remove">Odstrani iz skupnosti</string>
     <string name="concord_members_remove_title">Odstranim člana?</string>
+    <string name="concord_members_remove_message">S tem se zamenja šifrirni ključ skupnosti, tako da ta član ne more več brati ničesar, kar bo poslano kasneje. Vsem ostalim se ključ samodejno posodobi. Tega ni mogoče razveljaviti.</string>
     <string name="concord_members_remove_confirm">Odstrani</string>
+    <string name="concord_members_roles">Vloge…</string>
+    <string name="concord_members_roles_title">Dodeli vloge</string>
+    <string name="concord_members_roles_message">Izberite vse vloge, ki jih mora imeti ta član. Odznačitev vloge jo odstrani.</string>
+    <string name="concord_members_roles_save">Shrani</string>
+    <string name="concord_members_roles_out_of_reach">Nimate višjega položaja kot ta član</string>
+    <string name="concord_members_roles_none_assignable">Ni vlog, ki bi jih lahko dodelili</string>
+    <string name="concord_members_roles_failed">Vloge tega člana ni bilo mogoče posodobiti.</string>
     <string name="concord_role_owner">Lastnik</string>
     <string name="concord_role_admin">Administrator</string>
     <string name="concord_role_banned">Blokiran</string>
     <string name="concord_invite_card_join">Pridruži se skupnosti</string>
     <string name="concord_invite_card_subtitle">Povabilo Concord skupnosti</string>
+    <string name="concord_invite_naddr_label">Povabilo v Concord (odprite celotno povezavo za povabilo, da se pridružite)</string>
     <string name="concord_server_label">Concord</string>
+    <string name="concord_view_mode_title">Prikaz skupnosti Concord</string>
+    <string name="concord_view_inline">Vrstično</string>
     <string name="concord_view_grouped">Po skupnosti</string>
+    <string name="concord_view_inline_desc">Prikaži vsak kanal kot lasten pogovor, vmešan med vaše klepete.</string>
+    <string name="concord_view_grouped_desc">Zložite kanale posamezne skupnosti v eno vrstico, ki je postavljena na njeno najnovejše sporočilo.</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
-    <string name="chat_reply_in_chat">v pogovoru</string>
+    <string name="chat_reply_in_chat">V klepetu</string>
+    <string name="chat_reply_in_thread">V nizu objav</string>
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Niz objav</string>
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
+    <string name="chat_send_image_title">Pošlji sliko</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d odgovor</item>
@@ -377,7 +452,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="chats_reply_not_found">Ne nejdem tega sporočila</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Preiskani vsi releji · dotakni se za ogled</string>
+    <string name="dm_sender_reported_who">Kdo je dal prijavo?</string>
+    <string name="dm_sender_reported_dismiss">Opusti</string>
+    <string name="dm_sender_reported_hide">Skrij</string>
+    <string name="dm_sender_reported_subtitle">Oseba, ki jo spremljate, je opozorila na ta račun.</string>
+    <string name="dm_sender_reported_icon">Prijavljeno</string>
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Napaka pri nalaganju odgovorov: "</string>
     <string name="try_again">Poskusi ponovno</string>
     <string name="notification_feed_is_empty">Ni še obvestil.</string>
@@ -397,6 +478,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         So odlične za odprte skupnosti, povezane s specifičnimi temami. Nekatere od teh skupin so kratkotrajne
     zato sporočila v klepetu sčasoma izginejo</string>
     <string name="public_chat">Javni pogovor</string>
+    <string name="new_public_chat">Ustvari nov javen klepet</string>
     <string name="marmot_group">MLS skupina</string>
     <string name="marmot_group_no_messages_yet">Še ni sporočil</string>
     <string name="public_chat_title">Metapodatki Javnega Klepeta</string>
@@ -474,6 +556,15 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="share_as_image_url">Deli URL slike</string>
     <string name="share_as_image_generating">Ustvarjam predogled…</string>
     <string name="share_as_image_watermark">Deljeno z Amethyst</string>
+    <string name="share_as_qr">Deli kot QR kodo</string>
+    <string name="share_as_qr_mode_web">Spletna povezava</string>
+    <string name="share_as_qr_mode_nostr">Nostr povezava</string>
+    <string name="share_as_qr_hint_web">Skeniraj s katerokoli kamero na telefonu</string>
+    <string name="share_as_qr_hint_nostr">Skeniraj z Nostr aplikacijo</string>
+    <string name="share_as_qr_kind_picture">Fotografija</string>
+    <string name="share_as_qr_code_description_web">Koda QR s spletno povezavo do te opombe</string>
+    <string name="share_as_qr_code_description_nostr">Koda QR s povezavo Nostr do te opombe</string>
+    <string name="share_as_qr_thumbnail_hidden_sensitive">Miniatura je skrita zaradi občutljive vsebine</string>
     <string name="quick_action_copy_user_id">Avtorjev ID</string>
     <string name="quick_action_copy_note_id">ID zapiska</string>
     <string name="quick_action_copy_text">Kopiraj tekst</string>
@@ -809,6 +900,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="napplet_consent_storage">Ta nApplet želi uporabiti svojo zasebno shrambo.</string>
     <string name="napplet_consent_pay">Ta nApplet želi plačati Lightning račun.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">⚠ Ta nApplet želi plačati račun Lightning, ki ne določa zneska — prejemnik plačila določi, koliko se odtrga. To dovolite samo, če mu zaupate.</string>
     <string name="napplet_consent_resource">Ta nApplet želi pridobiti spletni vir.</string>
     <string name="napplet_consent_upload">Ta nApplet želi naložiti datoteko na vaš medijski strežnik.</string>
     <string name="napplet_consent_notify">Ta nApplet vam želi prikazati obvestila.</string>
@@ -823,11 +915,74 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
          one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">Sledi %1$d novemu računu</item>
+        <item quantity="two">Sledi %1$d novima računoma</item>
+        <item quantity="few">Sledi %1$d novim računom</item>
+        <item quantity="other">Sledi %1$d novim računom</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">PRENEHA SLEDITI %1$d računu</item>
+        <item quantity="two">PRENEHA SLEDITI %1$d računoma</item>
+        <item quantity="few">PRENEHA SLEDITI %1$d računom</item>
+        <item quantity="other">PRENEHA SLEDITI %1$d računom</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">doda %1$d rele</item>
+        <item quantity="two">doda %1$d releja</item>
+        <item quantity="few">doda %1$d releje</item>
+        <item quantity="other">doda %1$d relejev</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">ODSTRANI %1$d rele</item>
+        <item quantity="two">ODSTRANI %1$d releja</item>
+        <item quantity="few">ODSTRANI %1$d releje</item>
+        <item quantity="other">ODSTRANI %1$d relejev</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">utiša %1$d dodatno osebo</item>
+        <item quantity="two">utiša %1$d dodatni osebi</item>
+        <item quantity="few">utiša %1$d dodatne osebe</item>
+        <item quantity="other">utiša %1$d dodatnih oseb</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">PREKINE UTIŠANJE %1$d osebe</item>
+        <item quantity="two">PREKINE UTIŠANJE %1$d oseb</item>
+        <item quantity="few">PREKINE UTIŠANJE %1$d oseb</item>
+        <item quantity="other">PREKINE UTIŠANJE %1$d oseb</item>
+    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">⚠ To sledi uporabniku %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠ To PRENEHA SLEDITI uporabniku %1$s.</string>
+    <string name="napplet_consent_diff_mute_one">⚠ To utiša uporabnika %1$s.</string>
+    <string name="napplet_consent_diff_unmute_one">⚠ To PREKINE UTIŠANJE uporabnika %1$s.</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">⚠ To prepiše vaš seznam sledilcev: %1$s.</string>
+    <string name="napplet_consent_diff_relays">⚠ To prepiše vaš seznam relejev: %1$s. Vaše objave in branja se premaknejo skupaj z njim.</string>
+    <string name="napplet_consent_diff_mutes">⚠ To prepiše vaš seznam utišanih: %1$s. Utišane besede in oznake niso prikazane tukaj — za celoten seznam tapnite »Pokaži dogodek«</string>
+    <string name="napplet_consent_diff_joiner">%1$s in %2$s</string>
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">To ponovno objavi vaš obstoječi seznam nespremenjen.</string>
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">To zapisuje seznam z %1$d vnosom. Amethyst nima zajete kopije za primerjavo.</item>
+        <item quantity="two">⚠ To zapisuje seznam z %1$d vnosoma. Amethyst nima zajete kopije za primerjavo.</item>
+        <item quantity="few">⚠ To zapisuje seznam z %1$d vnosi. Amethyst nima zajete kopije za primerjavo.</item>
+        <item quantity="other">⚠ To zapisuje seznam z %1$d vnosi. Amethyst nima zajete kopije za primerjavo.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">⚠ To zahteva izbris %1$d vašega dogodka.</item>
+        <item quantity="two">⚠ To zahteva izbris %1$d vaših dogodkov.</item>
+        <item quantity="few">⚠ To zahteva izbris %1$d vaših dogodkov.</item>
+        <item quantity="other">⚠ To zahteva izbris %1$d vaših dogodkov.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">Vsebuje %1$d oznako. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
+        <item quantity="two">Vsebuje %1$d oznaki. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
+        <item quantity="few">Vsebuje %1$d oznake. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
+        <item quantity="other">Vsebuje %1$d oznak. Tapnite »Pokaži dogodek«, da vidite, kaj bo podpisano.</item>
+    </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Povezava z Nostrom</string>
     <string name="napplet_connect_subtitle">se želi povezati z vašim nostr računom</string>
@@ -864,9 +1019,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">berem tvoja zasebna sporočila</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">preberite zasebna sporočila z %1$s</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">Vedno dovoli za %1$s</string>
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">Amethyst tega sporočila ni mogel dešifrirati. Morda ni naslovljeno na ta račun.</string>
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">Sporočila z</string>
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Povezane aplikacije</string>
     <string name="napplet_permissions_revoke_all">Prekliči vsa dovoljenja</string>
@@ -878,6 +1037,103 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="napplet_decision_deny">Zavrni</string>
     <string name="napplet_connected_apps_search_keywords">Aplikacije, dovoljenja, podpisovalnik, napplet, nsite, spletna aplikacije zaupnik povezan.</string>
     <!-- NIP-46 remote signer (bunker) -->
+    <string name="nip46_signer_title">Oddaljen podpisnik</string>
+    <string name="nip46_signer_search_keywords">Podpisnik, bunker, NIP-46, Nostr Connect, oddaljeno podpisovanje</string>
+    <string name="nip46_signer_explainer">Dovolite drugim aplikacijam podpisovanje z vašim ključem. Amethyst posluša na vaših prejetih relejih in pred podpisom preveri dovoljenja posamezne aplikacije — pri čemer uporablja enake ravni zaupanja kot Povezane aplikacije.</string>
+    <string name="nip46_signer_enable">Deluj kot oddaljeni podpisnik</string>
+    <plurals name="nip46_signer_status_listening">
+        <item quantity="one">Poslušanje na %1$d releju</item>
+        <item quantity="two">Poslušanje na %1$d relejih</item>
+        <item quantity="few">Poslušanje na %1$d relejih</item>
+        <item quantity="other">Poslušanje na %1$d relejih</item>
+    </plurals>
+    <string name="nip46_signer_status_no_relays">Ni nastavljenih vhodnih relejev. Dodajte vhodne releje, da lahko aplikacije dosežejo vašega podpisnika.</string>
+    <plurals name="nip46_signer_relays_all_live">
+        <item quantity="one">Poslušanje na %1$d vhodnem releju</item>
+        <item quantity="two">Poslušanje na %1$d vhodnih relejih, oba poveza</item>
+        <item quantity="few">Poslušanje na %1$d vhodnih relejih, vsi povezani</item>
+        <item quantity="other">Poslušanje na %1$d vhodnih relejih, vsi povezani</item>
+    </plurals>
+    <string name="nip46_signer_relays_some_down">Povezan na %1$d od \%2$d relejev</string>
+    <string name="nip46_signer_bunker_uri_label">Vaš bunker naslov</string>
+    <string name="nip46_signer_bunker_uri_hint">Prilepite to v drugo aplikacijo, da jo povežete s svojim ključem.</string>
+    <string name="nip46_signer_copy">Kopiraj</string>
+    <string name="nip46_signer_copied">Naslov bunkerja kopiran</string>
+    <string name="nip46_signer_regenerate">Nov naslov</string>
+    <string name="nip46_signer_regenerated">Generiran nov bunker naslov</string>
+    <string name="nip46_signer_rotate_confirm_title">Ustvarim nov naslov?</string>
+    <string name="nip46_signer_rotate_confirm_message">S tem ustvarite nov bunker naslov in prekinete povezavo z vsemi trenutno povezanimi aplikacijami. Nihče s starim naslovom – vključno s pošiljatelji neželene pošte – vas ne more več doseči. Svoje aplikacije znova povežite s skeniranjem nove kode.</string>
+    <string name="nip46_signer_rotate_confirm_button">Generiraj</string>
+    <string name="nip46_signer_cancel">Prekliči</string>
+    <string name="nip46_signer_connect_label">Poveži aplikacijo</string>
+    <string name="nip46_signer_connect_hint">prilepi nostrconnect:// povezavo</string>
+    <string name="nip46_signer_connect_button">Poveži</string>
+    <string name="nip46_signer_manage_apps">Upravljanje povezanih aplikacij</string>
+    <string name="nip46_signer_apps_empty">Z vašim podpisnikom še ni povezana nobena aplikacija.\n\nZa povezavo skenirajte ali prilepite kodo aplikacije. Povezane aplikacije se prikažejo tukaj, neaktivne pa se po enem tednu samodejno odstranijo.</string>
+    <string name="nip46_signer_app_last_used">uporabljeno %1$s</string>
+    <string name="nip46_signer_app_online">Povezano</string>
+    <string name="nip46_signer_app_offline">Brez povezave</string>
+    <string name="nip46_signer_app_reconnect">Ponovno poveži</string>
+    <string name="nip46_signer_reconnecting">Ponovno povezovanje z releji…</string>
+    <string name="nip46_signer_app_relays_title">Releji</string>
+    <string name="nip46_signer_app_relays_inbox">Podpisuje preko vaših vhodnih relejev — ta aplikacija ni dodala svojih, zato ne ohranja dodatne povezave v ozadju.</string>
+    <string name="nip46_signer_app_relays_own_hint">Amethyst ohranja povezavo v ozadju z vsakim od njih, dokler ta aplikacija ostaja povezana. Pozabite aplikacijo, da jih prekinete.</string>
+    <plurals name="nip46_signer_app_relay_count">
+        <item quantity="one">%1$d rele</item>
+        <item quantity="two">%1$d releja</item>
+        <item quantity="few">%1$d releji</item>
+        <item quantity="other">%1$d relejev</item>
+    </plurals>
+    <string name="nip46_signer_connected_ok">Aplikacija je povezana. Amethyst zdaj zanjo podpisuje v ozadju.</string>
+    <string name="nip46_signer_connected_named">Povezano %1$s. Amethyst zdaj za to podpisuje v ozadju.</string>
+    <string name="nip46_signer_connect_invalid">Ni veljavna povezava nostrconnect://</string>
+    <string name="nip46_signer_connect_no_relays">Ta povezava ne vsebuje nobenega releja za povezavo</string>
+    <string name="nip46_signer_connect_failed">Ni se bilo mogoče povezati: %1$s</string>
+    <string name="nip46_signer_connect_declined">Povezava je bila zavrnjena</string>
+    <string name="nip46_connect_requests_title">Ta aplikacija zahteva:</string>
+    <string name="nip46_signer_readonly">To je račun samo za branje in ne more podpisovati.</string>
+    <string name="nip46_signer_remote_app">Aplikacija oddaljenega podpisnika</string>
+    <string name="nip46_signer_background_hint">Amethyst ohranja povezavo v ozadju (prikazano kot trajno obvestilo), da lahko odgovarja na zahteve za podpisovanje, ko je zaprt.</string>
+    <string name="nip46_signer_hero_title">Podpisovanje za druge aplikacije</string>
+    <string name="nip46_signer_turn_on">Vklopite podpisnika</string>
+    <string name="nip46_signer_live">V živo</string>
+    <plurals name="nip46_signer_batch_title">
+        <item quantity="one">%1$d zahteva za podpis</item>
+        <item quantity="two">%1$d zahtevi za podpis</item>
+        <item quantity="few">%1$d zahteve za podpis</item>
+        <item quantity="other">%1$d zahtev za podpis</item>
+    </plurals>
+    <string name="nip46_signer_batch_select_all">Izberi vse</string>
+    <string name="nip46_signer_batch_select_none">Nič ne izberi</string>
+    <string name="nip46_signer_batch_remember">Zapomni si te za vsako aplikacijo</string>
+    <string name="nip46_signer_batch_signing_as">kot %1$s</string>
+    <string name="nip46_signer_batch_allow">Dovoli %1$d</string>
+    <string name="nip46_signer_batch_deny">Zavrni %1$d</string>
+    <string name="nip46_signer_activity_title">Nedavna aktivnost</string>
+    <string name="nip46_signer_activity_empty">Še ni bilo obdelanih zahtev.</string>
+    <string name="nip46_signer_activity_denied">zavrnjeno</string>
+    <string name="nip46_signer_act_signed_kind">Podpisan dogodek (tip(kind) %1$d)</string>
+    <string name="nip46_signer_act_encrypted">Šifrirano sporočilo</string>
+    <string name="nip46_signer_act_decrypted">Dešifrirano sporočilo</string>
+    <string name="nip46_signer_act_shared_pubkey">Deljen vaš javni ključ</string>
+    <string name="nip46_signer_act_connected">Povezan</string>
+    <string name="nip46_signer_act_ping">Ping</string>
+    <string name="nip46_signer_act_listed_relays">Prikazan seznam relejev</string>
+    <string name="nip46_signer_act_other">%1$s</string>
+    <string name="nip46_signer_notif_channel_name">Zahteve za podpisovanje</string>
+    <string name="nip46_signer_notif_channel_desc">Celozaslonski pozivi, ki vas prosijo za odobritev aplikacije, ki želi, da Amethyst z vašim ključem podpisuje, šifrira ali dešifrira.</string>
+    <string name="nip46_signer_notif_sign_title">Želite odobriti zahtevo za podpisovanje?</string>
+    <string name="nip46_signer_notif_connect_title">Aplikacija se želi povezati</string>
+    <string name="nip46_signer_notif_tap">Tapnite za preveritev</string>
+    <string name="nip46_signer_scan_caption">Skenirajte za povezavo aplikacije z vašim ključem</string>
+    <string name="nip46_signer_scan_connect">Skeniraj kodo</string>
+    <string name="nip46_signer_paste_link">Raje prilepite povezavo</string>
+    <plurals name="nip46_signer_connected_count">
+        <item quantity="one">%1$d povezana aplikacija</item>
+        <item quantity="two">%1$d povezani aplikaciji</item>
+        <item quantity="few">%1$d povezane aplikacije</item>
+        <item quantity="other">%1$d povezanih aplikacij</item>
+    </plurals>
     <string name="napplet_connected_app_trust_level">Podpisujem stopnjo zaupanja</string>
     <string name="napplet_connected_app_capabilities">Zmogljivosti</string>
     <string name="napplet_connected_app_forget">Pozabi to aplikacijo</string>
@@ -948,6 +1204,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nip82_older_releases_hide">Skrij starejše različice</string>
     <string name="shorts">Kratki posnetki</string>
     <string name="public_chats">Javni klepeti</string>
+    <string name="location_channels">Lokacijski kanali</string>
     <string name="follow_packs">Paketi sledenih</string>
     <string name="live_streams">Posnetki v živo</string>
     <string name="nests">Zvočne sobe</string>
@@ -1078,6 +1335,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_create_submit">Začni sobo za klepet</string>
     <string name="nest_create_schedule_toggle">Načrtovano za kasneje</string>
     <string name="nest_create_when">Izberi začetni čas</string>
+    <string name="agent_console_title">Konzola za agente</string>
     <string name="nests_servers_title">Strežniki gnezda</string>
     <string name="nests_servers_explainer">Izberite strežnike MoQ, na katerih Amethyst objavlja vaša gnezda. Prvi vnos bo privzeto uporabljen ob začetku novega pogovora.</string>
     <string name="nests_servers_my_section">Vaši strežniki</string>
@@ -1302,6 +1560,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="public_bookmark_presence_indicator">že v tem javnem zaznamku</string>
     <string name="private_bookmark_presence_indicator">je zasebni zaznamek tukaj</string>
     <string name="private_rumor_mark">Zasebno — vidno le označenim sodelujočim</string>
+    <string name="private_rumor_info_title">Zasebni zapisek</string>
+    <string name="private_rumor_info_description">To sporočilo je bilo dostavljeno zasebno in ni podpisano. Vidijo ga lahko le označeni udeleženci, nihče zunaj pa ne more dokazati, kdo ga je napisal.</string>
     <string name="private_note">Nastavi kot zasebno: šifriraj zapis le za obveščene uporabnike</string>
     <string name="disable_private_note">Nastavi kot javno</string>
     <string name="private_note_locked">Odgovori na zasebni zapis so vedno zasebni.</string>
@@ -1309,6 +1569,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="private_note_no_receivers">Ni še prejemnikov: ta zapis lahko vidiš samo ti. Dodaj ljudi, da ga deliš z njimi.</string>
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Odstrani uporabnika iz obvestil</string>
+    <string name="notify_mute_user">Pošiljanje obvestil. Tapnite, da utišate obvestila za tega uporabnika</string>
+    <string name="notify_unmute_user">Pošiljanje obvestil. Tapnite, da utišate obvestila za tega uporabnika</string>
     <string name="notify_search_and_add_user">Poišči in dodaj prejemnika obvestil</string>
     <string name="bookmark_absence_indicator">Ni v tem zaznamku</string>
     <string name="bookmark_remove_action_desc">Odstrani zaznamek iz seznama</string>
@@ -1408,11 +1670,96 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="local_blossom_cache_profile_pics_only">V predpomnilnik shrani le slike profilov</string>
     <string name="local_blossom_cache_profile_pics_only_caption">Lokalni predpomnilnik omeji le na slike profilov. Slike in videoposnetki iz vira vsebin se bodo prenašali neposredno z izvornih strežnikov.</string>
     <string name="no_blossom_server_message">Nimate nastavljenih Blossom strežnikov. Uporabite lahko Amethyst-ov seznam ali dodajte enega spodaj ↓</string>
+    <string name="media_servers_upload_section">Vedenje ob nalaganju</string>
+    <string name="blossom_mirror_uploads">Zrcaljenje naloženih datotek</string>
+    <string name="blossom_mirror_uploads_caption">Po nalaganju datoteko kopirajte na svoje druge strežnike Blossom, da ostane na voljo, če se eden izklopi.</string>
+    <string name="blossom_optimize_media">Optimiziraj medije na strežniku</string>
+    <string name="blossom_optimize_media_caption">Naložite prek strežniške končne točke /media, da lahko odstrani metapodatke in stisne datoteko. Shranjena datoteka se lahko razlikuje od izvirnika.</string>
+    <string name="manage_stored_files">Upravljanje shranjenih datotek</string>
+    <string name="my_blossom_data">Moje Blossom datoteke</string>
+    <string name="blossom_refresh">Osveži</string>
+    <string name="blossom_sync_all">Sinhroniziraj vse</string>
+    <string name="blossom_sync_gaps">Nekatere vaše datoteke še niso na vseh vaših strežnikih.</string>
+    <string name="blossom_syncing">Kopiranje vaših datotek med strežniki…</string>
+    <string name="blossom_sync_done">Sinhronizacija zaključena</string>
+    <string name="blossom_sync_cancel">Prekliči</string>
+    <string name="blossom_sync_channel_name">Blossom sinhronizacija</string>
+    <string name="blossom_sync_channel_description">Prikazuje napredek med kopiranjem vaših datotek med vašimi strežniki Blossom.</string>
+    <string name="manage_stored_files_empty">Na vaših strežnikih Blossom ni bilo najdenih shranjenih datotek.</string>
+    <string name="blossom_stored_on">Shranjeno na</string>
+    <string name="blossom_file_details">Podrobnosti datoteke</string>
+    <string name="blossom_on_all_servers">Na vseh strežnikih</string>
+    <string name="blossom_not_on_all_servers">Ni na vseh strežnikih</string>
+    <string name="blossom_mirror_to_missing">Zrcali na manjkajoče</string>
+    <string name="blossom_delete_from">Izbriši iz…</string>
+    <string name="blossom_delete_from_host">Izbriši iz %1$s</string>
+    <string name="blossom_report">Prijavi</string>
+    <string name="blossom_open">Odpri</string>
+    <string name="blossom_payment_required">Ta strežnik za nalaganje zahteva plačilo: %1$s</string>
+    <string name="blossom_payment_title">Zahtevano plačilo</string>
+    <string name="blossom_payment_message">%1$s za shranjevanje te datoteke zahteva plačilo preko omrežja Lightning. Za nadaljevanje plačajte iz svoje povezane denarnice.</string>
+    <string name="blossom_payment_server_says">%1$s pove: \"%2$s\"</string>
+    <string name="blossom_pay">Plačaj</string>
+    <plurals name="blossom_pay_sats">
+        <item quantity="one">Plačaj %1$d sat</item>
+        <item quantity="two">Plačaj %1$d sata</item>
+        <item quantity="few">Plačaj %1$d sate</item>
+        <item quantity="other">Plačaj %1$d satov</item>
+    </plurals>
+    <string name="blossom_report_title">Prijavi blob</string>
+    <string name="blossom_report_comment_hint">Razlog (izbirno)</string>
+    <string name="blossom_send">Pošlji</string>
+    <string name="blossom_more_actions">Več možnosti</string>
+    <string name="blossom_import_menu">Uvozi datoteke…</string>
+    <string name="blossom_import_title">Uvozi datoteke</string>
+    <string name="blossom_import_intro">Preveri druge strežnike Blossom za datoteke, ki si jih naložil drugje, in jih kopiraj na svoje strežnike.</string>
+    <string name="blossom_import_sources_section">Strežniki za preverjanje</string>
+    <string name="blossom_import_enable_all">Omogoči vse</string>
+    <string name="blossom_import_disable_all">Onemogoči vse</string>
+    <string name="blossom_import_add_url_label">Ali pa prilepite naslov strežnika</string>
+    <string name="blossom_import_scan">Preveri stražnike</string>
+    <string name="blossom_import_scanning">PReverjam…</string>
+    <string name="blossom_import_source_failed">Strežnika ni mogoče doseči</string>
+    <string name="blossom_import_none_found">Na izbranih strežnikih ni bilo najdenih novih datotek.</string>
+    <string name="blossom_import_no_targets">Najprej dodajte svoje strežnike Blossom, da boste imeli kam kopirati uvožene datoteke.</string>
+    <string name="blossom_import_manage_servers">Upravljanje mojih strežnikov</string>
+    <string name="blossom_import_busy">Sinhronizacija datotek že poteka. Poskusite znova, ko se zaključi.</string>
+    <plurals name="blossom_import_files_found">
+        <item quantity="one">%1$d datoteka</item>
+        <item quantity="two">%1$d datoteki</item>
+        <item quantity="few">%1$d datoteke</item>
+        <item quantity="other">%1$d datotek</item>
+    </plurals>
+    <plurals name="blossom_import_found_files">
+        <item quantity="one">Najdena %1$d datoteka za uvoz na vaše strežnike.</item>
+        <item quantity="two">Najdeni %1$d datoteki za uvoz na vaše strežnike.</item>
+        <item quantity="few">Najdene %1$d datoteke za uvoz na vaše strežnike.</item>
+        <item quantity="other">Najdenih %1$d datotek za uvoz na vaše strežnike.</item>
+    </plurals>
+    <plurals name="blossom_import_start_button">
+        <item quantity="one">Uvozi %1$d datoteko</item>
+        <item quantity="two">Uvozi %1$d datoteki</item>
+        <item quantity="few">Uvozi %1$d datoteke</item>
+        <item quantity="other">Uvozi %1$d datotek</item>
+    </plurals>
     <string name="recommended_media_servers">Priporočljivi medijski strežniki</string>
     <string name="built_in_servers_description">Privzeti seznam Amethysta. Lahko jih dodate posamično ali dodate celoten seznam.</string>
     <string name="use_default_servers">Uporabi privzeti seznam</string>
     <string name="add_media_server">Dodaj medijski strežnik</string>
     <string name="delete_media_server">Odstrani medijski strežnik</string>
+    <string name="media_servers_reorder_hint">Podrsajte za spremembo vrstnega reda. Naložene datoteke se zaporedoma poskušajo poslati na strežnike od zgoraj navzdol.</string>
+    <string name="media_servers_priority_section">Prednost nalaganja</string>
+    <string name="media_servers_add_section">Dodaj strežnik</string>
+    <string name="media_servers_recommended_label">Priporočeno</string>
+    <string name="media_servers_add_url_label">Ali prilepite naslov strežnika</string>
+    <string name="media_servers_cache_section">Predpomnilnik naprave</string>
+    <string name="media_server_primary_badge">Primarni</string>
+    <string name="media_server_added">Dodano</string>
+    <string name="media_server_reorder">Razvrsti strežnik</string>
+    <string name="media_server_status_online">Povezano</string>
+    <string name="media_server_status_slow">Počasno</string>
+    <string name="media_server_status_offline">Brez povezave</string>
+    <string name="media_server_status_checking">Preverjam…</string>
     <string name="payment_targets">Cilji plačil</string>
     <string name="payment_targets_explainer">Objavite svoje naslove za plačila, da vam lahko drugi neposredno pošiljajo sredstva.</string>
     <string name="payment_targets_section_explainer">Dodajte naslove za plačila za različna omrežja (npr. bitcoin, lightning, monero).</string>
@@ -1423,6 +1770,20 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="no_payment_app_found">Ni aplikacije za tovrstno plačilo. Namestite združljivo denarnico.</string>
     <string name="no_payment_app_found_for_type">Ni nameščene aplikacije za plačila %1$s. Namesti združljivo denarnico.</string>
     <string name="error_dialog_payment_error">Plačila ni mogoče odpreti</string>
+    <string name="bolt12_offers">BOLT12 Ponudbe</string>
+    <string name="bolt12_offers_explainer">Objavite večkrat uporabne ponudbe BOLT12, da vam lahko drugi pošiljajo zap-e preko omrežja Lightning brez ustvarjanja novega računa vsakič.</string>
+    <string name="bolt12_offers_section_explainer">Dodajte eno ali več ponudb BOLT12 (lno1…). Objavljene so javno, tako da vam lahko plača kdo koli.</string>
+    <string name="no_bolt12_offers_message">Ni nastavljenih ponudb BOLT12. Dodajte jo spodaj ↓</string>
+    <string name="bolt12_offer">BOLT12 ponudba (lno1…)</string>
+    <string name="invalid_bolt12_offer">Neveljavna ponudba BOLT12</string>
+    <string name="delete_bolt12_offer">Izbriši BOLT12 ponudbo</string>
+    <string name="bolt12_pay_with_wallet">Plačaj s povezano denarnico</string>
+    <string name="bolt12_payment_amount_sats">Znesek (sat)</string>
+    <string name="bolt12_payment_sent">BOLT12 plačilo poslano</string>
+    <string name="bolt12_payment_failed">BOLT12 plačilo ni uspelo: %1$s</string>
+    <string name="bolt12_zap_error">BOLT12 zap napaka</string>
+    <string name="bolt12_zap_paid_no_receipt">Plačano preko BOLT12, vendar denarnica ni vrnila dokazila, zato potrdilo o zapu ni bilo objavljeno.</string>
+    <string name="bolt12_zap_invalid_receipt">Plačano preko BOLT12, vendar dokazilo o plačilu ni prestalo preverjanja, zato potrdilo o zapu ni bilo objavljeno.</string>
     <string name="uploading_state_ready">Čakam na začetek</string>
     <string name="uploading_state_compressing">Zgoščujem</string>
     <string name="uploading_state_uploading">Nalagam</string>
@@ -1440,6 +1801,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_list_kind3follows_users_only">Vsi sledeni sledenih</string>
     <string name="follow_list_kind3_follows_users_only">Privzeti seznam sledenih</string>
     <string name="follow_list_aroundme">V moji okolici</string>
+    <string name="follow_list_teleport">Teleportacija na lokacijo…</string>
+    <string name="follow_geohash">Sledi tej lokaciji</string>
+    <string name="unfollow_geohash">Prenehaj slediti tej lokaciji</string>
+    <string name="geo_post_posting_to">Pošiljam v</string>
+    <string name="geo_post_change_place">Spremeni</string>
     <string name="follow_list_global">Globalno</string>
     <string name="follow_list_curated">Izbrani</string>
     <string name="follow_list_mine">Moje</string>
@@ -1524,8 +1890,15 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="app_notification_zaps_channel_message">%1$s sat</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">za %1$s</string>
+    <string name="app_notification_payments_channel_name">Plačilo prejeto</string>
+    <string name="app_notification_payments_channel_description">Obvesti vas, ko vaša povezana denarnica prejme plačilo, ki ni Nostr zap</string>
+    <string name="app_notification_payments_channel_message">Prejeto %1$s sat</string>
+    <string name="app_notification_payments_summary">Nova plačila</string>
     <string name="app_notification_reply_label">Odgovori</string>
     <string name="app_notification_mark_read_label">Označi kot prebrano</string>
+    <string name="app_notification_me">Jaz</string>
+    <string name="app_notification_new_message">Novo sporočilo</string>
+    <string name="app_notification_added_to_group">Dodani ste bili v %1$s</string>
     <string name="app_notification_dms_summary">Novo sporočilo</string>
     <string name="app_notification_zaps_summary">Novi zapi</string>
     <string name="app_notification_reactions_channel_name">Odzivne ikone</string>
@@ -1548,13 +1921,48 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="app_notification_mentions_channel_message">%1$s vas je omenil</string>
     <string name="app_notification_mentions_summary">Nove omembe</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">Sporočila</string>
+    <string name="app_notification_group_social">Družabno</string>
+    <string name="app_notification_group_payments">Plačila</string>
+    <string name="app_notification_group_content">Vsebina</string>
+    <string name="app_notification_group_developer">Razvijalec</string>
+    <string name="app_notification_group_games">Igre</string>
     <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">Deljenja</string>
+    <string name="app_notification_reposts_channel_description">Obvesti vas, ko nekdo znova objavi vašo objavo</string>
+    <string name="app_notification_reposts_channel_message">Oseba %1$s je delila vašo objavo</string>
+    <string name="app_notification_reposts_summary">Nove delitve</string>
     <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_name">Medijske vsebine</string>
+    <string name="app_notification_media_channel_description">Obvesti vas, ko vas nekdo označi na fotografiji ali v videoposnetku</string>
+    <string name="app_notification_media_channel_message_photo">Oseba %1$s je delila fotografijo</string>
+    <string name="app_notification_media_channel_message_video">Oseba %1$s je delila video</string>
+    <string name="app_notification_media_summary">Nova medijska vsebina</string>
     <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_name">Članki in poudarki</string>
+    <string name="app_notification_articles_channel_description">Obvesti vas, ko vas nekdo emeni ali označi v članku</string>
+    <string name="app_notification_articles_channel_message">%1$s vas je omenil v članku</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s je poudaril vaš članek</string>
+    <string name="app_notification_articles_summary">Novi članki</string>
     <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">Koda in Git</string>
+    <string name="app_notification_code_channel_description">Obvesti vas o težavah, popravkih in zahtevkih za poteg (PR)</string>
+    <string name="app_notification_code_channel_message_issue">%1$s je odprl/a težavo</string>
+    <string name="app_notification_code_channel_message_patch">%1$s je poslal/a popravek</string>
+    <string name="app_notification_code_channel_message_pr">%1$s je odprl/a zahtevo za popravek (PR)</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s je osvežil/a zahtevo za popravek (PR)</string>
+    <string name="app_notification_code_summary">Nove aktivnosti v kodi</string>
     <!-- Badges -->
+    <string name="app_notification_badges_channel_name">Značke</string>
+    <string name="app_notification_badges_channel_description">Vas obvesti ko si prislužite značko</string>
+    <string name="app_notification_badges_channel_message">Prislužili ste si značko</string>
+    <string name="app_notification_badges_channel_message_from">Nagrajeni ste bili od %1$s</string>
+    <string name="app_notification_badges_summary">Nove značke</string>
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">Nutzap od %1$s</string>
+    <string name="app_notification_onchain_channel_message_from">Onchain zap od %1$s</string>
     <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s sprašuje</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Dohodni klici</string>
     <string name="app_notification_calls_channel_description">Obvestila o dohodnih glasovnih in video klicih</string>
@@ -1620,6 +2028,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
     <string name="always_on_notif_setting_title">Vedno aktivna obvestila</string>
     <string name="always_on_notif_setting_description">Ohranja stalno povezavo z vašimi releji za takojšnjo dostavo obvestil. Prikazuje trajno obvestilo. Porabi več baterije, a zagotavlja, da ne zamudite nobenega sporočila.</string>
+    <string name="always_on_notif_tile_label">Storitev obveščanja</string>
+    <string name="always_on_notif_tile_subtitle_on">Vklop</string>
+    <string name="always_on_notif_tile_subtitle_off">Izklop</string>
+    <string name="notification_service_master_title">Storitev obveščanja v ozadju</string>
+    <string name="notification_service_master_description">Glavno stikalo za sprotna obvestila v ozadju. Izklopite za varčevanje z baterijo — podobno kot način letenja. Ko je stikalo izklopljeno, noben račun v ozadju ne ostane povezan, nastavitev pa se ohrani (tudi po ponovnem zagonu), dokler je znova ne vklopite.</string>
+    <string name="notification_service_accounts_title">Aktivni računi v ozadju</string>
+    <string name="notification_service_participation_title">Ta račun naj ostane aktiven v ozadju</string>
     <string name="split_notifications_setting_title">Razdeli opozorila glede na sledilce</string>
     <string name="split_notifications_setting_description">Prikaže dva zavihka z obvestili — Sledim (ljudje, ki jim slediš) in Vsi ostali. Indikator neprebranih obvestil sveti le za aktivnosti ljudi, ki jim slediš.</string>
     <string name="show_messages_in_notifications_setting_title">Prikaži sporočilo</string>
@@ -1785,16 +2200,26 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="connectivity_type_unmetered_wifi_only">Samo z WiFi</string>
     <string name="connectivity_type_never">Nikoli</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
     <string name="ui_feature_set_type_complete">Celovit</string>
     <string name="ui_feature_set_type_simplified">Poenostavljen</string>
     <string name="ui_feature_set_type_performance">Optimiziran</string>
     <!-- Compact labels for the segmented control. -->
+    <string name="ui_feature_set_type_complete_short">Polno</string>
     <string name="gallery_type_classic">Klasično</string>
     <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistemska</string>
     <string name="light">Svetla</string>
     <string name="dark">Temna</string>
     <string name="application_preferences">Nastavitve aplikacije</string>
+    <string name="settings_section_appearance">Prikaz</string>
+    <string name="settings_section_media">Medijske vsebine in podatki</string>
+    <string name="settings_section_general">Splošno</string>
+    <string name="settings_section_tor_engine">Povezava</string>
+    <string name="settings_section_tor_routing">Usmeri preko Tor</string>
+    <string name="settings_section_profile_sections">Odseki in viri vsebin</string>
+    <string name="settings_section_home_tabs">Vidni zavihki</string>
+    <string name="settings_section_reminders">Opomniki</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Jezik</string>
     <string name="theme">Tema</string>
@@ -1813,6 +2238,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">Monospace</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
+    <string name="font_family_system_short">Sistem</string>
+    <string name="font_family_sans_serif_short">Sans</string>
+    <string name="font_family_serif_short">Serif</string>
+    <string name="font_family_monospace_short">Mono</string>
     <string name="font_size">Velikost pisave</string>
     <string name="font_size_description">Prilagoditev velikosti besedila v aplikaciji</string>
     <string name="font_size_small">Majhno</string>
@@ -1844,6 +2273,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="default_relays_longer">Ponastavi na privzeto</string>
     <string name="geohash_title">Prikaži lokacijo kot </string>
     <string name="geohash_explainer">Doda Geohash vaše lokacije k objavi. Javnost bo vedela, da se nahajate v radiju 5km (3milj) od trenutne lokacije</string>
+    <string name="geohash_teleport_title">Teleportiraj</string>
+    <string name="geohash_teleport_action">✈ Teleportiraj se sem</string>
+    <string name="location_pick_on_map">Izberi lokacijo na karti</string>
+    <string name="location_change_place">Spremeni lokacijo na karti</string>
     <string name="geohash_exclusive">Lokacijsko-ekskluzivna objava</string>
     <string name="geohash_exclusive_explainer">To bodo videli samo sledilci lokacije. Vaši splošni sledilci tega ne bodo videli.</string>
     <string name="hashtag_exclusive">Ekskluzivna objava ključnika</string>
@@ -1897,8 +2330,32 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="messages_create_public_private_chat_description">Nova javna ali zasebna skupina</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <string name="new_conversation_title">Začni pogovor</string>
+    <string name="new_conversation_best_for">Najboljše za</string>
+    <string name="new_conversation_pros">Dobro</string>
+    <string name="new_conversation_cons">Kompromisi</string>
+    <string name="new_conversation_section_direct">Zasebno</string>
+    <string name="new_conversation_section_encrypted">Šifrirane skupine</string>
+    <string name="new_conversation_section_relay">Zavedanje o relejih</string>
+    <string name="new_conversation_dm_title">Zasebno sporočilo</string>
+    <string name="new_conversation_dm_tagline">Zasebna sporočila, šifrirana od konca do konca (E2EE)</string>
+    <string name="new_conversation_dm_chip">1:1–5 sob</string>
+    <string name="new_conversation_dm_best">Klepeti ena na ena in v manjših skupinah z ljudmi, ki jih poznate.</string>
+    <string name="new_conversation_dm_cta">Novo sporočilo</string>
+    <string name="new_conversation_dm_pro_1">1 na 1 in manjše skupine</string>
+    <string name="new_conversation_dm_pro_2">Šifrirano od konca do konca (E2EE)</string>
+    <string name="new_conversation_dm_con_1">Uporabnikov ni mogoče dodati pozneje</string>
+    <string name="new_conversation_marmot_title">Marmot skupina</string>
+    <string name="new_conversation_marmot_tagline">Večje zasebne skupine</string>
+    <string name="new_conversation_marmot_chip">Vezano na napravo</string>
+    <string name="new_conversation_marmot_best">Večje zasebne skupine za tiste, ki prerasejo male zasebne klepete.</string>
+    <string name="new_conversation_marmot_cta">Ustvari skupino</string>
+    <string name="new_conversation_marmot_pro_1">Presega omejitve malih klepetov</string>
+    <string name="new_conversation_marmot_pro_2">Šifriran skupinski klepet</string>
+    <string name="new_conversation_marmot_con_1">ezano na napravo — ne bo prikazano, če se prijavite drugje</string>
+    <string name="new_conversation_concord_title">Concord skupnost</string>
     <string name="relay_groups_title">Skupine relejev</string>
-    <string name="relay_group_view_inline">V vrstici</string>
+    <string name="relay_group_view_inline">Vrstično</string>
     <string name="relay_group_view_grouped">Po releju</string>
     <string name="relay_group_view_inline_desc">Prikaži vsako skupino kot ločen pogovor, pomešan z vašimi klepeti.</string>
     <string name="relay_group_view_grouped_desc">Strni skupine posameznega releja v eno vrstico, prikazano pri njegovem najnovejšem sporočilu.</string>
@@ -1906,6 +2363,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_server_label">Skupine relejev</string>
     <string name="relay_groups_button">Skupine</string>
     <string name="messages_settings">Sporočila</string>
+    <string name="chat_type_concord_desc">Šifrirane skupnosti z več tematskimi kanali (Concord).</string>
     <string name="relay_group_create_title">Ustvari skupino</string>
     <string name="relay_group_relay_no_nip29">Ta relej ne oglašuje podpore za skupine NIP-29. Skupina, ustvarjena tukaj, ne bo delovala – relej ne bo upravljal njenega imena, članov in sporočil. Izberite rele, ki podpira skupine na ravni releja.</string>
     <string name="relay_group_create_name">Ime supine</string>
@@ -2694,9 +3152,101 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="remove_location">Odstrani lokacijo</string>
     <string name="add_content_warning">Dodaj opozorilo o vsebini</string>
     <string name="remove_content_warning">Odstrani opozorilo o vsebini</string>
+    <string name="chat_system_created_channel_unnamed">%1$s je ustvaril/-a kanal</string>
+    <string name="chat_system_updated_channel">%1$s je posodobil/-a profil kanala</string>
+    <string name="buzz_message_edited">(urejeno)</string>
+    <string name="buzz_diff_truncated">(razlika je odrezana)</string>
+    <string name="buzz_canvas_title">Delovna površina</string>
+    <string name="buzz_canvas_empty">V tem delovnem prostoru še ni bila deljena nobena delovna površina.</string>
+    <string name="buzz_canvas_edit">Uredi delovno površino</string>
+    <string name="buzz_canvas_save">Shrani delovno površino</string>
+    <string name="buzz_canvas_body_label">DElovna površina (Markdown)</string>
+    <string name="buzz_edit_message">Uredi</string>
+    <string name="buzz_editing_banner">Urejanje sporočila</string>
+    <string name="edit_message">Uredi</string>
+    <string name="message_edited">(urejeno)</string>
+    <string name="concord_editing_banner">Urejanje sporočila</string>
+    <string name="buzz_typing_one">%1$s tipka…</string>
+    <string name="buzz_typing_two">%1$s in %2$s tipkata…</string>
+    <string name="buzz_typing_many">Nekaj ljudi tipka…</string>
+    <string name="buzz_workspaces_title">Buzz delovni prostori</string>
+    <string name="buzz_workspaces_hero_tagline">Kjer ljudje in agenti ustvarjajo skupaj</string>
+    <string name="buzz_workspaces_leave">Zapusti delovni prostor</string>
+    <string name="buzz_workspaces_section">Vaši delovni prostori</string>
+    <string name="buzz_workspaces_empty_title">Ni delovnih prostorov</string>
+    <string name="buzz_workspaces_empty_body">Delovni prostori Buzz so releji, kjer ljudje in AI-agenti ustvarjajo skupaj. Pridružite se enemu,  se prikaže tukaj.</string>
+    <string name="buzz_workspaces_browse">Brskaj po skupinah</string>
+    <string name="buzz_console_card_title">Konzola za agenta</string>
+    <string name="buzz_console_card_subtitle">Stroški · Liki · Opazovalec v živo</string>
+    <string name="buzz_forum_new_title">Nova tema na forumu</string>
+    <string name="buzz_forum_body_label">O čem želitš razpravljati?</string>
+    <string name="buzz_forum_post_action">Pošlji temo</string>
+    <string name="buzz_forum_thread_title">Niz objav foruma</string>
+    <string name="buzz_forum_no_replies">Še ni odgovorov. Bodi prvi, ki bo odgovoril.</string>
+    <string name="buzz_dm_title">Zasebna sporočila</string>
+    <string name="buzz_dm_nav_label">ZS Buzz</string>
+    <string name="buzz_dm_card_subtitle">Zasebni pogovori v vaših delovnih prostorih</string>
+    <string name="buzz_dm_new">Novo sporočilo</string>
+    <string name="buzz_dm_empty_title">Ni še zasebnih sporočil</string>
+    <string name="buzz_dm_empty_body">Začnite zasebni pogovor s komerkoli v delovnem prostoru Buzz.</string>
+    <string name="buzz_dm_more">Več</string>
+    <string name="buzz_dm_hide">Skrij pogovore</string>
+    <string name="buzz_dm_add_member">Dodaj člana</string>
+    <string name="buzz_dm_add_member_title">Dodaj nekoga v to ZS</string>
+    <string name="buzz_dm_add_member_invalid">Neveljaven npub ali hex ključ </string>
+    <string name="buzz_dm_just_you">Samo vi</string>
+    <string name="buzz_dm_workspace">Delovni prostor</string>
+    <string name="buzz_dm_recipients">Za</string>
+    <string name="buzz_dm_add_hint">Dodaj nekoga (npub ali hex)</string>
+    <string name="buzz_dm_start">Začni pogovor</string>
+    <string name="buzz_dm_opening">Odpiram…</string>
+    <string name="buzz_dm_remove">Odstrani</string>
+    <string name="buzz_invite_title">Povabilo v delovni prostor</string>
+    <string name="buzz_invite_workspace">Delovni prostor</string>
+    <string name="buzz_invite_role">Vloga</string>
+    <string name="buzz_invite_body">Delovni prostor se bo odprl v varnem brskalniku znotraj aplikacije, kjer si boste lahko ogledali pogoje uporabe in dokončali pridružitev. Pripet se boste z vašim ključem Amethyst — brez gesla.</string>
+    <string name="buzz_invite_continue">Nadaljuj v brskaniku</string>
+    <string name="buzz_invite_invalid">To ne izgleda kot veljavna povezava za povabilo v Buzz.</string>
+    <string name="buzz_invite_expired">To povabilo je poteklo. Zaprosite za novo.</string>
+    <string name="buzz_invite_after_browser">Dokončajte sprejemanje pogojev v brskalniku in se nato vrnite — vaš delovni prostor vas bo čakal.</string>
+    <string name="buzz_invite_open_workspace">Odpri moje delovne prostore</string>
+    <string name="buzz_import_title">Uvozi kanale delovnega prostora</string>
+    <string name="buzz_import_loading">Iskanje vaših kanalov…</string>
+    <string name="buzz_import_your_channels">Vaši kanali v tem delovnem prostoru</string>
+    <string name="buzz_import_add">Dodaj</string>
+    <string name="buzz_import_add_all">Dodaj vse</string>
+    <string name="buzz_import_added">Dodano</string>
+    <string name="buzz_import_empty_title">Ni najdenih kanalov</string>
+    <string name="relay_group_section_channels">Kanali</string>
+    <string name="relay_group_section_forums">Forumi</string>
+    <string name="buzz_agent_working">Delam…</string>
+    <string name="relay_group_add_member">Dodaj člana</string>
+    <string name="buzz_community_add_people">Dodaj ljudi v ta delovni prostor</string>
+    <string name="buzz_invite_create">Ustvari povezavo povabila</string>
+    <string name="buzz_invite_link_title">Povezava povabila</string>
+    <string name="buzz_invite_share">Deli</string>
+    <string name="buzz_invite_copy">Kopiraj</string>
+    <string name="buzz_invite_error_title">Ne morem ustvarii povabila</string>
+    <string name="buzz_invite_dismiss">OK</string>
+    <string name="buzz_pin">Pripni kanal</string>
+    <string name="buzz_unpin">Odpni kanal</string>
+    <string name="buzz_dm_section_empty">Še ni pogovorov</string>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">Prikaži še %1$d pogovor</item>
+        <item quantity="two">Prikaži še %1$d pogovora</item>
+        <item quantity="few">Prikaži še %1$d pogovore</item>
+        <item quantity="other">Prikaži vseh %1$d pogovorov</item>
+    </plurals>
+    <string name="chat_delivery_details_title">Dostava sporočila</string>
+    <string name="close">Zapri</string>
+    <string name="chat_delivery_pending">Čakanje, da rele sprejme to sporočilo</string>
+    <string name="chat_delivery_no_relay_info">Za to sporočilo ni podatkov o releju</string>
+    <string name="chat_delivery_accepted">Sprejeto s strani vsaj enega releja</string>
+    <string name="chat_delivery_delivered_all">Dostavljeno relejem vseh prejemnikov</string>
     <string name="add_expiration_date">Dodaj datum poteka</string>
     <string name="remove_expiration_date">Odstrani datum poteka</string>
     <string name="expiration_date_label">Datum poteka</string>
+    <string name="expiration_info_description">Avtor je zahteval, da releji to opombo izbrišejo po %1$s. Ko poteče, bo izginila iz virov.</string>
     <string name="expiration_date_explainer">Nostr odjemalci bodo po tem datumu skrili objavo (NIP-40)</string>
     <string name="expiration_date_select">Izberite datum in čas poteka</string>
     <string name="expiration_expires_in">Se izteče čez %1$s</string>
@@ -2872,6 +3422,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="nsite_open">Odpri</string>
     <string name="ots_info_title">Dokaz časovnega žiga</string>
     <string name="ots_info_description">Obstaja dokaz, da je bil ta zapisek podpisan pred %1$s. Dokaz je bil ožigosan v Bitcoin verigi blokov na ta datum in čas.</string>
+    <string name="ots_info_pending_description">Za to objavo je bilo zahtevano dokazilo o časovnem žigu, ki čaka na zapis v verigo blokov Bitcoin. Postopek se običajno zaključi v nekaj urah.</string>
     <string name="edit_article">Uredi članek</string>
     <string name="edit_post">Uredi objavo</string>
     <string name="proposal_to_edit">Prošnja za izboljšavo objave</string>
@@ -2888,6 +3439,8 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="it_s_not_possible_to_react_to_a_draft_note">Ni mogoče reagirati na osnutek zapiska</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Osnutke zapisa ni mogoče Zap-niti</string>
     <string name="draft_note">Osnutek zapiska</string>
+    <string name="draft">Osnutek</string>
+    <string name="bounty_label">Nagrada</string>
     <string name="load_from_text">Iz zapiska</string>
     <string name="dvm_looking_for_app">Iščem aplikacijo</string>
     <string name="dvm_waiting_status">Zahteva poslana, čakam na odgovor</string>
@@ -2952,7 +3505,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="favorite_dvms_empty_headline">Pripni svoje najljubše algoritme</string>
     <string name="favorite_dvms_empty_step1">Tapni \"%1$s\" spodaj za brskanje med algoritmi.</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
-    <string name="favorite_dvms_empty_step2">Tapni %1$s ob viru vsebin, daga ohraniš tukaj.</string>
+    <string name="favorite_dvms_empty_step2">Tapni %1$s ob viru vsebin, da ga ohraniš tukaj.</string>
     <string name="favorite_dvms_empty_cta">Dodaj nekaj virov vsebin</string>
     <string name="favorite_dvms_add_more">Dodaj več…</string>
     <string name="dvm_home_status_requesting">Poizvedba pri %1$s za vir vsebin…</string>
@@ -3010,6 +3563,105 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="crashreport_found">Najdeno je poročilo o napaki</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Želite poslati poročilo o napaki Amethyst-u preko zasebnega sporočila? Vaši osebni podatki NE bojo posredovani.</string>
     <string name="crashreport_found_send">Pošlji</string>
+    <string name="resource_usage_title">Uporaba virov aplikacije</string>
+    <string name="resource_usage_search_keywords">Poraba baterije in podatkov, energija, omrežje, diagnostika ter glavna knjiga</string>
+    <string name="resource_usage_today">Danes</string>
+    <string name="resource_usage_week">Zadnjih 7 dni</string>
+    <string name="resource_usage_tile_cellular">Mobilni podatki danes</string>
+    <string name="resource_usage_tile_wifi">Wi-Fi danes</string>
+    <string name="resource_usage_tile_relay">Uporaba releja danes</string>
+    <string name="resource_usage_tile_in_app">Danes v aplikaciji</string>
+    <string name="resource_usage_trend_section">Količina podatkov na dan</string>
+    <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
+    <string name="resource_usage_activity_section">Aktivnost (7 dni)</string>
+    <string name="resource_usage_cellular_bg">Mobilni podatki (v ozadju)</string>
+    <string name="resource_usage_cellular_fg">Mobilni podatki (v aplikaciji)</string>
+    <string name="resource_usage_wifi">Wi-Fi podatki</string>
+    <string name="resource_usage_relay_time">Čas povezave z releji</string>
+    <string name="resource_usage_relay_time_bg_mobile">\u2026 v ozadju na mobilnih podatkih</string>
+    <string name="resource_usage_wakelock">Obdelava obvestil (CPU buden)</string>
+    <string name="resource_usage_worker_runs">Izvedena opravila v ozadju</string>
+    <string name="resource_usage_reconnects">Neuspele ponovne povezave z relejem</string>
+    <string name="resource_usage_http_requests">Spletne zahteve</string>
+    <string name="resource_usage_radio_bursts">Obuditve radijskega modula za prenose (ocena)</string>
+    <string name="resource_usage_http_active">Aktivni čas prenosa</string>
+    <string name="resource_usage_media_play">Čas predvajanja</string>
+    <string name="resource_usage_verifies">Preverjeni podpisi</string>
+    <string name="resource_usage_cpu">Porabljen procesorski čas</string>
+    <string name="resource_usage_fg_time">Čas v aplikaciji</string>
+    <string name="resource_usage_app_starts">Zagoni procesov aplikacije</string>
+    <string name="resource_usage_decrypts">Dešifrirana sporočila</string>
+    <string name="resource_usage_remote_signs">Oddaljeni podpisi</string>
+    <string name="resource_usage_pow">Rudarjenje PoW</string>
+    <string name="resource_usage_tor">Čas delovanja Tor</string>
+    <string name="resource_usage_calls">Čas trajanja klicev</string>
+    <string name="resource_usage_nests">Čas v zvočnih sobah</string>
+    <string name="resource_usage_location">Spremljanje lokacije</string>
+    <string name="resource_usage_battery_drain">Poraba baterije (v aplikaciji / v ozadju)</string>
+    <string name="resource_usage_alwayson_section">Storitev obvestil v ozadju</string>
+    <string name="resource_usage_alwayson_explanation">Ohranitve povezav z vašimireleji odprte tudi, ko je aplikacija zaprta, da obvestila prispijejo brez Googlovih potisnih strežnikov. Ko je možnost omogočena, predstavlja največji strošek baterije v ozadju. Če vam je baterija pomembnejša od trenutnih obvestil, lahko spremenite način dostave ali možnost izklopite.</string>
+    <string name="resource_usage_alwayson_uptime">Čas delovanja</string>
+    <plurals name="resource_usage_alwayson_starts">
+        <item quantity="one">%1$d zagon</item>
+        <item quantity="two">%1$d zagona</item>
+        <item quantity="few">%1$d zagoni</item>
+        <item quantity="other">%1$d zagonov</item>
+    </plurals>
+    <string name="resource_usage_alwayson_bg_relay">Ohranjene povezave z releji med zaprtjem</string>
+    <string name="resource_usage_alwayson_battery">Poraba baterije v tem času (celotna naprava)</string>
+    <string name="resource_usage_alwayson_settings_button">Spremeni nastavitve obvestil</string>
+    <string name="resource_usage_tor_settings_button">Možnosti zasebnosti</string>
+    <string name="resource_usage_tile_battery_rate">Baterija / ur v aplikaciji</string>
+    <string name="resource_usage_tile_data_rate">Podatki / ur v aplikaciji</string>
+    <string name="resource_usage_tile_avg_relays">Povp. povezave z releji</string>
+    <string name="resource_usage_by_subsystem_cellular">Podatki po funkcijah (7 dni)</string>
+    <string name="resource_usage_cell_of_total">%1$s · %2$s skupno</string>
+    <string name="resource_usage_screen_time_section">Čas zaslona (7 dni)</string>
+    <string name="resource_usage_tor_section">Vgrajen Tor</string>
+    <string name="resource_usage_tor_explanation">Preusmerja promet aplikacije skozi omrežje Tor za večjo zasebnost. Med delovanjem porabi več baterije zaradi šifriranja in ohranjanja povezav, vsak zagon pa zahteva vzpostavitev povezave (bootstrap). Če vaš model groženj to dopušča, lahko uporabo Tora prilagodite ali izklopite.</string>
+    <string name="resource_usage_by_subsystem">Poraba podatkov po funkcijah (7 dni)</string>
+    <string name="resource_usage_subsystem_relay">Sinhronizacija relejev</string>
+    <string name="resource_usage_subsystem_image">Slike</string>
+    <string name="resource_usage_subsystem_video">Video in zvok</string>
+    <string name="resource_usage_subsystem_uploads">Prenosi</string>
+    <string name="resource_usage_subsystem_money">Denarnica in zapi</string>
+    <string name="resource_usage_subsystem_nip05">Preverjanje naslova</string>
+    <string name="resource_usage_subsystem_preview">Predogled povezav</string>
+    <string name="resource_usage_subsystem_other">Drugo</string>
+    <string name="resource_usage_empty">Še ni podatkov o uporabi</string>
+    <string name="resource_usage_memory_section">Trenutni pomnilnik</string>
+    <string name="resource_usage_memory_heap">Pomnilnik aplikacije (heap)</string>
+    <string name="resource_usage_memory_native">Lokalni pomnilnik</string>
+    <string name="resource_usage_memory_image_cache">Pomnilnik slik (RAM)</string>
+    <string name="resource_usage_memory_image_disk">Pomnilnik slik (disk)</string>
+    <string name="resource_usage_memory_notes">Zapiski v pomnilniku</string>
+    <string name="resource_usage_memory_users">Profili v pomnilniku </string>
+    <string name="resource_usage_memory_addressables">Dosegljivi dogodki v pomnilniku</string>
+    <string name="resource_usage_memory_chatrooms">Seznami sob v pomnilniku</string>
+    <string name="resource_usage_memory_device_class">Kategorija pomnilnika naprave</string>
+    <string name="resource_usage_send_section">Pošlji razvijalcem</string>
+    <string name="resource_usage_send_explanation">Če Amethyst porablja preveč baterije ali podatkov, lahko to poročilo pošljete razvijalcem v šifriranem neposrednem sporočilu (DM). Vsebuje le številke s tega zaslona in tehnične števce za njimi – brez objav, stikov ali podrobnosti o brskanju. Nič ne bo poslano, dokler na zaslonu s sporočilom ne tapnete Pošlji.</string>
+    <string name="resource_usage_send_button">Pošlji poročilo prek ZS</string>
+    <string name="resource_usage_alert_title">Zaznana visoka poraba virov</string>
+    <string name="resource_usage_alert_message">Aplikacija Amethyst je nedavno porabila več virov kot pričakovano: %1$s. Želite razvijalcem poslati poročilo o uporabi v šifriranem zasebnem sporočilu (ZS)? Preden bo karkoli poslano, boste videli celotno poročilo.</string>
+    <string name="resource_usage_reason_bg_data">%1$s mobilnih podatkov v ozadju v enem dnevu</string>
+    <string name="resource_usage_reason_conn_time">%1$s povezav z releji v ozadju prek mobilnih podatkov v enem dnevu</string>
+    <string name="resource_usage_reason_wakelock">Procesor je bil zaradi obdelave obvestil v enem dnevu buden %1$s</string>
+    <plurals name="resource_usage_reason_churn">
+        <item quantity="one">Process aplikacije se je v enem dnevu znova zagnal %1$d-krat</item>
+        <item quantity="two">Process aplikacije se je v enem dnevu znova zagnal %1$d-krat</item>
+        <item quantity="few">Process aplikacije se je v enem dnevu znova zagnal %1$d-krat</item>
+        <item quantity="other">Process aplikacije se je v enem dnevu znova zagnal %1$d-krat</item>
+    </plurals>
+    <plurals name="resource_usage_reason_reconnects">
+        <item quantity="one">Aplikacija se je z releji v enem dnevu znova povezala %1$d-krat</item>
+        <item quantity="two">Aplikacija se je z releji v enem dnevu znova povezala %1$d-krat</item>
+        <item quantity="few">Aplikacija se je z releji v enem dnevu znova povezala %1$d-krat</item>
+        <item quantity="other">Aplikacija se je z releji v enem dnevu znova povezala %1$d-krat</item>
+    </plurals>
+    <string name="resource_usage_alert_send">Preglej in pošlji</string>
+    <string name="resource_usage_alert_not_now">Ne zdaj</string>
+    <string name="resource_usage_alert_opt_out">Ne sprašuj več</string>
     <string name="this_message_will_disappear_in">To sporočilo bo izginilo čez %1$s</string>
     <string name="select_signer">Izberi podpisnika</string>
     <string name="in_the_list">Že na seznamu</string>
@@ -3374,6 +4026,8 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="playback_actions_dialog_title">Predvajaj</string>
     <string name="video_quality_auto">Samodejno</string>
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
+    <string name="edit_nickname">Uredi vzdevek</string>
+    <string name="nickname_private">Vidno le vam</string>
     <!-- LAN cast (Chromecast) feature -->
     <string name="cast_to_device">Prenesi v napravo</string>
     <string name="cast_stop_casting">Prenehaj s prenašanjem</string>
@@ -3569,6 +4223,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="compose_signature_setting_description">Doda se na konec sporočila pri ustvarjanju nove objave, odgovora, citata ali članka. Pustite prazno, da onemogočite.</string>
     <string name="compose_signature_setting_hint">Vaš podpis</string>
     <string name="pow_settings_title">Dokazilo o delu (PoW)</string>
+    <string name="pow_info_description">Avtor je porabil računsko moč za rudarjenje tega zapisa do zahtevnosti %1$s – dokaz o opravljenem delu (PoW), ki otežuje pošiljanje neželene pošte.</string>
     <string name="pow_difficulty_title">Težavnost</string>
     <string name="pow_difficulty_explainer">Pred objavo sporočila, rudari (NIP-13) dokaz o delu (PoW), da jih lahko releji in bralci ločijo od neželene vsebine (spam). Višje vrednosti zahtevajo eksponentno več časa za rudarjenje. Objave se po končanem rudarjenju samodejno objavijo v ozadju.</string>
     <string name="pow_difficulty_off">Ugasni</string>
@@ -3632,6 +4287,11 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="pow_notification_channel_name">Rudarjenje z dokazom o delu (PoW)</string>
     <string name="pow_notification_channel_description">Prikazuje objave, ki še rudarijo svoj NIP-13 dokaz o delu, da lahko zaključijo postopek, potem ko zapustite aplikacijo.</string>
     <string name="pow_notification_cancel_all">Prekliči</string>
+    <string name="pow_notification_send_without_pow">Pošlji zdaj</string>
+    <string name="pow_cancel_dialog_title">Prekinem rudarjenje?</string>
+    <string name="pow_cancel_dialog_message">Ta objava še vedno rudari dokaz o opravljenem delu. Lahko jo pošljete zdaj brez dokaza ali pa jo zavržete.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Pošlji brez PoW</string>
+    <string name="pow_cancel_dialog_discard">Zavrzi objavo</string>
     <string name="pow_difficulty_estimate">≈ %1$s na objavo v tej napravi</string>
     <string name="pow_estimate_instant">&lt;1 s</string>
     <plurals name="pow_estimate_seconds">
@@ -3763,6 +4423,10 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="marmot_group_name_placeholder">Vnesi ime skupine</string>
     <string name="marmot_group_description_placeholder">Vnesite opis skupine (neobvezno)</string>
     <string name="marmot_edit_info_footer">Spremembe bodo potrjene prek MLS in poslane vsem članom skupine.</string>
+    <string name="marmot_group_icon">Ikona skupine</string>
+    <string name="marmot_add_photo">Dodaj fotografijo</string>
+    <string name="marmot_change_photo">Zamenjaj sliko</string>
+    <string name="marmot_remove_photo">Odstrani fotografijo</string>
     <string name="marmot_group_info_updated">Podatki o skupini so posodobljeni</string>
     <string name="marmot_failed_to_update">Posodobitev ni uspela: %1$s</string>
     <string name="marmot_failed_to_create_group">Skupine ni bilo mogoče ustvariti: %1$s</string>
@@ -3818,4 +4482,14 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Napaka pri razčlenjevanju JSON med pridobivanjem fakture iz %1$s. Preverite uporabnikove nastavitve za \"Lightning\"</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Ni mogoče ustvariti lightning fakture. Sporočilo od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Ni mogoče ustvariti lightning fakture od %1$s: Element \'pr\' ni bil najden v JSON-u.</string>
+    <string name="geohash_chat_open">Odpri lokacijski klepet</string>
+    <string name="geohash_chat">Lokacijski klepet</string>
+    <string name="new_conversation_location_title">Lokacijski kanal</string>
+    <string name="new_conversation_location_tagline">Klepetajte z ljudmi v bližini lokacije (geohash)</string>
+    <string name="new_conversation_location_chip">Lokalno</string>
+    <string name="new_conversation_location_best">Odlično za klepet z ljudmi v bližini – v soseski, mestu ali regiji.</string>
+    <string name="new_conversation_location_cta">Izberi lokacijo</string>
+    <string name="new_conversation_location_pro_1">Anonimno — enkratna identiteta za posamezno področje, nikoli vaš npub.</string>
+    <string name="new_conversation_location_pro_2">Združljivo z Bitchatom — doseže bližnje uporabnike na istih relejih.</string>
+    <string name="new_conversation_location_con_1">Javno in minljivo — brez zgodovine sporočil, dostopno vsem v celici.</string>
 </resources>

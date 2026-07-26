@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * The logged-in user's NIP-XX BOLT12 offer list (kind 10058) as live account state,
+ * The logged-in user's NIP-B1 BOLT12 offer list (kind 10058) as live account state,
  * mirroring [com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState].
  * Exposes the current offers as a [flow], persists them across restarts (via
  * [AccountSettings]), and publishes updates with [saveOffers].

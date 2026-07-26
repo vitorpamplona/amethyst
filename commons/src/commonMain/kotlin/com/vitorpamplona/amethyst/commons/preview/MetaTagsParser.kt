@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
+import com.vitorpamplona.amethyst.commons.util.codePointToChars
 import kotlinx.collections.immutable.toImmutableMap
 
 data class MetaTag(
@@ -179,13 +180,32 @@ object MetaTagsParser {
                 )
 
             fun replaceCharRefs(match: MatchResult): String {
-                val bcr = BASE_CHAR_REFS[match.groupValues[2]]
+                val isNumeric = match.groupValues[1].isNotEmpty()
+                val ref = match.groupValues[2]
+                val terminated = match.groupValues[3].isNotEmpty()
+
+                // Numeric character references (&#34; / &#x22;) must be terminated by ';'
+                if (isNumeric) {
+                    if (!terminated) return match.value
+                    val codePoint =
+                        if (ref.startsWith("x", ignoreCase = true)) {
+                            ref.drop(1).toIntOrNull(16)
+                        } else {
+                            ref.toIntOrNull(10)
+                        } ?: return match.value
+                    if (codePoint !in 0..0x10FFFF || codePoint in 0xD800..0xDFFF) {
+                        return match.value
+                    }
+                    return codePointToChars(codePoint).concatToString()
+                }
+
+                val bcr = BASE_CHAR_REFS[ref]
                 if (bcr != null) {
                     return bcr
                 }
                 // non-base char refs must be terminated by ';'
-                if (match.groupValues[3].isNotEmpty()) {
-                    val cr = CHAR_REFS[match.groupValues[2]]
+                if (terminated) {
+                    val cr = CHAR_REFS[ref]
                     if (cr != null) {
                         return cr
                     }

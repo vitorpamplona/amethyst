@@ -149,17 +149,17 @@ fun ChatroomMessageCompose(
                 RenderChannelAdminSystemMessage(baseNote, accountViewModel, nav)
             } else if (event is SystemMessageEvent) {
                 // Buzz kind-40099: relay-signed room narration (join/leave/topic).
-                RenderBuzzSystemMessage(baseNote)
+                RenderBuzzSystemMessage(baseNote, accountViewModel, nav)
             } else if (event is StreamMessageDiffEvent) {
                 // Buzz kind-40008: a code/text diff pushed into the channel.
                 RenderBuzzDiff(baseNote)
             } else if (event is ForumVoteEvent) {
                 // Buzz kind-45002: a forum up/down vote.
-                RenderBuzzForumVote(baseNote)
+                RenderBuzzForumVote(baseNote, accountViewModel)
             } else if (isBuzzActivityRow(event)) {
                 // Buzz agent-job (43xxx) and huddle (48xxx) lifecycle narration. Huddles
                 // especially must be caught here — their content is JSON, not chat text.
-                RenderBuzzActivityRow(baseNote)
+                RenderBuzzActivityRow(baseNote, accountViewModel)
             } else {
                 NormalChatNote(
                     baseNote,

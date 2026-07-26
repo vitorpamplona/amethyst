@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Stable
 
 /**
- * Per-payment NIP-XX BOLT12 zap entry attached to a target Note.
+ * Per-payment NIP-B1 BOLT12 zap entry attached to a target Note.
  *
  * Unlike NIP-BC onchain zaps (which carry an async chain-verification state
  * machine), a BOLT12 zap is validated **synchronously** at consumption time —
  * the `lnp` payer proof is a self-contained cryptographic settlement proof — so
- * every entry stored here has already passed [com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidator]
+ * every entry stored here has already passed [com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidator]
  * and its amount is counted directly, the same way a NIP-57 lightning zap
  * receipt's amount is.
  *

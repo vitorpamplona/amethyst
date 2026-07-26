@@ -75,7 +75,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -320,6 +320,12 @@ class AccountSettings(
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    /**
+     * Channel ids the viewer chose NOT to show on Messages after somebody added them to the channel
+     * (kind-44100). Local-only: it records a display preference, not membership — the relay roster
+     * still lists you, and Leave (kind 9022) is the separate action that actually removes you.
+     */
+    val dismissedChannelInvites: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
@@ -1517,6 +1523,27 @@ class AccountSettings(
             dismissedPollNoteIds.update {
                 it + noteId
             }
+            saveAccountSettings()
+        }
+    }
+
+    // ---
+    // dismissed channel invites (somebody added me to a channel; I don't want it on Messages)
+    // ---
+
+    fun isDismissedChannelInvite(channelId: String) = dismissedChannelInvites.value.contains(channelId)
+
+    fun dismissChannelInvite(channelId: String) {
+        if (!dismissedChannelInvites.value.contains(channelId)) {
+            dismissedChannelInvites.update { it + channelId }
+            saveAccountSettings()
+        }
+    }
+
+    /** Undo a dismissal — used when the viewer accepts the channel after all, so it can re-prompt later. */
+    fun undismissChannelInvite(channelId: String) {
+        if (dismissedChannelInvites.value.contains(channelId)) {
+            dismissedChannelInvites.update { it - channelId }
             saveAccountSettings()
         }
     }

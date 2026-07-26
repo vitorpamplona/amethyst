@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicPlaylistsFee
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicTracksFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ChannelInvitesState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
@@ -138,6 +139,9 @@ class AccountFeedContentStates(
     val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global), scope)
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
+
+    /** Channels somebody added the viewer to, awaiting a show-on-Messages decision. */
+    val channelInvites = ChannelInvitesState(account, scope)
     val notificationSummary = NotificationSummaryState(account)
 
     val feedListOptions = TopNavFilterState(account, scope)

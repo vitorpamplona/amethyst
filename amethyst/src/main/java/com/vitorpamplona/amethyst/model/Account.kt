@@ -165,7 +165,6 @@ import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
-import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
@@ -370,9 +369,9 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.builder.Bolt12ZapBuilder
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -1456,7 +1455,7 @@ class Account(
     }
 
     /**
-     * Sends a NIP-XX BOLT12 zap to [recipientPubKey] over the default NWC wallet.
+     * Sends a NIP-B1 BOLT12 zap to [recipientPubKey] over the default NWC wallet.
      *
      * Signs a kind 9737 intent, pays [offer] via the nwc#2 `pay` method with the
      * intent-bound `payer_note`, then — only if the wallet returns a payer proof that
@@ -2438,12 +2437,24 @@ class Account(
             val hostRelay = group.groupId.relayUrl
             val signed =
                 if (BuzzRelayDialect.isBuzz(hostRelay)) {
-                    // Buzz rejects kind-1111, so its minichat threads with a 40002 marked at the message's
-                    // root (never `broadcast` — a minichat reply always lives in the thread). Attached
-                    // media is carried as URLs appended to the content (no `imeta` on the stream event).
+                    // Buzz rejects kind-1111, so its minichat threads with a NIP-10 `reply`-marked `e`
+                    // on a plain kind-9 chat — byte-identical to `_buildReplyTags` in Buzz's own client
+                    // (direct reply -> one `reply` marker; nested -> `root` + `reply`), which is what
+                    // [buzzThread] emits.
+                    //
+                    // This used to write kind-40002. Nothing in Buzz writes 40002 any more — every send
+                    // path in their mobile, desktop and CLI clients emits kind 9, and their NOSTR.md
+                    // grades 40002 "Buzz-only — no standard NIP-29 client renders these" against kind 9's
+                    // blessed status. 40002 survives only as a read-compat tail from the
+                    // 10002 -> 40001 -> 40002 migration, so we were the last active writer of a kind
+                    // their clients no longer thread on. Reading 40002 stays supported (see
+                    // [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply]).
+                    //
+                    // Attached media rides as URLs appended to the content.
                     val root = rootEvent.tags.buzzThreadRoot() ?: rootEvent.tags.buzzThreadReply() ?: rootEvent.id
                     signer.sign(
-                        StreamMessageV2Event.build(group.groupId.id, finalText) {
+                        ChatEvent.build(finalText) {
+                            hTag(group.groupId.id)
                             buzzThread(root, rootEvent.id)
                             rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
                             previous(group.previousEventRefs(pubKey))

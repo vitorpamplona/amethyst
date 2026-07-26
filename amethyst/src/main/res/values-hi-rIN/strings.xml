@@ -32,6 +32,7 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">अरसहस्यीकरण…</string>
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
+    <string name="chat_preview_you_prefix">आप : %1$s</string>
     <string name="group_picture">समूह चित्र</string>
     <string name="explicit_content">अभद्र विषयवस्तु</string>
     <string name="relay_notice">पुनःप्रसारक सूचना</string>
@@ -277,7 +278,7 @@
     <string name="follow">अनुचरण करें</string>
     <string name="follow_back">प्रत्यानुचरण करें</string>
     <string name="unblock">बाधा हटाएँ</string>
-    <string name="copy_user_id">User ID कॉपी करें</string>
+    <string name="copy_user_id">उपयोगकर्ता विभेदक की अनुकृति</string>
     <string name="unblock_user">उपयोगकर्ता बाधा हटाएँ</string>
     <string name="user_is_blocked_hidden">प्रयोक्ता बाधित अथवा मौनकृत। उनके पत्र छिपाए गए।</string>
     <string name="npub_hex_username">"एनपुब॰, उपयोगकर्ता नाम, लेख"</string>
@@ -408,6 +409,7 @@
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">सूत्र</string>
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
+    <string name="chat_send_image_title">चित्र भेजें</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d उत्तर</item>
@@ -1604,6 +1606,10 @@
     <string name="blossom_sync_channel_name">ब्लोस्सम॰ समचरणीकरण</string>
     <string name="blossom_sync_channel_description">प्रगति दर्शाता है आपके अभिलेखों की अनुकृति करते समय आपके ब्लोस्सम सेवासंगणकों में।</string>
     <string name="manage_stored_files_empty">कोई रखे हुए अभिलेख प्राप्त नहीं आपके ब्लोस्सम सेवासंगणकों में।</string>
+    <string name="blossom_stored_on">यहाँ रखा गया</string>
+    <string name="blossom_file_details">अभिलेख विवरण</string>
+    <string name="blossom_on_all_servers">सभी सेवासंगणकों पर</string>
+    <string name="blossom_not_on_all_servers">सभी सेवासंगणकों पर नहीं</string>
     <string name="blossom_mirror_to_missing">प्रतिबिम्बन जहाँ अनुपलब्ध</string>
     <string name="blossom_delete_from">यहाँ से मिटाएँ…</string>
     <string name="blossom_delete_from_host">%1$s से मिटाएँ</string>
@@ -1621,6 +1627,33 @@
     <string name="blossom_report_title">अभिलेख वृत्तान्त</string>
     <string name="blossom_report_comment_hint">कारण (विकल्पात्मक)</string>
     <string name="blossom_send">भेजें</string>
+    <string name="blossom_more_actions">अधिक क्रियाएँ</string>
+    <string name="blossom_import_menu">अभिलेख आयात…</string>
+    <string name="blossom_import_title">अभिलेख आयात</string>
+    <string name="blossom_import_intro">अन्य ब्लोस्सम॰ सेवासंगणकों की जाँच करें अभिलेखों के लिए जिनका आरोहण आपने अन्यत्र किए तथा उन्हें अपने स्वयम के सेवासंगणकों में अनुकृति करके रखें।</string>
+    <string name="blossom_import_sources_section">सेवासंगणक जाँच करने के लिए</string>
+    <string name="blossom_import_enable_all">सभी को सक्षम करें</string>
+    <string name="blossom_import_disable_all">सभी को अक्षम करें</string>
+    <string name="blossom_import_add_url_label">अथवा सेवासंगणक पता चिपकाएँ</string>
+    <string name="blossom_import_scan">सेवासंगणक जाँच</string>
+    <string name="blossom_import_scanning">जाँच चालू…</string>
+    <string name="blossom_import_source_failed">यह सेवासंगणक अभिगम्य नहीं</string>
+    <string name="blossom_import_none_found">कोई नए अभिलेख प्राप्त नहीं चयनित सेवासंगणकों पर।</string>
+    <string name="blossom_import_no_targets">अपने ब्लोस्सम॰ सेवासंगणकों को पहले जोडें। जिससे कि कोई स्थान हो आयातित अभिलेखों की अनुकृति करके रखने के लिए।</string>
+    <string name="blossom_import_manage_servers">मेरे सेवासंगणकों का प्रबन्धन</string>
+    <string name="blossom_import_busy">एक अभिलेख समचरणीकरण पहले से चल रहा है। समाप्त होने के पश्चात आयात करने का पुनःप्रयास करें।</string>
+    <plurals name="blossom_import_files_found">
+        <item quantity="one">%1$d अभिलेख</item>
+        <item quantity="other">%1$d अभिलेख</item>
+    </plurals>
+    <plurals name="blossom_import_found_files">
+        <item quantity="one">%1$d नया अभिलेख प्राप्त आपके सेवासंगणकों में आयात करने के लिए।</item>
+        <item quantity="other">%1$d नए अभिलेख प्राप्त आपके सेवासंगणकों में आयात करने के लिए।</item>
+    </plurals>
+    <plurals name="blossom_import_start_button">
+        <item quantity="one">%1$d अभिलेख का आयात</item>
+        <item quantity="other">%1$d अभिलेखों का आयात</item>
+    </plurals>
     <string name="recommended_media_servers">अनुशम्सित प्रसारसंगणक</string>
     <string name="built_in_servers_description">अमेथिस्त की मूलविकल्प सूची। आप एक एक करके जोड सकते हैं अथवा सूची जोड सकते हैं।</string>
     <string name="use_default_servers">मूलविकल्प सूची का प्रयोग करें</string>
@@ -1649,6 +1682,20 @@
     <string name="no_payment_app_found">कोई क्रमक प्राप्त नहीं जो इस भुगतान को सम्भाल सके। कृपया अनुकूल धनकोष स्थापित करें।</string>
     <string name="no_payment_app_found_for_type">कोई क्रमक स्थापित नहीं जो %1$s भुगतान को सम्भाल सके। कृपया अनुकूल धनकोष स्थापित करें।</string>
     <string name="error_dialog_payment_error">भुगतान खोलने में असमर्थ</string>
+    <string name="bolt12_offers">बोल्ट१२ प्रस्ताव सूची</string>
+    <string name="bolt12_offers_explainer">पुनःउपयोज्य बोल्ट१२ प्रस्ताव प्रकाशित करें जिससे कि अन्य लोग आपको ज्साप कर सकें लैटनिंग॰ पर प्रत्येक बार पृथक चालान बिना।</string>
+    <string name="bolt12_offers_section_explainer">एक अथवा अनेक बोल्ट१२ प्रस्ताव जोडें (lno1…)। वे सार्वजनिक रूप से बाँटे जाते हैं जिससे कि कोई भी आपको भुगतान कर सके।</string>
+    <string name="no_bolt12_offers_message">कोई बोल्ट१२ प्रस्ताव स्थापित नही। नीचे एक जोडें।</string>
+    <string name="bolt12_offer">बोल्ट१२ प्रस्ताव (lno1…)</string>
+    <string name="invalid_bolt12_offer">मान्य बोल्ट१२ प्रस्ताव नहीं</string>
+    <string name="delete_bolt12_offer">बोल्ट१२ प्रस्ताव मिटाएँ</string>
+    <string name="bolt12_pay_with_wallet">संयोजित धनकोष से भुगतान करें</string>
+    <string name="bolt12_payment_amount_sats">मात्रा (साट्स)</string>
+    <string name="bolt12_payment_sent">बोल्ट१२ भुगतान भेजा गया</string>
+    <string name="bolt12_payment_failed">बोल्ट१२ भुगतान असफल : %1$s</string>
+    <string name="bolt12_zap_error">बोल्ट१२ ज्साप अपक्रम</string>
+    <string name="bolt12_zap_paid_no_receipt">बोल्ट१२ पर भुगतान किया गया। परन्तु धनकोष से कोई प्रमाण प्राप्त नहीं। इसलिए कोई ज्साप प्राप्तिप्रमाण प्रकाशित नहीं किया गया।</string>
+    <string name="bolt12_zap_invalid_receipt">बोल्ट१२ पर भुगतान किया गया। परन्तु भुगतान प्रमाण की प्रमाणीकरण असफल। इसलिए कोई ज्साप प्राप्तिप्रमाण प्रकाशित नहीं किया गया।</string>
     <string name="uploading_state_ready">आरम्भ नहीं हुआ</string>
     <string name="uploading_state_compressing">संक्षिप्तीकरण चल रहा है</string>
     <string name="uploading_state_uploading">आरोहण चल रहा है</string>
@@ -1696,9 +1743,9 @@
     <string name="follow_set_current_desc_label">वर्तमान विवरण :</string>
     <string name="follow_set_copy_indicator_description">आप एक विशिष्ट नाम अथवा विवरण रख सकते हैं नीचे इस अनुकृत सूची के लिए।</string>
     <string name="follow_set_creation_name_label">समुच्चय नाम</string>
-    <string name="follow_set_copy_name_label">(मूल सूची नाम)</string>
+    <string name="follow_set_copy_name_label">नयी सूची नाम</string>
     <string name="follow_set_creation_desc_label">समुच्चय विवरण (आवश्यक नहीं)</string>
-    <string name="follow_set_copy_desc_label">(मूल सूची विवरण)</string>
+    <string name="follow_set_copy_desc_label">नयी सूची विवरण</string>
     <string name="follow_set_creation_action_btn_label">समुच्चय बनाएँ</string>
     <string name="follow_set_copy_action_btn_label">सूची की अनुकृति</string>
     <string name="follow_set_rename_btn_label">समुच्चय पुनःनामकरण</string>
@@ -1755,6 +1802,10 @@
     <string name="app_notification_zaps_channel_message">%1$s साट्स</string>
     <string name="app_notification_zaps_channel_message_from">%1$s से</string>
     <string name="app_notification_zaps_channel_message_for">%1$s के लिए</string>
+    <string name="app_notification_payments_channel_name">भुगतान प्राप्त</string>
+    <string name="app_notification_payments_channel_description">आपको सूचित करता है जब आपके संयोजित धनकोष को एक भुगतान प्राप्त होता है जो एक नोस्टर ज्साप नहीं</string>
+    <string name="app_notification_payments_channel_message">%1$s साट्स प्राप्त</string>
+    <string name="app_notification_payments_summary">नए भुगतान</string>
     <string name="app_notification_reply_label">उत्तर</string>
     <string name="app_notification_mark_read_label">पढा हुआ चिह्नित करें</string>
     <string name="app_notification_me">मैं</string>
@@ -2316,6 +2367,8 @@
     <string name="relay_group_invite_preparing">आमन्त्रण उत्पादन…</string>
     <string name="relay_group_badge_private">निजी</string>
     <string name="relay_group_badge_invite_only">केवल आमन्त्रित</string>
+    <string name="relay_group_badge_live">वर्तमान</string>
+    <string name="relay_group_message_count_short_capped">%1$d से अधिक</string>
     <string name="relay_group_browse_invalid_url">प्रविष्ट करें एक मान्य पुनःप्रसारक पता (wss://…)।</string>
     <string name="relay_group_field_name">नाम</string>
     <string name="relay_group_field_about">विवरण</string>
@@ -2397,6 +2450,10 @@
     <plurals name="relay_group_follows_participating">
         <item quantity="one">%1$d व्यक्ति जिसके आप अनुचर</item>
         <item quantity="other">%1$d व्यक्ति जिसके आप अनुचर</item>
+    </plurals>
+    <plurals name="relay_group_relay_group_count">
+        <item quantity="one">%1$d समूह</item>
+        <item quantity="other">%1$d समूह</item>
     </plurals>
     <string name="messages_new_message">निजी</string>
     <string name="messages_new_message_to">के लिए</string>
@@ -3092,6 +3149,9 @@
     <string name="buzz_canvas_body_label">चित्रपट (मार्कडौन॰)</string>
     <string name="buzz_edit_message">सम्पादन</string>
     <string name="buzz_editing_banner">सन्देश सम्पादन</string>
+    <string name="edit_message">सम्पादन</string>
+    <string name="message_edited">(सम्पादित)</string>
+    <string name="concord_editing_banner">सन्देश सम्पादन</string>
     <string name="buzz_typing_one">%1$s टंकण मध्य…</string>
     <string name="buzz_typing_two">%1$s तथा %2$s टंकण मध्य…</string>
     <string name="buzz_typing_many">अनेक लोग टंकण मध्य…</string>
@@ -3156,8 +3216,8 @@
     <string name="buzz_invite_copy">अनुकृति</string>
     <string name="buzz_invite_error_title">आमन्त्रण बनाने में असफल</string>
     <string name="buzz_invite_dismiss">ठीक</string>
-    <string name="buzz_pin">चैनल पिन करें</string>
-    <string name="buzz_unpin">चैनल अनपिन करें</string>
+    <string name="buzz_pin">प्रणाली टाँकें</string>
+    <string name="buzz_unpin">प्रणाली टाँका हटाएँ</string>
     <string name="buzz_dm_section_empty">कोई संवाद नहीं अब तक</string>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">देखें %1$d और संवाद</item>

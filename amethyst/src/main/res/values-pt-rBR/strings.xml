@@ -32,6 +32,7 @@
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
     <string name="chat_preview_decrypting">Descriptografando…</string>
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
+    <string name="chat_preview_you_prefix">Você: %1$s</string>
     <string name="group_picture">Imagem do grupo</string>
     <string name="explicit_content">Conteúdo explícito</string>
     <string name="relay_notice">Aviso do relay</string>
@@ -344,6 +345,14 @@
         <item quantity="one">%1$d canal</item>
         <item quantity="other">%1$d canais</item>
     </plurals>
+    <plurals name="buzz_workspaces_count">
+        <item quantity="one">%1$d espaço de trabalho</item>
+        <item quantity="other">%1$d espaços de trabalho</item>
+    </plurals>
+    <plurals name="buzz_workspaces_channel_count">
+        <item quantity="one">%1$d canal</item>
+        <item quantity="other">%1$d canais</item>
+    </plurals>
     <plurals name="concord_member_count">
         <item quantity="one">%1$d membro</item>
         <item quantity="other">%1$d membros</item>
@@ -400,6 +409,7 @@
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Tópico</string>
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
+    <string name="chat_send_image_title">Enviar imagem</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d resposta</item>
@@ -1250,6 +1260,7 @@
     <string name="nest_create_submit">Iniciar espaço</string>
     <string name="nest_create_schedule_toggle">Agendar para depois</string>
     <string name="nest_create_when">Escolha um horário de início</string>
+    <string name="agent_console_title">Console do agente</string>
     <string name="nests_servers_title">Servidores de nest</string>
     <string name="nests_servers_explainer">Escolha em quais servidores MoQ o Amethyst publica seus nests. A primeira entrada é usada por padrão ao iniciar um novo espaço.</string>
     <string name="nests_servers_my_section">Seus servidores</string>
@@ -1592,6 +1603,10 @@
     <string name="blossom_sync_channel_name">Sincronização Blossom</string>
     <string name="blossom_sync_channel_description">Mostra o progresso enquanto seus arquivos são copiados entre seus servidores Blossom.</string>
     <string name="manage_stored_files_empty">Nenhum arquivo armazenado encontrado nos seus servidores Blossom.</string>
+    <string name="blossom_stored_on">Armazenado em</string>
+    <string name="blossom_file_details">Detalhes do arquivo</string>
+    <string name="blossom_on_all_servers">Em todos os servidores</string>
+    <string name="blossom_not_on_all_servers">Não está em todos os servidores</string>
     <string name="blossom_mirror_to_missing">Espelhar para os ausentes</string>
     <string name="blossom_delete_from">Excluir de…</string>
     <string name="blossom_delete_from_host">Excluir de %1$s</string>
@@ -1609,6 +1624,33 @@
     <string name="blossom_report_title">Denunciar blob</string>
     <string name="blossom_report_comment_hint">Motivo (opcional)</string>
     <string name="blossom_send">Enviar</string>
+    <string name="blossom_more_actions">Mais ações</string>
+    <string name="blossom_import_menu">Importar arquivos…</string>
+    <string name="blossom_import_title">Importar arquivos</string>
+    <string name="blossom_import_intro">Procure em outros servidores Blossom por arquivos que você enviou em outro lugar e copie-os para os seus próprios servidores.</string>
+    <string name="blossom_import_sources_section">Servidores a verificar</string>
+    <string name="blossom_import_enable_all">Ativar todos</string>
+    <string name="blossom_import_disable_all">Desativar todos</string>
+    <string name="blossom_import_add_url_label">Ou cole um endereço de servidor</string>
+    <string name="blossom_import_scan">Verificar servidores</string>
+    <string name="blossom_import_scanning">Verificando…</string>
+    <string name="blossom_import_source_failed">Não foi possível acessar este servidor</string>
+    <string name="blossom_import_none_found">Nenhum arquivo novo foi encontrado nos servidores selecionados.</string>
+    <string name="blossom_import_no_targets">Adicione primeiro seus próprios servidores Blossom, para que haja onde copiar os arquivos importados.</string>
+    <string name="blossom_import_manage_servers">Gerenciar meus servidores</string>
+    <string name="blossom_import_busy">Uma sincronização de arquivos já está em andamento. Tente importar novamente quando ela terminar.</string>
+    <plurals name="blossom_import_files_found">
+        <item quantity="one">%1$d arquivo</item>
+        <item quantity="other">%1$d arquivos</item>
+    </plurals>
+    <plurals name="blossom_import_found_files">
+        <item quantity="one">Encontrado %1$d arquivo para importar para os seus servidores.</item>
+        <item quantity="other">Encontrados %1$d arquivos para importar para os seus servidores.</item>
+    </plurals>
+    <plurals name="blossom_import_start_button">
+        <item quantity="one">Importar %1$d arquivo</item>
+        <item quantity="other">Importar %1$d arquivos</item>
+    </plurals>
     <string name="recommended_media_servers">Servidores de Mídia Recomendados</string>
     <string name="built_in_servers_description">Lista padrão do Amethyst. Você pode adicioná-los individualmente ou adicionar a lista.</string>
     <string name="use_default_servers">Usar Lista Padrão</string>
@@ -1637,6 +1679,20 @@
     <string name="no_payment_app_found">Nenhum aplicativo encontrado para processar este pagamento. Por favor, instale uma carteira compatível.</string>
     <string name="no_payment_app_found_for_type">Nenhum app instalado para processar pagamentos %1$s. Instale uma carteira compatível.</string>
     <string name="error_dialog_payment_error">Não foi possível abrir o pagamento</string>
+    <string name="bolt12_offers">Ofertas BOLT12</string>
+    <string name="bolt12_offers_explainer">Publique ofertas BOLT12 reutilizáveis para que outras pessoas possam zapear você pela Lightning sem uma fatura separada a cada vez.</string>
+    <string name="bolt12_offers_section_explainer">Adicione uma ou mais ofertas BOLT12 (lno1…). Elas são compartilhadas publicamente, então qualquer pessoa pode pagar você.</string>
+    <string name="no_bolt12_offers_message">Nenhuma oferta BOLT12 definida. Adicione uma abaixo ↓</string>
+    <string name="bolt12_offer">Oferta BOLT12 (lno1…)</string>
+    <string name="invalid_bolt12_offer">Não é uma oferta BOLT12 válida</string>
+    <string name="delete_bolt12_offer">Excluir oferta BOLT12</string>
+    <string name="bolt12_pay_with_wallet">Pagar com a carteira conectada</string>
+    <string name="bolt12_payment_amount_sats">Valor (sats)</string>
+    <string name="bolt12_payment_sent">Pagamento BOLT12 enviado</string>
+    <string name="bolt12_payment_failed">Falha no pagamento BOLT12: %1$s</string>
+    <string name="bolt12_zap_error">Erro no zap BOLT12</string>
+    <string name="bolt12_zap_paid_no_receipt">Pago via BOLT12, mas a carteira não retornou nenhum comprovante, então nenhum recibo de zap foi publicado.</string>
+    <string name="bolt12_zap_invalid_receipt">Pago via BOLT12, mas o comprovante de pagamento não foi validado, então nenhum recibo de zap foi publicado.</string>
     <string name="uploading_state_ready">Não iniciado</string>
     <string name="uploading_state_compressing">Compactando</string>
     <string name="uploading_state_uploading">Enviando</string>
@@ -1743,6 +1799,10 @@
     <string name="app_notification_zaps_channel_message">%1$s sats</string>
     <string name="app_notification_zaps_channel_message_from">De %1$s</string>
     <string name="app_notification_zaps_channel_message_for">por %1$s</string>
+    <string name="app_notification_payments_channel_name">Pagamentos recebidos</string>
+    <string name="app_notification_payments_channel_description">Notifica você quando sua carteira conectada recebe um pagamento que não é um zap do Nostr</string>
+    <string name="app_notification_payments_channel_message">Recebidos %1$s sats</string>
+    <string name="app_notification_payments_summary">Novos pagamentos</string>
     <string name="app_notification_reply_label">Responder</string>
     <string name="app_notification_mark_read_label">Marcar como lida</string>
     <string name="app_notification_me">Eu</string>
@@ -1776,6 +1836,7 @@
     <string name="app_notification_group_developer">Desenvolvedor</string>
     <string name="app_notification_group_games">Jogos</string>
     <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">Repostagens</string>
     <string name="app_notification_reposts_channel_description">Notifica você quando alguém reposta sua publicação</string>
     <string name="app_notification_reposts_channel_message">%1$s repostou sua publicação</string>
     <string name="app_notification_reposts_summary">Novos reposts</string>
@@ -2302,6 +2363,7 @@
     <string name="relay_group_invite_preparing">Preparando convite…</string>
     <string name="relay_group_badge_private">Privado</string>
     <string name="relay_group_badge_invite_only">Somente por convite</string>
+    <string name="relay_group_badge_live">AO VIVO</string>
     <string name="relay_group_browse_invalid_url">Insira uma URL de relay válida (wss://…).</string>
     <string name="relay_group_field_name">Nome</string>
     <string name="relay_group_field_about">Descrição</string>
@@ -2366,6 +2428,12 @@
     <string name="relay_group_browse_your_relays">Relays em que você está</string>
     <string name="relay_group_browse_popular">Relays populares</string>
     <string name="relay_group_no_messages_yet">Nenhuma mensagem ainda</string>
+    <string name="channel_invite_title">Adicionado a %1$s</string>
+    <string name="channel_invite_body">%1$s adicionou você a este canal em %2$s. Mostrar em Mensagens?</string>
+    <string name="channel_invite_unknown_actor">Alguém</string>
+    <string name="channel_invite_accept">Mostrar</string>
+    <string name="channel_invite_ignore">Ignorar</string>
+    <string name="channel_invite_leave">Sair</string>
     <string name="relay_group_join_to_post">Entre neste grupo para enviar mensagens.</string>
     <string name="relay_group_invite_only_to_post">Este grupo é somente por convite — você precisa de um convite para publicar.</string>
     <plurals name="relay_group_member_count">
@@ -2383,6 +2451,10 @@
     <plurals name="relay_group_follows_participating">
         <item quantity="one">%1$d pessoa que você segue</item>
         <item quantity="other">%1$d pessoas que você segue</item>
+    </plurals>
+    <plurals name="relay_group_relay_group_count">
+        <item quantity="one">%1$d grupo</item>
+        <item quantity="other">%1$d grupos</item>
     </plurals>
     <string name="messages_new_message">Privado</string>
     <string name="messages_new_message_to">Para</string>
@@ -3068,9 +3140,86 @@
     <string name="chat_system_created_channel">%1$s criou o canal %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s criou o canal</string>
     <string name="chat_system_updated_channel">%1$s atualizou o perfil do canal</string>
+    <string name="buzz_message_edited">(editado)</string>
+    <string name="buzz_diff_truncated">(diff truncado)</string>
+    <string name="buzz_canvas_empty">Nenhum canvas foi compartilhado neste espaço de trabalho ainda.</string>
+    <string name="buzz_canvas_edit">Editar canvas</string>
+    <string name="buzz_canvas_save">Salvar canvas</string>
+    <string name="buzz_edit_message">Editar</string>
+    <string name="buzz_editing_banner">Editando mensagem</string>
+    <string name="edit_message">Editar</string>
+    <string name="message_edited">(editado)</string>
+    <string name="concord_editing_banner">Editando mensagem</string>
+    <string name="buzz_typing_one">%1$s está digitando…</string>
+    <string name="buzz_typing_two">%1$s e %2$s estão digitando…</string>
+    <string name="buzz_typing_many">Várias pessoas estão digitando…</string>
+    <string name="buzz_workspaces_title">Espaços de trabalho Buzz</string>
+    <string name="buzz_workspaces_hero_tagline">Onde humanos e agentes constroem juntos</string>
+    <string name="buzz_workspaces_leave">Sair do espaço de trabalho</string>
+    <string name="buzz_workspaces_section">Seus espaços de trabalho</string>
+    <string name="buzz_workspaces_empty_title">Nenhum espaço de trabalho ainda</string>
+    <string name="buzz_workspaces_empty_body">Espaços de trabalho Buzz são relays onde humanos e agentes de IA constroem juntos. Entre em um para vê-lo aqui.</string>
+    <string name="buzz_workspaces_browse">Explorar grupos</string>
+    <string name="buzz_console_card_title">Console do agente</string>
+    <string name="buzz_console_card_subtitle">Custos · Personas · Observador ao vivo</string>
+    <string name="buzz_forum_new_title">Novo tópico do fórum</string>
+    <string name="buzz_forum_body_label">O que você quer discutir?</string>
+    <string name="buzz_forum_post_action">Publicar tópico</string>
+    <string name="buzz_forum_thread_title">Discussão do fórum</string>
+    <string name="buzz_forum_no_replies">Nenhuma resposta ainda. Seja a primeira pessoa a responder.</string>
+    <string name="buzz_dm_title">Mensagens diretas</string>
+    <string name="buzz_dm_nav_label">DMs do Buzz</string>
+    <string name="buzz_dm_card_subtitle">Conversas privadas nos seus espaços de trabalho</string>
+    <string name="buzz_dm_new">Nova mensagem</string>
+    <string name="buzz_dm_empty_title">Nenhuma mensagem direta ainda</string>
+    <string name="buzz_dm_empty_body">Inicie uma conversa privada com qualquer pessoa em um espaço de trabalho Buzz.</string>
+    <string name="buzz_dm_more">Mais</string>
+    <string name="buzz_dm_hide">Ocultar conversa</string>
+    <string name="buzz_dm_add_member">Adicionar membro</string>
+    <string name="buzz_dm_add_member_title">Adicionar alguém a esta DM</string>
+    <string name="buzz_dm_add_member_invalid">Não é uma chave npub ou hex válida</string>
+    <string name="buzz_dm_just_you">Só você</string>
+    <string name="buzz_dm_workspace">Espaço de trabalho</string>
+    <string name="buzz_dm_recipients">Para</string>
+    <string name="buzz_dm_add_hint">Adicionar alguém (npub ou hex)</string>
+    <string name="buzz_dm_start">Iniciar conversa</string>
+    <string name="buzz_dm_opening">Abrindo…</string>
+    <string name="buzz_dm_remove">Remover</string>
+    <string name="buzz_invite_title">Convite para espaço de trabalho</string>
+    <string name="buzz_invite_heading">Entrar neste espaço de trabalho</string>
+    <string name="buzz_invite_workspace">Espaço de trabalho</string>
+    <string name="buzz_invite_role">Função</string>
+    <string name="buzz_invite_body">Você abrirá o espaço de trabalho em um navegador seguro dentro do app para revisar os termos e concluir a entrada. Ele faz seu login com sua chave do Amethyst — sem senha.</string>
+    <string name="buzz_invite_continue">Continuar no navegador</string>
+    <string name="buzz_invite_invalid">Isso não parece ser um link de convite válido do Buzz.</string>
+    <string name="buzz_invite_expired">Este convite expirou. Peça um novo.</string>
+    <string name="buzz_invite_after_browser">Termine de aceitar os termos no navegador e depois volte — seu espaço de trabalho estará esperando.</string>
+    <string name="buzz_invite_open_workspace">Abrir meus espaços de trabalho</string>
+    <string name="buzz_import_title">Importar canais do espaço de trabalho</string>
+    <string name="buzz_import_loading">Procurando seus canais…</string>
+    <string name="buzz_import_your_channels">Seus canais neste espaço de trabalho</string>
+    <string name="buzz_import_add">Adicionar</string>
+    <string name="buzz_import_add_all">Adicionar todos</string>
+    <string name="buzz_import_added">Adicionado</string>
+    <string name="buzz_import_empty_title">Nenhum canal encontrado</string>
+    <string name="buzz_import_empty_body">Você ainda não parece ser membro de nenhum canal neste relay. Aceite primeiro o convite do espaço de trabalho no navegador e tente novamente.</string>
     <string name="relay_group_section_channels">Canais</string>
     <string name="relay_group_section_forums">Fóruns</string>
+    <string name="buzz_agent_working">Trabalhando…</string>
     <string name="relay_group_add_member">Adicionar membro</string>
+    <string name="buzz_community_add_people">Adicionar pessoas a este espaço de trabalho</string>
+    <string name="buzz_invite_create">Criar link de convite</string>
+    <string name="buzz_invite_link_title">Link de convite</string>
+    <string name="buzz_invite_share">Compartilhar</string>
+    <string name="buzz_invite_copy">Copiar</string>
+    <string name="buzz_invite_error_title">Não foi possível criar o convite</string>
+    <string name="buzz_pin">Fixar canal</string>
+    <string name="buzz_unpin">Desafixar canal</string>
+    <string name="buzz_dm_section_empty">Nenhuma conversa ainda</string>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">Ver mais %1$d conversa</item>
+        <item quantity="other">Ver todas as %1$d conversas</item>
+    </plurals>
     <string name="chat_delivery_details_title">Entrega da mensagem</string>
     <string name="close">Fechar</string>
     <string name="chat_delivery_pending">Aguardando um relay aceitar esta mensagem</string>

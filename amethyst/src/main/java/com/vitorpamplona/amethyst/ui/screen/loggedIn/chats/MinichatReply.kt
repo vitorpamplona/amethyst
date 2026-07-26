@@ -24,15 +24,33 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /**
  * Whether [event] is a **minichat thread reply** — a reply that lives inside the thread opened from
- * its parent message, NOT as a flat sibling in the main timeline. Two dialects express the same idea:
+ * its parent message, NOT as a flat sibling in the main timeline. Three dialects express the same idea:
  *
  * - **NIP-28/NIP-29 (public chats, Concord)**: a kind-1111 [CommentEvent].
- * - **Buzz workspaces**: a kind-40002 [StreamMessageV2Event] carrying a NIP-10 `reply`-marked `e` tag
- *   and NOT flagged `broadcast` (Buzz rejects kind-1111, so it threads chat with 40002 markers; a
- *   `broadcast=1` reply is an inline timeline sibling, matching block/buzz's `isThreadReply`).
+ * - **Buzz workspaces, current**: a kind-9 [ChatEvent] carrying a NIP-10 `reply`-marked `e` tag. This
+ *   is what every live Buzz client writes — `_buildReplyTags` in its Flutter client emits
+ *   `["e", id, "", "reply"]` for a direct reply and `["e", root, "", "root"]` +
+ *   `["e", parent, "", "reply"]` for a nested one, and all three of their clients send chat as kind 9.
+ * - **Buzz workspaces, legacy**: a kind-40002 [StreamMessageV2Event] with the same markers and NOT
+ *   flagged `broadcast`. Nothing in Buzz writes 40002 any more (their own NOSTR.md grades it
+ *   "Buzz-only — no standard NIP-29 client renders these"), but events exist in the wild from the
+ *   10002 -> 40001 -> 40002 migration, and Amethyst itself wrote some, so it stays readable.
+ *
+ * ### Why a marked `e` and not `q`
+ *
+ * NIP-C7 gives kind 9 exactly one reply mechanism — `["q", <id>, <relay>, <pubkey>]` — and never
+ * mentions `e` at all. So a marked `e` carries no C7 meaning and is free to denote a *thread* reply,
+ * which is precisely how Buzz uses it. The marker is what separates the cases: WhiteNoise/Marmot
+ * thread kind-9 chat with a **plain, unmarked** `e`, which is an in-chat reply and must keep rendering
+ * as a quote bubble in the timeline — so matching on the `reply` marker (never on the bare tag) leaves
+ * that dialect untouched.
+ *
+ * A `broadcast=1` reply is an inline timeline sibling ("also send to channel"), matching block/buzz's
+ * `isThreadReply`. Kind 9 has no broadcast tag, so a marked kind-9 is always thread-only.
  *
  * The timeline filter drops these (they belong in the minichat), the minichat count counts them, and
  * the minichat feed shows them — so all three agree on one definition.
@@ -40,6 +58,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 fun isMinichatReply(event: Event?): Boolean =
     when (event) {
         is CommentEvent -> true
+        is ChatEvent -> event.tags.buzzThreadReply() != null
         is StreamMessageV2Event -> !event.isBroadcast() && event.tags.buzzThreadReply() != null
         else -> false
     }

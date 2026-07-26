@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.isConcordTimelineMessage
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.isRelayGroupTimelineMessage
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.newestTimelineNote
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -157,7 +159,7 @@ class ChatroomListKnownFeedFilter(
                             // Newest loaded chat message, or a placeholder row so a just-joined group shows
                             // up on Messages before its first kind-9 arrives (mirrors the Marmot-group path
                             // above). Content kinds only — never a reaction/deletion as the "last message".
-                            channel.newestChatNote(account) ?: channel.placeholderNote()
+                            channel.newestTimelineNote(account) ?: channel.placeholderNote()
                         }
 
                     RelayGroupViewMode.GROUPED ->
@@ -169,7 +171,7 @@ class ChatroomListKnownFeedFilter(
                                 val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return@mapNotNull null
                                 val newest =
                                     tags
-                                        .mapNotNull { LocalCache.getOrCreateRelayGroupChannel(GroupId(it.groupId, relay)).newestChatNote(account) }
+                                        .mapNotNull { LocalCache.getOrCreateRelayGroupChannel(GroupId(it.groupId, relay)).newestTimelineNote(account) }
                                         .maxByOrNull { it.createdAt() ?: 0L }
                                 RelayGroupServerRoomNote(relay, newest)
                             }
@@ -489,13 +491,6 @@ class ChatroomListKnownFeedFilter(
         return newRelevantEphemeralChats
     }
 
-    /** The newest actual chat message loaded in this group's channel, or null if none yet. */
-    private fun RelayGroupChannel.newestChatNote(account: Account): Note? =
-        notes
-            .filter { _, it -> account.isAcceptable(it) && it.event?.isGroupChatContent() == true }
-            .sortedByDefaultFeedOrder()
-            .firstOrNull()
-
     /**
      * The newest decrypted *timeline* message loaded in this Concord channel, or null if none yet.
      * Uses [isConcordTimelineMessage] so a trailing kind-1111 thread reply (or a hidden author)
@@ -540,8 +535,8 @@ class ChatroomListKnownFeedFilter(
                 val joinedGroupIds = joined.mapTo(HashSet()) { it.groupId }
                 val result = mutableMapOf<String, Note>()
                 newItems.forEach { newNote ->
-                    val gid = newNote.event?.takeIf { it.isGroupChatContent() }?.groupId()
-                    if (gid != null && gid in joinedGroupIds && account.isAcceptable(newNote)) {
+                    val gid = newNote.event?.takeIf { isRelayGroupTimelineMessage(newNote, account) }?.groupId()
+                    if (gid != null && gid in joinedGroupIds) {
                         val lastNote = result[gid]
                         if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                             result[gid] = newNote
@@ -559,9 +554,8 @@ class ChatroomListKnownFeedFilter(
                 // Newest new message per host relay, collapsed into one per-relay row.
                 val newestPerRelay = HashMap<NormalizedRelayUrl, Note>()
                 newItems.forEach { newNote ->
-                    val gid = newNote.event?.takeIf { it.isGroupChatContent() }?.groupId() ?: return@forEach
+                    val gid = newNote.event?.takeIf { isRelayGroupTimelineMessage(newNote, account) }?.groupId() ?: return@forEach
                     val relay = groupToRelay[gid] ?: return@forEach
-                    if (!account.isAcceptable(newNote)) return@forEach
                     val lastNote = newestPerRelay[relay]
                     if (lastNote == null || (newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                         newestPerRelay[relay] = newNote
