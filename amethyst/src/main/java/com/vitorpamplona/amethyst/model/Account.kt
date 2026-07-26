@@ -174,6 +174,7 @@ import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.workflowChannel
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -3326,6 +3327,27 @@ class Account(
         cache.justConsumeMyOwnEvent(signed)
         client.publish(signed, setOf(relay))
         return signed.id
+    }
+
+    /**
+     * Publish a Buzz **workflow definition** (kind-30620) into channel [channelId] on [relay]: an
+     * addressable event whose `d` tag is a freshly-minted workflow UUID (returned here), carrying a
+     * human-readable [name] and the workflow's [yaml] recipe. On a real Buzz relay the relay parses
+     * the YAML and runs it; self-hosted on geode the definition is a named catalog entry the picker
+     * offers and `amy` triggers by id. Returns the new workflow id, or null when the account can't write.
+     */
+    suspend fun publishBuzzWorkflowDef(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        name: String,
+        yaml: String,
+    ): String? {
+        if (!isWriteable()) return null
+        val workflowId = RandomInstance.randomChars(16)
+        val signed = signer.sign(WorkflowDefEvent.build(workflowId, channelId, yaml, name.ifBlank { null }))
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return workflowId
     }
 
     /**

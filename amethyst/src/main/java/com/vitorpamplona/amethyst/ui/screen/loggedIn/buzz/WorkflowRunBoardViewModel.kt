@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRun
@@ -33,6 +34,7 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalGrantedEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowCancelledEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowFailedEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepCompletedEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepFailedEvent
@@ -53,6 +55,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+/** One selectable workflow definition (kind-30620) — its UUID `d` tag, optional name, and YAML recipe. */
+@Immutable
+data class WorkflowDefOption(
+    val id: String,
+    val name: String?,
+    val yaml: String,
+) {
+    /** What the picker shows: the name if it has one, else a short form of the id. */
+    val label: String get() = name ?: "Workflow ${id.take(8)}"
+}
 
 /**
  * Backing ViewModel for the [WorkflowRunBoardScreen] — the shared workflow runs of one Buzz channel.
@@ -75,6 +88,11 @@ class WorkflowRunBoardViewModel : ViewModel() {
 
     private val _runs = MutableStateFlow<List<WorkflowRun>>(emptyList())
     val runs: StateFlow<List<WorkflowRun>> = _runs.asStateFlow()
+
+    private val _definitions = MutableStateFlow<List<WorkflowDefOption>>(emptyList())
+
+    /** The channel's published workflow definitions (kind-30620), name-sorted — the picker's options. */
+    val definitions: StateFlow<List<WorkflowDefOption>> = _definitions.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -101,9 +119,10 @@ class WorkflowRunBoardViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             try {
-                // Phase 1: the `#h`-scoped trigger + lifecycle + approval gate.
+                // Phase 1: the `#h`-scoped trigger + lifecycle + approval gate, plus the channel's
+                // addressable workflow definitions (30620) that back the picker.
                 account.client.fetchAllWithHooks(
-                    filters = mapOf(relay to listOf(Filter(kinds = WORKFLOW_H_KINDS, tags = mapOf("h" to listOf(channelId))))),
+                    filters = mapOf(relay to listOf(Filter(kinds = WORKFLOW_H_KINDS + WorkflowDefEvent.KIND, tags = mapOf("h" to listOf(channelId))))),
                     timeoutMs = 8_000,
                     pendingOnAuthRequired = true,
                 ) { _, _ -> false }
@@ -132,7 +151,7 @@ class WorkflowRunBoardViewModel : ViewModel() {
         watchJob =
             viewModelScope.launch(Dispatchers.IO) {
                 account.client
-                    .subscribeAsFlow(relay, listOf(Filter(kinds = WORKFLOW_H_KINDS, tags = mapOf("h" to listOf(channelId)))))
+                    .subscribeAsFlow(relay, listOf(Filter(kinds = WORKFLOW_H_KINDS + WorkflowDefEvent.KIND, tags = mapOf("h" to listOf(channelId)))))
                     .collect {
                         // The client's global listener already consumed the batch into LocalCache.
                         reloadFromCache(channelId)
@@ -147,6 +166,13 @@ class WorkflowRunBoardViewModel : ViewModel() {
 
     private suspend fun reloadFromCache(channelId: String) =
         reloadMutex.withLock {
+            _definitions.value =
+                LocalCache
+                    .filter(Filter(kinds = listOf(WorkflowDefEvent.KIND), tags = mapOf("h" to listOf(channelId))))
+                    .mapNotNull { it.event as? WorkflowDefEvent }
+                    .map { WorkflowDefOption(it.workflowId(), it.name()?.takeIf { n -> n.isNotBlank() }, it.yaml()) }
+                    .distinctBy { it.id }
+                    .sortedBy { (it.name ?: it.id).lowercase() }
             val base =
                 LocalCache
                     .filter(Filter(kinds = WORKFLOW_H_KINDS, tags = mapOf("h" to listOf(channelId))))
@@ -179,6 +205,25 @@ class WorkflowRunBoardViewModel : ViewModel() {
         task: String,
     ) = act { account, relay, channelId ->
         account.triggerBuzzWorkflow(relay, channelId, workflowId, task)
+    }
+
+    /**
+     * Publish a new workflow definition (kind-30620) for this channel and hand its freshly-minted id
+     * back on [onCreated] (on the main-relevant flow) so the picker can select it immediately.
+     */
+    fun defineWorkflow(
+        name: String,
+        yaml: String,
+        onCreated: (String) -> Unit,
+    ) {
+        val account = account ?: return
+        val relay = relay ?: return
+        val channelId = channelId ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val newId = account.publishBuzzWorkflowDef(relay, channelId, name, yaml)
+            reloadFromCache(channelId)
+            if (newId != null) onCreated(newId)
+        }
     }
 
     fun approve(runId: HexKey) =

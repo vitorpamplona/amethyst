@@ -53,11 +53,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
@@ -69,6 +75,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -132,6 +139,7 @@ fun WorkflowRunBoardScreen(
     }
 
     val runs by viewModel.runs.collectAsStateWithLifecycle()
+    val definitions by viewModel.definitions.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) }
 
@@ -187,7 +195,9 @@ fun WorkflowRunBoardScreen(
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         NewRunSheet(
             sheetState = sheetState,
+            definitions = definitions,
             onDismiss = { composing = false },
+            onDefine = { name, yaml, onCreated -> viewModel.defineWorkflow(name, yaml, onCreated) },
             onTrigger = { workflowId, task ->
                 viewModel.trigger(workflowId, task)
                 composing = false
@@ -653,45 +663,166 @@ private fun StatePill(
     }
 }
 
+/**
+ * Trigger a run: pick one of the channel's published **workflow definitions** (kind-30620) from the
+ * dropdown — or define a new one inline (name + YAML) — then describe the task. The picker shows
+ * definitions by name; the free-text id field is gone. Defining a workflow publishes a 30620 and
+ * auto-selects it once it lands in the channel's definition list.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NewRunSheet(
     sheetState: SheetState,
+    definitions: List<WorkflowDefOption>,
     onDismiss: () -> Unit,
+    onDefine: (String, String, (String) -> Unit) -> Unit,
     onTrigger: (String, String) -> Unit,
 ) {
     var task by remember { mutableStateOf("") }
-    var workflowId by remember { mutableStateOf("") }
+    var selected by remember { mutableStateOf<WorkflowDefOption?>(null) }
+    var defining by remember { mutableStateOf(false) }
+    var pendingSelectId by remember { mutableStateOf<String?>(null) }
+
+    // Once a just-published definition lands in the channel list, select it and leave the editor.
+    LaunchedEffect(definitions, pendingSelectId) {
+        val id = pendingSelectId ?: return@LaunchedEffect
+        definitions.firstOrNull { it.id == id }?.let {
+            selected = it
+            defining = false
+            pendingSelectId = null
+        }
+    }
+    // Keep the selection valid if the list changes underneath us; default to the sole definition.
+    LaunchedEffect(definitions) {
+        if (selected != null && definitions.none { it.id == selected!!.id }) selected = null
+        if (selected == null && definitions.size == 1) selected = definitions.first()
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("Trigger a workflow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
                 "The runner does the work, then pauses for a human to approve before it opens a PR. The whole channel sees the run.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedTextField(
-                value = workflowId,
-                onValueChange = { workflowId = it },
-                label = { Text("Workflow id") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+
+            if (defining) {
+                DefinitionEditor(
+                    onCancel = { defining = false },
+                    onCreate = { name, yaml -> onDefine(name, yaml) { newId -> pendingSelectId = newId } },
+                )
+            } else {
+                WorkflowPicker(
+                    definitions = definitions,
+                    selected = selected,
+                    onSelect = { selected = it },
+                    onNewDefinition = { defining = true },
+                )
+                OutlinedTextField(
+                    value = task,
+                    onValueChange = { task = it },
+                    label = { Text("What should it do?") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                )
+                Button(
+                    onClick = { onTrigger(selected!!.id, task.trim()) },
+                    enabled = selected != null && task.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Trigger run")
+                }
+            }
+        }
+    }
+}
+
+/** The definition dropdown: pick a published 30620 by name, with a trailing "new definition" entry. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WorkflowPicker(
+    definitions: List<WorkflowDefOption>,
+    selected: WorkflowDefOption?,
+    onSelect: (WorkflowDefOption) -> Unit,
+    onNewDefinition: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.label ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Workflow") },
+            placeholder = { Text(if (definitions.isEmpty()) "No workflows defined yet" else "Choose a workflow") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            definitions.forEach { def ->
+                DropdownMenuItem(
+                    text = { Text(def.label) },
+                    onClick = {
+                        onSelect(def)
+                        expanded = false
+                    },
+                )
+            }
+            if (definitions.isNotEmpty()) HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("New definition…", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) },
+                leadingIcon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
+                onClick = {
+                    expanded = false
+                    onNewDefinition()
+                },
             )
-            OutlinedTextField(
-                value = task,
-                onValueChange = { task = it },
-                label = { Text("What should it do?") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-            )
+        }
+    }
+}
+
+/** Inline editor to publish a new kind-30620 definition: a name and its YAML recipe. */
+@Composable
+private fun DefinitionEditor(
+    onCancel: () -> Unit,
+    onCreate: (String, String) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    var yaml by remember { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("New workflow definition", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(
+            "Names it for the channel and publishes its YAML recipe (kind-30620). A real Buzz relay runs the YAML; self-hosted, the runner runs its configured command — the definition names and catalogs the run.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Name") },
+            placeholder = { Text("build-and-test") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = yaml,
+            onValueChange = { yaml = it },
+            label = { Text("YAML recipe") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 4,
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = onCancel) { Text("Cancel") }
             Button(
-                onClick = { onTrigger(workflowId.trim(), task.trim()) },
-                enabled = workflowId.isNotBlank() && task.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
+                onClick = { onCreate(name.trim(), yaml) },
+                enabled = name.isNotBlank() && yaml.isNotBlank(),
+                modifier = Modifier.weight(1f),
             ) {
-                Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Trigger run")
+                Text("Create definition")
             }
         }
     }
