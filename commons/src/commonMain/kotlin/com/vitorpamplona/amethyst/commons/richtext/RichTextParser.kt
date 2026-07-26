@@ -498,9 +498,15 @@ class RichTextParser {
         val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
         val pdfExt = listOf("pdf")
 
+        // The audio-only members of [videoExt] — both play through the same video pipeline, but audio
+        // has no picture, so anything that reasons about the shape of the media (aspect ratios, player
+        // sizing) has to tell them apart. `m3u8` stays out: a playlist carries either.
+        val audioExt = listOf("mp3", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
+
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }
         val pdfExtensions = pdfExt + pdfExt.map { it.uppercase() }
+        val audioExtensions = audioExt + audioExt.map { it.uppercase() }
 
         val tagIndex = Regex("\\#\\[([0-9]+)\\](.*)")
         val hashTagsPattern: Regex =
@@ -540,6 +546,11 @@ class RichTextParser {
         fun isVideoUrl(url: String): Boolean {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
             return videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+        }
+
+        fun isAudioUrl(url: String): Boolean {
+            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
+            return audioExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
 
         // Mirrors the canonical HLS-playlist MIME list also kept in MediaItemCache.toExoPlayerMimeType.
