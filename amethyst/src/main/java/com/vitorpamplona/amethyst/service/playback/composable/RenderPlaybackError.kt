@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -68,55 +70,100 @@ fun RenderPlaybackError(
     val uriHandler = LocalUriHandler.current
     val errorCodeName = remember(current) { current.errorCodeName }
 
-    Column(
+    BoxWithConstraints(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.75f))
-                .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+                .background(Color.Black.copy(alpha = 0.75f)),
     ) {
-        Icon(
-            symbol = MaterialSymbols.VideocamOff,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = Color.White,
-        )
+        // A Column measures its children against the height left over by the ones before them, so
+        // the button — last in the stack — is what collapses when the overlay is taller than its
+        // box. That is not hypothetical: the media box is 16:9 whenever the stream reports no
+        // dimensions, and in the feed a note is inset under the 55dp author column, leaving 322dp
+        // x 181dp on a normal phone. The full layout wants ~220dp, so the button was rendering
+        // 0.38dp tall — in the tree, and invisible on screen.
+        //
+        // Two things keep it alive. The description takes a weight, so it is the element that
+        // yields when space runs short rather than the button. And the icon, which is decorative
+        // and costs 60dp with its spacer, is dropped when even one line of description plus the
+        // button would not otherwise fit.
+        val hasRoomForIcon = maxHeight >= MIN_HEIGHT_FOR_ICON
+        val hasRoomForDescription = maxHeight >= MIN_HEIGHT_FOR_DESCRIPTION
+        val padding = if (maxHeight >= MIN_HEIGHT_FOR_FULL_PADDING) 16.dp else 8.dp
 
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = stringRes(R.string.error_video_playback_failed),
-            color = Color.White,
-            style = MaterialTheme.typography.titleSmall,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        Text(
-            text = stringRes(R.string.error_video_playback_failed_description, errorCodeName),
-            color = Color.White.copy(alpha = 0.85f),
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        FilledTonalButton(
-            onClick = {
-                runCatching { uriHandler.openUri(videoUri) }
-                    .onFailure { Log.w("RenderPlaybackError", "openUri failed for $videoUri", it) }
-            },
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(
-                symbol = MaterialSymbols.OpenInBrowser,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
+            if (hasRoomForIcon) {
+                Icon(
+                    symbol = MaterialSymbols.VideocamOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = Color.White,
+                )
+
+                Spacer(Modifier.height(12.dp))
+            }
+
+            Text(
+                text = stringRes(R.string.error_video_playback_failed),
+                color = Color.White,
+                style = MaterialTheme.typography.titleSmall,
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.size(8.dp))
-            Text(stringRes(R.string.error_video_open_in_browser))
+
+            if (hasRoomForDescription) {
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    text = stringRes(R.string.error_video_playback_failed_description, errorCodeName),
+                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            FilledTonalButton(
+                onClick = {
+                    runCatching { uriHandler.openUri(videoUri) }
+                        .onFailure { Log.w("RenderPlaybackError", "openUri failed for $videoUri", it) }
+                },
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.OpenInBrowser,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(stringRes(R.string.error_video_open_in_browser))
+            }
         }
     }
 }
+
+/**
+ * Smallest overlay height that still fits the 48dp icon and its 12dp spacer on top of the title,
+ * one line of description, the 16dp gap and the 40dp button, inside 16dp of padding. Below this
+ * the icon is the first thing to go, because it is the only part carrying no information.
+ */
+private val MIN_HEIGHT_FOR_ICON = 190.dp
+
+/**
+ * Below this the 16dp padding is itself competing with the button for space — a very wide, short
+ * video (a panorama, or anything past about 2.5:1) leaves barely more height than the title and
+ * button need. Halving the padding there buys the button its full height back.
+ */
+private val MIN_HEIGHT_FOR_FULL_PADDING = 150.dp
+
+/**
+ * Below this the description cannot fit even one full line, and a weighted Text handed less than a
+ * line's height draws it sliced in half rather than dropping it. Hide it instead: the title still
+ * says what went wrong and the button still offers the way out.
+ */
+private val MIN_HEIGHT_FOR_DESCRIPTION = 120.dp
