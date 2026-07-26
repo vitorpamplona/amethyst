@@ -170,20 +170,10 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
-            if (!isDm) {
-                IconButton(onClick = {
-                    nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
-                }) {
-                    Icon(
-                        symbol = MaterialSymbols.Forum,
-                        contentDescription = stringRes(R.string.relay_group_threads_title),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-
             // Buzz workspace canvas (kind 40100): shown on any Buzz-dialect relay so a member can
-            // open the shared markdown doc — or create one when the channel has none yet.
+            // open the shared markdown doc — or create one when the channel has none yet. The only
+            // affordance that stays an icon: it is this channel's shared document, i.e. content, while
+            // Threads and Share are navigation the reader needs once in a while.
             if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
                 IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
                     Icon(
@@ -197,48 +187,68 @@ fun RelayGroupTopBar(
             // remember the bech32 (naddr) encode — this top bar recomposes on every roster/metadata
             // emission (observeChannel), and the encode is otherwise redone each time.
             val naddr = remember(channel.groupId, isDm) { if (isDm) null else channel.toNAddr() }
-            if (naddr != null) {
-                val context = LocalContext.current
-                IconButton(onClick = { shareRelayGroup(context, naddr) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Share,
-                        contentDescription = stringRes(R.string.quick_action_share),
-                        modifier = Modifier.size(20.dp),
-                    )
+
+            if (displayMembership == RelayGroupMembership.PENDING) {
+                Text(
+                    text = stringRes(R.string.relay_group_pending),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (!displayMembership.isMember() && channel.requiresMembershipToPost()) {
+                FilledTonalButton(onClick = {
+                    // Closed groups need an invite code; open groups join directly.
+                    if (channel.isClosed()) {
+                        showJoinCode = true
+                    } else {
+                        requested = true
+                        accountViewModel.joinRelayGroup(channel)
+                    }
+                }) {
+                    Text(stringRes(R.string.join))
                 }
             }
-            when {
-                displayMembership == RelayGroupMembership.PENDING -> {
-                    Text(
-                        text = stringRes(R.string.relay_group_pending),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+            // The membership actions are only meaningful once the relay lets you in: while a join is
+            // pending, and on a gated group that doesn't list you, the Join affordance above stands in
+            // for them. Threads and Share stay available either way — you can want to hand out a group
+            // you are still only browsing.
+            val showMembershipActions =
+                displayMembership != RelayGroupMembership.PENDING &&
+                    !(!displayMembership.isMember() && channel.requiresMembershipToPost())
+
+            // Everything here used to be a top-bar icon. Threads especially over-advertised itself: on a
+            // Buzz `t=stream` channel it is always empty (forum posts live in `t=forum` channels, which
+            // the relay's channel list already surfaces in their own section), so it read as a broken
+            // feature on every chat. Demoted to the overflow, where the frequency of use actually is.
+            if (!isDm || naddr != null || showMembershipActions) {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.MoreVert,
+                        contentDescription = stringRes(R.string.more_options),
+                        modifier = Modifier.size(22.dp),
                     )
                 }
-
-                !displayMembership.isMember() && channel.requiresMembershipToPost() -> {
-                    FilledTonalButton(onClick = {
-                        // Closed groups need an invite code; open groups join directly.
-                        if (channel.isClosed()) {
-                            showJoinCode = true
-                        } else {
-                            requested = true
-                            accountViewModel.joinRelayGroup(channel)
-                        }
-                    }) {
-                        Text(stringRes(R.string.join))
-                    }
-                }
-
-                else -> {
-                    IconButton(onClick = { menuOpen = true }) {
-                        Icon(
-                            symbol = MaterialSymbols.MoreVert,
-                            contentDescription = stringRes(R.string.more_options),
-                            modifier = Modifier.size(22.dp),
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (!isDm) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.relay_group_threads_title)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
+                            },
                         )
                     }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (naddr != null) {
+                        val context = LocalContext.current
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.quick_action_share)) },
+                            onClick = {
+                                menuOpen = false
+                                shareRelayGroup(context, naddr)
+                            },
+                        )
+                    }
+                    if (showMembershipActions) {
                         DropdownMenuItem(
                             text = { Text(stringRes(R.string.relay_group_menu_members)) },
                             onClick = {
