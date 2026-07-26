@@ -620,6 +620,35 @@ and `commons` aggregator the app uses.
 > upstream builder; the tag layout (`e`/`h`/`p`/`status`) is a best-effort model and will be
 > reconciled once Buzz implements the protocol. See
 > [`cli/plans/2026-07-25-buzz-agent-support-channel.md`](plans/2026-07-25-buzz-agent-support-channel.md).
+
+#### Buzz workflows (source-confirmed — the human-approval primitive)
+
+Where agent-jobs are speculative, **workflows are Buzz's real structured-work primitive**: the
+command kinds (30620 definition, 46020 trigger, 46030/46031 grant/deny) are pinned against
+buzz-relay's Rust `command_executor.rs`. A run pauses on a **human-approval gate** and only ships
+after someone grants it — exactly the "anyone can drive, but a human gates the merge" model.
+
+On a real Buzz relay the *relay* parses the workflow YAML and executes it. Self-hosted on geode
+there is no workflow engine, so **`amy` is the runner** and emits the lifecycle events itself — a
+documented divergence. The **run id is the trigger's event id and doubles as the approval token**,
+so a grant's `d` tag equals the run id (no separate token bookkeeping). Because quartz's event store
+serves `#d` only for addressable kinds, decisions (regular kind 46030/46031) are fetched **by
+author** — every 46010 gate names its approver in a `p` tag — and matched to their run by the token.
+
+| Command | What it does |
+| --- | --- |
+| `amy buzz workflow trigger RELAY WFID --task TEXT --channel GID` | Trigger a run (kind:46020). Prints the `run_id` (= the trigger event id = the approval token). |
+| `amy buzz workflow list RELAY --channel GID [--timeout SECS]` | List a channel's runs, folded to state (TRIGGERED/RUNNING/AWAITING_APPROVAL/APPROVED/COMPLETED/FAILED/DENIED), awaiting-approval first. |
+| `amy buzz workflow show RELAY RUNID [--timeout SECS]` | Show one run's folded state + lifecycle (resolves the channel from the trigger, then folds it). |
+| `amy buzz workflow approve RELAY RUNID [--note N]` | Grant a run's approval gate (kind:46030, `d`=run id). Resumes the paused run. |
+| `amy buzz workflow deny RELAY RUNID [--note N]` | Deny a run's approval gate (kind:46031). The run is terminal (DENIED); the runner discards the unshipped work. |
+| `amy buzz workflow run RELAY --exec CMD --channel GID --approver NPUB [--on-approve CMD] [--worktree REPODIR] [--base-ref REF] [--accept-from npub,…] [--poll SECS] [--once]` | Run the **runner**. Per new trigger: emits triggered (46001) → step-started (46002) → runs `sh -c CMD` inside a fresh `git worktree`+branch (task on stdin; `BUZZ_RUN/CHANNEL/RELAY/AGENT/REQUESTER/BRANCH/WORKTREE/BASE_REF` in env) → step-completed (46003) → posts the **approval gate** (46010, addressed to `--approver`). On a later poll, when the approver publishes a grant it runs `--on-approve CMD` (the push + open-PR step) and emits completed (46005, carrying the PR url); a deny discards the worktree. Restart-safe: runs still at the gate are rebuilt from the run id on startup. |
+
+> **Permissions (same three-layer model as jobs).** Buzz gates *who can trigger/approve*
+> (`--approver`, `--accept-from`); the exec credential bounds *what the agent can touch* (keep the
+> git token PR-only); GitHub branch protection keeps *merge off the agent's path*. The approval gate
+> adds a fourth: a human must grant before anything is pushed. See
+> [`cli/plans/2026-07-25-buzz-agent-support-channel.md`](plans/2026-07-25-buzz-agent-support-channel.md).
 >
 > **Permissions.** Buzz scopes by identity, not capability flags. `--accept-from` is the
 > intake gate; what the agent can do to a repo is bounded by the credentials you give

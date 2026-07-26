@@ -190,10 +190,57 @@ Key files: routes `amethyst/.../navigation/routes/Routes.kt`; render dispatch
 ingest `model/LocalCache.kt` (~L4780-4855); subscription
 `.../relayGroup/datasource/RelayGroupFilterBuilders.kt`.
 
+## Pivot — jobs → workflows (2026-07-26)
+
+The 43001-43006 job prototype above proved the *shape* (drive an agent from a shared channel,
+worktree-isolate, PR-only, merge-on-GitHub), but those kinds are **reserved/speculative** with no
+upstream builder. Buzz's **real, source-confirmed** structured-work primitive is the **workflow**
+family — the command kinds are pinned against buzz-relay's Rust `command_executor.rs`:
+
+- **30620** workflow definition, **46020** trigger, **46001-46007** run/step lifecycle,
+- **46010** approval-requested gate, **46030 / 46031** grant / deny.
+
+So the driving surface switched to workflows. What that buys over jobs: a **first-class
+human-approval gate** (46010 → 46030/46031) baked into the protocol — the exact "anyone in the
+channel can drive, but a human gates the merge" model the goal asks for — rather than relying on
+GitHub branch-protection alone.
+
+**Divergence (documented):** on a real Buzz relay the *relay* parses the workflow YAML and executes
+it, signing the lifecycle + approval events. Self-hosted on geode there is no workflow engine, so
+**`amy` is the runner** (`amy buzz workflow run`) and emits the lifecycle events itself. The command
+events (30620/46020/46030/46031) stay faithful to Buzz; only the lifecycle *content* shape is
+Amethyst's (Buzz leaves it relay-defined).
+
+**Correlation:** the **run id is the trigger's event id and doubles as the approval token**, so a
+grant's `d` tag equals the run id — no separate token bookkeeping. Two store realities shaped the
+wire handling, both verified against geode:
+- quartz's `SQLiteEventStore` routes every `#d` filter to the addressable `d_tag` column (NULL for a
+  regular kind like 46030), so **decisions are fetched by author** — every 46010 gate names its
+  approver in a `p` tag — and matched to their run by the token the aggregator reads off the event.
+- The runner is **restart-safe**: runs still at the gate (AWAITING_APPROVAL / APPROVED / DENIED) are
+  rebuilt into the in-flight map from the run id on startup (worktree path + branch are
+  deterministic), so a decision arriving in a later poll — or a fresh `--once` process — still
+  resolves. The relay is the source of truth, not the in-memory map.
+
+**Landed (CLI + commons):**
+- `commons/.../model/buzz/WorkflowRuns.kt` — `WorkflowRunAggregator` folds trigger + lifecycle +
+  grant/deny into per-run state (`WorkflowRunAggregatorTest`, 8 cases).
+- `cli/.../commands/BuzzWorkflowCommands.kt` — `trigger` / `list` / `show` / `approve` / `deny` and
+  the **`run`** runner (agent work → 46010 gate → on grant runs `--on-approve` → 46005 completed; a
+  deny discards the worktree, run is DENIED). Wired into `amy buzz workflow`.
+- `cli/tests/buzz/workflow-loop.sh` — end-to-end headless harness (alice triggers, bot runs,
+  carol approves/denies) through embedded geode; 14/14 green, including the deny path and
+  worktree cleanup.
+
+The jobs code stays for now (the board already ships) but the workflow path is the one that matches
+Buzz upstream; the mobile P1 approvals-inbox below is really the 46010/46030/46031 surface.
+
 ## Follow-ups
 
-1. Reconcile 43001-43006 with Buzz upstream once it defines the job protocol.
-2. Wire the P0 mobile screens (approvals inbox + jobs board) on top of `BuzzJobAggregator`.
+1. Reconcile 43001-43006 with Buzz upstream once it defines the job protocol (or retire the job
+   path in favor of workflows).
+2. Wire the P0 mobile screens (approvals inbox + jobs board) on top of `BuzzJobAggregator` /
+   `WorkflowRunAggregator`.
 3. ✅ **Done** — a reference `--exec` wrapper (`tools/buzz-agent/agent-exec.sh` + README) runs
    the coding agent in the job worktree, commits, pushes the feature branch, opens a PR with a
    PR-only token, and prints the URL as the job result — with the branch-protection + token-scope
