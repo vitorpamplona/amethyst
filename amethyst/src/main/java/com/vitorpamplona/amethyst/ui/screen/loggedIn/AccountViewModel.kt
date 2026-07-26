@@ -76,7 +76,6 @@ import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientB
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
-import com.vitorpamplona.amethyst.model.unreadPrivateChatRoute
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.V4VPaymentHandler
@@ -105,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.Marm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -440,6 +440,15 @@ class AccountViewModel(
             .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
+    /**
+     * The bottom-bar envelope dot: true when ANY Messages row is showing its blue dot.
+     *
+     * Per-row via [rowHasUnreadFlow], which mirrors what each row composable computes for itself.
+     * This used to call `unreadPrivateChatRoute` directly, which returns null for anything that is not
+     * `ChatroomKeyable` — so only NIP-17/NIP-04 DMs counted, and a public chat, ephemeral room, geohash
+     * cell, Marmot group, NIP-29/Buzz channel or Concord channel could sit there with a visible dot
+     * while the envelope stayed clean.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
     val messagesHasNewItems =
         feedStates.dmKnown.feedContent
@@ -450,14 +459,7 @@ class AccountViewModel(
                     MutableStateFlow(null)
                 }
             }.flatMapLatest { loadedFeedState ->
-                val flows =
-                    loadedFeedState?.list?.mapNotNull { chat ->
-                        unreadPrivateChatRoute(chat)?.let { (route, createdAt) ->
-                            account.settings.getLastReadFlow(route).map { lastReadAt ->
-                                createdAt > lastReadAt
-                            }
-                        }
-                    }
+                val flows = loadedFeedState?.list?.mapNotNull { chat -> rowHasUnreadFlow(chat, account) }
 
                 if (!flows.isNullOrEmpty()) {
                     combine(flows) { newItems ->
@@ -465,20 +467,6 @@ class AccountViewModel(
                     }
                 } else {
                     MutableStateFlow(false)
-                }
-            }.onStart {
-                val feed = feedStates.dmKnown.feedContent.value
-                if (feed is FeedState.Loaded) {
-                    val newItems =
-                        feed.feed.value.list.any { chat ->
-                            unreadPrivateChatRoute(chat)?.let { (route, createdAt) ->
-                                val lastReadAt =
-                                    account.settings.lastReadPerRoute.value[route]
-                                        ?.value ?: 0L
-                                createdAt > lastReadAt
-                            } == true
-                        }
-                    emit(newItems)
                 }
             }
 
@@ -2202,8 +2190,6 @@ class AccountViewModel(
             markHiddenChatroomsAsRead()
         }
     }
-
-    private fun unreadPrivateChatRoute(chat: Note): Pair<String, Long>? = unreadPrivateChatRoute(chat.event, account.signer.pubKey, account::isAllHidden)
 
     private fun markHiddenChatroomsAsRead() {
         account.chatroomList.rooms.forEach { roomKey, chatroom ->
