@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip29RelayGroups
 
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryContent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
@@ -50,6 +52,39 @@ class PinEventsTest {
         event as GroupPinnedEvent
         assertEquals(gid, event.groupId())
         assertEquals(listOf(id1, id2, id3), event.pinnedEventIds())
+    }
+
+    /**
+     * kind:39005 is shared with Buzz's [ThreadSummaryEvent]. A summary carries `h` (the channel);
+     * every NIP-29 relay-generated 39xxx event — this one included — is addressed by `d` alone and
+     * never emits `h`, which is what [EventFactory] discriminates on. Without it a summary parsed as
+     * a pin list and `pinnedEventIds()` reported the thread root as a pinned message.
+     */
+    @Test
+    fun threadSummaryWithChannelTagDoesNotParseAsAPinList() {
+        val tags = arrayOf(arrayOf("d", id1), arrayOf("e", id1), arrayOf("h", gid))
+        val content = ThreadSummaryContent(replyCount = 3, descendantCount = 5, lastReplyAt = 99).encodeToJson()
+        val event: Event = EventFactory.create("00".repeat(32), relaySelf, 100, ThreadSummaryEvent.KIND, tags, content, "22".repeat(64))
+
+        assertEquals(true, event is ThreadSummaryEvent)
+        event as ThreadSummaryEvent
+        assertEquals(id1, event.rootId())
+        assertEquals(id1, event.rootEventTag())
+        assertEquals(gid, event.channelId())
+        assertEquals(3, event.summary().replyCount)
+    }
+
+    /** Both classes' own builders keep that shape, so outbound signing routes back to the right class. */
+    @Test
+    fun bothBuildersRoundTripThroughTheFactory() {
+        val pin = GroupPinnedEvent.build(gid, listOf(id1, id2))
+        val summary = ThreadSummaryEvent.build(id1, gid, ThreadSummaryContent(replyCount = 1, descendantCount = 1))
+
+        val parsedPin: Event = EventFactory.create("00".repeat(32), relaySelf, 100, pin.kind, pin.tags, pin.content, "22".repeat(64))
+        val parsedSummary: Event = EventFactory.create("00".repeat(32), relaySelf, 100, summary.kind, summary.tags, summary.content, "22".repeat(64))
+
+        assertEquals(true, parsedPin is GroupPinnedEvent)
+        assertEquals(true, parsedSummary is ThreadSummaryEvent)
     }
 
     @Test
