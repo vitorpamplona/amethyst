@@ -70,7 +70,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

@@ -26,8 +26,8 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND)
 

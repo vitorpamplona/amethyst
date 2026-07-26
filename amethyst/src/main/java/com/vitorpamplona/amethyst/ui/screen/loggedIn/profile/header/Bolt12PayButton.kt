@@ -68,7 +68,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.offer.Bolt12OfferListEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import kotlinx.coroutines.launch
 
 @Composable

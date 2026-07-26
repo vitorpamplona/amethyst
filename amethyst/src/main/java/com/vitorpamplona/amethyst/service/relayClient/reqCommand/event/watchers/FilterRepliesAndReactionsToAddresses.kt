@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 val RepliesAndReactionsToAddressesKinds1 =

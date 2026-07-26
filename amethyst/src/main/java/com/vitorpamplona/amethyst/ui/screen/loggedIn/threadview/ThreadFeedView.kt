@@ -344,12 +344,12 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent

@@ -56,9 +56,9 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import com.vitorpamplona.quartz.nipXXBolt12Zaps.zap.Bolt12ZapEvent
 
 /**
  * Kinds that notify me about activity on MY messages inside a NIP-29 group — reactions, replies

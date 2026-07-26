@@ -26,7 +26,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Verifies how validated NIP-XX BOLT12 zaps fold into a Note's aggregate zap
+ * Verifies how validated NIP-B1 BOLT12 zaps fold into a Note's aggregate zap
  * accounting — the model contract the LocalCache ingest path and the reaction-row
  * counter depend on.
  */
@@ -57,7 +57,7 @@ class NoteBolt12ZapTest {
 
     @Test
     fun keepsTheLowerAmountWhenTwoProofsShareAPaymentHash() {
-        // NIP-XX: same proof identifier, differing amounts → count the LOWER, in either order.
+        // NIP-B1: same proof identifier, differing amounts → count the LOWER, in either order.
         val a = note("a".repeat(64))
         a.addBolt12Zap(note("b".repeat(64)), "h", amountMillisats = 21_000_000L, cryptoVerified = true)
         a.addBolt12Zap(note("c".repeat(64)), "h", amountMillisats = 5_000_000L, cryptoVerified = true)
