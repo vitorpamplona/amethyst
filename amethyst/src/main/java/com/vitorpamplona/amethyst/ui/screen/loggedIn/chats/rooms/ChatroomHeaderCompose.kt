@@ -458,9 +458,19 @@ private fun RelayGroupRoomCompose(
             // rather than "author: {json}". Plain chat messages fall through to the usual framing.
             buzzTimelinePreviewSummary(noteEvent) ?: "$authorName: ${noteEvent.content.take(200)}"
         } else {
-            // Event-less placeholder row for a just-joined group with no messages yet — say so
-            // explicitly (like Marmot groups) instead of an empty second line.
-            stringRes(R.string.relay_group_no_messages_yet)
+            // Event-less placeholder row. Until the channel's `limit = 1` preview REQ settles we cannot
+            // tell an empty channel from one whose newest message simply hasn't arrived, and claiming
+            // "No messages yet" for a busy channel reads as a bug — so say "Loading" while the joined
+            // fleet is still fetching, and commit to the empty wording only once it has.
+            val stillFetching by accountViewModel
+                .dataSources()
+                .relayGroupJoinedChatTail.tail.loadingMore
+                .collectAsStateWithLifecycle()
+            if (stillFetching) {
+                stringRes(R.string.loading_feed)
+            } else {
+                stringRes(R.string.relay_group_no_messages_yet)
+            }
         }
 
     val groupPicture = channel.profilePicture()?.ifBlank { null }
