@@ -32,6 +32,8 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
@@ -452,6 +454,15 @@ class NotificationFeedFilter(
         if ((noteEvent is StreamMessageV2Event || noteEvent is ChatEvent) && isBuzzDmForMe(it, loggedInUserHex)) {
             if (!showMessages) return false
             return it.author?.pubkeyHex != loggedInUserHex
+        }
+
+        // A finished or failed agent job I filed: the workspace bot addresses the outcome to me via a
+        // `p` tag = the requester. Notify me directly — I don't "follow" the bot and the job kinds aren't
+        // in the generic relevance path, so mirror the Buzz-DM early return above rather than the p-tag
+        // heuristic. This is activity (not a chat message), so it ignores the Messages toggle.
+        if (noteEvent is JobResultEvent || noteEvent is JobErrorEvent) {
+            val requester = (noteEvent as? JobResultEvent)?.requester() ?: (noteEvent as JobErrorEvent).requester()
+            return requester == loggedInUserHex && it.author?.pubkeyHex != loggedInUserHex
         }
 
         if (!showMessages &&

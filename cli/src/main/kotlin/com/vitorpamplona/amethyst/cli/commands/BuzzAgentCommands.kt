@@ -414,7 +414,7 @@ object BuzzAgentCommands {
                         git(opts.worktreeBase, "worktree", "add", "-B", branch, worktreePath, opts.baseRef)
                     }
                 if (add.exit != 0) {
-                    publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, "worktree setup failed: ${add.stderr.take(MAX_BODY)}", channel, "error"))
+                    publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, "worktree setup failed: ${add.stderr.take(MAX_BODY)}", channel, job.requester, "error"))
                     return mapOf("job_id" to job.jobId, "state" to "failed", "error" to "worktree")
                 }
                 workdir = worktreePath
@@ -446,7 +446,7 @@ object BuzzAgentCommands {
                 mapOf("job_id" to job.jobId, "state" to "completed", "exit" to 0, "branch" to if (opts.worktreeBase != null) branch else null)
             } else {
                 val body = (run.stderr.ifBlank { run.stdout }).ifBlank { "exited ${run.exit}" }
-                publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, body.take(MAX_BODY), channel, "error"))
+                publish(ctx, opts.relay, JobErrorEvent.build(job.jobId, body.take(MAX_BODY), channel, job.requester, "error"))
                 mapOf("job_id" to job.jobId, "state" to "failed", "exit" to run.exit)
             }
         } finally {

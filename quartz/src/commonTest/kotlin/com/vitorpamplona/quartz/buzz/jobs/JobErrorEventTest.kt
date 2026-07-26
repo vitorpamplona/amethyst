@@ -26,16 +26,18 @@ import kotlin.test.assertEquals
 class JobErrorEventTest {
     private val requestId = "e".repeat(64)
     private val channel = "3f2504e0-4f89-41d3-9a0c-0305e82c3301"
+    private val requester = "a".repeat(64)
 
     @Test
     fun buildTagsAndContent() {
-        val t = JobErrorEvent.build(requestId, "tool timeout", channel, "failed")
+        val t = JobErrorEvent.build(requestId, "tool timeout", channel, requester, "failed")
         val ev = JobErrorEvent("00", "f".repeat(64), t.createdAt, t.tags, t.content, "sig")
 
         assertEquals(JobErrorEvent.KIND, ev.kind)
         assertEquals("tool timeout", ev.error())
         assertEquals(requestId, ev.jobRequest())
         assertEquals(channel, ev.channel())
+        assertEquals(requester, ev.requester())
         assertEquals("failed", ev.status())
     }
 }

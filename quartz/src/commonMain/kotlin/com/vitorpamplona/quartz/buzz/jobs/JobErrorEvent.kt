@@ -50,6 +50,9 @@ class JobErrorEvent(
     /** The channel this job is scoped to - the `h` tag. */
     fun channel() = tags.jobChannel()
 
+    /** The requester the failure is addressed to - the `p` tag. */
+    fun requester() = tags.jobParticipant()
+
     /** The optional status token - the `status` tag. */
     fun status() = tags.jobStatus()
 
@@ -63,12 +66,14 @@ class JobErrorEvent(
             requestId: HexKey,
             error: String,
             channelId: String? = null,
+            requester: HexKey? = null,
             status: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<JobErrorEvent>.() -> Unit = {},
         ) = eventTemplate<JobErrorEvent>(KIND, error, createdAt) {
             jobRequest(requestId)
             channelId?.let { jobChannel(it) }
+            requester?.let { jobParticipant(it) }
             status?.let { jobStatus(it) }
             initializer()
         }

@@ -70,7 +70,7 @@ class BuzzJobAggregatorTest {
     }
 
     private fun error(createdAt: Long = 1040): JobErrorEvent {
-        val t = JobErrorEvent.build(jobId, "build failed", channel, "error", createdAt)
+        val t = JobErrorEvent.build(jobId, "build failed", channel, status = "error", createdAt = createdAt)
         return JobErrorEvent("6".repeat(64), agent, t.createdAt, t.tags, t.content, "sig")
     }
 
