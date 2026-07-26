@@ -2191,6 +2191,11 @@
     <string name="remove_location">Eliminar ubicación</string>
     <string name="add_content_warning">Agregar advertencia de contenido</string>
     <string name="remove_content_warning">Eliminar advertencia de contenido</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="add_expiration_date">Añadir fecha de expiración</string>
     <string name="remove_expiration_date">Eliminar fecha de expiración</string>
     <string name="expiration_date_label">Fecha de expiración</string>

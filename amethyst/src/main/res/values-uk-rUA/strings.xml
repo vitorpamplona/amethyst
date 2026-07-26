@@ -2194,6 +2194,11 @@
     <string name="remove_location">Видалити місце</string>
     <string name="add_content_warning">Додати попередження про вміст</string>
     <string name="remove_content_warning">Видалити попередження про вміст</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="add_expiration_date">Додати дату завершення</string>
     <string name="remove_expiration_date">Видалити дату завершення</string>
     <string name="expiration_date_label">Дата завершення</string>
