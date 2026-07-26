@@ -52,6 +52,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -218,13 +219,28 @@ private fun LazyListScope.section(
 ) {
     if (jobs.isEmpty()) return
     item(key = "header-$title") {
-        Text(
-            text = "$title · ${jobs.size}",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
-        )
+        val accent = if (style == JobStyle.HERO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+        ) {
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = accent,
+                fontWeight = FontWeight.Bold,
+            )
+            Surface(color = accent.copy(alpha = 0.14f), shape = CircleShape) {
+                Text(
+                    text = jobs.size.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accent,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+                )
+            }
+        }
     }
     items(jobs, key = { it.jobId }) { job ->
         JobCard(job, style, me, accountViewModel, nav, viewModel)
@@ -241,9 +257,18 @@ private fun LazyItemScope.JobCard(
     viewModel: JobBoardViewModel,
 ) {
     val (container, accent) = styleColors(style)
+    val elevation =
+        if (style == JobStyle.HERO) {
+            4.dp
+        } else if (style == JobStyle.SHIPPED) {
+            3.dp
+        } else {
+            1.dp
+        }
     Surface(
         color = container,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
+        shadowElevation = elevation,
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -284,8 +309,16 @@ private fun LazyItemScope.JobCard(
                 }
 
                 when (style) {
-                    JobStyle.HERO ->
+                    JobStyle.HERO -> {
                         job.lastProgress?.takeIf { it.isNotBlank() }?.let { WorkingLine(it, accent) }
+                        if (job.state == JobState.IN_PROGRESS) {
+                            LinearProgressIndicator(
+                                color = accent,
+                                trackColor = accent.copy(alpha = 0.18f),
+                                modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
+                            )
+                        }
+                    }
                     JobStyle.SHIPPED ->
                         job.result?.takeIf { it.isNotBlank() }?.let { ResultLine(it) }
                     JobStyle.CLOSED ->
@@ -365,9 +398,15 @@ private fun StatePill(
     accent: Color,
 ) {
     val (label, symbol) = pillContent(state)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+    Surface(color = accent.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+        }
     }
 }
 

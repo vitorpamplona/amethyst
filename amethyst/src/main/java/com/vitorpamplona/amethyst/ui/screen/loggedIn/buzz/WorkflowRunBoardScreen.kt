@@ -25,6 +25,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,16 +51,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -70,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -99,8 +104,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
  * Every member sees the same runs: trigger a workflow (kind-46020), watch the runner work it through
  * triggered → step → the **approval gate** (46010), and — if the run named you as approver — grant or
  * deny it right here (46030/46031). A granted run ships and lands as a shipped result (its PR);
- * merge stays on GitHub. Runs awaiting a human are the visual hero, sorted first, because they're the
- * ones blocking. Correlation/state is the shared
+ * merge stays on GitHub. Runs awaiting a human are the visual hero — an elevated, glowing card sorted
+ * to the top — because they're the ones blocking. Correlation/state is the shared
  * [com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator]; this screen renders it and
  * routes trigger/approve/deny through [WorkflowRunBoardViewModel].
  */
@@ -148,8 +153,8 @@ fun WorkflowRunBoardScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
                     ) {
                         section("Needs your approval", groups.awaiting, RunStyle.GATE, me, accountViewModel, nav, viewModel)
                         section("Working now", groups.active, RunStyle.ACTIVE, me, accountViewModel, nav, viewModel)
@@ -221,45 +226,214 @@ private fun LazyListScope.section(
 ) {
     if (runs.isEmpty()) return
     item(key = "header-$title") {
-        Text(
-            text = "$title · ${runs.size}",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
-        )
+        SectionHeader(title, runs.size, style)
     }
     items(runs, key = { it.runId }) { run ->
-        RunCard(run, style, me, accountViewModel, nav, viewModel)
+        if (style == RunStyle.GATE) {
+            GateCard(run, me, accountViewModel, nav, viewModel)
+        } else {
+            RunCard(run, style, accountViewModel, nav)
+        }
     }
 }
 
 @Composable
-private fun LazyItemScope.RunCard(
-    run: WorkflowRun,
+private fun SectionHeader(
+    title: String,
+    count: Int,
     style: RunStyle,
+) {
+    val accent = if (style == RunStyle.GATE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+    ) {
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = accent,
+            fontWeight = FontWeight.Bold,
+        )
+        Surface(color = accent.copy(alpha = 0.14f), shape = CircleShape) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = accent,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+            )
+        }
+    }
+}
+
+/**
+ * The centerpiece: a run paused on its approval gate. Elevated and softly glowing so the one thing
+ * that needs a human reads as the hero of the board. If I'm the named approver it carries the
+ * grant/deny actions; otherwise it shows who the room is waiting on.
+ */
+@Composable
+private fun LazyItemScope.GateCard(
+    run: WorkflowRun,
     me: String,
     accountViewModel: AccountViewModel,
     nav: INav,
     viewModel: WorkflowRunBoardViewModel,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    val glowT = rememberInfiniteTransition(label = "gate")
+    val glow by glowT.animateFloat(
+        initialValue = 0.30f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse),
+        label = "gateGlow",
+    )
+    val mine = run.pendingApprover == me
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = scheme.surface,
+        shadowElevation = 10.dp,
+        border = BorderStroke(1.5.dp, scheme.primary.copy(alpha = glow)),
+        modifier = Modifier.fillMaxWidth().animateItem(),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .background(Brush.verticalGradient(listOf(scheme.primaryContainer.copy(alpha = 0.85f), scheme.surface)))
+                    .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(
+                        modifier = Modifier.size(40.dp).clip(CircleShape).background(scheme.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
+                    }
+                    Text(
+                        text = if (mine) "Needs your approval" else "Awaiting approval",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = scheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                TimeAgo(time = run.createdAt, style = TimeAgoStyle.Short)
+            }
+
+            Text(
+                text = run.task?.takeIf { it.isNotBlank() } ?: run.workflowId?.let { "Workflow: $it" } ?: "(no description)",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Person("by", run.requester, accountViewModel, nav)
+            }
+
+            if (mine) {
+                ApprovalActions(
+                    onApprove = { viewModel.approve(run.runId) },
+                    onDeny = { viewModel.deny(run.runId) },
+                )
+            } else {
+                WaitingPill(run.pendingApprover, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+/** The grant/deny buttons the named approver sees — Approve dominates, Deny stays a quiet exit. */
+@Composable
+private fun ApprovalActions(
+    onApprove: () -> Unit,
+    onDeny: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(
+            onClick = onDeny,
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
+            Text("Deny", fontWeight = FontWeight.SemiBold)
+        }
+        Button(
+            onClick = onApprove,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+        ) {
+            Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Approve & ship", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** Who the room is waiting on, for members who aren't the approver. */
+@Composable
+private fun WaitingPill(
+    approver: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(20.dp)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+            if (approver != null) {
+                Person("waiting on", approver, accountViewModel, nav)
+            } else {
+                Text("Waiting for approval", style = MaterialTheme.typography.labelLarge)
+            }
+        }
+    }
+}
+
+/** Active / shipped / closed runs — a colour-railed card with real depth and a state-tuned accent. */
+@Composable
+private fun LazyItemScope.RunCard(
+    run: WorkflowRun,
+    style: RunStyle,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val scheme = MaterialTheme.colorScheme
     val (container, accent) = styleColors(style)
+    val elevation =
+        if (style == RunStyle.ACTIVE) {
+            4.dp
+        } else if (style == RunStyle.SHIPPED) {
+            3.dp
+        } else {
+            1.dp
+        }
     Surface(
         color = container,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
+        shadowElevation = elevation,
         modifier =
             Modifier
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
                 .animateItem()
-                .alpha(if (style == RunStyle.CLOSED) 0.7f else 1f),
+                .alpha(if (style == RunStyle.CLOSED) 0.75f else 1f),
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            Box(modifier = Modifier.fillMaxHeight().width(4.dp).background(accent))
+            Box(modifier = Modifier.fillMaxHeight().width(5.dp).background(accent))
 
             Column(
-                modifier = Modifier.padding(14.dp).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -272,66 +446,42 @@ private fun LazyItemScope.RunCard(
 
                 Text(
                     text = run.task?.takeIf { it.isNotBlank() } ?: run.workflowId?.let { "Workflow: $it" } ?: "(no description)",
-                    style = if (style == RunStyle.GATE || style == RunStyle.ACTIVE) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (style == RunStyle.GATE || style == RunStyle.ACTIVE) FontWeight.SemiBold else FontWeight.Normal,
+                    style = if (style == RunStyle.ACTIVE) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (style == RunStyle.ACTIVE) FontWeight.SemiBold else FontWeight.Normal,
                 )
 
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Person("by", run.requester, accountViewModel, nav)
-                    if (run.state == WorkflowRunState.AWAITING_APPROVAL && run.pendingApprover != null && run.pendingApprover != me) {
-                        Person("gate", run.pendingApprover, accountViewModel, nav)
-                    }
-                }
+                Person("by", run.requester, accountViewModel, nav)
 
                 when (style) {
-                    RunStyle.ACTIVE ->
+                    RunStyle.ACTIVE -> {
                         run.lastStep?.takeIf { it.isNotBlank() }?.let { WorkingLine(it, accent) }
+                        if (run.state == WorkflowRunState.RUNNING || run.state == WorkflowRunState.APPROVED) RunningBar(accent)
+                    }
                     RunStyle.SHIPPED ->
                         run.result?.takeIf { it.isNotBlank() }?.let { ResultLine(it) }
-                    RunStyle.CLOSED -> ClosedLine(run)
+                    RunStyle.CLOSED -> ClosedLine(run, scheme)
                     RunStyle.GATE -> Unit
-                }
-
-                if (run.state == WorkflowRunState.AWAITING_APPROVAL && run.pendingApprover == me) {
-                    ApprovalActions(
-                        onApprove = { viewModel.approve(run.runId) },
-                        onDeny = { viewModel.deny(run.runId) },
-                    )
                 }
             }
         }
     }
 }
 
-/** The grant/deny buttons the named approver sees on a paused run. */
+/** A thin indeterminate bar so a run that's actively working *looks* alive. */
 @Composable
-private fun ApprovalActions(
-    onApprove: () -> Unit,
-    onDeny: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        OutlinedButton(
-            onClick = onDeny,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        ) {
-            Icon(symbol = MaterialSymbols.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("Deny")
-        }
-        Button(onClick = onApprove, modifier = Modifier.weight(1f)) {
-            Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("Approve")
-        }
-    }
+private fun RunningBar(accent: Color) {
+    LinearProgressIndicator(
+        color = accent,
+        trackColor = accent.copy(alpha = 0.18f),
+        modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
+    )
 }
 
 @Composable
-private fun ClosedLine(run: WorkflowRun) {
+private fun ClosedLine(
+    run: WorkflowRun,
+    scheme: ColorScheme,
+) {
     val text =
         when (run.state) {
             WorkflowRunState.DENIED -> "Denied — work discarded"
@@ -341,7 +491,7 @@ private fun ClosedLine(run: WorkflowRun) {
     Text(
         text,
         style = MaterialTheme.typography.bodyMedium,
-        color = if (run.state == WorkflowRunState.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        color = if (run.state == WorkflowRunState.FAILED) scheme.error else scheme.onSurfaceVariant,
     )
 }
 
@@ -370,7 +520,7 @@ private fun ResultLine(result: String) {
     val url = remember(result) { Regex("https?://\\S+").find(result)?.value }
     if (url != null) {
         val uriHandler = LocalUriHandler.current
-        Button(onClick = { uriHandler.openUri(url) }) {
+        Button(onClick = { uriHandler.openUri(url) }, shape = RoundedCornerShape(12.dp)) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text("View PR")
@@ -405,9 +555,15 @@ private fun StatePill(
     accent: Color,
 ) {
     val (label, symbol) = pillContent(state)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+    Surface(color = accent.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
