@@ -48,6 +48,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,6 +61,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,6 +72,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,6 +100,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import kotlinx.coroutines.launch
 
 /**
  * The shared **workflow run board** of one Buzz channel — where a team drives an AI agent under a
@@ -131,9 +136,13 @@ fun WorkflowRunBoardScreen(
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) }
 
     var composing by remember { mutableStateOf(false) }
+    var pending by remember { mutableStateOf<PendingDecision?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = { TopBarWithBackButton("Workflow runs", nav) },
+        snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { composing = true },
@@ -156,10 +165,12 @@ fun WorkflowRunBoardScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
                     ) {
-                        section("Needs your approval", groups.awaiting, RunStyle.GATE, me, accountViewModel, nav, viewModel)
-                        section("Working now", groups.active, RunStyle.ACTIVE, me, accountViewModel, nav, viewModel)
-                        section("Shipped", groups.done, RunStyle.SHIPPED, me, accountViewModel, nav, viewModel)
-                        section("Closed", groups.closed, RunStyle.CLOSED, me, accountViewModel, nav, viewModel)
+                        section("Needs your approval", groups.awaiting, RunStyle.GATE, me, accountViewModel, nav) { run, grant ->
+                            pending = PendingDecision(run, grant)
+                        }
+                        section("Working now", groups.active, RunStyle.ACTIVE, me, accountViewModel, nav)
+                        section("Shipped", groups.done, RunStyle.SHIPPED, me, accountViewModel, nav)
+                        section("Closed", groups.closed, RunStyle.CLOSED, me, accountViewModel, nav)
                     }
                 }
 
@@ -183,9 +194,36 @@ fun WorkflowRunBoardScreen(
             },
         )
     }
+
+    // Approving pushes code and opens a PR; denying discards it — both consequential enough to confirm.
+    pending?.let { decision ->
+        ConfirmDecisionDialog(
+            decision = decision,
+            onDismiss = { pending = null },
+            onConfirm = {
+                if (decision.grant) viewModel.approve(decision.run.runId) else viewModel.deny(decision.run.runId)
+                pending = null
+                scope.launch {
+                    snackbar.showSnackbar(
+                        if (decision.grant) {
+                            "Approved — the runner is opening a pull request"
+                        } else {
+                            "Denied — the work was discarded"
+                        },
+                    )
+                }
+            },
+        )
+    }
 }
 
 private enum class RunStyle { GATE, ACTIVE, SHIPPED, CLOSED }
+
+/** A grant/deny the approver has tapped but not yet confirmed. */
+private data class PendingDecision(
+    val run: WorkflowRun,
+    val grant: Boolean,
+)
 
 /** The runs bucketed by lifecycle; awaiting-a-human first (those block the room). */
 private class RunGroups(
@@ -222,7 +260,7 @@ private fun LazyListScope.section(
     me: String,
     accountViewModel: AccountViewModel,
     nav: INav,
-    viewModel: WorkflowRunBoardViewModel,
+    onDecide: (WorkflowRun, Boolean) -> Unit = { _, _ -> },
 ) {
     if (runs.isEmpty()) return
     item(key = "header-$title") {
@@ -230,7 +268,7 @@ private fun LazyListScope.section(
     }
     items(runs, key = { it.runId }) { run ->
         if (style == RunStyle.GATE) {
-            GateCard(run, me, accountViewModel, nav, viewModel)
+            GateCard(run, me, accountViewModel, nav, onDecide)
         } else {
             RunCard(run, style, accountViewModel, nav)
         }
@@ -278,7 +316,7 @@ private fun LazyItemScope.GateCard(
     me: String,
     accountViewModel: AccountViewModel,
     nav: INav,
-    viewModel: WorkflowRunBoardViewModel,
+    onDecide: (WorkflowRun, Boolean) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val glowT = rememberInfiniteTransition(label = "gate")
@@ -337,8 +375,8 @@ private fun LazyItemScope.GateCard(
 
             if (mine) {
                 ApprovalActions(
-                    onApprove = { viewModel.approve(run.runId) },
-                    onDeny = { viewModel.deny(run.runId) },
+                    onApprove = { onDecide(run, true) },
+                    onDeny = { onDecide(run, false) },
                 )
             } else {
                 WaitingPill(run.pendingApprover, accountViewModel, nav)
@@ -374,6 +412,54 @@ private fun ApprovalActions(
             Text("Approve & open PR", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
     }
+}
+
+/**
+ * The confirm step before a decision is published. Approving is a real commitment (it authorizes a
+ * push + PR), so it gets a filled confirm; denying discards work, so it gets an error-toned confirm.
+ * The copy states the boundary plainly: approving never merges or deploys.
+ */
+@Composable
+private fun ConfirmDecisionDialog(
+    decision: PendingDecision,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val task = decision.run.task?.takeIf { it.isNotBlank() } ?: "this run"
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                symbol = if (decision.grant) MaterialSymbols.Gavel else MaterialSymbols.Close,
+                contentDescription = null,
+                tint = if (decision.grant) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            )
+        },
+        title = { Text(if (decision.grant) "Approve this run?" else "Deny this run?") },
+        text = {
+            Text(
+                if (decision.grant) {
+                    "The runner will push its branch and open a pull request for “$task”. Approving never merges or deploys — that still happens on GitHub."
+                } else {
+                    "The agent's work for “$task” will be discarded. This can't be undone."
+                },
+            )
+        },
+        confirmButton = {
+            if (decision.grant) {
+                Button(onClick = onConfirm) {
+                    Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Approve & open PR")
+                }
+            } else {
+                TextButton(onClick = onConfirm, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Deny", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 /** Who the room is waiting on, for members who aren't the approver. */
