@@ -76,7 +76,12 @@ class RelayGroupOpenChatTailSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         windowLoad.setExpectedRelays(setOf(key.groupId.relayUrl))
-        return listOf(buildRelayGroupOpenChatTailFilter(key.groupId, DmHistoryTuning.recentBoundary()))
+        return listOf(
+            buildRelayGroupOpenChatTailFilter(key.groupId, DmHistoryTuning.recentBoundary()),
+            // Reactions/deletions for every message on screen, `#h`-scoped rather than `#e`-scoped —
+            // see [RELAY_GROUP_AUX_KINDS]. Covers a non-joined group opened by link too.
+            buildRelayGroupAuxFilter(key.groupId, DmHistoryTuning.recentBoundary()),
+        )
     }
 
     override fun id(key: RelayGroupOpenChatTailQueryState) = key.groupId

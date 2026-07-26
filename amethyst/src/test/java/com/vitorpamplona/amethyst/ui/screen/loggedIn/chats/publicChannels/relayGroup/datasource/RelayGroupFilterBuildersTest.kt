@@ -24,13 +24,16 @@ import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.FiltersChanged
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.SupportedRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteEventEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -110,21 +113,96 @@ class RelayGroupFilterBuildersTest {
         filters.filter { it.relay == relayB }.forEach { assertNull(it.filter.since) }
     }
 
-    // --- Joined chat tail (always-on): batched #h per relay, time floor, NO per-group limit ---
+    // --- Joined chat tail (always-on): ONE single-valued #h per group, time floor, NO limit ---
 
     @Test
-    fun `joined chat tail batches one h-filter per relay with no count limit`() {
-        val filters = buildRelayGroupJoinedChatTailFilters(joined, 999L)
-        assertEquals(2, filters.size)
+    fun `joined chat tail carries exactly one h value per group with no count limit`() {
+        val filter = buildRelayGroupJoinedChatTailFilter(GroupId("g1", relayA), 999L)
 
-        val a = filters.single { it.relay == relayA }
-        // The joined tail now always carries the Buzz timeline kinds too (see
+        assertEquals(relayA, filter.relay)
+        // The joined tail always carries the Buzz timeline kinds too (see
         // RELAY_GROUP_ALL_TIMELINE_KINDS / BuzzTimelineKindsTest).
-        assertEquals(timelineKinds + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS, a.filter.kinds)
-        assertEquals(setOf("g1", "g2"), a.filter.tags!!["h"]!!.toSet())
-        assertEquals(999L, a.filter.since)
-        assertNull("a time-floored tail must NOT cap by count (that is what lets it batch)", a.filter.limit)
-        assertNull(a.filter.until)
+        assertEquals(timelineKinds + BUZZ_RELAY_GROUP_TIMELINE_EXTRA_KINDS, filter.filter.kinds)
+        assertEquals(listOf("g1"), filter.filter.tags!!["h"])
+        assertEquals(999L, filter.filter.since)
+        assertNull("a time-floored tail must NOT cap by count", filter.filter.limit)
+        assertNull(filter.filter.until)
+    }
+
+    /**
+     * Regression guard for the Messages-list freeze: `block/buzz` indexes a live subscription under a
+     * single channel uuid resolved from `#h`, and downgrades any subscription whose filters mention two
+     * or more distinct ids to a *global* one — which by design receives no channel-scoped events. The
+     * stored query still answers correctly, so the symptom was "backfills on launch, then never updates".
+     * Each joined group must therefore get its own single-valued filter (and its own subscription).
+     */
+    @Test
+    fun `joined chat tail never batches multiple groups into one h filter`() {
+        joined.forEach { tag ->
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag.relayUrl)!!
+            val values = buildRelayGroupJoinedChatTailFilter(GroupId(tag.groupId, relay), 1L).filter.tags!!["h"]!!
+            assertEquals("a multi-value #h makes buzz register the sub as global and stop live delivery", 1, values.size)
+            assertEquals(tag.groupId, values.single())
+        }
+    }
+
+    /**
+     * The Messages-row preview is bounded by COUNT, never by time. The chat tail floors at `now - 7 days`
+     * to keep recent chat warm; on its own that leaves a channel quiet for longer stuck on its
+     * "No messages yet" placeholder forever, sorted to the bottom by `createdAt = 0`. Roster-driven
+     * protocols fill their rows this way — NIP-28 with `limit = 1`, Concord with `limit = 10` — because
+     * their row set comes from a list event and only needs one newest message per row.
+     */
+    @Test
+    fun `preview filter asks for one newest message with no time floor on a cold start`() {
+        val filter = buildRelayGroupPreviewFilter(g1OnA, null)
+
+        assertEquals(relayA, filter.relay)
+        assertEquals(listOf("g1"), filter.filter.tags!!["h"])
+        assertEquals(1, filter.filter.limit)
+        assertNull("a cold start must reach back past any window to fill the row", filter.filter.since)
+        assertNull(filter.filter.until)
+    }
+
+    @Test
+    fun `preview filter rides the per-relay EOSE since once caught up`() {
+        assertEquals(555L, buildRelayGroupPreviewFilter(g1OnA, 555L).filter.since)
+    }
+
+    /** Single-valued `#h`, so it can share the channel-scoped subscription without downgrading it. */
+    @Test
+    fun `preview filter names exactly one channel`() {
+        assertEquals(1, buildRelayGroupPreviewFilter(g1OnA, null).filter.tags!!["h"]!!.size)
+    }
+
+    /**
+     * Reactions/deletions ride the channel's own `#h` subscription, the way the Buzz reference client
+     * does it (its `channelEventKinds` bundles deletion + reaction into the one `#h` channel REQ).
+     * Amethyst's other source of reactions is the shared `#e` EventFinder query, which carries no `#h`
+     * and is therefore registered as a *global* subscription — a class that never receives
+     * channel-scoped events live, and a reaction inherits its target message's channel.
+     */
+    @Test
+    fun `aux filter carries reactions and deletions scoped to one group`() {
+        val filter = buildRelayGroupAuxFilter(GroupId("g1", relayA), 42L)
+
+        assertEquals(relayA, filter.relay)
+        assertEquals(listOf(DeletionEvent.KIND, ReactionEvent.KIND, DeleteEventEvent.KIND), filter.filter.kinds)
+        assertEquals(listOf("g1"), filter.filter.tags!!["h"])
+        assertEquals(42L, filter.filter.since)
+        assertEquals(RELAY_GROUP_AUX_LIMIT, filter.filter.limit)
+    }
+
+    /**
+     * The aux kinds must stay OUT of the timeline set: that set feeds the backward history pager, whose
+     * `until` cursor walks `created_at`. Reactions eating a page's `limit` would advance the cursor past
+     * chat messages that were never delivered.
+     */
+    @Test
+    fun `aux kinds are not in the timeline set the history pager pages over`() {
+        RELAY_GROUP_AUX_KINDS.forEach {
+            assertFalse("aux kind $it must not consume history-page limit", it in RELAY_GROUP_ALL_TIMELINE_KINDS)
+        }
     }
 
     // --- Open chat tail: a single group's recent #h on the host relay ---
@@ -239,7 +317,6 @@ class RelayGroupFilterBuildersTest {
     @Test
     fun `empty joined set produces no filters`() {
         assertTrue(buildRelayGroupStateFilters(emptySet()) { null }.isEmpty())
-        assertTrue(buildRelayGroupJoinedChatTailFilters(emptySet(), 1L).isEmpty())
     }
 
     // --- Reconnect stability: a `since`-only bump must NOT trigger a fresh REQ (no full replay) ---
@@ -265,8 +342,9 @@ class RelayGroupFilterBuildersTest {
 
     @Test
     fun `joined chat tail advancing its time floor is not a resend`() {
-        val earlier = buildRelayGroupJoinedChatTailFilters(joined, 1_000L).map { it.filter }
-        val later = buildRelayGroupJoinedChatTailFilters(joined, 2_000L).map { it.filter } // recentBoundary() crept forward
+        val groups = joined.map { GroupId(it.groupId, RelayUrlNormalizer.normalizeOrNull(it.relayUrl)!!) }
+        val earlier = groups.map { buildRelayGroupJoinedChatTailFilter(it, 1_000L).filter }
+        val later = groups.map { buildRelayGroupJoinedChatTailFilter(it, 2_000L).filter } // recentBoundary() crept forward
         earlier.zip(later).forEach { (old, new) ->
             assertFalse(
                 "a forward recent-tail floor bump is since-only → reconnect re-REQs the tail, not a full page",

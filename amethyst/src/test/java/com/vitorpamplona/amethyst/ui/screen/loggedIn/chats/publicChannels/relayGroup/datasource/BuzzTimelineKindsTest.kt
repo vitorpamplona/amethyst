@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,10 +49,9 @@ class BuzzTimelineKindsTest {
         assertTrue(openTail.filter.kinds!!.contains(StreamMessageV2Event.KIND))
 
         val fleet =
-            buildRelayGroupJoinedChatTailFilters(
-                listOf(GroupTag("g1", buzzRelay.url), GroupTag("g2", vanillaRelay.url)),
-                sinceEpoch = 0L,
-            )
+            listOf(GroupId("g1", buzzRelay), GroupId("g2", vanillaRelay)).map {
+                buildRelayGroupJoinedChatTailFilter(it, sinceEpoch = 0L)
+            }
         fleet.forEach { assertTrue(it.filter.kinds!!.contains(StreamMessageV2Event.KIND)) }
     }
 }
