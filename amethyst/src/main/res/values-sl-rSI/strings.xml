@@ -2363,6 +2363,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_server_label">Skupine relejev</string>
     <string name="relay_groups_button">Skupine</string>
     <string name="messages_settings">Sporočila</string>
+    <string name="chat_type_concord_desc">Šifrirane skupnosti z več tematskimi kanali (Concord).</string>
     <string name="relay_group_create_title">Ustvari skupino</string>
     <string name="relay_group_relay_no_nip29">Ta relej ne oglašuje podpore za skupine NIP-29. Skupina, ustvarjena tukaj, ne bo delovala – relej ne bo upravljal njenega imena, članov in sporočil. Izberite rele, ki podpira skupine na ravni releja.</string>
     <string name="relay_group_create_name">Ime supine</string>
