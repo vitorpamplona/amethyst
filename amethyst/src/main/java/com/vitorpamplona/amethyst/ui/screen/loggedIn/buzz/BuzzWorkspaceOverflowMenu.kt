@@ -54,17 +54,24 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /**
- * The Buzz workspace top-bar overflow (3-dot) menu. Holds the two workspace-owner actions that used
- * to sit inline above the channel list: "Add people to this workspace" (kind-9030, delegated to the
- * screen's [onAddPeople] dialog) and "Create invite link" (mints via the relay's `/api/invites`
- * endpoint — see [BuzzInviteMinter]). Any member sees both, but the relay only serves owners/admins,
- * so a rejection surfaces as the error dialog.
+ * The Buzz workspace top-bar overflow (3-dot) menu. Holds the community-wide actions that used to sit
+ * inline in the channel list:
+ * - "Add all channels" ([onAddAll], shown only when some channels aren't in the user's list yet) —
+ *   appends every discovered channel to the kind-10009 list at once;
+ * - "Agent Console" ([onOpenAgentConsole]) — the owner's per-community fleet console;
+ * - "Add people to this workspace" (kind-9030, delegated to the screen's [onAddPeople] dialog);
+ * - "Create invite link" (mints via the relay's `/api/invites` endpoint — see [BuzzInviteMinter]).
+ *
+ * Any member sees all of them, but the relay only serves the owner/admin ones, so a rejection
+ * surfaces as the error dialog.
  */
 @Composable
 fun BuzzWorkspaceOverflowMenu(
     relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     onAddPeople: () -> Unit,
+    onOpenAgentConsole: () -> Unit,
+    onAddAll: (() -> Unit)? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     var minting by remember { mutableStateOf(false) }
@@ -83,6 +90,28 @@ fun BuzzWorkspaceOverflowMenu(
     }
 
     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+        if (onAddAll != null) {
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(symbol = MaterialSymbols.DoneAll, contentDescription = null, modifier = Modifier.size(20.dp))
+                },
+                text = { Text(stringRes(R.string.buzz_import_add_all)) },
+                onClick = {
+                    menuOpen = false
+                    onAddAll()
+                },
+            )
+        }
+        DropdownMenuItem(
+            leadingIcon = {
+                Icon(symbol = MaterialSymbols.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp))
+            },
+            text = { Text(stringRes(R.string.buzz_console_card_title)) },
+            onClick = {
+                menuOpen = false
+                onOpenAgentConsole()
+            },
+        )
         DropdownMenuItem(
             leadingIcon = {
                 Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = null, modifier = Modifier.size(20.dp))

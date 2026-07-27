@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -111,11 +112,59 @@ fun RelayGroupChannel.newestTimelineNote(account: Account): Note? =
         .sortedByDefaultFeedOrder()
         .firstOrNull()
 
+/**
+ * The pubkeys of the [limit] most-recent distinct posters in this group, newest first — the facepile
+ * shown on a channel row. One O(notes) pass keeps each author's latest post time, so a chatty author
+ * counts once (at their newest message) rather than crowding out quieter voices.
+ */
+fun RelayGroupChannel.recentAuthorHexes(
+    account: Account,
+    limit: Int,
+): List<HexKey> {
+    val latestByAuthor = HashMap<HexKey, Long>()
+    for (note in notes.values()) {
+        if (!isRelayGroupTimelineMessage(note, account)) continue
+        val author = note.author?.pubkeyHex ?: continue
+        val at = note.createdAt() ?: continue
+        val prev = latestByAuthor[author]
+        if (prev == null || at > prev) latestByAuthor[author] = at
+    }
+    return latestByAuthor.entries
+        .sortedByDescending { it.value }
+        .take(limit)
+        .map { it.key }
+}
+
 /** Whether this group's message store holds any acceptable timeline message created after [sinceSecs]. */
 private fun RelayGroupChannel.hasChatNewerThan(
     account: Account,
     sinceSecs: Long,
-): Boolean =
+): Boolean = newMessagesSince(account, sinceSecs) > 0
+
+/** The number of this group's timeline messages created strictly after [sinceSecs] (0 if none). */
+private fun RelayGroupChannel.newMessagesSince(
+    account: Account,
+    sinceSecs: Long,
+): Int =
     notes.count { _, note ->
         (note.createdAt() ?: 0L) > sinceSecs && isRelayGroupTimelineMessage(note, account)
-    } > 0
+    }
+
+/**
+ * The count of chat messages in [groupId] newer than the timestamp this account last read it — the
+ * number the channel-row unread badge shows. Reactive: it recombines both when a fresh message folds
+ * in (the channel's notes flow ticks) and when the user opens the group (which advances the last-read
+ * marker), so opening a channel clears its badge. Mirrors [relayGroupChannelHasUnreadFlow].
+ */
+fun relayGroupChannelUnreadCountFlow(
+    account: Account,
+    groupId: GroupId,
+): Flow<Int> {
+    val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
+    return combine(
+        account.loadLastReadFlow(relayGroupChannelLastReadRoute(groupId)),
+        channel.flow().notes.stateFlow,
+    ) { lastRead, _ ->
+        channel.newMessagesSince(account, lastRead)
+    }
+}
