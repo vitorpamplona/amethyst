@@ -2414,6 +2414,7 @@
     <string name="relay_group_favorite_relay">Favoritmarkera det här reläet</string>
     <string name="relay_group_threads_empty">Inga trådar ännu. Starta en med +-knappen.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="relay_group_threads_empty_read_only">Inga trådar än.</string>
     <string name="relay_group_threads_loading_older">Läser in äldre trådar…</string>
     <string name="relay_group_threads_all_caught_up">Inga äldre trådar</string>
     <string name="relay_group_thread_new">Ny tråd</string>
@@ -3148,10 +3149,40 @@
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
     <string name="buzz_system_member_joined">%1$s anslöt</string>
     <string name="buzz_system_member_added">%1$s lades till av %2$s</string>
+    <string name="buzz_system_member_left">%1$s lämnade</string>
+    <string name="buzz_system_member_removed">%1$s togs bort av %2$s</string>
+    <string name="buzz_system_topic_changed">%1$s satte ämnet till ”%2$s”</string>
+    <string name="buzz_system_topic_cleared">%1$s rensade ämnet</string>
+    <string name="buzz_system_purpose_changed">%1$s satte syftet till ”%2$s”</string>
+    <string name="buzz_system_purpose_cleared">%1$s rensade syftet</string>
+    <string name="buzz_system_visibility_open">%1$s gjorde den här kanalen öppen — vem som helst kan hitta och gå med i den</string>
+    <string name="buzz_system_visibility_private">%1$s gjorde den här kanalen privat — endast via inbjudan</string>
+    <string name="buzz_system_visibility_other">%1$s ändrade synligheten till %2$s</string>
+    <string name="buzz_system_ttl_set">%1$s ställde in att meddelanden försvinner efter %2$s</string>
+    <string name="buzz_system_ttl_cleared">%1$s stängde av försvinnande meddelanden</string>
+    <string name="buzz_system_channel_archived">%1$s arkiverade den här kanalen</string>
+    <string name="buzz_system_channel_unarchived">%1$s återställde den här kanalen</string>
+    <string name="buzz_system_channel_created">%1$s skapade den här kanalen</string>
+    <string name="buzz_system_channel_deleted">%1$s tog bort den här kanalen</string>
+    <string name="buzz_system_message_deleted">%1$s tog bort ett meddelande</string>
+    <string name="buzz_system_message_deleted_reason">%1$s tog bort ett meddelande: %2$s</string>
+    <string name="buzz_system_dm_created">%1$s startade den här konversationen</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s startade en huddle</string>
+    <string name="buzz_huddle_joined">🔊 %1$s gick med i huddlen</string>
+    <string name="buzz_huddle_left">🔊 %1$s lämnade huddlen</string>
+    <string name="buzz_huddle_ended">🔊 Huddle avslutad</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙ %1$s begärde ett jobb</string>
+    <string name="buzz_job_accepted">⚙ %1$s accepterade jobbet</string>
+    <string name="buzz_job_progress">⚙ Jobbförlopp</string>
+    <string name="buzz_job_result">⚙ Jobbresultat</string>
+    <string name="buzz_job_cancelled">⚙ Jobbet avbrutet</string>
+    <string name="buzz_job_error">⚠ Jobbfel</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">▲ %1$s röstade upp ett inlägg</string>
+    <string name="buzz_forum_downvoted">▼ %1$s röstade ner ett inlägg</string>
     <string name="buzz_canvas_empty">Ingen canvas har delats i den här arbetsytan än.</string>
     <string name="buzz_canvas_edit">Redigera canvas</string>
     <string name="buzz_canvas_save">Spara canvas</string>
