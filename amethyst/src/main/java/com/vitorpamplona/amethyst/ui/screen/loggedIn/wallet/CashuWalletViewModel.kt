@@ -26,12 +26,15 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.MintQuoteStarted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeRedeemError
+import com.vitorpamplona.amethyst.commons.cashu.ops.requireP2pkRedeemable
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.anyP2pkLocked
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -905,10 +908,36 @@ class CashuWalletViewModel : ViewModel() {
         _redeemState.value = CashuRedeemFlowState.Redeeming
         vm.launchSigner {
             try {
-                val total = parsedTokens.sumOf { ops.redeemToken(trimmed, it.proofs, it.mint).amount }
+                // Keys that can unlock a P2PK-locked token: our wallet key, and
+                // — for a local nsec login only — the identity key (some senders,
+                // e.g. Bey Wallet, P2PK-lock ecash straight to the recipient npub).
+                // Only gathered when a proof is actually locked: redeemSigningKeys()
+                // decrypts the kind:17375 privkey, which is a signer round-trip on
+                // a bunker/external signer we shouldn't pay for a plain token.
+                val (walletKey, identityKey) =
+                    if (parsedTokens.any { it.proofs.anyP2pkLocked() }) {
+                        state.redeemSigningKeys()
+                    } else {
+                        null to null
+                    }
+                // All-or-nothing: reject an unsignable P2PK lock before redeeming
+                // any group, so a multi-mint token never ends up half-redeemed.
+                requireP2pkRedeemable(parsedTokens.flatMap { it.proofs }, walletKey, identityKey)
+                val total =
+                    parsedTokens.sumOf {
+                        ops
+                            .redeemToken(
+                                cashuToken = trimmed,
+                                proofs = it.proofs,
+                                mintUrl = it.mint,
+                                walletP2pkPrivkeyHex = walletKey,
+                                identityPrivkeyHex = identityKey,
+                            ).amount
+                    }
                 _redeemState.value = CashuRedeemFlowState.Completed(total)
             } catch (e: Exception) {
-                _redeemState.value = CashuRedeemFlowState.Error(describeMintError(e))
+                _redeemState.value =
+                    CashuRedeemFlowState.Error(describeRedeemError(e, account!!.signer.pubKey))
             }
         }
     }
