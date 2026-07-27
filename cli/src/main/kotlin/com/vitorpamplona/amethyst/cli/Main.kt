@@ -822,6 +822,14 @@ private fun printUsage() {
         |  buzz attest AGENT [--kind K]               issue a NIP-OA attestation (offline)
         |  buzz console [--relays R,R]                aggregate my kind-44200 agent turn metrics
         |  buzz personas [--relays R,R]               list my kind-30175 personas
+        |  buzz job request RELAY <text>              file an agent job (kind-43001)
+        |  buzz job list/show/cancel RELAY …          track agent jobs (43001-43006)
+        |  buzz workflow trigger RELAY WFID …         trigger a Buzz workflow run (kind-46020)
+        |  buzz workflow run RELAY --exec CMD …       run the workflow runner (agent work → approval gate)
+        |  buzz workflow approve/deny RELAY RUNID     grant/deny a run's approval gate (46030/46031)
+        |  buzz agent up RELAY --repo DIR --approver NPUB  one-command gated runner (bundled wrapper)
+        |  buzz agent doctor [--repo DIR]             preflight the host: gh token + branch protection
+        |  buzz agent serve RELAY --exec CMD          run a parallel backlog scheduler (worktree-isolated)
         |
         |Marmot (MLS group messaging):
         |  marmot key-package publish                 publish a fresh KeyPackage

@@ -32,9 +32,12 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
+import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
@@ -186,6 +189,9 @@ class NotificationFeedFilter(
                 VideoShortEvent.KIND,
                 VoiceEvent.KIND,
                 VoiceReplyEvent.KIND,
+                // A Buzz workflow approval gate (46010) addressed to me — I need to grant/deny it.
+                // Also gates the push dispatcher, which uses NOTIFICATION_KINDS as its first filter.
+                WorkflowApprovalRequestedEvent.KIND,
             ) + ADDRESSABLE_KINDS
 
         // How deep to walk a public chat reply chain looking for one of the
@@ -490,6 +496,21 @@ class NotificationFeedFilter(
         if ((noteEvent is StreamMessageV2Event || noteEvent is ChatEvent) && isBuzzDmForMe(it, loggedInUserHex)) {
             if (!showMessages) return false
             return it.author?.pubkeyHex != loggedInUserHex
+        }
+
+        // A finished or failed agent job I filed: the workspace bot addresses the outcome to me via a
+        // `p` tag = the requester. Notify me directly — I don't "follow" the bot and the job kinds aren't
+        // in the generic relevance path, so mirror the Buzz-DM early return above rather than the p-tag
+        // heuristic. This is activity (not a chat message), so it ignores the Messages toggle.
+        if (noteEvent is JobResultEvent || noteEvent is JobErrorEvent) {
+            val requester = (noteEvent as? JobResultEvent)?.requester() ?: (noteEvent as JobErrorEvent).requester()
+            return requester == loggedInUserHex && it.author?.pubkeyHex != loggedInUserHex
+        }
+
+        // A Buzz workflow paused on an approval gate (46010) addressed to me as the approver: I must
+        // grant or deny before the run ships. Same early-return shape — it's activity, not a message.
+        if (noteEvent is WorkflowApprovalRequestedEvent) {
+            return noteEvent.approver() == loggedInUserHex && it.author?.pubkeyHex != loggedInUserHex
         }
 
         if (!showMessages &&

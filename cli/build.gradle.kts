@@ -23,6 +23,12 @@ sourceSets {
     }
 }
 
+// `resources.srcDir(...)` above re-adds the default resource root, so every resource is registered
+// twice (identical source + destination). Pick last-wins instead of failing the copy.
+tasks.withType<ProcessResources>().configureEach {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
 dependencies {
     implementation(project(":quartz"))
     implementation(project(":commons"))

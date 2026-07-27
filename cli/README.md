@@ -460,7 +460,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 
 | Command | What it does |
 |---|---|
-| `amy serve [--host H] [--port N] [--path P] [--db FILE] [--admin NPUBS]` | Run a Nostr relay by embedding **geode** (the standalone Ktor relay on quartz's relay-server code). In-memory by default; `--db FILE` for SQLite. The active account is always an admin, so `amy admin ws://host:port …` works against it. Blocks until interrupted. |
+| `amy serve [--host H] [--port N] [--path P] [--db FILE] [--admin NPUBS] [--buzz [--members NPUBS]]` | Run a Nostr relay by embedding **geode** (the standalone Ktor relay on quartz's relay-server code). In-memory by default; `--db FILE` for SQLite. The active account is always an admin, so `amy admin ws://host:port …` works against it. `--buzz` makes it a **private Buzz workspace relay** (`BuzzMembershipPolicy`): NIP-42 required, and only members (admins + `--members`) or NIP-OA-attested agents may read/write — so a team can self-host the agent channel on one JVM process instead of Block's Rust `buzz-relay` + Postgres/Redis/MinIO. Blocks until interrupted. |
 
 ### Identity
 
@@ -610,6 +610,49 @@ and `commons` aggregator the app uses.
 | `amy buzz dm open RELAY PUBKEY [PUBKEY…]` | Open (or re-surface) a DM with 1-8 people (kind:41010). The relay assigns the channel id and confirms via 41001. |
 | `amy buzz dm hide RELAY CHANNEL` | Hide a DM from my sidebar (kind:41012); re-opening it un-hides. |
 | `amy buzz dm add-member RELAY CHANNEL PUBKEY` | Add a member to an existing group DM (kind:41011). |
+| `amy buzz job request RELAY <text> [--agent PUBKEY] [--channel GID]` | File an agent job (kind:43001): ask an agent to do a task, optionally targeting an agent (`p`) and/or scoping to a channel (`h`). |
+| `amy buzz job list RELAY [--channel GID] [--mine\|--assigned] [--limit N] [--timeout SECS]` | List jobs and their folded state (REQUESTED/ACCEPTED/IN_PROGRESS/COMPLETED/FAILED/CANCELLED). `--mine` = jobs I requested; `--assigned` = jobs targeting me. |
+| `amy buzz job show RELAY JOBID [--timeout SECS]` | Show one job's full lifecycle (request + every reply, folded). |
+| `amy buzz job cancel RELAY JOBID [--reason R] [--channel GID]` | Cancel a job (kind:43005). |
+| `amy buzz agent serve RELAY --exec CMD [--channel GID] [--accept-from npub,…] [--accept-from-channel] [--parallel N] [--worktree REPODIR] [--base-ref REF] [--branch-prefix P] [--claim-untargeted] [--poll SECS] [--exec-timeout SECS] [--no-progress] [--dry-run] [--once]` | Run a backlog **scheduler**. Watches a channel's REQUESTED jobs, orders them by the group's upvotes (kind-7 likes), and runs up to `--parallel N` at once — each in its own `git worktree`+branch (`--worktree REPODIR`, off `--base-ref`, named `<branch-prefix><jobid>`) so concurrent runs never collide. Per job: accept (43002) → progress (43003) → runs `sh -c CMD` inside the worktree (task text on stdin; `BUZZ_JOB_ID/REQUESTER/CHANNEL/RELAY/AGENT/UPVOTES/BRANCH/WORKTREE/BASE_REF` in env) → result (43004) or error (43006). Intake gate: `--accept-from` (explicit npubs) and/or `--accept-from-channel` (the channel's kind-39002 member roster). `--parallel > 1` requires `--worktree`. The exec commits/pushes its branch and opens the PR; **merge stays on GitHub, never here.** |
+
+> **Agent-job schema is provisional.** Kinds 43001-43006 are *reserved* in Buzz with no
+> upstream builder; the tag layout (`e`/`h`/`p`/`status`) is a best-effort model and will be
+> reconciled once Buzz implements the protocol. See
+> [`cli/plans/2026-07-25-buzz-agent-support-channel.md`](plans/2026-07-25-buzz-agent-support-channel.md).
+
+#### Buzz workflows (source-confirmed — the human-approval primitive)
+
+Where agent-jobs are speculative, **workflows are Buzz's real structured-work primitive**: the
+command kinds (30620 definition, 46020 trigger, 46030/46031 grant/deny) are pinned against
+buzz-relay's Rust `command_executor.rs`. A run pauses on a **human-approval gate** and only ships
+after someone grants it — exactly the "anyone can drive, but a human gates the merge" model.
+
+On a real Buzz relay the *relay* parses the workflow YAML and executes it. Self-hosted on geode
+there is no workflow engine, so **`amy` is the runner** and emits the lifecycle events itself — a
+documented divergence. The **run id is the trigger's event id and doubles as the approval token**,
+so a grant's `d` tag equals the run id (no separate token bookkeeping). Because quartz's event store
+serves `#d` only for addressable kinds, decisions (regular kind 46030/46031) are fetched **by
+author** — every 46010 gate names its approver in a `p` tag — and matched to their run by the token.
+
+| Command | What it does |
+| --- | --- |
+| `amy buzz workflow trigger RELAY WFID --task TEXT --channel GID` | Trigger a run (kind:46020). Prints the `run_id` (= the trigger event id = the approval token). |
+| `amy buzz workflow list RELAY --channel GID [--timeout SECS]` | List a channel's runs, folded to state (TRIGGERED/RUNNING/AWAITING_APPROVAL/APPROVED/COMPLETED/FAILED/DENIED), awaiting-approval first. |
+| `amy buzz workflow show RELAY RUNID [--timeout SECS]` | Show one run's folded state + lifecycle (resolves the channel from the trigger, then folds it). |
+| `amy buzz workflow approve RELAY RUNID [--note N]` | Grant a run's approval gate (kind:46030, `d`=run id). Resumes the paused run. |
+| `amy buzz workflow deny RELAY RUNID [--note N]` | Deny a run's approval gate (kind:46031). The run is terminal (DENIED); the runner discards the unshipped work. |
+| `amy buzz workflow run RELAY --exec CMD --channel GID --approver NPUB [--on-approve CMD] [--worktree REPODIR] [--base-ref REF] [--accept-from npub,…] [--poll SECS] [--once]` | Run the **runner**. Per new trigger: emits triggered (46001) → step-started (46002) → runs `sh -c CMD` inside a fresh `git worktree`+branch (task on stdin; `BUZZ_RUN/CHANNEL/RELAY/AGENT/REQUESTER/BRANCH/WORKTREE/BASE_REF` in env) → step-completed (46003) → posts the **approval gate** (46010, addressed to `--approver`). On a later poll, when the approver publishes a grant it runs `--on-approve CMD` (the push + open-PR step) and emits completed (46005, carrying the PR url); a deny discards the worktree. Restart-safe: runs still at the gate are rebuilt from the run id on startup. |
+
+> **Permissions (same three-layer model as jobs).** Buzz gates *who can trigger/approve*
+> (`--approver`, `--accept-from`); the exec credential bounds *what the agent can touch* (keep the
+> git token PR-only); GitHub branch protection keeps *merge off the agent's path*. The approval gate
+> adds a fourth: a human must grant before anything is pushed. See
+> [`cli/plans/2026-07-25-buzz-agent-support-channel.md`](plans/2026-07-25-buzz-agent-support-channel.md).
+>
+> **Permissions.** Buzz scopes by identity, not capability flags. `--accept-from` is the
+> intake gate; what the agent can do to a repo is bounded by the credentials you give
+> `--exec` (keep its git token PR-only) and by branch-protecting `main` — not by Buzz.
 
 ### Concord Channels (encrypted communities)
 

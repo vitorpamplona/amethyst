@@ -183,7 +183,8 @@ fun RelayGroupTopBar(
             // outright. So a DM shows the icon only when a canvas already exists — which is also what
             // keeps us from advertising "start a shared doc" in a two-person conversation.
             val hasCanvas by observeBuzzCanvas(channel.groupId.id)
-            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) && (!isDm || hasCanvas)) {
+            val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
+            if (isBuzzRelay && (!isDm || hasCanvas)) {
                 IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
                     Icon(
                         symbol = MaterialSymbols.Dashboard,
@@ -244,6 +245,20 @@ fun RelayGroupTopBar(
                             onClick = {
                                 menuOpen = false
                                 nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
+                            },
+                        )
+                    }
+                    // The agent surface: this channel's job backlog (43001-43006) and workflow runs
+                    // (46020 + lifecycle) folded into one **Agent work** board, where the human-approval
+                    // gate is an inline card state. A menu entry rather than an icon — it's a view of
+                    // the channel reached occasionally, and icons pushed the bar back to four, truncating
+                    // the channel name and relay the title row is there to show.
+                    if (isBuzzRelay && !isDm) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.buzz_agent_work_title)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.BuzzAgentWork(channel.groupId.id, channel.groupId.relayUrl.url))
                             },
                         )
                     }

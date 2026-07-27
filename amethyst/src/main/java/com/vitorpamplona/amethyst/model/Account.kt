@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -163,12 +164,19 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concor
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
 import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
 import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
+import com.vitorpamplona.quartz.buzz.workflow.workflowChannel
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_ADMIN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
@@ -241,6 +249,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNu
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
@@ -293,6 +302,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
 import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -397,6 +407,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
@@ -3280,6 +3292,132 @@ class Account(
     ) {
         val template = DmAddMemberEvent.build(channel.groupId.id, member)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * File a Buzz agent job (kind-43001) into channel [channelId] on [relay] — a shared
+     * feature-request the workspace bot can pick up. Untargeted: any agent watching the
+     * channel may accept it. Returns the new job id (the request event id), or null when the
+     * account can't write. See [com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator].
+     */
+    suspend fun fileBuzzJob(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        request: String,
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val signed = signer.sign(JobRequestEvent.build(request, channelId, null))
+        // Reflect it locally so the board updates immediately (publish only sends to relays).
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return signed.id
+    }
+
+    /** Cancel a Buzz job [jobId] with a kind-43005 scoped to [channelId] on [relay]. */
+    suspend fun cancelBuzzJob(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        jobId: HexKey,
+    ) {
+        if (!isWriteable()) return
+        val signed = signer.sign(JobCancelEvent.build(jobId, "", channelId))
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+    }
+
+    /**
+     * Trigger a Buzz **workflow** run (kind-46020) for [workflowId] into channel [channelId] on
+     * [relay], carrying [task] as the run's request. The trigger's event id IS the run id (and the
+     * approval token), returned here. A run pauses on a human-approval gate before anything ships —
+     * see [com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator].
+     */
+    suspend fun triggerBuzzWorkflow(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        workflowId: String,
+        task: String,
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val content = Json.encodeToString(WorkflowRunPayload(task = task, workflow = workflowId))
+        val signed = signer.sign(WorkflowTriggerEvent.build(workflowId, content) { workflowChannel(channelId) })
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return signed.id
+    }
+
+    /**
+     * Publish a Buzz **workflow definition** (kind-30620) into channel [channelId] on [relay]: an
+     * addressable event whose `d` tag is a freshly-minted workflow UUID (returned here), carrying a
+     * human-readable [name] and the workflow's [yaml] recipe. On a real Buzz relay the relay parses
+     * the YAML and runs it; self-hosted on geode the definition is a named catalog entry the picker
+     * offers and `amy` triggers by id. Returns the new workflow id, or null when the account can't write.
+     */
+    suspend fun publishBuzzWorkflowDef(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        name: String,
+        yaml: String,
+    ): String? {
+        if (!isWriteable()) return null
+        val workflowId = RandomInstance.randomChars(16)
+        val signed = signer.sign(WorkflowDefEvent.build(workflowId, channelId, yaml, name.ifBlank { null }))
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return workflowId
+    }
+
+    /**
+     * Grant a paused Buzz workflow run's approval gate (kind-46030). [runId] is the run id, which
+     * doubles as the approval token (the grant's `d` tag). Resuming lets the runner ship the work.
+     * Publishing to the single group [relay]; the runner discovers the decision by author.
+     */
+    suspend fun approveBuzzWorkflowRun(
+        relay: NormalizedRelayUrl,
+        runId: HexKey,
+        note: String = "",
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val signed = signer.sign(ApprovalGrantEvent.build(runId, note))
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return signed.id
+    }
+
+    /** Deny a paused Buzz workflow run's approval gate (kind-46031); the run is terminal (DENIED). */
+    suspend fun denyBuzzWorkflowRun(
+        relay: NormalizedRelayUrl,
+        runId: HexKey,
+        note: String = "",
+    ): HexKey? {
+        if (!isWriteable()) return null
+        val signed = signer.sign(ApprovalDenyEvent.build(runId, note))
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
+        return signed.id
+    }
+
+    /**
+     * Upvote a Buzz job [jobId] (authored by [jobAuthor]) — a NIP-25 like (kind-7 `+`) `e`-tagging
+     * the request, `p`-tagging its author and `k`-tagging the reacted kind per NIP-25, and
+     * `h`-scoped to [channelId] so the scheduler (and the board) count it toward priority.
+     */
+    suspend fun upvoteBuzzJob(
+        relay: NormalizedRelayUrl,
+        channelId: String,
+        jobId: HexKey,
+        jobAuthor: HexKey?,
+    ) {
+        if (!isWriteable()) return
+        val template =
+            eventTemplate<ReactionEvent>(ReactionEvent.KIND, ReactionEvent.LIKE) {
+                addUnique(ETag.assemble(jobId, null, null))
+                jobAuthor?.let { addUnique(PTag.assemble(it, null)) }
+                addUnique(arrayOf("k", JobRequestEvent.KIND.toString()))
+                addUnique(GroupIdTag.assemble(channelId))
+            }
+        val signed = signer.sign(template)
+        cache.justConsumeMyOwnEvent(signed)
+        client.publish(signed, setOf(relay))
     }
 
     /** Send a kind 9022 leave request to the host relay and drop it from our list. */

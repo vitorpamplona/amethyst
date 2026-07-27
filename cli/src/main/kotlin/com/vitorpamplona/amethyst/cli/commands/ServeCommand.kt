@@ -26,7 +26,10 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.geode.KtorRelay
 import com.vitorpamplona.geode.RelayEngine
+import com.vitorpamplona.quartz.buzz.relay.BuzzMembershipPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.awaitCancellation
 
@@ -48,9 +51,12 @@ object ServeCommand {
         |
         |  serve [--host H] [--port N] [--path P]      in-memory by default (ephemeral); --db FILE
         |        [--db FILE] [--admin NPUBS]            for a persistent SQLite store. The account's
-        |                                               pubkey is always an admin; --admin adds more
+        |        [--buzz [--members NPUBS]]             pubkey is always an admin; --admin adds more
         |                                               (comma-separated npub/hex). Blocks until
         |                                               interrupted. Defaults: 127.0.0.1:7447/
+        |
+        |  --buzz turns this into a private Buzz workspace relay (NIP-42 required; only members
+        |  and NIP-OA-attested agents may read/write). Members = admins + --members.
         """.trimMargin()
 
     suspend fun run(
@@ -66,34 +72,54 @@ object ServeCommand {
         val port = args.intFlag("port", 7447)
         val path = args.flag("path") ?: "/"
         val dbFile = args.flag("db")
-        val extraAdmins =
+
+        fun csv(name: String) =
             args
-                .flag("admin")
+                .flag(name)
                 ?.split(',')
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() }
                 .orEmpty()
+        val extraAdmins = csv("admin")
+        val buzz = args.bool("buzz")
+        val extraMembers = csv("members")
         args.rejectUnknown()
 
-        // Resolve admin pubkeys (self + --admin) up front, then drop the
+        // Resolve admin + member pubkeys (self + --admin [+ --members]) up front, then drop the
         // Context — the embedded relay owns its own store and needs no account.
-        val adminPubkeys =
+        val (adminPubkeys, memberPubkeys) =
             Context.open(dataDir).use { ctx ->
-                buildSet {
-                    add(ctx.identity.pubKeyHex)
-                    extraAdmins.forEach { add(ctx.requireUserHex(it)) }
-                }
+                val admins =
+                    buildSet {
+                        add(ctx.identity.pubKeyHex)
+                        extraAdmins.forEach { add(ctx.requireUserHex(it)) }
+                    }
+                val members =
+                    buildSet {
+                        addAll(admins)
+                        extraMembers.forEach { add(ctx.requireUserHex(it)) }
+                    }
+                admins to members
             }
 
         // 0.0.0.0 isn't routable in a NIP-42 challenge; advertise loopback.
         val advertisedHost = if (host == "0.0.0.0") "127.0.0.1" else host
         val url = "ws://$advertisedHost:$port$path".normalizeRelayUrl()
+
+        // --buzz locks the relay to members + NIP-OA-attested agents; otherwise a vanilla relay.
+        val policyBuilder: () -> IRelayPolicy =
+            if (buzz) {
+                { BuzzMembershipPolicy(url, memberPubkeys) }
+            } else {
+                { EmptyPolicy }
+            }
+
         // In-memory is RelayEngine's default; only build a SQLite store for --db.
         val relay =
             if (dbFile != null) {
-                RelayEngine(url, store = EventStore(dbName = dbFile, relay = url), adminPubkeys = adminPubkeys)
+                RelayEngine(url, store = EventStore(dbName = dbFile, relay = url), policyBuilder = policyBuilder, adminPubkeys = adminPubkeys)
             } else {
-                RelayEngine(url, adminPubkeys = adminPubkeys)
+                RelayEngine(url, policyBuilder = policyBuilder, adminPubkeys = adminPubkeys)
             }
         val server = KtorRelay(relay, host = host, port = port, path = path).start()
 
@@ -112,9 +138,11 @@ object ServeCommand {
                 "path" to path,
                 "persistent" to (dbFile != null),
                 "admin_pubkeys" to adminPubkeys.toList(),
+                "buzz" to buzz,
+                "members" to if (buzz) memberPubkeys.toList() else null,
             ),
         )
-        System.err.println("[serve] relay up at ${server.url} — Ctrl-C to stop")
+        System.err.println("[serve] relay up at ${server.url}${if (buzz) " (Buzz workspace, ${memberPubkeys.size} members)" else ""} — Ctrl-C to stop")
 
         // Block until the process is interrupted; the shutdown hook tears down.
         awaitCancellation()

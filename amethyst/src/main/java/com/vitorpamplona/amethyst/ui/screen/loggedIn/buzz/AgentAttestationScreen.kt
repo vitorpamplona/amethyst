@@ -20,49 +20,89 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+
+// Common event kinds an agent might be restricted to — suggestions for the "Restrict to kind" field;
+// any 0–65535 is still accepted by free numeric entry.
+private val KIND_OPTIONS =
+    listOf(
+        DropdownOption("1", "1 · Text note"),
+        DropdownOption("7", "7 · Reaction"),
+        DropdownOption("9", "9 · Group chat message"),
+        DropdownOption("1111", "1111 · Comment"),
+        DropdownOption("30023", "30023 · Long-form article"),
+        DropdownOption("40002", "40002 · Buzz minichat message"),
+    )
+
+private val KIND_LABELS = KIND_OPTIONS.associate { it.value to it.label }
 
 /**
  * Owner-side NIP-OA attestation issuance. The owner signs a standalone commitment
@@ -85,7 +125,7 @@ fun AgentAttestationScreen(
     val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     Scaffold(
-        topBar = { TopBarWithBackButton("Attestations", nav) },
+        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_attest_topbar), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -106,7 +146,7 @@ fun AgentAttestationScreen(
             if (privKey == null) {
                 ReadOnlyKeyNotice()
             } else {
-                AttestationForm(ownerKey = keyPair)
+                AttestationForm(ownerKey = keyPair, accountViewModel = accountViewModel, nav = nav)
             }
         }
     }
@@ -129,26 +169,26 @@ private fun HoldAttestationSection(myPubkey: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Hold an attestation",
+                text = stringRes(R.string.buzz_attest_hold_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             if (mine != null) {
                 Text(
-                    text = "Holding an attestation for this account. It is attached automatically when you authenticate to a Buzz relay.",
+                    text = stringRes(R.string.buzz_attest_holding),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "Grants: " + mine.conditions.ifEmpty { "any kind, any time (unrestricted)" },
+                    text = stringRes(R.string.buzz_attest_grants_prefix, mine.conditions.ifEmpty { stringRes(R.string.buzz_attest_grants_unrestricted) }),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedButton(onClick = { BuzzHeldAttestations.remove(myPubkey) }) {
-                    Text("Remove")
+                    Text(stringRes(R.string.buzz_attest_remove))
                 }
             } else {
                 Text(
-                    text = "Paste an owner-signed auth tag issued to this account to authenticate to their Buzz workspace as a virtual member.",
+                    text = stringRes(R.string.buzz_attest_hold_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -158,7 +198,7 @@ private fun HoldAttestationSection(myPubkey: String) {
                         input = it
                         error = null
                     },
-                    label = { Text("auth tag JSON") },
+                    label = { Text(stringRes(R.string.buzz_attest_authtag_label)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -179,7 +219,7 @@ private fun HoldAttestationSection(myPubkey: String) {
                     enabled = input.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Hold attestation")
+                    Text(stringRes(R.string.buzz_attest_hold_button))
                 }
             }
         }
@@ -229,16 +269,12 @@ private fun ReadOnlyKeyNotice() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Local key required",
+                text = stringRes(R.string.buzz_attest_readonly_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text =
-                    "A NIP-OA attestation is a signature over a hashed commitment, not a Nostr event, " +
-                        "so it can only be produced by a signer that holds your raw private key. This " +
-                        "account uses a remote (NIP-46 bunker) or external (NIP-55) signer, which cannot " +
-                        "sign an attestation.",
+                text = stringRes(R.string.buzz_attest_readonly_desc),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -246,11 +282,15 @@ private fun ReadOnlyKeyNotice() {
 }
 
 @Composable
-private fun AttestationForm(ownerKey: KeyPair) {
+private fun AttestationForm(
+    ownerKey: KeyPair,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
-    var agentInput by remember { mutableStateOf("") }
+    var selectedAgent by remember { mutableStateOf<HexKey?>(null) }
     var kindInput by remember { mutableStateOf("") }
     var afterInput by remember { mutableStateOf("") }
     var beforeInput by remember { mutableStateOf("") }
@@ -258,42 +298,47 @@ private fun AttestationForm(ownerKey: KeyPair) {
     var result by remember { mutableStateOf<OwnerAttestation?>(null) }
 
     Text(
-        text =
-            "Authorize an agent pubkey to publish in your workspace without enrolling its key. " +
-                "The agent attaches the signed tag below to its events.",
+        text = stringRes(R.string.buzz_attest_form_desc),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    OutlinedTextField(
-        value = agentInput,
-        onValueChange = {
-            agentInput = it
+    // #1: pick the agent by name from the local user cache — or paste an npub/hex for a key that
+    // isn't a contact yet (the common case for an external agent operator).
+    AgentKeyPicker(
+        selected = selectedAgent,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        onSelect = {
+            selectedAgent = it
             error = null
             result = null
         },
-        label = { Text("Agent public key (npub or hex)") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        onClear = {
+            selectedAgent = null
+            error = null
+            result = null
+        },
     )
 
     Text(
-        text = "Conditions (optional) — leave blank for an unrestricted attestation.",
+        text = stringRes(R.string.buzz_attest_conditions_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    OutlinedTextField(
+    // #3: kind is any 0–65535, but the common ones have names — offer them, keep free numeric entry.
+    EditableSuggestDropdown(
         value = kindInput,
         onValueChange = {
             kindInput = it.filter(Char::isDigit)
             error = null
             result = null
         },
-        label = { Text("Restrict to kind (0–65535)") },
-        singleLine = true,
+        label = stringRes(R.string.buzz_attest_kind_label),
+        options = KIND_OPTIONS,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth(),
+        supportingText = KIND_LABELS[kindInput],
     )
 
     OutlinedTextField(
@@ -303,9 +348,11 @@ private fun AttestationForm(ownerKey: KeyPair) {
             error = null
             result = null
         },
-        label = { Text("Only events after (unix seconds)") },
+        label = { Text(stringRes(R.string.buzz_attest_after_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        // Echo the entered epoch back as a readable UTC time so nobody has to eyeball unix seconds.
+        supportingText = unixEcho(afterInput)?.let { echo -> { Text(echo) } },
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -316,9 +363,10 @@ private fun AttestationForm(ownerKey: KeyPair) {
             error = null
             result = null
         },
-        label = { Text("Only events before (unix seconds)") },
+        label = { Text(stringRes(R.string.buzz_attest_before_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        supportingText = unixEcho(beforeInput)?.let { echo -> { Text(echo) } },
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -332,7 +380,8 @@ private fun AttestationForm(ownerKey: KeyPair) {
 
     Button(
         onClick = {
-            when (val outcome = buildAttestation(agentInput, kindInput, afterInput, beforeInput, ownerKey)) {
+            val agent = selectedAgent ?: return@Button
+            when (val outcome = buildAttestation(agent, kindInput, afterInput, beforeInput, ownerKey)) {
                 is AttestationOutcome.Failure -> {
                     error = outcome.message
                     result = null
@@ -343,10 +392,10 @@ private fun AttestationForm(ownerKey: KeyPair) {
                 }
             }
         },
-        enabled = agentInput.isNotBlank(),
+        enabled = selectedAgent != null,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text("Generate attestation")
+        Text(stringRes(R.string.buzz_attest_generate))
     }
 
     result?.let { attestation ->
@@ -357,6 +406,112 @@ private fun AttestationForm(ownerKey: KeyPair) {
     }
 }
 
+/**
+ * Single-agent people picker: once an agent is chosen it shows as a removable chip; otherwise a
+ * name typeahead over the local user cache with an npub/hex paste escape hatch (Enter accepts it).
+ * Mirrors the New-DM recipient picker so authorizing an agent stops being the one raw-key field.
+ */
+@Composable
+private fun AgentKeyPicker(
+    selected: HexKey?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onSelect: (HexKey) -> Unit,
+    onClear: () -> Unit,
+) {
+    if (selected != null) {
+        AgentChip(selected, accountViewModel, nav, onClear)
+        return
+    }
+
+    var query by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf<List<HexKey>>(emptyList()) }
+    var pasteError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            suggestions = emptyList()
+            return@LaunchedEffect
+        }
+        delay(150)
+        suggestions =
+            withContext(Dispatchers.IO) {
+                LocalCache.findUsersStartingWith(query.trim(), accountViewModel.account).map { it.pubkeyHex }.take(8)
+            }
+    }
+
+    OutlinedTextField(
+        value = query,
+        onValueChange = {
+            query = it
+            pasteError = false
+        },
+        label = { Text(stringRes(R.string.buzz_attest_agent_label)) },
+        leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+        singleLine = true,
+        isError = pasteError,
+        // Keep the invalid-paste error on the field the user just typed in, not far down the form.
+        supportingText = stringRes(R.string.buzz_attest_agent_paste_error).takeIf { pasteError }?.let { msg -> { Text(msg) } },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions =
+            KeyboardActions(
+                onDone = {
+                    val hex = decodePublicKeyAsHexOrNull(query.trim())?.takeIf { it.isValid() }
+                    if (hex != null) onSelect(hex) else pasteError = true
+                },
+            ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    // A plain Column (not LazyColumn) — this form lives inside a verticalScroll parent.
+    suggestions.forEach { hex ->
+        AgentSuggestionRow(hex, accountViewModel, nav) { onSelect(hex) }
+    }
+}
+
+/** One tappable agent search result — avatar + resolved name. */
+@Composable
+private fun AgentSuggestionRow(
+    hex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onClick: () -> Unit,
+) {
+    val user: User = remember(hex) { LocalCache.getOrCreateUser(hex) }
+    val name by observeUserName(user, accountViewModel)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        UserPicture(hex, 34.dp, accountViewModel = accountViewModel, nav = nav)
+        Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** The chosen agent as a removable chip — tapping the close affordance clears the selection. */
+@Composable
+private fun AgentChip(
+    hex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onRemove: () -> Unit,
+) {
+    val user: User = remember(hex) { LocalCache.getOrCreateUser(hex) }
+    val name by observeUserName(user, accountViewModel)
+    InputChip(
+        selected = false,
+        onClick = onRemove,
+        label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        avatar = { UserPicture(hex, 22.dp, accountViewModel = accountViewModel, nav = nav) },
+        trailingIcon = { Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.buzz_attest_change_agent), modifier = Modifier.size(16.dp)) },
+    )
+}
+
 @Composable
 private fun AttestationResultCard(
     attestation: OwnerAttestation,
@@ -365,14 +520,12 @@ private fun AttestationResultCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Signed attestation",
+                text = stringRes(R.string.buzz_attest_signed_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text =
-                    "Grants: " +
-                        (attestation.conditions.ifEmpty { "any kind, any time (unrestricted)" }),
+                text = stringRes(R.string.buzz_attest_grants_prefix, attestation.conditions.ifEmpty { stringRes(R.string.buzz_attest_grants_unrestricted) }),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
@@ -386,14 +539,11 @@ private fun AttestationResultCard(
                 horizontalArrangement = Arrangement.End,
             ) {
                 OutlinedButton(onClick = onCopy) {
-                    Text("Copy tag")
+                    Text(stringRes(R.string.buzz_attest_copy_tag))
                 }
             }
             Text(
-                text =
-                    "⚠ Hand this to the agent operator only. While it is valid and you remain a " +
-                        "workspace member, the relay lets this agent post as a member under the " +
-                        "conditions above.",
+                text = stringRes(R.string.buzz_attest_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -463,6 +613,16 @@ private fun parseOptionalUnix(input: String): OptionalUnix? {
     val parsed = input.toLongOrNull() ?: return null
     if (parsed !in 0..4294967295L) return null
     return OptionalUnix(parsed)
+}
+
+private val UNIX_ECHO_FORMAT =
+    SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+
+/** A readable UTC rendering of an entered epoch-seconds string, or null when it's blank/out of range. */
+private fun unixEcho(input: String): String? {
+    if (input.isBlank()) return null
+    val secs = input.toLongOrNull()?.takeIf { it in 0..4294967295L } ?: return null
+    return UNIX_ECHO_FORMAT.format(Date(secs * 1000))
 }
 
 /** Serializes the `auth` tag to a JSON array string (values are hex / canonical ASCII). */

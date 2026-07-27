@@ -80,6 +80,9 @@ object BuzzCommands {
         |amy buzz dm open RELAY PUBKEY [PUBKEY…]     open a DM with 1-8 people (kind-41010)
         |amy buzz dm hide RELAY CHANNEL              hide a DM from my sidebar (kind-41012)
         |amy buzz dm add-member RELAY CHANNEL PUBKEY add a member to a group DM (kind-41011)
+        |amy buzz job …                             file/list/show/cancel agent jobs (43001-43006)
+        |amy buzz workflow …                        trigger/run/approve Buzz workflows (30620/46020/46030)
+        |amy buzz agent serve RELAY --exec CMD       run a parallel backlog scheduler (worktree-isolated)
         """.trimMargin()
 
     suspend fun dispatch(
@@ -98,6 +101,9 @@ object BuzzCommands {
                 "console" to { rest -> console(dataDir, rest) },
                 "personas" to { rest -> personas(dataDir, rest) },
                 "dm" to { rest -> dm(dataDir, rest) },
+                "job" to { rest -> BuzzJobCommands.dispatch(dataDir, rest) },
+                "workflow" to { rest -> BuzzWorkflowCommands.dispatch(dataDir, rest) },
+                "agent" to { rest -> BuzzAgentCommands.dispatch(dataDir, rest) },
             ),
         )
 
