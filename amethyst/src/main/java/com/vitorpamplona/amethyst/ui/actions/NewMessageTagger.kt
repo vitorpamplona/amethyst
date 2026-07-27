@@ -45,17 +45,10 @@ class NewMessageTagger(
     var message: String,
     var pTags: List<User>? = null,
     var eTags: List<Note>? = null,
-    // Defaults to a Dao that reads straight from LocalCache, so callers with no AccountViewModel
+    // Defaults to LocalCache, which implements Dao directly, so callers with no AccountViewModel
     // — model-layer sends, background receivers — can just omit it. UI callers still pass their
-    // AccountViewModel, which implements Dao with these same LocalCache lookups.
-    var dao: Dao =
-        object : Dao {
-            override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
-
-            override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
-
-            override fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
-        },
+    // AccountViewModel (also a Dao).
+    var dao: Dao = LocalCache,
 ) {
     val directMentions = mutableSetOf<HexKey>()
     val directMentionsNotes = mutableSetOf<Note>()
@@ -271,9 +264,9 @@ class NewMessageTagger(
 }
 
 interface Dao {
-    suspend fun getOrCreateUser(hex: HexKey): User
+    fun getOrCreateUser(hex: HexKey): User
 
-    suspend fun getOrCreateNote(hex: HexKey): Note
+    fun getOrCreateNote(hex: HexKey): Note
 
     fun getOrCreateAddressableNote(address: Address): AddressableNote?
 }

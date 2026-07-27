@@ -2035,13 +2035,13 @@ class AccountViewModel(
 
     fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
-    override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
+    override fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
     fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
-    override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
+    override fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
     fun noteFromEvent(event: Event): Note? {
         var note = checkGetOrCreateNote(event.id)
