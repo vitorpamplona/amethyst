@@ -138,6 +138,18 @@ fun ChatroomMessageCompose(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
+            // Advance the room's last-read marker for whatever this row turns out to be. This used
+            // to live inside NormalChatNote — the `else` of the branch below — so a row rendered by
+            // any of the specialised paths (Buzz system lines and activity rows, diffs, forum votes,
+            // NIP-28 admin lines, zaps) never marked itself read. A channel whose newest events are
+            // system messages therefore kept its unread badge no matter how often it was opened,
+            // which on a Buzz relay is most channels: joins and role changes are system messages.
+            if (routeForLastRead != null) {
+                LaunchedEffect(key1 = routeForLastRead, key2 = baseNote.idHex) {
+                    accountViewModel.loadAndMarkAsRead(routeForLastRead, baseNote.createdAt(), dismissNotificationId = baseNote.idHex)
+                }
+            }
+
             val event = baseNote.event
             if (event is LnZapEvent) {
                 RenderChatZap(baseNote, accountViewModel, nav)
@@ -163,7 +175,6 @@ fun ChatroomMessageCompose(
             } else {
                 NormalChatNote(
                     baseNote,
-                    routeForLastRead,
                     innerQuote,
                     canPreview,
                     parentBackgroundColor,
@@ -194,7 +205,6 @@ fun ChatroomMessageCompose(
 @Composable
 fun NormalChatNote(
     note: Note,
-    routeForLastRead: String?,
     innerQuote: Boolean = false,
     canPreview: Boolean = true,
     parentBackgroundColor: MutableState<Color>? = null,
@@ -221,12 +231,6 @@ fun NormalChatNote(
                 accountViewModel.isLoggedUser(note.author)
             }
         }
-
-    if (routeForLastRead != null) {
-        LaunchedEffect(key1 = routeForLastRead) {
-            accountViewModel.loadAndMarkAsRead(routeForLastRead, note.createdAt(), dismissNotificationId = note.idHex)
-        }
-    }
 
     // A geohash chat asks own messages to still show the author line (which identity posted), so the
     // usual "hide the name on my own bubbles" shortcut is opt-out there.

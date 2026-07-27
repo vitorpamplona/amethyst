@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
@@ -3420,6 +3421,26 @@ class Account(
     ) {
         val template = RemoveUserEvent.build(channel.groupId.id, listOf(pubkey))
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Re-reads a relay group's own state (39000-39003) from its host relay.
+     *
+     * Needed because Buzz never streams those. It signs them with `d`/`p` tags and **no `h`**, yet
+     * stores and fans them out channel-scoped — so a filter carrying `#h` does not match their tags,
+     * and one without `#h` is a global subscription, which by design receives no channel-scoped
+     * event. Neither shape can be live, so a role change or rename left the roster stale until the
+     * next cold start. What the relay does push is the kind-40099 that narrates the change; callers
+     * use that as the cue to call this.
+     */
+    suspend fun refreshRelayGroupState(channel: RelayGroupChannel) {
+        val relay = channel.groupId.relayUrl
+        val filter =
+            Filter(
+                kinds = RELAY_GROUP_METADATA_KINDS,
+                tags = mapOf("d" to listOf(channel.groupId.id)),
+            )
+        client.fetchAll(filters = mapOf(relay to listOf(filter)), timeoutMs = 8_000)
     }
 
     /**
