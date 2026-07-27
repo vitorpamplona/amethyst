@@ -448,6 +448,7 @@
     <string name="dm_sender_reported_subtitle">Někdo, koho sledujete, nahlásil tento účet</string>
     <string name="dm_sender_reported_icon">Nahlášeno</string>
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Chyba při načítání odpovědí: "</string>
     <string name="try_again">Zkusit znovu</string>
     <string name="notification_feed_is_empty">Zatím žádná oznámení.</string>
@@ -2404,6 +2405,7 @@
     <string name="chat_type_ephemeral_title">Dočasné chaty</string>
     <string name="chat_type_ephemeral_desc">Odlehčené místnosti vázané na relay, které neuchovávají historii.</string>
     <string name="relay_group_create_title">Vytvořit skupinu</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">Tento relay neuvádí podporu skupin NIP-29. Skupina zde vytvořená nebude fungovat — její název, členové a zprávy nebudou relayem spravovány. Vyberte relay, který podporuje skupiny založené na relay.</string>
     <string name="relay_group_create_name">Název skupiny</string>
     <string name="relay_group_create_topic">Téma (volitelné)</string>
@@ -2451,6 +2453,7 @@
     <string name="relay_group_badge_private">Soukromá</string>
     <string name="relay_group_badge_invite_only">Pouze na pozvání</string>
     <string name="relay_group_badge_live">ŽIVĚ</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Zadejte platnou URL relay (wss://…).</string>
     <string name="relay_group_field_name">Název</string>
     <string name="relay_group_field_about">Popis</string>
@@ -3283,6 +3286,7 @@
     <string name="buzz_system_message_deleted_reason">%1$s smazal zprávu: %2$s</string>
     <string name="buzz_system_dm_created">%1$s zahájil tuto konverzaci</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <string name="buzz_huddle_started">🔊 %1$s zahájil huddle</string>
     <string name="buzz_huddle_joined">🔊 %1$s se připojil k huddlu</string>
@@ -3346,6 +3350,7 @@
     <string name="buzz_invite_title">Pozvánka do pracovního prostoru</string>
     <string name="buzz_invite_heading">Připojit se k tomuto pracovnímu prostoru</string>
     <string name="buzz_invite_workspace">Pracovní prostor</string>
+    <string name="buzz_invite_role">Role</string>
     <string name="buzz_invite_body">Pracovní prostor se otevře v zabezpečeném prohlížeči v aplikaci, kde si projdete podmínky a dokončíte připojení. Přihlásí vás vaším klíčem Amethyst — bez hesla.</string>
     <string name="buzz_invite_continue">Pokračovat v prohlížeči</string>
     <string name="buzz_invite_invalid">Toto nevypadá jako platný odkaz s pozvánkou Buzz.</string>
@@ -3370,6 +3375,7 @@
     <string name="buzz_invite_share">Sdílet</string>
     <string name="buzz_invite_copy">Kopírovat</string>
     <string name="buzz_invite_error_title">Pozvánku se nepodařilo vytvořit</string>
+    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_pin">Připnout kanál</string>
     <string name="buzz_unpin">Odepnout kanál</string>
     <string name="buzz_dm_section_empty">Zatím žádné konverzace</string>
@@ -4633,4 +4639,7 @@
     <string name="new_conversation_location_pro_1">Anonymní — jednorázová identita pro každou oblast, nikdy váš npub.</string>
     <string name="new_conversation_location_pro_2">Kompatibilní s Bitchatem; zasáhne blízké uživatele na stejných relayích.</string>
     <string name="new_conversation_location_con_1">Veřejné a dočasné — žádná historie, může to číst kdokoli v buňce.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

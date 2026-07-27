@@ -428,6 +428,7 @@
     <string name="dm_sender_reported_subtitle">Någon du följer har flaggat detta konto</string>
     <string name="dm_sender_reported_icon">Anmäld</string>
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Det gick inte att läsa in svar: "</string>
     <string name="try_again">Försök igen</string>
     <string name="notification_feed_is_empty">Inga aviseringar ännu.</string>
@@ -2318,6 +2319,7 @@
     <string name="chat_type_ephemeral_title">Försvinnande chattar</string>
     <string name="chat_type_ephemeral_desc">Lätta, reläbegränsade rum som inte sparar historik.</string>
     <string name="relay_group_create_title">Skapa en grupp</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">Det här reläet annonserar inte stöd för NIP-29-relägrupper. En grupp som skapas här fungerar inte — dess namn, medlemmar och meddelanden hanteras inte av reläet. Välj ett relä som stöder reläbaserade grupper.</string>
     <string name="relay_group_create_name">Gruppnamn</string>
     <string name="relay_group_create_topic">Ämne (valfritt)</string>
@@ -3168,6 +3170,7 @@
     <string name="buzz_system_message_deleted_reason">%1$s tog bort ett meddelande: %2$s</string>
     <string name="buzz_system_dm_created">%1$s startade den här konversationen</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <string name="buzz_huddle_started">🔊 %1$s startade en huddle</string>
     <string name="buzz_huddle_joined">🔊 %1$s gick med i huddlen</string>
@@ -3183,9 +3186,11 @@
     <!-- Buzz forum votes (kind 45002). -->
     <string name="buzz_forum_upvoted">▲ %1$s röstade upp ett inlägg</string>
     <string name="buzz_forum_downvoted">▼ %1$s röstade ner ett inlägg</string>
+    <string name="buzz_canvas_title">Canvas</string>
     <string name="buzz_canvas_empty">Ingen canvas har delats i den här arbetsytan än.</string>
     <string name="buzz_canvas_edit">Redigera canvas</string>
     <string name="buzz_canvas_save">Spara canvas</string>
+    <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
     <string name="buzz_edit_message">Redigera</string>
     <string name="buzz_editing_banner">Redigerar meddelande</string>
     <string name="edit_message">Redigera</string>
@@ -3254,6 +3259,7 @@
     <string name="buzz_invite_share">Dela</string>
     <string name="buzz_invite_copy">Kopiera</string>
     <string name="buzz_invite_error_title">Kunde inte skapa inbjudan</string>
+    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_pin">Fäst kanal</string>
     <string name="buzz_unpin">Lossa kanal</string>
     <string name="buzz_dm_section_empty">Inga konversationer än</string>
@@ -4467,4 +4473,7 @@
     <string name="new_conversation_location_pro_1">Anonym — en engångsidentitet per område, aldrig din npub.</string>
     <string name="new_conversation_location_pro_2">Bitchat-kompatibel; når närliggande användare på samma reläer.</string>
     <string name="new_conversation_location_con_1">Offentlig och flyktig — ingen historik, alla i cellen kan läsa den.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

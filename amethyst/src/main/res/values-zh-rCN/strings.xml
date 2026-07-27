@@ -2095,6 +2095,7 @@
     <string name="chat_type_ephemeral_title">临时聊天</string>
     <string name="chat_type_ephemeral_desc">不留存历史记录的中继限定的轻量级房间。</string>
     <string name="relay_group_create_title">建群</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">此继电器不支持NIP-29中继群。 在这里创建的群将无法工作 — — 其名称、成员和消息将不会由中继管理。选择支持基于中继的群的中继。</string>
     <string name="relay_group_create_name">群名称</string>
     <string name="relay_group_create_topic">主题(可选)</string>
@@ -4058,4 +4059,7 @@
     <string name="new_conversation_location_pro_1">匿名−−每个区域的一次性身份，永远不会透露你的 npub。</string>
     <string name="new_conversation_location_pro_2">Bitchat-兼容；接触同一中继上的附近用户。</string>
     <string name="new_conversation_location_con_1">公开和临时——没有历史记录，房间里的任何人都可以阅读。</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

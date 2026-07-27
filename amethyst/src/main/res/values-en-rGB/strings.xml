@@ -61,6 +61,7 @@
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <!-- Onchain zap send dialog -->
@@ -83,4 +84,7 @@
     <!-- NIP-9B community rules composer-side validation. -->
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
     <!-- Marmot (MLS) group chats -->
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

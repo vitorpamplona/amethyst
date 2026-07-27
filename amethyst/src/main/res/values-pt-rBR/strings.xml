@@ -428,6 +428,7 @@
     <string name="dm_sender_reported_subtitle">Alguém que você segue sinalizou esta conta</string>
     <string name="dm_sender_reported_icon">Denunciado</string>
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Erro ao carregar respostas"</string>
     <string name="try_again">Tente novamente</string>
     <string name="notification_feed_is_empty">Ainda não há notificações.</string>
@@ -1831,6 +1832,7 @@
     <string name="app_notification_mentions_summary">Novas menções</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <string name="app_notification_group_messages">Mensagens</string>
+    <string name="app_notification_group_social">Social</string>
     <string name="app_notification_group_payments">Pagamentos</string>
     <string name="app_notification_group_content">Conteúdo</string>
     <string name="app_notification_group_developer">Desenvolvedor</string>
@@ -2317,6 +2319,7 @@
     <string name="chat_type_ephemeral_title">Chats efêmeros</string>
     <string name="chat_type_ephemeral_desc">Salas leves, restritas a um relay, que não mantêm histórico.</string>
     <string name="relay_group_create_title">Criar um grupo</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">Este relay não anuncia suporte a grupos NIP-29. Um grupo criado aqui não funcionará — seu nome, membros e mensagens não serão gerenciados pelo relay. Escolha um relay que suporte grupos baseados em relay.</string>
     <string name="relay_group_create_name">Nome do grupo</string>
     <string name="relay_group_create_topic">Tópico (opcional)</string>
@@ -2364,6 +2367,7 @@
     <string name="relay_group_badge_private">Privado</string>
     <string name="relay_group_badge_invite_only">Somente por convite</string>
     <string name="relay_group_badge_live">AO VIVO</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Insira uma URL de relay válida (wss://…).</string>
     <string name="relay_group_field_name">Nome</string>
     <string name="relay_group_field_about">Descrição</string>
@@ -3166,6 +3170,7 @@
     <string name="buzz_system_message_deleted_reason">%1$s excluiu uma mensagem: %2$s</string>
     <string name="buzz_system_dm_created">%1$s iniciou esta conversa</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <string name="buzz_huddle_started">🔊 %1$s iniciou um huddle</string>
     <string name="buzz_huddle_joined">🔊 %1$s entrou no huddle</string>
@@ -3181,9 +3186,11 @@
     <!-- Buzz forum votes (kind 45002). -->
     <string name="buzz_forum_upvoted">▲ %1$s votou a favor de um post</string>
     <string name="buzz_forum_downvoted">▼ %1$s votou contra um post</string>
+    <string name="buzz_canvas_title">Canvas</string>
     <string name="buzz_canvas_empty">Nenhum canvas foi compartilhado neste espaço de trabalho ainda.</string>
     <string name="buzz_canvas_edit">Editar canvas</string>
     <string name="buzz_canvas_save">Salvar canvas</string>
+    <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
     <string name="buzz_edit_message">Editar</string>
     <string name="buzz_editing_banner">Editando mensagem</string>
     <string name="edit_message">Editar</string>
@@ -3252,6 +3259,7 @@
     <string name="buzz_invite_share">Compartilhar</string>
     <string name="buzz_invite_copy">Copiar</string>
     <string name="buzz_invite_error_title">Não foi possível criar o convite</string>
+    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_pin">Fixar canal</string>
     <string name="buzz_unpin">Desafixar canal</string>
     <string name="buzz_dm_section_empty">Nenhuma conversa ainda</string>
@@ -4465,4 +4473,7 @@
     <string name="new_conversation_location_pro_1">Anônimo — uma identidade descartável por área, nunca seu npub.</string>
     <string name="new_conversation_location_pro_2">Compatível com Bitchat; alcança usuários próximos nos mesmos relays.</string>
     <string name="new_conversation_location_con_1">Público e efêmero — sem histórico, qualquer um na célula pode ler.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

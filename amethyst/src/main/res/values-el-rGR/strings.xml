@@ -1518,6 +1518,7 @@
     <string name="messages_create_public_private_chat_description">Νέα δημόσια ή ιδιωτική ομάδα</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="messages_new_message">Ιδιωτικό</string>
@@ -2997,4 +2998,7 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Σφάλμα ανάλυσης JSON από την ανάκτηση τιμολογίου του %1$s. Ελέγξτε τη ρύθμιση Lightning του χρήστη</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Δεν είναι δυνατή η δημιουργία τιμολογίου Lightning. Μήνυμα από τον/την %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Δεν είναι δυνατή η δημιουργία τιμολογίου Lightning από τον/την %1$s: Το στοιχείο pr δεν βρέθηκε στο αποτέλεσμα JSON.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

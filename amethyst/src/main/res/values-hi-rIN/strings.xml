@@ -2321,6 +2321,7 @@
     <string name="chat_type_ephemeral_title">अस्थायी चर्चाएँ</string>
     <string name="chat_type_ephemeral_desc">लघु पुनःप्रसारक सीमित शालाएँ जो स्थायी इतिहास नहीं रखते।</string>
     <string name="relay_group_create_title">समूह बनाएँ</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">यह पुनःप्रसारक निप॰२९ पुनःप्रसारक समूहों का अवलम्बन करने का विज्ञापन नहीं करता। यहाँ बनाए गए समूह काम नहीं करेंगे। उसका नाम तथा सदस्यों तथा सन्देशों का प्रबन्धन पुनःप्रसारक द्वारा नहीं किया जाएगा। एक पुनःप्रसारक का चयन करें जो पुनःप्रसारक आधारित समूहों का अवलम्बन करता हो।</string>
     <string name="relay_group_create_name">समूह नाम</string>
     <string name="relay_group_create_topic">विषय (विकल्पात्मक)</string>
@@ -4475,4 +4476,7 @@
     <string name="new_conversation_location_pro_1">नामरहित। एक अस्थायी परिचय प्रति क्षेत्र। आपका एनपुब॰ कभी नहीं।</string>
     <string name="new_conversation_location_pro_2">बिटचाट॰ अनुकूल। निकटस्थ प्रयोक्ता अभिगम्य जो समान पुनःप्रसारकों पर हों।</string>
     <string name="new_conversation_location_con_1">सार्वजनिक तथा अस्थायी। इतिहास रहित। प्रसारक्षेत्र में सभी पढ सकेंगे।</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>
