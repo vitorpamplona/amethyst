@@ -301,7 +301,7 @@ class RelayGroupChannel(
         val admin = admins.firstOrNull { it.pubKey == pubkey }
         if (admin != null) {
             return when {
-                admin.roles.any { it.equals(RelayGroupMembership.ROLE_ADMIN, true) } -> RelayGroupMembership.ADMIN
+                admin.roles.any { role -> RelayGroupMembership.ADMIN_ROLES.any { role.equals(it, true) } } -> RelayGroupMembership.ADMIN
                 // Presence in the kind-39001 admins list IS the moderation signal;
                 // the role labels (moderator, ceo, owner, …) are relay-defined. So
                 // anyone in that list who isn't the top-level admin is at least a

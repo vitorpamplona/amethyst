@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListS
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
@@ -168,6 +169,8 @@ import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_ADMIN
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -3428,7 +3431,19 @@ class Account(
         pubkey: HexKey,
         roles: List<String>,
     ) {
-        val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles))
+        // Buzz ignores the roles inside the `p` tag and reads a top-level `role` tag instead, in its
+        // own vocabulary — so map ours onto its set before sending. Anything it cannot parse fails
+        // the whole put-user, which is why an unmapped role must become `member` rather than travel.
+        val buzzRole =
+            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+                when {
+                    roles.any { it.equals(RelayGroupMembership.ROLE_ADMIN, true) } -> BUZZ_ROLE_ADMIN
+                    else -> BUZZ_ROLE_MEMBER
+                }
+            } else {
+                null
+            }
+        val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles), buzzRole = buzzRole)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 

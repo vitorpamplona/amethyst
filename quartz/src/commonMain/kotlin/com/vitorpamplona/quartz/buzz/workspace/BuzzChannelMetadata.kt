@@ -80,3 +80,14 @@ fun newBuzzChannelId(): String {
     val hex = bytes.toHexKey()
     return "${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}"
 }
+
+/**
+ * Buzz's channel member roles, from `crates/buzz-core/src/channel.rs`. Note there is **no
+ * moderator**: a role string outside this set fails the relay's put-user handler outright
+ * (`invalid role: …`), taking the membership change with it.
+ */
+const val BUZZ_ROLE_OWNER = "owner"
+const val BUZZ_ROLE_ADMIN = "admin"
+const val BUZZ_ROLE_MEMBER = "member"
+const val BUZZ_ROLE_GUEST = "guest"
+const val BUZZ_ROLE_BOT = "bot"

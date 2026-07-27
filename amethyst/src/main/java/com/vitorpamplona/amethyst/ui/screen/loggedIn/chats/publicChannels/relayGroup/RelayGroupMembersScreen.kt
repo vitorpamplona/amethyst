@@ -25,9 +25,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,10 +41,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -60,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -73,12 +77,14 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzAddPeopleDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
@@ -165,8 +171,6 @@ private fun RelayGroupMembers(
                 .sortedBy { it.membership.rank() }
         }
 
-    var showAddMember by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
@@ -191,11 +195,17 @@ private fun RelayGroupMembers(
             )
         },
         // Only a moderator can add a member (the relay rejects a kind-9000 from anyone else).
-        floatingActionButton = {
+        // The search sits at the bottom of the screen rather than behind a button: adding people is
+        // usually adding *several*, and a dialog made that "open, search, pick, dialog closes,
+        // reopen" per person. Inline, each pick lands in the roster above while the field keeps
+        // focus for the next name.
+        bottomBar = {
             if (iCanModerate) {
-                FloatingActionButton(onClick = { showAddMember = true }, shape = CircleShape) {
-                    Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(R.string.relay_group_add_member))
-                }
+                AddMemberBar(
+                    isAlreadyIn = { channel.membershipOf(it) != RelayGroupMembership.NONE },
+                    onAdd = { accountViewModel.putRelayGroupUser(channel, it, emptyList()) },
+                    accountViewModel = accountViewModel,
+                )
             }
         },
     ) { padding ->
@@ -224,14 +234,83 @@ private fun RelayGroupMembers(
             }
         }
     }
+}
 
-    if (showAddMember) {
-        BuzzAddPeopleDialog(
-            title = stringRes(R.string.relay_group_add_member),
-            accountViewModel = accountViewModel,
-            isAlreadyIn = { channel.membershipOf(it) != RelayGroupMembership.NONE },
-            onAdd = { accountViewModel.putRelayGroupUser(channel, it, emptyList()) },
-            onDismiss = { showAddMember = false },
+/**
+ * The always-present "add a member" search docked at the bottom of the roster: the app's ordinary
+ * user typeahead (local cache + relay + NIP-05 + a pasted npub), with its results rising above the
+ * field the way a chat composer's suggestions do.
+ *
+ * Picking someone adds them and clears the query but keeps the keyboard, so a moderator can add a
+ * handful of people in one pass. Someone already in the group shows an "Added" hint instead of the
+ * add icon and does nothing when tapped — the relay would reject the duplicate anyway.
+ */
+@Composable
+private fun AddMemberBar(
+    isAlreadyIn: (HexKey) -> Boolean,
+    onAdd: (HexKey) -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    var query by remember { mutableStateOf("") }
+    val userSuggestions =
+        remember(accountViewModel) {
+            UserSuggestionState(accountViewModel.account, Amethyst.instance.nip05Client)
+        }
+
+    LaunchedEffect(query) { userSuggestions.processCurrentWord(query) }
+
+    // Docked at the bottom, so it has to clear the gesture bar and ride above the keyboard —
+    // otherwise the field it is meant to be typed into is the part that gets covered.
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding(),
+    ) {
+        if (query.length > 2) {
+            ShowUserSuggestionList(
+                userSuggestions = userSuggestions,
+                onSelect = { user ->
+                    if (!isAlreadyIn(user.pubkeyHex)) {
+                        onAdd(user.pubkeyHex)
+                        query = ""
+                    }
+                },
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightChat,
+                contentPadding = PaddingValues(0.dp),
+                trailingContent = { user ->
+                    if (isAlreadyIn(user.pubkeyHex)) {
+                        Text(
+                            text = stringRes(R.string.buzz_import_added),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Icon(
+                            symbol = MaterialSymbols.PersonAdd,
+                            contentDescription = stringRes(R.string.relay_group_add_member),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                },
+            )
+            HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+        }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            singleLine = true,
+            leadingIcon = {
+                Icon(
+                    symbol = MaterialSymbols.PersonAdd,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+            },
+            label = { Text(stringRes(R.string.buzz_add_people_hint)) },
         )
     }
 }
@@ -254,6 +333,8 @@ private fun RelayGroupMemberRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
+
     // Create-or-get (never a one-shot null): UsernameDisplay observes the user's
     // metadata flow, so the name fills in when the kind:0 arrives instead of being
     // stuck on truncated hex forever.
@@ -300,88 +381,96 @@ private fun RelayGroupMemberRow(
                 (viewerIsAdmin || entry.membership != RelayGroupMembership.ADMIN)
 
         if (canActOnTarget) {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(
-                    symbol = MaterialSymbols.MoreVert,
-                    contentDescription = stringRes(R.string.more_options),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                val declaredRoles = channel.supportedRoles
-                if (declaredRoles.isNotEmpty()) {
-                    // The relay declares its own role set (kind 39003) — offer exactly those
-                    // instead of the built-in admin/moderator pair. Roles are privilege grants,
-                    // so only admins assign them; the relay is the final authority.
-                    if (viewerIsAdmin) {
-                        declaredRoles.forEach { role ->
-                            val alreadyHasRole = entry.roles.any { it.equals(role.name, true) }
-                            if (!alreadyHasRole) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(stringRes(R.string.relay_group_assign_role, role.name))
-                                            role.description?.let {
-                                                Text(
-                                                    text = it,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
+            // Button and menu share one Box: an expanded DropdownMenu still emits a node into its
+            // parent, so as a direct child of this `spacedBy` Row it added a second 12.dp gap and
+            // visibly nudged the button sideways the moment you tapped it.
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.MoreVert,
+                        contentDescription = stringRes(R.string.more_options),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    val declaredRoles = channel.supportedRoles
+                    if (declaredRoles.isNotEmpty()) {
+                        // The relay declares its own role set (kind 39003) — offer exactly those
+                        // instead of the built-in admin/moderator pair. Roles are privilege grants,
+                        // so only admins assign them; the relay is the final authority.
+                        if (viewerIsAdmin) {
+                            declaredRoles.forEach { role ->
+                                val alreadyHasRole = entry.roles.any { it.equals(role.name, true) }
+                                if (!alreadyHasRole) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(stringRes(R.string.relay_group_assign_role, role.name))
+                                                role.description?.let {
+                                                    Text(
+                                                        text = it,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
                                             }
-                                        }
-                                    },
-                                    onClick = {
-                                        menuOpen = false
-                                        // Additive: NIP-29 allows multiple roles per member and the menu only
-                                        // offers roles they lack, so keep the ones they already hold.
-                                        accountViewModel.putRelayGroupUser(channel, entry.pubkey, entry.roles + role.name)
-                                    },
-                                )
+                                        },
+                                        onClick = {
+                                            menuOpen = false
+                                            // Additive: NIP-29 allows multiple roles per member and the menu only
+                                            // offers roles they lack, so keep the ones they already hold.
+                                            accountViewModel.putRelayGroupUser(channel, entry.pubkey, entry.roles + role.name)
+                                        },
+                                    )
+                                }
                             }
                         }
+                    } else {
+                        // No 39003 role set advertised: fall back to the built-in admin/moderator shortcuts.
+                        if (viewerIsAdmin && entry.membership != RelayGroupMembership.ADMIN) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(R.string.relay_group_make_admin)) },
+                                onClick = {
+                                    menuOpen = false
+                                    accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_ADMIN))
+                                },
+                            )
+                        }
+                        // Buzz's roles are owner/admin/member/guest/bot — there is no moderator, and a
+                        // role it cannot parse fails the whole put-user. Offering it there is offering a
+                        // menu item that cannot do anything.
+                        if (!isBuzzRelay && entry.membership != RelayGroupMembership.MODERATOR && entry.membership != RelayGroupMembership.ADMIN) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(R.string.relay_group_make_moderator)) },
+                                onClick = {
+                                    menuOpen = false
+                                    accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_MODERATOR))
+                                },
+                            )
+                        }
                     }
-                } else {
-                    // No 39003 role set advertised: fall back to the built-in admin/moderator shortcuts.
-                    if (viewerIsAdmin && entry.membership != RelayGroupMembership.ADMIN) {
+                    if (entry.membership == RelayGroupMembership.MODERATOR || entry.membership == RelayGroupMembership.ADMIN) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.relay_group_make_admin)) },
+                            text = { Text(stringRes(R.string.relay_group_demote_member)) },
                             onClick = {
                                 menuOpen = false
-                                accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_ADMIN))
+                                accountViewModel.putRelayGroupUser(channel, entry.pubkey, emptyList())
                             },
                         )
                     }
-                    if (entry.membership != RelayGroupMembership.MODERATOR && entry.membership != RelayGroupMembership.ADMIN) {
-                        DropdownMenuItem(
-                            text = { Text(stringRes(R.string.relay_group_make_moderator)) },
-                            onClick = {
-                                menuOpen = false
-                                accountViewModel.putRelayGroupUser(channel, entry.pubkey, listOf(RelayGroupMembership.ROLE_MODERATOR))
-                            },
-                        )
-                    }
-                }
-                if (entry.membership == RelayGroupMembership.MODERATOR || entry.membership == RelayGroupMembership.ADMIN) {
                     DropdownMenuItem(
-                        text = { Text(stringRes(R.string.relay_group_demote_member)) },
+                        text = {
+                            Text(
+                                text = stringRes(R.string.relay_group_remove_user),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
                         onClick = {
                             menuOpen = false
-                            accountViewModel.putRelayGroupUser(channel, entry.pubkey, emptyList())
+                            confirmRemove = true
                         },
                     )
                 }
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = stringRes(R.string.relay_group_remove_user),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    onClick = {
-                        menuOpen = false
-                        confirmRemove = true
-                    },
-                )
             }
         }
     }
