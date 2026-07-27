@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.Dispatchers
@@ -95,14 +96,21 @@ fun BuzzCanvasScreen(
     val canvas = remember(version) { state.canvasNote }
     val content = canvas?.event?.content
 
-    // The channel this canvas belongs to, for the subtitle. Null until its kind-39000 lands, which
-    // only costs the subtitle — the canvas itself is keyed by the raw channel id.
-    val channelName =
+    // The channel this canvas belongs to, for the subtitle and the edit gate. Null until its
+    // kind-39000 lands, which only costs the subtitle — the canvas itself is keyed by the raw id.
+    val channel =
         remember(channelId, relayUrl) {
             RelayUrlNormalizer.normalizeOrNull(relayUrl)?.let { relay ->
-                LocalCache.getRelayGroupChannelIfExists(GroupId(channelId, relay))?.toBestDisplayName()
+                LocalCache.getRelayGroupChannelIfExists(GroupId(channelId, relay))
             }
         }
+    val channelName = channel?.toBestDisplayName()
+
+    // Buzz never lets a DM's canvas be written: its editor's `canEdit` is `canEditNarrative`, which
+    // excludes `channelType === "dm"` outright. A DM reaching this screen at all means a canvas
+    // already exists (see the top bar's gate), so render it read-only rather than offering an edit
+    // that Buzz's own client would never show.
+    val canEdit = channel?.event?.isBuzzDm() != true
 
     var editing by remember { mutableStateOf(false) }
 
@@ -145,8 +153,10 @@ fun BuzzCanvasScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { editing = true }) {
-                Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(R.string.buzz_canvas_edit))
+            if (canEdit) {
+                FloatingActionButton(onClick = { editing = true }) {
+                    Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(R.string.buzz_canvas_edit))
+                }
             }
         },
     ) { padding ->
