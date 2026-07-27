@@ -87,6 +87,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -621,22 +622,27 @@ private fun WorkingLine(
     accent: Color,
 ) {
     val pulse = rememberInfiniteTransition(label = "working")
-    val a by pulse.animateFloat(
-        initialValue = 0.45f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "workingAlpha",
-    )
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.alpha(a)) {
+    // Keep the State (no `by`) and read it inside graphicsLayer so the pulse redraws, not recomposes.
+    val a =
+        pulse.animateFloat(
+            initialValue = 0.45f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "workingAlpha",
+        )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.graphicsLayer { alpha = a.value }) {
         Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(accent))
         Text(text, style = MaterialTheme.typography.bodyMedium, color = accent, fontWeight = FontWeight.Medium)
     }
 }
 
+/** Matches the first URL in a shipped-run result; compiled once for the process, not per result. */
+private val URL_REGEX = Regex("https?://\\S+")
+
 /** A shipped result — if it carries a URL, offer a prominent "View PR" instead of raw text. */
 @Composable
 private fun ResultLine(result: String) {
-    val url = remember(result) { Regex("https?://\\S+").find(result)?.value }
+    val url = remember(result) { URL_REGEX.find(result)?.value }
     if (url != null) {
         val uriHandler = LocalUriHandler.current
         Button(onClick = { uriHandler.openUri(url) }, shape = RoundedCornerShape(12.dp)) {

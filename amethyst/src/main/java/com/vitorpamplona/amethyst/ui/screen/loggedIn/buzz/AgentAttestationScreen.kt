@@ -83,6 +83,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 // Common event kinds an agent might be restricted to — suggestions for the "Restrict to kind" field;
 // any 0–65535 is still accepted by free numeric entry.
@@ -319,7 +323,6 @@ private fun AttestationForm(
             error = null
             result = null
         },
-        onInvalidPaste = { error = "Invalid agent public key. Enter an npub or 64-char hex key." },
     )
 
     Text(
@@ -352,6 +355,8 @@ private fun AttestationForm(
         label = { Text("Only events after (unix seconds)") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        // Echo the entered epoch back as a readable UTC time so nobody has to eyeball unix seconds.
+        supportingText = unixEcho(afterInput)?.let { echo -> { Text(echo) } },
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -365,6 +370,7 @@ private fun AttestationForm(
         label = { Text("Only events before (unix seconds)") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        supportingText = unixEcho(beforeInput)?.let { echo -> { Text(echo) } },
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -416,7 +422,6 @@ private fun AgentKeyPicker(
     nav: INav,
     onSelect: (HexKey) -> Unit,
     onClear: () -> Unit,
-    onInvalidPaste: () -> Unit,
 ) {
     if (selected != null) {
         AgentChip(selected, accountViewModel, nav, onClear)
@@ -425,6 +430,7 @@ private fun AgentKeyPicker(
 
     var query by remember { mutableStateOf("") }
     var suggestions by remember { mutableStateOf<List<HexKey>>(emptyList()) }
+    var pasteError by remember { mutableStateOf(false) }
 
     LaunchedEffect(query) {
         if (query.isBlank()) {
@@ -440,16 +446,22 @@ private fun AgentKeyPicker(
 
     OutlinedTextField(
         value = query,
-        onValueChange = { query = it },
+        onValueChange = {
+            query = it
+            pasteError = false
+        },
         label = { Text("Agent (search a name, or paste npub / hex)") },
         leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
         singleLine = true,
+        isError = pasteError,
+        // Keep the invalid-paste error on the field the user just typed in, not far down the form.
+        supportingText = "Enter an npub or 64-char hex key.".takeIf { pasteError }?.let { msg -> { Text(msg) } },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions =
             KeyboardActions(
                 onDone = {
                     val hex = decodePublicKeyAsHexOrNull(query.trim())?.takeIf { it.isValid() }
-                    if (hex != null) onSelect(hex) else onInvalidPaste()
+                    if (hex != null) onSelect(hex) else pasteError = true
                 },
             ),
         modifier = Modifier.fillMaxWidth(),
@@ -610,6 +622,16 @@ private fun parseOptionalUnix(input: String): OptionalUnix? {
     val parsed = input.toLongOrNull() ?: return null
     if (parsed !in 0..4294967295L) return null
     return OptionalUnix(parsed)
+}
+
+private val UNIX_ECHO_FORMAT =
+    SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+
+/** A readable UTC rendering of an entered epoch-seconds string, or null when it's blank/out of range. */
+private fun unixEcho(input: String): String? {
+    if (input.isBlank()) return null
+    val secs = input.toLongOrNull()?.takeIf { it in 0..4294967295L } ?: return null
+    return UNIX_ECHO_FORMAT.format(Date(secs * 1000))
 }
 
 /** Serializes the `auth` tag to a JSON array string (values are hex / canonical ASCII). */
