@@ -2412,6 +2412,7 @@
     <string name="relay_group_favorite_relay">Favoritar este relay</string>
     <string name="relay_group_threads_empty">Nenhuma thread ainda. Comece uma com o botão +.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="relay_group_threads_empty_read_only">Nenhuma discussão ainda.</string>
     <string name="relay_group_threads_loading_older">Carregando tópicos mais antigos…</string>
     <string name="relay_group_threads_all_caught_up">Nenhum tópico mais antigo</string>
     <string name="relay_group_thread_new">Nova thread</string>
@@ -3144,10 +3145,42 @@
     <string name="buzz_message_edited">(editado)</string>
     <string name="buzz_diff_truncated">(diff truncado)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s entrou</string>
+    <string name="buzz_system_member_added">%1$s foi adicionado por %2$s</string>
+    <string name="buzz_system_member_left">%1$s saiu</string>
+    <string name="buzz_system_member_removed">%1$s foi removido por %2$s</string>
+    <string name="buzz_system_topic_changed">%1$s definiu o tópico como “%2$s”</string>
+    <string name="buzz_system_topic_cleared">%1$s removeu o tópico</string>
+    <string name="buzz_system_purpose_changed">%1$s definiu o propósito como “%2$s”</string>
+    <string name="buzz_system_purpose_cleared">%1$s removeu o propósito</string>
+    <string name="buzz_system_visibility_open">%1$s tornou este canal aberto — qualquer pessoa pode encontrá-lo e entrar</string>
+    <string name="buzz_system_visibility_private">%1$s tornou este canal privado — apenas por convite</string>
+    <string name="buzz_system_visibility_other">%1$s alterou a visibilidade para %2$s</string>
+    <string name="buzz_system_ttl_set">%1$s definiu que as mensagens desaparecem após %2$s</string>
+    <string name="buzz_system_ttl_cleared">%1$s desativou as mensagens temporárias</string>
+    <string name="buzz_system_channel_archived">%1$s arquivou este canal</string>
+    <string name="buzz_system_channel_unarchived">%1$s restaurou este canal</string>
+    <string name="buzz_system_channel_created">%1$s criou este canal</string>
+    <string name="buzz_system_channel_deleted">%1$s excluiu este canal</string>
+    <string name="buzz_system_message_deleted">%1$s excluiu uma mensagem</string>
+    <string name="buzz_system_message_deleted_reason">%1$s excluiu uma mensagem: %2$s</string>
+    <string name="buzz_system_dm_created">%1$s iniciou esta conversa</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s iniciou um huddle</string>
+    <string name="buzz_huddle_joined">🔊 %1$s entrou no huddle</string>
+    <string name="buzz_huddle_left">🔊 %1$s saiu do huddle</string>
+    <string name="buzz_huddle_ended">🔊 Huddle encerrado</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙ %1$s solicitou um trabalho</string>
+    <string name="buzz_job_accepted">⚙ %1$s aceitou o trabalho</string>
+    <string name="buzz_job_progress">⚙ Progresso do trabalho</string>
+    <string name="buzz_job_result">⚙ Resultado do trabalho</string>
+    <string name="buzz_job_cancelled">⚙ Trabalho cancelado</string>
+    <string name="buzz_job_error">⚠ Erro no trabalho</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">▲ %1$s votou a favor de um post</string>
+    <string name="buzz_forum_downvoted">▼ %1$s votou contra um post</string>
     <string name="buzz_canvas_empty">Nenhum canvas foi compartilhado neste espaço de trabalho ainda.</string>
     <string name="buzz_canvas_edit">Editar canvas</string>
     <string name="buzz_canvas_save">Salvar canvas</string>
@@ -4432,44 +4465,4 @@
     <string name="new_conversation_location_pro_1">Anônimo — uma identidade descartável por área, nunca seu npub.</string>
     <string name="new_conversation_location_pro_2">Compatível com Bitchat; alcança usuários próximos nos mesmos relays.</string>
     <string name="new_conversation_location_con_1">Público e efêmero — sem histórico, qualquer um na célula pode ler.</string>
-    <string name="app_notification_group_social">Social</string>
-    <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
-    <string name="buzz_canvas_title">Canvas</string>
-    <string name="buzz_forum_downvoted">▼ %1$s votou contra um post</string>
-    <string name="buzz_forum_upvoted">▲ %1$s votou a favor de um post</string>
-    <string name="buzz_huddle_ended">🔊 Huddle encerrado</string>
-    <string name="buzz_huddle_joined">🔊 %1$s entrou no huddle</string>
-    <string name="buzz_huddle_left">🔊 %1$s saiu do huddle</string>
-    <string name="buzz_huddle_started">🔊 %1$s iniciou um huddle</string>
-    <string name="buzz_invite_dismiss">OK</string>
-    <string name="buzz_job_accepted">⚙ %1$s aceitou o trabalho</string>
-    <string name="buzz_job_cancelled">⚙ Trabalho cancelado</string>
-    <string name="buzz_job_error">⚠ Erro no trabalho</string>
-    <string name="buzz_job_progress">⚙ Progresso do trabalho</string>
-    <string name="buzz_job_requested">⚙ %1$s solicitou um trabalho</string>
-    <string name="buzz_job_result">⚙ Resultado do trabalho</string>
-    <string name="buzz_system_channel_archived">%1$s arquivou este canal</string>
-    <string name="buzz_system_channel_created">%1$s criou este canal</string>
-    <string name="buzz_system_channel_deleted">%1$s excluiu este canal</string>
-    <string name="buzz_system_channel_unarchived">%1$s restaurou este canal</string>
-    <string name="buzz_system_dm_created">%1$s iniciou esta conversa</string>
-    <string name="buzz_system_member_added">%1$s foi adicionado por %2$s</string>
-    <string name="buzz_system_member_joined">%1$s entrou</string>
-    <string name="buzz_system_member_left">%1$s saiu</string>
-    <string name="buzz_system_member_removed">%1$s foi removido por %2$s</string>
-    <string name="buzz_system_message_deleted">%1$s excluiu uma mensagem</string>
-    <string name="buzz_system_message_deleted_reason">%1$s excluiu uma mensagem: %2$s</string>
-    <string name="buzz_system_purpose_changed">%1$s definiu o propósito como “%2$s”</string>
-    <string name="buzz_system_purpose_cleared">%1$s removeu o propósito</string>
-    <string name="buzz_system_topic_changed">%1$s definiu o tópico como “%2$s”</string>
-    <string name="buzz_system_topic_cleared">%1$s removeu o tópico</string>
-    <string name="buzz_system_ttl_cleared">%1$s desativou as mensagens temporárias</string>
-    <string name="buzz_system_ttl_set">%1$s definiu que as mensagens desaparecem após %2$s</string>
-    <string name="buzz_system_unknown">%1$s: %2$s</string>
-    <string name="buzz_system_visibility_open">%1$s tornou este canal aberto — qualquer pessoa pode encontrá-lo e entrar</string>
-    <string name="buzz_system_visibility_other">%1$s alterou a visibilidade para %2$s</string>
-    <string name="buzz_system_visibility_private">%1$s tornou este canal privado — apenas por convite</string>
-    <string name="dm_sender_reported_more_count">+%1$d</string>
-    <string name="relay_group_message_count_short_capped">%1$d+</string>
-    <string name="relay_group_threads_empty_read_only">Nenhuma discussão ainda.</string>
 </resources>
