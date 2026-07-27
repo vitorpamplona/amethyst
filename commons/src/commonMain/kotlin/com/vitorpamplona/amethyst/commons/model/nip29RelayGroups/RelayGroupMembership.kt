@@ -56,5 +56,15 @@ enum class RelayGroupMembership {
     companion object {
         const val ROLE_ADMIN = "admin"
         const val ROLE_MODERATOR = "moderator"
+
+        /**
+         * Buzz's top role. Its hierarchy is `owner` > `admin` > `member` (no moderator), so the
+         * channel's creator carries `owner` and never the literal `admin` — which used to leave the
+         * one person with full authority classified below it, unable to promote anyone.
+         */
+        const val ROLE_OWNER = "owner"
+
+        /** Role strings that mean full authority over the group, across both dialects. */
+        val ADMIN_ROLES = listOf(ROLE_ADMIN, ROLE_OWNER)
     }
 }

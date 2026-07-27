@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.test.Test
@@ -66,7 +65,6 @@ class BatchInsertLossTest {
     @Test
     fun batchInsertNeverLosesAcceptedRegularEvents() =
         runBlocking {
-            Secp256k1Instance
             val file = File(corpusPath).takeIf { it.exists() } ?: File("../$corpusPath")
             if (!file.exists()) {
                 println("─ BatchInsertLossTest: corpus not found at $corpusPath — skipping ─")

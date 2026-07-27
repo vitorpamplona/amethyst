@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
@@ -43,6 +44,9 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_STREAM
+import com.vitorpamplona.quartz.buzz.workspace.newBuzzChannelId
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -65,9 +69,26 @@ class RelayGroupMetadataViewModel : ViewModel() {
     private var channel: RelayGroupChannel? = null
     val isNewGroup by derivedStateOf { channel == null }
 
-    /** Host relay (create + edit) and the group id (generated in create mode). */
-    var relay: NormalizedRelayUrl? = null
+    /**
+     * Host relay (create + edit) and the group id (generated in create mode).
+     *
+     * Snapshot state rather than a plain var: it is assigned by initCreate/initEdit *after* the
+     * first composition and [isBuzzRelay] derives from it, so a plain var would leave the screen
+     * rendering its NIP-29 shape forever.
+     */
+    var relay: NormalizedRelayUrl? by mutableStateOf(null)
         private set
+
+    /**
+     * True when the target relay speaks the Buzz dialect. Buzz calls these **channels**, and honours
+     * only a subset of NIP-29's metadata: `name`, `about` and a two-valued `visibility`. Its create
+     * path also takes a `channel_type`, which is what [isForum] selects.
+     */
+    val isBuzzRelay by derivedStateOf { relay?.let { BuzzRelayDialect.isBuzz(it) } == true }
+
+    /** Buzz only: create a `forum` channel (threaded posts) instead of a `stream` (chat) one. */
+    var isForum by mutableStateOf(false)
+
     var groupId: String = ""
         private set
 
@@ -120,8 +141,9 @@ class RelayGroupMetadataViewModel : ViewModel() {
         this.account = accountViewModel.account
         if (this.relay == null) {
             this.relay = relay
-            // Random NIP-29 group id: 8 secure bytes, hex-encoded (matches Armada).
-            this.groupId = RandomInstance.bytes(8).toHexKey()
+            // Random NIP-29 group id: 8 secure bytes, hex-encoded (matches Armada) — except on a
+            // Buzz relay, which keys channels by UUID and ignores an id it cannot parse as one.
+            this.groupId = if (BuzzRelayDialect.isBuzz(relay)) newBuzzChannelId() else RandomInstance.bytes(8).toHexKey()
         }
     }
 
@@ -245,6 +267,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 hashtags = hashtags,
                 geohashes = geohashes,
                 parent = parentGroupId,
+                channelType = if (isBuzzRelay) (if (isForum) BUZZ_CHANNEL_TYPE_FORUM else BUZZ_CHANNEL_TYPE_STREAM) else null,
             )
         } else {
             account.editRelayGroupMetadata(

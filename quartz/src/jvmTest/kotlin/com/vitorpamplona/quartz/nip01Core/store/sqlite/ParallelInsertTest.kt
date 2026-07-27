@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -60,7 +59,6 @@ class ParallelInsertTest {
 
     @BeforeTest
     fun setup() {
-        Secp256k1Instance
         // Use a real file so the pool can hand out independent reader
         // connections — :memory: would make every connection a separate DB.
         dbFile = Files.createTempFile("parallel-insert-", ".db")

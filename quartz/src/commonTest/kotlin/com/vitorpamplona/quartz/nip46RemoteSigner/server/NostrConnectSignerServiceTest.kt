@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -58,6 +59,7 @@ import kotlin.test.assertTrue
  * commonTest), so this exercises the subscribe → decrypt → dispatch → publish
  * plumbing and the JSON round-trip, not the cipher itself.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class NostrConnectSignerServiceTest {
     private val serverKey = "a".repeat(64)
     private val clientKey = "b".repeat(64)

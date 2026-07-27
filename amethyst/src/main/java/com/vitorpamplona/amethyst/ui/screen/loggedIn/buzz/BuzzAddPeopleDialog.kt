@@ -20,80 +20,71 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.UserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import androidx.compose.runtime.LaunchedEffect as ComposeLaunchedEffect
 
 /**
- * A reusable "add a person" dialog: a typeahead over the local user cache (name / NIP-05 / npub
- * prefix, or a pasted npub/hex). Tapping a result that isn't already in the target invokes [onAdd];
- * members already present are shown with an "Added" hint and aren't tappable.
+ * A reusable "add a person" dialog for Buzz: the app's ordinary user search — the same
+ * [UserSuggestionState] engine the @-mention typeahead uses — over the local cache, the relays
+ * (NIP-50) and NIP-05 identifiers, plus a pasted npub/nprofile.
+ *
+ * It used to search only [com.vitorpamplona.amethyst.model.LocalCache], so anyone the device had
+ * never seen simply had no result and the only way through was to paste a raw hex key — which is
+ * what the field's own hint told you to do. Searching the relays is what makes finding a person by
+ * name work at all here.
  *
  * Context-agnostic — the caller supplies [isAlreadyIn] (membership predicate) and [onAdd] (the
  * actual add, e.g. a channel kind-9000 put-user or a community kind-9030 admin-add). Used by both
- * the channel members screen and the Buzz community view.
+ * the channel members screen and the Buzz community view. Members already present render an "Added"
+ * hint instead of the add affordance and do nothing when tapped.
  */
 @Composable
 fun BuzzAddPeopleDialog(
     title: String,
     accountViewModel: AccountViewModel,
-    nav: INav,
     isAlreadyIn: (HexKey) -> Boolean,
     onAdd: (HexKey) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    var results by remember { mutableStateOf<List<HexKey>>(emptyList()) }
-
-    LaunchedEffect(query) {
-        if (query.isBlank()) {
-            results = emptyList()
-            return@LaunchedEffect
+    val userSuggestions =
+        remember(accountViewModel) {
+            UserSuggestionState(accountViewModel.account, Amethyst.instance.nip05Client)
         }
-        delay(150)
-        results =
-            withContext(Dispatchers.IO) {
-                LocalCache
-                    .findUsersStartingWith(query.trim(), accountViewModel.account)
-                    .map { it.pubkeyHex }
-                    .take(15)
-            }
-    }
+    val focusRequester = remember { FocusRequester() }
+
+    ComposeLaunchedEffect(query) { userSuggestions.processCurrentWord(query) }
+    ComposeLaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -103,61 +94,65 @@ fun BuzzAddPeopleDialog(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                     singleLine = true,
-                    leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                    label = { Text(stringRes(R.string.buzz_dm_add_hint)) },
+                    leadingIcon = {
+                        Icon(
+                            symbol = MaterialSymbols.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    label = { Text(stringRes(R.string.buzz_add_people_hint)) },
                 )
-                LazyColumn(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    items(results, key = { it }) { hex ->
-                        val alreadyIn = isAlreadyIn(hex)
-                        AddPersonRow(hex, alreadyIn, accountViewModel, nav) {
-                            if (!alreadyIn) {
-                                onAdd(hex)
+
+                // The typeahead needs a couple of characters before a relay search is worth firing;
+                // below that the list would flash every match in the cache.
+                if (query.length > 2) {
+                    ShowUserSuggestionList(
+                        userSuggestions = userSuggestions,
+                        onSelect = { user ->
+                            if (!isAlreadyIn(user.pubkeyHex)) {
+                                onAdd(user.pubkeyHex)
                                 onDismiss()
                             }
-                        }
-                    }
+                        },
+                        accountViewModel = accountViewModel,
+                        modifier = SuggestionListDefaultHeightChat,
+                        // The dialog already supplies the surface and the spacing: drop the
+                        // dropdown's opaque rows, per-row dividers and top gap, which are there for
+                        // floating over a composer.
+                        itemColors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        showDividers = false,
+                        contentPadding = PaddingValues(0.dp),
+                        onEmpty = {
+                            Text(
+                                text = stringRes(R.string.buzz_add_people_empty),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = { user ->
+                            if (isAlreadyIn(user.pubkeyHex)) {
+                                Text(
+                                    text = stringRes(R.string.buzz_import_added),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Icon(
+                                    symbol = MaterialSymbols.PersonAdd,
+                                    contentDescription = stringRes(R.string.relay_group_add_member),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        },
+                    )
                 }
             }
         },
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) } },
     )
-}
-
-@Composable
-private fun AddPersonRow(
-    hex: HexKey,
-    alreadyIn: Boolean,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onClick: () -> Unit,
-) {
-    val user = remember(hex) { accountViewModel.checkGetOrCreateUser(hex) }
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = !alreadyIn, onClick = onClick)
-                .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        UserPicture(hex, Size35dp, accountViewModel = accountViewModel, nav = nav)
-        Column(Modifier.weight(1f)) {
-            if (user != null) {
-                UsernameDisplay(user, accountViewModel = accountViewModel)
-            } else {
-                Text(hex.take(8), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-        if (alreadyIn) {
-            Text(
-                text = stringRes(R.string.buzz_import_added),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
 }

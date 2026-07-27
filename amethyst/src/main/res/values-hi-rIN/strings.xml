@@ -2416,6 +2416,8 @@
     <string name="relay_group_discovery_empty_filtered">इस छलनी के अनुकूल कोई समूह प्राप्त नहीं अब तक।</string>
     <string name="relay_group_favorite_relay">इस पुनःप्रसारक को प्रियचिह्नित करें</string>
     <string name="relay_group_threads_empty">कोई सूत्र नहीं अब तक। संकलनचिह्न घुण्डी से एक आरम्भ करें।</string>
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="relay_group_threads_empty_read_only">कोई सूत्र नहीं अब तक।</string>
     <string name="relay_group_threads_loading_older">पुराने सूत्रों का आवहन…</string>
     <string name="relay_group_threads_all_caught_up">इससे पुराने अन्य कोई सूत्र नहीं</string>
     <string name="relay_group_thread_new">नया सूत्र</string>
@@ -2433,6 +2435,12 @@
     <string name="relay_group_browse_your_relays">पुनःप्रसारक जिन पर आप हैं</string>
     <string name="relay_group_browse_popular">लोकप्रिय पुनःप्रसारक</string>
     <string name="relay_group_no_messages_yet">कोई सन्देश नहीं अब तक</string>
+    <string name="channel_invite_title">%1$s में जोडा गया</string>
+    <string name="channel_invite_body">%1$s ने आपको इस प्रणाली में जोडा %2$s पर। क्या इसे सन्देशों में दिखाया जाए।</string>
+    <string name="channel_invite_unknown_actor">कोई व्यक्ति</string>
+    <string name="channel_invite_accept">दिखाएँ</string>
+    <string name="channel_invite_ignore">उपेक्षा करें</string>
+    <string name="channel_invite_leave">छोडें</string>
     <string name="relay_group_join_to_post">इस समूह से जुडें सन्देशों को भेजने के लिए।</string>
     <string name="relay_group_invite_only_to_post">यह समूह आमन्त्रण सीमित है। आपके पास एक आमन्त्रण होना चाहिए पत्र प्रकाशन के लिए।</string>
     <plurals name="relay_group_member_count">
@@ -3143,12 +3151,45 @@
     <string name="buzz_message_edited">(सम्पादित)</string>
     <string name="buzz_diff_truncated">(अन्तर ह्रस्वकृत)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s जुड गए</string>
+    <string name="buzz_system_member_added">%1$s को %2$s ने जोडा</string>
+    <string name="buzz_system_member_left">%1$s चले गए</string>
+    <string name="buzz_system_member_removed">%1$s को %2$s ने हटाया</string>
+    <string name="buzz_system_topic_changed">%1$s ने विषय %2$s रखा</string>
+    <string name="buzz_system_topic_cleared">%1$s ने विषय हटाया</string>
+    <string name="buzz_system_purpose_changed">%1$s ने उद्देश्य %2$s रखा</string>
+    <string name="buzz_system_purpose_cleared">%1$s ने उद्देश्य हटाया</string>
+    <string name="buzz_system_visibility_open">%1$s ने इस प्रणाली को खुला बनाया। कोई भी इसे ढूँढ सकता है तथा इससे जुड सकता है</string>
+    <string name="buzz_system_visibility_private">%1$s ने इस प्रणाली को निजी बनाया। आमन्त्रण सीमित</string>
+    <string name="buzz_system_visibility_other">%1$s ने दृश्यमानता को %2$s कर दिया</string>
+    <string name="buzz_system_ttl_set">%1$s ने %2$s पश्चात सन्देश अदृश्यकरण सक्षम किया</string>
+    <string name="buzz_system_ttl_cleared">%1$s ने सन्देश अदृश्यकरण अक्षम किया</string>
+    <string name="buzz_system_channel_archived">%1$s ने इस प्रणाली को संग्रहित किया</string>
+    <string name="buzz_system_channel_unarchived">%1$s ने इस प्रणाली को पुनःस्थापित किया</string>
+    <string name="buzz_system_channel_created">%1$s ने इस प्रणाली को बनाया</string>
+    <string name="buzz_system_channel_deleted">%1$s ने इस प्रणाली को मिटाया</string>
+    <string name="buzz_system_message_deleted">%1$s ने एक सन्देश को मिटा दिया</string>
+    <string name="buzz_system_message_deleted_reason">%1$s ने एक सन्देश को मिटा दिया : %2$s</string>
+    <string name="buzz_system_dm_created">%1$s ने यह संवाद आरम्भ किया</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s : %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">सूचना। %1$s ने एक गोष्ठी आरम्भ की</string>
+    <string name="buzz_huddle_joined">सूचना। %1$s गोष्ठी में जुड गए</string>
+    <string name="buzz_huddle_left">सूचना। %1$s गोष्ठी से चले गए</string>
+    <string name="buzz_huddle_ended">सूचना। गोष्ठी समाप्त</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">स्थिति। %1$s ने एक कार्य का अनुरोध किया</string>
+    <string name="buzz_job_accepted">स्थिति। %1$s ने कार्य स्वीकारा</string>
+    <string name="buzz_job_progress">स्थिति। कार्य प्रगति</string>
+    <string name="buzz_job_result">स्थिति। कार्य परिणाम</string>
+    <string name="buzz_job_cancelled">स्थिति। कार्य निरस्त</string>
+    <string name="buzz_job_error">सावधान। कार्य अपक्रम</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">मतदान। %1$s एक पत्र पर सहमत</string>
+    <string name="buzz_forum_downvoted">मतदान। %1$s एक पत्र पर असहमत</string>
     <string name="buzz_canvas_title">चित्रपट</string>
-    <string name="buzz_canvas_empty">कोई चित्रपट बाँटा नहीं गया इस कार्यशाला में अब तक।</string>
+    <string name="buzz_canvas_empty">कोई चित्रपट बाँटा नहीं गया इस प्रणाली में अब तक।</string>
     <string name="buzz_canvas_edit">चित्रपट सम्पादन</string>
     <string name="buzz_canvas_save">चित्रपट अभिलेखन</string>
     <string name="buzz_canvas_body_label">चित्रपट (मार्कडौन॰)</string>

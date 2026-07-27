@@ -2541,6 +2541,12 @@
     <string name="chat_type_ephemeral_title">Ephemeral chats</string>
     <string name="chat_type_ephemeral_desc">Lightweight, relay-scoped rooms that don\'t persist history.</string>
     <string name="relay_group_create_title">Create a group</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
+    <string name="buzz_channel_create_title">New channel</string>
+    <string name="buzz_channel_flag_private">Private channel</string>
+    <string name="buzz_channel_flag_private_desc">Hidden from the channel list and invite-only. Off means anyone on this relay can find and join it.</string>
+    <string name="buzz_channel_flag_forum">Forum channel</string>
+    <string name="buzz_channel_flag_forum_desc">Threaded posts instead of a chat timeline. This cannot be changed later.</string>
     <string name="relay_group_relay_no_nip29">This relay doesn\'t advertise support for NIP-29 relay groups. A group created here won\'t work — its name, members and messages won\'t be managed by the relay. Pick a relay that supports relay-based groups.</string>
     <string name="relay_group_create_name">Group name</string>
     <string name="relay_group_create_topic">Topic (optional)</string>
@@ -3533,6 +3539,8 @@
     <string name="buzz_dm_workspace">Workspace</string>
     <string name="buzz_dm_recipients">To</string>
     <string name="buzz_dm_add_hint">Add someone (npub or hex)</string>
+    <string name="buzz_add_people_hint">Search by name, NIP-05 or npub</string>
+    <string name="buzz_add_people_empty">No one found. Try a different name, a NIP-05 address, or paste an npub.</string>
     <string name="buzz_dm_start">Start conversation</string>
     <string name="buzz_dm_opening">Opening…</string>
     <string name="buzz_dm_remove">Remove</string>

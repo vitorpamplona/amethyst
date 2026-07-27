@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
@@ -75,7 +76,7 @@ class CommentEvent(
     PubKeyHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = content
+    override fun indexableContent() = (listOf(content) + tags.hashtags()).joinToString("\n")
 
     override fun pubKeyHints(): List<PubKeyHint> {
         val pHints =

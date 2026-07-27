@@ -172,7 +172,11 @@ fun SlimListItem(
     supportingContent: @Composable (() -> Unit)? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
-    colors: ListItemColors = ListItemDefaults.colors(),
+    // The container default stays `background` — what this layout has always painted — rather than
+    // ListItemDefaults' `surface`, so existing callers are unchanged. It is a parameter now because
+    // the row was painting its own opaque background even when the caller asked for another colour:
+    // inside a container that already has a surface (a dialog) that reads as a black block.
+    colors: ListItemColors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
     tonalElevation: Dp = ListItemContainerElevation,
     shadowElevation: Dp = ListItemContainerElevation,
 ) {
@@ -232,7 +236,7 @@ fun SlimListItem(
     Surface(
         modifier = Modifier.semantics(mergeDescendants = true) {}.then(modifier),
         shape = ListItemDefaults.shape,
-        color = MaterialTheme.colorScheme.background,
+        color = colors.containerColor,
         contentColor = MaterialTheme.colorScheme.onBackground,
         tonalElevation = tonalElevation,
         shadowElevation = shadowElevation,

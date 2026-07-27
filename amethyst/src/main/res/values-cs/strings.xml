@@ -2498,6 +2498,8 @@
     <string name="relay_group_discovery_empty_filtered">Pro tento filtr zatím nebyly nalezeny žádné skupiny.</string>
     <string name="relay_group_favorite_relay">Oblíbit tento relay</string>
     <string name="relay_group_threads_empty">Zatím žádná vlákna. Založte jedno tlačítkem +.</string>
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="relay_group_threads_empty_read_only">Zatím žádná vlákna.</string>
     <string name="relay_group_threads_loading_older">Načítání starších vláken…</string>
     <string name="relay_group_threads_all_caught_up">Žádná starší vlákna</string>
     <string name="relay_group_thread_new">Nové vlákno</string>
@@ -3260,10 +3262,42 @@
     <string name="buzz_message_edited">(upraveno)</string>
     <string name="buzz_diff_truncated">(rozdíl zkrácen)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s se připojil</string>
+    <string name="buzz_system_member_added">%1$s byl přidán %2$s</string>
+    <string name="buzz_system_member_left">%1$s odešel</string>
+    <string name="buzz_system_member_removed">%1$s byl odstraněn %2$s</string>
+    <string name="buzz_system_topic_changed">%1$s nastavil téma na „%2$s“</string>
+    <string name="buzz_system_topic_cleared">%1$s zrušil téma</string>
+    <string name="buzz_system_purpose_changed">%1$s nastavil účel na „%2$s“</string>
+    <string name="buzz_system_purpose_cleared">%1$s zrušil účel</string>
+    <string name="buzz_system_visibility_open">%1$s nastavil tento kanál jako otevřený — kdokoli ho může najít a připojit se</string>
+    <string name="buzz_system_visibility_private">%1$s nastavil tento kanál jako soukromý — pouze na pozvání</string>
+    <string name="buzz_system_visibility_other">%1$s změnil viditelnost na %2$s</string>
+    <string name="buzz_system_ttl_set">%1$s nastavil mizení zpráv po %2$s</string>
+    <string name="buzz_system_ttl_cleared">%1$s vypnul mizející zprávy</string>
+    <string name="buzz_system_channel_archived">%1$s archivoval tento kanál</string>
+    <string name="buzz_system_channel_unarchived">%1$s obnovil tento kanál</string>
+    <string name="buzz_system_channel_created">%1$s vytvořil tento kanál</string>
+    <string name="buzz_system_channel_deleted">%1$s smazal tento kanál</string>
+    <string name="buzz_system_message_deleted">%1$s smazal zprávu</string>
+    <string name="buzz_system_message_deleted_reason">%1$s smazal zprávu: %2$s</string>
+    <string name="buzz_system_dm_created">%1$s zahájil tuto konverzaci</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s zahájil huddle</string>
+    <string name="buzz_huddle_joined">🔊 %1$s se připojil k huddlu</string>
+    <string name="buzz_huddle_left">🔊 %1$s opustil huddle</string>
+    <string name="buzz_huddle_ended">🔊 Huddle skončil</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙ %1$s vyžádal úlohu</string>
+    <string name="buzz_job_accepted">⚙ %1$s přijal úlohu</string>
+    <string name="buzz_job_progress">⚙ Průběh úlohy</string>
+    <string name="buzz_job_result">⚙ Výsledek úlohy</string>
+    <string name="buzz_job_cancelled">⚙ Úloha zrušena</string>
+    <string name="buzz_job_error">⚠ Chyba úlohy</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">▲ %1$s hlasoval pro příspěvek</string>
+    <string name="buzz_forum_downvoted">▼ %1$s hlasoval proti příspěvku</string>
     <string name="buzz_canvas_title">Plátno</string>
     <string name="buzz_canvas_empty">V tomto pracovním prostoru zatím nebylo sdíleno žádné plátno.</string>
     <string name="buzz_canvas_edit">Upravit plátno</string>

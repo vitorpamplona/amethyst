@@ -2026,6 +2026,7 @@
     <string name="relay_group_discovery_empty_filtered">Még nem találhatók csoportok ehhez a szűrőhöz.</string>
     <string name="relay_group_favorite_relay">Átjátszó hozzáadása a kedvencekhez</string>
     <string name="relay_group_threads_empty">Még nincsenek szálak. Indítson egyet a + gombbal.</string>
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="relay_group_thread_new">Új szál</string>
     <string name="relay_group_thread_untitled">Névtelen</string>
     <string name="relay_group_thread_title_label">Cím</string>

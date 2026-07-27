@@ -108,6 +108,35 @@ val RELAY_GROUP_METADATA_KINDS =
 val RELAY_GROUP_PIN_KINDS = listOf(GroupPinnedEvent.KIND)
 
 /**
+ * A live, channel-scoped subscription to this group's own relay-signed state (39000-39003) on a Buzz
+ * relay — the thing that keeps a roster, a name or a visibility flip current without a refetch.
+ *
+ * Buzz signs these with `d`/`p` tags and **no `h`**, so a `#h` filter looks like it could not match.
+ * It does: `filter_match_one` falls back to the stored `channel_id` for an `#h` filter **when the
+ * event carries no `h` tag at all**, and these are stored channel-scoped. Scoping the filter by `#h`
+ * is also what indexes the subscription under the channel, which is what makes it eligible for the
+ * channel fan-out in the first place — a `#d` filter has no channel tag, so on Buzz it registers as a
+ * global subscription and by design receives no channel-scoped event, which is why these updates
+ * never arrived live.
+ *
+ * Buzz-only. On a relay29-family relay the same events are addressable with no `channel_id` behind
+ * them, so an `#h` filter matches nothing there — those relays keep being served by the `#d`
+ * directory filters.
+ */
+fun buildRelayGroupLiveStateFilter(groupId: GroupId): List<RelayBasedFilter> =
+    listOf(
+        RelayBasedFilter(
+            relay = groupId.relayUrl,
+            filter = Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id))),
+        ),
+        // Pins stay in their own filter for the same reason the directory filters split them out.
+        RelayBasedFilter(
+            relay = groupId.relayUrl,
+            filter = Filter(kinds = RELAY_GROUP_PIN_KINDS, tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id))),
+        ),
+    )
+
+/**
  * Every relay-signed group *state* kind: metadata + admins + members + roles + pins. Small replaceable
  * events. **Never put this list on the wire as one filter** — request [RELAY_GROUP_METADATA_KINDS] and
  * [RELAY_GROUP_PIN_KINDS] as separate filters instead (see [RELAY_GROUP_PIN_KINDS]). Kept as the
