@@ -41,10 +41,6 @@ import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
-import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -113,7 +109,6 @@ class UiSharedPreferences(
         val UI_PROPOSE_AI_IMPROVEMENTS = stringPreferencesKey("ui.propose_ai_improvements")
         val UI_USE_TRACKED_BROADCASTS = stringPreferencesKey("ui.use_tracked_broadcasts")
         val UI_AUTOMATICALLY_CREATE_DRAFTS = stringPreferencesKey("ui.automatically_create_drafts")
-        val UI_BOTTOM_BAR_ITEMS = stringPreferencesKey("ui.bottom_bar_items")
         val UI_SHOW_HOME_NEW_THREADS_TAB = booleanPreferencesKey("ui.show_home_new_threads_tab")
         val UI_SHOW_HOME_CONVERSATIONS_TAB = booleanPreferencesKey("ui.show_home_conversations_tab")
         val UI_SHOW_HOME_EVERYTHING_TAB = booleanPreferencesKey("ui.show_home_everything_tab")
@@ -154,7 +149,6 @@ class UiSharedPreferences(
                         preferences[UI_USE_TRACKED_BROADCASTS]?.let { BooleanType.valueOf(it) }
                             ?: if (featureSet == FeatureSetType.COMPLETE) BooleanType.ALWAYS else BooleanType.NEVER,
                     automaticallyCreateDrafts = preferences[UI_AUTOMATICALLY_CREATE_DRAFTS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
-                    bottomBarItems = preferences[UI_BOTTOM_BAR_ITEMS]?.let { decodeBottomBarItems(it) } ?: DefaultBottomBarEntries,
                     showHomeNewThreadsTab = preferences[UI_SHOW_HOME_NEW_THREADS_TAB] ?: true,
                     showHomeConversationsTab = preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] ?: true,
                     showHomeEverythingTab = preferences[UI_SHOW_HOME_EVERYTHING_TAB] ?: false,
@@ -209,7 +203,6 @@ class UiSharedPreferences(
                     preferences[UI_PROPOSE_AI_IMPROVEMENTS] = sharedSettings.automaticallyProposeAiImprovements.name
                     preferences[UI_USE_TRACKED_BROADCASTS] = sharedSettings.useTrackedBroadcasts.name
                     preferences[UI_AUTOMATICALLY_CREATE_DRAFTS] = sharedSettings.automaticallyCreateDrafts.name
-                    preferences[UI_BOTTOM_BAR_ITEMS] = encodeBottomBarItems(sharedSettings.bottomBarItems)
                     preferences[UI_SHOW_HOME_NEW_THREADS_TAB] = sharedSettings.showHomeNewThreadsTab
                     preferences[UI_SHOW_HOME_CONVERSATIONS_TAB] = sharedSettings.showHomeConversationsTab
                     preferences[UI_SHOW_HOME_EVERYTHING_TAB] = sharedSettings.showHomeEverythingTab
@@ -231,42 +224,5 @@ class UiSharedPreferences(
                 Log.e("SharedPreferences") { "Error saving DataStore preferences: ${e.message}" }
             }
         }
-
-        /**
-         * Persists "follow the defaults" as a blank sentinel instead of the concrete default list.
-         *
-         * A user who resets the bottom bar (or who never customized it) should track whatever
-         * [DefaultBottomBarEntries] is in the *installed* app version. Storing the concrete list would
-         * pin them to today's default, so a future version that changes the default would never reach
-         * them. Storing a blank value instead makes [decodeBottomBarItems] resolve it back to the
-         * current [DefaultBottomBarEntries] on every load — i.e. the user is automatically migrated to
-         * the new default. Any genuinely customized bar is still stored as JSON.
-         */
-        internal fun encodeBottomBarItems(items: List<BottomBarEntry>): String = if (items == DefaultBottomBarEntries) "" else JsonMapper.toJson(items)
-
-        internal fun decodeBottomBarItems(raw: String): List<BottomBarEntry>? {
-            if (raw.isBlank()) return DefaultBottomBarEntries
-            // Current format: a JSON list of BottomBarEntry (built-ins + favorites).
-            runCatching { return JsonMapper.fromJson<List<BottomBarEntry>>(raw) }
-            // Configs written before the stable @SerialName discriminators used the fully-qualified
-            // class name as the polymorphic "type" value. Rewrite it to the short name and retry, so a
-            // customized bar survives the upgrade instead of silently resetting to defaults.
-            runCatching {
-                val migrated =
-                    raw
-                        .replace(LEGACY_BUILTIN_DISCRIMINATOR, "builtIn")
-                        .replace(LEGACY_FAVORITE_DISCRIMINATOR, "favorite")
-                return JsonMapper.fromJson<List<BottomBarEntry>>(migrated)
-            }
-            // Oldest format: comma-joined NavBarItem enum names (before favorites/unified entries).
-            val legacy = raw.split(",").mapNotNull { name -> runCatching { NavBarItem.valueOf(name) }.getOrNull() }
-            if (legacy.isNotEmpty()) return legacy.map { BottomBarEntry.BuiltIn(it) }
-            // Unrecognizable — fall back to the defaults rather than leaving the bar empty.
-            return DefaultBottomBarEntries
-        }
-
-        // The pre-@SerialName polymorphic discriminators (fully-qualified class names) for migration.
-        private const val LEGACY_BUILTIN_DISCRIMINATOR = "com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.BuiltIn"
-        private const val LEGACY_FAVORITE_DISCRIMINATOR = "com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry.Favorite"
     }
 }

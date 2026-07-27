@@ -53,7 +53,7 @@ fun EmbeddedTabPreloader(accountViewModel: AccountViewModel) {
     val context = LocalContext.current
     val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
-    val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    val bottomBarItems by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
     val favoriteIds = bottomBarItems.favoriteIds()
 

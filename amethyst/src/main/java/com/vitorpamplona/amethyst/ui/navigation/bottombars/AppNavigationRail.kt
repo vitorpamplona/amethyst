@@ -55,7 +55,7 @@ fun AppNavigationRail(
     nav: Nav,
     accountViewModel: AccountViewModel,
 ) {
-    val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
     val favorites by FavoriteAppsRegistry.favorites.collectAsStateWithLifecycle()
     val favoritesById = remember(favorites) { favorites.associateBy { it.id } }

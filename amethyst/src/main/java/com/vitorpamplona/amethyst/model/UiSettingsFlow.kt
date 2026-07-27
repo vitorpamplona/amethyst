@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,7 +42,6 @@ class UiSettingsFlow(
     val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyCreateDrafts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
-    val bottomBarItems: MutableStateFlow<List<BottomBarEntry>> = MutableStateFlow(DefaultBottomBarEntries),
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeConversationsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showHomeEverythingTab: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -77,7 +74,6 @@ class UiSettingsFlow(
             automaticallyProposeAiImprovements,
             useTrackedBroadcasts,
             automaticallyCreateDrafts,
-            bottomBarItems,
             showHomeNewThreadsTab,
             showHomeConversationsTab,
             showHomeEverythingTab,
@@ -114,7 +110,7 @@ class UiSettingsFlow(
                 flows[12] as BooleanType,
                 flows[13] as BooleanType,
                 flows[14] as BooleanType,
-                flows[15] as List<BottomBarEntry>,
+                flows[15] as Boolean,
                 flows[16] as Boolean,
                 flows[17] as Boolean,
                 flows[18] as Boolean,
@@ -122,13 +118,12 @@ class UiSettingsFlow(
                 flows[20] as Boolean,
                 flows[21] as Boolean,
                 flows[22] as Boolean,
-                flows[23] as Boolean,
-                flows[24] as BooleanType,
-                flows[25] as AccentColorType,
-                flows[26] as FontFamilyType,
-                flows[27] as FontSizeType,
-                flows[28] as String,
-                flows[29] as Boolean,
+                flows[23] as BooleanType,
+                flows[24] as AccentColorType,
+                flows[25] as FontFamilyType,
+                flows[26] as FontSizeType,
+                flows[27] as String,
+                flows[28] as Boolean,
             )
         }
 
@@ -149,7 +144,6 @@ class UiSettingsFlow(
             automaticallyProposeAiImprovements.value,
             useTrackedBroadcasts.value,
             automaticallyCreateDrafts.value,
-            bottomBarItems.value,
             showHomeNewThreadsTab.value,
             showHomeConversationsTab.value,
             showHomeEverythingTab.value,
@@ -227,10 +221,6 @@ class UiSettingsFlow(
         }
         if (automaticallyCreateDrafts.value != torSettings.automaticallyCreateDrafts) {
             automaticallyCreateDrafts.tryEmit(torSettings.automaticallyCreateDrafts)
-            any = true
-        }
-        if (bottomBarItems.value != torSettings.bottomBarItems) {
-            bottomBarItems.tryEmit(torSettings.bottomBarItems)
             any = true
         }
         if (showHomeNewThreadsTab.value != torSettings.showHomeNewThreadsTab) {
@@ -329,7 +319,6 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
                 MutableStateFlow(uiSettings.useTrackedBroadcasts),
                 MutableStateFlow(uiSettings.automaticallyCreateDrafts),
-                MutableStateFlow(uiSettings.bottomBarItems),
                 MutableStateFlow(uiSettings.showHomeNewThreadsTab),
                 MutableStateFlow(uiSettings.showHomeConversationsTab),
                 MutableStateFlow(uiSettings.showHomeEverythingTab),

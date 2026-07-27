@@ -160,6 +160,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
@@ -1020,6 +1021,12 @@ class Account(
 
     suspend fun changeAudioVisualizer(style: VisualizerStyle) {
         if (settings.changeAudioVisualizer(style)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun changeBottomBarItems(items: List<BottomBarEntry>) {
+        if (settings.changeBottomBarItems(items)) {
             sendNewAppSpecificData()
         }
     }

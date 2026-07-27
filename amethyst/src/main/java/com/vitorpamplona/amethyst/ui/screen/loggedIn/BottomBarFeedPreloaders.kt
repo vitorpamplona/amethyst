@@ -64,7 +64,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.Workout
  */
 @Composable
 fun BottomBarFeedPreloaders(accountViewModel: AccountViewModel) {
-    val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
 
     // Only built-in destinations have feeds to preload; favorite-app entries embed their own content.

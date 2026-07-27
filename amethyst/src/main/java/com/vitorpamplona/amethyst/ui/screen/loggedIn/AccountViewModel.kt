@@ -675,7 +675,7 @@ class AccountViewModel(
     fun importConcordCommunities() =
         viewModelScope.launch(Dispatchers.IO) {
             val pinnedRelays =
-                settings.uiSettingsFlow.bottomBarItems.value
+                account.settings.syncedSettings.navigation.bottomBarItems.value
                     .flatMap {
                         when (it) {
                             is BottomBarEntry.Concord -> it.relays
@@ -1933,6 +1933,13 @@ class AccountViewModel(
     fun changeAudioVisualizer(style: VisualizerStyle) =
         launchSigner {
             account.changeAudioVisualizer(style)
+        }
+
+    fun bottomBarItemsFlow(): StateFlow<List<BottomBarEntry>> = account.settings.syncedSettings.navigation.bottomBarItems
+
+    fun changeBottomBarItems(items: List<BottomBarEntry>) =
+        launchSigner {
+            account.changeBottomBarItems(items)
         }
 
     fun pinnedChatroomsFlow(): StateFlow<Set<ChatroomKey>> = account.settings.syncedSettings.chats.pinnedChatrooms

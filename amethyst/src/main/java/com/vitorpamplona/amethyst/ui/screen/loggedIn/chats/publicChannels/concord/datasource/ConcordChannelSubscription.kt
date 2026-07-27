@@ -194,7 +194,7 @@ private const val RECONNECT_RESWEEP_MIN_INTERVAL_MS = 60_000L
 @Composable
 private fun bootstrapPinnedCommunities(accountViewModel: AccountViewModel) {
     val account = accountViewModel.account
-    val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
     val communities by account.concordChannelList.liveCommunities.collectAsStateWithLifecycle()
 

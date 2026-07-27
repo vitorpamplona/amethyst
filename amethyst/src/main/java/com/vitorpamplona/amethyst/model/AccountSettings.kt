@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -467,6 +468,15 @@ class AccountSettings(
     fun changeAudioVisualizer(style: VisualizerStyle): Boolean {
         if (syncedSettings.media.audioVisualizer.value != style) {
             syncedSettings.media.audioVisualizer.tryEmit(style)
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeBottomBarItems(newItems: List<BottomBarEntry>): Boolean {
+        if (syncedSettings.navigation.bottomBarItems.value != newItems) {
+            syncedSettings.navigation.bottomBarItems.tryEmit(newItems)
             saveAccountSettings()
             return true
         }
