@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
-import com.vitorpamplona.amethyst.ui.actions.LocalCacheDao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -207,7 +206,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         // (`p`) and linkable — the same enrichment the in-app composers do. The comment builders
         // already tag the reply-parent author, so drop it from the body mentions to avoid a
         // duplicate `p` (kind-1 doesn't auto-tag the parent, so nothing is lost there).
-        val tagger = NewMessageTagger(replyText, emptyList(), emptyList(), LocalCacheDao)
+        val tagger = NewMessageTagger(replyText)
         tagger.run()
         val mentions = tagger.pTags?.mapNotNull { pt -> pt.pubkeyHex.takeIf { it != targetEvent.pubKey } }.orEmpty()
 

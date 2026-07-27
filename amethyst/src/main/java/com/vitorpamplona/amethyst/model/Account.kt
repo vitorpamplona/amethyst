@@ -158,7 +158,6 @@ import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryT
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
-import com.vitorpamplona.amethyst.ui.actions.LocalCacheDao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
@@ -2432,7 +2431,7 @@ class Account(
         // quick reply is notified (`p`) and their reference resolves. The reply-parent author is
         // already tagged by each builder below, so drop it from the body mentions to avoid a
         // duplicate `p`.
-        val tagger = NewMessageTagger(text, emptyList(), emptyList(), LocalCacheDao)
+        val tagger = NewMessageTagger(text)
         tagger.run()
         val mentions = tagger.pTags?.mapNotNull { it.pubkeyHex.takeIf { pk -> pk != rootEvent.pubKey } }.orEmpty()
         val finalText = appendMediaUrls(tagger.message, imetas)

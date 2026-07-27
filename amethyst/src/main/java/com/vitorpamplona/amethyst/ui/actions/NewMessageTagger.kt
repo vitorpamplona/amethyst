@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -44,7 +45,10 @@ class NewMessageTagger(
     var message: String,
     var pTags: List<User>? = null,
     var eTags: List<Note>? = null,
-    var dao: Dao,
+    // Defaults to a Dao whose methods read straight from LocalCache (see the interface below),
+    // so callers with no AccountViewModel — model-layer sends, background receivers — can just
+    // omit it. UI callers still pass their AccountViewModel, which resolves to the same thing.
+    var dao: Dao = object : Dao {},
 ) {
     val directMentions = mutableSetOf<HexKey>()
     val directMentionsNotes = mutableSetOf<Note>()
@@ -260,9 +264,9 @@ class NewMessageTagger(
 }
 
 interface Dao {
-    suspend fun getOrCreateUser(hex: String): User
+    suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
 
-    suspend fun getOrCreateNote(hex: String): Note
+    suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
-    fun getOrCreateAddressableNote(address: Address): AddressableNote?
+    fun getOrCreateAddressableNote(address: Address): AddressableNote? = LocalCache.getOrCreateAddressableNote(address)
 }
