@@ -1842,6 +1842,7 @@
     <string name="app_notification_reposts_channel_message">%1$s repostade ditt inlägg</string>
     <string name="app_notification_reposts_summary">Nya reposter</string>
     <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_name">Media</string>
     <string name="app_notification_media_channel_description">Meddelar dig när någon nämner dig i ett foto eller en video</string>
     <string name="app_notification_media_channel_message_photo">%1$s delade ett foto</string>
     <string name="app_notification_media_channel_message_video">%1$s delade en video</string>
@@ -2363,6 +2364,8 @@
     <string name="relay_group_invite_preparing">Förbereder inbjudan…</string>
     <string name="relay_group_badge_private">Privat</string>
     <string name="relay_group_badge_invite_only">Endast inbjudan</string>
+    <string name="relay_group_badge_live">LIVE</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Ange en giltig relä-URL (wss://…).</string>
     <string name="relay_group_field_name">Namn</string>
     <string name="relay_group_field_about">Beskrivning</string>
@@ -2410,6 +2413,7 @@
     <string name="relay_group_discovery_empty_filtered">Inga grupper hittades för det här filtret ännu.</string>
     <string name="relay_group_favorite_relay">Favoritmarkera det här reläet</string>
     <string name="relay_group_threads_empty">Inga trådar ännu. Starta en med +-knappen.</string>
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="relay_group_threads_loading_older">Läser in äldre trådar…</string>
     <string name="relay_group_threads_all_caught_up">Inga äldre trådar</string>
     <string name="relay_group_thread_new">Ny tråd</string>
@@ -3142,6 +3146,8 @@
     <string name="buzz_message_edited">(redigerat)</string>
     <string name="buzz_diff_truncated">(diff avkortad)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s anslöt</string>
+    <string name="buzz_system_member_added">%1$s lades till av %2$s</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->

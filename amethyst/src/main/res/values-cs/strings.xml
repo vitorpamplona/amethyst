@@ -2498,6 +2498,7 @@
     <string name="relay_group_discovery_empty_filtered">Pro tento filtr zatím nebyly nalezeny žádné skupiny.</string>
     <string name="relay_group_favorite_relay">Oblíbit tento relay</string>
     <string name="relay_group_threads_empty">Zatím žádná vlákna. Založte jedno tlačítkem +.</string>
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="relay_group_threads_loading_older">Načítání starších vláken…</string>
     <string name="relay_group_threads_all_caught_up">Žádná starší vlákna</string>
     <string name="relay_group_thread_new">Nové vlákno</string>
@@ -3260,6 +3261,8 @@
     <string name="buzz_message_edited">(upraveno)</string>
     <string name="buzz_diff_truncated">(rozdíl zkrácen)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s se připojil</string>
+    <string name="buzz_system_member_added">%1$s byl přidán %2$s</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->

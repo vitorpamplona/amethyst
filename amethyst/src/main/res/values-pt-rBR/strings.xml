@@ -2411,6 +2411,7 @@
     <string name="relay_group_discovery_empty_filtered">Nenhum grupo encontrado para este filtro ainda.</string>
     <string name="relay_group_favorite_relay">Favoritar este relay</string>
     <string name="relay_group_threads_empty">Nenhuma thread ainda. Comece uma com o botão +.</string>
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="relay_group_threads_loading_older">Carregando tópicos mais antigos…</string>
     <string name="relay_group_threads_all_caught_up">Nenhum tópico mais antigo</string>
     <string name="relay_group_thread_new">Nova thread</string>
