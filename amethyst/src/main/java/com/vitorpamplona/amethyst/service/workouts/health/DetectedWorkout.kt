@@ -30,7 +30,9 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
  * UI directly.
  *
  * [id] is the Health Connect record id, used to remember which sessions the
- * user has already handled (accepted or dismissed) so each is offered once.
+ * user has already handled (accepted or dismissed) so each is offered once. When
+ * several close-by sessions of the same type are combined by [WorkoutMerger],
+ * [id] becomes the members' ids joined with `+` and [sessionCount] rises above 1.
  */
 @Immutable
 data class DetectedWorkout(
@@ -47,4 +49,10 @@ data class DetectedWorkout(
     val elevationGainMeters: Double?,
     /** Human-readable name of the app/device that wrote the record (e.g. "Samsung Health"). */
     val source: String,
+    /**
+     * How many Health Connect sessions this workout represents. 1 for a raw
+     * session; higher when [WorkoutMerger] combined several close-by same-type
+     * sessions (e.g. a long run split around breaks) into a single suggestion.
+     */
+    val sessionCount: Int = 1,
 )

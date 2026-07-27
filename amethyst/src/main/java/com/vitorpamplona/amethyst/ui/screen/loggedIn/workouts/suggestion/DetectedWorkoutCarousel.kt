@@ -210,6 +210,9 @@ private fun summaryLine(workout: DetectedWorkout): String {
         parts.add(stringRes(R.string.workout_suggestion_distance_km, "%.2f".format(it / 1000.0)))
     }
     parts.add(formatWorkoutDuration(workout.durationSeconds))
+    if (workout.sessionCount > 1) {
+        parts.add(stringRes(R.string.workout_suggestion_combined_sessions, workout.sessionCount))
+    }
     return parts.joinToString(" · ")
 }
 
