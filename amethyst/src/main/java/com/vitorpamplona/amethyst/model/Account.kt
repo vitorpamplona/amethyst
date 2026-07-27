@@ -2431,7 +2431,7 @@ class Account(
         // quick reply is notified (`p`) and their reference resolves. The reply-parent author is
         // already tagged by each builder below, so drop it from the body mentions to avoid a
         // duplicate `p`.
-        val tagger = NewMessageTagger(text)
+        val tagger = NewMessageTagger(text, dao = LocalCache)
         tagger.run()
         val mentions = tagger.pTags?.mapNotNull { it.pubkeyHex.takeIf { pk -> pk != rootEvent.pubKey } }.orEmpty()
         val finalText = appendMediaUrls(tagger.message, imetas)

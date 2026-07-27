@@ -206,7 +206,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         // (`p`) and linkable — the same enrichment the in-app composers do. The comment builders
         // already tag the reply-parent author, so drop it from the body mentions to avoid a
         // duplicate `p` (kind-1 doesn't auto-tag the parent, so nothing is lost there).
-        val tagger = NewMessageTagger(replyText)
+        val tagger = NewMessageTagger(replyText, dao = LocalCache)
         tagger.run()
         val mentions = tagger.pTags?.mapNotNull { pt -> pt.pubkeyHex.takeIf { it != targetEvent.pubKey } }.orEmpty()
 
