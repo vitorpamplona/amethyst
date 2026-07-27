@@ -160,7 +160,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
 import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
 import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
@@ -3421,25 +3420,6 @@ class Account(
     ) {
         val template = RemoveUserEvent.build(channel.groupId.id, listOf(pubkey))
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /**
-     * Re-reads one relay group's own state (39000-39003) from its host relay, straight into
-     * [LocalCache] so every screen observing that group updates through the flows it already has.
-     *
-     * Buzz cannot stream those events: it signs them with `d`/`p` tags and **no `h`**, yet stores
-     * and fans them out channel-scoped — so a filter carrying `#h` does not match their tags, and
-     * one without `#h` is a global subscription, which by design receives no channel-scoped event.
-     * Re-issuing the standing REQ doesn't help either: its filters are unchanged, so no new REQ goes
-     * out. An explicit fetch is the only thing that actually pulls them.
-     */
-    suspend fun refreshRelayGroupState(groupId: GroupId) {
-        val filter =
-            Filter(
-                kinds = RELAY_GROUP_METADATA_KINDS,
-                tags = mapOf("d" to listOf(groupId.id)),
-            )
-        client.fetchAll(filters = mapOf(groupId.relayUrl to listOf(filter)), timeoutMs = 8_000)
     }
 
     /**

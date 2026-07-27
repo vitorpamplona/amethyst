@@ -111,7 +111,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -2239,31 +2238,6 @@ class AccountViewModel(
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.deleteNotes(newNotes)
                 }
-            }
-        }
-
-        // A Buzz relay narrates every change to a channel — joins, removals, role changes, renames,
-        // visibility, archive — as a kind-40099, but it cannot stream the state those changes
-        // produce: it signs 39000-39003 with `d`/`p` tags and no `h`, then stores and fans them out
-        // channel-scoped, so a filter carrying `#h` doesn't match their tags while one without `#h`
-        // is a global subscription, which receives no channel-scoped event. Nothing arrives for the
-        // cache to be reactive to.
-        //
-        // The narration does arrive, so treat it as the relay saying "this channel changed" and
-        // re-issue the always-on state REQ. Its filters carry `since`, so the relay replays exactly
-        // the 39000-39003 written since the last EOSE; those land in LocalCache and every screen
-        // showing that group — roster, top bar, channel list, Messages row — updates through the
-        // flows it already observes. Central on purpose: the alternative was one screen refreshing
-        // itself while the rest of the app stayed stale.
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { newNotes ->
-                newNotes
-                    .mapNotNullTo(mutableSetOf()) { (it.event as? SystemMessageEvent)?.channel() }
-                    // The event names its channel but not its host, and the note's relay list can
-                    // still be empty this early — so resolve the host from the channels already in
-                    // cache, which is where the group is being displayed from anyway.
-                    .flatMap { LocalCache.relayGroupChannelsWithId(it) }
-                    .forEach { account.refreshRelayGroupState(it) }
             }
         }
     }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
@@ -117,6 +118,12 @@ class RelayGroupJoinedChatTailSubAssembler(
             // Reactions/deletions for every message in this channel — the shape Buzz's own client uses.
             buildRelayGroupAuxFilter(key.groupId, DmHistoryTuning.recentBoundary()),
         ) +
+            // This group's own state (39000-39003 + pins), `#h`-scoped so Buzz streams it. The
+            // account-wide state subscription asks by `#d`, which carries no channel tag and so
+            // registers as a global subscription there — and Buzz never fans a channel-scoped event
+            // to one of those, which is why a rename or a role change used to sit stale until the
+            // next cold start. Costs nothing on a relay29 relay, where it simply matches nothing.
+            (if (BuzzRelayDialect.isBuzz(relay)) buildRelayGroupLiveStateFilter(key.groupId) else emptyList()) +
             filterGroupNotificationsToPubkey(
                 relay = relay,
                 pubkey = key.account.userProfile().pubkeyHex,

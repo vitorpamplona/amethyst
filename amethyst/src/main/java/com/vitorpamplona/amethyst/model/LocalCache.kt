@@ -735,13 +735,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getRelayGroupChannelIfExists(key: GroupId): RelayGroupChannel? = relayGroupChannels.get(key)
 
-    /**
-     * Every known [GroupId] whose channel id matches [groupId], across relays. A NIP-29 group id is
-     * only unique per host, so this is normally one entry — it returns a list because the same id
-     * can legitimately exist on two relays.
-     */
-    fun relayGroupChannelsWithId(groupId: String): List<GroupId> = relayGroupChannels.filter { key, _ -> key.id == groupId }.map { it.groupId }
-
     /** Every relay group we know of that is hosted on [relay] (its channel directory). */
     fun getRelayGroupChannelsOnRelay(relay: NormalizedRelayUrl): List<RelayGroupChannel> = relayGroupChannels.filter { key, _ -> key.relayUrl == relay }
 
