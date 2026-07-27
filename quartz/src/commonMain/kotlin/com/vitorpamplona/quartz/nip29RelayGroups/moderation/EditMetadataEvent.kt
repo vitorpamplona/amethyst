@@ -66,7 +66,7 @@ class EditMetadataEvent(
 
     fun previousEvents() = tags.previousEvents()
 
-    override fun indexableContent() = listOfNotNull(name(), about()).joinToString("\n")
+    override fun indexableContent() = (listOfNotNull(name(), about()) + hashtags()).joinToString("\n")
 
     companion object {
         const val KIND = 9002

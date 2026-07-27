@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETag
@@ -65,7 +66,7 @@ class LiveActivitiesChatMessageEvent(
     AddressHintProvider,
     ExposeInDraft,
     SearchableEvent {
-    override fun indexableContent() = content
+    override fun indexableContent() = (listOf(content) + tags.hashtags()).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(ETag::parseAsHint)

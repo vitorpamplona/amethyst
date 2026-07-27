@@ -57,7 +57,7 @@ class BirdexEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+    override fun indexableContent() = (listOfNotNull(summary()) + speciesNames()).joinToString("\n")
 
     /** Scientific names of the collected species, in event order, from the `n` tags. */
     fun speciesNames() = tags.mapValueTagged("n") { it }

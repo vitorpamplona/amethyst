@@ -53,7 +53,7 @@ class ContactCardEvent(
     SearchableEvent {
     // Only the public summary tag is indexed; the rest of the card lives in
     // NIP-44 encrypted content and is intentionally never indexed.
-    override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+    override fun indexableContent() = (listOfNotNull(summary()) + topics()).joinToString("\n")
 
     fun aboutUser() = tags.dTag()
 

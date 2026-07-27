@@ -60,7 +60,7 @@ class Ps1SaveEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(summary(), saveTitle(), filename()).joinToString("\n")
+    override fun indexableContent() = listOfNotNull(summary(), saveTitle(), region(), filename()).joinToString("\n")
 
     /** Human-readable save name, from the `title` tag (may be null). */
     fun saveTitle() = tags.firstTagValue("title")
