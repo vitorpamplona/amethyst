@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,10 +48,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -170,11 +173,17 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
-            // Buzz workspace canvas (kind 40100): shown on any Buzz-dialect relay so a member can
-            // open the shared markdown doc — or create one when the channel has none yet. The only
-            // affordance that stays an icon: it is this channel's shared document, i.e. content, while
-            // Threads and Share are navigation the reader needs once in a while.
-            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            // Buzz canvas (kind 40100): shown on any Buzz-dialect relay so a member can open the
+            // channel's shared markdown doc — or create one when it has none yet. The only affordance
+            // that stays an icon: it is this channel's shared document, i.e. content, while Threads and
+            // Share are navigation the reader needs once in a while.
+            //
+            // Except on a DM, where Buzz itself never offers to *write* one: its canvas entry needs
+            // `hasCanvas || canEditNarrative`, and `canEditNarrative` excludes `channelType === "dm"`
+            // outright. So a DM shows the icon only when a canvas already exists — which is also what
+            // keeps us from advertising "start a shared doc" in a two-person conversation.
+            val hasCanvas by observeBuzzCanvas(channel.groupId.id)
+            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) && (!isDm || hasCanvas)) {
                 IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
                     Icon(
                         symbol = MaterialSymbols.Dashboard,
@@ -371,4 +380,19 @@ private fun RoleBadge(membership: RelayGroupMembership) {
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }
+}
+
+/**
+ * Whether this Buzz channel has a canvas (kind 40100) in cache, recomposing when one lands.
+ *
+ * Only the top bar's DM case needs this: a DM gets the canvas affordance solely when a document
+ * already exists, mirroring Buzz's own `hasCanvas || canEditNarrative` where `canEditNarrative`
+ * excludes DMs. Reads the same [BuzzWorkspaceStates] registry the canvas screen renders from, so the
+ * icon appears the moment the document arrives rather than on the next visit.
+ */
+@Composable
+private fun observeBuzzCanvas(channelId: String): State<Boolean> {
+    val state = remember(channelId) { BuzzWorkspaceStates.getOrCreate(channelId) }
+    val version by state.canvasUpdates.collectAsStateWithLifecycle()
+    return remember(channelId, version) { mutableStateOf(state.canvasNote != null) }
 }
