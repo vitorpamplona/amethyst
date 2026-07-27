@@ -183,27 +183,12 @@ fun RelayGroupTopBar(
             // outright. So a DM shows the icon only when a canvas already exists — which is also what
             // keeps us from advertising "start a shared doc" in a two-person conversation.
             val hasCanvas by observeBuzzCanvas(channel.groupId.id)
-            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) && (!isDm || hasCanvas)) {
+            val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
+            if (isBuzzRelay && (!isDm || hasCanvas)) {
                 IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
                     Icon(
                         symbol = MaterialSymbols.Dashboard,
                         contentDescription = stringRes(R.string.buzz_canvas_title),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-                // Buzz agent backlog (kinds 43001-43006): the channel's shared job board.
-                IconButton(onClick = { nav.nav(Route.BuzzJobBoard(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Checklist,
-                        contentDescription = "Backlog",
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-                // Buzz workflow runs (46020 + lifecycle): the channel's shared run board + approval gates.
-                IconButton(onClick = { nav.nav(Route.BuzzWorkflowBoard(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Gavel,
-                        contentDescription = "Workflow runs",
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -260,6 +245,26 @@ fun RelayGroupTopBar(
                             onClick = {
                                 menuOpen = false
                                 nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
+                            },
+                        )
+                    }
+                    // The agent surfaces: this channel's job backlog (43001-43006) and workflow runs
+                    // (46020 + lifecycle). Menu entries rather than icons — they are two more views of
+                    // the channel, reached occasionally, and as icons they pushed the bar back to four,
+                    // truncating the channel name and relay the title row is there to show.
+                    if (isBuzzRelay && !isDm) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.buzz_job_board_title)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.BuzzJobBoard(channel.groupId.id, channel.groupId.relayUrl.url))
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.buzz_workflow_runs_title)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.BuzzWorkflowBoard(channel.groupId.id, channel.groupId.relayUrl.url))
                             },
                         )
                     }

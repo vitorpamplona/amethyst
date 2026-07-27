@@ -4854,6 +4854,7 @@
     <string name="new_conversation_location_con_1">Public and ephemeral — no history, anyone in the cell can read it.</string>
 
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Backlog</string>
     <string name="buzz_workflow_runs_title">Workflow runs</string>
     <string name="buzz_workflow_new_run">New run</string>
     <string name="buzz_workflow_section_awaiting">Needs your approval</string>

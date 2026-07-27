@@ -147,8 +147,10 @@ is a coherent *owner telemetry* surface and should stay that — just get a bett
 The **shared work surface is a different thing and belongs at the channel level.** A Buzz job is
 `h`-scoped to a channel, so the backlog is *per-channel* — exactly like the Canvas (40100) and
 Forum, which launch from `RelayGroupTopBar` gated by `BuzzRelayDialect.isBuzz`. So the Jobs
-board sits there too (a `Checklist` action → `Route.BuzzJobBoard(channelId, relayUrl)`), NOT
-inside the owner Console. Keeping "owner fleet telemetry" and "this channel's shared backlog"
+board sits there too (→ `Route.BuzzJobBoard(channelId, relayUrl)`), NOT inside the owner
+Console. It lives in that bar's **overflow menu** rather than as an icon: Canvas is the only
+affordance holding an icon there, because a fourth and fifth one squeeze the title row until the
+channel name and relay truncate. Keeping "owner fleet telemetry" and "this channel's shared backlog"
 as separate surfaces is the right call.
 
 Note the model change also **deprioritizes the workflow-approval inbox (46010/46030/46031)**: with
@@ -162,7 +164,8 @@ create/interact surface** for the two kinds that define the workflow. Priorities
 
 **P0 — the shared work surface**
 - **P0-2 Jobs board — ✅ LANDED.** `JobBoardScreen` + `JobBoardViewModel` (per-channel,
-  `Route.BuzzJobBoard(channelId, relayUrl)`, entered from `RelayGroupTopBar` on Buzz relays).
+  `Route.BuzzJobBoard(channelId, relayUrl)`, entered from the `RelayGroupTopBar` overflow menu
+  on Buzz relays).
   Reads job kinds + kind-7 upvotes scoped to the channel `h`, folds via `BuzzJobAggregator`,
   groups by state (In progress / Queued-by-upvotes / Done / Closed), live via `subscribeAsFlow`.
   Three write actions through new `Account` helpers: **file** a task (43001, FAB → dialog),
@@ -231,10 +234,14 @@ wire handling, both verified against geode:
 - `cli/tests/buzz/workflow-loop.sh` — end-to-end headless harness (alice triggers, bot runs,
   carol approves/denies) through embedded geode; 14/14 green, including the deny path and
   worktree cleanup.
+- `cli/tests/buzz/agent-exec.sh` — covers the real `--exec` wrapper the loop harnesses stub out:
+  task → agent → commit → push → PR url, plus the paths that must fail (no diff, empty task,
+  missing scheduler env) and the default-branch guard, asserting `main` is left unmoved. Stubbed
+  `gh` + agent, so no network, credentials, or Claude Code; 19/19 green.
 
 **Landed (Android app):**
 - `WorkflowRunBoardScreen` + `WorkflowRunBoardViewModel` (per channel, `Route.BuzzWorkflowBoard`,
-  entered from `RelayGroupTopBar` on Buzz relays). Folds the workflow kinds via
+  entered from the `RelayGroupTopBar` overflow menu on Buzz relays). Folds the workflow kinds via
   `WorkflowRunAggregator`, groups runs by state with **"Needs your approval" pinned first**, and the
   named approver grants/denies a paused run inline (46030/46031). Merge stays on GitHub.
 - `Account.triggerBuzzWorkflow` / `approveBuzzWorkflowRun` / `denyBuzzWorkflowRun` (same
