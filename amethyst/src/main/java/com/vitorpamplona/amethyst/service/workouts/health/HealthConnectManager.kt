@@ -142,8 +142,11 @@ class HealthConnectManager(
                 )
             Log.i(TAG) { "readNewWorkouts: ${response.records.size} exercise session(s) in window $since .. $now" }
             val mapped = response.records.mapNotNull { mapSession(it) }
-            Log.i(TAG) { "readNewWorkouts: mapped ${mapped.size} workout(s) after type/duration filtering" }
-            mapped
+            // Fold split-up sessions of the same activity (a long run broken around
+            // breaks) into one suggestion so the composer offers the whole effort.
+            val merged = WorkoutMerger.mergeCloseWorkouts(mapped)
+            Log.i(TAG) { "readNewWorkouts: mapped ${mapped.size} -> ${merged.size} workout(s) after type/duration filtering and merging" }
+            merged
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Failed to read workouts from Health Connect", e)

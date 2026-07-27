@@ -792,6 +792,10 @@
     <string name="workout_suggestion_connect_button">Connect</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">From Health Connect</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d activity</item>
+        <item quantity="other">%1$d activities</item>
+    </plurals>
     <string name="exercise_running">Running</string>
     <string name="exercise_walking">Walking</string>
     <string name="exercise_cycling">Cycling</string>
