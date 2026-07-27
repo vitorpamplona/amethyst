@@ -60,7 +60,9 @@ class MintExceptionTest {
         // describeMintError lives in amethyst-layer, but at the quartz level we
         // can at least confirm both exceptions are runtime — callers don't need
         // to declare them.
-        assertTrue(MintHttpException(200, null, null, "m") is RuntimeException)
-        assertTrue(MintProtocolException("m") is RuntimeException)
+        val http: Exception = MintHttpException(200, null, null, "m")
+        val protocol: Exception = MintProtocolException("m")
+        assertTrue(http is RuntimeException)
+        assertTrue(protocol is RuntimeException)
     }
 }

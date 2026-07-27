@@ -94,10 +94,10 @@ class MergeQueryCorrectnessTest {
     ): List<String> =
         all
             .asSequence()
-            .filter { filter.authors == null || it.pubKey in filter.authors!! }
-            .filter { filter.kinds == null || it.kind in filter.kinds!! }
-            .filter { filter.since == null || it.createdAt >= filter.since!! }
-            .filter { filter.until == null || it.createdAt <= filter.until!! }
+            .filter { filter.authors == null || it.pubKey in filter.authors }
+            .filter { filter.kinds == null || it.kind in filter.kinds }
+            .filter { filter.since == null || it.createdAt >= filter.since }
+            .filter { filter.until == null || it.createdAt <= filter.until }
             .sortedWith(newestFirst)
             .take(limit)
             .map { it.id }

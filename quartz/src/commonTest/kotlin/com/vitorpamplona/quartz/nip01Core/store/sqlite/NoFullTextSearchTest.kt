@@ -25,10 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.runBlocking
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -46,11 +44,6 @@ import kotlin.test.assertTrue
  */
 class NoFullTextSearchTest {
     private val signer = NostrSignerSync()
-
-    @BeforeTest
-    fun setup() {
-        Secp256k1Instance
-    }
 
     private fun store() =
         SQLiteEventStore(

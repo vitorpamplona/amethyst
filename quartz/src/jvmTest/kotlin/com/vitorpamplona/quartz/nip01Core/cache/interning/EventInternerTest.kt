@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -39,7 +38,6 @@ class EventInternerTest {
 
     @BeforeTest
     fun setUp() {
-        Secp256k1Instance
         interner = EventInterner()
     }
 

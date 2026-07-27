@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkType
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -61,7 +60,6 @@ class RelayReachabilityStoreTest {
     @Test
     fun recordsAndReloadsReachability() =
         runBlocking {
-            Secp256k1Instance
             val store = store()
             val cache = cache(store)
             val now = 1_000_000L
@@ -78,7 +76,6 @@ class RelayReachabilityStoreTest {
     @Test
     fun aFreshSuccessfulOpenOverridesAnEarlierDeadMark() =
         runBlocking {
-            Secp256k1Instance
             val store = store()
             val cache = cache(store)
 
@@ -94,7 +91,6 @@ class RelayReachabilityStoreTest {
     @Test
     fun recordsOlderThanTheTtlAreIgnored() =
         runBlocking {
-            Secp256k1Instance
             val store = store()
             val cache = cache(store) // ttl = 3600s
 

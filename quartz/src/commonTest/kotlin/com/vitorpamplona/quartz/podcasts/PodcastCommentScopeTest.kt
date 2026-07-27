@@ -47,11 +47,11 @@ class PodcastCommentScopeTest {
     @Test
     fun `episode events declare themselves as NIP-22 comment roots`() {
         // Consistency with every other commentable content type (articles, videos, …).
-        val pc20 =
+        val pc20: Event =
             signer.sign<Podcasting20EpisodeEvent>(
                 Podcasting20EpisodeEvent.build("ep-1", "E", listOf(PodcastAudio("https://x/a.mp3")), "Thu, 04 Nov 2023 12:00:00 GMT"),
             )
-        val f4 =
+        val f4: Event =
             signer.sign<PodcastEpisodeEvent>(
                 PodcastEpisodeEvent.build("E", "d", listOf(AudioTag("https://x/a.mp3"))),
             )

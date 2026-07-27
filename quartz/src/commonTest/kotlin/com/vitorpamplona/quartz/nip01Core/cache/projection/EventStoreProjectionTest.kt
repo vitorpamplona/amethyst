@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -64,7 +63,6 @@ class EventStoreProjectionTest {
 
     @BeforeTest
     fun setUp() {
-        Secp256k1Instance
         store = EventStore(dbName = null)
         observable = ObservableEventStore(store)
         scope = CoroutineScope(SupervisorJob())

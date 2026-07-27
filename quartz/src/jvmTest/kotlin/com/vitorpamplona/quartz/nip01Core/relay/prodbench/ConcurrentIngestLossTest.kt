@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.backend.IngestQueue
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,7 +64,6 @@ class ConcurrentIngestLossTest {
     @Test
     fun concurrentIngestNeverLosesAcceptedEvents() =
         runBlocking {
-            Secp256k1Instance
             val file = File(corpusPath).takeIf { it.exists() } ?: File("../$corpusPath")
             if (!file.exists()) {
                 println("─ ConcurrentIngestLossTest: corpus not found — skipping ─")
