@@ -214,20 +214,30 @@ fun RelayGroupChannelListScreen(
         }
 
     fun buzzTypeOf(groupId: GroupId): String? = channelsById[groupId.id]?.event?.buzzChannelType()
-    // Starred channels float to the top of their section (stable sort keeps the alphabetical order
-    // within the starred and unstarred buckets).
+
+    // Starred channels float to the top of their section, then alphabetical.
+    //
+    // The name is the tie-break on purpose: [buzzGroupIds] is in *arrival* order (membership ids as
+    // the ViewModel emitted them, then directory ids), so sorting on `starred` alone — a stable sort
+    // over a boolean — left the underlying order at the mercy of whatever landed first. The list
+    // visibly reshuffled in the second after opening, and came back differently each visit. Ordering
+    // by a property of the channel instead makes the first frame the final order; a channel whose
+    // 39000 hasn't arrived sorts by its id until the name lands.
     val starred by BuzzChannelStars.flow.collectAsStateWithLifecycle()
+
+    fun buzzSortKey(groupId: GroupId): String = channelsById[groupId.id]?.toBestDisplayName()?.lowercase() ?: groupId.id
+
     val buzzChatChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
                 .filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } }
-                .sortedByDescending { it.id in starred }
+                .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
     val buzzForumChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
                 .filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM }
-                .sortedByDescending { it.id in starred }
+                .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
 
     // Which sections the user has collapsed (session-scoped). Keyed by section id below.
