@@ -28,21 +28,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -64,25 +60,23 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
-import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun NotificationSettingsScreen(
@@ -175,19 +169,8 @@ private fun AccountParticipationRow(
     accountViewModel: AccountViewModel,
 ) {
     val participates by settings.alwaysOnNotificationService.collectAsStateWithLifecycle()
-
-    // Resolve the User behind this account so its live metadata (picture + display name)
-    // can be observed. These are other/background accounts, not the logged-in one, so the
-    // User may not exist in LocalCache yet — create it lazily off the main thread.
     val pubkeyHex = remember(info) { decodePublicKeyAsHexOrNull(info.npub) }
-    var user by remember(info) { mutableStateOf(pubkeyHex?.let { LocalCache.getUserIfExists(it) }) }
-    if (user == null && pubkeyHex != null) {
-        LaunchedEffect(pubkeyHex) {
-            launch(Dispatchers.IO) { user = LocalCache.getOrCreateUser(pubkeyHex) }
-        }
-    }
-
-    val userInfo = user?.let { observeUserInfo(it, accountViewModel).value }
+    val npubShort = remember(info) { info.npub.toShortDisplay() }
 
     Row(
         modifier =
@@ -197,58 +180,49 @@ private fun AccountParticipationRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RobohashFallbackAsyncImage(
-            robot = pubkeyHex ?: info.npub,
-            model = userInfo?.info?.profilePicture(),
-            contentDescription = stringRes(R.string.profile_image),
-            modifier =
-                Modifier
-                    .size(36.dp)
-                    .clip(CircleShape),
-            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            autoPlayGif =
-                accountViewModel.settings.autoPlayVideosFlow
-                    .collectAsStateWithLifecycle()
-                    .value,
-        )
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp, end = 12.dp),
-        ) {
-            val bestName = userInfo?.info?.bestName()
-            if (bestName != null) {
-                ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
-                    CreateTextWithEmoji(
-                        text = bestName,
-                        tags = userInfo.tags,
+        // Weight built here in RowScope, then captured by the LoadUser content lambda
+        // (which is not itself a RowScope) so the name still expands to fill the row.
+        val nameModifier =
+            Modifier
+                .weight(1f)
+                .padding(start = 16.dp, end = 12.dp)
+
+        // These are other/background accounts, not the logged-in one, so LoadUser
+        // resolves (and lazily creates) the User behind each npub off the main thread,
+        // then the shared UserPicture / UsernameDisplay observe its live metadata.
+        if (pubkeyHex != null) {
+            LoadUser(pubkeyHex, accountViewModel) { user ->
+                if (user != null) {
+                    ClickableUserPicture(
+                        baseUser = user,
+                        size = Size35dp,
+                        accountViewModel = accountViewModel,
+                    )
+                    UsernameDisplay(
+                        baseUser = user,
+                        weight = nameModifier,
+                        accountViewModel = accountViewModel,
+                    )
+                } else {
+                    Text(
+                        text = npubShort,
+                        style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = nameModifier,
                     )
                 }
-                Text(
-                    text = info.npub.toShortDisplay(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                Text(
-                    text = info.npub.toShortDisplay(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = stringRes(R.string.notification_service_participation_title),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
+        } else {
+            Text(
+                text = npubShort,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = nameModifier,
+            )
         }
+
         Switch(
             checked = participates,
             onCheckedChange = { settings.toggleAlwaysOnNotificationService() },
