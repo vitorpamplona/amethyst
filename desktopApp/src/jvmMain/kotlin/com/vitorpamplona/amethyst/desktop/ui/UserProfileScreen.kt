@@ -65,16 +65,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
 import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -89,6 +94,8 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscri
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.note.DesktopRichText
+import com.vitorpamplona.amethyst.desktop.ui.note.RichTextCallbacks
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
 import com.vitorpamplona.amethyst.desktop.ui.profile.EditProfileDialog
 import com.vitorpamplona.amethyst.desktop.ui.profile.GalleryTab
@@ -149,6 +156,15 @@ fun UserProfileScreen(
         )
     }
     var picture by remember { mutableStateOf(cachedMetadata?.profilePicture()) }
+    var banner by remember {
+        mutableStateOf(
+            cachedMetadata
+                ?.flow
+                ?.value
+                ?.info
+                ?.banner,
+        )
+    }
     var nip05 by remember {
         mutableStateOf(
             cachedMetadata
@@ -334,6 +350,7 @@ fun UserProfileScreen(
                                 displayName = metadata.displayName ?: metadata.name
                                 about = metadata.about
                                 picture = metadata.picture
+                                banner = metadata.banner
                                 nip05 = metadata.nip05
                                 website = metadata.website
                                 lnAddress = metadata.lnAddress()
@@ -735,6 +752,19 @@ fun UserProfileScreen(
                                 ),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+                                banner?.takeIf { it.isNotBlank() }?.let { bannerUrl ->
+                                    AsyncImage(
+                                        model = bannerUrl,
+                                        contentDescription = "Profile banner",
+                                        contentScale = ContentScale.Crop,
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(120.dp)
+                                                .clip(MaterialTheme.shapes.medium),
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                }
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.Top,
@@ -798,12 +828,15 @@ fun UserProfileScreen(
                                     }
                                 }
 
-                                if (about != null) {
+                                about?.takeIf { it.isNotBlank() }?.let { bio ->
                                     Spacer(Modifier.height(12.dp))
-                                    Text(
-                                        about!!,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                    val bioState = remember(bio) { CachedRichTextParser.parseText(bio, EmptyTagList) }
+                                    DesktopRichText(
+                                        content = bio,
+                                        state = bioState,
+                                        localCache = localCache,
+                                        callbacks = RichTextCallbacks(onMentionClick = onNavigateToProfile),
+                                        modifier = Modifier.fillMaxWidth(),
                                     )
                                 }
 

@@ -232,6 +232,7 @@ fun EditProfileDialog(
                             nip05 = fields.nip05.value,
                             lnAddress = fields.lnAddress.value,
                             lnURL = fields.lnURL.value,
+                            clinkOffer = fields.clinkOffer.value,
                         )
                     } else {
                         MetadataEvent.createNew(
@@ -245,6 +246,7 @@ fun EditProfileDialog(
                             nip05 = fields.nip05.value,
                             lnAddress = fields.lnAddress.value,
                             lnURL = fields.lnURL.value,
+                            clinkOffer = fields.clinkOffer.value,
                         )
                     }
                 val signedMetadata = account.signer.sign(metadataTemplate)
@@ -374,6 +376,7 @@ fun EditProfileContent(
     val nip05Value by fields.nip05.collectAsState()
     val lnAddressValue by fields.lnAddress.collectAsState()
     val lnURLValue by fields.lnURL.collectAsState()
+    val clinkOfferValue by fields.clinkOffer.collectAsState()
     val twitterValue by fields.twitter.collectAsState()
     val githubValue by fields.github.collectAsState()
     val mastodonValue by fields.mastodon.collectAsState()
@@ -673,6 +676,13 @@ fun EditProfileContent(
                     value = lnURLValue,
                     onValueChange = { fields.lnURL.value = it },
                     label = { Text("LNURL (legacy)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = clinkOfferValue,
+                    onValueChange = { fields.clinkOffer.value = it },
+                    label = { Text("CLINK offer (noffer…)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
