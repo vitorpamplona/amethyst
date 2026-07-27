@@ -21,22 +21,28 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -48,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -57,9 +64,13 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
 import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -69,6 +80,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun NotificationSettingsScreen(
@@ -118,7 +132,7 @@ private fun DeliverySection(accountViewModel: AccountViewModel) {
     }
 
     if (master) {
-        BackgroundAccountsSection()
+        BackgroundAccountsSection(accountViewModel)
         BatteryOptimizationBanner()
     }
 }
@@ -131,7 +145,7 @@ private fun DeliverySection(accountViewModel: AccountViewModel) {
  * observes, so participation changes take effect live.
  */
 @Composable
-private fun BackgroundAccountsSection() {
+private fun BackgroundAccountsSection(accountViewModel: AccountViewModel) {
     val accounts by produceState<List<Pair<AccountInfo, AccountSettings>>>(emptyList()) {
         value =
             runCatching {
@@ -149,7 +163,7 @@ private fun BackgroundAccountsSection() {
     SettingsSection(R.string.notification_service_accounts_title) {
         accounts.forEachIndexed { index, (info, settings) ->
             if (index > 0) SettingsDivider()
-            AccountParticipationRow(info, settings)
+            AccountParticipationRow(info, settings, accountViewModel)
         }
     }
 }
@@ -158,14 +172,83 @@ private fun BackgroundAccountsSection() {
 private fun AccountParticipationRow(
     info: AccountInfo,
     settings: AccountSettings,
+    accountViewModel: AccountViewModel,
 ) {
     val participates by settings.alwaysOnNotificationService.collectAsStateWithLifecycle()
-    SettingsControlRow(
-        icon = MaterialSymbols.AccountCircle,
-        title = info.npub.toShortDisplay(),
-        description = stringRes(R.string.notification_service_participation_title),
-        onClick = { settings.toggleAlwaysOnNotificationService() },
+
+    // Resolve the User behind this account so its live metadata (picture + display name)
+    // can be observed. These are other/background accounts, not the logged-in one, so the
+    // User may not exist in LocalCache yet — create it lazily off the main thread.
+    val pubkeyHex = remember(info) { decodePublicKeyAsHexOrNull(info.npub) }
+    var user by remember(info) { mutableStateOf(pubkeyHex?.let { LocalCache.getUserIfExists(it) }) }
+    if (user == null && pubkeyHex != null) {
+        LaunchedEffect(pubkeyHex) {
+            launch(Dispatchers.IO) { user = LocalCache.getOrCreateUser(pubkeyHex) }
+        }
+    }
+
+    val userInfo = user?.let { observeUserInfo(it, accountViewModel).value }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { settings.toggleAlwaysOnNotificationService() }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        RobohashFallbackAsyncImage(
+            robot = pubkeyHex ?: info.npub,
+            model = userInfo?.info?.profilePicture(),
+            contentDescription = stringRes(R.string.profile_image),
+            modifier =
+                Modifier
+                    .size(36.dp)
+                    .clip(CircleShape),
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif =
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value,
+        )
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(start = 16.dp, end = 12.dp),
+        ) {
+            val bestName = userInfo?.info?.bestName()
+            if (bestName != null) {
+                ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
+                    CreateTextWithEmoji(
+                        text = bestName,
+                        tags = userInfo.tags,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text = info.npub.toShortDisplay(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Text(
+                    text = info.npub.toShortDisplay(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringRes(R.string.notification_service_participation_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Switch(
             checked = participates,
             onCheckedChange = { settings.toggleAlwaysOnNotificationService() },
