@@ -45,10 +45,22 @@ class PutUserEvent(
     companion object {
         const val KIND = 9000
 
+        /**
+         * NIP-29 put-user. The roles ride inside each `p` tag (`["p", pubkey, role, …]`), which is
+         * what relay29 reads.
+         *
+         * [buzzRole] additionally emits a top-level `["role", …]` tag. Buzz reads **only** that —
+         * `extract_tag_value(event, "role")`, defaulting to `member` — so without it every put-user
+         * lands as a plain member and a promotion silently does nothing. Its vocabulary is also its
+         * own (`owner`/`admin`/`member`/`guest`/`bot`, no moderator); an unparseable role fails the
+         * whole handler, so callers map to Buzz's set before passing it here. Harmless on relay29,
+         * which ignores the extra tag.
+         */
         fun build(
             groupId: String,
             pubKeysWithRoles: List<Pair<HexKey, List<String>>>,
             previousEvents: List<String> = emptyList(),
+            buzzRole: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PutUserEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -56,6 +68,7 @@ class PutUserEvent(
             pubKeysWithRoles.forEach { (pubKey, roles) ->
                 userPubKeyWithRoles(pubKey, roles)
             }
+            buzzRole?.let { add(arrayOf("role", it)) }
             previous(previousEvents)
             initializer()
         }

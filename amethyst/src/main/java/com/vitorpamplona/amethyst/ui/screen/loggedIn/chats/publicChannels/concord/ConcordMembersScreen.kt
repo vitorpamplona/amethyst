@@ -290,62 +290,66 @@ private fun ConcordMemberRow(
         MemberBadge(entry.membership, entry.roleName)
         if (hasMenu) {
             var expanded by remember { mutableStateOf(false) }
-            IconButton(onClick = { expanded = true }) {
-                SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(R.string.more_options))
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                if (canToggleAdmin) {
-                    DropdownMenuItem(
-                        text = { Text(stringRes(if (isAdmin) R.string.concord_members_remove_admin else R.string.concord_members_make_admin)) },
-                        onClick = {
-                            accountViewModel.setConcordAdmin(communityId, entry.pubkey, makeAdmin = !isAdmin)
-                            expanded = false
-                        },
-                    )
+            // One Box for button + menu: an expanded DropdownMenu emits a node, and as a direct child
+            // of this `spacedBy` Row that adds a gap and shifts the button as you tap it.
+            Box {
+                IconButton(onClick = { expanded = true }) {
+                    SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(R.string.more_options))
                 }
-                if (viewerCanManageRoles) {
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(stringRes(R.string.concord_members_roles))
-                                rolesBlockedReason?.let {
-                                    Text(
-                                        it,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    if (canToggleAdmin) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(if (isAdmin) R.string.concord_members_remove_admin else R.string.concord_members_make_admin)) },
+                            onClick = {
+                                accountViewModel.setConcordAdmin(communityId, entry.pubkey, makeAdmin = !isAdmin)
+                                expanded = false
+                            },
+                        )
+                    }
+                    if (viewerCanManageRoles) {
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(stringRes(R.string.concord_members_roles))
+                                    rolesBlockedReason?.let {
+                                        Text(
+                                            it,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        enabled = rolesBlockedReason == null,
-                        onClick = {
-                            editRoles = true
-                            expanded = false
-                        },
-                    )
-                }
-                if (canBan) {
-                    DropdownMenuItem(
-                        text = { Text(stringRes(if (isBanned) R.string.concord_members_unban else R.string.concord_members_ban)) },
-                        onClick = {
-                            accountViewModel.setConcordBan(communityId, entry.pubkey, ban = !isBanned)
-                            expanded = false
-                        },
-                    )
-                }
-                if (canRemove) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringRes(R.string.concord_members_remove),
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        onClick = {
-                            confirmRemove = true
-                            expanded = false
-                        },
-                    )
+                            },
+                            enabled = rolesBlockedReason == null,
+                            onClick = {
+                                editRoles = true
+                                expanded = false
+                            },
+                        )
+                    }
+                    if (canBan) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(if (isBanned) R.string.concord_members_unban else R.string.concord_members_ban)) },
+                            onClick = {
+                                accountViewModel.setConcordBan(communityId, entry.pubkey, ban = !isBanned)
+                                expanded = false
+                            },
+                        )
+                    }
+                    if (canRemove) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringRes(R.string.concord_members_remove),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                confirmRemove = true
+                                expanded = false
+                            },
+                        )
+                    }
                 }
             }
         }

@@ -198,8 +198,8 @@ private fun RelayGroupMetadataScaffold(
         topBar = {
             if (viewModel.isNewGroup) {
                 CreatingTopBar(
-                    titleRes = R.string.relay_group_create_title,
-                    isActive = { viewModel.canPost && nip29Support == true },
+                    titleRes = if (viewModel.isBuzzRelay) R.string.buzz_channel_create_title else R.string.relay_group_create_title,
+                    isActive = { viewModel.canPost && (nip29Support == true || viewModel.isBuzzRelay) },
                     onCancel = nav::popBack,
                     onPost = onSubmit,
                 )
@@ -226,20 +226,23 @@ private fun RelayGroupMetadataScaffold(
                     .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                if (nip29Support == false) {
+                if (nip29Support == false && !viewModel.isBuzzRelay) {
                     NoNip29Warning()
                     Spacer(Modifier.height(16.dp))
                 }
 
-                GroupImagePicker(viewModel) { wantsToPickImage = true }
-
-                Spacer(Modifier.height(16.dp))
+                if (!viewModel.isBuzzRelay) {
+                    GroupImagePicker(viewModel) { wantsToPickImage = true }
+                    Spacer(Modifier.height(16.dp))
+                }
 
                 GroupMetadataFields(viewModel)
 
-                Spacer(Modifier.height(16.dp))
-
-                ParentGroupSection(viewModel, accountViewModel)
+                // Sub-groups are a NIP-29 relation; Buzz has no parent channel.
+                if (!viewModel.isBuzzRelay) {
+                    Spacer(Modifier.height(16.dp))
+                    ParentGroupSection(viewModel, accountViewModel)
+                }
             }
         }
     }
@@ -356,32 +359,38 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
 
-    Spacer(Modifier.height(12.dp))
-    Text(
-        text = stringRes(R.string.relay_group_section_discovery),
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-    )
-    Text(
-        text = stringRes(R.string.relay_group_section_discovery_desc),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 2.dp),
-    )
+    // Everything below is NIP-29 vocabulary. A Buzz relay stores only `name`, `about` and a
+    // two-valued `visibility` (its 9002 handler accepts nothing else), so offering hashtags, a
+    // geohash, or the invite-only/restricted/hidden flags there would be four controls that look
+    // like they configure the channel and are silently dropped by the relay.
+    if (!viewModel.isBuzzRelay) {
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringRes(R.string.relay_group_section_discovery),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = stringRes(R.string.relay_group_section_discovery_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
 
-    OutlinedTextField(
-        value = viewModel.topics.value,
-        onValueChange = {
-            viewModel.topics.value = it
-            viewModel.markTouched()
-        },
-        singleLine = true,
-        label = { Text(stringRes(R.string.relay_group_field_topics)) },
-        placeholder = { Text(stringRes(R.string.relay_group_field_topics_hint)) },
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-    )
-    Spacer(Modifier.height(8.dp))
-    GroupLocationField(viewModel)
+        OutlinedTextField(
+            value = viewModel.topics.value,
+            onValueChange = {
+                viewModel.topics.value = it
+                viewModel.markTouched()
+            },
+            singleLine = true,
+            label = { Text(stringRes(R.string.relay_group_field_topics)) },
+            placeholder = { Text(stringRes(R.string.relay_group_field_topics_hint)) },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+        Spacer(Modifier.height(8.dp))
+        GroupLocationField(viewModel)
+    }
 
     Spacer(Modifier.height(12.dp))
     Text(
@@ -390,14 +399,33 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
         color = MaterialTheme.colorScheme.primary,
     )
 
+    // Buzz's `visibility`: open = searchable and anyone may join, private = hidden and invite-only.
+    // One switch covers both, so it keeps NIP-29's private flag but says what Buzz actually does.
     LabeledSwitchRow(
-        label = stringRes(R.string.relay_group_flag_private),
-        description = stringRes(R.string.relay_group_flag_private_desc),
+        label = stringRes(if (viewModel.isBuzzRelay) R.string.buzz_channel_flag_private else R.string.relay_group_flag_private),
+        description = stringRes(if (viewModel.isBuzzRelay) R.string.buzz_channel_flag_private_desc else R.string.relay_group_flag_private_desc),
         checked = viewModel.isPrivate,
     ) {
         viewModel.isPrivate = it
         viewModel.markTouched()
     }
+
+    if (viewModel.isBuzzRelay) {
+        // Buzz's `channel_type`. Only offered on create: the relay takes it on the 9007 and its
+        // 9002 handler has no `channel_type` key, so an existing channel cannot be converted.
+        if (viewModel.isNewGroup) {
+            LabeledSwitchRow(
+                label = stringRes(R.string.buzz_channel_flag_forum),
+                description = stringRes(R.string.buzz_channel_flag_forum_desc),
+                checked = viewModel.isForum,
+            ) {
+                viewModel.isForum = it
+                viewModel.markTouched()
+            }
+        }
+        return
+    }
+
     LabeledSwitchRow(
         label = stringRes(R.string.relay_group_flag_invite_only),
         description = stringRes(R.string.relay_group_flag_invite_only_desc),
