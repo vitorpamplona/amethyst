@@ -4856,6 +4856,7 @@
     <!-- Buzz workflow run board -->
     <string name="buzz_job_board_title">Backlog</string>
     <string name="buzz_workflow_runs_title">Workflow runs</string>
+    <string name="buzz_agent_work_title">Agent work</string>
     <string name="buzz_workflow_new_run">New run</string>
     <string name="buzz_workflow_section_awaiting">Needs your approval</string>
     <string name="buzz_workflow_section_active">Working now</string>

@@ -716,6 +716,11 @@ sealed class Route {
         val relayUrl: String,
     ) : Route()
 
+    @Serializable data class BuzzAgentWork(
+        val channelId: String,
+        val relayUrl: String,
+    ) : Route()
+
     @Serializable data class BuzzWorkflowBoard(
         val channelId: String,
         val relayUrl: String,

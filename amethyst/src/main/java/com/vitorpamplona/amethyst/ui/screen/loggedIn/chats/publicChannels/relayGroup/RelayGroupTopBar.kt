@@ -248,23 +248,17 @@ fun RelayGroupTopBar(
                             },
                         )
                     }
-                    // The agent surfaces: this channel's job backlog (43001-43006) and workflow runs
-                    // (46020 + lifecycle). Menu entries rather than icons — they are two more views of
-                    // the channel, reached occasionally, and as icons they pushed the bar back to four,
-                    // truncating the channel name and relay the title row is there to show.
+                    // The agent surface: this channel's job backlog (43001-43006) and workflow runs
+                    // (46020 + lifecycle) folded into one **Agent work** board, where the human-approval
+                    // gate is an inline card state. A menu entry rather than an icon — it's a view of
+                    // the channel reached occasionally, and icons pushed the bar back to four, truncating
+                    // the channel name and relay the title row is there to show.
                     if (isBuzzRelay && !isDm) {
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.buzz_job_board_title)) },
+                            text = { Text(stringRes(R.string.buzz_agent_work_title)) },
                             onClick = {
                                 menuOpen = false
-                                nav.nav(Route.BuzzJobBoard(channel.groupId.id, channel.groupId.relayUrl.url))
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringRes(R.string.buzz_workflow_runs_title)) },
-                            onClick = {
-                                menuOpen = false
-                                nav.nav(Route.BuzzWorkflowBoard(channel.groupId.id, channel.groupId.relayUrl.url))
+                                nav.nav(Route.BuzzAgentWork(channel.groupId.id, channel.groupId.relayUrl.url))
                             },
                         )
                     }
