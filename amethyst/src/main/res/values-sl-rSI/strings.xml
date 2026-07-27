@@ -2417,6 +2417,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="chat_type_ephemeral_title">Minljivi klepeti</string>
     <string name="chat_type_ephemeral_desc">Hitri klepeti na releju, ki ne hranijo zgodovine sporočil</string>
     <string name="relay_group_create_title">Ustvari skupino</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">Ta relej ne oglašuje podpore za skupine NIP-29. Skupina, ustvarjena tukaj, ne bo delovala – relej ne bo upravljal njenega imena, članov in sporočil. Izberite rele, ki podpira skupine na ravni releja.</string>
     <string name="relay_group_create_name">Ime supine</string>
     <string name="relay_group_create_topic">Tema (neobvezno)</string>
@@ -2513,6 +2514,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_favorite_relay">Dodaj ta rele med priljubljene</string>
     <string name="relay_group_threads_empty">Še ni nizov objav. Začni jih z + gumbom.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="relay_group_threads_empty_read_only">Še ni niza objav</string>
     <string name="relay_group_threads_loading_older">Nalaganje starejšega niza objav…</string>
     <string name="relay_group_threads_all_caught_up">Nalaganje starejšega niza objav…</string>
     <string name="relay_group_thread_new">Nov niz objav</string>
@@ -3278,10 +3280,43 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="buzz_message_edited">(urejeno)</string>
     <string name="buzz_diff_truncated">(razlika je odrezana)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s se je pridružil</string>
+    <string name="buzz_system_member_added">%2$s je dodal %1$s</string>
+    <string name="buzz_system_member_left">%1$s se je odjavil</string>
+    <string name="buzz_system_member_removed">%2$s je odstranil %1$s</string>
+    <string name="buzz_system_topic_changed">%1$s nastavil temo o \"%2$s\"</string>
+    <string name="buzz_system_topic_cleared">%1$s počistil temo</string>
+    <string name="buzz_system_purpose_changed">%1$s nastavil namen v \"%2$s\"</string>
+    <string name="buzz_system_purpose_cleared">%1$s počištil namen</string>
+    <string name="buzz_system_visibility_open">%1$s je spremenil kanal v javnega — sedaj ga lahko najde vsak</string>
+    <string name="buzz_system_visibility_private">%1$s nastavil ta kanal zaseben — Samo z povabilom</string>
+    <string name="buzz_system_visibility_other">%1$s nastavil vidnost na %2$s</string>
+    <string name="buzz_system_ttl_set">%1$s nastavil minljiva sporočila po %2$s</string>
+    <string name="buzz_system_ttl_cleared">%1$s  ugasnil minljiva sporočila</string>
+    <string name="buzz_system_channel_archived">%1$s je arhiviral ta kanal</string>
+    <string name="buzz_system_channel_unarchived">%1$s je obnovil ta kanal</string>
+    <string name="buzz_system_channel_created">%1$s je ustvaril ta kanal</string>
+    <string name="buzz_system_channel_deleted">%1$s je izbrisal ta kanal</string>
+    <string name="buzz_system_message_deleted">%1$s izbrisal sporočilo</string>
+    <string name="buzz_system_message_deleted_reason">%1$s izbrisal sporočilo: %2$s</string>
+    <string name="buzz_system_dm_created">%1$s začel ta pogovor</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s je začel ta posvet</string>
+    <string name="buzz_huddle_joined">🔊 %1$s se je pridružil posvetu</string>
+    <string name="buzz_huddle_left">🔊 %1$s je zapustil posvet</string>
+    <string name="buzz_huddle_ended">🔊 Posvet zaključen</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙ %1$s je zahteval opravilo</string>
+    <string name="buzz_job_accepted">⚙ %1$s je sprejel opravilo</string>
+    <string name="buzz_job_progress">⚙ Napredek opravila</string>
+    <string name="buzz_job_result">⚙ Rezultat opravila</string>
+    <string name="buzz_job_cancelled">⚙ Opravilo preklicano</string>
+    <string name="buzz_job_error">⚠ Napaka pri opravilu</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">▲ %1$s je objavi dal +</string>
+    <string name="buzz_forum_downvoted">▼ %1$s je objavi dal —</string>
     <string name="buzz_canvas_title">Delovna površina</string>
     <string name="buzz_canvas_empty">V tem delovnem prostoru še ni bila deljena nobena delovna površina.</string>
     <string name="buzz_canvas_edit">Uredi delovno površino</string>
@@ -4622,4 +4657,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="new_conversation_location_pro_1">Anonimno — enkratna identiteta za posamezno področje, nikoli vaš npub.</string>
     <string name="new_conversation_location_pro_2">Združljivo z Bitchatom — doseže bližnje uporabnike na istih relejih.</string>
     <string name="new_conversation_location_con_1">Javno in minljivo — brez zgodovine sporočil, dostopno vsem v celici.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

@@ -1533,6 +1533,7 @@
     <string name="messages_create_public_private_chat_description">নতুন পাবলিক বা প্রাইভেট গ্রুপ</string>
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="messages_new_message">ব্যক্তিগত</string>
@@ -3055,4 +3056,7 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">%1$s-এর ইনভয়েস ফেচ থেকে JSON পার্স করতে ত্রুটি। ব্যবহারকারীর Lightning সেটআপ পরীক্ষা করুন</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">একটি Lightning ইনভয়েস তৈরি করতে অক্ষম। %1$s থেকে বার্তা: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">%1$s থেকে একটি Lightning ইনভয়েস তৈরি করতে অক্ষম: ফলাফলের JSON-এ উপাদান pr পাওয়া যায়নি।</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

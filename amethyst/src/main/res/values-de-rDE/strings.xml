@@ -428,6 +428,7 @@
     <string name="dm_sender_reported_subtitle">Jemand, dem du folgst, hat dieses Konto gemeldet</string>
     <string name="dm_sender_reported_icon">Gemeldet</string>
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Fehler beim Laden der Antworten: "</string>
     <string name="try_again">Erneut versuchen</string>
     <string name="notification_feed_is_empty">Noch keine Benachrichtigungen.</string>
@@ -1839,6 +1840,7 @@
     <string name="app_notification_group_developer">Entwickler</string>
     <string name="app_notification_group_games">Spiele</string>
     <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">Reposts</string>
     <string name="app_notification_reposts_channel_description">Benachrichtigt dich, wenn jemand deinen Beitrag repostet</string>
     <string name="app_notification_reposts_channel_message">%1$s hat deinen Beitrag repostet</string>
     <string name="app_notification_reposts_summary">Neue Reposts</string>
@@ -1855,6 +1857,7 @@
     <string name="app_notification_articles_channel_message_highlight">%1$s hat deinen Artikel hervorgehoben</string>
     <string name="app_notification_articles_summary">Neue Artikel</string>
     <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">Code &amp; Git</string>
     <string name="app_notification_code_channel_description">Benachrichtigt dich über Issues, Patches und Pull Requests</string>
     <string name="app_notification_code_channel_message_issue">%1$s hat ein Issue eröffnet</string>
     <string name="app_notification_code_channel_message_patch">%1$s hat einen Patch gesendet</string>
@@ -2318,6 +2321,7 @@
     <string name="chat_type_ephemeral_title">Flüchtige Chats</string>
     <string name="chat_type_ephemeral_desc">Leichtgewichtige, relay-gebundene Räume, die keinen Verlauf speichern.</string>
     <string name="relay_group_create_title">Eine Gruppe erstellen</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">Dieses Relay wirbt nicht mit Unterstützung für NIP-29-Relay-Gruppen. Eine hier erstellte Gruppe funktioniert nicht — ihr Name, ihre Mitglieder und Nachrichten werden nicht vom Relay verwaltet. Wähle ein Relay, das relaybasierte Gruppen unterstützt.</string>
     <string name="relay_group_create_name">Gruppenname</string>
     <string name="relay_group_create_topic">Thema (optional)</string>
@@ -2364,6 +2368,8 @@
     <string name="relay_group_invite_preparing">Einladung wird vorbereitet…</string>
     <string name="relay_group_badge_private">Privat</string>
     <string name="relay_group_badge_invite_only">Nur mit Einladung</string>
+    <string name="relay_group_badge_live">LIVE</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Gib eine gültige Relay-URL ein (wss://…).</string>
     <string name="relay_group_field_name">Name</string>
     <string name="relay_group_field_about">Beschreibung</string>
@@ -3166,6 +3172,7 @@
     <string name="buzz_system_message_deleted_reason">%1$s hat eine Nachricht gelöscht: %2$s</string>
     <string name="buzz_system_dm_created">%1$s hat diese Unterhaltung begonnen</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <string name="buzz_huddle_started">🔊 %1$s hat einen Huddle gestartet</string>
     <string name="buzz_huddle_joined">🔊 %1$s ist dem Huddle beigetreten</string>
@@ -3181,9 +3188,11 @@
     <!-- Buzz forum votes (kind 45002). -->
     <string name="buzz_forum_upvoted">▲ %1$s hat einen Beitrag hochgestuft</string>
     <string name="buzz_forum_downvoted">▼ %1$s hat einen Beitrag herabgestuft</string>
+    <string name="buzz_canvas_title">Canvas</string>
     <string name="buzz_canvas_empty">In diesem Workspace wurde noch kein Canvas geteilt.</string>
     <string name="buzz_canvas_edit">Canvas bearbeiten</string>
     <string name="buzz_canvas_save">Canvas speichern</string>
+    <string name="buzz_canvas_body_label">Canvas (Markdown)</string>
     <string name="buzz_edit_message">Bearbeiten</string>
     <string name="buzz_editing_banner">Nachricht bearbeiten</string>
     <string name="edit_message">Bearbeiten</string>
@@ -3218,6 +3227,7 @@
     <string name="buzz_dm_add_member_title">Jemanden zu dieser DM hinzufügen</string>
     <string name="buzz_dm_add_member_invalid">Kein gültiger npub- oder Hex-Schlüssel</string>
     <string name="buzz_dm_just_you">Nur du</string>
+    <string name="buzz_dm_workspace">Workspace</string>
     <string name="buzz_dm_recipients">An</string>
     <string name="buzz_dm_add_hint">Jemanden hinzufügen (npub oder hex)</string>
     <string name="buzz_dm_start">Unterhaltung beginnen</string>
@@ -3225,6 +3235,7 @@
     <string name="buzz_dm_remove">Entfernen</string>
     <string name="buzz_invite_title">Workspace-Einladung</string>
     <string name="buzz_invite_heading">Diesem Workspace beitreten</string>
+    <string name="buzz_invite_workspace">Workspace</string>
     <string name="buzz_invite_role">Rolle</string>
     <string name="buzz_invite_body">Du öffnest den Workspace in einem sicheren In-App-Browser, um die Bedingungen zu prüfen und den Beitritt abzuschließen. Die Anmeldung erfolgt mit deinem Amethyst-Schlüssel — ohne Passwort.</string>
     <string name="buzz_invite_continue">Im Browser fortfahren</string>
@@ -3250,6 +3261,7 @@
     <string name="buzz_invite_share">Teilen</string>
     <string name="buzz_invite_copy">Kopieren</string>
     <string name="buzz_invite_error_title">Einladung konnte nicht erstellt werden</string>
+    <string name="buzz_invite_dismiss">OK</string>
     <string name="buzz_pin">Kanal anheften</string>
     <string name="buzz_unpin">Kanal nicht mehr anheften</string>
     <string name="buzz_dm_section_empty">Noch keine Unterhaltungen</string>
@@ -4463,4 +4475,7 @@
     <string name="new_conversation_location_pro_1">Anonym — eine Wegwerf-Identität pro Gebiet, niemals dein npub.</string>
     <string name="new_conversation_location_pro_2">Bitchat-kompatibel; erreicht Nutzer in der Nähe auf denselben Relays.</string>
     <string name="new_conversation_location_con_1">Öffentlich und flüchtig — kein Verlauf, jeder in der Zelle kann es lesen.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

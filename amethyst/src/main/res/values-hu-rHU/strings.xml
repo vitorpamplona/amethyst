@@ -1955,6 +1955,7 @@
     <string name="relay_groups_button">Csoportok</string>
     <string name="messages_settings">Üzenetek</string>
     <string name="relay_group_create_title">Csoport létrehozása</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">Ez az átjátszó nem hirdeti a NIP-29 átjátszócsoportok támogatását. Az itt létrehozott csoport nem fog működni. A nevét, a tagjait és az üzeneteit nem az átjátszó fogja kezelni. Válasszon egy olyan átjátszót, amely támogatja az átjátszóalapú csoportokat.</string>
     <string name="relay_group_create_name">Csoport neve</string>
     <string name="relay_group_create_topic">Téma (nem kötelező)</string>
@@ -3935,4 +3936,7 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Hiba történt a JSON elemzésekor a(z) %1$s számlahívásából. Ellenőrizze a felhasználó lightning-beállításait</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nem lehetett lightning-számlát létrehozni. Üzenet a következőtől: %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nem sikerült Lightning-számlát létrehozni a következőből: %1$s:  A „PR” elem nem található a kapott JSON-ban.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>

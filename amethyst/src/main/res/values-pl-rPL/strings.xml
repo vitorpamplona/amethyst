@@ -2405,6 +2405,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="chat_type_ephemeral_title">Czaty efemeryczne</string>
     <string name="chat_type_ephemeral_desc">Lekkie pokoje, które nie utrzymują się w historii.</string>
     <string name="relay_group_create_title">Utwórz grupę</string>
+    <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="relay_group_relay_no_nip29">Ten transmiter nie obsługuje grup zgodnych ze standardem NIP-29. Grupa utworzona tutaj nie będzie działać — transmiter nie będzie zarządzał jej nazwą, członkami ani wiadomościami. Wybierz transmiter, który obsługuje grupy oparte na rekomendacjach.</string>
     <string name="relay_group_create_name">Nazwa grupy</string>
     <string name="relay_group_create_topic">Temat (opcjonalnie)</string>
@@ -4599,4 +4600,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="new_conversation_location_pro_1">Anonimowy — to tymczasowa tożsamość przypisana do danego obszaru, nigdy nie jest to twój npub.</string>
     <string name="new_conversation_location_pro_2">Kompatybilny z Bitchatem; dociera do pobliskich użytkowników na tych samych transmiterach.</string>
     <string name="new_conversation_location_con_1">Publiczny i efemeryczny – brak historii, każdy uczestnik może go odczytać.</string>
+    <!-- Buzz workflow run board -->
+    <!-- Buzz agent attestation -->
+    <!-- Buzz agent persona editor -->
 </resources>
