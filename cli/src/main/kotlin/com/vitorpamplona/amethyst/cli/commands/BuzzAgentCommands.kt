@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -84,6 +85,10 @@ import java.util.concurrent.TimeUnit
 object BuzzAgentCommands {
     private val USAGE =
         """
+        |amy buzz agent up RELAY --repo DIR --approver NPUB   one-command gated runner (recommended)
+        |    [--channel GID]                             defaults to the relay's only channel
+        |    [--base-ref REF] [--poll SECS] [--once]     bundled wrapper; intake = channel members
+        |amy buzz agent doctor [--repo DIR] [--json]     preflight: gh token scope + branch protection
         |amy buzz agent serve RELAY --exec CMD         run a backlog scheduler
         |    [--channel GID]                             only handle jobs scoped to this channel
         |    [--accept-from npub,npub]                   allowlist of requester keys
@@ -114,9 +119,171 @@ object BuzzAgentCommands {
             tail,
             USAGE,
             mapOf(
+                "up" to { rest -> up(dataDir, rest) },
+                "doctor" to { rest -> doctor(dataDir, rest) },
                 "serve" to { rest -> serve(dataDir, rest) },
             ),
         )
+
+    // ---- one-command bundles -------------------------------------------------
+
+    /**
+     * `amy buzz agent up RELAY --repo DIR --approver NPUB [--channel GID] …` — the low-ceremony way to
+     * put a **gated** agent runner on a channel. It resolves the channel (the relay's only one unless
+     * `--channel` is given), defaults the worktree to `--repo` and intake to the channel roster,
+     * extracts the bundled agent/ship wrappers, and hands off to `buzz workflow run`. Everything it
+     * defaults stays overridable there; this just removes the eight flags and the two scripts for the
+     * common case. The one thing it can't default is `--approver` — a human must own the gate.
+     */
+    private suspend fun up(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val usage = "buzz agent up RELAY --repo DIR --approver NPUB [--channel GID] [--base-ref REF] [--poll SECS] [--once]"
+        val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
+        val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
+        val repo = args.flag("repo") ?: return Output.error("bad_args", "pass --repo DIR (your git checkout — the agent works and opens PRs here)")
+        if (!File(repo).resolve(".git").exists()) return Output.error("bad_args", "--repo is not a git repository: $repo")
+        val approver = args.flag("approver") ?: return Output.error("bad_args", "pass --approver NPUB (the human who signs off each run)")
+        val baseRef = args.flag("base-ref")
+        val poll = args.flag("poll")
+        val timeout = args.flag("timeout")
+        val once = args.bool("once")
+        val explicitChannel = args.flag("channel")
+        args.rejectUnknown("repo", "approver", "channel", "base-ref", "poll", "timeout", "once")
+
+        val channel =
+            explicitChannel
+                ?: Context.open(dataDir).use { ctx ->
+                    ctx.prepare()
+                    resolveSingleChannel(ctx, relay, timeout?.toLongOrNull() ?: 8)
+                        ?: return Output.error("bad_args", "couldn't pick a channel automatically — pass --channel GID (this relay hosts none or several)")
+                }
+
+        val (agentStep, shipStep) = extractWrappers()
+
+        val runArgs =
+            buildList {
+                add(relayUrl)
+                add("--channel")
+                add(channel)
+                add("--approver")
+                add(approver)
+                add("--exec")
+                add(agentStep)
+                add("--on-approve")
+                add(shipStep)
+                add("--worktree")
+                add(repo)
+                add("--accept-from-channel")
+                baseRef?.let {
+                    add("--base-ref")
+                    add(it)
+                }
+                poll?.let {
+                    add("--poll")
+                    add(it)
+                }
+                timeout?.let {
+                    add("--timeout")
+                    add(it)
+                }
+                if (once) add("--once")
+            }.toTypedArray()
+
+        System.err.println("[agent up] gated runner on ${relay.url} #$channel — repo $repo — approver $approver")
+        System.err.println("[agent up] wrappers: $agentStep + $shipStep (edit to customize, or re-run with your own --exec/--on-approve)")
+        return BuzzWorkflowCommands.runFromArgs(dataDir, runArgs)
+    }
+
+    /** The relay's single hosted channel (its 39000 group id), or null when there are zero or many. */
+    private suspend fun resolveSingleChannel(
+        ctx: Context,
+        relay: NormalizedRelayUrl,
+        timeoutSecs: Long,
+    ): String? =
+        ctx
+            .drain(mapOf(relay to listOf(Filter(kinds = listOf(GroupMetadataEvent.KIND)))), timeoutSecs * 1000, pendingOnAuthRequired = true)
+            .map { it.second }
+            .filterIsInstance<GroupMetadataEvent>()
+            .mapNotNull { it.groupId() }
+            .distinct()
+            .singleOrNull()
+
+    /** Extract the bundled gated wrappers to ~/.amy/buzz-agent and return (agentStepPath, shipStepPath). */
+    private fun extractWrappers(): Pair<String, String> {
+        val dir = File(System.getProperty("user.home"), ".amy/buzz-agent").apply { mkdirs() }
+
+        fun extract(name: String): String {
+            val out = File(dir, name)
+            (
+                BuzzAgentCommands::class.java.getResourceAsStream("/buzz-agent/$name")
+                    ?: error("bundled wrapper /buzz-agent/$name missing from the amy jar")
+            ).use { input -> out.outputStream().use { input.copyTo(it) } }
+            out.setExecutable(true)
+            return out.absolutePath
+        }
+        return extract("workflow-agent.sh") to extract("workflow-ship.sh")
+    }
+
+    /**
+     * `amy buzz agent doctor [--repo DIR]` — preflight the host safety the gate relies on: `gh` is
+     * authenticated and its token can write to the repo, the default branch is protected against
+     * force-push, and the worktree is a clean git checkout. Turns the tutorial's security checklist
+     * into a green/red report; exits non-zero if anything is off. Honours `--json` like every verb.
+     */
+    private suspend fun doctor(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val repo = args.flag("repo") ?: System.getProperty("user.dir")
+        args.rejectUnknown("repo")
+
+        val checks = mutableListOf<Map<String, Any?>>()
+
+        fun check(
+            name: String,
+            ok: Boolean,
+            detail: String,
+        ) = checks.add(mapOf("name" to name, "ok" to ok, "detail" to detail))
+
+        val isRepo = File(repo).resolve(".git").exists()
+        check("git repo", isRepo, if (isRepo) repo else "$repo is not a git checkout")
+        if (isRepo) {
+            val status = git(repo, "status", "--porcelain")
+            check("worktree clean", status.stdout.isBlank(), if (status.stdout.isBlank()) "no uncommitted changes" else "uncommitted changes present")
+        }
+
+        val ghAuth = runExec("gh auth status", "", emptyMap(), 20, repo)
+        val ghOk = ghAuth.exit == 0
+        check("gh authenticated", ghOk, if (ghOk) "ok" else "run: gh auth login")
+
+        if (ghOk) {
+            val perm = runExec("gh repo view --json viewerPermission -q .viewerPermission", "", emptyMap(), 20, repo).stdout.trim()
+            val canWrite = perm == "WRITE" || perm == "MAINTAIN" || perm == "ADMIN"
+            check("token can write to repo", canWrite, if (canWrite) "permission: $perm" else "permission: ${perm.ifBlank { "unknown" }} — needs Contents:RW + Pull requests:RW on this repo")
+
+            val def = runExec("gh repo view --json defaultBranchRef -q .defaultBranchRef.name", "", emptyMap(), 20, repo).stdout.trim().ifBlank { "main" }
+            val prot = runExec("gh api repos/{owner}/{repo}/branches/$def/protection --jq .allow_force_pushes.enabled", "", emptyMap(), 20, repo)
+            val isProtected = prot.exit == 0
+            val forcePushOff = prot.stdout.trim() == "false"
+            check(
+                "default branch protected ($def)",
+                isProtected && forcePushOff,
+                when {
+                    !isProtected -> "'$def' has no branch protection — require a PR + reviews and block force-push"
+                    !forcePushOff -> "'$def' allows force-push — disable it in branch protection"
+                    else -> "protected; force-push blocked"
+                },
+            )
+        }
+
+        val allOk = checks.all { it["ok"] == true }
+        Output.emit(mapOf("ok" to allOk, "repo" to repo, "checks" to checks))
+        return if (allOk) 0 else 1
+    }
 
     private class Opts(
         val relay: NormalizedRelayUrl,

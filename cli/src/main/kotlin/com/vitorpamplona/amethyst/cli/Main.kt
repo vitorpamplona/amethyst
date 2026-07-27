@@ -827,6 +827,8 @@ private fun printUsage() {
         |  buzz workflow trigger RELAY WFID …         trigger a Buzz workflow run (kind-46020)
         |  buzz workflow run RELAY --exec CMD …       run the workflow runner (agent work → approval gate)
         |  buzz workflow approve/deny RELAY RUNID     grant/deny a run's approval gate (46030/46031)
+        |  buzz agent up RELAY --repo DIR --approver NPUB  one-command gated runner (bundled wrapper)
+        |  buzz agent doctor [--repo DIR]             preflight the host: gh token + branch protection
         |  buzz agent serve RELAY --exec CMD          run a parallel backlog scheduler (worktree-isolated)
         |
         |Marmot (MLS group messaging):

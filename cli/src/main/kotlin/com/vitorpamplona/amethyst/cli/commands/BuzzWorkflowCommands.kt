@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -82,8 +83,16 @@ object BuzzWorkflowCommands {
         |amy buzz workflow deny RELAY RUNID [--note N]                   deny the approval gate (46031)
         |amy buzz workflow run RELAY --exec CMD --channel GID            run the workflow runner
         |    --approver NPUB [--on-approve CMD] [--worktree REPODIR]        agent work → 46010 gate →
-        |    [--base-ref REF] [--accept-from npub,…] [--poll SECS] [--once] on grant: --on-approve → 46005
+        |    [--base-ref REF] [--accept-from npub,…]                        on grant: --on-approve → 46005
+        |    [--accept-from-channel] [--poll SECS] [--once]                 (--worktree defaults to cwd;
+        |                                                                    --accept-from-channel = obey members)
         """.trimMargin()
+
+    /** Entry point for `amy buzz agent up` — build the flag list, then reuse the runner below. */
+    internal suspend fun runFromArgs(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int = run(dataDir, rest)
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -298,12 +307,16 @@ object BuzzWorkflowCommands {
             decodePublicKeyAsHexOrNull(approverInput.trim())?.takeIf { it.isValid() }
                 ?: return Output.error("bad_args", "invalid --approver key: $approverInput")
         val onApprove = args.flag("on-approve") // push + open PR; runs in the worktree after grant
-        val worktreeBase = args.flag("worktree")
+        // The worktree defaults to the current directory: the runner isolates each run in its own
+        // git worktree off it, and the common case is "run me inside my checkout." Pass --worktree to
+        // point elsewhere.
+        val worktreeBase = args.flag("worktree") ?: System.getProperty("user.dir")
         val baseRef = args.flag("base-ref") ?: "HEAD"
         val once = args.bool("once")
         val pollSecs = args.flag("poll")?.toLongOrNull() ?: 5
         val timeoutSecs = args.flag("timeout")?.toLongOrNull() ?: 8
-        val acceptFrom =
+        val fromChannel = args.bool("accept-from-channel")
+        val explicitAccept =
             args
                 .flag("accept-from")
                 ?.split(",")
@@ -311,13 +324,23 @@ object BuzzWorkflowCommands {
                 ?.map {
                     decodePublicKeyAsHexOrNull(it)?.takeIf { hex -> hex.isValid() } ?: return Output.error("bad_args", "invalid --accept-from key: $it")
                 }?.toSet()
-        args.rejectUnknown("exec", "channel", "approver", "on-approve", "worktree", "base-ref", "once", "poll", "timeout", "accept-from")
+        args.rejectUnknown("exec", "channel", "approver", "on-approve", "worktree", "base-ref", "once", "poll", "timeout", "accept-from", "accept-from-channel")
 
-        if (worktreeBase != null && !File(worktreeBase).isDirectory) return Output.error("bad_args", "--worktree is not a directory: $worktreeBase")
+        if (!File(worktreeBase).isDirectory) return Output.error("bad_args", "--worktree is not a directory: $worktreeBase")
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
+
+            // Intake allowlist: explicit --accept-from ∪ the channel's kind-39002 roster (when
+            // --accept-from-channel). Null = obey anyone who can post to the relay. On a shared
+            // community you own no relay for, --accept-from-channel scopes the agent to members.
+            val acceptFrom: Set<HexKey>? =
+                if (fromChannel) {
+                    (explicitAccept ?: emptySet()) + channelMembers(ctx, relay, channel, timeoutSecs)
+                } else {
+                    explicitAccept
+                }
             val started = mutableSetOf<HexKey>() // triggers we've begun
             val awaiting = mutableMapOf<HexKey, AwaitingRun>() // runId -> worktree while at the gate
             val decided = mutableSetOf<HexKey>()
@@ -556,6 +579,22 @@ object BuzzWorkflowCommands {
                 ExecResult(proc.exitValue(), out.await(), err.await())
             }
         }
+
+    /** Latest kind-39002 roster for [channel] → its member pubkeys (empty if the relay serves none). */
+    private suspend fun channelMembers(
+        ctx: Context,
+        relay: NormalizedRelayUrl,
+        channel: String,
+        timeoutSecs: Long,
+    ): Set<HexKey> =
+        ctx
+            .drain(mapOf(relay to listOf(Filter(kinds = listOf(GroupMembersEvent.KIND), tags = mapOf("d" to listOf(channel))))), timeoutSecs * 1000, pendingOnAuthRequired = true)
+            .map { it.second }
+            .filterIsInstance<GroupMembersEvent>()
+            .maxByOrNull { it.createdAt }
+            ?.members()
+            ?.toSet()
+            .orEmpty()
 
     private const val MAX = 60_000
     private val LIFECYCLE_KINDS =

@@ -21,7 +21,34 @@ See the design in [`cli/plans/2026-07-25-buzz-agent-support-channel.md`](../../c
 Its steps: read task → run agent → verify a diff exists → commit → push the branch → open (or
 reuse) the PR → print the URL.
 
-## Usage
+## Two paths: gated vs direct
+
+- **Direct (ungated) jobs** — `agent-exec.sh` (this file's subject) does agent → commit → push → PR
+  in one shot. Point `amy buzz agent serve` at it.
+- **Gated workflow runs** — the work pauses on a human-approval gate before anything ships, so it's
+  split into two steps around the gate: **`workflow-agent.sh`** (the `--exec` step: agent → commit,
+  no push) and **`workflow-ship.sh`** (the `--on-approve` step: push → PR, runs only after a human
+  grants). Point `amy buzz workflow run` at them.
+
+## The easy button: `amy buzz agent up`
+
+For the gated path you don't need to wire any of this by hand. `amy` bundles `workflow-agent.sh` +
+`workflow-ship.sh` and runs them for you:
+
+```bash
+amy buzz agent up wss://your-buzz-relay --repo /path/to/your/checkout --approver npub1you…
+```
+
+It resolves the channel (the relay's only one, or pass `--channel`), defaults the worktree to
+`--repo`, scopes intake to the channel roster (`--accept-from-channel`), and extracts the wrappers to
+`~/.amy/buzz-agent/` (edit them there to customize, or pass your own `--exec`/`--on-approve`). Before
+first run, check the host is safe:
+
+```bash
+amy buzz agent doctor --repo /path/to/your/checkout   # gh token scope + branch protection + clean tree
+```
+
+## Usage (manual / direct path)
 
 ```bash
 amy buzz agent serve wss://your-buzz-relay <channel-uuid> \
@@ -30,6 +57,9 @@ amy buzz agent serve wss://your-buzz-relay <channel-uuid> \
   --accept-from-channel \
   --parallel 2
 ```
+
+The bundled copies `agent up` extracts live in `cli/src/main/resources/buzz-agent/`; the copies here
+in `tools/buzz-agent/` are the readable, customizable reference (same content).
 
 `--worktree` is **required** (the wrapper needs `BUZZ_BRANCH`/`BUZZ_WORKTREE`). `--parallel N`
 runs N jobs at once, each in its own worktree+branch.
