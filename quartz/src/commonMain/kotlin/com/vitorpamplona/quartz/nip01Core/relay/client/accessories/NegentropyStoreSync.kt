@@ -175,8 +175,13 @@ class NegentropyStoreSync(
             try {
                 coroutineScope {
                     // needIds = relay has, store lacks; haveIds = store has, relay lacks.
+                    // Both are bounded so a slow consumer back-pressures the reconcile
+                    // instead of buffering the whole residual set. haveBatches drains
+                    // through the single, network-bound uploader (publish + OK wait) far
+                    // slower than the reconcile produces have-ids, so leaving it UNLIMITED
+                    // let a first push of a large local store queue O(local-set) ids.
                     val needBatches = Channel<List<HexKey>>(config.downloadWorkers * 2)
-                    val haveBatches = Channel<List<HexKey>>(Channel.UNLIMITED)
+                    val haveBatches = Channel<List<HexKey>>((config.downloadWorkers * 2).coerceAtLeast(2))
 
                     val downloaders =
                         List(config.downloadWorkers.coerceAtLeast(1)) {
