@@ -1937,10 +1937,15 @@ class AccountViewModel(
 
     fun bottomBarItemsFlow(): StateFlow<List<BottomBarEntry>> = account.settings.syncedSettings.navigation.bottomBarItems
 
-    fun changeBottomBarItems(items: List<BottomBarEntry>) =
-        launchSigner {
-            account.changeBottomBarItems(items)
+    fun changeBottomBarItems(items: List<BottomBarEntry>) {
+        // Apply to the reactive flow synchronously on the caller (UI) thread so rapid edits stay
+        // ordered — launchSigner dispatches on a multi-threaded pool, so wrapping the emit too would
+        // let two quick edits complete out of order and revert the newer one (the settings screen
+        // re-seeds its editable list from this flow). Only the sign + encrypt + publish runs off-thread.
+        if (account.applyBottomBarItems(items)) {
+            launchSigner { account.sendNewAppSpecificData() }
         }
+    }
 
     fun pinnedChatroomsFlow(): StateFlow<Set<ChatroomKey>> = account.settings.syncedSettings.chats.pinnedChatrooms
 

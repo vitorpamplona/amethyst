@@ -1025,11 +1025,14 @@ class Account(
         }
     }
 
-    suspend fun changeBottomBarItems(items: List<BottomBarEntry>) {
-        if (settings.changeBottomBarItems(items)) {
-            sendNewAppSpecificData()
-        }
-    }
+    /**
+     * Applies the new bottom-bar list to the reactive synced-settings flow and returns whether it
+     * changed. Non-suspending and only touches in-memory state, so callers invoke it synchronously on
+     * the UI thread — rapid edits then stay strictly ordered instead of racing on the multi-threaded
+     * signer dispatcher (an out-of-order write would revert the newer edit, which the settings screen
+     * re-seeds from this flow). Pair a `true` result with [sendNewAppSpecificData] to publish.
+     */
+    fun applyBottomBarItems(items: List<BottomBarEntry>): Boolean = settings.changeBottomBarItems(items)
 
     suspend fun toggleChatroomPin(room: ChatroomKey) {
         settings.toggleChatroomPin(room)
@@ -1082,7 +1085,7 @@ class Account(
         sendNewAppSpecificData()
     }
 
-    private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
+    internal suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
     // ---
     // NIP-13 proof-of-work publishing
