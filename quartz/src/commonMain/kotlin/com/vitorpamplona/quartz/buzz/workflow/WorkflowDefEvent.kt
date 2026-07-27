@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -43,7 +44,10 @@ class WorkflowDefEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(name(), content).joinToString("\n")
+
     /** The workflow UUID - the NIP-33 `d` tag. */
     fun workflowId() = dTag()
 

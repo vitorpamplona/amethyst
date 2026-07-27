@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -45,7 +46,10 @@ class HuddleGuidelinesEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = content
+
     /** The channel UUID these guidelines apply to — the `h` tag. */
     fun channelId(): String? = tags.huddleChannel()
 

@@ -55,7 +55,7 @@ class AuctionEvent(
             null
         }
 
-    override fun indexableContent() = auctionData()?.let { listOfNotNull(it.name, it.description).joinToString("\n") } ?: ""
+    override fun indexableContent() = auctionData()?.let { (listOfNotNull(it.name, it.description) + tags.hashtags()).joinToString("\n") } ?: ""
 
     companion object {
         const val KIND = 30020

@@ -74,7 +74,7 @@ class Podcasting20EpisodeEvent(
     PodcastEpisode,
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = listOfNotNull(title(), description(), content).joinToString("\n")
+    override fun indexableContent() = (listOfNotNull(title(), description(), content) + topics()).joinToString("\n")
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -49,7 +50,10 @@ class AttestationEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun eventHints(): List<EventIdHint> = tags.mapNotNull(ETag::parseAsHint)
 
     override fun linkedEventIds(): List<HexKey> = tags.mapNotNull(ETag::parseId)

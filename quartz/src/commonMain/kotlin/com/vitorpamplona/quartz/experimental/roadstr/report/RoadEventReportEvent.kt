@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -60,7 +61,10 @@ class RoadEventReportEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = content
+
     /** The parsed [RoadEventType], or null when the `t` tag is missing/unknown. */
     fun roadEventType() = tags.roadEventType()
 

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * A Concord Chat Plane **message edit** (CORD-02 Appendix B, `kind:3302`).
@@ -45,7 +46,10 @@ class ConcordChatEditEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = content
+
     /** The id of the message this edit replaces (its `e` tag), or null if malformed. */
     fun editedMessageId(): HexKey? = firstTaggedEvent()?.eventId
 
