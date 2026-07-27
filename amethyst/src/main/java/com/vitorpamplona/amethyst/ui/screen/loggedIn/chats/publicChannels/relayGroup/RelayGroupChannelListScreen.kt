@@ -488,7 +488,6 @@ fun RelayGroupChannelListScreen(
         BuzzAddPeopleDialog(
             title = stringRes(R.string.buzz_community_add_people),
             accountViewModel = accountViewModel,
-            nav = nav,
             isAlreadyIn = { BuzzCommunityMembership.isMember(relay, it) },
             onAdd = { accountViewModel.addCommunityMember(relay, it) },
             onDismiss = { showAddPeople = false },

@@ -193,7 +193,7 @@ private fun RelayGroupMembers(
         // Only a moderator can add a member (the relay rejects a kind-9000 from anyone else).
         floatingActionButton = {
             if (iCanModerate) {
-                FloatingActionButton(onClick = { showAddMember = true }) {
+                FloatingActionButton(onClick = { showAddMember = true }, shape = CircleShape) {
                     Icon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(R.string.relay_group_add_member))
                 }
             }
@@ -229,7 +229,6 @@ private fun RelayGroupMembers(
         BuzzAddPeopleDialog(
             title = stringRes(R.string.relay_group_add_member),
             accountViewModel = accountViewModel,
-            nav = nav,
             isAlreadyIn = { channel.membershipOf(it) != RelayGroupMembership.NONE },
             onAdd = { accountViewModel.putRelayGroupUser(channel, it, emptyList()) },
             onDismiss = { showAddMember = false },

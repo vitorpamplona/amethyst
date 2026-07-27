@@ -3539,6 +3539,8 @@
     <string name="buzz_dm_workspace">Workspace</string>
     <string name="buzz_dm_recipients">To</string>
     <string name="buzz_dm_add_hint">Add someone (npub or hex)</string>
+    <string name="buzz_add_people_hint">Search by name, NIP-05 or npub</string>
+    <string name="buzz_add_people_empty">No one found. Try a different name, a NIP-05 address, or paste an npub.</string>
     <string name="buzz_dm_start">Start conversation</string>
     <string name="buzz_dm_opening">Opening…</string>
     <string name="buzz_dm_remove">Remove</string>

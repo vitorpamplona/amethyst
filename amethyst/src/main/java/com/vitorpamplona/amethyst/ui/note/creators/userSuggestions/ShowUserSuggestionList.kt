@@ -32,6 +32,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItemColors
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,6 +67,9 @@ import com.vitorpamplona.amethyst.ui.theme.nip05
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/** The dropdown's breathing room under the composer it floats over. */
+private val SuggestionListPadding = PaddingValues(top = 10.dp)
+
 @Composable
 fun ShowUserSuggestionList(
     userSuggestions: UserSuggestionState,
@@ -73,6 +78,13 @@ fun ShowUserSuggestionList(
     modifier: Modifier = Modifier,
     onEmpty: @Composable () -> Unit = {},
     trailingContent: (@Composable (User) -> Unit)? = null,
+    // Defaults suit this list's usual home: a dropdown floating over a composer, where an opaque
+    // row and a divider per entry are what separate it from the text underneath. Inside a container
+    // that already provides its own surface — a dialog — that chrome reads as a black box bolted on,
+    // so those callers pass a transparent row and drop the dividers.
+    itemColors: ListItemColors = ListItemDefaults.colors(),
+    showDividers: Boolean = true,
+    contentPadding: PaddingValues = SuggestionListPadding,
 ) {
     UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
@@ -93,7 +105,7 @@ fun ShowUserSuggestionList(
         }
     }
 
-    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty, trailingContent)
+    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier, onEmpty, trailingContent, itemColors, showDividers, contentPadding)
 }
 
 @Composable
@@ -117,6 +129,9 @@ fun WatchResponses(
     modifier: Modifier = Modifier,
     onEmpty: @Composable () -> Unit = {},
     trailingContent: (@Composable (User) -> Unit)? = null,
+    itemColors: ListItemColors = ListItemDefaults.colors(),
+    showDividers: Boolean = true,
+    contentPadding: PaddingValues = SuggestionListPadding,
 ) {
     val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
 
@@ -125,7 +140,7 @@ fun WatchResponses(
         val priority = remember(suggestions) { userSuggestions.priorityPubkeys() }
 
         LazyColumn(
-            contentPadding = PaddingValues(top = 10.dp),
+            contentPadding = contentPadding,
             modifier = modifier,
             state = listState,
         ) {
@@ -137,10 +152,12 @@ fun WatchResponses(
                         } else {
                             null
                         }
-                UserLine(item, accountViewModel, trailing) { onSelect(item) }
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
+                UserLine(item, accountViewModel, trailing, itemColors) { onSelect(item) }
+                if (showDividers) {
+                    HorizontalDivider(
+                        thickness = DividerThickness,
+                    )
+                }
             }
         }
     } else {
@@ -169,9 +186,11 @@ fun UserLine(
     baseUser: User,
     accountViewModel: AccountViewModel,
     trailingContent: (@Composable (User) -> Unit)? = null,
+    colors: ListItemColors = ListItemDefaults.colors(),
     onClick: () -> Unit,
 ) {
     SlimListItem(
+        colors = colors,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         leadingContent = {
             ClickableUserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, onClick = null)
