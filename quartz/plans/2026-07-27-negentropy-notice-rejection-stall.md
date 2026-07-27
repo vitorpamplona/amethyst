@@ -111,3 +111,52 @@ purplepag.es answer ordinary REQs fine, so paging delivers the events).
   matching NOTICE, nor CLOSED-for-subId, just silence) still relies on the idle
   watchdog — which now fires correctly because the refusal chatter no longer
   resets it.
+
+## Follow-up audit (same PR)
+
+A read-through of the whole negentropy accessories package surfaced a few more
+issues; the actionable ones are fixed here.
+
+- **`isOverflow` was too broad → split-storm (fixed).** It matched a bare
+  `"too many"` / `"too large"`, so a *non-shrinking* error — `"too many
+  requests"`, `"too many concurrent subscriptions"` — was read as a
+  set-too-large overflow. Because such an error doesn't shrink with the window,
+  every split re-triggers it and `reconcileWindows` walks toward 1-second leaves,
+  queueing up to ~2³¹ `Filter`s (OOM + relay hammering). Tightened to
+  result-set-qualified phrases (`too many records`, `too many query results`,
+  `result set too large`, `max_sync_events`), so a rate/quota error now fails
+  over to paging. Added a `MAX_WINDOWS` (100k) backstop in `reconcileWindows` —
+  wording-independent — that bails to paging if a split ever fails to converge.
+- **NOTICE matcher hardened (fixed).** The first-cut `isNegentropyRejectionNotice`
+  matched bare `"envelope"` / `"NEG-OPEN"` / `"NEG-MSG"`; since a `NOTICE` has no
+  subId and every connection listener sees it, an unrelated notice on a shared
+  connection could abort a healthy reconcile mid-handshake. Narrowed to
+  `"negentropy"` / `"unknown envelope"` (phrases a NIP-77-speaking relay never
+  emits for a well-formed client); the now-un-defeated idle watchdog is the
+  wording-independent backstop, so under-matching here is safe.
+- **Window split dropped future-dated events (fixed).** On overflow the upper
+  child was `copy(until = hi)` with `hi = until ?: now()`, so once any split
+  happened, events with `created_at > now()` (clock skew) were excluded though
+  the un-split path included them. The upper child now keeps the window's
+  original `until` (may be null = unbounded); the split *math* still uses `now()`
+  so it converges.
+- **`NegentropyStoreSync` up-direction memory (fixed).** `haveBatches` was an
+  UNLIMITED channel drained by a single network-bound uploader, so a first push
+  of a large store buffered O(local-set) ids. Bounded it like `needBatches` so
+  the have-direction back-pressures the reconcile.
+- **`negentropySyncOrFetch` O(delivered) memory (documented).** The cross-phase
+  dedup set is inherent to the combinator's contract; added a KDoc note steering
+  unbounded bulk mirrors to `negentropySync` / `negentropyReconcile` directly.
+
+Noted but not changed (low severity / would cost more than they save):
+
+- `fetchByIds` returns an `ArrayList` mutated on the relay reader thread; on the
+  idle-timeout path there's no channel happens-before, so a late in-flight event
+  could race the worker's iteration. Near-impossible for by-id filters (needs a
+  live event on a specific 32-byte id after the idle deadline); a fix would add
+  per-event synchronization on the download hot path.
+- Per-batch `ArrayList(needIds.subList(...))` copy and the fan-out's no-op
+  `sendHaveBatch` chunk-then-discard are minor allocation churn.
+- `negentropySync`'s "exactly once, no dedup" holds only because relays send the
+  overflow NEG-ERR up-front (before streaming any ids); a relay that streamed
+  partial rounds then overflowed would double-deliver. Latent, not triggered.

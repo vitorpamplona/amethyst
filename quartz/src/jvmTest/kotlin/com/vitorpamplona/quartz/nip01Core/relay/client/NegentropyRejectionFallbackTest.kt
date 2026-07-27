@@ -32,6 +32,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -60,15 +61,17 @@ class NegentropyRejectionFallbackTest {
     private fun subIdOf(frame: String): String? = Regex("^\\[\"[A-Z-]+\",\"([^\"]+)\"").find(frame)?.groupValues?.get(1)
 
     /**
-     * A fake relay whose reply to each sent frame is decided by [replyToNegOpen].
-     * All replies (and the initial onOpen) are posted on a background executor so the
-     * socket behaves like a real async OkHttp socket — never re-entrant into the
-     * client's send path.
+     * A fake relay whose reply to a NEG-OPEN is produced by [replyToNegOpen] (given the
+     * NEG-OPEN's subId), counting NEG-OPENs so a test can assert the client did NOT
+     * split-storm. All replies (and the initial onOpen) are posted on a background
+     * executor so the socket behaves like a real async OkHttp socket — never re-entrant
+     * into the client's send path.
      */
     private inner class ScriptedRelay(
-        val replyToNegOpen: String,
+        val replyToNegOpen: (subId: String) -> String,
     ) : WebsocketBuilder {
         val io = Executors.newSingleThreadScheduledExecutor()
+        val negOpens = AtomicInteger(0)
 
         override fun build(
             url: NormalizedRelayUrl,
@@ -89,8 +92,11 @@ class NegentropyRejectionFallbackTest {
                             // The keep-alive REQ and any paging REQ: answer EOSE so the
                             // subscription settles (paging then completes with 0 events).
                             msg.startsWith("[\"REQ\"") -> subIdOf(msg)?.let { out.onMessage("[\"EOSE\",\"$it\"]") }
-                            // The negentropy handshake: the relay refuses via NOTICE.
-                            msg.startsWith("[\"NEG-OPEN\"") -> out.onMessage(replyToNegOpen)
+                            // The negentropy handshake: the relay refuses.
+                            msg.startsWith("[\"NEG-OPEN\"") -> {
+                                negOpens.incrementAndGet()
+                                subIdOf(msg)?.let { out.onMessage(replyToNegOpen(it)) }
+                            }
                             else -> Unit
                         }
                     }, 5, TimeUnit.MILLISECONDS)
@@ -101,8 +107,8 @@ class NegentropyRejectionFallbackTest {
         fun shutdown() = io.shutdownNow()
     }
 
-    private fun negOpenRejectedBy(notice: String) {
-        val relay = ScriptedRelay(notice)
+    private fun negOpenRejectedBy(reply: (subId: String) -> String): ScriptedRelay {
+        val relay = ScriptedRelay(reply)
         val client = NostrClient(relay)
         try {
             runBlocking {
@@ -115,7 +121,7 @@ class NegentropyRejectionFallbackTest {
                     }
                 assertTrue(
                     thrown.reason == NegentropySyncException.Reason.UNAVAILABLE,
-                    "a NOTICE rejection should be UNAVAILABLE, was ${thrown.reason}",
+                    "a runtime negentropy refusal should be UNAVAILABLE, was ${thrown.reason}",
                 )
 
                 // negentropySyncOrFetch must transparently fall back to paging.
@@ -123,18 +129,36 @@ class NegentropyRejectionFallbackTest {
                     withTimeout(8_000) {
                         client.negentropySyncOrFetch(url, Filter(kinds = listOf(0))) { }
                     }
-                assertTrue(result.pagedFallback, "expected paging fallback after NOTICE rejection")
+                assertTrue(result.pagedFallback, "expected paging fallback after the refusal")
                 assertEquals(0, result.downloaded)
             }
         } finally {
             client.close()
             relay.shutdown()
         }
+        return relay
     }
 
     @Test
-    fun strfryNegentropyDisabledFallsBackToPaging() = negOpenRejectedBy("[\"NOTICE\",\"ERROR: bad msg: negentropy disabled\"]")
+    fun strfryNegentropyDisabledFallsBackToPaging() {
+        negOpenRejectedBy { "[\"NOTICE\",\"ERROR: bad msg: negentropy disabled\"]" }
+    }
 
     @Test
-    fun purplePagesUnknownEnvelopeFallsBackToPaging() = negOpenRejectedBy("[\"NOTICE\",\"failed to parse envelope: unknown envelope label\"]")
+    fun purplePagesUnknownEnvelopeFallsBackToPaging() {
+        negOpenRejectedBy { "[\"NOTICE\",\"failed to parse envelope: unknown envelope label\"]" }
+    }
+
+    @Test
+    fun rateLimitNegErrPagesWithoutSplitStorm() {
+        // A NEG-ERR that does NOT shrink with the window ("too many requests") must not
+        // be mistaken for a set-too-large overflow: doing so would binary-split the
+        // created_at range forever. Assert we page after exactly ONE NEG-OPEN.
+        val relay = negOpenRejectedBy { subId -> "[\"NEG-ERR\",\"$subId\",\"rate-limited: too many requests\"]" }
+        assertEquals(
+            2,
+            relay.negOpens.get(),
+            "one NEG-OPEN per phase (sync + syncOrFetch), i.e. no window-split storm; got ${relay.negOpens.get()}",
+        )
+    }
 }

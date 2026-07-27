@@ -149,7 +149,9 @@ class NegentropySyncResult(
  *   cap can wedge the connection, not just fail the extra REQ — size the two knobs
  *   to fit the target relay.
  * @param onProgress        optional `(needSoFar, downloaded)` ticks as work proceeds.
- * @param onEvent           called once per distinct event, on the relay reader thread.
+ * @param onEvent           called once per distinct event, serially, from the single
+ *   delivery consumer coroutine (not the relay reader thread) — so it never overlaps
+ *   itself and the [maxEvents] cap is exact.
  */
 @OptIn(ExperimentalAtomicApi::class)
 suspend fun INostrClient.negentropySync(
@@ -286,6 +288,14 @@ class NegentropyOrFetchResult(
  * across both phases, so anything the negentropy attempt already delivered before
  * failing is not delivered again by the paging phase. [maxEvents] is honored across
  * both phases.
+ *
+ * **Memory:** unlike bare [negentropySync] (which streams in memory bounded by the
+ * pipeline depth), this holds a set of every delivered id for the whole run — needed
+ * to dedup the paging phase against what negentropy already delivered — so peak heap
+ * is O(delivered ids) (~100 B each). Fine for bounded/filtered syncs; for an
+ * open-ended bulk mirror of a multi-million-event set prefer [negentropySync] (or
+ * [negentropyReconcile]) directly and handle the fallback yourself, to keep the
+ * streaming memory bound.
  *
  * Use [negentropySync] directly if you want to decide the fallback yourself (try
  * another relay, narrow the filter, abort, …) instead of always paging.
@@ -486,6 +496,15 @@ internal suspend fun reconcileWindows(
     val remaining = AtomicInt(1)
     pending.send(filter)
 
+    // Total windows ever created (never decremented). A genuine overflow shrinks the
+    // window until it fits, so it converges after a handful of splits; a
+    // non-shrinking error mislabeled as overflow (e.g. a rate limit) would instead
+    // split forever toward 1-second leaves and blow up `pending`. This cap is the
+    // wording-independent backstop [isOverflow]'s narrowing relies on: cross it and
+    // we fail over to paging instead of storming the relay. Legitimate splits are in
+    // the tens–hundreds, so the cap is orders of magnitude above any real sync.
+    val totalWindows = AtomicInt(1)
+
     val reconcilers =
         List(reconcileConcurrency.coerceAtLeast(1)) { reconcilerIndex ->
             launch {
@@ -526,10 +545,26 @@ internal suspend fun reconcileWindows(
                                     detail = "created_at window [$lo, $hi] still exceeds the relay's max_sync_events",
                                 )
                             }
+                            if (totalWindows.addAndFetch(2) > MAX_WINDOWS) {
+                                // The split isn't converging — almost always a
+                                // non-shrinking error (rate limit, quota) misread as
+                                // overflow. Bail to paging rather than storm the relay.
+                                throw NegentropySyncException(
+                                    relay = relay,
+                                    window = window,
+                                    reason = NegentropySyncException.Reason.UNAVAILABLE,
+                                    detail = "created_at window split exceeded $MAX_WINDOWS windows without converging; the relay likely rejects negentropy with an overflow-looking error",
+                                )
+                            }
                             val mid = lo + (hi - lo) / 2
                             remaining.incrementAndFetch()
+                            // The lower child gets the finite midpoint; the upper child
+                            // KEEPS this window's original `until` (which may be null =
+                            // unbounded). Replacing null with `now()` here would drop
+                            // every event dated after now() (clock skew) once any split
+                            // happens, while the un-split path would have included them.
                             pending.send(window.copy(since = lo, until = mid))
-                            pending.send(window.copy(since = mid + 1, until = hi))
+                            pending.send(window.copy(since = mid + 1, until = window.until))
                         }
 
                         is ReconcileOutcome.Failed ->
@@ -985,24 +1020,35 @@ private sealed interface NegFrame {
 }
 
 /**
- * strfry sends `["NEG-ERR", subId, "blocked: too many query results"]` when a
- * NEG-OPEN matches more than `relay__negentropy__maxSyncEvents`. Match that
- * verbatim, plus a looser contains-check for equivalent "result set too large"
- * wording from other relays, so it still triggers the window split rather than
+ * strfry sends `["NEG-ERR", subId, "blocked: query matches too many records (N > M)"]`
+ * (and, older, `"too many query results"`) when a NEG-OPEN matches more than
+ * `relay__negentropy__maxSyncEvents`. Match that, plus equivalent "result set too
+ * large" wording from other relays, so it triggers the window split rather than
  * aborting.
  *
- * This MUST stay narrow: only a genuine *set-too-large* signal may be treated as
- * overflow, because overflow triggers `created_at` window-splitting. A NEG-ERR
- * that is really a hard refusal — negentropy disabled, `auth-required`, a ban —
- * must NOT match, or every split re-opens, is refused again, and the splitter
- * fans out across the whole `created_at` range (a ~2^31-window storm) instead of
- * failing over to paging. In particular a bare `blocked: …` prefix is such a
- * refusal (e.g. strfry-style `"blocked: Negentropy sync is disabled"`) and is
- * deliberately excluded — only the specific overflow wording counts.
+ * This MUST stay narrow, and specifically must key on the *result-set-size* meaning:
+ * only a genuine set-too-large signal may be treated as overflow, because overflow
+ * triggers `created_at` window-splitting. Two ways a too-lax matcher goes wrong:
+ *  - A hard refusal (negentropy disabled, `auth-required`, a ban) that happens to
+ *    contain a matched word would split, re-open, be refused again, and fan out
+ *    across the whole `created_at` range instead of failing over to paging.
+ *  - A *rate/quota* error — `"too many requests"`, `"too many concurrent
+ *    subscriptions"` — is especially dangerous: it does not shrink as the window
+ *    shrinks, so every split re-triggers it and the splitter walks toward 1-second
+ *    leaves, queueing up to ~2^31 windows (an OOM + relay-hammering storm) before
+ *    any window is small enough to give up on. That is why the bare `"too many"` /
+ *    `"too large"` substrings were replaced with result-set-qualified phrases:
+ *    `"too many requests"` no longer looks like overflow, so it fails over to paging.
+ *
+ * [reconcileWindows] also caps the total window count as a wording-independent
+ * backstop, so a novel overflow-looking-but-not-shrinking error can never storm.
  */
-private fun isOverflow(reason: String): Boolean =
-    reason.contains("too many", ignoreCase = true) ||
-        reason.contains("too large", ignoreCase = true) ||
+internal fun isOverflow(reason: String): Boolean =
+    reason.contains("too many records", ignoreCase = true) ||
+        reason.contains("too many results", ignoreCase = true) ||
+        reason.contains("too many query results", ignoreCase = true) ||
+        reason.contains("result set too large", ignoreCase = true) ||
+        reason.contains("results too large", ignoreCase = true) ||
         reason.contains("max_sync_events", ignoreCase = true)
 
 /**
@@ -1015,14 +1061,19 @@ private fun isOverflow(reason: String): Boolean =
  * We only treat a NOTICE as our negentropy rejection when it plausibly refers to the
  * NEG exchange (this matcher) AND it arrives before this session's first valid NEG
  * frame — so an unrelated NOTICE on a healthy relay mid-reconcile can never abort an
- * otherwise-progressing sync. This MUST stay narrow for the same reason [isOverflow]
- * must: a false positive fails the whole window over to paging.
+ * otherwise-progressing sync. This is only a *fast path*: it is deliberately narrow
+ * (a false positive fails the window over to paging), and anything it misses is still
+ * caught by the idle watchdog, which — since NOTICE/CLOSED no longer bump the clock —
+ * fires once a refusing relay goes silent after its notice. So prefer under-matching
+ * here. Both matched phrases are ones a relay that actually speaks NIP-77 would never
+ * emit for a well-formed client (quartz only sends valid frames): "negentropy" names
+ * the feature; "unknown envelope" is the parse failure of a relay that never
+ * implemented the NEG-OPEN envelope. Broad substrings like a bare "envelope" or the
+ * echoed command names are excluded — an unrelated parse/rate NOTICE could carry them.
  */
-private fun isNegentropyRejectionNotice(reason: String): Boolean =
+internal fun isNegentropyRejectionNotice(reason: String): Boolean =
     reason.contains("negentropy", ignoreCase = true) ||
-        reason.contains("envelope", ignoreCase = true) ||
-        reason.contains("NEG-OPEN", ignoreCase = true) ||
-        reason.contains("NEG-MSG", ignoreCase = true)
+        reason.contains("unknown envelope", ignoreCase = true)
 
 /**
  * One `REQ` for [batch] ids; collects the matching events and returns them on
@@ -1100,6 +1151,15 @@ internal suspend fun INostrClient.fetchByIds(
 
 /** Seconds: a window this small that still overflows can't be split further. */
 private const val MIN_WINDOW_SECONDS = 1L
+
+/**
+ * Hard cap on total `created_at` windows a single reconcile may split into, a
+ * wording-independent backstop against a non-shrinking error (rate limit, quota)
+ * being mistaken for a set-too-large overflow and splitting forever. A real sync
+ * against a huge relay converges in tens–hundreds of windows, so this is a wide
+ * margin; crossing it fails the sync over to paging instead of storming the relay.
+ */
+private const val MAX_WINDOWS = 100_000
 
 /** Bounded buffer between the download workers and the single delivery consumer. */
 private const val DELIVERY_BUFFER = 256
