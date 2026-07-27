@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -45,7 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -53,20 +56,26 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
+import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * A Buzz workspace **canvas** (NIP kind 40100): the newest shared markdown document for a channel.
- * The canvas is overlay state held in [BuzzWorkspaceStates] (never a timeline row — a workspace has
+ * A Buzz **canvas** (kind 40100): the newest shared markdown document for ONE channel. The relay
+ * requires an `h` channel tag on every canvas (its own `channel_scoped_content_kinds_require_h_tags`
+ * invariant), so each channel has its own — this is not a workspace-wide document.
+ *
+ * The canvas is overlay state held in [BuzzWorkspaceStates] (never a timeline row — a channel has
  * one live canvas, last-write-wins), so this reads the registry by the channel's `h` id and
  * re-composes off `canvasUpdates` when a newer revision lands.
  *
@@ -87,6 +96,22 @@ fun BuzzCanvasScreen(
     val canvas = remember(version) { state.canvasNote }
     val content = canvas?.event?.content
 
+    // The channel this canvas belongs to, for the subtitle and the edit gate. Null until its
+    // kind-39000 lands, which only costs the subtitle — the canvas itself is keyed by the raw id.
+    val channel =
+        remember(channelId, relayUrl) {
+            RelayUrlNormalizer.normalizeOrNull(relayUrl)?.let { relay ->
+                LocalCache.getRelayGroupChannelIfExists(GroupId(channelId, relay))
+            }
+        }
+    val channelName = channel?.toBestDisplayName()
+
+    // Buzz never lets a DM's canvas be written: its editor's `canEdit` is `canEditNarrative`, which
+    // excludes `channelType === "dm"` outright. A DM reaching this screen at all means a canvas
+    // already exists (see the top bar's gate), so render it read-only rather than offering an edit
+    // that Buzz's own client would never show.
+    val canEdit = channel?.event?.isBuzzDm() != true
+
     var editing by remember { mutableStateOf(false) }
 
     if (editing) {
@@ -101,10 +126,37 @@ fun BuzzCanvasScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_canvas_title), nav) },
+        // Name the channel under the title, like the Threads screen: a canvas belongs to one channel,
+        // and arriving here from a chat should not lose track of which.
+        topBar = {
+            TopBarExtensibleWithBackButton(
+                title = {
+                    Column {
+                        Text(
+                            text = stringRes(R.string.buzz_canvas_title),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (channelName != null) {
+                            Text(
+                                text = channelName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                },
+                popBack = nav::popBack,
+            )
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { editing = true }) {
-                Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(R.string.buzz_canvas_edit))
+            if (canEdit) {
+                FloatingActionButton(onClick = { editing = true }) {
+                    Icon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(R.string.buzz_canvas_edit))
+                }
             }
         },
     ) { padding ->

@@ -2206,6 +2206,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="ui_feature_set_type_performance">Optimiziran</string>
     <!-- Compact labels for the segmented control. -->
     <string name="ui_feature_set_type_complete_short">Polno</string>
+    <string name="ui_feature_set_type_simplified_short">Preprosto</string>
+    <string name="ui_feature_set_type_performance_short">Hitro</string>
     <string name="gallery_type_classic">Klasično</string>
     <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistemska</string>
@@ -2354,6 +2356,39 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="new_conversation_marmot_pro_2">Šifriran skupinski klepet</string>
     <string name="new_conversation_marmot_con_1">ezano na napravo — ne bo prikazano, če se prijavite drugje</string>
     <string name="new_conversation_concord_title">Concord skupnost</string>
+    <string name="new_conversation_concord_tagline">Skupnosti, razdeljene po kanalih</string>
+    <string name="new_conversation_concord_chip">Delovni prostori</string>
+    <string name="new_conversation_concord_best">Velike skupnosti, organizirane po kanalih ali potekih dela.</string>
+    <string name="new_conversation_concord_cta">Ustvari skupnost</string>
+    <string name="new_conversation_concord_pro_1">Prilagojeno za ogromne skupnosti</string>
+    <string name="new_conversation_concord_pro_2">Razdeljeno po kanalih ali potekih dela</string>
+    <string name="new_conversation_concord_con_1">Zahteva več nastavitev</string>
+    <string name="new_conversation_public_chat_title">Javni klepet</string>
+    <string name="new_conversation_public_chat_tagline">Javna sporočila na releju</string>
+    <string name="new_conversation_public_chat_chip">Brez moderiranja</string>
+    <string name="new_conversation_public_chat_best">Odprte javne sobe, kjer lahko objavlja vsak.</string>
+    <string name="new_conversation_public_chat_cta">Ustvari nov javen klepet</string>
+    <string name="new_conversation_public_chat_pro_1">Pridruži se lahko kdorkoli</string>
+    <string name="new_conversation_public_chat_pro_2">Preprosto in zlahka dosegljivo </string>
+    <string name="new_conversation_public_chat_con_1">Samo javno</string>
+    <string name="new_conversation_public_chat_con_2">Brez moderacije</string>
+    <string name="new_conversation_relay_group_title">Skupina releja</string>
+    <string name="new_conversation_relay_group_tagline">Na relejih — javno ali zasebno</string>
+    <string name="new_conversation_relay_group_chip">Moderirano</string>
+    <string name="new_conversation_relay_group_best">Skupine, ki jih moderira njihov gostiteljski rele</string>
+    <string name="new_conversation_relay_group_cta">Brskanje po skupinah na relejih</string>
+    <string name="new_conversation_relay_group_pro_1">Moderira gostiteljski rele</string>
+    <string name="new_conversation_relay_group_pro_2">Javno ali zasebno</string>
+    <string name="new_conversation_relay_group_con_1">Vezano na tisti posamezni rele</string>
+    <string name="new_conversation_ephemeral_title">Minljivi klepet</string>
+    <string name="new_conversation_ephemeral_tagline">Kdor koli je trenutno na spletu</string>
+    <string name="new_conversation_ephemeral_chip">Trenutno v živo</string>
+    <string name="new_conversation_ephemeral_best">Klepet v živo s tistimi, ki so pravkar na spletu.</string>
+    <string name="new_conversation_ephemeral_cta">Zaženi klepet</string>
+    <string name="new_conversation_ephemeral_pro_1">Pogovor s trenutno prisotnimi</string>
+    <string name="new_conversation_ephemeral_pro_2">Nič ni shranjeno</string>
+    <string name="new_conversation_ephemeral_con_1">Brez zgodovine</string>
+    <string name="new_conversation_ephemeral_con_2">Omejeno na rele</string>
     <string name="relay_groups_title">Skupine relejev</string>
     <string name="relay_group_view_inline">Vrstično</string>
     <string name="relay_group_view_grouped">Po releju</string>
@@ -2363,7 +2398,24 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_server_label">Skupine relejev</string>
     <string name="relay_groups_button">Skupine</string>
     <string name="messages_settings">Sporočila</string>
+    <string name="messages_load_types_title">Naloži pogovore</string>
+    <string name="messages_load_types_desc">Izberite, kateri klepeti naj bodo vidni v prejetih sporočilih. Z izklopom se klepet skrije in ne prenese več z vaših relejev.</string>
+    <string name="chat_type_nip17_title">Zasebna sporočila</string>
+    <string name="chat_type_nip17_desc">E2EE, gift-wrapped zasebna sporočila (NIP-17)</string>
+    <string name="chat_type_nip04_title">Zastarela direktna sporočila</string>
+    <string name="chat_type_nip04_desc">Starejša, manj zasebna šifrirana direktna sporočila (NIP-04)</string>
+    <string name="chat_type_nip28_title">Javni kanali</string>
+    <string name="chat_type_nip28_desc">Odprte, javne klepetalnice, ki jih lahko prebere in se jim pridruži vsak (NIP-28)</string>
+    <string name="chat_type_nip29_title">Skupine relejev</string>
+    <string name="chat_type_nip29_desc">Skupinski klepeti z moderiranjem in seznami članov (NIP-29)</string>
+    <string name="chat_type_marmot_title">Šifrirane skupine</string>
+    <string name="chat_type_marmot_desc">MLS- E2EE šifrirani skupinski klepeti (Marmot)</string>
+    <string name="chat_type_concord_title">Concord skupnosti</string>
     <string name="chat_type_concord_desc">Šifrirane skupnosti z več tematskimi kanali (Concord).</string>
+    <string name="chat_type_geohash_title">Lokacijski klepeti</string>
+    <string name="chat_type_geohash_desc">Javni klepet glede na vašo lokacijo (Geohash)</string>
+    <string name="chat_type_ephemeral_title">Minljivi klepeti</string>
+    <string name="chat_type_ephemeral_desc">Hitri klepeti na releju, ki ne hranijo zgodovine sporočil</string>
     <string name="relay_group_create_title">Ustvari skupino</string>
     <string name="relay_group_relay_no_nip29">Ta relej ne oglašuje podpore za skupine NIP-29. Skupina, ustvarjena tukaj, ne bo delovala – relej ne bo upravljal njenega imena, članov in sporočil. Izberite rele, ki podpira skupine na ravni releja.</string>
     <string name="relay_group_create_name">Ime supine</string>
@@ -2387,6 +2439,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_members_title">Člani</string>
     <string name="relay_group_make_admin">Dodeli vlogo skrbnika</string>
     <string name="relay_group_make_moderator">Dodeli vlogo moderatorja</string>
+    <string name="relay_group_assign_role">Dodeli vlogo: %1$s</string>
     <string name="relay_group_demote_member">Odvzemi vlogo</string>
     <string name="relay_group_remove_user">Odstrani iz skupine</string>
     <string name="relay_group_remove_user_confirm">Odstrani %1$s iz te skupine? Izgubili bodo dostop, dokler jih ponovno ne dodate ali povabite.</string>
@@ -2399,11 +2452,19 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_menu_members">Člani</string>
     <string name="relay_group_menu_edit">Uredi skupino</string>
     <string name="relay_group_threads_title">Nizi objav</string>
+    <string name="relay_group_pin_message">Pripni sporočilo</string>
+    <string name="relay_group_unpin_message">Odpni sporočilo</string>
+    <string name="relay_group_pinned_label">Pripeto</string>
+    <string name="relay_group_pinned_content_description">Pripeta sporočila</string>
     <string name="relay_group_open">Odpri skupino</string>
     <string name="relay_group_channels_empty">Na tem releju še ni skupin.</string>
+    <string name="relay_group_channels_not_nip29">Ta rele ne sporoča podpore za skupine (NIP-29), zato tukaj skupin morda ni.</string>
+    <string name="relay_group_relay_not_nip29">Skupine (NIP-29) morda niso podprte</string>
     <string name="relay_group_invite_preparing">Pripravljam povabilo…</string>
     <string name="relay_group_badge_private">Zasebno</string>
     <string name="relay_group_badge_invite_only">samo s povabilom</string>
+    <string name="relay_group_badge_live">V ŽIVO</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Vnesite veljaven URL releja (wss://…)</string>
     <string name="relay_group_field_name">Ime</string>
     <string name="relay_group_field_about">Opis</string>
@@ -2416,7 +2477,28 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_field_topics_hint">bitcoin, nostr, umetnost</string>
     <string name="relay_group_field_geohash">Lokacija (geohash)</string>
     <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_location_add">Dodaj lokacijo</string>
+    <string name="relay_group_location_add_desc">Pripnite svojo skupino na zemljevid, da jo lahko odkrijejo ljudje v bližini.</string>
+    <string name="relay_group_location_edit">Spremeni lokacijo</string>
+    <string name="relay_group_location_clear">Odstrani lokacijo</string>
+    <string name="relay_group_location_manual">Ročno vnesite geohash</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
+    <string name="location_picker_title">Izberi lokacijo</string>
+    <string name="location_picker_hint">Premaknite zemljevid, vnesite lokacijo ali uporabite svojo trenutno legi.</string>
+    <string name="location_picker_search_hint">Išči po mestu ali naslovu</string>
+    <string name="location_picker_search_empty">Noben ustrezen kraj ni bil najden.</string>
+    <string name="location_picker_use_mine">Uporabi mojo trenutno lokacijo</string>
+    <string name="location_picker_area">Velikost območja</string>
+    <string name="location_picker_confirm">Uporabi to lokacijo</string>
+    <string name="relay_group_section_structure">Struktura</string>
+    <string name="relay_group_parent_desc">Dodajte v starševsko skupino za ustvarjanje hierarhije.</string>
+    <string name="relay_group_parent_label">Starševska skupina</string>
+    <string name="relay_group_parent_none">Krovna skupina</string>
+    <string name="relay_group_parent_pick_title">Izberite starševsko skupino</string>
+    <string name="relay_group_parent_search">Išči skupine</string>
+    <string name="relay_group_parent_top_level_option">Brez starševske skupine (krovna skupina)</string>
+    <string name="relay_group_parent_none_desc">Ta skupina je na najvišji ravni.</string>
+    <string name="relay_group_parent_empty">Tukaj trenutno ni nobenih drugih skupin.</string>
     <string name="relay_group_section_permissions">Dovoljenja</string>
     <string name="relay_group_flag_private">Zasebno</string>
     <string name="relay_group_flag_private_desc">Samo člani lahko berejo sporočila.</string>
@@ -2430,6 +2512,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_discovery_empty_filtered">S tem filtrom še ni najdenih nobenih skupin.</string>
     <string name="relay_group_favorite_relay">Dodaj ta rele med priljubljene</string>
     <string name="relay_group_threads_empty">Še ni nizov objav. Začni jih z + gumbom.</string>
+    <string name="relay_group_threads_loading_older">Nalaganje starejšega niza objav…</string>
+    <string name="relay_group_threads_all_caught_up">Nalaganje starejšega niza objav…</string>
     <string name="relay_group_thread_new">Nov niz objav</string>
     <string name="relay_group_thread_untitled">Brez naslova</string>
     <string name="relay_group_thread_title_label">Naslov</string>
@@ -2439,9 +2523,18 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_browse_description">Brskajte po skupinah, ki jih gosti rele. Prilepite naslov releja ali izberite enega spodaj.</string>
     <string name="relay_group_browse_relay_label">Naslov releja</string>
     <string name="relay_group_browse_go">Brskaj</string>
+    <string name="relay_tor_clearnet_title">Povezava s tem relejem preko omrežja Tor ni mogoča.</string>
+    <string name="relay_tor_clearnet_body">%1$s se ne odziva prek omrežja Tor — gostitelj morda blokirajo izstopna vozlišča Tor. Želite vzpostaviti povezavo prek običajnega spleta (clearnet)?</string>
+    <string name="relay_tor_clearnet_action">Uporabi običajni splet (clearnet)</string>
     <string name="relay_group_browse_your_relays">Releji na katerih ste vi</string>
     <string name="relay_group_browse_popular">Popularni releji</string>
     <string name="relay_group_no_messages_yet">Ni sporočil</string>
+    <string name="channel_invite_title">Dodano v: %1$s</string>
+    <string name="channel_invite_body">%1$s vas je dodal v ta kanal na %2$s. Želite to prikazati med sporočili?</string>
+    <string name="channel_invite_unknown_actor">Nekdo</string>
+    <string name="channel_invite_accept">Prikaži</string>
+    <string name="channel_invite_ignore">Prezri</string>
+    <string name="channel_invite_leave">Zapusti</string>
     <string name="relay_group_join_to_post">Pridružite se tej skupini, da boste lahko pošiljali sporočila.</string>
     <string name="relay_group_invite_only_to_post">Ta skupina je zaprtega tipa – za objavljanje potrebujete povabilo.</string>
     <plurals name="relay_group_member_count">
@@ -2467,6 +2560,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         <item quantity="two">%1$d uporabnika, ki jima sledite</item>
         <item quantity="few">%1$d uporabniki, ki jim sledite</item>
         <item quantity="other">%1$d uporabnikov, ki jim sledite</item>
+    </plurals>
+    <plurals name="relay_group_relay_group_count">
+        <item quantity="one">%1$d skupina</item>
+        <item quantity="two">%1$d skupini</item>
+        <item quantity="few">%1$d skupine</item>
+        <item quantity="other">%1$d skupin</item>
     </plurals>
     <string name="messages_new_message">Zasebno</string>
     <string name="messages_new_message_to">Za</string>
@@ -2540,6 +2639,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="no_blossom_apps_found_description">Aplikacije Blossom niso bile najdene. Za ogled te datoteke namestite lokalno aplikacijo Blossom.</string>
     <string name="hidden_words">Skrite besede</string>
     <string name="hide_new_word_label">Skrij novo besedo ali stavek</string>
+    <string name="mute_hashtag">Utišaj ključnik</string>
+    <string name="unmute_hashtag">Vklopi zvok za ključnik</string>
     <string name="settings_muted_threads_title">Utišaj nize objav</string>
     <string name="settings_muted_threads_empty">Ni utišanih nizov objav</string>
     <string name="settings_muted_threads_unknown">Neznan niz objav · %1$s</string>
@@ -2550,6 +2651,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="error_dialog_pay_withdraw_error">Ni bilo mogoče dvigniti</string>
     <string name="cashu_failed_redemption">Cashu žetona ni bilo mogoče unovčiti</string>
     <string name="cashu_failed_redemption_explainer_error_msg">Kovnica je posredovala naslednje sporočilo o napaki: %1$s</string>
+    <string name="cashu_unsafe_mint_url">Ta naslov strežnika Cashu kovnice ni varen.</string>
+    <string name="cashu_unsafe_mint_url_explainer">Amethyst se ni povezal z izdajateljem tega žetona. %1$s</string>
     <string name="cashu_successful_redemption">Prejeli ste Cashu žeton</string>
     <string name="cashu_successful_redemption_explainer">V vašo denarnico je bilo poslanih %1$s satoshi-jev. (Provizija: %2$s sat)</string>
     <string name="cashu_no_wallet_found">Na sistemu ni najdene združljive Cashu denarnice</string>
@@ -3081,8 +3184,23 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="bottom_bar_settings">Spodnja navigacijska vrstica</string>
     <string name="bottom_bar_settings_description">Povlecite za spremembo vrstnega reda. Preklopite za dodajanje ali odstranjevanje elementov s spodnje vrstice. Če ni izbran noben element, je spodnja vrstica skrita.</string>
     <string name="bottom_bar_settings_available">Dostopno</string>
+    <string name="bottom_bar_settings_pinned">Vaša spodnja vrstica</string>
+    <string name="bottom_bar_settings_pinned_empty">Ni pripetih elementov. Spodnja vrstica bo skrita, dokler ne dodate vsaj enega.</string>
     <string name="bottom_bar_settings_reorder">Razporedi</string>
+    <string name="bottom_bar_settings_expand">Prikaži možnosti</string>
+    <string name="bottom_bar_settings_no_favorites">Ni priljubljenih. Dodaj jih z zvezdico v brskalniku.</string>
+    <string name="bottom_bar_settings_no_groups">Niste še član nobene skupine.</string>
+    <string name="bottom_bar_settings_reorder_hint">Povleci za razvrščanje · ✕ za izbris</string>
+    <string name="bottom_bar_settings_add">Dodaj</string>
+    <string name="bottom_bar_settings_added">Dodano</string>
+    <string name="bottom_bar_settings_remove">Odstrani</string>
     <string name="bottom_bar_settings_restore_default">Obnovi prevzete</string>
+    <string name="bottom_bar_category_main">Glavno</string>
+    <string name="bottom_bar_category_chats">Klepeti in skupine</string>
+    <string name="bottom_bar_category_you">Ti</string>
+    <string name="bottom_bar_category_feeds">Viri vsebin</string>
+    <string name="bottom_bar_category_apps">Aplikacije in Splet</string>
+    <string name="bottom_bar_category_other">Drugo</string>
     <string name="home_tabs_settings">Domači zavihki</string>
     <string name="home_tabs_settings_description">Izberite zavihke, ki se prikažejo na začetnem zaslonu. Če je aktiven le en zavihek, je vrstica z zavihki skrita.</string>
     <string name="home_tab_everything">Vse</string>
@@ -3140,6 +3258,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="audio_visualizer_static">Statična slika</string>
     <string name="profile_image_of_user">Slika profila %1$s</string>
     <string name="relay_info">Rele %1$s</string>
+    <string name="accepted_by_relays">Sprejeto na relejih</string>
     <string name="expand_relay_list">Razširi seznam relejev</string>
     <string name="note_options">Možnosti zapiska</string>
     <string name="poll">Anketa</string>
@@ -3152,10 +3271,16 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="remove_location">Odstrani lokacijo</string>
     <string name="add_content_warning">Dodaj opozorilo o vsebini</string>
     <string name="remove_content_warning">Odstrani opozorilo o vsebini</string>
+    <string name="chat_system_created_channel">%1$s je ustvaril/a kanal %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s je ustvaril/-a kanal</string>
     <string name="chat_system_updated_channel">%1$s je posodobil/-a profil kanala</string>
     <string name="buzz_message_edited">(urejeno)</string>
     <string name="buzz_diff_truncated">(razlika je odrezana)</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="buzz_canvas_title">Delovna površina</string>
     <string name="buzz_canvas_empty">V tem delovnem prostoru še ni bila deljena nobena delovna površina.</string>
     <string name="buzz_canvas_edit">Uredi delovno površino</string>
@@ -3202,6 +3327,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="buzz_dm_opening">Odpiram…</string>
     <string name="buzz_dm_remove">Odstrani</string>
     <string name="buzz_invite_title">Povabilo v delovni prostor</string>
+    <string name="buzz_invite_heading">Pridruži se delovnemu prostoru</string>
     <string name="buzz_invite_workspace">Delovni prostor</string>
     <string name="buzz_invite_role">Vloga</string>
     <string name="buzz_invite_body">Delovni prostor se bo odprl v varnem brskalniku znotraj aplikacije, kjer si boste lahko ogledali pogoje uporabe in dokončali pridružitev. Pripet se boste z vašim ključem Amethyst — brez gesla.</string>
@@ -3217,6 +3343,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="buzz_import_add_all">Dodaj vse</string>
     <string name="buzz_import_added">Dodano</string>
     <string name="buzz_import_empty_title">Ni najdenih kanalov</string>
+    <string name="buzz_import_empty_body">Videti je, da na tem releju še nisi član nobenega kanala. Najprej v brskalniku sprejmi vabilo v delovni prostor in poskusite znova.</string>
     <string name="relay_group_section_channels">Kanali</string>
     <string name="relay_group_section_forums">Forumi</string>
     <string name="buzz_agent_working">Delam…</string>
@@ -3572,6 +3699,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="resource_usage_tile_relay">Uporaba releja danes</string>
     <string name="resource_usage_tile_in_app">Danes v aplikaciji</string>
     <string name="resource_usage_trend_section">Količina podatkov na dan</string>
+    <string name="resource_usage_legend_cellular">Mobilni podatki (MB)</string>
     <string name="resource_usage_legend_wifi">Wi-Fi (MB)</string>
     <string name="resource_usage_activity_section">Aktivnost (7 dni)</string>
     <string name="resource_usage_cellular_bg">Mobilni podatki (v ozadju)</string>
@@ -3627,6 +3755,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="resource_usage_subsystem_money">Denarnica in zapi</string>
     <string name="resource_usage_subsystem_nip05">Preverjanje naslova</string>
     <string name="resource_usage_subsystem_preview">Predogled povezav</string>
+    <string name="resource_usage_subsystem_push">Registracija potisnih obvestil</string>
     <string name="resource_usage_subsystem_other">Drugo</string>
     <string name="resource_usage_empty">Še ni podatkov o uporabi</string>
     <string name="resource_usage_memory_section">Trenutni pomnilnik</string>

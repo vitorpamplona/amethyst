@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -52,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -204,12 +202,6 @@ fun ConcordHomeScreen(
                 }
 
                 if (mode != ChannelExpand.CLOSED && state != null) {
-                    // A banner hero (CORD-02 §6) belongs to the full view, not the compact unread peek.
-                    if (mode == ChannelExpand.OPEN) {
-                        state.metadata?.banner?.let { banner ->
-                            item(key = "banner-${entry.id}") { CommunityBanner(banner, accountViewModel) }
-                        }
-                    }
                     // Channels, most-recently-active first, each with its last message + unread state.
                     // In UNREAD mode a row hides itself unless it has new messages (peek).
                     val channels =
@@ -355,26 +347,6 @@ private fun CommunityHeader(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-/** The community's decrypted CORD-02 §6 banner as a hero strip; renders nothing until it resolves. */
-@Composable
-private fun CommunityBanner(
-    banner: ImagePointer,
-    accountViewModel: AccountViewModel,
-) {
-    val model = rememberConcordImageModel(banner, accountViewModel) ?: return
-    val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
-    RobohashFallbackAsyncImage(
-        robot = "",
-        model = model,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxWidth().height(110.dp),
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = false,
-        autoPlayGif = autoPlayGif,
-    )
 }
 
 /**

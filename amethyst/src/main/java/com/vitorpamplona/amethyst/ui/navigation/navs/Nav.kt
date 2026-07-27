@@ -94,10 +94,18 @@ class Nav(
                 // Clear sibling bottom-nav entries but keep Home (the start
                 // destination) below, so back-swipe from any tab returns to
                 // Home and back-swipe from Home leaves the app.
+                //
+                // saveState/restoreState is what makes a tab survive being left. Without them the
+                // popped entry is DESTROYED, taking its ViewModelStore with it — so every return to
+                // a tab rebuilt its screen-scoped ViewModels from nothing and re-fetched. On the
+                // Buzz community tab that is a visible ~1s of empty Direct Messages plus a channel
+                // list that reshuffles as data lands; other tabs pay it as lost scroll position.
                 popUpTo(Route.Home) {
                     inclusive = false
+                    saveState = true
                 }
                 launchSingleTop = true
+                restoreState = true
             }
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.

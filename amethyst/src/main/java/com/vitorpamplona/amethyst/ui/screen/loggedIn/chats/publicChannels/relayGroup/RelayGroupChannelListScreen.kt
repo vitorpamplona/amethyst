@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -90,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -214,20 +216,30 @@ fun RelayGroupChannelListScreen(
         }
 
     fun buzzTypeOf(groupId: GroupId): String? = channelsById[groupId.id]?.event?.buzzChannelType()
-    // Starred channels float to the top of their section (stable sort keeps the alphabetical order
-    // within the starred and unstarred buckets).
+
+    // Starred channels float to the top of their section, then alphabetical.
+    //
+    // The name is the tie-break on purpose: [buzzGroupIds] is in *arrival* order (membership ids as
+    // the ViewModel emitted them, then directory ids), so sorting on `starred` alone — a stable sort
+    // over a boolean — left the underlying order at the mercy of whatever landed first. The list
+    // visibly reshuffled in the second after opening, and came back differently each visit. Ordering
+    // by a property of the channel instead makes the first frame the final order; a channel whose
+    // 39000 hasn't arrived sorts by its id until the name lands.
     val starred by BuzzChannelStars.flow.collectAsStateWithLifecycle()
+
+    fun buzzSortKey(groupId: GroupId): String = channelsById[groupId.id]?.toBestDisplayName()?.lowercase() ?: groupId.id
+
     val buzzChatChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
                 .filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } }
-                .sortedByDescending { it.id in starred }
+                .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
     val buzzForumChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
                 .filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM }
-                .sortedByDescending { it.id in starred }
+                .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
 
     // Which sections the user has collapsed (session-scoped). Keyed by section id below.
@@ -271,7 +283,7 @@ fun RelayGroupChannelListScreen(
                         text = relay.displayUrl(),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.MiddleEllipsis,
                     )
                 },
                 showBackButton = canPop,
@@ -282,6 +294,10 @@ fun RelayGroupChannelListScreen(
                             relay = relay,
                             accountViewModel = accountViewModel,
                             onAddPeople = { showAddPeople = true },
+                            onOpenAgentConsole = { nav.nav(Route.AgentConsole(relay.url)) },
+                            // Only offer "Add all" when some discovered channel isn't in the user's
+                            // list yet — hidden once everything is already added.
+                            onAddAll = if (buzzChatChannels.any { it.id !in buzzAdded }) ({ buzzVm.addAll() }) else null,
                         )
                     }
                 },
@@ -360,7 +376,7 @@ fun RelayGroupChannelListScreen(
                         }
                     }
 
-                    // -- CHANNELS --
+                    // -- CHANNELS -- (Add-all now lives in the community's top-bar overflow menu)
                     if (buzzChatChannels.isNotEmpty()) {
                         val channelsCollapsed = "channels" in collapsedSections
                         item(key = "sec-channels") {
@@ -368,13 +384,7 @@ fun RelayGroupChannelListScreen(
                                 title = stringRes(R.string.relay_group_section_channels),
                                 collapsed = channelsCollapsed,
                                 onToggle = { toggleSection("channels") },
-                            ) {
-                                if (buzzChatChannels.any { it.id !in buzzAdded }) {
-                                    FilledTonalButton(onClick = { buzzVm.addAll() }) {
-                                        Text(stringRes(R.string.buzz_import_add_all))
-                                    }
-                                }
-                            }
+                            )
                         }
                         if (!channelsCollapsed) {
                             items(buzzChatChannels, key = { "chat-${it.id}" }) { groupId ->
@@ -413,6 +423,9 @@ fun RelayGroupChannelListScreen(
                                     onOpen = { nav.nav(Route.RelayGroupThreads(groupId.id, relay.url)) },
                                     isStarred = groupId.id in starred,
                                     onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
+                                    // Forum posts live in a separate thread store, not the chat notes the
+                                    // activity preview reads — so don't warm a kind-9 sub that returns nothing.
+                                    showActivityPreview = false,
                                 )
                             }
                         }
@@ -456,11 +469,7 @@ fun RelayGroupChannelListScreen(
                             }
                         }
                     }
-
-                    // -- AGENT CONSOLE -- (owner's per-community fleet console, footer)
-                    item(key = "sec-console") {
-                        AgentConsoleFooter { nav.nav(Route.AgentConsole(relay.url)) }
-                    }
+                    // Agent Console now lives in the community's top-bar overflow menu, not a footer card.
                 } else {
                     // Vanilla NIP-29 relay: flat channel directory (no forums/DMs/console).
                     itemsIndexed(channels, key = { _, channel -> channel.groupId.id }) { index, channel ->
@@ -565,8 +574,9 @@ private fun RelayGroupSectionHeader(
 
 /**
  * One inline Direct-Message conversation row inside the community view: the counterpart's avatar +
- * name (or a "+N" cluster label for a group DM) and a compact last-activity time. Tapping opens the
- * DM as its relay-group chat.
+ * name (or a "+N" cluster label for a group DM), a preview of the last message, and a compact
+ * last-activity time. The channel's recent content is warmed while the row is visible so the preview
+ * fills in ahead of a tap. Tapping opens the DM as its relay-group chat.
  */
 @Composable
 private fun BuzzDmInlineRow(
@@ -582,6 +592,23 @@ private fun BuzzDmInlineRow(
     val leadName by observeUserName(leadUser, accountViewModel)
     val label = if (others.size > 1) "$leadName +${others.size - 1}" else leadName
 
+    val account = accountViewModel.account
+    val groupId = remember(row.channelId, row.relayUrl) { GroupId(row.channelId, row.relayUrl) }
+    val channel = remember(groupId) { LocalCache.getOrCreateRelayGroupChannel(groupId) }
+    // Warm a screen's worth of recent DM messages while visible, so the preview isn't blank until opened.
+    RelayGroupCardWarmupSubscription(
+        channel,
+        accountViewModel.dataSources().relayGroupCardWarmup,
+        accountViewModel,
+        contentOnly = true,
+        contentLimit = CHANNEL_LIST_WARMUP_LIMIT,
+    )
+    val notesState by channel
+        .flow()
+        .notes.stateFlow
+        .collectAsStateWithLifecycle()
+    val lastNote = remember(notesState) { channel.newestTimelineNote(account) }
+
     Row(
         modifier =
             Modifier
@@ -593,19 +620,21 @@ private fun BuzzDmInlineRow(
     ) {
         // Only show a presence dot for a 1:1 DM — a cluster avatar can't carry one peer's status.
         Box {
-            UserPicture(leadHex, 40.dp, accountViewModel = accountViewModel, nav = nav)
+            UserPicture(leadHex, 44.dp, accountViewModel = accountViewModel, nav = nav)
             if (others.size == 1) {
                 PresenceDot(leadHex, Modifier.align(Alignment.BottomEnd), ringColor = MaterialTheme.colorScheme.surface)
             }
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            BuzzDmPreviewLine(lastNote, accountViewModel)
+        }
         if (row.lastActivity > 0) {
             Text(
                 text = timeAgoShort(row.lastActivity, stringRes(R.string.now)),
@@ -614,6 +643,34 @@ private fun BuzzDmInlineRow(
             )
         }
     }
+}
+
+/** The last-message preview under a DM row: "author: snippet", or nothing before any message loads. */
+@Composable
+private fun BuzzDmPreviewLine(
+    lastNote: Note?,
+    accountViewModel: AccountViewModel,
+) {
+    val event = lastNote?.event ?: return
+    val author = lastNote.author
+    val summary = buzzTimelinePreviewSummary(event, accountViewModel)
+    val preview: String =
+        when {
+            summary != null -> summary
+            author != null -> {
+                val authorName by observeUserName(author, accountViewModel)
+                val body = event.content.take(80)
+                if (body.isBlank()) authorName else "$authorName: $body"
+            }
+            else -> event.content.take(80)
+        }
+    Text(
+        preview,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 /** The "See all N conversations" row that opens the full per-community DM inbox. */
@@ -629,28 +686,6 @@ private fun SeeAllRow(
     ) {
         Text(text = label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Icon(symbol = MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-    }
-}
-
-/** The owner's per-community Agent Console entry, pinned as the footer of a Buzz community view. */
-@Composable
-private fun AgentConsoleFooter(onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(symbol = MaterialSymbols.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.size(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringRes(R.string.buzz_console_card_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(
-                    stringRes(R.string.buzz_console_card_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Icon(symbol = MaterialSymbols.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-        }
     }
 }
 

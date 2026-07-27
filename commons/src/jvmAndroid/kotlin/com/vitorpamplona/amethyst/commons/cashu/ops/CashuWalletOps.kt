@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.RandomSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.SecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.splitAmountIntoDenominations
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PKUnredeemableException
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.firstUnsignableP2pkLock
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -630,9 +632,29 @@ class CashuWalletOps(
         proofs: List<CashuProof>,
         mintUrl: String,
         nutzapEventId: String? = null,
+        /**
+         * The wallet's NIP-60 P2PK private key (kind:17375 `privkey`, hex).
+         * Used to sign the NUT-11 witness when the token is locked to our
+         * wallet key. Null when the wallet hasn't decrypted its kind:17375.
+         */
+        walletP2pkPrivkeyHex: String? = null,
+        /**
+         * The account's Nostr identity private key (hex), available ONLY for a
+         * local nsec signer. Some senders (e.g. Bey Wallet's P2PK send) lock
+         * ecash directly to the recipient's npub, so we sign the witness with
+         * the identity key when the lock targets it. Null for remote (NIP-46)
+         * or external (NIP-55) signers — they can't produce a raw witness
+         * signature, so such a token surfaces as [P2PKUnredeemableException].
+         */
+        identityPrivkeyHex: String? = null,
     ): RedeemCompleted {
         if (proofs.isEmpty()) throw IllegalArgumentException("Token has no proofs")
-        val swap = ops(mintUrl).swap(proofs, targetSplit = null)
+        // Index our candidate signing keys by their x-only pubkey so a locked
+        // proof can be matched to the key that unlocks it. Empty when we hold
+        // no keys (e.g. CLI callers) — a locked token then throws a clear
+        // P2PKUnredeemableException instead of an unsigned swap.
+        val signingKeys = p2pkKeyIndex(walletP2pkPrivkeyHex, identityPrivkeyHex)
+        val swap = ops(mintUrl).redeemToken(proofs) { lockXOnly -> signingKeys[lockXOnly] }
         val total = swap.keep.sumOf { it.amount }
 
         // All output goes to "keep" since targetSplit was null.
@@ -1276,12 +1298,74 @@ data class RestoreOutcome(
 /** Drop the leading parity byte if present so two pubkeys can be compared. */
 private fun String.lastHex64(): String = if (length == 66) substring(2) else this
 
+/**
+ * Index the given private keys by their 32-byte x-only pubkey hex, skipping
+ * blanks. Used by [CashuWalletOps.redeemToken] to resolve which of our keys (if
+ * any) unlocks a P2PK proof, comparing against the lock's x-only `data`.
+ */
+private fun p2pkKeyIndex(vararg privKeysHex: String?): Map<String, String> =
+    buildMap {
+        privKeysHex.forEach { hex ->
+            if (!hex.isNullOrBlank()) {
+                // toHexKey() emits lowercase, matching the lowercased x-only the
+                // resolver is queried with (see P2PKRedeem.xOnly).
+                val xOnly =
+                    Secp256k1
+                        .pubKeyCompress(Secp256k1.pubkeyCreate(hex.hexToByteArray()))
+                        .toHexKey()
+                        .lastHex64()
+                put(xOnly, hex)
+            }
+        }
+    }
+
+/**
+ * Pre-flight a token's proofs against the keys we hold: throws
+ * [P2PKUnredeemableException] (naming the offending lock) if any P2PK-locked
+ * proof can't be signed. Callers redeem a multi-group token one group at a time,
+ * each swapping + publishing, so checking every group up front avoids redeeming
+ * some and then failing on an unsignable one — mirroring the unknown-mint
+ * pre-check. Plain (unlocked) proofs are ignored.
+ */
+fun requireP2pkRedeemable(
+    proofs: List<CashuProof>,
+    walletP2pkPrivkeyHex: String?,
+    identityPrivkeyHex: String?,
+) {
+    val signingKeys = p2pkKeyIndex(walletP2pkPrivkeyHex, identityPrivkeyHex)
+    firstUnsignableP2pkLock(proofs) { signingKeys[it] }?.let { throw P2PKUnredeemableException(it) }
+}
+
 /** Catches mint HTTP / protocol errors and surfaces their detail message. */
 fun describeMintError(e: Throwable): String =
     when (e) {
+        is P2PKUnredeemableException -> "This ecash is locked to a public key this wallet can't sign for."
         is MintHttpException -> "Mint error (HTTP ${e.httpStatus}): ${e.detail ?: e.message}"
         is MintProtocolException -> "Mint refused: ${e.message}"
         else -> e.message ?: e::class.simpleName ?: "Unknown error"
+    }
+
+/**
+ * Error text for the redeem-token flow. Adds context [describeMintError] can't:
+ * when a token is P2PK-locked to the user's own [identityPubKeyHex] but we
+ * couldn't sign for it, it means the current signer is a bunker/external one
+ * that can't produce a raw witness — so point the user at claiming it elsewhere.
+ * Falls back to [describeMintError] for everything else.
+ */
+fun describeRedeemError(
+    e: Throwable,
+    identityPubKeyHex: String?,
+): String =
+    if (e is P2PKUnredeemableException) {
+        val lock = e.lockPubKeyHex.lastHex64()
+        if (identityPubKeyHex != null && lock.equals(identityPubKeyHex.lastHex64(), ignoreCase = true)) {
+            "This ecash is locked to your Nostr identity key, which the current login can't sign for " +
+                "(only a local key / nsec login can). Import your nsec into a Cashu wallet to claim it."
+        } else {
+            "This ecash is locked to a public key you don't control (${lock.take(12)}…) and can't be claimed here."
+        }
+    } else {
+        describeMintError(e)
     }
 
 /** A decrypted, unspent token event ready to be spent. */

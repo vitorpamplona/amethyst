@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.signP2pkWitnesses
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
@@ -213,6 +214,28 @@ class CashuMintOperations(
                 proof.copy(witness = witness)
             }
         return swap(unlocked, targetSplit = null)
+    }
+
+    /**
+     * Redeem the proofs of an out-of-band token (a pasted `cashuA`/`cashuB`
+     * string) into fresh proofs in our wallet.
+     *
+     * Unlike [redeemNutzap] — which assumes every proof is P2PK-locked to our
+     * single wallet key — a pasted token may be plain, P2PK-locked, or a mix,
+     * and the lock may target any key. [signP2pkWitnesses] inspects each secret
+     * and, for locked proofs, asks [signingKeyFor] for the matching private key
+     * (by the lock's x-only pubkey). Plain proofs pass straight through.
+     *
+     * Throws [P2PKUnredeemableException] if a locked proof's key is unknown —
+     * caught upstream to show "this ecash is locked to a key you don't control"
+     * instead of leaking the mint's raw `witness is missing` 400.
+     */
+    suspend fun redeemToken(
+        proofs: List<CashuProof>,
+        signingKeyFor: (lockPubKeyXOnly: String) -> String?,
+    ): SwapResult {
+        if (proofs.isEmpty()) throw IllegalArgumentException("Nothing to redeem")
+        return swap(signP2pkWitnesses(proofs, signingKeyFor), targetSplit = null)
     }
 
     /**

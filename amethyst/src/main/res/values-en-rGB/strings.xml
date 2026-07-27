@@ -63,6 +63,11 @@
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Onchain zap send dialog -->
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

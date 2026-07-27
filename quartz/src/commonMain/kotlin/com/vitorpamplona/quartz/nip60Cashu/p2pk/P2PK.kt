@@ -92,8 +92,13 @@ object P2PK {
      * Parse a Cashu P2PK secret string. Returns null if the string is not a
      * NUT-11 P2PK secret.
      */
-    fun parseSecret(secret: String): ParsedP2pk? =
-        try {
+    fun parseSecret(secret: String): ParsedP2pk? {
+        // Fast reject before the (throwing) JSON parse: NUT-10 well-known
+        // secrets are a JSON array (`["P2PK", …]`), while a plain Cashu secret
+        // is opaque hex/base64. Redeeming a token calls this once per proof, so
+        // skipping the parse+exception for the common plain case matters.
+        if (!secret.looksLikeJsonArray()) return null
+        return try {
             val arr = json.parseToJsonElement(secret) as? JsonArray ?: return null
             if (arr.size < 2) return null
             val kind = (arr[0] as? JsonPrimitive)?.content
@@ -105,11 +110,29 @@ object P2PK {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** True when the first non-whitespace char is `[` — i.e. it may be a JSON array. */
+    private fun String.looksLikeJsonArray(): Boolean {
+        for (c in this) {
+            if (c.isWhitespace()) continue
+            return c == '['
+        }
+        return false
+    }
 
     /**
      * BIP-340 Schnorr signature over `sha256(secret_bytes)` used as the unlock
      * witness. Returns the witness JSON string ready to drop into a Cashu
      * proof's `witness` field.
+     *
+     * SECURITY: [secret] is attacker-controlled (it comes from a pasted token),
+     * and when [privKeyHex] is the account's Nostr identity key this signs
+     * `sha256(secret)` with that key. Cross-protocol reuse against Nostr event
+     * signing is prevented only because a valid P2PK secret must start with
+     * `["P2PK"` while a Nostr event serialization starts with `[0,` — so callers
+     * MUST only reach here for secrets that already passed [parseSecret]; that
+     * prefix check is load-bearing for safety, not just parsing.
      */
     fun signWitness(
         secret: String,

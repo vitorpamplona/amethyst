@@ -3142,6 +3142,11 @@
     <string name="chat_system_updated_channel">%1$s hat das Kanalprofil aktualisiert</string>
     <string name="buzz_message_edited">(bearbeitet)</string>
     <string name="buzz_diff_truncated">(Diff gekürzt)</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="buzz_canvas_empty">In diesem Workspace wurde noch kein Canvas geteilt.</string>
     <string name="buzz_canvas_edit">Canvas bearbeiten</string>
     <string name="buzz_canvas_save">Canvas speichern</string>

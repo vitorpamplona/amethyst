@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,10 +48,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -170,21 +173,17 @@ fun RelayGroupTopBar(
             }
         },
         actions = {
-            if (!isDm) {
-                IconButton(onClick = {
-                    nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
-                }) {
-                    Icon(
-                        symbol = MaterialSymbols.Forum,
-                        contentDescription = stringRes(R.string.relay_group_threads_title),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-
-            // Buzz workspace canvas (kind 40100): shown on any Buzz-dialect relay so a member can
-            // open the shared markdown doc — or create one when the channel has none yet.
-            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
+            // Buzz canvas (kind 40100): shown on any Buzz-dialect relay so a member can open the
+            // channel's shared markdown doc — or create one when it has none yet. The only affordance
+            // that stays an icon: it is this channel's shared document, i.e. content, while Threads and
+            // Share are navigation the reader needs once in a while.
+            //
+            // Except on a DM, where Buzz itself never offers to *write* one: its canvas entry needs
+            // `hasCanvas || canEditNarrative`, and `canEditNarrative` excludes `channelType === "dm"`
+            // outright. So a DM shows the icon only when a canvas already exists — which is also what
+            // keeps us from advertising "start a shared doc" in a two-person conversation.
+            val hasCanvas by observeBuzzCanvas(channel.groupId.id)
+            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) && (!isDm || hasCanvas)) {
                 IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
                     Icon(
                         symbol = MaterialSymbols.Dashboard,
@@ -213,48 +212,68 @@ fun RelayGroupTopBar(
             // remember the bech32 (naddr) encode — this top bar recomposes on every roster/metadata
             // emission (observeChannel), and the encode is otherwise redone each time.
             val naddr = remember(channel.groupId, isDm) { if (isDm) null else channel.toNAddr() }
-            if (naddr != null) {
-                val context = LocalContext.current
-                IconButton(onClick = { shareRelayGroup(context, naddr) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Share,
-                        contentDescription = stringRes(R.string.quick_action_share),
-                        modifier = Modifier.size(20.dp),
-                    )
+
+            if (displayMembership == RelayGroupMembership.PENDING) {
+                Text(
+                    text = stringRes(R.string.relay_group_pending),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (!displayMembership.isMember() && channel.requiresMembershipToPost()) {
+                FilledTonalButton(onClick = {
+                    // Closed groups need an invite code; open groups join directly.
+                    if (channel.isClosed()) {
+                        showJoinCode = true
+                    } else {
+                        requested = true
+                        accountViewModel.joinRelayGroup(channel)
+                    }
+                }) {
+                    Text(stringRes(R.string.join))
                 }
             }
-            when {
-                displayMembership == RelayGroupMembership.PENDING -> {
-                    Text(
-                        text = stringRes(R.string.relay_group_pending),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+            // The membership actions are only meaningful once the relay lets you in: while a join is
+            // pending, and on a gated group that doesn't list you, the Join affordance above stands in
+            // for them. Threads and Share stay available either way — you can want to hand out a group
+            // you are still only browsing.
+            val showMembershipActions =
+                displayMembership != RelayGroupMembership.PENDING &&
+                    !(!displayMembership.isMember() && channel.requiresMembershipToPost())
+
+            // Everything here used to be a top-bar icon. Threads especially over-advertised itself: on a
+            // Buzz `t=stream` channel it is always empty (forum posts live in `t=forum` channels, which
+            // the relay's channel list already surfaces in their own section), so it read as a broken
+            // feature on every chat. Demoted to the overflow, where the frequency of use actually is.
+            if (!isDm || naddr != null || showMembershipActions) {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        symbol = MaterialSymbols.MoreVert,
+                        contentDescription = stringRes(R.string.more_options),
+                        modifier = Modifier.size(22.dp),
                     )
                 }
-
-                !displayMembership.isMember() && channel.requiresMembershipToPost() -> {
-                    FilledTonalButton(onClick = {
-                        // Closed groups need an invite code; open groups join directly.
-                        if (channel.isClosed()) {
-                            showJoinCode = true
-                        } else {
-                            requested = true
-                            accountViewModel.joinRelayGroup(channel)
-                        }
-                    }) {
-                        Text(stringRes(R.string.join))
-                    }
-                }
-
-                else -> {
-                    IconButton(onClick = { menuOpen = true }) {
-                        Icon(
-                            symbol = MaterialSymbols.MoreVert,
-                            contentDescription = stringRes(R.string.more_options),
-                            modifier = Modifier.size(22.dp),
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (!isDm) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.relay_group_threads_title)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.RelayGroupThreads(channel.groupId.id, channel.groupId.relayUrl.url))
+                            },
                         )
                     }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (naddr != null) {
+                        val context = LocalContext.current
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.quick_action_share)) },
+                            onClick = {
+                                menuOpen = false
+                                shareRelayGroup(context, naddr)
+                            },
+                        )
+                    }
+                    if (showMembershipActions) {
                         DropdownMenuItem(
                             text = { Text(stringRes(R.string.relay_group_menu_members)) },
                             onClick = {
@@ -377,4 +396,19 @@ private fun RoleBadge(membership: RelayGroupMembership) {
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }
+}
+
+/**
+ * Whether this Buzz channel has a canvas (kind 40100) in cache, recomposing when one lands.
+ *
+ * Only the top bar's DM case needs this: a DM gets the canvas affordance solely when a document
+ * already exists, mirroring Buzz's own `hasCanvas || canEditNarrative` where `canEditNarrative`
+ * excludes DMs. Reads the same [BuzzWorkspaceStates] registry the canvas screen renders from, so the
+ * icon appears the moment the document arrives rather than on the next visit.
+ */
+@Composable
+private fun observeBuzzCanvas(channelId: String): State<Boolean> {
+    val state = remember(channelId) { BuzzWorkspaceStates.getOrCreate(channelId) }
+    val version by state.canvasUpdates.collectAsStateWithLifecycle()
+    return remember(channelId, version) { mutableStateOf(state.canvasNote != null) }
 }

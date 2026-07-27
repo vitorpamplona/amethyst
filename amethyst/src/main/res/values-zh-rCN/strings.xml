@@ -2875,6 +2875,11 @@
     <string name="chat_system_created_channel">%1$s 创建了频道 %2$s</string>
     <string name="chat_system_created_channel_unnamed">%1$s 创建了频道</string>
     <string name="chat_system_updated_channel">%1$s 更新了频道配置文件</string>
+    <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <!-- Buzz forum votes (kind 45002). -->
     <string name="chat_delivery_details_title">消息传递</string>
     <string name="close">关闭</string>
     <string name="chat_delivery_pending">正在等待中继接受此消息</string>
