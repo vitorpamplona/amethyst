@@ -4658,6 +4658,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="new_conversation_location_pro_2">Združljivo z Bitchatom — doseže bližnje uporabnike na istih relejih.</string>
     <string name="new_conversation_location_con_1">Javno in minljivo — brez zgodovine sporočil, dostopno vsem v celici.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_workflow_pill_denied">Zavrnjeno</string>
     <!-- Buzz agent attestation -->
     <!-- Buzz agent persona editor -->
 </resources>
