@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.stream.mentions
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
@@ -92,7 +93,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -776,7 +776,11 @@ open class ChannelNewMessageViewModel :
                 // match. LocalCache overlays the newest edit last-write-wins, so the edited row
                 // re-renders with this content.
                 val target = editingBuzzMessage.value!!
-                StreamMessageEditEvent.build(channel.groupId.id, target.idHex, tagger.message)
+                StreamMessageEditEvent.build(channel.groupId.id, target.idHex, tagger.message) {
+                    // Carry `p` mentions for anyone cited in the edited text, so a mention added
+                    // (or kept) by an edit still notifies the member and resolves its `nostr:` ref.
+                    mentions(tagger.pTags?.map { it.pubkeyHex }.orEmpty())
+                }
             }
 
             channel is RelayGroupChannel && BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) -> {
@@ -806,8 +810,13 @@ open class ChannelNewMessageViewModel :
                                 ?: parentTags?.buzzThreadReply()
                                 ?: parent.idHex
                         buzzThread(root, parent.idHex)
-                        parent.author?.pubkeyHex?.let { pTag(PTag(it)) }
                     }
+
+                    // `p` mentions for everyone cited in the body (plus the reply target, which the
+                    // tagger seeds into pTags) so a named member is notified and the Buzz relay can
+                    // resolve the `nostr:` reference — mirrors the mention p-tags every other chat
+                    // kind above emits. Deduplicated by mentions(), so the reply author isn't doubled.
+                    mentions(tagger.pTags?.map { it.pubkeyHex }.orEmpty())
 
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
