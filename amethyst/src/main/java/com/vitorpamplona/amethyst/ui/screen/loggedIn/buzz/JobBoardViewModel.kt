@@ -25,8 +25,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -34,24 +32,27 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * Backing ViewModel for the [JobBoardScreen] — the shared backlog of one Buzz channel.
  *
  * A Buzz "job" is the agent-job protocol (kinds 43001-43006): a member files a request, the
  * workspace bot works it, and every step lands as a signed event the whole room sees. This VM
- * fetches those events (plus their kind-7 upvotes) scoped to the channel `h`, folds them into
- * per-job [JobView] records via the shared [BuzzJobAggregator], and exposes the backlog as a
- * [StateFlow]. It also drives the three write actions the board offers: file, upvote, cancel.
+ * folds those events (plus their kind-7 upvotes) into per-job [JobView] records via the shared
+ * [BuzzJobAggregator] and exposes the backlog as a [StateFlow]. It also drives the three write
+ * actions the board offers: file, upvote, cancel.
  *
- * The heavy lifting (correlation, state machine, upvote priority) lives in `commons`; this VM is
- * the Android glue (fetch → LocalCache → re-derive → publish via [Account]).
+ * **Aggregated from the live subscription, not `LocalCache`:** the job kinds 43001-43006 are neither
+ * regular (`< 10_000`) nor addressable, so `LocalCache.filter` can't serve them (its note branch only
+ * matches `kind.isRegular()`) — reading them back from cache returned nothing and the board stayed
+ * empty. We consume the events straight off [subscribeAsFlow], which accumulates the channel's stored
+ * + live events (deduped) and re-emits the list. The kind-7 upvotes ride the same `#h` subscription.
  */
 class JobBoardViewModel : ViewModel() {
     @Volatile private var account: Account? = null
@@ -65,7 +66,6 @@ class JobBoardViewModel : ViewModel() {
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private var watchJob: Job? = null
-    private val reloadMutex = Mutex()
 
     fun bind(
         account: Account,
@@ -76,29 +76,9 @@ class JobBoardViewModel : ViewModel() {
         this.account = account
         this.channelId = channelId
         this.relay = RelayUrlNormalizer.normalizeOrNull(relayUrl)
-        refresh()
     }
 
-    fun refresh() {
-        val account = account ?: return
-        val relay = relay ?: return
-        val channelId = channelId ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            try {
-                account.client.fetchAllWithHooks(
-                    filters = mapOf(relay to boardFilters(channelId)),
-                    timeoutMs = 8_000,
-                    pendingOnAuthRequired = true,
-                ) { _, _ -> false }
-                reloadFromCache(channelId)
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    /** Keep the board live while it's on screen: any batch of job/reaction events re-derives it. */
+    /** Keep the board live while it's on screen: the subscription backfills then streams job/reaction events. */
     fun startWatching() {
         val account = account ?: return
         val relay = relay ?: return
@@ -106,10 +86,22 @@ class JobBoardViewModel : ViewModel() {
         if (watchJob != null) return
         watchJob =
             viewModelScope.launch(Dispatchers.IO) {
-                account.client.subscribeAsFlow(relay, boardFilters(channelId)).collect {
-                    // The client's global listener already consumed the batch into LocalCache.
-                    reloadFromCache(channelId)
-                }
+                _isLoading.value = true
+                val loadingTimeout =
+                    launch {
+                        delay(LOADING_TIMEOUT_MS)
+                        _isLoading.value = false
+                    }
+                account.client
+                    .subscribeAsFlow(relay, boardFilters(channelId))
+                    .onStart { emit(emptyList()) }
+                    .collect { events ->
+                        if (events.isNotEmpty()) {
+                            loadingTimeout.cancel()
+                            _isLoading.value = false
+                        }
+                        _jobs.value = BuzzJobAggregator.aggregate(events)
+                    }
             }
     }
 
@@ -117,15 +109,6 @@ class JobBoardViewModel : ViewModel() {
         watchJob?.cancel()
         watchJob = null
     }
-
-    private suspend fun reloadFromCache(channelId: String) =
-        reloadMutex.withLock {
-            val events =
-                LocalCache
-                    .filter(Filter(kinds = ALL_KINDS, tags = mapOf("h" to listOf(channelId))))
-                    .mapNotNull { it.event }
-            _jobs.value = BuzzJobAggregator.aggregate(events)
-        }
 
     fun file(request: String) =
         act { account, relay, channelId ->
@@ -148,10 +131,8 @@ class JobBoardViewModel : ViewModel() {
         val account = account ?: return
         val relay = relay ?: return
         val channelId = channelId ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            block(account, relay, channelId)
-            reloadFromCache(channelId) // optimistic local re-derive; the live watch catches relay echoes
-        }
+        // The live subscription picks up the relay's echo of our own write, so no local re-derive here.
+        viewModelScope.launch(Dispatchers.IO) { block(account, relay, channelId) }
     }
 
     override fun onCleared() {
@@ -160,10 +141,11 @@ class JobBoardViewModel : ViewModel() {
     }
 
     companion object {
+        private const val LOADING_TIMEOUT_MS = 6_000L
+
         // The Buzz agent-job protocol (request/accepted/progress/result/cancel/error) plus the
         // kind-7 upvotes that prioritize it.
         private val JOB_KINDS = (43001..43006).toList()
-        private val ALL_KINDS = JOB_KINDS + ReactionEvent.KIND
 
         private fun boardFilters(channelId: String) =
             listOf(

@@ -174,7 +174,9 @@ object WorkflowRunAggregator {
             (thread.filterIsInstance<WorkflowStepStartedEvent>() + thread.filterIsInstance<WorkflowStepCompletedEvent>())
                 .sortedBy { it.createdAt }
 
+        // Parse each event's JSON content at most once — `fold` runs per run, per board re-derive.
         val triggerPayload = trigger?.let { payload(it.content) }
+        val triggeredPayload = triggered?.let { payload(it.content) }
 
         // Terminal outcomes and the deny decision compete by timestamp — newest wins.
         val terminal =
@@ -197,9 +199,9 @@ object WorkflowRunAggregator {
 
         return WorkflowRun(
             runId = runId,
-            workflowId = trigger?.workflowId() ?: triggerPayload?.workflow ?: payload(triggered?.content ?: "")?.workflow,
+            workflowId = trigger?.workflowId() ?: triggerPayload?.workflow ?: triggeredPayload?.workflow,
             channel = trigger?.tags?.workflowChannel() ?: approval?.channel() ?: triggered?.channel(),
-            task = triggerPayload?.task ?: payload(triggered?.content ?: "")?.task,
+            task = triggerPayload?.task ?: triggeredPayload?.task,
             requester = trigger?.pubKey,
             state = state,
             pendingApprover = approval?.approver(),

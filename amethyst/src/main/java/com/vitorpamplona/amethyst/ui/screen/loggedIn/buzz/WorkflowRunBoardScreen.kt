@@ -129,7 +129,8 @@ fun WorkflowRunBoardScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val me = accountViewModel.account.userProfile().pubkeyHex
+    val me = remember(accountViewModel) { accountViewModel.account.userProfile().pubkeyHex }
+    val canWrite = remember(accountViewModel) { accountViewModel.account.isWriteable() }
     val viewModel: WorkflowRunBoardViewModel = viewModel(key = "WorkflowRunBoard-$relayUrl-$channelId")
     viewModel.bind(accountViewModel.account, channelId, relayUrl)
 
@@ -152,11 +153,13 @@ fun WorkflowRunBoardScreen(
         topBar = { TopBarWithBackButton("Workflow runs", nav) },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { composing = true },
-                icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                text = { Text("New run") },
-            )
+            if (canWrite) {
+                ExtendedFloatingActionButton(
+                    onClick = { composing = true },
+                    icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
+                    text = { Text("New run") },
+                )
+            }
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -173,12 +176,12 @@ fun WorkflowRunBoardScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
                     ) {
-                        section("Needs your approval", groups.awaiting, RunStyle.GATE, me, accountViewModel, nav) { run, grant ->
+                        section("Needs your approval", groups.awaiting, RunStyle.GATE, me, canWrite, accountViewModel, nav) { run, grant ->
                             pending = PendingDecision(run, grant)
                         }
-                        section("Working now", groups.active, RunStyle.ACTIVE, me, accountViewModel, nav)
-                        section("Shipped", groups.done, RunStyle.SHIPPED, me, accountViewModel, nav)
-                        section("Closed", groups.closed, RunStyle.CLOSED, me, accountViewModel, nav)
+                        section("Working now", groups.active, RunStyle.ACTIVE, me, canWrite, accountViewModel, nav)
+                        section("Shipped", groups.done, RunStyle.SHIPPED, me, canWrite, accountViewModel, nav)
+                        section("Closed", groups.closed, RunStyle.CLOSED, me, canWrite, accountViewModel, nav)
                     }
                 }
 
@@ -197,10 +200,18 @@ fun WorkflowRunBoardScreen(
             sheetState = sheetState,
             definitions = definitions,
             onDismiss = { composing = false },
-            onDefine = { name, yaml, onCreated -> viewModel.defineWorkflow(name, yaml, onCreated) },
+            onDefine = { name, yaml, onResult -> viewModel.defineWorkflow(name, yaml, onResult) },
             onTrigger = { workflowId, task ->
-                viewModel.trigger(workflowId, task)
-                composing = false
+                // Only close the sheet on a confirmed publish; on failure keep it open (task text intact)
+                // and tell the user, instead of silently swallowing a read-only / rejected write.
+                viewModel.trigger(workflowId, task) { ok ->
+                    if (ok) {
+                        composing = false
+                        scope.launch { snackbar.showSnackbar("Run triggered") }
+                    } else {
+                        scope.launch { snackbar.showSnackbar("Couldn't trigger the run — check you can post to this workspace") }
+                    }
+                }
             },
         )
     }
@@ -211,17 +222,20 @@ fun WorkflowRunBoardScreen(
             decision = decision,
             onDismiss = { pending = null },
             onConfirm = {
-                if (decision.grant) viewModel.approve(decision.run.runId) else viewModel.deny(decision.run.runId)
-                pending = null
-                scope.launch {
-                    snackbar.showSnackbar(
-                        if (decision.grant) {
-                            "Approved — the runner is opening a pull request"
-                        } else {
-                            "Denied — the work was discarded"
-                        },
-                    )
+                val grant = decision.grant
+                val onResult: (Boolean) -> Unit = { ok ->
+                    scope.launch {
+                        snackbar.showSnackbar(
+                            when {
+                                ok && grant -> "Approved — the runner is opening a pull request"
+                                ok -> "Denied — the work was discarded"
+                                else -> "Couldn't publish your decision — check you can post to this workspace"
+                            },
+                        )
+                    }
                 }
+                if (grant) viewModel.approve(decision.run.runId, onResult) else viewModel.deny(decision.run.runId, onResult)
+                pending = null
             },
         )
     }
@@ -268,17 +282,18 @@ private fun LazyListScope.section(
     runs: List<WorkflowRun>,
     style: RunStyle,
     me: String,
+    canWrite: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
     onDecide: (WorkflowRun, Boolean) -> Unit = { _, _ -> },
 ) {
     if (runs.isEmpty()) return
-    item(key = "header-$title") {
+    item(key = "header-$title", contentType = "header") {
         SectionHeader(title, runs.size, style)
     }
-    items(runs, key = { it.runId }) { run ->
+    items(runs, key = { it.runId }, contentType = { style }) { run ->
         if (style == RunStyle.GATE) {
-            GateCard(run, me, accountViewModel, nav, onDecide)
+            GateCard(run, me, canWrite, accountViewModel, nav, onDecide)
         } else {
             RunCard(run, style, accountViewModel, nav)
         }
@@ -324,6 +339,7 @@ private fun SectionHeader(
 private fun LazyItemScope.GateCard(
     run: WorkflowRun,
     me: String,
+    canWrite: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
     onDecide: (WorkflowRun, Boolean) -> Unit,
@@ -383,10 +399,17 @@ private fun LazyItemScope.GateCard(
                 Person("by", run.requester, accountViewModel, nav)
             }
 
-            if (mine) {
+            if (mine && canWrite) {
                 ApprovalActions(
                     onApprove = { onDecide(run, true) },
                     onDeny = { onDecide(run, false) },
+                )
+            } else if (mine) {
+                // Named approver, but this login can't sign (read-only / remote signer w/o write).
+                Text(
+                    text = "You're the approver, but this login can't sign a decision.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 WaitingPill(run.pendingApprover, accountViewModel, nav)
@@ -675,7 +698,7 @@ private fun NewRunSheet(
     sheetState: SheetState,
     definitions: List<WorkflowDefOption>,
     onDismiss: () -> Unit,
-    onDefine: (String, String, (String) -> Unit) -> Unit,
+    onDefine: (String, String, (String?) -> Unit) -> Unit,
     onTrigger: (String, String) -> Unit,
 ) {
     var task by remember { mutableStateOf("") }
@@ -710,7 +733,12 @@ private fun NewRunSheet(
             if (defining) {
                 DefinitionEditor(
                     onCancel = { defining = false },
-                    onCreate = { name, yaml -> onDefine(name, yaml) { newId -> pendingSelectId = newId } },
+                    onCreate = { name, yaml, onResult ->
+                        onDefine(name, yaml) { newId ->
+                            pendingSelectId = newId // non-null → the effect below selects it and closes the editor
+                            onResult(newId != null) // null → the editor shows its error and re-enables
+                        }
+                    },
                 )
             } else {
                 WorkflowPicker(
@@ -719,6 +747,15 @@ private fun NewRunSheet(
                     onSelect = { selected = it },
                     onNewDefinition = { defining = true },
                 )
+                if (definitions.isEmpty()) {
+                    // Don't leave a first-time user staring at a disabled Trigger button and an empty
+                    // dropdown — point them at the way forward.
+                    Text(
+                        "No workflows yet. Open the menu above and choose “New definition…” to create one, then trigger it.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedTextField(
                     value = task,
                     onValueChange = { task = it },
@@ -783,18 +820,24 @@ private fun WorkflowPicker(
     }
 }
 
-/** Inline editor to publish a new kind-30620 definition: a name and its YAML recipe. */
+/**
+ * Inline editor to publish a new kind-30620 definition: a name and its YAML recipe. [onCreate] hands
+ * back a success flag; on failure the editor stays open, shows an error, and re-enables the button so
+ * the work isn't lost and the user isn't nudged into publishing a duplicate.
+ */
 @Composable
 private fun DefinitionEditor(
     onCancel: () -> Unit,
-    onCreate: (String, String) -> Unit,
+    onCreate: (String, String, (Boolean) -> Unit) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var yaml by remember { mutableStateOf("") }
+    var publishing by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("New workflow definition", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         Text(
-            "Names it for the channel and publishes its YAML recipe (kind-30620). A real Buzz relay runs the YAML; self-hosted, the runner runs its configured command — the definition names and catalogs the run.",
+            "Names it for the channel and publishes its YAML recipe (kind-30620). A real Buzz relay runs the YAML. Self-hosted, the runner runs its configured command — here the definition just names and catalogs the run.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -804,25 +847,37 @@ private fun DefinitionEditor(
             label = { Text("Name") },
             placeholder = { Text("build-and-test") },
             singleLine = true,
+            enabled = !publishing,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = yaml,
             onValueChange = { yaml = it },
             label = { Text("YAML recipe") },
+            enabled = !publishing,
             modifier = Modifier.fillMaxWidth(),
             minLines = 4,
         )
+        error?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onCancel) { Text("Cancel") }
+            OutlinedButton(onClick = onCancel, enabled = !publishing) { Text("Cancel") }
             Button(
-                onClick = { onCreate(name.trim(), yaml) },
-                enabled = name.isNotBlank() && yaml.isNotBlank(),
+                onClick = {
+                    error = null
+                    publishing = true
+                    onCreate(name.trim(), yaml) { ok ->
+                        publishing = false
+                        if (!ok) error = "Couldn't publish the definition — check you can post to this workspace."
+                    }
+                },
+                enabled = !publishing && name.isNotBlank() && yaml.isNotBlank(),
                 modifier = Modifier.weight(1f),
             ) {
                 Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Create definition")
+                Text(if (publishing) "Publishing…" else "Create definition")
             }
         }
     }
