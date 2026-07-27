@@ -314,7 +314,8 @@ fun RelayGroupChannelListScreen(
             FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
                 Icon(
                     symbol = MaterialSymbols.Add,
-                    contentDescription = stringRes(R.string.relay_group_create_title),
+                    contentDescription =
+                        stringRes(if (isBuzz) R.string.buzz_channel_create_title else R.string.relay_group_create_title),
                     modifier = Modifier.size(24.dp),
                 )
             }

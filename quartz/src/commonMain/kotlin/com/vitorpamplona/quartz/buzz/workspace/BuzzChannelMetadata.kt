@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.buzz.workspace
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.utils.RandomInstance
 
 /*
  * Buzz-specific readers over a NIP-29 group's relay-signed metadata (kind:39000).
@@ -51,3 +53,30 @@ fun GroupMetadataEvent.buzzParticipants(): List<HexKey> = tags.mapNotNull(PTag::
 const val BUZZ_CHANNEL_TYPE_DM = "dm"
 const val BUZZ_CHANNEL_TYPE_FORUM = "forum"
 const val BUZZ_CHANNEL_TYPE_STREAM = "stream"
+
+/**
+ * Buzz's two channel visibilities, from `crates/buzz-db/src/channel.rs`: [BUZZ_VISIBILITY_OPEN] is
+ * searchable and anyone may join, [BUZZ_VISIBILITY_PRIVATE] is hidden and invite-only. They ride a
+ * `visibility` tag on the create (9007) and metadata (9002) events — NIP-29's own `private` status
+ * flag is a separate vocabulary the Buzz relay does not read.
+ */
+const val BUZZ_VISIBILITY_OPEN = "open"
+const val BUZZ_VISIBILITY_PRIVATE = "private"
+
+/**
+ * A new Buzz channel id: a RFC-4122 v4 UUID string.
+ *
+ * Buzz keys channels by UUID and parses the create event's `h` tag with `val.parse::<Uuid>()`
+ * (`extract_h_tag_channel`). NIP-29's own convention — a short random hex id — does not parse, so
+ * the relay silently ignores the id the client chose and creates the channel under one of its own.
+ * The client then subscribes to an id the relay never used: the new channel shows an empty feed and
+ * never gets a name. Group ids are opaque strings in NIP-29, so a UUID is valid there too.
+ */
+fun newBuzzChannelId(): String {
+    val bytes = RandomInstance.bytes(16)
+    // v4, RFC-4122 variant.
+    bytes[6] = ((bytes[6].toInt() and 0x0F) or 0x40).toByte()
+    bytes[8] = ((bytes[8].toInt() and 0x3F) or 0x80).toByte()
+    val hex = bytes.toHexKey()
+    return "${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}"
+}

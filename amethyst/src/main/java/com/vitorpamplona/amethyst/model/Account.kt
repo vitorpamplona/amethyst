@@ -168,6 +168,8 @@ import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
+import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
@@ -3302,8 +3304,21 @@ class Account(
         hashtags: List<String> = emptyList(),
         geohashes: List<String> = emptyList(),
         parent: String? = null,
+        channelType: String? = null,
     ): GroupId {
-        signAndSendPrivatelyOrBroadcast(CreateGroupEvent.build(groupId)) { listOf(relay) }
+        // The metadata rides the create event as well as the 9002 below. A plain NIP-29 relay takes
+        // its metadata from the 9002 and ignores these tags; Buzz rejects the 9007 outright without
+        // a `name` (see CreateGroupEvent.build), which used to make "create group" on a Buzz relay
+        // publish two events and produce nothing at all.
+        signAndSendPrivatelyOrBroadcast(
+            CreateGroupEvent.build(
+                groupId = groupId,
+                name = name,
+                about = about,
+                visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
+                channelType = channelType,
+            ),
+        ) { listOf(relay) }
 
         val edit =
             EditMetadataEvent.build(
